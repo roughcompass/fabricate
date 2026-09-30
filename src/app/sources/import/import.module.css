@@ -1,0 +1,18 @@
+/* A 44px hit area around the check box, per the touch-target minimum. */
+.hit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3));
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--brand-teal);
+  cursor: pointer;
+  &:disabled { cursor: not-allowed; }
+}

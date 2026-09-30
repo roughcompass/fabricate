@@ -1,0 +1,220 @@
+/*
+ * Fabricate global styles: cascade layers, design tokens, element defaults,
+ * and the application shell. Component styles live in CSS Modules beside each
+ * component and read only these tokens.
+ *
+ * Tokens follow the project design system (the design-review reference). Where
+ * a reference color fails WCAG contrast for small text or input borders, a
+ * dedicated token darkens it: --status-*-text, --text-link, --border-strong.
+ */
+@layer reset, tokens, base;
+
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
+  img, svg { display: block; max-width: 100%; }
+  input, button, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  table { border-collapse: collapse; }
+  p, h1, h2, h3, h4, dd, li { overflow-wrap: anywhere; }
+}
+
+@layer tokens {
+  :root {
+    color-scheme: light dark;
+
+    --font-body: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "PT Mono", "SF Mono", Consolas, monospace;
+
+    /* Three sizes per view: title, body, label. Hierarchy comes from weight. */
+    --text-title: 24px;
+    --text-body: 14px;
+    --text-label: 12px;
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+
+    --radius-control: 4px;
+    --radius-card: 8px;
+
+    --width-narrow: 600px;
+    --width-settings: 800px;
+    --width-standard: 1200px;
+    --header-height: 56px;
+    --page-gutter: var(--space-6);
+    --touch-target: 44px;
+
+    --duration-fast: 150ms;
+    --duration-layout: 200ms;
+
+    --brand-teal: #008297;
+    --brand-teal-hover: #005075;
+    --brand-teal-subtle: #e6f4f6;
+    --brand-dark: #101820;
+    --brand-warm: #d6b89c;
+    --brand-warm-deep: #936846;
+    --on-brand: #ffffff;
+
+    --surface-primary: #ffffff;
+    --surface-secondary: #f5f7f8;
+    --surface-tertiary: #ebeef0;
+    --text-primary: #31373d;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --text-link: #007385;
+    --border-default: #e0e4e8;
+    --border-subtle: #f0f2f4;
+    --border-strong: #7a8491;
+
+    --status-success: #24874b;
+    --status-success-bg: #f0faf4;
+    --status-success-text: #1f7a43;
+    --status-error: #cc440d;
+    --status-error-bg: #fef5f0;
+    --status-error-text: #b83d0c;
+    --status-warning: #b45309;
+    --status-warning-bg: #fffbeb;
+    --status-warning-text: #b45309;
+    --status-info: #008297;
+    --status-info-bg: #e6f4f6;
+    --status-info-text: #006e80;
+    --status-neutral-bg: #f5f7f8;
+    --status-neutral-text: #6b7280;
+
+    --shadow-hover: 0 2px 8px rgb(0 0 0 / 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --brand-teal: #2bb3c4;
+      --brand-teal-hover: #5ccad7;
+      --brand-teal-subtle: #0f2a30;
+      --on-brand: #101820;
+
+      --surface-primary: #101820;
+      --surface-secondary: #1a2530;
+      --surface-tertiary: #243040;
+      --text-primary: #f0f2f4;
+      --text-secondary: #9ca3af;
+      --text-tertiary: #6b7280;
+      --text-link: #2bb3c4;
+      --border-default: #2a3540;
+      --border-subtle: #1f2a35;
+      --border-strong: #6b7a8a;
+
+      --status-success: #4cc38a;
+      --status-success-bg: #12291f;
+      --status-success-text: #4cc38a;
+      --status-error: #ff8a5c;
+      --status-error-bg: #2f1a12;
+      --status-error-text: #ff8a5c;
+      --status-warning: #f5a524;
+      --status-warning-bg: #2b2210;
+      --status-warning-text: #f5a524;
+      --status-info: #2bb3c4;
+      --status-info-bg: #0f2a30;
+      --status-info-text: #2bb3c4;
+      --status-neutral-bg: #1a2530;
+      --status-neutral-text: #9ca3af;
+
+      --shadow-hover: 0 2px 8px rgb(0 0 0 / 0.4);
+    }
+  }
+
+  @media (max-width: 1024px) {
+    :root { --page-gutter: var(--space-4); }
+  }
+
+  @media (max-width: 767px) {
+    :root { --page-gutter: var(--space-3); }
+  }
+}
+
+@layer base {
+  body {
+    background: var(--surface-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.5;
+  }
+
+  a { color: var(--text-link); text-underline-offset: 0.15em; }
+  a:hover { color: var(--brand-teal-hover); }
+  h1 { font-size: var(--text-title); font-weight: 300; line-height: 1.3; letter-spacing: -0.01em; }
+  h2, h3 { font-size: var(--text-body); font-weight: 600; line-height: 1.4; }
+  code, kbd, samp, pre { font-family: var(--font-mono); }
+  strong { font-weight: 600; }
+
+  :focus-visible { outline: 2px solid var(--brand-teal); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  .skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: calc(-1 * var(--space-12));
+    z-index: 10;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-control);
+    background: var(--brand-teal);
+    color: var(--on-brand);
+    &:focus { top: var(--space-2); }
+  }
+
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-bottom: 1px solid var(--border-default);
+    background: var(--surface-primary);
+  }
+  .app-header__inner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    max-width: calc(var(--width-standard) + 2 * var(--page-gutter));
+    height: var(--header-height);
+    margin: 0 auto;
+    padding: 0 var(--page-gutter);
+  }
+  .app-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--touch-target);
+    color: var(--text-primary);
+    font-weight: 600;
+    text-decoration: none;
+    &:hover { color: var(--text-primary); }
+  }
+  .app-brand__mark { width: 18px; height: 18px; color: var(--brand-teal); }
+
+  .app-main {
+    max-width: calc(var(--width-standard) + 2 * var(--page-gutter));
+    margin: 0 auto;
+    padding: var(--space-10) var(--page-gutter);
+    &:focus { outline: none; }
+  }
+
+  @media (max-width: 767px) {
+    .app-header__inner { gap: var(--space-3); }
+    .app-brand__label { display: none; }
+    .app-main { padding-top: var(--space-6); }
+  }
+}

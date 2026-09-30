@@ -1,0 +1,80 @@
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { assessmentCounts, disableSource, editSource, enableSource, registerSource } from "@/lib/catalog/catalog";
+import { SourceBoundary } from "@/lib/catalog/source-boundary";
+import { getSource, listSources } from "@/lib/catalog/source-records";
+import { getConfig, withOverrides } from "@/lib/config";
+import { targetsOf } from "@/lib/assessments/assessment-records";
+import type { Db } from "@/lib/db/client";
+import { buildAssessment } from "../support/builders";
+import { createTestDb } from "../support/db";
+import { GitFixture } from "../support/git-fixture";
+import { captureValidation } from "../support/validation";
+
+describe("catalog service", () => {
+  let db: Db;
+  let fixture: GitFixture;
+  let boundary: SourceBoundary;
+
+  beforeEach(() => {
+    db = createTestDb();
+    fixture = GitFixture.create("catalog");
+    fixture.repo("fleet/orders").write("README.md", "orders").commit();
+    boundary = new SourceBoundary(withOverrides(getConfig(), { allowedRoots: [path.join(fixture.root, "fleet")] }));
+  });
+
+  afterEach(() => fixture.cleanup());
+
+  it("registers a remote source with its canonical URL", () => {
+    const source = registerSource(db, { name: "orders", cloneUrl: "https://GIT.example.com/acme/orders.git", gitRef: "main" }, boundary);
+
+    expect(source).toMatchObject({ cloneUrl: "https://git.example.com/acme/orders.git", canonicalUrl: "https://git.example.com/acme/orders", gitRef: "main" });
+  });
+
+  it("registers a local source at its resolved path", () => {
+    const source = registerSource(db, { name: "orders", cloneUrl: `file://${fixture.root}/fleet/./orders`.replace("/./", "/"), gitRef: "" }, boundary);
+
+    expect(source.cloneUrl).toBe(`file://${path.join(fixture.root, "fleet", "orders")}`);
+  });
+
+  it("reports URL and field problems together and writes nothing", () => {
+    const error = captureValidation(() => registerSource(db, { name: " ", cloneUrl: "git@github.com:acme/orders.git", gitRef: "bad..ref" }, boundary));
+
+    expect(error.issues.map((issue) => issue.field)).toEqual(["cloneUrl", "name", "gitRef"]);
+    expect(error.messagesFor("cloneUrl")[0]).toMatch(/scp-style shorthand/);
+    expect(listSources(db)).toEqual([]);
+  });
+
+  it("reports a local path outside the boundary as a clone URL problem", () => {
+    const error = captureValidation(() => registerSource(db, { name: "escape", cloneUrl: "file:///etc", gitRef: "" }, boundary));
+
+    expect(error.messagesFor("cloneUrl")[0]).toMatch(/outside the allowed source roots/);
+  });
+
+  it("rejects a duplicate canonical URL and identifies the existing source", () => {
+    const existing = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "" }, boundary);
+    const error = captureValidation(() => registerSource(db, { name: "copy", cloneUrl: "https://git.example.com/acme/orders/", gitRef: "" }, boundary));
+
+    expect(error.messagesFor("cloneUrl")).toEqual([`This clone URL is already registered as orders (${existing.publicId})`]);
+  });
+
+  it("edits a source with optimistic locking", () => {
+    const source = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "" }, boundary);
+    const edited = editSource(db, source.publicId, 0, { name: "orders-ui", cloneUrl: "https://git.example.com/acme/orders-ui.git", gitRef: "release" }, boundary);
+
+    expect(edited).toMatchObject({ name: "orders-ui", canonicalUrl: "https://git.example.com/acme/orders-ui", gitRef: "release", lockVersion: 1 });
+  });
+
+  it("preserves assessment history when a source is disabled", () => {
+    const source = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "main" }, boundary);
+    const { assessment } = buildAssessment(db, { sources: [source] });
+
+    disableSource(db, source.publicId);
+    expect(getSource(db, source.publicId).enabled).toBe(false);
+    expect(targetsOf(db, assessment.id)[0]).toMatchObject({ sourceName: "orders", gitRef: "main" });
+    expect(assessmentCounts(db).get(source.id)).toBe(1);
+
+    enableSource(db, source.publicId);
+    expect(getSource(db, source.publicId).enabled).toBe(true);
+  });
+});

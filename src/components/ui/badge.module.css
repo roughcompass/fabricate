@@ -1,0 +1,28 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-control);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-text);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.icon { flex: none; }
+
+.success { background: var(--status-success-bg); color: var(--status-success-text); }
+.error { background: var(--status-error-bg); color: var(--status-error-text); }
+.warning { background: var(--status-warning-bg); color: var(--status-warning-text); }
+.info { background: var(--status-info-bg); color: var(--status-info-text); }
+
+.spin { animation: spin 1s linear infinite; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

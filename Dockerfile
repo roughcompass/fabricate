@@ -1,77 +1,60 @@
 # syntax=docker/dockerfile:1
-# check=error=true
+#
+# Fabricate production image. One image runs either process:
+#
+#   docker run -p 3000:3000 -v fabricate_storage:/app/storage fabricate            # web server
+#   docker run -v fabricate_storage:/app/storage fabricate node dist/worker.cjs    # worker
+#   docker run --rm -v fabricate_storage:/app/storage fabricate node dist/migrate.cjs
+#
+# The runtime stage contains Node.js and Git but no package manager: npm,
+# npx, Corepack, pnpm, and Yarn are removed, so nothing can install or run
+# an assessed repository's packages.
 
-# This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
-# docker build -t fabricate .
-# docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name fabricate fabricate
+ARG NODE_VERSION=24.14.0
 
-# For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
+FROM node:${NODE_VERSION}-bookworm-slim AS base
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version
-ARG RUBY_VERSION=3.4.11
-FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
-
-# Rails app lives here
-WORKDIR /rails
-
-# Install base packages
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips sqlite3 && \
-    ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
-
-# Set production environment variables and enable jemalloc for reduced memory usage and latency.
-ENV RAILS_ENV="production" \
-    BUNDLE_DEPLOYMENT="1" \
-    BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development" \
-    LD_PRELOAD="/usr/local/lib/libjemalloc.so"
-
-# Throw-away build stage to reduce size of final image
+# Build the Next.js standalone server and the bundled worker. node-gyp needs
+# Python to evaluate better-sqlite3's prebuild detection (and a compiler if no
+# prebuild matches); none of this reaches the runtime stage.
 FROM base AS build
-
-# Install packages needed to build gems
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libvips libyaml-dev pkg-config && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
-
-# Install application gems
-COPY vendor/* ./vendor/
-COPY Gemfile Gemfile.lock ./
-
-RUN bundle install && \
-    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
-    # -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
-    bundle exec bootsnap precompile -j 1 --gemfile
-
-# Copy application code
+RUN apt-get update -qq \
+    && apt-get install --no-install-recommends -y python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY . .
+RUN npm run build
 
-# Precompile bootsnap code for faster boot times.
-# -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
-RUN bundle exec bootsnap precompile -j 1 app/ lib/
+# Runtime: Node.js, Git, and the SSH client for ssh:// sources.
+FROM base AS runtime
+RUN apt-get update -qq \
+    && apt-get install --no-install-recommends -y git openssh-client ca-certificates tini \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+             /usr/local/bin/yarn /usr/local/bin/yarnpkg /usr/local/bin/pnpm /usr/local/bin/pnpx
 
-# Precompiling assets for production without requiring secret RAILS_MASTER_KEY
-RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+ENV NODE_ENV=production \
+    FABRICATE_ENV=production \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
 
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/drizzle ./drizzle
+COPY --from=build --chown=node:node /app/config ./config
+# The worker bundle loads the native SQLite binding from node_modules.
+COPY --from=build --chown=node:node /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
 
+RUN mkdir -p storage && chown node:node storage
+USER node
+VOLUME /app/storage
+EXPOSE 3000
 
-
-# Final stage for app image
-FROM base
-
-# Run and own only the runtime files as a non-root user for security
-RUN groupadd --system --gid 1000 rails && \
-    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash
-USER 1000:1000
-
-# Copy built artifacts: gems, application
-COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
-COPY --chown=rails:rails --from=build /rails /rails
-
-# Entrypoint prepares the database.
-ENTRYPOINT ["/rails/bin/docker-entrypoint"]
-
-# Start server via Thruster by default, this can be overwritten at runtime
-EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]
+ENTRYPOINT ["tini", "--"]
+CMD ["node", "server.js"]

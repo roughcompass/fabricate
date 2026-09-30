@@ -1,0 +1,46 @@
+.wrap { overflow-x: auto; }
+
+.table {
+  width: 100%;
+  font-size: var(--text-body);
+
+  & th, & td { padding: var(--space-3) var(--space-4); text-align: left; vertical-align: top; }
+  & th {
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
+    font-size: var(--text-label);
+    font-weight: 600;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-default);
+  }
+  & td { border-bottom: 1px solid var(--border-subtle); }
+  & tbody tr:last-child td { border-bottom: 0; }
+  & tbody tr { transition: background var(--duration-fast) ease; }
+  & tbody tr:hover { background: var(--surface-secondary); }
+}
+
+.cell { min-width: 0; }
+.numeric { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.actions { text-align: right !important; white-space: nowrap; }
+.actions .cell > * { flex-wrap: nowrap; justify-content: flex-end; }
+.primary { font-weight: 600; }
+.secondary { margin-top: 2px; color: var(--text-secondary); font-size: var(--text-label); overflow-wrap: anywhere; }
+.secondary.mono { overflow-wrap: normal; white-space: nowrap; }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.mono { font-family: var(--font-mono); font-size: var(--text-label); overflow-wrap: anywhere; }
+
+/* Rows become labelled blocks on narrow screens, so nothing scrolls sideways. */
+@media (max-width: 767px) {
+  .responsive {
+    & thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    & tr { display: block; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); }
+    & tbody tr:last-child { border-bottom: 0; }
+    & td { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-3); padding: var(--space-1) 0; border: 0; }
+    & td::before { content: attr(data-label); color: var(--text-secondary); font-size: var(--text-label); }
+    & td.actions { display: flex; justify-content: flex-start; padding-top: var(--space-2); }
+    & td.actions .cell > * { justify-content: flex-start; }
+    & td > .cell { justify-self: start; max-width: 100%; }
+    & td.actions::before { content: none; }
+    & .numeric { text-align: left !important; }
+  }
+}

@@ -1,0 +1,241 @@
+import fs from "node:fs";
+import path from "node:path";
+import { z } from "zod";
+
+/**
+ * Typed, immutable safety and analysis configuration.
+ *
+ * Values come from config/fabricate.json (a `shared` section merged with the
+ * section for the current environment) and then FABRICATE_* environment
+ * variables. The harness workspace's fleet-kit/ tree is appended to the denied
+ * roots unconditionally: no file setting, environment variable, or override
+ * can remove it, and an allowed root inside it is a configuration error.
+ */
+
+export const PROTECTED_DIRECTORY = "fleet-kit";
+
+export class ConfigurationError extends Error {
+  override name = "ConfigurationError";
+}
+
+const positiveInteger = z.int().positive();
+const pathSetting = z.string().trim().min(1, "path settings must not be blank");
+
+const settingsSchema = z.strictObject({
+  allowedRoots: z.array(pathSetting),
+  deniedRoots: z.array(pathSetting),
+  gitTimeoutSeconds: positiveInteger,
+  gitLockTimeoutSeconds: positiveInteger,
+  workerConcurrency: positiveInteger,
+  database: pathSetting,
+  repositoryStorage: pathSetting,
+  gitCredentialHelper: z.string().trim().min(1).nullable(),
+  analysis: z.strictObject({
+    maxBlobBytes: positiveInteger,
+    maxFiles: positiveInteger,
+    maxTotalBytes: positiveInteger,
+  }),
+});
+
+export type Settings = z.infer<typeof settingsSchema>;
+
+const fileSchema = z.strictObject({
+  shared: settingsSchema,
+  development: settingsSchema.partial().optional(),
+  test: settingsSchema.partial().optional(),
+  production: settingsSchema.partial().optional(),
+});
+
+export type Environment = "development" | "test" | "production";
+
+export const ENV_KEYS = {
+  allowedRoots: "FABRICATE_ALLOWED_ROOTS",
+  deniedRoots: "FABRICATE_DENIED_ROOTS",
+  gitTimeoutSeconds: "FABRICATE_GIT_TIMEOUT",
+  gitLockTimeoutSeconds: "FABRICATE_GIT_LOCK_TIMEOUT",
+  workerConcurrency: "FABRICATE_WORKER_CONCURRENCY",
+  database: "FABRICATE_DATABASE",
+  repositoryStorage: "FABRICATE_REPOSITORY_STORAGE",
+  gitCredentialHelper: "FABRICATE_GIT_CREDENTIAL_HELPER",
+  maxBlobBytes: "FABRICATE_MAX_BLOB_BYTES",
+  maxFiles: "FABRICATE_MAX_FILES",
+  maxTotalBytes: "FABRICATE_MAX_TOTAL_BYTES",
+} as const;
+
+export interface AnalysisBudgets {
+  readonly maxBlobBytes: number;
+  readonly maxFiles: number;
+  readonly maxTotalBytes: number;
+}
+
+export interface FabricateConfig {
+  readonly environment: Environment;
+  readonly appRoot: string;
+  readonly workspaceRoot: string;
+  readonly allowedRoots: readonly string[];
+  /** Operator-configured roots followed by the mandatory protected roots. */
+  readonly deniedRoots: readonly string[];
+  readonly mandatoryDeniedRoots: readonly string[];
+  readonly gitTimeoutSeconds: number;
+  readonly gitLockTimeoutSeconds: number;
+  readonly workerConcurrency: number;
+  readonly database: string;
+  readonly repositoryStorage: string;
+  readonly gitCredentialHelper: string | null;
+  readonly analysis: AnalysisBudgets;
+  /** The settings this configuration was built from, before mandatory additions. */
+  readonly settings: Settings;
+}
+
+export interface LoadOptions {
+  appRoot?: string;
+  environment?: Environment;
+  env?: Readonly<Record<string, string | undefined>>;
+  /** Settings to use instead of reading config/fabricate.json. */
+  file?: unknown;
+}
+
+export function currentEnvironment(env: Readonly<Record<string, string | undefined>> = process.env): Environment {
+  const value = env.FABRICATE_ENV ?? env.NODE_ENV ?? "development";
+  if (value === "development" || value === "test" || value === "production") return value;
+  throw new ConfigurationError(`Unsupported environment ${JSON.stringify(value)}`);
+}
+
+export function loadConfig(options: LoadOptions = {}): FabricateConfig {
+  const appRoot = path.resolve(options.appRoot ?? process.cwd());
+  const env = options.env ?? process.env;
+  const environment = options.environment ?? currentEnvironment(env);
+  const file = parse(fileSchema, options.file ?? readConfigFile(appRoot), "config/fabricate.json");
+  const settings = applyEnvironment({ ...file.shared, ...file[environment] }, env);
+  return buildConfig(settings, { appRoot, environment });
+}
+
+/**
+ * Returns a new configuration with some settings replaced. Mandatory denied
+ * roots are recomputed, so an override can never remove fleet-kit/.
+ */
+export function withOverrides(
+  config: FabricateConfig,
+  overrides: Partial<Omit<Settings, "analysis">> & { analysis?: Partial<Settings["analysis"]> },
+): FabricateConfig {
+  const settings = { ...config.settings, ...overrides, analysis: { ...config.settings.analysis, ...overrides.analysis } };
+  return buildConfig(settings, { appRoot: config.appRoot, environment: config.environment });
+}
+
+/** Roots denied regardless of any operator setting. */
+export function mandatoryDeniedRoots(workspaceRoot: string): string[] {
+  const protectedTree = path.join(workspaceRoot, PROTECTED_DIRECTORY);
+  return unique([protectedTree, realpathIfExists(protectedTree)].filter((value): value is string => value !== null));
+}
+
+export function isInside(root: string, candidate: string): boolean {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
+/** True when any segment of the path is the protected directory name. */
+export function namesProtectedDirectory(candidate: string): boolean {
+  return candidate.split(/[\\/]+/).includes(PROTECTED_DIRECTORY);
+}
+
+function buildConfig(raw: unknown, context: { appRoot: string; environment: Environment }): FabricateConfig {
+  const settings = parse(settingsSchema, raw, "configuration");
+  const { appRoot } = context;
+  const resolve = (value: string) => path.resolve(appRoot, value);
+  const workspaceRoot = path.dirname(appRoot);
+  const mandatory = mandatoryDeniedRoots(workspaceRoot);
+  const allowedRoots = unique(settings.allowedRoots.map(resolve));
+  const deniedRoots = unique([...settings.deniedRoots.map(resolve), ...mandatory]);
+
+  for (const allowed of allowedRoots) {
+    const candidates = [allowed, realpathIfExists(allowed)].filter((value): value is string => value !== null);
+    if (candidates.some((candidate) => namesProtectedDirectory(candidate) || mandatory.some((denied) => isInside(denied, candidate)))) {
+      throw new ConfigurationError(`Allowed root ${allowed} is inside the protected ${PROTECTED_DIRECTORY}/ tree`);
+    }
+  }
+
+  return deepFreeze({
+    environment: context.environment,
+    appRoot,
+    workspaceRoot,
+    allowedRoots,
+    deniedRoots,
+    mandatoryDeniedRoots: mandatory,
+    gitTimeoutSeconds: settings.gitTimeoutSeconds,
+    gitLockTimeoutSeconds: settings.gitLockTimeoutSeconds,
+    workerConcurrency: settings.workerConcurrency,
+    database: resolve(settings.database),
+    repositoryStorage: resolve(settings.repositoryStorage),
+    gitCredentialHelper: settings.gitCredentialHelper,
+    analysis: { ...settings.analysis },
+    settings,
+  });
+}
+
+function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Record<string, string | undefined>>): unknown {
+  const result: Record<string, unknown> = { ...settings };
+  const analysis: Record<string, unknown> = { ...(settings.analysis as Record<string, unknown>) };
+  const text = (key: string) => {
+    const value = env[key];
+    return value === undefined || value.trim() === "" ? undefined : value.trim();
+  };
+  const integer = (key: string) => {
+    const value = text(key);
+    if (value === undefined) return undefined;
+    if (!/^\d+$/.test(value)) throw new ConfigurationError(`${key} must be a positive integer (got ${JSON.stringify(value)})`);
+    return Number(value);
+  };
+  const list = (key: string) => text(key)?.split(path.delimiter).filter((entry) => entry.trim() !== "");
+
+  const assignments: [Record<string, unknown>, string, unknown][] = [
+    [result, "allowedRoots", list(ENV_KEYS.allowedRoots)],
+    [result, "deniedRoots", list(ENV_KEYS.deniedRoots)],
+    [result, "gitTimeoutSeconds", integer(ENV_KEYS.gitTimeoutSeconds)],
+    [result, "gitLockTimeoutSeconds", integer(ENV_KEYS.gitLockTimeoutSeconds)],
+    [result, "workerConcurrency", integer(ENV_KEYS.workerConcurrency)],
+    [result, "database", text(ENV_KEYS.database)],
+    [result, "repositoryStorage", text(ENV_KEYS.repositoryStorage)],
+    [result, "gitCredentialHelper", text(ENV_KEYS.gitCredentialHelper)],
+    [analysis, "maxBlobBytes", integer(ENV_KEYS.maxBlobBytes)],
+    [analysis, "maxFiles", integer(ENV_KEYS.maxFiles)],
+    [analysis, "maxTotalBytes", integer(ENV_KEYS.maxTotalBytes)],
+  ];
+  for (const [target, key, value] of assignments) if (value !== undefined) target[key] = value;
+  result.analysis = analysis;
+  return result;
+}
+
+function readConfigFile(appRoot: string): unknown {
+  const file = path.join(appRoot, "config", "fabricate.json");
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (error) {
+    throw new ConfigurationError(`Could not read ${file}: ${(error as Error).message}`);
+  }
+}
+
+function parse<T>(schema: z.ZodType<T>, value: unknown, label: string): T {
+  const result = schema.safeParse(value);
+  if (!result.success) throw new ConfigurationError(`Invalid ${label}:\n${z.prettifyError(result.error)}`);
+  return result.data;
+}
+
+function realpathIfExists(target: string): string | null {
+  try {
+    return fs.realpathSync(target);
+  } catch {
+    return null;
+  }
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object") {
+    for (const item of Object.values(value)) deepFreeze(item);
+    Object.freeze(value);
+  }
+  return value;
+}

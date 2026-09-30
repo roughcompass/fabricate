@@ -1,0 +1,890 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "4daccb89-5a7a-48df-9fcb-1d712237859e",
+  "prevId": "d030e0c0-7f2e-4288-b752-dac5cf98bdc7",
+  "tables": {
+    "initiative_targets": {
+      "name": "initiative_targets",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "initiative_id": {
+          "name": "initiative_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "repository_source_id": {
+          "name": "repository_source_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "initiative_targets_selection": {
+          "name": "initiative_targets_selection",
+          "columns": [
+            "initiative_id",
+            "repository_source_id"
+          ],
+          "isUnique": true
+        },
+        "initiative_targets_source": {
+          "name": "initiative_targets_source",
+          "columns": [
+            "repository_source_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "initiative_targets_initiative_id_initiatives_id_fk": {
+          "name": "initiative_targets_initiative_id_initiatives_id_fk",
+          "tableFrom": "initiative_targets",
+          "tableTo": "initiatives",
+          "columnsFrom": [
+            "initiative_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "initiative_targets_repository_source_id_repository_sources_id_fk": {
+          "name": "initiative_targets_repository_source_id_repository_sources_id_fk",
+          "tableFrom": "initiative_targets",
+          "tableTo": "repository_sources",
+          "columnsFrom": [
+            "repository_source_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "initiatives": {
+      "name": "initiatives",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "public_id": {
+          "name": "public_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "objective": {
+          "name": "objective",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "selection_mode": {
+          "name": "selection_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'all_enabled'"
+        },
+        "lock_version": {
+          "name": "lock_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "initiatives_public_id_unique": {
+          "name": "initiatives_public_id_unique",
+          "columns": [
+            "public_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "initiatives_public_id": {
+          "name": "initiatives_public_id",
+          "value": "\"initiatives\".\"public_id\" GLOB 'ini_*'"
+        },
+        "initiatives_name": {
+          "name": "initiatives_name",
+          "value": "length(trim(\"initiatives\".\"name\")) BETWEEN 1 AND 120"
+        },
+        "initiatives_objective": {
+          "name": "initiatives_objective",
+          "value": "length(\"initiatives\".\"objective\") <= 2000"
+        },
+        "initiatives_selection_mode": {
+          "name": "initiatives_selection_mode",
+          "value": "selection_mode IN ('all_enabled', 'explicit')"
+        }
+      }
+    },
+    "repository_sources": {
+      "name": "repository_sources",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "public_id": {
+          "name": "public_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "clone_url": {
+          "name": "clone_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "canonical_url": {
+          "name": "canonical_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "git_ref": {
+          "name": "git_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "lock_version": {
+          "name": "lock_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "repository_sources_public_id_unique": {
+          "name": "repository_sources_public_id_unique",
+          "columns": [
+            "public_id"
+          ],
+          "isUnique": true
+        },
+        "repository_sources_canonical_url": {
+          "name": "repository_sources_canonical_url",
+          "columns": [
+            "canonical_url"
+          ],
+          "isUnique": false
+        },
+        "repository_sources_enabled_canonical_url": {
+          "name": "repository_sources_enabled_canonical_url",
+          "columns": [
+            "canonical_url"
+          ],
+          "isUnique": true,
+          "where": "\"repository_sources\".\"enabled\" = 1"
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "repository_sources_public_id": {
+          "name": "repository_sources_public_id",
+          "value": "\"repository_sources\".\"public_id\" GLOB 'src_*'"
+        },
+        "repository_sources_name": {
+          "name": "repository_sources_name",
+          "value": "length(trim(\"repository_sources\".\"name\")) BETWEEN 1 AND 100"
+        },
+        "repository_sources_urls": {
+          "name": "repository_sources_urls",
+          "value": "length(\"repository_sources\".\"clone_url\") > 0 AND length(\"repository_sources\".\"canonical_url\") > 0"
+        },
+        "repository_sources_git_ref": {
+          "name": "repository_sources_git_ref",
+          "value": "\"repository_sources\".\"git_ref\" IS NULL OR length(\"repository_sources\".\"git_ref\") BETWEEN 1 AND 255"
+        },
+        "repository_sources_enabled": {
+          "name": "repository_sources_enabled",
+          "value": "\"repository_sources\".\"enabled\" IN (0, 1)"
+        }
+      }
+    },
+    "assessment_targets": {
+      "name": "assessment_targets",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "public_id": {
+          "name": "public_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "assessment_id": {
+          "name": "assessment_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "repository_source_id": {
+          "name": "repository_source_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source_public_id": {
+          "name": "source_public_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source_name": {
+          "name": "source_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "clone_url": {
+          "name": "clone_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "canonical_url": {
+          "name": "canonical_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "git_ref": {
+          "name": "git_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "failure_code": {
+          "name": "failure_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "failure_message": {
+          "name": "failure_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "lock_version": {
+          "name": "lock_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "assessment_targets_public_id_unique": {
+          "name": "assessment_targets_public_id_unique",
+          "columns": [
+            "public_id"
+          ],
+          "isUnique": true
+        },
+        "assessment_targets_position": {
+          "name": "assessment_targets_position",
+          "columns": [
+            "assessment_id",
+            "position"
+          ],
+          "isUnique": true
+        },
+        "assessment_targets_source": {
+          "name": "assessment_targets_source",
+          "columns": [
+            "assessment_id",
+            "repository_source_id"
+          ],
+          "isUnique": true
+        },
+        "assessment_targets_repository_source": {
+          "name": "assessment_targets_repository_source",
+          "columns": [
+            "repository_source_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "assessment_targets_assessment_id_assessments_id_fk": {
+          "name": "assessment_targets_assessment_id_assessments_id_fk",
+          "tableFrom": "assessment_targets",
+          "tableTo": "assessments",
+          "columnsFrom": [
+            "assessment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "assessment_targets_repository_source_id_repository_sources_id_fk": {
+          "name": "assessment_targets_repository_source_id_repository_sources_id_fk",
+          "tableFrom": "assessment_targets",
+          "tableTo": "repository_sources",
+          "columnsFrom": [
+            "repository_source_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "assessment_targets_public_id": {
+          "name": "assessment_targets_public_id",
+          "value": "\"assessment_targets\".\"public_id\" GLOB 'tgt_*'"
+        },
+        "assessment_targets_position_range": {
+          "name": "assessment_targets_position_range",
+          "value": "\"assessment_targets\".\"position\" >= 0"
+        },
+        "assessment_targets_state": {
+          "name": "assessment_targets_state",
+          "value": "state IN ('pending', 'acquiring', 'analyzing', 'complete', 'failed', 'canceled')"
+        },
+        "assessment_targets_failure_code": {
+          "name": "assessment_targets_failure_code",
+          "value": "(\"assessment_targets\".\"failure_code\" IS NOT NULL) = (\"assessment_targets\".\"state\" = 'failed')"
+        }
+      }
+    },
+    "assessments": {
+      "name": "assessments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "public_id": {
+          "name": "public_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "initiative_id": {
+          "name": "initiative_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'queued'"
+        },
+        "launch_token": {
+          "name": "launch_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "detector_release": {
+          "name": "detector_release",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "configuration": {
+          "name": "configuration",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "configuration_digest": {
+          "name": "configuration_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_schema_version": {
+          "name": "profile_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "relationship_schema_version": {
+          "name": "relationship_schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cancel_requested_at": {
+          "name": "cancel_requested_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "failure_reason": {
+          "name": "failure_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "lock_version": {
+          "name": "lock_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "assessments_public_id_unique": {
+          "name": "assessments_public_id_unique",
+          "columns": [
+            "public_id"
+          ],
+          "isUnique": true
+        },
+        "assessments_launch_token_unique": {
+          "name": "assessments_launch_token_unique",
+          "columns": [
+            "launch_token"
+          ],
+          "isUnique": true
+        },
+        "assessments_initiative": {
+          "name": "assessments_initiative",
+          "columns": [
+            "initiative_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "assessments_initiative_id_initiatives_id_fk": {
+          "name": "assessments_initiative_id_initiatives_id_fk",
+          "tableFrom": "assessments",
+          "tableTo": "initiatives",
+          "columnsFrom": [
+            "initiative_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "assessments_public_id": {
+          "name": "assessments_public_id",
+          "value": "\"assessments\".\"public_id\" GLOB 'asm_*'"
+        },
+        "assessments_state": {
+          "name": "assessments_state",
+          "value": "state IN ('queued', 'acquiring', 'analyzing', 'finalizing', 'complete', 'complete_with_issues', 'failed', 'canceled')"
+        },
+        "assessments_configuration_digest": {
+          "name": "assessments_configuration_digest",
+          "value": "length(\"assessments\".\"configuration_digest\") = 64"
+        },
+        "assessments_schema_versions": {
+          "name": "assessments_schema_versions",
+          "value": "\"assessments\".\"profile_schema_version\" > 0 AND \"assessments\".\"relationship_schema_version\" > 0"
+        }
+      }
+    },
+    "source_snapshots": {
+      "name": "source_snapshots",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "public_id": {
+          "name": "public_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "assessment_target_id": {
+          "name": "assessment_target_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "repository_source_id": {
+          "name": "repository_source_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "commit_sha": {
+          "name": "commit_sha",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tree_sha": {
+          "name": "tree_sha",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ref_kind": {
+          "name": "ref_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "resolved_ref": {
+          "name": "resolved_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "internal_ref": {
+          "name": "internal_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "acquisition_metadata": {
+          "name": "acquisition_metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "acquired_at": {
+          "name": "acquired_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "source_snapshots_public_id_unique": {
+          "name": "source_snapshots_public_id_unique",
+          "columns": [
+            "public_id"
+          ],
+          "isUnique": true
+        },
+        "source_snapshots_assessment_target_id_unique": {
+          "name": "source_snapshots_assessment_target_id_unique",
+          "columns": [
+            "assessment_target_id"
+          ],
+          "isUnique": true
+        },
+        "source_snapshots_internal_ref_unique": {
+          "name": "source_snapshots_internal_ref_unique",
+          "columns": [
+            "internal_ref"
+          ],
+          "isUnique": true
+        },
+        "source_snapshots_commit": {
+          "name": "source_snapshots_commit",
+          "columns": [
+            "commit_sha"
+          ],
+          "isUnique": false
+        },
+        "source_snapshots_repository_source": {
+          "name": "source_snapshots_repository_source",
+          "columns": [
+            "repository_source_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "source_snapshots_assessment_target_id_assessment_targets_id_fk": {
+          "name": "source_snapshots_assessment_target_id_assessment_targets_id_fk",
+          "tableFrom": "source_snapshots",
+          "tableTo": "assessment_targets",
+          "columnsFrom": [
+            "assessment_target_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "source_snapshots_repository_source_id_repository_sources_id_fk": {
+          "name": "source_snapshots_repository_source_id_repository_sources_id_fk",
+          "tableFrom": "source_snapshots",
+          "tableTo": "repository_sources",
+          "columnsFrom": [
+            "repository_source_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "source_snapshots_public_id": {
+          "name": "source_snapshots_public_id",
+          "value": "\"source_snapshots\".\"public_id\" GLOB 'snp_*'"
+        },
+        "source_snapshots_object_ids": {
+          "name": "source_snapshots_object_ids",
+          "value": "length(\"source_snapshots\".\"commit_sha\") = 40 AND \"source_snapshots\".\"commit_sha\" NOT GLOB '*[^0-9a-f]*' AND length(\"source_snapshots\".\"tree_sha\") = 40 AND \"source_snapshots\".\"tree_sha\" NOT GLOB '*[^0-9a-f]*'"
+        },
+        "source_snapshots_ref_kind": {
+          "name": "source_snapshots_ref_kind",
+          "value": "ref_kind IN ('default_branch', 'branch', 'tag', 'commit')"
+        },
+        "source_snapshots_internal_ref": {
+          "name": "source_snapshots_internal_ref",
+          "value": "\"source_snapshots\".\"internal_ref\" = 'refs/fabricate/snapshots/' || \"source_snapshots\".\"public_id\""
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

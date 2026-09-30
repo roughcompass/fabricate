@@ -1,0 +1,319 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "190f56ae-ba9e-4099-a8e4-95a5489bf7df",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "initiative_targets": {
+      "name": "initiative_targets",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "initiative_id": {
+          "name": "initiative_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "repository_source_id": {
+          "name": "repository_source_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "initiative_targets_selection": {
+          "name": "initiative_targets_selection",
+          "columns": [
+            "initiative_id",
+            "repository_source_id"
+          ],
+          "isUnique": true
+        },
+        "initiative_targets_source": {
+          "name": "initiative_targets_source",
+          "columns": [
+            "repository_source_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "initiative_targets_initiative_id_initiatives_id_fk": {
+          "name": "initiative_targets_initiative_id_initiatives_id_fk",
+          "tableFrom": "initiative_targets",
+          "tableTo": "initiatives",
+          "columnsFrom": [
+            "initiative_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "initiative_targets_repository_source_id_repository_sources_id_fk": {
+          "name": "initiative_targets_repository_source_id_repository_sources_id_fk",
+          "tableFrom": "initiative_targets",
+          "tableTo": "repository_sources",
+          "columnsFrom": [
+            "repository_source_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "initiatives": {
+      "name": "initiatives",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "public_id": {
+          "name": "public_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "objective": {
+          "name": "objective",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "selection_mode": {
+          "name": "selection_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'all_enabled'"
+        },
+        "lock_version": {
+          "name": "lock_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "initiatives_public_id_unique": {
+          "name": "initiatives_public_id_unique",
+          "columns": [
+            "public_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "initiatives_public_id": {
+          "name": "initiatives_public_id",
+          "value": "\"initiatives\".\"public_id\" GLOB 'ini_*'"
+        },
+        "initiatives_name": {
+          "name": "initiatives_name",
+          "value": "length(trim(\"initiatives\".\"name\")) BETWEEN 1 AND 120"
+        },
+        "initiatives_objective": {
+          "name": "initiatives_objective",
+          "value": "length(\"initiatives\".\"objective\") <= 2000"
+        },
+        "initiatives_selection_mode": {
+          "name": "initiatives_selection_mode",
+          "value": "selection_mode IN ('all_enabled', 'explicit')"
+        }
+      }
+    },
+    "repository_sources": {
+      "name": "repository_sources",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "public_id": {
+          "name": "public_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "clone_url": {
+          "name": "clone_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "canonical_url": {
+          "name": "canonical_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "git_ref": {
+          "name": "git_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "lock_version": {
+          "name": "lock_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "repository_sources_public_id_unique": {
+          "name": "repository_sources_public_id_unique",
+          "columns": [
+            "public_id"
+          ],
+          "isUnique": true
+        },
+        "repository_sources_canonical_url": {
+          "name": "repository_sources_canonical_url",
+          "columns": [
+            "canonical_url"
+          ],
+          "isUnique": false
+        },
+        "repository_sources_enabled_canonical_url": {
+          "name": "repository_sources_enabled_canonical_url",
+          "columns": [
+            "canonical_url"
+          ],
+          "isUnique": true,
+          "where": "\"repository_sources\".\"enabled\" = 1"
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "repository_sources_public_id": {
+          "name": "repository_sources_public_id",
+          "value": "\"repository_sources\".\"public_id\" GLOB 'src_*'"
+        },
+        "repository_sources_name": {
+          "name": "repository_sources_name",
+          "value": "length(trim(\"repository_sources\".\"name\")) BETWEEN 1 AND 100"
+        },
+        "repository_sources_urls": {
+          "name": "repository_sources_urls",
+          "value": "length(\"repository_sources\".\"clone_url\") > 0 AND length(\"repository_sources\".\"canonical_url\") > 0"
+        },
+        "repository_sources_git_ref": {
+          "name": "repository_sources_git_ref",
+          "value": "\"repository_sources\".\"git_ref\" IS NULL OR length(\"repository_sources\".\"git_ref\") BETWEEN 1 AND 255"
+        },
+        "repository_sources_enabled": {
+          "name": "repository_sources_enabled",
+          "value": "\"repository_sources\".\"enabled\" IN (0, 1)"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

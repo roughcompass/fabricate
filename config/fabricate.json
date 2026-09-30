@@ -1,0 +1,25 @@
+{
+  "shared": {
+    "allowedRoots": [],
+    "deniedRoots": [],
+    "gitTimeoutSeconds": 120,
+    "gitLockTimeoutSeconds": 300,
+    "workerConcurrency": 3,
+    "database": "storage/fabricate.sqlite3",
+    "repositoryStorage": "storage/repositories",
+    "gitCredentialHelper": null,
+    "analysis": {
+      "maxBlobBytes": 1048576,
+      "maxFiles": 4000,
+      "maxTotalBytes": 67108864
+    }
+  },
+  "development": {
+    "allowedRoots": ["../fleet"]
+  },
+  "test": {
+    "database": "tmp/test/fabricate.sqlite3",
+    "repositoryStorage": "tmp/test/repositories"
+  },
+  "production": {}
+}
