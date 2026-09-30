@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, lte } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
@@ -102,6 +102,21 @@ export function findAssessmentByLaunchToken(db: Executor, initiativeId: number, 
 
 export function listAssessments(db: Executor, initiativeId: number): Assessment[] {
   return db.select().from(assessments).where(eq(assessments.initiativeId, initiativeId)).orderBy(desc(assessments.createdAt), desc(assessments.id)).all();
+}
+
+/**
+ * An Assessment's sequence number within its Initiative, counting from 1 in
+ * creation order: "Assessment #3". Stable because Assessments are never
+ * deleted; a change that adds deletion must persist the numbers first.
+ */
+export function assessmentNumber(db: Executor, assessment: Pick<Assessment, "id" | "initiativeId">): number {
+  return db.select({ value: count() }).from(assessments).where(and(eq(assessments.initiativeId, assessment.initiativeId), lte(assessments.id, assessment.id))).get()?.value ?? 0;
+}
+
+/** The sequence number of each of an Initiative's Assessments, by id. */
+export function assessmentNumbers(db: Executor, initiativeId: number): Map<number, number> {
+  const ids = db.select({ id: assessments.id }).from(assessments).where(eq(assessments.initiativeId, initiativeId)).orderBy(asc(assessments.id)).all();
+  return new Map(ids.map(({ id }, index) => [id, index + 1]));
 }
 
 export function targetsOf(db: Executor, assessmentId: number): AssessmentTarget[] {

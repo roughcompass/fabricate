@@ -1,42 +1,48 @@
 "use client";
 
 import { useActionState } from "react";
-import { Notice } from "@/components/ui/notice";
+import { Alert } from "@/components/ui/alert";
+import type { ButtonSize, ButtonVariant } from "@/components/ui/button-content";
+import { PageAlertPortal } from "@/components/ui/page-alert-portal";
 import { SubmitButton } from "@/components/ui/submit-button";
-import type { ButtonVariant } from "@/components/ui/button";
 import type { LaunchState } from "./form-state";
-import styles from "./initiatives.module.css";
 
 interface LaunchFormProps {
   action: (previous: LaunchState, formData: FormData) => Promise<LaunchState>;
   launchToken: string;
-  label?: string;
-  failure?: string;
+  label: string;
+  /** The page alert's title when the launch is refused. */
+  failure: string;
   variant?: ButtonVariant;
+  size?: ButtonSize;
+  /** A fuller accessible name, such as "Start Evaluation of Assessment #2". */
+  accessibleName?: string;
 }
 
 /**
  * Starts an Assessment or an Evaluation. The launch token is generated when
  * the page renders, so resubmitting the same page returns the run it already
- * started.
+ * started. A refusal lists its problems in one alert below the page header,
+ * never inside the header actions or a table cell.
  */
-export function LaunchForm({ action, launchToken, label = "Start assessment", failure = "The assessment was not started because its scope could not be resolved.", variant = "primary" }: LaunchFormProps) {
+export function LaunchForm({ action, launchToken, label, failure, variant = "primary", size = "md", accessibleName }: LaunchFormProps) {
   const [state, formAction] = useActionState(action, { problems: [] });
-
   return (
-    <form action={formAction} className={styles.launch}>
+    <form action={formAction} style={{ display: "contents" }}>
       <input type="hidden" name="launchToken" value={launchToken} />
-      <SubmitButton icon="play" pendingLabel="Starting…" variant={variant}>
+      <SubmitButton icon={variant === "primary" ? "play" : undefined} pendingLabel="Starting" variant={variant} size={size} aria-label={accessibleName}>
         {label}
       </SubmitButton>
       {state.problems.length > 0 && (
-        <Notice tone="error" title={failure}>
-          <ul>
-            {state.problems.map((problem) => (
-              <li key={problem}>{problem}</li>
-            ))}
-          </ul>
-        </Notice>
+        <PageAlertPortal>
+          <Alert tone="error" title={failure} live>
+            <ul>
+              {state.problems.map((problem) => (
+                <li key={problem}>{problem}</li>
+              ))}
+            </ul>
+          </Alert>
+        </PageAlertPortal>
       )}
     </form>
   );

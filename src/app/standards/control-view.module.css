@@ -1,0 +1,19 @@
+@layer pages {
+  .list { margin: 0; padding: 0; list-style: none; }
+  .item { padding: var(--space-5); }
+  .item + .item { border-top: 1px solid var(--color-border); }
+
+  .control { display: flex; flex-direction: column; gap: var(--space-4); }
+  .header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+  .title { font-size: var(--font-size-heading); line-height: var(--line-height-heading); letter-spacing: var(--letter-spacing-heading); }
+
+  .expression { line-height: var(--line-height-heading); overflow-wrap: anywhere; }
+  .tree { display: flex; flex-direction: column; gap: var(--space-1); margin: var(--space-1) 0 0; padding-left: var(--space-4); border-left: 1px solid var(--color-border-strong); list-style: none; }
+  .id { color: var(--color-text-secondary); font-size: var(--font-size-caption); }
+  .muted { color: var(--color-text-secondary); }
+
+  @media (max-width: 767px) {
+    .item { padding: var(--space-4); }
+    .tree { padding-left: var(--space-3); }
+  }
+}

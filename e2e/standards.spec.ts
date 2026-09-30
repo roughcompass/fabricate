@@ -7,6 +7,11 @@ import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 
 const control = (page: Page, number: number) => page.getByRole("region", { name: new RegExp(`^Control ${number}\\b`) });
 const builder = (scope: ReturnType<typeof control>, legend: string) => scope.getByRole("group", { name: legend, exact: true });
+const toasts = (page: Page) => page.getByRole("region", { name: "Notifications" });
+const controlAction = async (page: Page, number: number, action: string) => {
+  await page.getByRole("button", { name: `Actions for Control ${number}` }).click();
+  await page.locator("[popover]:popover-open").getByRole("button", { name: action }).click();
+};
 
 test("builds, reorders, edits, and removes nested Controls in the structured editor, and saves them as data", async ({ page, db }) => {
   await page.goto("/standards");
@@ -14,7 +19,7 @@ test("builds, reorders, edits, and removes nested Controls in the structured edi
   await page.getByLabel("Name").fill("Service readiness");
   await page.getByLabel("Purpose").fill("Services can be substituted during migrations");
   await page.getByRole("button", { name: "Create Standard" }).click();
-  await expect(page.getByText("The Standard was created with an empty draft.")).toBeVisible();
+  await expect(toasts(page).getByText("Service readiness was created.")).toBeVisible();
 
   // Control 1: a repository field predicate.
   await page.getByRole("button", { name: "Add Control" }).click();
@@ -23,6 +28,7 @@ test("builds, reorders, edits, and removes nested Controls in the structured edi
   await first.getByLabel("Title").fill("Runs continuous integration");
   await first.getByLabel("Rationale").fill("Changes need automated verification.");
   await first.getByLabel("Severity").selectOption("high");
+  await expect(first.getByLabel("Severity").locator("option")).toHaveText(["Critical", "High", "Medium", "Low", "Info"]);
   const firstCondition = builder(first, "Expected condition");
   // The condition types are a closed set; there is no way to type an expression.
   await expect(firstCondition.getByLabel("Condition type").first().locator("option")).toHaveText(["Always", "A field", "All of these", "Any of these", "Not", "Every item", "At least one item", "Number of items"]);
@@ -41,26 +47,39 @@ test("builds, reorders, edits, and removes nested Controls in the structured edi
   const derivation = builder(second, "Condition 1");
   await derivation.getByLabel("Field").selectOption({ label: "Endpoint derivation" });
   await derivation.getByLabel("Operator").selectOption({ label: "is one of" });
-  await derivation.getByLabel("configured").check();
-  await derivation.getByLabel("host_provided").check();
+  await derivation.getByLabel("Configured").check();
+  await derivation.getByLabel("Host provided").check();
   await each.getByRole("button", { name: "Add condition" }).last().click();
   const contract = builder(second, "Condition 2");
   await contract.getByLabel("Field").selectOption({ label: "Contract evidence" });
   await contract.getByLabel("Operator").selectOption({ label: "equals" });
+  await expect(contract.getByLabel("Value").locator("option")).toHaveText(["Yes", "No"]);
   await contract.getByLabel("Value").selectOption("true");
+
+  // Three levels of nesting are told apart by indentation and guide lines, not boxes inside boxes.
+  const nested = await second.evaluate((section) => {
+    const boxed = (element: Element) => {
+      const style = getComputedStyle(element);
+      return ["Top", "Right", "Bottom", "Left"].every((side) => Number.parseFloat(style.getPropertyValue(`border-${side.toLowerCase()}-width`)) > 0) && !element.matches("input, select, textarea, button, [popover]");
+    };
+    return [...section.querySelectorAll("*")].filter(boxed).length;
+  });
+  expect(nested).toBe(0);
 
   // Control 3 is added and removed again.
   await page.getByRole("button", { name: "Add Control" }).click();
   await expect(control(page, 3)).toBeVisible();
-  await page.getByRole("button", { name: "Remove Control 3" }).click();
+  await controlAction(page, 3, "Remove");
   await expect(control(page, 3)).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Move Control 2 up" }).click();
+  await controlAction(page, 2, "Move up");
   await expect(control(page, 1)).toContainText("Service destinations are configurable or contracted");
   await expect(page.getByText("Unsaved changes")).toBeVisible();
   await page.getByRole("button", { name: "Save draft" }).click();
-  await expect(page.getByText("The draft is valid.")).toBeVisible();
-  await expect(page.getByText("All changes saved")).toBeVisible();
+  // The save bar is the one place that reports the save: no separate notice or toast.
+  await expect(page.getByText("All changes saved · Ready to publish")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Review and publish" })).toBeVisible();
+  await expect(toasts(page).getByText(/saved/i)).toHaveCount(0);
 
   const standard = listStandards(db)[0]!;
   const document = draftDocument(draftOf(db, standard.id)!);
@@ -79,18 +98,63 @@ test("builds, reorders, edits, and removes nested Controls in the structured edi
   });
   expect(controls[1]).toMatchObject({ severity: "high", condition: { op: "exists", selector: "repository.ci_systems" }, guidance: null });
 
-  // Editing a nested value and clearing a title: validation addresses each problem.
+  // Editing a nested value and clearing a title: the index lists where, the fields say what.
   await control(page, 2).getByLabel("Title").fill("");
-  await builder(control(page, 1), "Condition 1").getByLabel("configured").uncheck();
-  await builder(control(page, 1), "Condition 1").getByLabel("host_provided").uncheck();
+  await builder(control(page, 1), "Condition 1").getByLabel("Configured").uncheck();
+  await builder(control(page, 1), "Condition 1").getByLabel("Host provided").uncheck();
   await page.getByRole("button", { name: "Save draft" }).click();
-  const summary = page.getByRole("alert").filter({ hasText: "problems to fix before publication" });
-  await expect(summary).toContainText("Control 1 (services-configurable), Expected condition: Enter at least one value");
-  await expect(summary).toContainText("Control 2 (has-ci), Title: Enter a title");
+  const index = page.getByRole("region", { name: "Issues" });
+  await expect(index).toContainText("2 issues to fix before publication");
+  await expect(index.getByRole("button", { name: "Control 1 (services-configurable) · Expected condition" })).toBeVisible();
+  await expect(index.getByRole("button", { name: "Control 2 (has-ci) · Title" })).toBeVisible();
+  await expect(index).not.toContainText("Enter a title");
   await expect(control(page, 2).getByText("Enter a title")).toBeVisible();
+  await expect(page.getByText("All changes saved · 2 issues to fix")).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expectNoHorizontalOverflow(page);
+});
+
+test("restores a removed Control in its place with Undo", async ({ page, db }) => {
+  const { standard, draft } = createStandard(db, { name: "Engineering baseline", purpose: "Shared expectations" });
+  saveDraft(db, draft, draft.lockVersion, sampleStandard());
+  await page.goto(`/standards/${standard.publicId}/draft`);
+
+  const titleOf = (number: number) => control(page, number).locator("button[aria-expanded]");
+  const secondTitle = await titleOf(2).textContent();
+  await controlAction(page, 2, "Remove");
+  await expect(titleOf(2)).not.toHaveText(secondTitle!);
+  await toasts(page).getByRole("button", { name: "Undo" }).click();
+  await expect(titleOf(2)).toHaveText(secondTitle!);
+  await expect(page.getByText("Unsaved changes")).toBeVisible();
+});
+
+test("follows an issue link into a collapsed Control and focuses the field", async ({ page, db }) => {
+  const { standard, draft } = createStandard(db, { name: "Engineering baseline", purpose: "Shared expectations" });
+  const document = sampleStandard();
+  (document.controls as JsonObject[])[1]!.title = "";
+  saveDraft(db, draft, draft.lockVersion, document);
+  await page.goto(`/standards/${standard.publicId}/draft`);
+
+  await expect(control(page, 2).getByLabel("Title")).toBeHidden();
+  await expect(control(page, 2)).toContainText("1 issue");
+  await page.getByRole("region", { name: "Issues" }).getByRole("button", { name: /Control 2 .*· Title/ }).click();
+  await expect(control(page, 2).getByLabel("Title")).toBeFocused();
+  await expect(control(page, 2).getByText("Enter a title")).toBeVisible();
+});
+
+test("edits a Standard's name and purpose, showing a rejected field once", async ({ page, db }) => {
+  const { standard } = createStandard(db, { name: "Engineering baseline", purpose: "Shared expectations" });
+  await page.goto(`/standards/${standard.publicId}/edit`);
+  await page.getByLabel("Purpose").fill("");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByLabel("Purpose")).toBeFocused();
+  const message = await page.locator("#standard-purpose-error").textContent();
+  await expect(page.getByText(message!)).toHaveCount(1);
+
+  await page.getByLabel("Purpose").fill("Expectations every team shares");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(toasts(page).getByText("Engineering baseline was updated.")).toBeVisible();
 });
 
 test("distinguishes drafts from Releases and shows exact publication inputs before an irreversible confirmation", async ({ page, db }) => {
@@ -100,7 +164,6 @@ test("distinguishes drafts from Releases and shows exact publication inputs befo
 
   await page.goto("/standards");
   const row = page.getByRole("row", { name: /Engineering baseline/ });
-  await expect(row).toContainText("Draft");
   await expect(row).toContainText("Ready to publish");
   await expect(row).toContainText("Not published");
 
@@ -110,43 +173,43 @@ test("distinguishes drafts from Releases and shows exact publication inputs befo
   const publication = page.getByRole("region", { name: "Publication" });
   await expect(publication).toContainText(`From draft version${saved.lockVersion}`);
   await expect(publication).toContainText(preview.digest);
-  await expect(publication).toContainText("Publishing is irreversible");
   // Every Control is shown in full before publication.
   await expect(page.getByRole("article", { name: "Control services-configurable" })).toContainText("service.endpoint_derivation");
 
-  // Dismissing the confirmation publishes nothing.
-  page.once("dialog", (dialog) => void dialog.dismiss());
+  // Canceling the confirmation publishes nothing.
   await page.getByRole("button", { name: "Publish v1" }).click();
-  await expect(page.getByRole("heading", { name: "Publish Engineering baseline v1" })).toBeVisible();
+  const dialog = page.getByRole("dialog", { name: "Publish Engineering baseline v1?" });
+  await expect(dialog).toContainText(`draft version ${saved.lockVersion}`);
+  await expect(dialog).toContainText("can never be edited or deleted");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toBeHidden();
   expect(releasesOf(db, standard.id)).toHaveLength(0);
 
-  let confirmation = "";
-  page.once("dialog", (dialog) => {
-    confirmation = dialog.message();
-    void dialog.accept();
-  });
   await page.getByRole("button", { name: "Publish v1" }).click();
-  await expect(page.getByText("Release v1 was published.")).toBeVisible();
-  expect(confirmation).toContain(`draft version ${saved.lockVersion}`);
+  await dialog.getByRole("button", { name: "Publish v1" }).click();
+  await expect(toasts(page).getByText("Release v1 was published.")).toBeVisible();
   const [release] = releasesOf(db, standard.id);
   expect(release!.digest).toBe(preview.digest);
-  await expect(page.getByRole("region", { name: "Release" })).toContainText(release!.digest);
+  // The digest is technical metadata, in the details after the Controls.
+  await page.locator("summary", { hasText: "Details" }).click();
+  await expect(page.locator("details[open]")).toContainText(release!.digest);
   await expect(page.getByRole("article", { name: "Control has-ci" })).toContainText("repository.ci_systems");
 
-  await page.getByRole("link", { name: "Engineering baseline" }).first().click();
+  await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Engineering baseline" }).click();
   await expect(page.getByRole("region", { name: "Release history" })).toContainText("v1");
   await expect(page.getByRole("region", { name: "Draft" })).toContainText("There is no draft");
   await page.getByRole("button", { name: "Start a draft from v1" }).click();
-  await expect(page.getByText("A new draft was started from the Release.")).toBeVisible();
+  await expect(toasts(page).getByText("A new draft was started from the Release.")).toBeVisible();
   await expect(control(page, 1)).toBeVisible();
   expect(draftOf(db, getStandard(db, standard.publicId).id)?.basedOnReleaseId).toBe(release!.id);
 });
 
-test("refuses to offer publication for a draft with problems", async ({ page, db }) => {
+test("refuses to offer publication for a draft with problems, listing them once", async ({ page, db }) => {
   const { standard } = createStandard(db, { name: "Incomplete", purpose: "Not ready" });
 
-  await page.goto(`/standards/${standard.publicId}/publish`);
+  await page.goto(`/standards/${standard.publicId}/publish?notice=invalid`);
   await expect(page.getByText("The draft has 1 problem, so it cannot be published")).toBeVisible();
-  await expect(page.getByText("controls: Add at least one Control")).toBeVisible();
+  await expect(page.getByText("Controls: Add at least one Control")).toHaveCount(1);
+  await expect(page.getByText(/was not published/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Publish/ })).toHaveCount(0);
 });

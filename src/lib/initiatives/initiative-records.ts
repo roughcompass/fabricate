@@ -107,6 +107,12 @@ export function getInitiative(db: Executor, publicId: string): Initiative {
   return initiative;
 }
 
+export function initiativeById(db: Executor, id: number): Initiative {
+  const initiative = db.select().from(initiatives).where(eq(initiatives.id, id)).get();
+  if (!initiative) throw new NotFoundError(`Initiative ${id} does not exist`);
+  return initiative;
+}
+
 export function listInitiatives(db: Executor): Initiative[] {
   return db.select().from(initiatives).orderBy(sql`lower(${initiatives.name})`, asc(initiatives.publicId)).all();
 }
@@ -136,8 +142,8 @@ export function selectedReleases(db: Executor, initiativeId: number): { release:
 }
 
 export function scopeLabel(initiative: Initiative, selectedCount: number): string {
-  if (initiative.selectionMode === "all_enabled") return "All enabled sources";
-  return `${selectedCount} selected ${selectedCount === 1 ? "source" : "sources"}`;
+  if (initiative.selectionMode === "all_enabled") return "All enabled Sources";
+  return `${selectedCount} selected ${selectedCount === 1 ? "Source" : "Sources"}`;
 }
 
 function normalize(input: InitiativeInput): Required<InitiativeInput> {

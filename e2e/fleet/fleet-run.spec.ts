@@ -27,6 +27,7 @@ const REPOSITORIES = ["acme-platform", "legacy-portal", "mf-admin", "mf-billing"
 const ANALYTICS_CONSUMERS = ["mf-admin", "mf-billing", "mf-shell", "spa-orders", "spa-reports", "spa-root"];
 
 const header = (page: Page) => page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+const toast = (page: Page, text: string | RegExp) => page.getByRole("region", { name: "Notifications" }).getByText(text);
 const control = (page: Page, number: number) => page.getByRole("region", { name: new RegExp(`^Control ${number}\\b`) });
 const builder = (scope: ReturnType<typeof control>, legend: string) => scope.getByRole("group", { name: legend, exact: true });
 
@@ -36,17 +37,17 @@ async function newStandard(page: Page, name: string, purpose: string) {
   await page.getByLabel("Name").fill(name);
   await page.getByLabel("Purpose").fill(purpose);
   await page.getByRole("button", { name: "Create Standard" }).click();
-  await expect(page.getByText("The Standard was created with an empty draft.")).toBeVisible();
+  await expect(toast(page, `${name} was created.`)).toBeVisible();
 }
 
 async function saveAndPublish(page: Page, name: string) {
   await page.getByRole("button", { name: "Save draft" }).click();
-  await expect(page.getByText("The draft is valid.")).toBeVisible();
-  await page.getByRole("link", { name: name }).first().click();
+  await expect(page.getByText("All changes saved · Ready to publish")).toBeVisible();
   await page.getByRole("link", { name: "Review and publish" }).click();
-  page.once("dialog", (dialog) => void dialog.accept());
+  await expect(page.getByRole("heading", { level: 1, name: `Publish ${name} v1` })).toBeVisible();
   await page.getByRole("button", { name: "Publish v1" }).click();
-  await expect(page.getByText("Release v1 was published.")).toBeVisible();
+  await page.getByRole("dialog", { name: `Publish ${name} v1?` }).getByRole("button", { name: "Publish v1" }).click();
+  await expect(toast(page, "Release v1 was published.")).toBeVisible();
 }
 
 test("assesses the synthetic fleet, authors Standards in the editor, and runs a diagnostic Evaluation", async ({ page }) => {
@@ -59,7 +60,7 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await page.getByLabel("Absolute path").fill(FLEET_ROOT);
     await page.getByRole("button", { name: "Preview" }).click();
     for (const name of REPOSITORIES) await expect(page.getByRole("checkbox", { name: `Import ${name}` })).toBeChecked();
-    await page.getByRole("button", { name: "Add selected sources" }).click();
+    await page.getByRole("button", { name: `Add ${REPOSITORIES.length} Sources` }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Sources" })).toBeVisible();
     const sources = listSources(db);
     expect(sources.map((source) => source.name).sort()).toEqual(REPOSITORIES);
@@ -70,9 +71,9 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await page.goto("/initiatives/new");
     await page.getByLabel("Name").fill("Fleet baseline");
     await page.getByLabel("Objective").fill("Establish the current state of every fleet repository");
-    await page.getByRole("button", { name: "Create initiative" }).click();
-    await page.getByRole("button", { name: "Start assessment" }).click();
-    await expect(page.getByText("The assessment was started.")).toBeVisible();
+    await page.getByRole("button", { name: "Create Initiative" }).click();
+    await page.getByRole("button", { name: "Start Assessment" }).click();
+    await expect(toast(page, "Assessment #1 was started.")).toBeVisible();
     await run();
     await expect(header(page)).toContainText("Complete");
     const assessment = listAssessments(db, listInitiatives(db)[0]!.id)[0]!;
@@ -92,9 +93,9 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     const platform = (profileDocument(profiles.get("acme-platform")!).fact_document as JsonObject).service_dependencies as JsonObject[];
     expect(platform).toContainEqual(expect.objectContaining({ client: expect.objectContaining({ kind: "fetch" }), characterizable: false, endpoint: expect.objectContaining({ state: "unknown" }) }));
 
-    await page.getByRole("link", { name: "View mf-billing Profile" }).click();
+    await page.getByRole("link", { name: "mf-billing Profile" }).click();
     const analytics = page.locator("#services").getByRole("region", { name: "package:@acme/analytics", exact: true });
-    await expect(analytics).toContainText("Called through packaged");
+    await expect(analytics).toContainText("called through packaged");
     await expect(page.getByText("Static discovery does not prove entitlement, reachability, or integrated behavior", { exact: false })).toBeVisible();
   });
 
@@ -121,8 +122,8 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     const each = builder(services, "Condition every item must meet");
     await each.getByLabel("Field").selectOption({ label: "Endpoint derivation" });
     await each.getByLabel("Operator").selectOption({ label: "is one of" });
-    await each.getByLabel("configured").check();
-    await each.getByLabel("host_provided").check();
+    await each.getByLabel("Configured").check();
+    await each.getByLabel("Host provided").check();
     await saveAndPublish(page, "Fleet engineering baseline");
 
     await newStandard(page, "Fleet relationships", "Every composition resolves within the fleet");
@@ -161,7 +162,7 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await releases.getByLabel("Fleet relationships v1").check();
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.getByRole("table", { name: "Assessment history" }).getByRole("button", { name: "Start Evaluation" }).click();
-    await expect(page.getByText("The Evaluation was started.", { exact: false })).toBeVisible();
+    await expect(toast(page, "Evaluation #1 was started.")).toBeVisible();
     await run();
     await expect(header(page)).toContainText("Complete");
     await expect(page.getByRole("table", { name: "Summary by Release" }).locator("tbody tr")).toHaveCount(2);

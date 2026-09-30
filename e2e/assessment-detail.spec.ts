@@ -28,11 +28,14 @@ for (const viewport of [
     const complete = await seedAssessment(db, initiative, sources, [files("orders"), files("billing")]);
     await page.goto(`/assessments/${complete.publicId}`);
     await expect(header(page)).toContainText("Complete");
-    await expect(page.getByText("Every scoped repository was assessed.")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Assessment #1" })).toBeVisible();
+    await expect(page).toHaveTitle("Assessment #1 · Fleet assessment · Fabricate");
+    // The status says it; no alert restates it.
+    await expect(page.locator("#page-alerts")).toBeEmpty();
     await expect(scope(page).getByRole("row").filter({ hasText: "Complete" })).toHaveCount(2);
-    await expect(page.getByRole("link", { name: "View orders Profile" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Review the Relationship Map" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Cancel assessment" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "orders Profile" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Review the Relationship Map/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancel Assessment" })).toHaveCount(0);
     await expectLaidOut(page);
 
     const partial = await seedAssessment(db, initiative, sources, [files("orders"), "failed"]);
@@ -42,8 +45,8 @@ for (const viewport of [
     const failedRow = scope(page).getByRole("row").filter({ hasText: "billing" });
     await expect(failedRow).toContainText("source_unavailable");
     await expect(failedRow).toContainText("The repository could not be reached");
-    await expect(page.getByText("1 coverage gap")).toBeVisible();
-    await expect(page.getByRole("link", { name: "View orders Profile" })).toBeVisible();
+    await expect(page.getByLabel("Assessment results")).toContainText("Coverage gaps1");
+    await expect(page.getByRole("link", { name: "orders Profile" })).toBeVisible();
     await expectLaidOut(page);
 
     const failed = await seedAssessment(db, initiative, sources, ["failed", "failed"]);
@@ -58,13 +61,15 @@ for (const viewport of [
     await page.goto(`/assessments/${canceled.publicId}`);
     await expect(header(page)).toContainText("Canceled");
     await expect(page.getByText("1 completed Profile remains reviewable.", { exact: false })).toBeVisible();
-    await expect(page.getByRole("link", { name: "View orders Profile" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "orders Profile" })).toBeVisible();
     await expect(scope(page).getByRole("row").filter({ hasText: "billing" })).toContainText("Canceled");
     await expectLaidOut(page);
 
     // Every Assessment of the Initiative stays reachable from it.
     await page.goto(`/initiatives/${initiative.publicId}`);
-    for (const assessment of [complete, partial, failed, canceled]) await expect(page.getByRole("link", { name: assessment.publicId })).toBeVisible();
+    for (const [index, assessment] of [complete, partial, failed, canceled].entries()) {
+      await expect(page.getByRole("link", { name: `Assessment #${index + 1}` })).toHaveAttribute("href", `/assessments/${assessment.publicId}`);
+    }
   });
 }
 
@@ -75,14 +80,14 @@ test("records a cancellation request for an active Assessment and keeps its scop
   await page.goto(`/assessments/${assessment.publicId}`);
   await expect(scope(page)).toContainText("orders");
   await expect(scope(page)).toContainText("https://git.example.com/acme/orders.git");
-  let confirmation = "";
-  page.once("dialog", (dialog) => {
-    confirmation = dialog.message();
-    void dialog.accept();
-  });
-  await page.getByRole("button", { name: "Cancel assessment" }).click();
-  await expect(page.getByText("Cancellation was requested.", { exact: false })).toBeVisible();
-  expect(confirmation).toContain("completed Profiles are kept");
-  await expect(page.getByRole("button", { name: "Cancel assessment" })).toHaveCount(0);
-  await expect(page.getByText("Cancellation requested. Unfinished repositories stop at their next check.")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel Assessment" }).click();
+  const dialog = page.getByRole("dialog", { name: "Cancel Assessment #1?" });
+  await expect(dialog).toContainText("Completed Profiles are kept.");
+  await dialog.getByRole("button", { name: "Cancel Assessment" }).click();
+
+  // One message: the toast. The status shows Canceling, and no alert repeats the request.
+  await expect(page.getByRole("region", { name: "Notifications" }).getByText("Cancellation was requested.")).toBeVisible();
+  await expect(header(page)).toContainText("Canceling");
+  await expect(page.locator("main").getByText(/[Cc]ancellation (was )?requested/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Cancel Assessment" })).toHaveCount(0);
 });

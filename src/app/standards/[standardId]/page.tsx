@@ -1,58 +1,62 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StatusBadge } from "@/components/ui/badge";
+import { cache } from "react";
 import { ActionButton, ButtonLink } from "@/components/ui/button";
-import { Timestamp, countLabel } from "@/components/ui/format";
-import { Card, DetailsList, EmptyState, Page, PageHeader } from "@/components/ui/layout";
-import { Notice } from "@/components/ui/notice";
-import { Mono, Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { countLabel } from "@/components/ui/count";
+import { DescriptionList } from "@/components/ui/description-list";
+import { Disclosure } from "@/components/ui/disclosure";
+import { EmptyState } from "@/components/ui/empty-state";
+import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { Page, PageHeader } from "@/components/ui/page";
+import { Panel } from "@/components/ui/panel";
+import { RelativeTime } from "@/components/ui/relative-time";
+import { Section } from "@/components/ui/section";
+import { Status } from "@/components/ui/status";
+import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { ShortValue, Tag } from "@/components/ui/tag";
 import { getDb } from "@/lib/db/client";
 import { draftDocument, draftOf, findStandard, releaseDocument, releasesOf } from "@/lib/standards/standard-records";
 import { validateStandard } from "@/lib/standards/validate";
 import { reviseStandard } from "../actions";
+import { standardOutcome } from "../outcomes";
 
-export const metadata: Metadata = { title: "Standard" };
+const loadStandard = cache((publicId: string) => findStandard(getDb(), publicId));
 
-const NOTICES: Record<string, [tone: "success" | "warning" | "info", message: string]> = {
-  updated: ["success", "The Standard's name and purpose were updated. Published Releases keep the name and purpose they were published with."],
-  draft_exists: ["warning", "This Standard already has a draft. Edit or publish it before starting another revision."],
-  no_draft: ["info", "This Standard has no draft; it may have just been published."],
-};
+export async function generateMetadata({ params }: { params: Promise<{ standardId: string }> }): Promise<Metadata> {
+  const standard = loadStandard((await params).standardId);
+  return { title: standard?.name ?? "Standard not found" };
+}
+
+/** "Profile v1 · Map v1": the result schemas a Release reads. */
+function reads(profiles: string, maps: string): string {
+  const versions = (json: string) => (JSON.parse(json) as number[]).map((version) => `v${version}`).join(", ") || "none";
+  return `Profile ${versions(profiles)} · Relationship Map ${versions(maps)}`;
+}
 
 export default async function StandardPage({ params, searchParams }: { params: Promise<{ standardId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ standardId }, query] = await Promise.all([params, searchParams]);
   const db = getDb();
-  const standard = findStandard(db, standardId);
+  const standard = loadStandard(standardId);
   if (!standard) notFound();
   const draft = draftOf(db, standard.id);
   const issues = draft ? validateStandard(draftDocument(draft), { metadata: standard }) : [];
   const controls = draft ? draftDocument(draft).controls : null;
   const releases = releasesOf(db, standard.id);
-  const notice = typeof query.notice === "string" ? NOTICES[query.notice] : undefined;
 
   return (
     <Page>
       <PageHeader
+        breadcrumbs={[{ href: "/standards", label: "Standards" }]}
         title={standard.name}
-        back={{ href: "/standards", label: "Standards" }}
         description={standard.purpose}
-        actions={
-          <ButtonLink href={`/standards/${standard.publicId}/edit`} icon="edit">
-            Edit name and purpose
-          </ButtonLink>
-        }
+        secondaryActions={[{ href: `/standards/${standard.publicId}/edit`, label: "Edit name and purpose", icon: "edit" }]}
+        alerts={<OutcomeToast outcome={standardOutcome(param(query, "notice"), standard)} />}
       />
 
-      {notice && (
-        <Notice tone={notice[0]} live>
-          {notice[1]}
-        </Notice>
-      )}
-
-      <Card
+      <Section
         title="Draft"
-        description="The editable version of this Standard. Publishing it creates a new immutable Release."
+        description="The editable version of this Standard; publishing it creates a new Release."
         actions={
           draft ? (
             <>
@@ -67,65 +71,84 @@ export default async function StandardPage({ params, searchParams }: { params: P
         }
       >
         {draft ? (
-          <DetailsList
+          <DescriptionList
+            layout="columns"
             items={[
-              ["Status", <StatusBadge key="status" state="draft" />],
+              ["Status", issues.length ? <Status key="status" state="draft_problems" label={`${countLabel(issues.length, "problem")} to fix`} /> : <Status key="status" state="draft_ready" />],
               ["Controls", Array.isArray(controls) ? controls.length : 0],
-              ["Validation", issues.length ? `${countLabel(issues.length, "problem")} to fix before publication` : "Valid and ready to publish"],
-              ["Draft version", draft.lockVersion],
-              ["Last saved", <Timestamp key="saved" value={draft.updatedAt} />],
+              ["Last saved", <RelativeTime key="saved" value={draft.updatedAt} />],
             ]}
           />
-        ) : releases[0] ? (
-          <p>
-            There is no draft. To change this Standard, start a new draft from a Release; the Release itself never changes.{" "}
-          </p>
         ) : (
-          <p>There is no draft.</p>
+          <Panel flush>
+            <EmptyState
+              title="There is no draft"
+              action={
+                releases[0] && (
+                  <ActionButton action={reviseStandard.bind(null, standard.publicId, releases[0].publicId)} variant="primary" icon="edit">
+                    {`Start a draft from v${releases[0].version}`}
+                  </ActionButton>
+                )
+              }
+            >
+              To change this Standard, start a draft from a Release. The Release itself stays as it was published.
+            </EmptyState>
+          </Panel>
         )}
-        {!draft && releases[0] && <ActionButton action={reviseStandard.bind(null, standard.publicId, releases[0].publicId)} icon="edit">{`Start a draft from v${releases[0].version}`}</ActionButton>}
-      </Card>
+      </Section>
 
-      <Card title="Release history" description="Every published Release, newest first. Releases are immutable and can be selected by Initiatives." flush={releases.length > 0}>
-        {releases.length ? (
-          <Table
-            label="Releases"
-            head={
-              <>
-                <Th>Release</Th>
-                <Th>Published</Th>
-                <Th align="numeric">Controls</Th>
-                <Th>Digest</Th>
-              </>
-            }
-          >
-            {releases.map((release) => {
-              const document = releaseDocument(release);
-              return (
-                <tr key={release.publicId}>
-                  <Td label="Release">
-                    <Primary>
-                      <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{`v${release.version}`}</Link>
-                    </Primary>
-                    <Secondary>{`Reads Profile v${JSON.parse(release.profileSchemaVersions).join(", v") || "none"} · Map v${JSON.parse(release.relationshipSchemaVersions).join(", v") || "none"}`}</Secondary>
-                  </Td>
-                  <Td label="Published">
-                    <Timestamp value={release.publishedAt} />
-                  </Td>
-                  <Td label="Controls" align="numeric">
-                    {Array.isArray(document.controls) ? document.controls.length : 0}
-                  </Td>
-                  <Td label="Digest">
-                    <Mono>{release.digest.slice(0, 12)}</Mono>
-                  </Td>
-                </tr>
-              );
-            })}
-          </Table>
-        ) : (
-          <EmptyState title="Not published yet">Publish the draft to create the first Release.</EmptyState>
-        )}
-      </Card>
+      <Section title="Release history" description="Every published Release, newest first; Initiatives select Releases to evaluate against.">
+        <Panel flush>
+          {releases.length ? (
+            <Table
+              label="Releases"
+              head={
+                <>
+                  <Th>Release</Th>
+                  <Th>Published</Th>
+                  <Th align="numeric">Controls</Th>
+                  <Th>Digest</Th>
+                </>
+              }
+            >
+              {releases.map((release) => {
+                const document = releaseDocument(release);
+                return (
+                  <tr key={release.publicId}>
+                    <Td label="Release">
+                      <Primary>
+                        <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{`v${release.version}`}</Link>
+                      </Primary>
+                      <Secondary>{`Reads ${reads(release.profileSchemaVersions, release.relationshipSchemaVersions)}`}</Secondary>
+                    </Td>
+                    <Td label="Published">
+                      <RelativeTime value={release.publishedAt} />
+                    </Td>
+                    <Td label="Controls" align="numeric">
+                      {Array.isArray(document.controls) ? document.controls.length : 0}
+                    </Td>
+                    <Td label="Digest">
+                      <ShortValue value={release.digest} label="digest" />
+                    </Td>
+                  </tr>
+                );
+              })}
+            </Table>
+          ) : (
+            <EmptyState title="Not published yet">Publish the draft to create the first Release.</EmptyState>
+          )}
+        </Panel>
+      </Section>
+
+      <Disclosure summary="Details" variant="plain">
+        <DescriptionList
+          items={[
+            ["ID", <Tag key="id" copy label="ID">{standard.publicId}</Tag>],
+            ["Created", <RelativeTime key="created" value={standard.createdAt} />],
+            ...(draft ? ([["Draft version", draft.lockVersion]] as [string, React.ReactNode][]) : []),
+          ]}
+        />
+      </Disclosure>
     </Page>
   );
 }

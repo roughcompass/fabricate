@@ -1,21 +1,26 @@
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
-import { Badge } from "@/components/ui/badge";
-import { DetailsList } from "@/components/ui/layout";
+import { DescriptionList } from "@/components/ui/description-list";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Severity } from "@/components/ui/status";
+import { Tag } from "@/components/ui/tag";
 import { COLLECTION_BY_ID, SELECTOR_BY_ID } from "@/lib/standards/registry";
-import styles from "./standards.module.css";
+import styles from "./control-view.module.css";
 
-/** A complete, read-only rendering of Controls: every field, and every expression node with its registry identifier. */
+/**
+ * A complete, read-only rendering of Controls: every field, and every
+ * expression node with its registry identifier. Render it inside a flush Panel;
+ * the Controls are divided, not boxed.
+ */
 
 const COMPARATOR_WORDS: Record<string, string> = { eq: "equals", lt: "is less than", lte: "is at most", gt: "is more than", gte: "is at least" };
-const SEVERITY_TONES: Record<string, "error" | "warning" | "info" | "neutral"> = { critical: "error", high: "error", medium: "warning", low: "info", info: "neutral" };
 
 export function ControlList({ controls }: { controls: JsonValue }) {
   const list = Array.isArray(controls) ? controls : [];
-  if (!list.length) return <p className={styles.muted}>No Controls.</p>;
+  if (!list.length) return <EmptyState title="No Controls">A Standard needs at least one Control before it can be published.</EmptyState>;
   return (
-    <ol className={styles.controls}>
+    <ol className={styles.list}>
       {list.map((control, index) => (
-        <li key={index} className={styles.control}>
+        <li key={index} className={styles.item}>
           <ControlDefinition control={control} />
         </li>
       ))}
@@ -25,16 +30,16 @@ export function ControlList({ controls }: { controls: JsonValue }) {
 
 function ControlDefinition({ control }: { control: JsonValue }) {
   const value = record(control);
-  const severity = typeof value.severity === "string" ? value.severity : "unknown";
+  const key = String(value.key ?? "");
   return (
-    <article aria-label={`Control ${String(value.key ?? "")}`}>
-      <header className={styles.controlHeader}>
-        <h3 className={styles.controlTitle}>{String(value.title ?? "Untitled Control")}</h3>
-        <Badge tone={SEVERITY_TONES[severity] ?? "neutral"}>{severity}</Badge>
+    <article aria-label={`Control ${key}`} className={styles.control}>
+      <header className={styles.header}>
+        <h3 className={styles.title}>{String(value.title ?? "Untitled Control")}</h3>
+        <Severity value={typeof value.severity === "string" ? value.severity : "unknown"} />
       </header>
-      <DetailsList
+      <DescriptionList
         items={[
-          ["Key", <code key="key">{String(value.key ?? "")}</code>],
+          ["Key", <Tag key="key">{key}</Tag>],
           ["Subject", value.subject === "relationship_map" ? "The Relationship Map, once per Evaluation" : "Each assessed repository"],
           ["Rationale", String(value.rationale ?? "")],
           ["Applies when", <ExpressionView key="applicability" expression={value.applicability ?? null} />],
@@ -52,12 +57,19 @@ export function ExpressionView({ expression }: { expression: JsonValue }) {
 
 function describe(expression: JsonValue): React.ReactNode {
   const node = record(expression);
+  const identifier = (id: JsonValue | undefined) => <code className={styles.id}>{String(id ?? "")}</code>;
   const field = () => {
     const selector = typeof node.selector === "string" ? SELECTOR_BY_ID.get(node.selector) : undefined;
     return (
       <>
         <strong>{selector?.label ?? "Unknown field"}</strong>
-        {typeof node.parameter === "string" && <> of <strong>{node.parameter}</strong></>} <code className={styles.id}>{String(node.selector ?? "")}</code>
+        {typeof node.parameter === "string" && (
+          <>
+            {" "}
+            of <strong>{node.parameter}</strong>
+          </>
+        )}{" "}
+        {identifier(node.selector)}
       </>
     );
   };
@@ -76,11 +88,16 @@ function describe(expression: JsonValue): React.ReactNode {
     const definition = typeof node.collection === "string" ? COLLECTION_BY_ID.get(node.collection) : undefined;
     return (
       <>
-        <strong>{definition?.label ?? "Unknown collection"}</strong> <code className={styles.id}>{String(node.collection ?? "")}</code>
+        <strong>{definition?.label ?? "Unknown collection"}</strong> {identifier(node.collection)}
       </>
     );
   };
-  const where = () => (node.where ? <ul className={styles.tree}><li>Only those where: {describe(node.where)}</li></ul> : null);
+  const where = () =>
+    node.where ? (
+      <ul className={styles.tree}>
+        <li>Only those where: {describe(node.where)}</li>
+      </ul>
+    ) : null;
 
   switch (node.op) {
     case "always":
@@ -94,15 +111,35 @@ function describe(expression: JsonValue): React.ReactNode {
     case "exists":
       return <>{field()} is known and present</>;
     case "equals":
-      return <>{field()} is <strong>{String(node.value)}</strong></>;
+      return (
+        <>
+          {field()} is <strong>{String(node.value)}</strong>
+        </>
+      );
     case "in":
-      return <>{field()} is one of <strong>{values(node.values)}</strong></>;
+      return (
+        <>
+          {field()} is one of <strong>{values(node.values)}</strong>
+        </>
+      );
     case "compare":
-      return <>{field()} {COMPARATOR_WORDS[String(node.comparator)] ?? String(node.comparator)} <strong>{String(node.value)}</strong></>;
+      return (
+        <>
+          {field()} {COMPARATOR_WORDS[String(node.comparator)] ?? String(node.comparator)} <strong>{String(node.value)}</strong>
+        </>
+      );
     case "contains":
-      return <>{field()} contains {node.mode === "all" ? "all of" : "any of"} <strong>{values(node.values)}</strong></>;
+      return (
+        <>
+          {field()} contains {node.mode === "all" ? "all of" : "any of"} <strong>{values(node.values)}</strong>
+        </>
+      );
     case "semver_satisfies":
-      return <>{field()} satisfies <strong>{String(node.range)}</strong></>;
+      return (
+        <>
+          {field()} satisfies <strong>{String(node.range)}</strong>
+        </>
+      );
     case "every":
     case "some":
       return (

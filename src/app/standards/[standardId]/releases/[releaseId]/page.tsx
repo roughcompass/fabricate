@@ -1,63 +1,92 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { StatusBadge } from "@/components/ui/badge";
+import { cache } from "react";
 import { ActionButton } from "@/components/ui/button";
-import { Timestamp } from "@/components/ui/format";
-import { Card, DetailsList, Page, PageHeader } from "@/components/ui/layout";
-import { Notice } from "@/components/ui/notice";
+import { DescriptionList } from "@/components/ui/description-list";
+import { Disclosure } from "@/components/ui/disclosure";
+import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { Page, PageHeader } from "@/components/ui/page";
+import { Panel } from "@/components/ui/panel";
+import { RelativeTime } from "@/components/ui/relative-time";
+import { Section } from "@/components/ui/section";
+import { Status } from "@/components/ui/status";
+import { Tag } from "@/components/ui/tag";
 import { getDb } from "@/lib/db/client";
 import { draftOf, findRelease, findStandard, releaseDocument } from "@/lib/standards/standard-records";
 import { reviseStandard } from "../../../actions";
 import { ControlList } from "../../../control-view";
+import { releaseOutcome } from "../../../outcomes";
 
-export const metadata: Metadata = { title: "Standard Release" };
-
-export default async function ReleasePage({ params, searchParams }: { params: Promise<{ standardId: string; releaseId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ standardId, releaseId }, query] = await Promise.all([params, searchParams]);
+const load = cache((standardId: string, releaseId: string) => {
   const db = getDb();
   const standard = findStandard(db, standardId);
   const release = findRelease(db, releaseId);
-  if (!standard || !release || release.standardId !== standard.id) notFound();
+  return standard && release && release.standardId === standard.id ? { standard, release } : undefined;
+});
+
+export async function generateMetadata({ params }: { params: Promise<{ standardId: string; releaseId: string }> }): Promise<Metadata> {
+  const { standardId, releaseId } = await params;
+  const found = load(standardId, releaseId);
+  return { title: found ? `${found.standard.name} v${found.release.version}` : "Release not found" };
+}
+
+export default async function ReleasePage({ params, searchParams }: { params: Promise<{ standardId: string; releaseId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [{ standardId, releaseId }, query] = await Promise.all([params, searchParams]);
+  const found = load(standardId, releaseId);
+  if (!found) notFound();
+  const { standard, release } = found;
   const document = releaseDocument(release);
+  const controls = document.controls ?? [];
   const published = document.standard as { name?: string; purpose?: string } | undefined;
-  const hasDraft = Boolean(draftOf(db, standard.id));
+  const hasDraft = Boolean(draftOf(getDb(), standard.id));
+  const versions = (json: string) => (JSON.parse(json) as number[]).map((version) => `v${version}`).join(", ") || "none";
 
   return (
     <Page>
       <PageHeader
+        breadcrumbs={[
+          { href: "/standards", label: "Standards" },
+          { href: `/standards/${standard.publicId}`, label: standard.name },
+        ]}
         title={`${published?.name ?? standard.name} v${release.version}`}
-        back={{ href: `/standards/${standard.publicId}`, label: standard.name }}
-        badge={<StatusBadge state="published" />}
+        status={<Status state="published" />}
         description={published?.purpose}
-        actions={
+        extraActions={
           hasDraft ? undefined : (
             <ActionButton action={reviseStandard.bind(null, standard.publicId, release.publicId)} icon="edit">
-              Start a new draft from this Release
+              Start a draft from this Release
             </ActionButton>
           )
         }
+        alerts={<OutcomeToast outcome={releaseOutcome(param(query, "notice"), release)} />}
       />
-      {query.notice === "published" && (
-        <Notice tone="success" live>
-          {`Release v${release.version} was published. It is now immutable and can be selected by Initiatives.`}
-        </Notice>
-      )}
 
-      <Card title="Release">
-        <DetailsList
+      <Section title="Release">
+        <DescriptionList
           items={[
-            ["Published", <Timestamp key="published" value={release.publishedAt} />],
-            ["From draft version", release.draftLockVersion],
-            ["Document schema", `fabricate.standard v${release.documentSchemaVersion}`],
-            ["Reads", `Repository Profile v${JSON.parse(release.profileSchemaVersions).join(", v") || "none"}; Relationship Map v${JSON.parse(release.relationshipSchemaVersions).join(", v") || "none"}`],
-            ["Content digest", <code key="digest">{release.digest}</code>],
+            ["Published", <RelativeTime key="published" value={release.publishedAt} />],
+            ["Controls", Array.isArray(controls) ? controls.length : 0],
+            ["Reads", `Repository Profile ${versions(release.profileSchemaVersions)} · Relationship Map ${versions(release.relationshipSchemaVersions)}`],
           ]}
         />
-      </Card>
+      </Section>
 
-      <Card title="Controls" description="The complete, immutable definition of every Control in this Release.">
-        <ControlList controls={document.controls ?? []} />
-      </Card>
+      <Section title="Controls" description="The complete definition of every Control in this Release.">
+        <Panel flush>
+          <ControlList controls={controls} />
+        </Panel>
+      </Section>
+
+      <Disclosure summary="Details" variant="plain">
+        <DescriptionList
+          items={[
+            ["Content digest", <Tag key="digest" copy label="digest">{release.digest}</Tag>],
+            ["From draft version", release.draftLockVersion],
+            ["Document schema", `fabricate.standard v${release.documentSchemaVersion}`],
+            ["ID", <Tag key="id" copy label="ID">{release.publicId}</Tag>],
+          ]}
+        />
+      </Disclosure>
     </Page>
   );
 }

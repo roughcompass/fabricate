@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, lte } from "drizzle-orm";
 import type { Assessment, AssessmentTarget } from "@/lib/assessments/assessment-records";
 import { LAUNCH_TOKEN } from "@/lib/assessments/assessment-records";
 import { type Executor, immediate } from "@/lib/db/client";
@@ -115,6 +115,21 @@ export function listEvaluations(db: Executor, filter: { initiativeId?: number; a
     .where(and(...conditions))
     .orderBy(desc(evaluations.createdAt), desc(evaluations.id))
     .all();
+}
+
+/**
+ * An Evaluation's sequence number within its Initiative, counting from 1 in
+ * creation order: "Evaluation #2". Stable because Evaluations are never
+ * deleted; a change that adds deletion must persist the numbers first.
+ */
+export function evaluationNumber(db: Executor, evaluation: Pick<Evaluation, "id" | "initiativeId">): number {
+  return db.select({ value: count() }).from(evaluations).where(and(eq(evaluations.initiativeId, evaluation.initiativeId), lte(evaluations.id, evaluation.id))).get()?.value ?? 0;
+}
+
+/** The sequence number of each of an Initiative's Evaluations, by id. */
+export function evaluationNumbers(db: Executor, initiativeId: number): Map<number, number> {
+  const ids = db.select({ id: evaluations.id }).from(evaluations).where(eq(evaluations.initiativeId, initiativeId)).orderBy(asc(evaluations.id)).all();
+  return new Map(ids.map(({ id }, index) => [id, index + 1]));
 }
 
 export function evaluationReleasesOf(db: Executor, evaluationId: number): EvaluationRelease[] {

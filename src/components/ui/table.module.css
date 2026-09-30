@@ -1,46 +1,70 @@
-.wrap { overflow-x: auto; }
+@layer components {
+  /* Positioned, so visually hidden headers are clipped with the table instead of widening the page. */
+  .scroll { position: relative; overflow-x: auto; }
+  /* A scrolling table keeps each cell on one line and scrolls, rather than squeezing its columns. */
+  .scroll .table { width: max-content; min-width: 100%; }
+  .scroll .table :is(th, td), .scroll .cell { white-space: nowrap; overflow-wrap: normal; }
 
-.table {
-  width: 100%;
-  font-size: var(--text-body);
+  .table {
+    width: 100%;
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
 
-  & th, & td { padding: var(--space-3) var(--space-4); text-align: left; vertical-align: top; }
-  & th {
-    background: var(--surface-secondary);
-    color: var(--text-secondary);
-    font-size: var(--text-label);
-    font-weight: 600;
-    white-space: nowrap;
-    border-bottom: 1px solid var(--border-default);
+    & th, & td { padding: var(--space-3) var(--space-4); text-align: left; vertical-align: top; }
+    & th {
+      padding-top: var(--space-2);
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-caption);
+      font-weight: var(--font-weight-medium);
+      line-height: var(--line-height-caption);
+      white-space: nowrap;
+    }
+    & td { border-bottom: 1px solid var(--color-border-subtle); }
+    & tbody tr:last-child td { border-bottom: 0; }
+    & tbody tr { transition: background var(--duration-fast) var(--ease-standard); }
+    & tbody tr:hover { background: var(--color-bg-subtle); }
+    & tbody tr.emptyRow:hover { background: transparent; }
   }
-  & td { border-bottom: 1px solid var(--border-subtle); }
-  & tbody tr:last-child td { border-bottom: 0; }
-  & tbody tr { transition: background var(--duration-fast) ease; }
-  & tbody tr:hover { background: var(--surface-secondary); }
-}
 
-.cell { min-width: 0; }
-.numeric { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.actions { text-align: right !important; white-space: nowrap; }
-.actions .cell > * { flex-wrap: nowrap; justify-content: flex-end; }
-.primary { font-weight: 600; }
-.secondary { margin-top: 2px; color: var(--text-secondary); font-size: var(--text-label); overflow-wrap: anywhere; }
-.secondary.mono { overflow-wrap: normal; white-space: nowrap; }
-.visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.mono { font-family: var(--font-mono); font-size: var(--text-label); overflow-wrap: anywhere; }
+  /* Words and Tags break only when a line would overflow, so short names and identifiers keep their width; a mono secondary line breaks anywhere. */
+  .cell { min-width: 0; overflow-wrap: break-word; }
+  .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .table th.numeric, .table td.numeric { text-align: right; }
+  .actions { width: 1%; white-space: nowrap; }
+  .table th.actions, .table td.actions { text-align: right; }
 
-/* Rows become labelled blocks on narrow screens, so nothing scrolls sideways. */
-@media (max-width: 767px) {
-  .responsive {
-    & thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-    & tr { display: block; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); }
-    & tbody tr:last-child { border-bottom: 0; }
-    & td { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-3); padding: var(--space-1) 0; border: 0; }
-    & td::before { content: attr(data-label); color: var(--text-secondary); font-size: var(--text-label); }
-    & td.actions { display: flex; justify-content: flex-start; padding-top: var(--space-2); }
-    & td.actions .cell > * { justify-content: flex-start; }
-    & td > .cell { justify-self: start; max-width: 100%; }
-    & td.actions::before { content: none; }
-    & .numeric { text-align: left !important; }
+  .primary { font-weight: var(--font-weight-medium); }
+  .secondary { margin-top: 2px; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); overflow-wrap: break-word; }
+  .mono { font-family: var(--font-family-mono); font-size: var(--font-size-secondary); overflow-wrap: anywhere; }
+
+  /* A small control centered on the first line of text: its extra height is taken back by negative margins. */
+  .rowActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-1);
+    margin-block: calc((var(--space-5) - var(--size-control-sm)) / 2);
+  }
+
+  /* Rows become labelled blocks on narrow screens, so nothing scrolls sideways. */
+  @media (max-width: 767px) {
+    .table {
+      & thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      & tr { display: block; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
+      & tbody tr:last-child { border-bottom: 0; }
+      & td { display: grid; grid-template-columns: minmax(min-content, 2fr) minmax(0, 5fr); gap: var(--space-3); padding: var(--space-1) 0; border: 0; }
+      & td::before { content: attr(data-label); color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
+      & td:not([data-label])::before { content: none; }
+      & td:not([data-label]) { display: block; }
+      & td.actions { width: auto; }
+      & th.numeric, & td.numeric { text-align: left; }
+      & td.actions { padding-top: var(--space-2); }
+    }
+    /* A scrolling table collapses too, so its cells wrap again instead of being clipped. */
+    .scroll .table { width: 100%; }
+    .scroll .table :is(th, td), .scroll .cell { white-space: normal; overflow-wrap: break-word; }
+    .rowActions { justify-content: flex-start; margin-block: 0; }
+    .emptyRow td { display: block; }
   }
 }

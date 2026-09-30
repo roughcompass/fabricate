@@ -1,0 +1,35 @@
+@layer components {
+  .page { display: flex; flex-direction: column; gap: var(--space-8); width: 100%; min-width: 0; margin: 0 auto; }
+  .page[data-width="form"] { max-width: var(--size-form); gap: var(--space-6); }
+
+  .header { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+  .titleRow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+  .heading { display: flex; flex: 1; flex-direction: column; gap: var(--space-2); min-width: min(100%, var(--size-dialog)); }
+  .titleLine { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
+  /* The page title's type, stated here so a specimen rendered at a lower heading level looks the same. */
+  .title {
+    min-width: 0;
+    font-size: var(--font-size-title);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-title);
+    letter-spacing: var(--letter-spacing-title);
+    overflow-wrap: anywhere;
+  }
+
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .metaItem { display: inline-flex; align-items: center; gap: var(--space-2); }
+  .metaItem + .metaItem::before { content: "·"; color: var(--color-text-tertiary); }
+  .description { max-width: var(--size-prose); color: var(--color-text-secondary); }
+
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+  .always, .wide { display: contents; }
+  .narrow { display: none; }
+
+  @media (max-width: 767px) {
+    .page { gap: var(--space-6); }
+    .titleRow { flex-direction: column; align-items: stretch; }
+    .heading { min-width: 0; }
+    .wide { display: none; }
+    .narrow { display: inline-flex; }
+  }
+}

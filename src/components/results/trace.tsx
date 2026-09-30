@@ -1,17 +1,12 @@
 import type { JsonObject } from "@repo-facts/contract";
-import { Badge, type Tone } from "@/components/ui/badge";
-import type { IconName } from "@/components/ui/icon";
+import { Status } from "@/components/ui/status";
 import type { TraceNode } from "@/lib/evaluations/interpreter";
 import { COLLECTION_BY_ID, SELECTOR_BY_ID } from "@/lib/standards/registry";
 import { EvidenceList } from "./evidence";
 import styles from "./results.module.css";
 import { formatValue } from "./value";
 
-const RESULTS: Record<TraceNode["result"], [Tone, IconName, string]> = {
-  true: ["success", "checkCircle", "Holds"],
-  false: ["error", "xCircle", "Does not hold"],
-  unknown: ["warning", "help", "Unknown"],
-};
+const RESULTS: Record<TraceNode["result"], string> = { true: "holds", false: "does_not_hold", unknown: "unknown" };
 
 const INCLUDED: Record<TraceNode["result"], string> = { true: "matches the filter", false: "does not match the filter", unknown: "may match the filter" };
 
@@ -63,22 +58,19 @@ export function TraceView({ trace, records, assessmentId, label }: { trace: Trac
 }
 
 function TraceItem({ node, records, assessmentId }: { node: TraceNode; records: JsonObject; assessmentId: string }) {
-  const [tone, icon, result] = RESULTS[node.result];
   return (
-    <li>
-      <div className={styles.traceLine}>
-        <Badge tone={tone} icon={icon}>
-          {result}
-        </Badge>
+    <li className={styles.step}>
+      <div className={styles.line}>
+        <Status state={RESULTS[node.result]} />
         <span>{describe(node)}</span>
       </div>
       {"observed" in node && (
-        <div className={styles.value}>
+        <div className={styles.detail}>
           {`Observed: ${formatValue(node.observed)}`}
           {node.complete === false && " (the list may be incomplete)"}
         </div>
       )}
-      {node.count && <div>{node.count.possible === null ? `At least ${node.count.definite}; items that were not seen could add more.` : node.count.possible ? `Between ${node.count.definite} and ${node.count.definite + node.count.possible}.` : `Exactly ${node.count.definite}.`}</div>}
+      {node.count && <div className={styles.detail}>{node.count.possible === null ? `At least ${node.count.definite}; items that were not seen could add more.` : node.count.possible ? `Between ${node.count.definite} and ${node.count.definite + node.count.possible}.` : `Exactly ${node.count.definite}.`}</div>}
       {node.reason && <div className={styles.muted}>{node.reason}</div>}
       {node.evidence.length > 0 && <EvidenceList ids={node.evidence} records={records} assessmentId={assessmentId} />}
       {node.children && (
@@ -92,17 +84,13 @@ function TraceItem({ node, records, assessmentId }: { node: TraceNode; records: 
         <ul className={styles.trace}>
           {node.items.length === 0 && <li className={styles.muted}>No items.</li>}
           {node.items.map((item, index) => (
-            <li key={index}>
-              <div className={styles.traceLine}>
-                <span className={styles.value}>
+            <li key={index} className={styles.step}>
+              <div className={styles.line}>
+                <span>
                   <strong>{item.subject}</strong>
                   {item.where && ` ${INCLUDED[item.included]}`}
                 </span>
-                {item.trace && (
-                  <Badge tone={RESULTS[item.result][0]} icon={RESULTS[item.result][1]}>
-                    {RESULTS[item.result][2]}
-                  </Badge>
-                )}
+                {item.trace && <Status state={RESULTS[item.result]} />}
               </div>
               {(item.where || item.trace) && (
                 <ul className={styles.trace}>

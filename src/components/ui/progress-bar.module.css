@@ -1,0 +1,7 @@
+@layer components {
+  .progress { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+  .text { display: flex; justify-content: space-between; gap: var(--space-3); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .percent { font-variant-numeric: tabular-nums; }
+  .track { height: var(--space-1); overflow: hidden; border-radius: var(--radius-full); background: var(--color-bg-muted); }
+  .fill { height: 100%; border-radius: var(--radius-full); background: var(--color-progress); transition: width var(--duration-slow) var(--ease-standard); }
+}

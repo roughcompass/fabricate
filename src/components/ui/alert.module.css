@@ -1,0 +1,31 @@
+@layer components {
+  .slot { display: flex; flex-direction: column; gap: var(--space-3); }
+  .slot:empty { display: none; }
+
+  .alert {
+    --_border: var(--color-progress-border);
+    --_bg: var(--color-progress-bg);
+    --_tone: var(--color-progress);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--_border);
+    border-radius: var(--radius-lg);
+    background: var(--_bg);
+    color: var(--color-text);
+
+    &[data-tone="success"] { --_border: var(--color-success-border); --_bg: var(--color-success-bg); --_tone: var(--color-success); }
+    &[data-tone="warning"] { --_border: var(--color-warning-border); --_bg: var(--color-warning-bg); --_tone: var(--color-warning); }
+    &[data-tone="error"] { --_border: var(--color-error-border); --_bg: var(--color-error-bg); --_tone: var(--color-error); }
+  }
+
+  .icon { flex: none; margin-top: 2px; color: var(--_tone); }
+  /* The actions sit beside the text while it has room, then move below it, aligned with the text rather than the icon. */
+  .main { display: flex; flex: 1; flex-wrap: wrap; align-items: flex-start; gap: var(--space-2) var(--space-3); min-width: 0; }
+  .body { display: flex; flex: 1 1 var(--size-filter); flex-direction: column; gap: var(--space-1); min-width: 0; }
+  .title { font-weight: var(--font-weight-semibold); }
+  .content { display: flex; flex-direction: column; gap: var(--space-1); }
+  .content ul { margin: 0; padding-left: var(--space-5); }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+}

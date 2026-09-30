@@ -3,24 +3,25 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
+import { cache } from "react";
 import { ExpressionView } from "@/app/standards/control-view";
 import { EvidenceList } from "@/components/results/evidence";
-import styles from "@/components/results/results.module.css";
 import { TraceView } from "@/components/results/trace";
-import { StatusBadge } from "@/components/ui/badge";
-import { ShortSha } from "@/components/ui/format";
-import { Card, DetailsList, Page, PageHeader, ui } from "@/components/ui/layout";
-import { Notice } from "@/components/ui/notice";
-import { Mono } from "@/components/ui/table";
+import { DescriptionList } from "@/components/ui/description-list";
+import { Disclosure } from "@/components/ui/disclosure";
+import { Page, PageHeader } from "@/components/ui/page";
+import { Section } from "@/components/ui/section";
+import { Severity, Status } from "@/components/ui/status";
+import { ShortValue, Tag } from "@/components/ui/tag";
 import { assessmentById } from "@/lib/assessments/lookups";
 import { getDb } from "@/lib/db/client";
 import { findings } from "@/lib/db/schema";
-import { findEvaluation, findingDocument } from "@/lib/evaluations/evaluation-records";
+import { evaluationNumber, findEvaluation, findingDocument } from "@/lib/evaluations/evaluation-records";
 import type { TraceNode } from "@/lib/evaluations/interpreter";
+import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { releaseById, standardById } from "@/lib/standards/standard-records";
 import { COLLECTION_BY_ID, SELECTOR_BY_ID } from "@/lib/standards/registry";
-
-export const metadata: Metadata = { title: "Finding" };
+import styles from "./finding.module.css";
 
 type Cause = { selector: string | null; parameter: string | null; collection: string | null; reason: string };
 
@@ -30,19 +31,32 @@ function causeSubject(cause: Cause): string {
   return "The expression";
 }
 
-export default async function FindingPage({ params }: { params: Promise<{ evaluationId: string; findingId: string }> }) {
-  const { evaluationId, findingId } = await params;
+const load = cache((evaluationId: string, findingId: string) => {
   const db = getDb();
   const evaluation = findEvaluation(db, evaluationId);
-  if (!evaluation) notFound();
+  if (!evaluation) return undefined;
   const finding = db
     .select()
     .from(findings)
     .where(and(eq(findings.publicId, findingId), eq(findings.evaluationId, evaluation.id)))
     .get();
-  if (!finding) notFound();
+  if (!finding) return undefined;
+  return { evaluation, finding, document: findingDocument(finding), initiative: initiativeById(db, evaluation.initiativeId), number: evaluationNumber(db, evaluation) };
+});
 
-  const document = findingDocument(finding);
+export async function generateMetadata({ params }: { params: Promise<{ evaluationId: string; findingId: string }> }): Promise<Metadata> {
+  const { evaluationId, findingId } = await params;
+  const found = load(evaluationId, findingId);
+  if (!found) return { title: "Finding not found" };
+  return { title: `${String((found.document.control as JsonObject).title)} · ${String((found.document.subject as JsonObject).name)}` };
+}
+
+export default async function FindingPage({ params }: { params: Promise<{ evaluationId: string; findingId: string }> }) {
+  const { evaluationId, findingId } = await params;
+  const db = getDb();
+  const found = load(evaluationId, findingId);
+  if (!found) notFound();
+  const { evaluation, finding, document, initiative, number } = found;
   const control = document.control as JsonObject;
   const subject = document.subject as JsonObject;
   const release = releaseById(db, finding.standardReleaseId);
@@ -55,6 +69,7 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
   const guidance = document.guidance as JsonObject | null;
   const profile = subject.profile as JsonObject | null | undefined;
   const map = subject.map as JsonObject | null | undefined;
+  const releaseLink = <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{`${standard.name} v${release.version}`}</Link>;
   const subjectLink =
     subject.type === "repository" ? (
       profile ? (
@@ -71,74 +86,94 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
   return (
     <Page>
       <PageHeader
+        breadcrumbs={[
+          { href: "/", label: "Initiatives" },
+          { href: `/initiatives/${initiative.publicId}`, label: initiative.name },
+          { href: `/evaluations/${evaluation.publicId}`, label: `Evaluation #${number}` },
+        ]}
         title={String(control.title)}
-        back={{ href: `/evaluations/${evaluation.publicId}#findings`, label: `Evaluation ${evaluation.publicId}` }}
-        badge={<StatusBadge state={finding.outcome} />}
-        description={`${String(subject.name)}, evaluated against ${standard.name} v${release.version}.`}
+        status={<Status state={finding.outcome} />}
+        meta={[String(subject.name), releaseLink, <Severity key="severity" value={finding.severity} />]}
       />
 
-      <Card title="Result">
-        <p>{String(document.reasoning)}</p>
-        <DetailsList
+      <Section title="Result">
+        <p className={styles.reasoning}>{String(document.reasoning)}</p>
+        <DescriptionList
           items={[
-            ["Outcome", <StatusBadge key="outcome" state={finding.outcome} />],
-            ["Severity", finding.severity],
             ["Subject", subjectLink],
-            ...(typeof subject.commit === "string" ? ([["Commit", <ShortSha key="commit" sha={subject.commit} />]] as [string, React.ReactNode][]) : []),
-            ["Release", <Link key="release" href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{`${standard.name} v${release.version}`}</Link>],
-            ["Control key", <Mono key="key">{finding.controlKey}</Mono>],
-            ["Evaluator version", <Mono key="evaluator">{String(document.evaluator_version)}</Mono>],
+            ...(typeof subject.commit === "string" ? ([["Commit", <ShortValue key="commit" value={subject.commit} label="commit" />]] as [string, React.ReactNode][]) : []),
+            ["Control key", <Tag key="key">{finding.controlKey}</Tag>],
           ]}
         />
-      </Card>
+      </Section>
 
       {finding.outcome === "indeterminate" && (
-        <Card title="Why this is Indeterminate" description="Every cause that prevented a decision. Resolving any one of them may not be enough.">
+        <Section title="Why this is Indeterminate" description="Every cause that prevented a decision; resolving one of them may not be enough.">
           {causes.length ? (
             <ul className={styles.causes} aria-label="Indeterminate causes">
               {causes.map((cause, index) => (
                 <li key={index}>
                   <strong>{causeSubject(cause)}</strong>
-                  {cause.selector && <> <code className={ui.mono}>{cause.selector}</code></>}: {cause.reason}
+                  {cause.selector && (
+                    <>
+                      {" "}
+                      <code className={styles.id}>{cause.selector}</code>
+                    </>
+                  )}
+                  : {cause.reason}
                 </li>
               ))}
             </ul>
           ) : (
             <p>The evidence could not establish a result.</p>
           )}
-        </Card>
+        </Section>
       )}
 
-      <Card title="Expected state" description={String(control.rationale)}>
-        <DetailsList
+      <Section title="Expected state" description={String(control.rationale)}>
+        <DescriptionList
           items={[
             ["Applies when", <ExpressionView key="applicability" expression={control.applicability ?? null} />],
             ["Expected", <ExpressionView key="condition" expression={control.condition ?? null} />],
           ]}
         />
-      </Card>
+      </Section>
 
-      <Card title="What was observed" description="How each part of the Control was read against the Profile or Relationship Map, with the values it saw.">
-        <h3 className={styles.traceHeading}>Applicability</h3>
-        <TraceView trace={applicability} records={evidence} assessmentId={assessment.publicId} label="Applicability trace" />
-        <h3 className={styles.traceHeading}>Expected condition</h3>
-        {condition ? (
-          <TraceView trace={condition} records={evidence} assessmentId={assessment.publicId} label="Condition trace" />
-        ) : (
-          <p className={ui.muted}>{finding.outcome === "not_applicable" ? "Not evaluated, because the Control does not apply." : "Not evaluated, because whether the Control applies is unknown."}</p>
-        )}
-      </Card>
+      <Section title="What was observed" description="How each part of the Control was read against the Profile or Relationship Map, with the values it saw.">
+        <div className={styles.traces}>
+          <div>
+            <h3>Applicability</h3>
+            <TraceView trace={applicability} records={evidence} assessmentId={assessment.publicId} label="Applicability trace" />
+          </div>
+          <div>
+            <h3>Expected condition</h3>
+            {condition ? (
+              <TraceView trace={condition} records={evidence} assessmentId={assessment.publicId} label="Condition trace" />
+            ) : (
+              <p className={styles.muted}>{finding.outcome === "not_applicable" ? "Not evaluated, because the Control does not apply." : "Not evaluated, because whether the Control applies is unknown."}</p>
+            )}
+          </div>
+        </div>
+      </Section>
 
-      <Card title="Evidence" description="Every committed location the observed values came from.">
+      <Section title="Evidence" description="Every committed location the observed values came from.">
         <EvidenceList ids={Object.keys(evidence)} records={evidence} assessmentId={assessment.publicId} />
-      </Card>
+      </Section>
 
       {guidance && (
-        <Card title="Diagnostic guidance" description="Context from the Standard's author for interpreting this Control.">
+        <Section title="Diagnostic guidance" description="This guidance is diagnostic: Fabricate does not act on it, or check that following it would change this Finding.">
           <p>{String(guidance.text)}</p>
-          <Notice tone="info">This guidance is diagnostic. Fabricate does not act on it, and it does not verify that following it would change this Finding.</Notice>
-        </Card>
+        </Section>
       )}
+
+      <Disclosure summary="Details" variant="plain">
+        <DescriptionList
+          items={[
+            ["Evaluator version", String(document.evaluator_version)],
+            ["ID", <Tag key="id" copy label="ID">{finding.publicId}</Tag>],
+          ]}
+        />
+      </Disclosure>
     </Page>
   );
 }

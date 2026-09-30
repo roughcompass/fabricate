@@ -8,10 +8,13 @@ import { text, texts } from "@/lib/web/form-data";
 
 export async function importSources(formData: FormData): Promise<void> {
   const directory = text(formData, "directory", 4_096);
+  const paths = texts(formData, "paths", 4_096);
+  // Nothing selected is a mistake to correct, not a successful import of nothing.
+  if (paths.length === 0) redirect(`/sources/import?directory=${encodeURIComponent(directory)}&notice=none-selected`);
   let created = 0;
   let failed = 0;
   try {
-    const result = confirmImport(getDb(), directory, texts(formData, "paths", 4_096));
+    const result = confirmImport(getDb(), directory, paths);
     created = result.created.length;
     failed = result.failed.length;
   } catch (error) {

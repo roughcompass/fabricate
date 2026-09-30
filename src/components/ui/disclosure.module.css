@@ -1,0 +1,35 @@
+@layer components {
+  .panel, .plain { min-width: 0; }
+  .panel { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
+
+  .summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+
+    &::-webkit-details-marker { display: none; }
+    &:hover .chevron { color: var(--color-text); }
+  }
+  .panel > .summary { min-height: var(--size-control-lg); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); }
+  .panel[open] > .summary { border-bottom: 1px solid var(--color-border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .plain > .summary { color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
+  .plain > .summary:hover { color: var(--color-text); }
+
+  .chevron { flex: none; color: var(--color-text-secondary); transition: transform var(--duration-fast) var(--ease-standard); }
+  details[open] > .summary .chevron { transform: rotate(90deg); }
+  .label { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); flex: 1; min-width: 0; }
+  .aside { display: flex; flex: none; align-items: center; gap: var(--space-3); color: var(--color-text-secondary); }
+
+  .content { min-width: 0; }
+  .panel > .content { padding: var(--space-4); }
+  .plain > .content { padding-top: var(--space-3); }
+
+  /* On narrow screens the aside moves below a label that needs the room, still right-aligned. */
+  @media (max-width: 767px) {
+    .summary { flex-wrap: wrap; }
+    .aside { flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+  }
+}

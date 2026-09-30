@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { StatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { Timestamp, countLabel } from "@/components/ui/format";
-import { Card, EmptyState, Page, PageHeader } from "@/components/ui/layout";
+import { countLabel } from "@/components/ui/count";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Page, PageHeader } from "@/components/ui/page";
+import { Panel } from "@/components/ui/panel";
+import { RelativeTime } from "@/components/ui/relative-time";
+import { Status } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { getDb } from "@/lib/db/client";
 import { draftDocument, draftOf, listStandards, releasesOf } from "@/lib/standards/standard-records";
@@ -17,21 +20,18 @@ export default function StandardsPage() {
     const draft = draftOf(db, standard.id);
     return { standard, draft, problems: draft ? validateStandard(draftDocument(draft), { metadata: standard }).length : 0, releases: releasesOf(db, standard.id) };
   });
+  const create = (
+    <ButtonLink href="/standards/new" variant="primary" icon="plus">
+      New Standard
+    </ButtonLink>
+  );
 
   return (
     <Page>
-      <PageHeader
-        title="Standards"
-        description="Desired engineering state as machine-evaluable Controls. Drafts are editable; published Releases never change."
-        actions={
-          <ButtonLink href="/standards/new" variant="primary" icon="plus">
-            New Standard
-          </ButtonLink>
-        }
-      />
+      <PageHeader title="Standards" description="Desired engineering state, written as Controls that Evaluations check. Drafts are editable; publishing a draft creates a Release." primaryAction={create} />
 
-      {rows.length ? (
-        <Card flush>
+      <Panel flush>
+        {rows.length ? (
           <Table
             label="Standard Library"
             head={
@@ -52,21 +52,14 @@ export default function StandardsPage() {
                   <Secondary>{standard.purpose}</Secondary>
                 </Td>
                 <Td label="Draft">
-                  {draft ? (
-                    <>
-                      <StatusBadge state="draft" />
-                      <Secondary>{problems ? countLabel(problems, "problem") : "Ready to publish"}</Secondary>
-                    </>
-                  ) : (
-                    <Secondary>No draft</Secondary>
-                  )}
+                  {!draft ? <Status state="no_draft" /> : problems ? <Status state="draft_problems" label={countLabel(problems, "problem")} /> : <Status state="draft_ready" />}
                 </Td>
                 <Td label="Latest Release">
                   {releases[0] ? (
                     <>
-                      <StatusBadge state="published" label={`v${releases[0].version}`} />
+                      {`v${releases[0].version}`}
                       <Secondary>
-                        <Timestamp value={releases[0].publishedAt} />
+                        Published <RelativeTime value={releases[0].publishedAt} />
                       </Secondary>
                     </>
                   ) : (
@@ -79,19 +72,12 @@ export default function StandardsPage() {
               </tr>
             ))}
           </Table>
-        </Card>
-      ) : (
-        <EmptyState
-          title="No Standards yet"
-          actions={
-            <ButtonLink href="/standards/new" variant="primary" icon="plus">
-              New Standard
-            </ButtonLink>
-          }
-        >
-          Create a Standard to describe the desired state you want to compare Assessments with.
-        </EmptyState>
-      )}
+        ) : (
+          <EmptyState title="No Standards yet" icon="file" action={create}>
+            A Standard describes the desired state that Evaluations compare Assessments with.
+          </EmptyState>
+        )}
+      </Panel>
     </Page>
   );
 }

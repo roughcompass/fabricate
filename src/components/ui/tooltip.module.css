@@ -1,0 +1,31 @@
+@layer components {
+  .wrap { position: relative; display: inline-flex; border-radius: var(--radius-sm); }
+
+  .bubble {
+    position: absolute;
+    bottom: calc(100% + var(--space-1));
+    left: 50%;
+    z-index: var(--z-toast);
+    width: max-content;
+    max-width: var(--size-toast);
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-menu);
+    color: var(--color-text);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-caption);
+    white-space: normal;
+    display: none;
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+  /* An idle bubble takes no space, so it can never overflow the page; aria-describedby still announces it. */
+  .wrap:hover > .bubble, .wrap:focus-visible > .bubble, .wrap:focus-within > .bubble { display: block; animation: appear var(--duration-fast) var(--ease-standard); }
+
+  @keyframes appear {
+    from { opacity: 0; }
+  }
+}

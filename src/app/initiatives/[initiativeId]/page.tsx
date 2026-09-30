@@ -2,235 +2,266 @@ import crypto from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StatusBadge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
-import { Timestamp, countLabel } from "@/components/ui/format";
-import { Card, DetailsList, EmptyState, Page, PageHeader, ui } from "@/components/ui/layout";
-import { Notice } from "@/components/ui/notice";
-import { Mono, Secondary, Table, Td, Th } from "@/components/ui/table";
-import { listAssessments, targetsOf } from "@/lib/assessments/assessment-records";
-import { evaluationReleasesOf, listEvaluations } from "@/lib/evaluations/evaluation-records";
+import { cache } from "react";
+import { DescriptionList } from "@/components/ui/description-list";
+import { Disclosure } from "@/components/ui/disclosure";
+import { EmptyState } from "@/components/ui/empty-state";
+import { countLabel } from "@/components/ui/count";
+import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { Page, PageHeader } from "@/components/ui/page";
+import { Panel } from "@/components/ui/panel";
+import { RelativeTime } from "@/components/ui/relative-time";
+import { Section } from "@/components/ui/section";
+import { Status } from "@/components/ui/status";
+import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { Tag, TagList } from "@/components/ui/tag";
+import { assessmentNumbers, listAssessments, targetsOf } from "@/lib/assessments/assessment-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
+import { evaluationNumbers, evaluationReleasesOf, listEvaluations } from "@/lib/evaluations/evaluation-records";
 import { findInitiative, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
 import { releaseById, releaseLabel, standardById } from "@/lib/standards/standard-records";
 import { startEvaluationAction } from "../../evaluations/actions";
 import { startAssessment } from "../actions";
 import { LaunchForm } from "../launch-form";
-import styles from "../initiatives.module.css";
+import { initiativeOutcome } from "../outcomes";
 
-export const metadata: Metadata = { title: "Initiative" };
+// One lookup per request, shared by the page and its metadata.
+const loadInitiative = cache((publicId: string) => findInitiative(getDb(), publicId));
 
-const NOTICES: Record<string, [tone: "success" | "warning", message: string]> = {
-  created: ["success", "The initiative was created."],
-  updated: ["success", "The initiative was updated. Existing Assessments and Evaluations keep the scope and Releases they started with."],
-  retained: ["warning", "This initiative has Assessments, so it is retained to keep their history reviewable."],
-};
+export async function generateMetadata({ params }: { params: Promise<{ initiativeId: string }> }): Promise<Metadata> {
+  const initiative = loadInitiative((await params).initiativeId);
+  return { title: initiative?.name ?? "Initiative not found" };
+}
+
+const reusable = (state: string) => state === "complete" || state === "complete_with_issues";
 
 export default async function InitiativePage({ params, searchParams }: { params: Promise<{ initiativeId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ initiativeId }, query] = await Promise.all([params, searchParams]);
   const db = getDb();
-  const initiative = findInitiative(db, initiativeId);
+  const initiative = loadInitiative(initiativeId);
   if (!initiative) notFound();
 
   const sources = selectedSources(db, initiative.id);
   const releases = selectedReleases(db, initiative.id);
-  const assessments = listAssessments(db, initiative.id).map((assessment) => ({ assessment, targets: targetsOf(db, assessment.id) }));
+  const assessmentNumber = assessmentNumbers(db, initiative.id);
+  const evaluationNumber = evaluationNumbers(db, initiative.id);
+  const assessments = listAssessments(db, initiative.id).map((assessment) => ({
+    assessment,
+    number: assessmentNumber.get(assessment.id)!,
+    targets: targetsOf(db, assessment.id),
+  }));
   const evaluations = listEvaluations(db, { initiativeId: initiative.id }).map((evaluation) => ({
     evaluation,
-    assessment: assessments.find(({ assessment }) => assessment.id === evaluation.assessmentId)!.assessment,
+    number: evaluationNumber.get(evaluation.id)!,
+    assessment: assessments.find(({ assessment }) => assessment.id === evaluation.assessmentId)!,
     releases: evaluationReleasesOf(db, evaluation.id).map((pinned) => {
       const release = releaseById(db, pinned.standardReleaseId);
       return releaseLabel(standardById(db, release.standardId), release);
     }),
   }));
-  const reusable = (state: string) => state === "complete" || state === "complete_with_issues";
   const enabledCount = listSources(db, { enabled: true }).length;
-  const notice = typeof query.notice === "string" ? NOTICES[query.notice] : undefined;
+  const scope = initiative.selectionMode === "all_enabled" ? `${scopeLabel(initiative, 0)} (${enabledCount} now)` : scopeLabel(initiative, sources.length);
 
   return (
     <Page>
       <PageHeader
+        breadcrumbs={[{ href: "/", label: "Initiatives" }]}
         title={initiative.name}
-        back={{ href: "/", label: "Initiatives" }}
+        meta={[
+          <span key="created">
+            Created <RelativeTime value={initiative.createdAt} />
+          </span>,
+        ]}
         description={initiative.objective || undefined}
-        actions={
-          <>
-            <ButtonLink href={`/initiatives/${initiative.publicId}/edit`} icon="edit">
-              Edit
-            </ButtonLink>
-            <LaunchForm action={startAssessment.bind(null, initiative.publicId)} launchToken={crypto.randomUUID()} />
-          </>
+        secondaryActions={[
+          {
+            href: `/initiatives/${initiative.publicId}/edit`,
+            label: "Edit",
+            icon: "edit",
+          },
+        ]}
+        primaryAction={
+          <LaunchForm
+            action={startAssessment.bind(null, initiative.publicId)}
+            launchToken={crypto.randomUUID()}
+            label="Start Assessment"
+            failure="The Assessment was not started because its scope could not be resolved."
+          />
         }
+        alerts={<OutcomeToast outcome={initiativeOutcome(param(query, "notice"), initiative)} />}
       />
 
-      {notice && (
-        <Notice tone={notice[0]} live>
-          {notice[1]}
-        </Notice>
-      )}
-
-      <Card title="Scope">
-        <DetailsList
+      <Section title="Overview">
+        <DescriptionList
+          layout="columns"
           items={[
-            ["Repositories", initiative.selectionMode === "all_enabled" ? `All enabled sources (${enabledCount} now)` : scopeLabel(initiative, sources.length)],
+            ["Repositories", scope],
             ...(initiative.selectionMode === "explicit"
               ? ([
                   [
-                    "Selected",
-                    <ul key="selected" className={styles.releases}>
-                      {sources.map((source) => (
-                        <li key={source.publicId} className={styles.release}>
-                          <span>{source.name}</span>
-                          {!source.enabled && <StatusBadge state="disabled" />}
-                        </li>
+                    "Selected Sources",
+                    <span key="sources">
+                      {sources.map((source, index) => (
+                        <span key={source.publicId}>
+                          {index > 0 && ", "}
+                          {source.name}
+                          {!source.enabled && " (disabled)"}
+                        </span>
                       ))}
-                    </ul>,
+                    </span>,
                   ],
                 ] as const)
               : []),
-            ["Public id", <Mono key="id">{initiative.publicId}</Mono>],
+            [
+              "Standard Releases",
+              releases.length ? (
+                <span key="releases">
+                  {releases.map(({ release, standard }, index) => (
+                    <span key={release.publicId}>
+                      {index > 0 && ", "}
+                      <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{releaseLabel(standard, release)}</Link>
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                <span key="releases">
+                  None selected. <Link href={`/initiatives/${initiative.publicId}/edit`}>Select a Release</Link> to run Evaluations.
+                </span>
+              ),
+            ],
           ]}
         />
-      </Card>
+      </Section>
 
-      <Card
-        title="Standard Releases"
-        description={
-          releases.length
-            ? "Each selected Release is evaluated independently. Assessments never depend on these selections."
-            : "None selected. Assessments establish current state without a Standard; select a published Release to run Evaluations."
-        }
-      >
-        {releases.length > 0 && (
-          <ul className={styles.releases}>
-            {releases.map(({ release, standard }) => (
-              <li key={release.publicId} className={styles.release}>
-                <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{releaseLabel(standard, release)}</Link>
-                <Mono>{release.digest.slice(0, 12)}</Mono>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      <Section title="Assessments" description="Each Assessment keeps the scope it started with; a finished one can be evaluated again after the Release selection changes.">
+        <Panel flush>
+          {assessments.length > 0 ? (
+            <Table
+              label="Assessment history"
+              head={
+                <>
+                  <Th>Assessment</Th>
+                  <Th>Status</Th>
+                  <Th>Scope</Th>
+                  <Th>Finished</Th>
+                  <Th align="actions" hidden>
+                    Evaluate
+                  </Th>
+                </>
+              }
+            >
+              {assessments.map(({ assessment, number, targets }) => {
+                const failed = targets.filter((target) => target.state === "failed").length;
+                const canceled = targets.filter((target) => target.state === "canceled").length;
+                return (
+                  <tr key={assessment.publicId}>
+                    <Td label="Assessment">
+                      <Primary>
+                        <Link href={`/assessments/${assessment.publicId}`}>{`Assessment #${number}`}</Link>
+                      </Primary>
+                      <Secondary>
+                        Started <RelativeTime value={assessment.createdAt} />
+                      </Secondary>
+                    </Td>
+                    <Td label="Status">
+                      <Status state={assessment.state} />
+                    </Td>
+                    <Td label="Scope">{[countLabel(targets.length, "Source"), failed ? `${failed} failed` : null, canceled ? `${canceled} canceled` : null].filter(Boolean).join(" · ")}</Td>
+                    <Td label="Finished">
+                      <RelativeTime value={assessment.finishedAt} />
+                    </Td>
+                    <Td align="actions">
+                      <RowActions>
+                        {!reusable(assessment.state) ? (
+                          <Secondary>{assessment.state === "failed" || assessment.state === "canceled" ? "No results to evaluate" : "Evaluate once finished"}</Secondary>
+                        ) : releases.length === 0 ? (
+                          <Link href={`/initiatives/${initiative.publicId}/edit`}>Select a Release to evaluate</Link>
+                        ) : (
+                          <LaunchForm
+                            action={startEvaluationAction.bind(null, initiative.publicId, assessment.publicId)}
+                            launchToken={crypto.randomUUID()}
+                            label="Start Evaluation"
+                            accessibleName={`Start Evaluation of Assessment #${number}`}
+                            failure={`The Evaluation of Assessment #${number} was not started.`}
+                            variant="secondary"
+                            size="sm"
+                          />
+                        )}
+                      </RowActions>
+                    </Td>
+                  </tr>
+                );
+              })}
+            </Table>
+          ) : (
+            <EmptyState title="No Assessments yet">Start an Assessment to pin each scoped repository to a commit and profile it without running its code.</EmptyState>
+          )}
+        </Panel>
+      </Section>
 
-      <Card
-        title="Assessments"
-        description="Current-state runs, newest first. Each keeps the scope it started with, and a finished one can be evaluated again whenever the Release selection changes."
-        flush={assessments.length > 0}
-      >
-        {assessments.length > 0 ? (
-          <Table
-            label="Assessment history"
-            head={
-              <>
-                <Th>Assessment</Th>
-                <Th>Status</Th>
-                <Th>Scope</Th>
-                <Th>Started</Th>
-                <Th>Finished</Th>
-                <Th align="actions">Evaluate</Th>
-              </>
-            }
-          >
-            {assessments.map(({ assessment, targets }) => {
-              const failed = targets.filter((target) => target.state === "failed").length;
-              const canceled = targets.filter((target) => target.state === "canceled").length;
-              return (
-                <tr key={assessment.publicId}>
-                  <Td label="Assessment">
-                    <Link href={`/assessments/${assessment.publicId}`}>
-                      <Mono>{assessment.publicId}</Mono>
-                    </Link>
+      <Section title="Evaluations" description="Comparisons of an Assessment with the Standard Releases selected when each started.">
+        <Panel flush>
+          {evaluations.length > 0 ? (
+            <Table
+              label="Evaluation history"
+              head={
+                <>
+                  <Th>Evaluation</Th>
+                  <Th>Status</Th>
+                  <Th>Assessment</Th>
+                  <Th>Standard Releases</Th>
+                  <Th>Finished</Th>
+                </>
+              }
+            >
+              {evaluations.map(({ evaluation, number, assessment, releases: pinned }) => (
+                <tr key={evaluation.publicId}>
+                  <Td label="Evaluation">
+                    <Primary>
+                      <Link href={`/evaluations/${evaluation.publicId}`}>{`Evaluation #${number}`}</Link>
+                    </Primary>
                     <Secondary>
-                      <Timestamp value={assessment.createdAt} />
+                      Started <RelativeTime value={evaluation.createdAt} />
                     </Secondary>
                   </Td>
                   <Td label="Status">
-                    <StatusBadge state={assessment.state} />
+                    <Status state={evaluation.state} />
                   </Td>
-                  <Td label="Scope">
-                    {[countLabel(targets.length, "source"), failed ? `${failed} failed` : null, canceled ? `${canceled} canceled` : null].filter(Boolean).join(" · ")}
+                  <Td label="Assessment">
+                    <Link href={`/assessments/${assessment.assessment.publicId}`}>{`Assessment #${assessment.number}`}</Link>
                   </Td>
-                  <Td label="Started">
-                    <Timestamp value={assessment.startedAt} />
+                  <Td label="Standard Releases">
+                    <TagList values={pinned} />
                   </Td>
                   <Td label="Finished">
-                    <Timestamp value={assessment.finishedAt} />
-                  </Td>
-                  <Td label="Evaluate" align="actions">
-                    {!reusable(assessment.state) ? (
-                      <span className={ui.muted}>{assessment.state === "failed" || assessment.state === "canceled" ? "No results to evaluate" : "After it finishes"}</span>
-                    ) : releases.length === 0 ? (
-                      <Link href={`/initiatives/${initiative.publicId}/edit`}>Select a Release to evaluate</Link>
-                    ) : (
-                      <LaunchForm
-                        action={startEvaluationAction.bind(null, initiative.publicId, assessment.publicId)}
-                        launchToken={crypto.randomUUID()}
-                        label="Start Evaluation"
-                        failure="The Evaluation was not started."
-                        variant="secondary"
-                      />
-                    )}
+                    <RelativeTime value={evaluation.finishedAt} />
                   </Td>
                 </tr>
-              );
-            })}
-          </Table>
-        ) : (
-          <EmptyState title="Not assessed yet">Start an assessment to pin every scoped repository to a commit and analyze it without running its code.</EmptyState>
-        )}
-      </Card>
+              ))}
+            </Table>
+          ) : (
+            <EmptyState title="No Evaluations yet">
+              {releases.length ? "Start an Evaluation from a finished Assessment above." : "Select a published Standard Release, then evaluate a finished Assessment."}
+            </EmptyState>
+          )}
+        </Panel>
+      </Section>
 
-      <Card title="Evaluations" description="Diagnostic comparisons of an Assessment with the Releases selected when each started, newest first." flush={evaluations.length > 0}>
-        {evaluations.length > 0 ? (
-          <Table
-            label="Evaluation history"
-            head={
-              <>
-                <Th>Evaluation</Th>
-                <Th>Status</Th>
-                <Th>Assessment</Th>
-                <Th>Releases</Th>
-                <Th>Finished</Th>
-              </>
-            }
-          >
-            {evaluations.map(({ evaluation, assessment, releases: pinned }) => (
-              <tr key={evaluation.publicId}>
-                <Td label="Evaluation">
-                  <Link href={`/evaluations/${evaluation.publicId}`}>
-                    <Mono>{evaluation.publicId}</Mono>
-                  </Link>
-                  <Secondary>
-                    <Timestamp value={evaluation.createdAt} />
-                  </Secondary>
-                </Td>
-                <Td label="Status">
-                  <StatusBadge state={evaluation.state} />
-                </Td>
-                <Td label="Assessment">
-                  <Link href={`/assessments/${assessment.publicId}`}>
-                    <Mono>{assessment.publicId}</Mono>
-                  </Link>
-                </Td>
-                <Td label="Releases">
-                  <ul className={ui.plainList}>
-                    {pinned.map((label) => (
-                      <li key={label}>{label}</li>
-                    ))}
-                  </ul>
-                </Td>
-                <Td label="Finished">
-                  <Timestamp value={evaluation.finishedAt} />
-                </Td>
-              </tr>
-            ))}
-          </Table>
-        ) : (
-          <EmptyState title="Not evaluated yet">{releases.length ? "Start an Evaluation from a finished Assessment above." : "Select a published Standard Release, then evaluate a finished Assessment."}</EmptyState>
-        )}
-      </Card>
+      <Disclosure summary="Details" variant="plain">
+        <DescriptionList
+          items={[
+            [
+              "ID",
+              <Tag key="id" copy label="ID">
+                {initiative.publicId}
+              </Tag>,
+            ],
+            ["Created", <RelativeTime key="created" value={initiative.createdAt} />],
+            ["Updated", <RelativeTime key="updated" value={initiative.updatedAt} />],
+          ]}
+        />
+      </Disclosure>
     </Page>
   );
 }

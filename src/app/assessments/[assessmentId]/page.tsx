@@ -1,205 +1,245 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { cache } from "react";
 import { ProgressPoller } from "@/components/progress-poller";
-import { StatusBadge } from "@/components/ui/badge";
-import { ConfirmButton } from "@/components/ui/confirm-button";
-import { ShortSha, Timestamp, countLabel } from "@/components/ui/format";
-import { Card, DetailsList, Page, PageHeader, ui } from "@/components/ui/layout";
-import { Notice } from "@/components/ui/notice";
-import { Mono, Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
-import { findAssessment, snapshotOf, targetReferenceLabel, targetsOf } from "@/lib/assessments/assessment-records";
+import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { countLabel } from "@/components/ui/count";
+import { DescriptionList } from "@/components/ui/description-list";
+import { Disclosure } from "@/components/ui/disclosure";
+import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { Page, PageHeader } from "@/components/ui/page";
+import { Panel } from "@/components/ui/panel";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { RelativeTime } from "@/components/ui/relative-time";
+import { Section } from "@/components/ui/section";
+import { StatGroup } from "@/components/ui/stat-group";
+import { Status, humanize } from "@/components/ui/status";
+import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { ShortValue, Tag } from "@/components/ui/tag";
+import { assessmentNumber, findAssessment, snapshotOf, targetReferenceLabel, targetsOf } from "@/lib/assessments/assessment-records";
 import { assessmentStatus } from "@/lib/assessments/status";
 import { getDb } from "@/lib/db/client";
-import { initiatives } from "@/lib/db/schema";
 import { ASSESSMENT_MACHINE, isTerminal } from "@/lib/db/state-machines";
-import { listEvaluations } from "@/lib/evaluations/evaluation-records";
+import { evaluationNumbers, listEvaluations } from "@/lib/evaluations/evaluation-records";
+import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { profileDiagnostics, profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
 import type { MapDocument } from "@/lib/relationships/schema";
 import { cancelAssessment } from "../actions";
+import { assessmentOutcome } from "../outcomes";
 
-export const metadata: Metadata = { title: "Assessment" };
+const load = cache((publicId: string) => {
+  const db = getDb();
+  const assessment = findAssessment(db, publicId);
+  if (!assessment) return undefined;
+  return { assessment, initiative: initiativeById(db, assessment.initiativeId), number: assessmentNumber(db, assessment) };
+});
 
-const NOTICES: Record<string, [tone: "success" | "info" | "warning", message: string]> = {
-  started: ["success", "The assessment was started."],
-  "already-started": ["info", "This assessment was already started; no duplicate work was created."],
-  "cancel-requested": ["info", "Cancellation was requested. Work that has not finished stops at its next check; completed Profiles are kept."],
-  "already-finished": ["info", "The assessment had already finished, so there was nothing to cancel."],
-};
+export async function generateMetadata({ params }: { params: Promise<{ assessmentId: string }> }): Promise<Metadata> {
+  const found = load((await params).assessmentId);
+  return { title: found ? `Assessment #${found.number} · ${found.initiative.name}` : "Assessment not found" };
+}
+
+const FINISHED = new Set(["complete", "failed", "canceled"]);
 
 export default async function AssessmentPage({ params, searchParams }: { params: Promise<{ assessmentId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ assessmentId }, query] = await Promise.all([params, searchParams]);
   const db = getDb();
-  const assessment = findAssessment(db, assessmentId);
-  if (!assessment) notFound();
+  const found = load(assessmentId);
+  if (!found) notFound();
+  const { assessment, initiative, number } = found;
+  const name = `Assessment #${number}`;
 
-  const initiative = db.select().from(initiatives).where(eq(initiatives.id, assessment.initiativeId)).get()!;
   const targets = targetsOf(db, assessment.id);
   const profiles = new Map(profilesOf(db, assessment.id).map(({ profile, target }) => [target.id, profile]));
   const map = mapOf(db, assessment.id);
   const coverage = map ? (mapDocument(map) as unknown as MapDocument).coverage : null;
+  const evaluationNumber = evaluationNumbers(db, initiative.id);
   const evaluations = listEvaluations(db, { assessmentId: assessment.id });
   const status = assessmentStatus(db, assessment);
   const terminal = isTerminal(ASSESSMENT_MACHINE, assessment.state);
   const failed = targets.filter((target) => target.state === "failed");
-  const notice = typeof query.notice === "string" ? NOTICES[query.notice] : undefined;
+  const finished = targets.filter((target) => FINISHED.has(target.state)).length;
   const skippedInputs = (targetId: number) => {
     const profile = profiles.get(targetId);
     return profile ? profileDiagnostics(profileDocument(profile)).skipped.length : 0;
   };
+  const shownState = !terminal && assessment.cancelRequestedAt ? "canceling" : assessment.state;
 
   return (
     <Page>
       {!status.terminal && <ProgressPoller url={`/api/assessments/${assessment.publicId}/status`} version={status.version} />}
       <PageHeader
-        title={`Assessment ${assessment.publicId}`}
-        back={{ href: `/initiatives/${initiative.publicId}`, label: initiative.name }}
-        badge={<StatusBadge state={assessment.state} />}
-        description="Each scoped repository is pinned to a commit and analyzed without running its code. This scope was frozen when the assessment started."
-        actions={
+        breadcrumbs={[
+          { href: "/", label: "Initiatives" },
+          { href: `/initiatives/${initiative.publicId}`, label: initiative.name },
+        ]}
+        title={name}
+        status={<Status state={shownState} />}
+        meta={[
+          countLabel(targets.length, "Source"),
+          <span key="started">
+            Started <RelativeTime value={assessment.createdAt} />
+          </span>,
+          ...(assessment.finishedAt
+            ? [
+                <span key="finished">
+                  Finished <RelativeTime value={assessment.finishedAt} />
+                </span>,
+              ]
+            : []),
+        ]}
+        description="Each scoped repository is pinned to a commit and profiled without running its code."
+        extraActions={
           !terminal && !assessment.cancelRequestedAt ? (
-            <ConfirmButton action={cancelAssessment.bind(null, assessment.publicId)} fields={{}} confirmation="Cancel this assessment? Work that has not finished stops; completed Profiles are kept." icon="slash">
-              Cancel assessment
-            </ConfirmButton>
+            <ConfirmDialog action={cancelAssessment.bind(null, assessment.publicId)} trigger={{ label: "Cancel Assessment", icon: "slash" }} title={`Cancel ${name}?`} confirmLabel="Cancel Assessment" tone="danger">
+              <p>Repositories that have not finished stop at their next check. Completed Profiles are kept.</p>
+            </ConfirmDialog>
           ) : undefined
+        }
+        alerts={
+          <>
+            <OutcomeToast outcome={assessmentOutcome(param(query, "notice"), assessment, name)} />
+            {assessment.state === "complete_with_issues" && (
+              <Alert tone="warning" title={`${failed.length} of ${countLabel(targets.length, "repository", "repositories")} could not be assessed`}>
+                <p>{`${failed.map((target) => target.sourceName).join(", ")}: ${failed[0]?.failureMessage ?? "not assessed"}${failed.length > 1 ? " (and more below)" : ""}.`}</p>
+                <p>Their relationships are missing from the Relationship Map, and Evaluations treat what they could contain as unknown.</p>
+              </Alert>
+            )}
+            {assessment.state === "failed" && (
+              <Alert tone="error" title="No repository could be assessed">
+                {/* The stored reason often repeats the title; the rows below give each repository's reason. */}
+                {assessment.failureReason && !/^No repository could be assessed\.?$/i.test(assessment.failureReason) ? assessment.failureReason : "Each repository's reason is listed below."}
+              </Alert>
+            )}
+            {assessment.state === "canceled" && (
+              <Alert tone="info" title={`${countLabel(profiles.size, "completed Profile")} ${profiles.size === 1 ? "remains" : "remain"} reviewable.`}>
+                Repositories that had not finished when the Assessment was canceled were not profiled.
+              </Alert>
+            )}
+          </>
         }
       />
 
-      {notice && (
-        <Notice tone={notice[0]} live>
-          {notice[1]}
-        </Notice>
-      )}
-      {!terminal && assessment.cancelRequestedAt && (
-        <Notice tone="info" live>
-          Cancellation requested. Unfinished repositories stop at their next check.
-        </Notice>
-      )}
-      {assessment.state === "complete" && <Notice tone="success">Every scoped repository was assessed.</Notice>}
-      {assessment.state === "complete_with_issues" && (
-        <Notice tone="warning" title={`${failed.length} of ${targets.length} repositories could not be assessed`}>
-          Results from the others are available. The Relationship Map marks each missing repository as a coverage gap, and Evaluations treat what it could hold as unknown.
-        </Notice>
-      )}
-      {assessment.state === "failed" && (
-        <Notice tone="warning" title="No repository could be assessed">
-          {assessment.failureReason ?? "Every repository failed to be acquired or analyzed."}
-        </Notice>
-      )}
-      {assessment.state === "canceled" && (
-        <Notice tone="info" title="The assessment was canceled">
-          {`${countLabel(profiles.size, "completed Profile")} ${profiles.size === 1 ? "remains" : "remain"} reviewable. Repositories that had not finished were not analyzed.`}
-        </Notice>
-      )}
-
-      <Card title="Results" description="Available once repositories finish. Results never change after they are written.">
-        <DetailsList
-          items={[
-            ["Repository Profiles", `${profiles.size} of ${targets.length}`],
-            [
-              "Relationship Map",
-              map && coverage ? (
-                <span key="map">
-                  <Link href={`/assessments/${assessment.publicId}/map`}>Review the Relationship Map</Link>
-                  {coverage.gaps.length > 0 && <Secondary>{`${countLabel(coverage.gaps.length, "coverage gap")}`}</Secondary>}
-                </span>
-              ) : (
-                <span key="map" className={ui.muted}>
-                  {terminal ? "Not available" : "Written when every repository finishes"}
-                </span>
-              ),
-            ],
-            [
-              "Evaluations",
-              evaluations.length ? (
-                <ul key="evaluations" className={ui.plainList}>
-                  {evaluations.map((evaluation) => (
-                    <li key={evaluation.publicId}>
-                      <Link href={`/evaluations/${evaluation.publicId}`}>
-                        <Mono>{evaluation.publicId}</Mono>
-                      </Link>{" "}
-                      <StatusBadge state={evaluation.state} />
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <span key="evaluations" className={ui.muted}>
-                  None yet. Start one from the Initiative once this assessment finishes.
-                </span>
-              ),
-            ],
+      <Section title="Overview">
+        {!terminal && <ProgressBar value={finished} max={targets.length} label={`${finished} of ${countLabel(targets.length, "repository", "repositories")} finished`} />}
+        <StatGroup
+          label="Assessment results"
+          stats={[
+            { label: "Repository Profiles", value: `${profiles.size}/${targets.length}` },
+            map && coverage
+              ? { label: "Relationship Map", value: coverage.complete ? "Complete" : "Partial", hint: <Link href={`/assessments/${assessment.publicId}/map`}>Review the Relationship Map</Link> }
+              : { label: "Relationship Map", value: "—", hint: terminal ? "Not available" : "Written when every repository finishes" },
+            { label: "Coverage gaps", value: coverage ? coverage.gaps.length : "—" },
+            { label: "Evaluations", value: evaluations.length, hint: evaluations.length ? undefined : terminal ? "Start one from the Initiative" : "Available once finished" },
           ]}
         />
-      </Card>
+      </Section>
 
-      <Card title="Scope and progress" description="Source configuration as it was when the assessment started, and each repository's progress." flush>
-        <Table
-          label="Assessment scope"
-          head={
-            <>
-              <Th>Source</Th>
-              <Th>Clone URL</Th>
-              <Th>Reference</Th>
-              <Th>Status</Th>
-              <Th>Profile</Th>
-            </>
-          }
-        >
-          {targets.map((target) => {
-            const snapshot = snapshotOf(db, target.id);
-            const profile = profiles.get(target.id);
-            const skipped = skippedInputs(target.id);
-            return (
-              <tr key={target.publicId} id={target.publicId}>
-                <Td label="Source">
-                  <Primary>{target.sourceName}</Primary>
-                  <Secondary mono>{target.sourcePublicId}</Secondary>
-                </Td>
-                <Td label="Clone URL">
-                  <Mono>{target.cloneUrl}</Mono>
-                </Td>
-                <Td label="Reference">
-                  {target.gitRef ? <Mono>{target.gitRef}</Mono> : <span className={ui.muted}>{targetReferenceLabel(target)}</span>}
-                  {snapshot && (
+      <Section title="Repositories" description="The scope as it was when the Assessment started, and each repository's progress.">
+        <Panel flush>
+          <Table
+            label="Assessment scope"
+            head={
+              <>
+                <Th>Repository</Th>
+                <Th>Reference</Th>
+                <Th>Status</Th>
+                <Th>Profile</Th>
+              </>
+            }
+          >
+            {targets.map((target) => {
+              const snapshot = snapshotOf(db, target.id);
+              const profile = profiles.get(target.id);
+              const skipped = skippedInputs(target.id);
+              return (
+                <tr key={target.publicId} id={target.publicId}>
+                  <Td label="Repository">
+                    <Primary>{target.sourceName}</Primary>
                     <Secondary>
-                      <ShortSha sha={snapshot.commitSha} />
+                      <Tag>{target.cloneUrl}</Tag>
                     </Secondary>
-                  )}
-                </Td>
-                <Td label="Status">
-                  <StatusBadge state={target.state} />
-                  {target.failureCode && <Secondary mono>{target.failureCode}</Secondary>}
-                  {target.failureMessage && <Secondary>{target.failureMessage}</Secondary>}
-                </Td>
-                <Td label="Profile">
-                  {profile ? (
-                    <>
-                      <Link href={`/profiles/${profile.publicId}`}>{`View ${target.sourceName} Profile`}</Link>
-                      {skipped > 0 && <Secondary>{countLabel(skipped, "skipped input")}</Secondary>}
-                    </>
-                  ) : (
-                    <span className={ui.muted}>{terminal || target.state === "failed" || target.state === "canceled" ? "None" : "Pending"}</span>
-                  )}
-                </Td>
-              </tr>
-            );
-          })}
-        </Table>
-      </Card>
+                  </Td>
+                  <Td label="Reference">
+                    {target.gitRef ? <Tag>{target.gitRef}</Tag> : humanize(targetReferenceLabel(target))}
+                    {snapshot && (
+                      <Secondary>
+                        <ShortValue value={snapshot.commitSha} label="commit" />
+                      </Secondary>
+                    )}
+                  </Td>
+                  <Td label="Status">
+                    <Status state={target.state} />
+                    {target.failureMessage && <Secondary>{target.failureMessage}</Secondary>}
+                    {target.failureCode && <Secondary mono>{target.failureCode}</Secondary>}
+                  </Td>
+                  <Td label="Profile">
+                    {profile ? (
+                      <>
+                        <Link href={`/profiles/${profile.publicId}`} aria-label={`${target.sourceName} Profile`}>
+                          Profile
+                        </Link>
+                        {skipped > 0 && <Secondary>{countLabel(skipped, "skipped input")}</Secondary>}
+                      </>
+                    ) : (
+                      <Secondary>{terminal || target.state === "failed" || target.state === "canceled" ? "None" : "Pending"}</Secondary>
+                    )}
+                  </Td>
+                </tr>
+              );
+            })}
+          </Table>
+        </Panel>
+      </Section>
 
-      <Card title="Recorded inputs">
-        <DetailsList
+      {evaluations.length > 0 && (
+        <Section title="Evaluations">
+          <Panel flush>
+            <Table
+              label="Evaluations of this Assessment"
+              head={
+                <>
+                  <Th>Evaluation</Th>
+                  <Th>Status</Th>
+                  <Th>Finished</Th>
+                </>
+              }
+            >
+              {evaluations.map((evaluation) => (
+                <tr key={evaluation.publicId}>
+                  <Td label="Evaluation">
+                    <Primary>
+                      <Link href={`/evaluations/${evaluation.publicId}`}>{`Evaluation #${evaluationNumber.get(evaluation.id)}`}</Link>
+                    </Primary>
+                  </Td>
+                  <Td label="Status">
+                    <Status state={evaluation.state} />
+                  </Td>
+                  <Td label="Finished">
+                    <RelativeTime value={evaluation.finishedAt} />
+                  </Td>
+                </tr>
+              ))}
+            </Table>
+          </Panel>
+        </Section>
+      )}
+
+      <Disclosure summary="Details" variant="plain">
+        <DescriptionList
           items={[
-            ["Detector release", <Mono key="release">{assessment.detectorRelease}</Mono>],
-            ["Configuration digest", <Mono key="digest">{assessment.configurationDigest.slice(0, 12)}</Mono>],
-            ["Created", <Timestamp key="created" value={assessment.createdAt} />],
-            ["Started", <Timestamp key="started" value={assessment.startedAt} />],
-            ["Finished", <Timestamp key="finished" value={assessment.finishedAt} />],
+            ["Detector release", <Tag key="release">{assessment.detectorRelease}</Tag>],
+            ["Configuration digest", <ShortValue key="digest" value={assessment.configurationDigest} label="digest" />],
+            ["Created", <RelativeTime key="created" value={assessment.createdAt} />],
+            ["Started", <RelativeTime key="started" value={assessment.startedAt} />],
+            ["Finished", <RelativeTime key="finished" value={assessment.finishedAt} />],
+            ["ID", <Tag key="id" copy label="ID">{assessment.publicId}</Tag>],
           ]}
         />
-      </Card>
+      </Disclosure>
     </Page>
   );
 }

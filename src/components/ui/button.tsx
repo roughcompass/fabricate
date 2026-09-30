@@ -1,55 +1,63 @@
 import Link from "next/link";
-import { Icon, type IconName } from "./icon";
+import { type ButtonSize, type ButtonVariant, ButtonContent, buttonClass } from "./button-content";
+import type { IconName } from "./icon";
+import { SubmitButton } from "./submit-button";
 import styles from "./button.module.css";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
+export { type ButtonSize, type ButtonVariant, buttonClass } from "./button-content";
 
-export function buttonClass(variant: ButtonVariant = "secondary"): string {
-  return [styles.button, variant !== "secondary" && styles[variant]].filter(Boolean).join(" ");
-}
-
-interface ButtonLinkProps extends Omit<React.ComponentProps<typeof Link>, "className"> {
+interface CommonProps {
   variant?: ButtonVariant;
+  size?: ButtonSize;
   icon?: IconName;
+  /** The accessible name and tooltip of an icon-only button. */
+  label?: string;
 }
 
-export function ButtonLink({ variant, icon, children, ...props }: ButtonLinkProps) {
+type ButtonLinkProps = CommonProps & Omit<React.ComponentProps<typeof Link>, "className">;
+
+export function ButtonLink({ variant, size = "md", icon, label, children, ...props }: ButtonLinkProps) {
+  const iconOnly = !children;
   return (
-    <Link className={buttonClass(variant)} {...props}>
-      {icon && <Icon name={icon} />}
-      {children}
+    <Link className={buttonClass(variant, size, iconOnly)} aria-label={iconOnly ? label : undefined} title={iconOnly ? label : undefined} {...props}>
+      <ButtonContent icon={icon} size={size}>
+        {children}
+      </ButtonContent>
     </Link>
   );
 }
 
-interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "className"> {
-  variant?: ButtonVariant;
-  icon?: IconName;
-}
+type ButtonProps = CommonProps & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "className">;
 
-export function Button({ variant, icon, children, type = "button", ...props }: ButtonProps) {
+export function Button({ variant, size = "md", icon, label, children, type = "button", ...props }: ButtonProps) {
+  const iconOnly = !children;
   return (
-    <button type={type} className={buttonClass(variant)} {...props}>
-      {icon && <Icon name={icon} />}
-      {children}
+    <button type={type} className={buttonClass(variant, size, iconOnly)} aria-label={iconOnly ? label : undefined} title={iconOnly ? label : undefined} {...props}>
+      <ButtonContent icon={icon} size={size}>
+        {children}
+      </ButtonContent>
     </button>
   );
 }
 
-interface ActionButtonProps extends ButtonProps {
+interface ActionButtonProps extends CommonProps {
   action: (formData: FormData) => void | Promise<void>;
   /** Hidden fields submitted with the action. */
   fields?: Record<string, string>;
+  children?: React.ReactNode;
+  "aria-label"?: string;
 }
 
-/** A button that submits a Server Action through its own form; works without JavaScript. */
-export function ActionButton({ action, fields = {}, ...props }: ActionButtonProps) {
+/** A button that submits a Server Action through its own form; works without JavaScript and shows its pending state. */
+export function ActionButton({ action, fields = {}, variant = "secondary", size, icon, label, children, "aria-label": ariaLabel }: ActionButtonProps) {
   return (
     <form action={action} className={styles.inline}>
       {Object.entries(fields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <Button type="submit" {...props} />
+      <SubmitButton variant={variant} size={size} icon={icon} label={label} aria-label={ariaLabel}>
+        {children}
+      </SubmitButton>
     </form>
   );
 }

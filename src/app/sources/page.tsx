@@ -1,70 +1,85 @@
 import type { Metadata } from "next";
-import { StatusBadge } from "@/components/ui/badge";
-import { ActionButton, ButtonLink } from "@/components/ui/button";
-import { countLabel } from "@/components/ui/format";
-import { Card, Cluster, EmptyState, Page, PageHeader, TabLink, Tabs, ui } from "@/components/ui/layout";
-import { Mono, Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
+import Link from "next/link";
+import { ButtonLink } from "@/components/ui/button";
+import { countLabel } from "@/components/ui/count";
+import { EmptyState } from "@/components/ui/empty-state";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { TextInput } from "@/components/ui/form";
+import { Menu, MenuAction, MenuItem } from "@/components/ui/menu";
+import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { Page, PageHeader } from "@/components/ui/page";
+import { Panel } from "@/components/ui/panel";
+import { Status, humanize } from "@/components/ui/status";
+import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { TabLink, Tabs } from "@/components/ui/tabs";
+import { Tag } from "@/components/ui/tag";
 import { assessmentCounts } from "@/lib/catalog/catalog";
 import { listSources, sourceReferenceLabel } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { setSourceEnabled } from "./actions";
-import { ImportNotice, SourceNotice } from "./notices";
+import { sourceOutcome } from "./outcomes";
 
 export const metadata: Metadata = { title: "Sources" };
 
 const FILTERS = { enabled: true, disabled: false } as const;
 
-const single = (value: string | string[] | undefined) => (typeof value === "string" ? value : undefined);
-
 export default async function SourcesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const params = await searchParams;
-  const status = typeof params.status === "string" && params.status in FILTERS ? (params.status as keyof typeof FILTERS) : null;
+  const query = await searchParams;
+  const status = typeof query.status === "string" && Object.hasOwn(FILTERS, query.status) ? (query.status as keyof typeof FILTERS) : null;
+  const search = (param(query, "q") ?? "").trim().slice(0, 200);
   const db = getDb();
   const all = listSources(db);
-  const sources = status ? all.filter((source) => source.enabled === FILTERS[status]) : all;
+  const needle = search.toLowerCase();
+  const matching = needle ? all.filter((source) => source.name.toLowerCase().includes(needle) || source.cloneUrl.toLowerCase().includes(needle)) : all;
+  const sources = status ? matching.filter((source) => source.enabled === FILTERS[status]) : matching;
   const counts = assessmentCounts(db);
-  const enabledCount = all.filter((source) => source.enabled).length;
+  const enabledCount = matching.filter((source) => source.enabled).length;
+  const href = (next: keyof typeof FILTERS | null, query = search) => {
+    const params = new URLSearchParams({ ...(next && { status: next }), ...(query && { q: query }) });
+    return `/sources${params.size ? `?${params}` : ""}`;
+  };
+  const create = (
+    <ButtonLink href="/sources/new" variant="primary" icon="plus">
+      New Source
+    </ButtonLink>
+  );
 
   return (
     <Page>
       <PageHeader
         title="Sources"
-        description="Clonable Git repositories available to initiatives. Edits and disabling apply only to assessments started afterward."
-        actions={
-          <>
-            <ButtonLink href="/sources/import" icon="folder">
-              Import directory
-            </ButtonLink>
-            <ButtonLink href="/sources/new" variant="primary" icon="plus">
-              Add source
-            </ButtonLink>
-          </>
-        }
+        description="Git repositories available to Initiatives. Edits and disabling apply to Assessments started afterward."
+        secondaryActions={[{ href: "/sources/import", label: "Import directory", icon: "folder" }]}
+        primaryAction={create}
+        alerts={<OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"), param(query, "failed"))} />}
       />
 
-      <SourceNotice db={db} code={single(params.notice)} sourcePublicId={single(params.source)} />
-      <ImportNotice code={single(params.notice)} count={single(params.count)} failed={single(params.failed)} />
-
-      <Tabs label="Filter sources">
-        <TabLink href="/sources" active={status === null}>
-          All {all.length}
+      <Tabs
+        label="Filter Sources"
+        aside={
+          <FilterBar key={search} action="/sources" label="Search Sources" filtered={Boolean(search)} clearHref={href(status, "")} keep={status ? { status } : {}}>
+            <TextInput id="source-search" name="q" type="search" label="Search Sources" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} />
+          </FilterBar>
+        }
+      >
+        <TabLink href={href(null)} active={status === null} count={matching.length}>
+          All
         </TabLink>
-        <TabLink href="/sources?status=enabled" active={status === "enabled"}>
-          Enabled {enabledCount}
+        <TabLink href={href("enabled")} active={status === "enabled"} count={enabledCount}>
+          Enabled
         </TabLink>
-        <TabLink href="/sources?status=disabled" active={status === "disabled"}>
-          Disabled {all.length - enabledCount}
+        <TabLink href={href("disabled")} active={status === "disabled"} count={matching.length - enabledCount}>
+          Disabled
         </TabLink>
       </Tabs>
 
-      {sources.length > 0 ? (
-        <Card flush>
+      <Panel flush>
+        {sources.length > 0 ? (
           <Table
-            label="Repository sources"
+            label="Repository Sources"
             head={
               <>
                 <Th>Name</Th>
-                <Th>Clone URL</Th>
                 <Th>Reference</Th>
                 <Th>Status</Th>
                 <Th align="numeric">Assessments</Th>
@@ -77,57 +92,58 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
             {sources.map((source) => (
               <tr key={source.publicId} id={source.publicId}>
                 <Td label="Name">
-                  <Primary>{source.name}</Primary>
-                  <Secondary mono>{source.publicId}</Secondary>
+                  <Primary>
+                    <Link href={`/sources/${source.publicId}/edit`}>{source.name}</Link>
+                  </Primary>
+                  <Secondary>
+                    <Tag copy label="clone URL">
+                      {source.cloneUrl}
+                    </Tag>
+                  </Secondary>
                 </Td>
-                <Td label="Clone URL">
-                  <Mono>{source.cloneUrl}</Mono>
-                </Td>
-                <Td label="Reference">
-                  {source.gitRef ? <Mono>{source.gitRef}</Mono> : <span className={ui.muted}>{sourceReferenceLabel(source)}</span>}
-                </Td>
+                <Td label="Reference">{source.gitRef ? <Tag>{source.gitRef}</Tag> : <Secondary>{humanize(sourceReferenceLabel(source))}</Secondary>}</Td>
                 <Td label="Status">
-                  <StatusBadge state={source.enabled ? "enabled" : "disabled"} />
+                  <Status state={source.enabled ? "enabled" : "disabled"} />
                 </Td>
                 <Td label="Assessments" align="numeric">
-                  {countLabel(counts.get(source.id) ?? 0, "assessment")}
+                  {countLabel(counts.get(source.id) ?? 0, "Assessment")}
                 </Td>
                 <Td align="actions">
-                  <Cluster>
-                    <ButtonLink href={`/sources/${source.publicId}/edit`} variant="ghost" aria-label={`Edit ${source.name}`}>
-                      Edit
-                    </ButtonLink>
-                    <ActionButton
-                      action={setSourceEnabled}
-                      fields={{ publicId: source.publicId, enabled: String(!source.enabled) }}
-                      variant="ghost"
-                      aria-label={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
-                    >
-                      {source.enabled ? "Disable" : "Enable"}
-                    </ActionButton>
-                  </Cluster>
+                  <RowActions>
+                    <Menu label={`Actions for ${source.name}`}>
+                      <MenuItem href={`/sources/${source.publicId}/edit`} icon="edit">
+                        Edit
+                      </MenuItem>
+                      <MenuAction action={setSourceEnabled} fields={{ publicId: source.publicId, enabled: String(!source.enabled) }} icon={source.enabled ? "slash" : "checkCircle"}>
+                        {source.enabled ? "Disable" : "Enable"}
+                      </MenuAction>
+                    </Menu>
+                  </RowActions>
                 </Td>
               </tr>
             ))}
           </Table>
-        </Card>
-      ) : (
-        <EmptyState
-          title={status ? `No ${status} sources` : "No sources yet"}
-          actions={
-            <>
-              <ButtonLink href="/sources/import" icon="folder">
-                Import directory
-              </ButtonLink>
-              <ButtonLink href="/sources/new" variant="primary" icon="plus">
-                Add source
-              </ButtonLink>
-            </>
-          }
-        >
-          Register file://, https://, or ssh:// Git repositories, or import the Git working trees inside an allowed local directory.
-        </EmptyState>
-      )}
+        ) : search ? (
+          <EmptyState title="No matching Sources" icon="search">{`No Source name or clone URL contains “${search}”.`}</EmptyState>
+        ) : status ? (
+          <EmptyState title={`No ${status} Sources`}>{status === "disabled" ? "Every Source is enabled." : "Enable a Source to include it in Assessments."}</EmptyState>
+        ) : (
+          <EmptyState
+            title="No Sources yet"
+            icon="git"
+            action={
+              <>
+                <ButtonLink href="/sources/import" icon="folder">
+                  Import directory
+                </ButtonLink>
+                {create}
+              </>
+            }
+          >
+            Register file://, https://, or ssh:// Git repositories, or import the working trees inside an allowed local directory.
+          </EmptyState>
+        )}
+      </Panel>
     </Page>
   );
 }

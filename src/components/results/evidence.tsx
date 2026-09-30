@@ -17,7 +17,7 @@ export function evidenceLocation(record: JsonObject): string {
 
 /**
  * The evidence behind a fact, relationship, or Finding: each record's
- * committed location, detector, and rule, linked to a view of the cited lines.
+ * committed location, linked to a view of the cited lines, with its detector and rule.
  */
 export function EvidenceList({ ids, records, assessmentId }: { ids: readonly JsonValue[]; records: JsonObject; assessmentId: string }) {
   const cited = ids.map(String).filter((id) => records[id]);
@@ -28,10 +28,10 @@ export function EvidenceList({ ids, records, assessmentId }: { ids: readonly Jso
         const record = records[id] as JsonObject;
         return (
           <li key={id}>
-            <Link href={`/assessments/${assessmentId}/evidence/${id}`} className={styles.evidenceLink}>
+            <Link href={`/assessments/${assessmentId}/evidence/${id}`} className={styles.location}>
               {evidenceLocation(record)}
-            </Link>{" "}
-            <span className={styles.muted}>
+            </Link>
+            <span className={styles.source}>
               {String(record.detector)} · {String(record.rule)}
             </span>
           </li>

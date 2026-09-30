@@ -1,0 +1,147 @@
+import type { Locator, Page } from "@playwright/test";
+import { expect, test } from "./support/fixtures";
+
+/** The component gallery, and the component behavior it demonstrates. */
+
+const light = (page: Page, title: string) => page.getByRole("region", { name: `${title}, light` });
+const height = (locator: Locator) => locator.evaluate((element) => element.getBoundingClientRect().height);
+
+test("renders every component section in both themes", async ({ page }) => {
+  await page.goto("/design-system");
+  await expect(page.getByRole("heading", { level: 1, name: "Design system" })).toBeVisible();
+  const titles = await page.getByRole("list", { name: "Components" }).getByRole("link").allTextContents();
+  expect(titles.length).toBeGreaterThan(10);
+  for (const title of titles) {
+    await expect(page.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: new RegExp(`^${title}, light$`) })).toBeAttached();
+  }
+  // Bordered containers never nest.
+  expect(await page.locator("[data-panel] [data-panel]").count()).toBe(0);
+  // The dark frame resolves the dark palette while the page stays light.
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.getByRole("region", { name: "Buttons, dark" })).toHaveCSS("background-color", "rgb(17, 17, 17)");
+  await expect(light(page, "Buttons")).toHaveCSS("background-color", "rgb(250, 250, 250)");
+});
+
+test("sizes controls at 36px by default and keeps primary text on the accent readable", async ({ page }) => {
+  await page.goto("/design-system");
+  const buttons = light(page, "Buttons");
+  expect(await height(buttons.locator('[data-size-sample="md"]'))).toBe(36);
+  expect(await height(buttons.locator('[data-size-sample="sm"]'))).toBe(28);
+  await expect(buttons.getByRole("button", { name: "Primary", exact: true })).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(buttons.getByRole("link", { name: "Edit" })).toHaveCSS("text-decoration-line", "none");
+});
+
+test("draws check boxes, inputs, and selects consistently", async ({ page }) => {
+  await page.goto("/design-system");
+  const form = light(page, "Form controls");
+  const boxes = form.locator('input[type="checkbox"]');
+  const sizes = await boxes.evaluateAll((inputs) => inputs.map((input) => `${input.getBoundingClientRect().width}x${input.getBoundingClientRect().height}`));
+  expect(new Set(sizes)).toEqual(new Set(["16x16"]));
+  const input = form.getByLabel("Name", { exact: true });
+  const select = form.getByLabel("Severity");
+  expect(await height(input)).toBe(await height(select));
+  const border = (locator: Locator) => locator.evaluate((element) => getComputedStyle(element).borderTopColor);
+  expect(await border(input)).toBe(await border(select));
+});
+
+test.describe("on a touch device", () => {
+  test.use({ hasTouch: true });
+
+  test("gives every control a 44px target", async ({ page }) => {
+    await page.goto("/design-system");
+    const buttons = light(page, "Buttons");
+    expect(await height(buttons.locator('[data-size-sample="md"]'))).toBeGreaterThanOrEqual(44);
+    expect(await height(buttons.locator('[data-size-sample="sm"]'))).toBeGreaterThanOrEqual(44);
+  });
+});
+
+for (const width of [1280, 375]) {
+  test(`keeps table rows one height with and without actions at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/design-system");
+    const table = light(page, "Table");
+    // clientHeight leaves out the collapsed row border, which only the first row has.
+    const inner = (row: string) => table.locator(`[data-row-sample="${row}"] td`).first().evaluate((cell) => cell.clientHeight);
+    const withActions = await inner("actions");
+    const withoutActions = await inner("plain");
+    expect(withActions).toBe(withoutActions);
+  });
+}
+
+for (const [width, narrow] of [[1280, false], [375, true]] as const) {
+  test(`lays out the page header at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/design-system#page-header");
+    const specimen = light(page, "Page header");
+    const header = specimen.locator("header").first();
+    await expect(header.getByRole("navigation", { name: "Breadcrumb" })).toBeVisible();
+    await expect(header.getByRole("heading", { level: 3, name: "Assessment #3" })).toBeVisible();
+    await expect(header.getByRole("button", { name: "Start Assessment" })).toBeVisible();
+    if (narrow) {
+      await expect(header.getByRole("link", { name: "Edit" })).toBeHidden();
+      await header.getByRole("button", { name: "More actions" }).click();
+      await expect(page.locator("[popover]:popover-open").getByRole("link", { name: "Edit" })).toBeVisible();
+    } else {
+      await expect(header.getByRole("link", { name: "Edit" })).toBeVisible();
+      await expect(header.getByRole("button", { name: "More actions" })).toBeHidden();
+    }
+  });
+}
+
+test("opens a menu inside a scrolling table without clipping, and closes it on Escape and an outside click", async ({ page }) => {
+  await page.goto("/design-system");
+  const table = light(page, "Table");
+  const trigger = table.getByRole("button", { name: "Actions in a scrolling table, light" });
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+  const item = page.getByRole("link", { name: "Open Release" }).first();
+  await expect(item).toBeVisible();
+  // The item is the topmost element at its own center: nothing clips or covers it.
+  const box = (await item.boundingBox())!;
+  const topmost = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.textContent, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+  expect(topmost).toBe("Open Release");
+
+  await page.keyboard.press("Escape");
+  await expect(item).toBeHidden();
+  await trigger.click();
+  await expect(item).toBeVisible();
+  await page.mouse.click(5, 5);
+  await expect(item).toBeHidden();
+});
+
+test("copies a digest's full value", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/design-system");
+  const sample = light(page, "Tags and copy").locator("[data-copy-sample]");
+  await sample.getByRole("button", { name: "Copy digest" }).click();
+  await expect(sample.getByRole("button", { name: "Copied" })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("4807ba9e52ea3f1c9d0b7a6e5f4c3b2a1908f7e6d5c4b3a291807f6e5d4c3b2a");
+});
+
+test("applies a filter as soon as it changes and offers to clear it", async ({ page }) => {
+  await page.goto("/design-system");
+  const bar = page.getByRole("form", { name: "Filter demo" });
+  await expect(bar.getByRole("button", { name: "Apply" })).toBeHidden();
+  await bar.getByLabel("Tone").selectOption("error");
+  await expect(page).toHaveURL(/tone=error/);
+  await expect(page.getByText("Filtered to error")).toBeVisible();
+  await page.getByRole("link", { name: "Clear filters" }).click();
+  await expect(page.getByText("No filter")).toBeVisible();
+});
+
+test.describe("without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("opens a menu and applies filters with the Apply button", async ({ page }) => {
+    await page.goto("/design-system");
+    await light(page, "Menu").getByRole("button", { name: "Row actions, light" }).click();
+    await expect(page.getByRole("link", { name: "Edit" }).filter({ visible: true }).first()).toBeVisible();
+
+    const bar = page.getByRole("form", { name: "Filter demo" });
+    await bar.getByLabel("Tone").selectOption("success");
+    await bar.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/tone=success/);
+    await expect(page.getByText("Filtered to success")).toBeVisible();
+  });
+});

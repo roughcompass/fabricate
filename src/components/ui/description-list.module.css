@@ -1,0 +1,17 @@
+@layer components {
+  .rows { display: grid; grid-template-columns: minmax(var(--size-label), max-content) minmax(0, 1fr); gap: var(--space-3) var(--space-6); }
+  .rows .item { display: contents; }
+
+  .columns { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--size-filter)), 1fr)); gap: var(--space-5) var(--space-6); }
+  .columns .item { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+
+  .term { color: var(--color-text-secondary); }
+  .columns .term { font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .value { min-width: 0; overflow-wrap: anywhere; }
+  .empty { color: var(--color-text-tertiary); }
+
+  @media (max-width: 767px) {
+    .rows { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+    .rows .item + .item .term { margin-top: var(--space-3); }
+  }
+}

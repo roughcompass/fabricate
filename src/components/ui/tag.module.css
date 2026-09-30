@@ -1,0 +1,22 @@
+@layer components {
+  .wrap { display: inline-flex; align-items: center; gap: 2px; min-width: 0; max-width: 100%; vertical-align: middle; }
+
+  /* A value breaks only where it would overflow, so a table column is never squeezed below its identifiers' width. */
+  .tag, .sans {
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-muted);
+    color: var(--color-text);
+    font-size: var(--font-size-secondary);
+    line-height: var(--line-height-secondary);
+    overflow-wrap: break-word;
+  }
+  .tag { font-family: var(--font-family-mono); }
+  .sans { padding: 0 var(--space-2); border: 1px solid var(--color-border); background: var(--color-bg-subtle); }
+
+  .list { display: inline-flex; flex-wrap: wrap; gap: var(--space-1); min-width: 0; max-width: 100%; }
+  .empty { color: var(--color-text-secondary); }
+}

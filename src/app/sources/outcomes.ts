@@ -1,0 +1,48 @@
+import { countLabel } from "@/components/ui/count";
+import type { Outcome } from "@/components/ui/outcome-toast";
+import { findEnabledSourceByCanonicalUrl, findSource } from "@/lib/catalog/source-records";
+import type { Executor } from "@/lib/db/client";
+
+/**
+ * Messages for the outcome codes catalog actions redirect with. The URL carries
+ * only a code, a Source ID, and counts; the text is built here from the
+ * records, so a crafted link cannot inject text. An unknown code shows nothing.
+ */
+export function sourceOutcome(db: Executor, code: string | undefined, sourcePublicId: string | undefined, count: string | undefined, failed: string | undefined): Outcome | undefined {
+  if (code === "imported" || code === "import-partial") {
+    const created = Number.parseInt(count ?? "0", 10) || 0;
+    const failures = Number.parseInt(failed ?? "0", 10) || 0;
+    if (failures === 0) return { id: `imported:${created}`, tone: "success", title: `Added ${countLabel(created, "Source")}.` };
+    return {
+      id: `import-partial:${created}:${failures}`,
+      tone: "warning",
+      title: `Added ${created} of ${countLabel(created + failures, "selected Source")}.`,
+      description: `${countLabel(failures, "candidate")} could not be added. Preview the directory again to see why.`,
+    };
+  }
+
+  const source = sourcePublicId ? findSource(db, sourcePublicId) : undefined;
+  if (!code || !source) return undefined;
+  const id = `${code}:${source.publicId}`;
+  switch (code) {
+    case "added":
+      return { id, tone: "success", title: `${source.name} was added.` };
+    case "updated":
+      return { id, tone: "success", title: `${source.name} was updated.`, description: "Running and past Assessments keep the configuration they started with." };
+    case "enabled":
+      return { id, tone: "success", title: `${source.name} is enabled for future Assessments.` };
+    case "disabled":
+      return { id, tone: "success", title: `${source.name} is disabled.`, description: "Past Assessments that included it are unchanged." };
+    case "enable-conflict": {
+      const existing = findEnabledSourceByCanonicalUrl(db, source.canonicalUrl, source.id);
+      return {
+        id,
+        tone: "error",
+        title: `${source.name} could not be enabled.`,
+        description: existing ? `Its clone URL is already registered as ${existing.name}. Disable that Source first.` : "Another enabled Source has the same clone URL.",
+      };
+    }
+    default:
+      return undefined;
+  }
+}

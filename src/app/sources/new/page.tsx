@@ -1,21 +1,15 @@
 import type { Metadata } from "next";
-import { Card, Page, PageHeader } from "@/components/ui/layout";
+import { Page, PageHeader } from "@/components/ui/page";
 import { createSource } from "../actions";
 import { SourceForm } from "../source-form";
 
-export const metadata: Metadata = { title: "Add source" };
+export const metadata: Metadata = { title: "New Source" };
 
 export default function NewSourcePage() {
   return (
-    <Page width="narrow">
-      <PageHeader
-        title="Add source"
-        back={{ href: "/sources", label: "Sources" }}
-        description="Register a Git repository. Local file:// sources must resolve inside an allowed source root."
-      />
-      <Card>
-        <SourceForm action={createSource} initial={{ values: { name: "", cloneUrl: "", gitRef: "" }, errors: {} }} submitLabel="Add source" />
-      </Card>
+    <Page width="form">
+      <PageHeader breadcrumbs={[{ href: "/sources", label: "Sources" }]} title="New Source" description="Register a Git repository. A local file:// Source must be inside an allowed source root." />
+      <SourceForm action={createSource} initial={{ values: { name: "", cloneUrl: "", gitRef: "" }, errors: {} }} submitLabel="Create Source" />
     </Page>
   );
 }

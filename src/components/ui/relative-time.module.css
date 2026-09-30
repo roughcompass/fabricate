@@ -1,0 +1,4 @@
+@layer components {
+  .time { white-space: nowrap; text-decoration: underline dotted var(--color-border-strong); text-underline-offset: 2px; cursor: default; }
+  .empty { color: var(--color-text-tertiary); }
+}

@@ -1,0 +1,110 @@
+@layer pages {
+  .editor { display: flex; flex-direction: column; gap: var(--space-4); }
+
+  /* The issue index: where each problem is, as links; the messages stay beside their fields. */
+  .issues {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-warning-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-warning-bg);
+  }
+  .issuesTitle { display: flex; align-items: center; gap: var(--space-2); font-weight: var(--font-weight-semibold); }
+  .issuesTitle svg { color: var(--color-warning); }
+  .issueList { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; list-style: none; }
+  .issueLink {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-link);
+    font-size: var(--font-size-secondary);
+    line-height: var(--line-height-secondary);
+    text-align: left;
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+    &:hover { color: var(--color-accent-hover); }
+  }
+
+  .controls { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+
+  .control { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
+  .control[data-invalid] { border-color: var(--color-warning-border); }
+  .controlHeader { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2); }
+  .toggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    min-height: var(--size-control-md);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text);
+    text-align: left;
+    &:hover { background: var(--color-bg-subtle); }
+  }
+  .chevron { flex: none; color: var(--color-text-secondary); transition: transform var(--duration-fast) var(--ease-standard); }
+  .toggle[aria-expanded="true"] .chevron { transform: rotate(90deg); }
+  .controlText { display: flex; flex: 1; align-items: center; gap: var(--space-2); min-width: 0; }
+  .controlLabel { display: flex; flex: none; align-items: center; gap: var(--space-2); max-width: 100%; }
+  .controlName { flex: none; color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
+  .controlTitle { min-width: 0; overflow: hidden; font-weight: var(--font-weight-medium); text-overflow: ellipsis; white-space: nowrap; }
+  .untitled { color: var(--color-text-tertiary); font-weight: var(--font-weight-regular); }
+  .controlMeta { display: flex; flex: none; align-items: center; gap: var(--space-3); }
+  .issueCount { color: var(--color-warning); font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); }
+
+  .controlBody { display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-5); border-top: 1px solid var(--color-border); }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--size-filter)), 1fr)); gap: var(--space-4); align-items: start; }
+  .fieldError { color: var(--color-error); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+
+  /* The condition builder: nesting shown by indentation and a guide line, never boxes inside boxes. */
+  .node { position: relative; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; margin: 0; padding: 0; border: 0; }
+  .nodeLegend { margin-bottom: var(--space-2); padding: 0; color: var(--color-text); font-weight: var(--font-weight-medium); }
+  .node[data-depth="1"] > .nodeLegend { font-weight: var(--font-weight-semibold); }
+  .node:not([data-depth="1"]) > .nodeLegend { color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
+  .remove { position: absolute; top: calc(-1 * var(--space-1)); right: 0; }
+  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--size-filter)), 1fr)); gap: var(--space-3); align-items: start; }
+  .children { display: flex; flex-direction: column; gap: var(--space-4); padding-left: var(--space-4); border-left: 1px solid var(--color-border-strong); }
+  .values { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; border: 0; }
+  .valuesLegend { padding: 0; margin-bottom: var(--space-1); font-weight: var(--font-weight-medium); }
+  .valueList { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+  /* The save bar: the single place for save and validity status. */
+  .savebar {
+    position: sticky;
+    bottom: var(--space-4);
+    z-index: var(--z-sticky);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-toast);
+  }
+  .saveStatus { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+  .saveError { color: var(--color-error); }
+  .saveActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+  @media (max-width: 767px) {
+    /* The name and key over the title, which wraps rather than truncating; the severity and menu stay beside them. */
+    .toggle { padding-block: var(--space-1); }
+    .controlText { flex-direction: column; align-items: flex-start; gap: 2px; }
+    .controlLabel { flex-wrap: wrap; }
+    .controlTitle { white-space: normal; }
+    .controlBody { padding: var(--space-4); }
+    .children { padding-left: var(--space-3); }
+    .savebar { bottom: var(--space-2); }
+    .saveActions { width: 100%; justify-content: flex-end; }
+  }
+}

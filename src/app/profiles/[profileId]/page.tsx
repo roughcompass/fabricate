@@ -2,21 +2,30 @@ import { type JsonObject, type JsonValue, SHARED_CATEGORIES } from "@repo-facts/
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { EvidenceList } from "@/components/results/evidence";
-import styles from "@/components/results/results.module.css";
 import { factText, formatValue } from "@/components/results/value";
-import { Badge, StatusBadge } from "@/components/ui/badge";
-import { ShortSha, Timestamp, countLabel } from "@/components/ui/format";
-import { Card, DetailsList, Page, PageHeader, Stat, ui } from "@/components/ui/layout";
-import { Notice } from "@/components/ui/notice";
-import { Mono, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { Alert } from "@/components/ui/alert";
+import { countLabel } from "@/components/ui/count";
+import { DescriptionList } from "@/components/ui/description-list";
+import { Disclosure } from "@/components/ui/disclosure";
+import { Page, PageHeader } from "@/components/ui/page";
+import { Panel } from "@/components/ui/panel";
+import { RelativeTime } from "@/components/ui/relative-time";
+import { Section } from "@/components/ui/section";
+import { SectionNav } from "@/components/ui/section-nav";
+import { StatGroup } from "@/components/ui/stat-group";
+import { Status, diagnosticReason } from "@/components/ui/status";
+import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { ShortValue, Tag } from "@/components/ui/tag";
+import { assessmentNumber } from "@/lib/assessments/assessment-records";
 import { assessmentById } from "@/lib/assessments/lookups";
 import { getDb } from "@/lib/db/client";
 import { assessmentTargets } from "@/lib/db/schema";
+import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { findProfile, latestProfileOfSource, profileDiagnostics, profileDocument } from "@/lib/profiles/profile-records";
 import { eq } from "drizzle-orm";
-
-export const metadata: Metadata = { title: "Repository Profile" };
+import styles from "./profile.module.css";
 
 type Fact = { key: string; state: string; value: JsonValue; evidence: JsonValue[]; reasoning?: string; candidates?: { value: JsonValue; evidence: JsonValue[] }[] };
 type Category = { state: string; facts: Fact[]; search: { complete: boolean; skipped: string[]; surface: string[]; rules: string[] } };
@@ -36,13 +45,35 @@ const SERVICE_FACTS: [key: string, label: string][] = [
   ["substitutes", "Test substitutes"],
 ];
 
+const load = cache((publicId: string) => {
+  const db = getDb();
+  const profile = findProfile(db, publicId);
+  if (!profile) return undefined;
+  const target = db.select().from(assessmentTargets).where(eq(assessmentTargets.id, profile.assessmentTargetId)).get()!;
+  const assessment = assessmentById(db, profile.assessmentId);
+  return { profile, target, assessment, initiative: initiativeById(db, assessment.initiativeId), number: assessmentNumber(db, assessment) };
+});
+
+export async function generateMetadata({ params }: { params: Promise<{ profileId: string }> }): Promise<Metadata> {
+  const found = load((await params).profileId);
+  return { title: found ? `${found.target.sourceName} · Assessment #${found.number}` : "Profile not found" };
+}
+
+/** Why a category has no facts, in one sentence. */
+function emptyReason(category: Category | undefined): string {
+  if (category?.state === "absent") {
+    return category.search.surface.length ? `None detected after a complete search of ${countLabel(category.search.surface.length, "input")}.` : "None detected: no input this category reads exists in this commit.";
+  }
+  if (category?.search.skipped.length) return `Unknown: ${countLabel(category.search.skipped.length, "relevant input")} could not be read or understood, so an absence cannot be claimed. ${category.search.skipped.join(", ")}`;
+  return "Unknown: no bounded search can establish this category from committed files, or none of its searches was complete.";
+}
+
 export default async function ProfilePage({ params }: { params: Promise<{ profileId: string }> }) {
   const { profileId } = await params;
   const db = getDb();
-  const profile = findProfile(db, profileId);
-  if (!profile) notFound();
-  const target = db.select().from(assessmentTargets).where(eq(assessmentTargets.id, profile.assessmentTargetId)).get()!;
-  const assessment = assessmentById(db, profile.assessmentId);
+  const found = load(profileId);
+  if (!found) notFound();
+  const { profile, target, assessment, initiative, number } = found;
   const document = profileDocument(profile);
   const facts = document.fact_document as JsonObject;
   const categories = (facts.categories ?? {}) as unknown as Record<string, Category>;
@@ -51,164 +82,221 @@ export default async function ProfilePage({ params }: { params: Promise<{ profil
   const diagnostics = profileDiagnostics(document);
   const latest = latestProfileOfSource(db, target.sourcePublicId);
   const newer = latest && latest.profile.id !== profile.id ? latest : null;
-  const states = SHARED_CATEGORIES.map((definition) => categories[definition.id]?.state ?? "unknown");
-  const count = (state: string) => states.filter((item) => item === state).length;
+  const stateOf = (id: string) => categories[id]?.state ?? "unknown";
+  const count = (state: string) => SHARED_CATEGORIES.filter((definition) => stateOf(definition.id) === state).length;
   const groups = [...new Set(SHARED_CATEGORIES.map((definition) => definition.group))];
   const evidenceFor = (ids: JsonValue[] | undefined) => <EvidenceList ids={ids ?? []} records={evidence} assessmentId={assessment.publicId} />;
+  const commit = String(document.commit);
 
   return (
     <Page>
       <PageHeader
+        breadcrumbs={[
+          { href: "/", label: "Initiatives" },
+          { href: `/initiatives/${initiative.publicId}`, label: initiative.name },
+          { href: `/assessments/${assessment.publicId}`, label: `Assessment #${number}` },
+        ]}
         title={target.sourceName}
-        back={{ href: `/assessments/${assessment.publicId}`, label: `Assessment ${assessment.publicId}` }}
-        description={`Repository Profile at commit ${String(document.commit).slice(0, 12)}, from detector release ${String(document.detector_release)}.`}
+        meta={[
+          <ShortValue key="commit" value={commit} label="commit" />,
+          <span key="created">
+            Profiled <RelativeTime value={profile.createdAt} />
+          </span>,
+        ]}
+        description="Every fact comes from committed files at this commit, read as data. Nothing in the repository was run."
+        alerts={
+          newer && (
+            <Alert
+              tone="info"
+              title="This is a historical Profile"
+              actions={
+                <Link href={`/profiles/${newer.profile.publicId}`} className={styles.alertLink}>
+                  View the newest Profile
+                </Link>
+              }
+            >
+              A newer Profile of this repository exists. This one keeps its original facts, evidence, and detector release.
+            </Alert>
+          )
+        }
       />
-      <Notice tone="info">Every fact comes from committed files at this commit, read as data. Nothing in the repository was run.</Notice>
-      {newer && (
-        <Notice tone="info" title="This is a historical Profile">
-          {"A newer Profile of this repository exists. This one keeps its original facts, evidence, and detector release. "}
-          <Link href={`/profiles/${newer.profile.publicId}`}>View the newest Profile</Link>
-        </Notice>
-      )}
 
-      <Card title="Summary">
-        <div className={ui.stats}>
-          <Stat label="Observed" value={count("observed")} />
-          <Stat label="Inferred or mixed" value={count("inferred") + count("mixed")} />
-          <Stat label="Conflicting" value={count("conflicting")} />
-          <Stat label="Unknown" value={count("unknown")} />
-          <Stat label="None detected" value={count("absent")} />
-        </div>
-        <DetailsList
-          items={[
-            ["Service Dependencies", <Link key="services" href="#services">{countLabel(services.length, "dependency", "dependencies")}</Link>],
-            ["Skipped inputs", <Link key="skipped" href="#diagnostics">{countLabel(diagnostics.skipped.length, "input")}</Link>],
-            ["Commit", <ShortSha key="commit" sha={String(document.commit)} />],
-            ["Detector release", <Mono key="release">{String(document.detector_release)}</Mono>],
-            ["Profile digest", <Mono key="digest">{profile.digest.slice(0, 12)}</Mono>],
-            ["Created", <Timestamp key="created" value={profile.createdAt} />],
+      <div className={styles.layout}>
+        <SectionNav
+          label="Profile sections"
+          jumpLabel="Jump to category"
+          groups={[
+            ...groups.map((group) => ({ label: group, items: SHARED_CATEGORIES.filter((definition) => definition.group === group).map((definition) => ({ id: definition.id, label: definition.label, state: stateOf(definition.id) })) })),
+            {
+              label: "More",
+              items: [
+                { id: "services", label: `Service Dependencies (${services.length})` },
+                { id: "diagnostics", label: `Skipped inputs (${diagnostics.skipped.length})` },
+              ],
+            },
           ]}
         />
-      </Card>
 
-      {groups.map((group) => (
-        <section key={group} className={styles.group} aria-labelledby={`group-${group}`}>
-          <h2 id={`group-${group}`} className={styles.groupTitle}>
-            {group}
-          </h2>
-          {SHARED_CATEGORIES.filter((definition) => definition.group === group).map((definition) => {
-            const category = categories[definition.id];
+        <div className={styles.content}>
+          <StatGroup
+            label="Categories by state"
+            stats={[
+              { label: "Observed", value: count("observed") },
+              { label: "Inferred or mixed", value: count("inferred") + count("mixed") },
+              { label: "Conflicting", value: count("conflicting") },
+              { label: "Unknown", value: count("unknown") },
+              { label: "None detected", value: count("absent") },
+            ]}
+          />
+
+          {groups.map((group) => {
+            const definitions = SHARED_CATEGORIES.filter((definition) => definition.group === group);
+            const withFacts = definitions.filter((definition) => categories[definition.id]?.facts.length);
+            const withoutFacts = definitions.filter((definition) => !categories[definition.id]?.facts.length);
             return (
-              <div key={definition.id} id={definition.id}>
-                <Card level={3} title={definition.label} description={definition.description} actions={<StatusBadge state={category?.state ?? "unknown"} />} flush={Boolean(category?.facts.length)}>
-                  {category?.facts.length ? (
-                    <Table
-                      label={definition.label}
-                      head={
-                        <>
-                          <Th>Fact</Th>
-                          <Th>Value</Th>
-                          <Th>State</Th>
-                          <Th>Evidence</Th>
-                        </>
-                      }
-                    >
-                      {category.facts.map((fact) => (
-                        <tr key={fact.key}>
-                          <Td label="Fact">
-                            <Mono>{fact.key}</Mono>
-                          </Td>
-                          <Td label="Value">
-                            {fact.state === "conflicting" ? (
-                              <ul className={styles.candidates} aria-label="Candidates">
-                                {(fact.candidates ?? []).map((candidate, index) => (
-                                  <li key={index} className={styles.value}>
-                                    {formatValue(candidate.value)} {evidenceFor(candidate.evidence)}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <span className={styles.value}>{factText(fact.state, fact.value)}</span>
-                            )}
-                            {fact.reasoning && <Secondary>{fact.reasoning}</Secondary>}
-                          </Td>
-                          <Td label="State">
-                            <StatusBadge state={fact.state} />
-                          </Td>
-                          <Td label="Evidence">{evidenceFor(fact.evidence)}</Td>
-                        </tr>
+              <Section key={group} title={group}>
+                {withFacts.map((definition) => {
+                  const category = categories[definition.id]!;
+                  return (
+                    <Section key={definition.id} id={definition.id} level={3} title={definition.label} description={definition.description} actions={<Status state={category.state} />}>
+                      <Panel flush>
+                        <Table
+                          label={definition.label}
+                          head={
+                            <>
+                              <Th>Fact</Th>
+                              <Th>Value</Th>
+                              <Th>State</Th>
+                              <Th>Evidence</Th>
+                            </>
+                          }
+                        >
+                          {category.facts.map((fact) => (
+                            <tr key={fact.key}>
+                              <Td label="Fact">
+                                <Tag>{fact.key}</Tag>
+                              </Td>
+                              <Td label="Value">
+                                {fact.state === "conflicting" ? (
+                                  <ul className={styles.candidates} aria-label="Candidates">
+                                    {(fact.candidates ?? []).map((candidate, index) => (
+                                      <li key={index}>
+                                        {formatValue(candidate.value)} {evidenceFor(candidate.evidence)}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  factText(fact.state, fact.value)
+                                )}
+                                {fact.reasoning && <Secondary>{fact.reasoning}</Secondary>}
+                              </Td>
+                              <Td label="State">
+                                <Status state={fact.state} />
+                              </Td>
+                              <Td label="Evidence">{evidenceFor(fact.evidence)}</Td>
+                            </tr>
+                          ))}
+                        </Table>
+                      </Panel>
+                    </Section>
+                  );
+                })}
+                {withoutFacts.length > 0 && (
+                  <Panel flush>
+                    <ul className={styles.compact} aria-label={`${group} categories without facts`}>
+                      {withoutFacts.map((definition) => (
+                        <li key={definition.id} id={definition.id} className={styles.compactRow}>
+                          <div className={styles.compactName}>
+                            <Primary>{definition.label}</Primary>
+                            <Secondary>{emptyReason(categories[definition.id])}</Secondary>
+                          </div>
+                          <Status state={stateOf(definition.id)} />
+                        </li>
                       ))}
-                    </Table>
-                  ) : category?.state === "absent" ? (
-                    <p>{category.search.surface.length ? `None detected after a complete search of ${countLabel(category.search.surface.length, "input")}.` : "None detected: no input this category reads exists in this commit."}</p>
-                  ) : category?.search.skipped.length ? (
-                    <p>
-                      {`Unknown: ${countLabel(category.search.skipped.length, "relevant input")} could not be read or understood, so an absence cannot be claimed. `}
-                      <span className={styles.value}>{category.search.skipped.join(", ")}</span>
-                    </p>
-                  ) : (
-                    <p>Unknown: no bounded search can establish this category from committed files, or none of its searches was complete.</p>
-                  )}
-                </Card>
-              </div>
+                    </ul>
+                  </Panel>
+                )}
+              </Section>
             );
           })}
-        </section>
-      ))}
 
-      <section className={styles.group} aria-labelledby="service-dependencies" id="services">
-        <h2 id="service-dependencies" className={styles.groupTitle}>
-          Service Dependencies
-        </h2>
-        <Notice tone="info" title="Static discovery only">
-          These are outbound calls found in committed source and configuration. Static discovery does not prove entitlement, reachability, or integrated behavior, so access is unknown for every service, and no response is fabricated or connection attempted.
-        </Notice>
-        {services.length === 0 && <p>No Service Dependency was found.</p>}
-        {services.map((service) => {
-          const missing = Array.isArray(service.missing_evidence) ? service.missing_evidence.map(String) : [];
-          const access = (service.access ?? {}) as JsonObject;
-          return (
-            <Card key={String(service.key)} level={3} title={String(service.key)} description={`Called through ${formatValue(((service.client ?? {}) as JsonObject).kind ?? null)}`} actions={
-                <Badge tone={service.characterizable ? "success" : "warning"} icon={service.characterizable ? "checkCircle" : "alert"}>
-                  {service.characterizable ? "Boundary characterized" : "Boundary incomplete"}
-                </Badge>
-              }>
-              <DetailsList
-                items={[
-                  ...SERVICE_FACTS.map(([key, label]): [string, React.ReactNode] => {
-                    const fact = (service[key] ?? {}) as JsonObject;
-                    const state = String(fact.state ?? "unknown");
-                    return [
-                      label,
-                      <span key={key} className={styles.value}>
-                        <StatusBadge state={state} />{" "}
-                        {state === "conflicting"
-                          ? `Candidates: ${(Array.isArray(fact.candidates) ? fact.candidates : []).map((candidate) => formatValue((candidate as JsonObject).value)).join(" | ")}`
-                          : factText(state, fact.value)}
-                        {typeof fact.reasoning === "string" && <Secondary>{fact.reasoning}</Secondary>}
-                      </span>,
-                    ];
-                  }),
-                  ["Access", <span key="access"><StatusBadge state="unknown" /> {String(access.reason ?? "Not established by static discovery")}</span>],
-                  ["Missing evidence", missing.length ? missing.join(", ").replaceAll("_", " ") : "None"],
-                  ["Call sites", evidenceFor(Array.isArray(service.call_sites) ? service.call_sites : [])],
-                ]}
-              />
-            </Card>
-          );
-        })}
-      </section>
+          <Section id="services" title="Service Dependencies" description="Outbound calls found in committed source and configuration. Static discovery does not prove entitlement, reachability, or integrated behavior, so access is unknown for every service.">
+            {services.length === 0 && <p className={styles.muted}>No Service Dependency was found.</p>}
+            {services.map((service) => {
+              const missing = Array.isArray(service.missing_evidence) ? service.missing_evidence.map(String) : [];
+              const access = (service.access ?? {}) as JsonObject;
+              const key = String(service.key);
+              return (
+                <section key={key} aria-label={key}>
+                  <Disclosure
+                    summary={
+                      <>
+                        <Tag>{key}</Tag>
+                        <span className={styles.muted}>{`called through ${formatValue(((service.client ?? {}) as JsonObject).kind ?? null)}`}</span>
+                      </>
+                    }
+                    aside={<Status state={service.characterizable ? "characterized" : "incomplete"} />}
+                  >
+                    <DescriptionList
+                      items={[
+                        ...SERVICE_FACTS.map(([factKey, label]): [string, React.ReactNode] => {
+                          const fact = (service[factKey] ?? {}) as JsonObject;
+                          const state = String(fact.state ?? "unknown");
+                          return [
+                            label,
+                            <span key={factKey}>
+                              <Status state={state} size="sm" />{" "}
+                              {state === "conflicting" ? `Candidates: ${(Array.isArray(fact.candidates) ? fact.candidates : []).map((candidate) => formatValue((candidate as JsonObject).value)).join(" | ")}` : factText(state, fact.value)}
+                              {typeof fact.reasoning === "string" && <Secondary>{fact.reasoning}</Secondary>}
+                            </span>,
+                          ];
+                        }),
+                        [
+                          "Access",
+                          <span key="access">
+                            <Status state="unknown" size="sm" /> {String(access.reason ?? "Not established by static discovery")}
+                          </span>,
+                        ],
+                        ["Missing evidence", missing.length ? missing.join(", ").replaceAll("_", " ") : "None"],
+                        ["Call sites", evidenceFor(Array.isArray(service.call_sites) ? service.call_sites : [])],
+                      ]}
+                    />
+                  </Disclosure>
+                </section>
+              );
+            })}
+          </Section>
 
-      <div id="diagnostics">
-        <Card title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent." flush={diagnostics.skipped.length > 0}>
-          {diagnostics.skipped.length ? <DiagnosticTable label="Skipped inputs" diagnostics={diagnostics.skipped} /> : <p>Every input was read and understood.</p>}
-        </Card>
+          <Section id="diagnostics" title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent.">
+            {diagnostics.skipped.length ? (
+              <Panel flush>
+                <DiagnosticTable label="Skipped inputs" diagnostics={diagnostics.skipped} />
+              </Panel>
+            ) : (
+              <p className={styles.muted}>Every input was read and understood.</p>
+            )}
+          </Section>
+          {diagnostics.notes.length > 0 && (
+            <Section title="Other diagnostics" description="Inconsistencies and unsupported constructs the detectors noted without skipping the input.">
+              <Panel flush>
+                <DiagnosticTable label="Other diagnostics" diagnostics={diagnostics.notes} />
+              </Panel>
+            </Section>
+          )}
+
+          <Disclosure summary="Details" variant="plain">
+            <DescriptionList
+              items={[
+                ["Commit", <Tag key="commit" copy label="commit">{commit}</Tag>],
+                ["Detector release", <Tag key="release">{String(document.detector_release)}</Tag>],
+                ["Profile digest", <ShortValue key="digest" value={profile.digest} label="digest" />],
+                ["Created", <RelativeTime key="created" value={profile.createdAt} />],
+                ["ID", <Tag key="id" copy label="ID">{profile.publicId}</Tag>],
+              ]}
+            />
+          </Disclosure>
+        </div>
       </div>
-      {diagnostics.notes.length > 0 && (
-        <Card title="Other diagnostics" description="Inconsistencies and unsupported constructs the detectors noted without skipping the input." flush>
-          <DiagnosticTable label="Other diagnostics" diagnostics={diagnostics.notes} />
-        </Card>
-      )}
     </Page>
   );
 }
@@ -228,10 +316,10 @@ function DiagnosticTable({ label, diagnostics }: { label: string; diagnostics: r
       {diagnostics.map((diagnostic, index) => (
         <tr key={`${String(diagnostic.path)}:${index}`}>
           <Td label="Path">
-            <Mono>{String(diagnostic.path) || "(repository)"}</Mono>
+            <Tag>{String(diagnostic.path) || "(repository)"}</Tag>
           </Td>
           <Td label="Reason">
-            {String(diagnostic.reason).replaceAll("_", " ")}
+            {diagnosticReason(String(diagnostic.reason))}
             {diagnostic.detector !== null && <Secondary mono>{String(diagnostic.detector)}</Secondary>}
           </Td>
           <Td label="Detail">{String(diagnostic.detail)}</Td>

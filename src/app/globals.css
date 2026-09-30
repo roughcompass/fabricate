@@ -1,38 +1,134 @@
 /*
  * Fabricate global styles: cascade layers, design tokens, element defaults,
- * and the application shell. Component styles live in CSS Modules beside each
- * component and read only these tokens.
+ * and the application shell. docs/design-system.md is the source of truth for
+ * every token and the rules for using it.
  *
- * Tokens follow the project design system (the design-review reference). Where
- * a reference color fails WCAG contrast for small text or input borders, a
- * dedicated token darkens it: --status-*-text, --text-link, --border-strong.
+ * Token names start with their type (--color-, --font-size-, --space-,
+ * --size-, --radius-, --shadow-, --z-, --duration-, --ease-), and stylesheets
+ * use only tokens of the matching type; test/lint/design-tokens.test.ts
+ * enforces this. Colors are defined once with light-dark(), so the theme is
+ * selected by color-scheme: the System preference, or data-theme on any
+ * element (the root, or a gallery panel).
+ *
+ * Layer order: shared components (src/components) wrap their rules in
+ * `components`, and route stylesheets (src/app) in `pages`, so composition
+ * rules win over component defaults regardless of stylesheet load order.
  */
-@layer reset, tokens, base;
+@layer reset, tokens, base, components, pages;
 
 @layer reset {
   *, *::before, *::after { box-sizing: border-box; }
   * { margin: 0; }
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-  body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
+  body { min-height: 100dvh; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
   img, svg { display: block; max-width: 100%; }
   input, button, textarea, select { font: inherit; color: inherit; }
   button { cursor: pointer; }
   table { border-collapse: collapse; }
   p, h1, h2, h3, h4, dd, li { overflow-wrap: anywhere; }
+  [hidden] { display: none !important; }
 }
 
 @layer tokens {
+  :root { color-scheme: light dark; }
+
+  /*
+   * Colors, and the shadows built from them, are declared on every themed
+   * element as well as the root: a custom property holding light-dark() is
+   * resolved where it is declared, so each themed subtree redeclares them to
+   * resolve against its own color-scheme.
+   */
+  :root, [data-theme] {
+    /* Neutral surfaces, text, and borders. */
+    --color-bg: light-dark(#ffffff, #0a0a0a);
+    --color-bg-subtle: light-dark(#fafafa, #111111);
+    --color-bg-muted: light-dark(#f2f2f2, #1c1c1c);
+    --color-bg-elevated: light-dark(#ffffff, #171717);
+    --color-border: light-dark(#ebebeb, #2e2e2e);
+    --color-border-subtle: light-dark(#f2f2f2, #1f1f1f);
+    --color-border-strong: light-dark(#858585, #6e6e6e);
+    --color-text: light-dark(#171717, #ededed);
+    --color-text-secondary: light-dark(#666666, #a1a1a1);
+    --color-text-tertiary: light-dark(#8f8f8f, #737373);
+
+    /* The single accent: primary actions, links, selection, focus, progress. */
+    --color-accent: light-dark(#008297, #2bb3c4);
+    --color-accent-hover: light-dark(#006e80, #5ccad7);
+    --color-accent-subtle: light-dark(#e6f4f6, #0f2a30);
+    --color-on-accent: light-dark(#ffffff, #0a0a0a);
+    --color-link: light-dark(#007385, #2bb3c4);
+    --color-focus: light-dark(#008297, #2bb3c4);
+    --color-focus-ring: light-dark(rgb(0 130 151 / 0.2), rgb(43 179 196 / 0.3));
+
+    /* Destructive confirmation. */
+    --color-danger: light-dark(#cf222e, #da3633);
+    --color-danger-hover: light-dark(#a40e26, #b62324);
+    --color-on-danger: #ffffff;
+
+    /* Status: a foreground for text, icons, and dots; a background and border for alerts and toasts. */
+    --color-success: light-dark(#1a7f37, #3fb950);
+    --color-success-bg: light-dark(#effaf2, #0f2417);
+    --color-success-border: light-dark(#b4e3c1, #1f4d2b);
+    --color-warning: light-dark(#9a6700, #d29922);
+    --color-warning-bg: light-dark(#fff8e5, #2a2111);
+    --color-warning-border: light-dark(#f0d78f, #5c4813);
+    --color-error: light-dark(#cf222e, #f85149);
+    --color-error-bg: light-dark(#fff0ef, #2d1214);
+    --color-error-border: light-dark(#f5b8b5, #6e2226);
+    --color-neutral: light-dark(#666666, #a1a1a1);
+    --color-neutral-bg: light-dark(#f2f2f2, #1c1c1c);
+    --color-neutral-border: light-dark(#e0e0e0, #333333);
+    --color-progress: light-dark(#007385, #2bb3c4);
+    --color-progress-bg: light-dark(#e6f4f6, #0f2a30);
+    --color-progress-border: light-dark(#a6d8df, #1d5560);
+
+    /* Shadow and overlay colors. */
+    --color-shadow: light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.5));
+    --color-shadow-strong: light-dark(rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.7));
+    --color-overlay: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.6));
+
+    /* Shadows. */
+    --shadow-menu: 0 1px 3px var(--color-shadow), 0 8px 24px var(--color-shadow);
+    --shadow-dialog: 0 24px 64px var(--color-shadow-strong);
+    --shadow-toast: 0 8px 24px var(--color-shadow-strong);
+    --shadow-sticky: 0 -8px 24px var(--color-shadow);
+    --shadow-focus: 0 0 0 3px var(--color-focus-ring);
+    --shadow-selected: 0 0 0 1px var(--color-accent);
+  }
+
   :root {
-    color-scheme: light dark;
+    /* Typography: one scale, one role per step. */
+    --font-family-sans: var(--font-geist-sans, ui-sans-serif), system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-family-mono: var(--font-geist-mono, ui-monospace), "SF Mono", Menlo, Consolas, monospace;
 
-    --font-body: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --font-mono: "PT Mono", "SF Mono", Consolas, monospace;
+    --font-size-caption: 12px;
+    --font-size-secondary: 13px;
+    --font-size-body: 14px;
+    --font-size-heading: 16px;
+    --font-size-subtitle: 20px;
+    --font-size-title: 24px;
+    --font-size-display: 32px;
 
-    /* Three sizes per view: title, body, label. Hierarchy comes from weight. */
-    --text-title: 24px;
-    --text-body: 14px;
-    --text-label: 12px;
+    --line-height-caption: 16px;
+    --line-height-secondary: 18px;
+    --line-height-body: 20px;
+    --line-height-heading: 24px;
+    --line-height-subtitle: 28px;
+    --line-height-title: 32px;
+    --line-height-display: 40px;
 
+    --letter-spacing-normal: 0;
+    --letter-spacing-heading: -0.01em;
+    --letter-spacing-subtitle: -0.015em;
+    --letter-spacing-title: -0.02em;
+    --letter-spacing-display: -0.03em;
+    --letter-spacing-caps: 0.04em;
+
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+
+    /* Spacing: a 4px scale. */
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
@@ -42,179 +138,132 @@
     --space-8: 32px;
     --space-10: 40px;
     --space-12: 48px;
+    --space-16: 64px;
+    --space-gutter: var(--space-6);
 
-    --radius-control: 4px;
-    --radius-card: 8px;
+    /* Sizes: controls, icons, and layout widths. */
+    --size-control-sm: 28px;
+    --size-control-md: 36px;
+    --size-control-lg: 40px;
+    --size-touch: 44px;
+    --size-icon-sm: 14px;
+    --size-icon: 16px;
+    --size-icon-lg: 20px;
+    --size-checkbox: 16px;
+    --size-dot: 8px;
+    --size-line-number: 32px;
+    --size-label: 160px;
+    --size-filter: 176px;
+    --size-menu: 192px;
+    --size-nav: 224px;
+    --size-toast: 380px;
+    --size-dialog: 480px;
+    --size-form: 640px;
+    --size-prose: 720px;
+    --size-content: 1200px;
+    --size-header: 56px;
 
-    --width-narrow: 600px;
-    --width-settings: 800px;
-    --width-standard: 1200px;
-    --header-height: 56px;
-    --page-gutter: var(--space-6);
-    --touch-target: 44px;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-full: 9999px;
 
-    --duration-fast: 150ms;
-    --duration-layout: 200ms;
 
-    --brand-teal: #008297;
-    --brand-teal-hover: #005075;
-    --brand-teal-subtle: #e6f4f6;
-    --brand-dark: #101820;
-    --brand-warm: #d6b89c;
-    --brand-warm-deep: #936846;
-    --on-brand: #ffffff;
+    --z-raised: 1;
+    --z-header: 10;
+    --z-sticky: 20;
+    --z-dialog: 40;
+    --z-toast: 50;
 
-    --surface-primary: #ffffff;
-    --surface-secondary: #f5f7f8;
-    --surface-tertiary: #ebeef0;
-    --text-primary: #31373d;
-    --text-secondary: #6b7280;
-    --text-tertiary: #9ca3af;
-    --text-link: #007385;
-    --border-default: #e0e4e8;
-    --border-subtle: #f0f2f4;
-    --border-strong: #7a8491;
-
-    --status-success: #24874b;
-    --status-success-bg: #f0faf4;
-    --status-success-text: #1f7a43;
-    --status-error: #cc440d;
-    --status-error-bg: #fef5f0;
-    --status-error-text: #b83d0c;
-    --status-warning: #b45309;
-    --status-warning-bg: #fffbeb;
-    --status-warning-text: #b45309;
-    --status-info: #008297;
-    --status-info-bg: #e6f4f6;
-    --status-info-text: #006e80;
-    --status-neutral-bg: #f5f7f8;
-    --status-neutral-text: #6b7280;
-
-    --shadow-hover: 0 2px 8px rgb(0 0 0 / 0.08);
+    --duration-fast: 120ms;
+    --duration-base: 200ms;
+    --duration-slow: 300ms;
+    --duration-spin: 800ms;
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --brand-teal: #2bb3c4;
-      --brand-teal-hover: #5ccad7;
-      --brand-teal-subtle: #0f2a30;
-      --on-brand: #101820;
-
-      --surface-primary: #101820;
-      --surface-secondary: #1a2530;
-      --surface-tertiary: #243040;
-      --text-primary: #f0f2f4;
-      --text-secondary: #9ca3af;
-      --text-tertiary: #6b7280;
-      --text-link: #2bb3c4;
-      --border-default: #2a3540;
-      --border-subtle: #1f2a35;
-      --border-strong: #6b7a8a;
-
-      --status-success: #4cc38a;
-      --status-success-bg: #12291f;
-      --status-success-text: #4cc38a;
-      --status-error: #ff8a5c;
-      --status-error-bg: #2f1a12;
-      --status-error-text: #ff8a5c;
-      --status-warning: #f5a524;
-      --status-warning-bg: #2b2210;
-      --status-warning-text: #f5a524;
-      --status-info: #2bb3c4;
-      --status-info-bg: #0f2a30;
-      --status-info-text: #2bb3c4;
-      --status-neutral-bg: #1a2530;
-      --status-neutral-text: #9ca3af;
-
-      --shadow-hover: 0 2px 8px rgb(0 0 0 / 0.4);
-    }
-  }
+  /* An explicit preference, on the root or on any subtree. */
+  [data-theme="light"] { color-scheme: light; }
+  [data-theme="dark"] { color-scheme: dark; }
 
   @media (max-width: 1024px) {
-    :root { --page-gutter: var(--space-4); }
+    :root { --space-gutter: var(--space-4); }
   }
 
-  @media (max-width: 767px) {
-    :root { --page-gutter: var(--space-3); }
+  /* Touch devices get a 44px target on every control size. */
+  @media (pointer: coarse) {
+    :root {
+      --size-control-sm: var(--size-touch);
+      --size-control-md: var(--size-touch);
+      --size-control-lg: var(--size-touch);
+    }
   }
 }
 
 @layer base {
+  html { background: var(--color-bg); scrollbar-gutter: stable; }
+
   body {
-    background: var(--surface-primary);
-    color: var(--text-primary);
-    font-family: var(--font-body);
-    font-size: var(--text-body);
-    line-height: 1.5;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
   }
 
-  a { color: var(--text-link); text-underline-offset: 0.15em; }
-  a:hover { color: var(--brand-teal-hover); }
-  h1 { font-size: var(--text-title); font-weight: 300; line-height: 1.3; letter-spacing: -0.01em; }
-  h2, h3 { font-size: var(--text-body); font-weight: 600; line-height: 1.4; }
-  code, kbd, samp, pre { font-family: var(--font-mono); }
-  strong { font-weight: 600; }
+  h1 {
+    font-size: var(--font-size-title);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-title);
+    letter-spacing: var(--letter-spacing-title);
+  }
+  h2 {
+    font-size: var(--font-size-heading);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-heading);
+  }
+  h3 {
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-body);
+  }
 
-  :focus-visible { outline: 2px solid var(--brand-teal); outline-offset: 2px; }
+  a {
+    color: var(--color-link);
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+  a:hover { color: var(--color-accent-hover); }
+  /* In tables, links are neutral and underline on hover; accent links are for running text. */
+  :is(td, th) a { color: var(--color-text); text-decoration-line: none; }
+  :is(td, th) a:hover { color: var(--color-text); text-decoration-line: underline; }
+
+  code, kbd, samp, pre { font-family: var(--font-family-mono); font-size: var(--font-size-secondary); }
+  strong { font-weight: var(--font-weight-semibold); }
+
+  :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  ::selection { background: var(--color-accent-subtle); }
+
+  /* Available to screen readers, invisible on screen. */
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+  }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
-  }
-
-  .skip-link {
-    position: absolute;
-    left: var(--space-4);
-    top: calc(-1 * var(--space-12));
-    z-index: 10;
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-control);
-    background: var(--brand-teal);
-    color: var(--on-brand);
-    &:focus { top: var(--space-2); }
-  }
-
-  .app-header {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    border-bottom: 1px solid var(--border-default);
-    background: var(--surface-primary);
-  }
-  .app-header__inner {
-    display: flex;
-    align-items: center;
-    gap: var(--space-6);
-    max-width: calc(var(--width-standard) + 2 * var(--page-gutter));
-    height: var(--header-height);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
-  .app-brand {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-height: var(--touch-target);
-    color: var(--text-primary);
-    font-weight: 600;
-    text-decoration: none;
-    &:hover { color: var(--text-primary); }
-  }
-  .app-brand__mark { width: 18px; height: 18px; color: var(--brand-teal); }
-
-  .app-main {
-    max-width: calc(var(--width-standard) + 2 * var(--page-gutter));
-    margin: 0 auto;
-    padding: var(--space-10) var(--page-gutter);
-    &:focus { outline: none; }
-  }
-
-  @media (max-width: 767px) {
-    .app-header__inner { gap: var(--space-3); }
-    .app-brand__label { display: none; }
-    .app-main { padding-top: var(--space-6); }
   }
 }

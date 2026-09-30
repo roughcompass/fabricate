@@ -29,16 +29,17 @@ const row = (page: Page, text: string) => relationships(page).getByRole("row").f
 test("reviews every resolution state and the coverage gap", async ({ page, db }) => {
   const assessment = await seedMap(db);
   await page.goto(`/assessments/${assessment.publicId}`);
-  await page.getByRole("link", { name: "Review the Relationship Map" }).click();
+  await page.getByRole("link", { name: /Review the Relationship Map/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Relationship Map" })).toBeVisible();
-  await expect(page.getByText("1 repository did not contribute")).toBeVisible();
-
-  const gaps = page.getByRole("table", { name: "Coverage gaps" });
-  await expect(gaps.getByRole("row").filter({ hasText: "billing" })).toContainText("Failed");
-  await expect(gaps.getByRole("row").filter({ hasText: "billing" })).toContainText("source_unavailable");
+  // One alert names each gap; no separate gaps table repeats it.
+  const coverage = page.locator("#page-alerts");
+  await expect(coverage).toContainText("1 repository did not contribute");
+  await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).toContainText("Failed");
+  await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).toContainText("source_unavailable");
+  await expect(page.getByRole("table", { name: "Coverage gaps" })).toHaveCount(0);
 
   const resolved = row(page, "depends on").filter({ has: page.getByRole("link", { name: "client", exact: true }) });
-  await expect(resolved).toContainText("Package dependency, observed");
+  await expect(resolved).toContainText("Package dependency, observed in source");
   await expect(resolved.getByText("Resolved")).toBeVisible();
   await expect(row(page, "produces").filter({ hasText: "@acme/client" })).toContainText("Resolved");
 
@@ -57,7 +58,7 @@ test("reviews every resolution state and the coverage gap", async ({ page, db })
   await expect(row(page, "https://payments.invalid")).toContainText("Resolved");
 });
 
-test("filters relationships with the keyboard and announces the result", async ({ page, db }) => {
+test("filters relationships as soon as a filter changes and announces the result", async ({ page, db }) => {
   const assessment = await seedMap(db);
   await page.goto(`/assessments/${assessment.publicId}/map`);
   const form = page.getByRole("form", { name: "Filter relationships" });
@@ -65,7 +66,7 @@ test("filters relationships with the keyboard and announces the result", async (
   const total = await relationships(page).locator("tbody tr").count();
   await expect(status).toHaveText(`${total} relationships`);
 
-  // Every control is labeled and reachable in order; Enter on the button submits.
+  // Every control is labeled and reachable in order; choosing a value applies it.
   await form.getByLabel("Node").focus();
   await page.keyboard.press("Tab");
   await expect(form.getByLabel("Direction")).toBeFocused();
@@ -73,32 +74,38 @@ test("filters relationships with the keyboard and announces the result", async (
   await expect(form.getByLabel("Relationship type")).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(form.getByLabel("Resolution state")).toBeFocused();
+  await expect(form.getByRole("button", { name: "Apply" })).toBeHidden();
   await form.getByLabel("Resolution state").selectOption("ambiguous");
-  await page.keyboard.press("Tab");
-  await expect(form.getByRole("button", { name: "Apply filters" })).toBeFocused();
-  await page.keyboard.press("Enter");
 
   await expect(page).toHaveURL(/state=ambiguous/);
   await expect(status).toHaveText(`Showing 1 of ${total} relationships`);
   await expect(relationships(page).locator("tbody tr")).toHaveCount(1);
   await expect(form.getByLabel("Resolution state")).toHaveValue("ambiguous");
 
-  // Direction: what depends on the client repository, from the node summary.
+  // Direction: what depends on the client repository, from the Nodes tab.
   await page.getByRole("link", { name: "Clear filters" }).click();
   await expect(status).toHaveText(`${total} relationships`);
+  await page.getByRole("navigation", { name: "Relationship Map views" }).getByRole("link", { name: /^Nodes/ }).click();
   await page.getByRole("table", { name: "Nodes" }).getByRole("link", { name: "1 incoming to client" }).click();
   await expect(form.getByLabel("Direction")).toHaveValue("incoming");
   await expect(relationships(page).locator("tbody tr")).toHaveCount(1);
   await expect(row(page, "web")).toContainText("depends on");
 
   await form.getByLabel("Direction").selectOption("outgoing");
-  await form.getByRole("button", { name: "Apply filters" }).click();
+  await expect(page).toHaveURL(/direction=outgoing/);
   await expect(relationships(page).locator("tbody tr")).toHaveCount(1);
   await expect(relationships(page)).toContainText("produces");
 
   await form.getByLabel("Relationship type").selectOption("service_call");
-  await form.getByRole("button", { name: "Apply filters" }).click();
   await expect(page.getByText("No relationship matches these filters.")).toBeVisible();
+});
+
+test("opens a shared Nodes address on the Nodes tab", async ({ page, db }) => {
+  const assessment = await seedMap(db);
+  await page.goto(`/assessments/${assessment.publicId}/map?view=nodes`);
+  await expect(page.getByRole("table", { name: "Nodes" })).toBeVisible();
+  await expect(relationships(page)).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Relationship Map views" }).getByRole("link", { name: /^Nodes/ })).toHaveAttribute("aria-current", "page");
 });
 
 test("navigates from a relationship to its evidence with the keyboard", async ({ page, db }) => {
@@ -109,7 +116,7 @@ test("navigates from a relationship to its evidence with the keyboard", async ({
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { level: 1, name: /^package\.json \/dependencies\/legacy-ui$/ })).toBeVisible();
   await expect(page.getByText("packages.consumed")).toBeVisible();
-  await expect(page.getByRole("link", { name: "web Profile" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "web" })).toBeVisible();
 });
 
 test("the map stays readable at mobile width", async ({ page, db }) => {

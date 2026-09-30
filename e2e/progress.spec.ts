@@ -23,8 +23,11 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
   buildInitiative(db, { name: "Fleet assessment" });
 
   await page.goto(`/initiatives/${listInitiatives(db)[0]!.publicId}`);
-  await page.getByRole("button", { name: "Start assessment" }).click();
-  await expect(page.getByText("The assessment was started.")).toBeVisible();
+  await page.getByRole("button", { name: "Start Assessment" }).click();
+  const started = page.getByRole("region", { name: "Notifications" }).getByText("Assessment #1 was started.");
+  await expect(started).toBeVisible();
+  // The outcome leaves the address at once, so no refresh can bring it back.
+  await expect(page).not.toHaveURL(/notice=/);
   const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
   await expect(header).toContainText("Queued");
 
@@ -35,6 +38,7 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
   await step(); // the coordinator enqueues one job per target
   await step(); // the first target is acquired and analyzed
   await expect(header).toContainText("Analyzing");
+  await expect(page.getByRole("progressbar", { name: "1 of 2 repositories finished" })).toBeVisible();
   await expect(scope.getByRole("row").filter({ hasText: "Complete" })).toHaveCount(1);
   await expect(scope.getByRole("row").filter({ hasText: "Pending" })).toHaveCount(1);
 
@@ -44,6 +48,18 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
   await step(); // the finalizer writes the map and the outcome
   await expect(header).toContainText("Complete");
   await expect(scope.getByRole("row").filter({ hasText: "Complete" })).toHaveCount(2);
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
+  await expect(started).toHaveCount(await started.count() > 0 ? 1 : 0);
+
+  // A finished Assessment stops polling.
+  let polls = 0;
+  page.on("request", (request) => {
+    if (request.url().includes("/status")) polls++;
+  });
+  await page.waitForTimeout(4_000);
+  expect(polls).toBe(0);
+  await page.reload();
+  await expect(page.getByText("was started")).toHaveCount(0);
 
   // The status payload carries states and codes only: no clone URL, path, or failure message.
   const assessment = listAssessments(db, listInitiatives(db)[0]!.id)[0]!;

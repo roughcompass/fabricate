@@ -1,0 +1,7 @@
+@layer pages {
+  .reasoning { max-width: var(--size-prose); font-size: var(--font-size-heading); line-height: var(--line-height-heading); }
+  .causes { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding-left: var(--space-5); }
+  .id { color: var(--color-text-secondary); font-size: var(--font-size-caption); }
+  .traces { display: flex; flex-direction: column; gap: var(--space-6); }
+  .muted { color: var(--color-text-secondary); }
+}

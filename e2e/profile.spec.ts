@@ -15,6 +15,11 @@ import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, gitRepo
 
 const category = (page: Page, id: string) => page.locator(`#${id}`);
 const service = (page: Page, key: string) => page.locator("#services").getByRole("region", { name: key, exact: true });
+/** Opens a Service Dependency's panel. */
+const expand = async (region: Locator) => {
+  await region.locator("summary").click();
+  return region;
+};
 /** The value a details list gives for +term+. */
 const detail = (region: Locator, term: string) => region.locator(`xpath=.//dt[normalize-space()='${term}']/following-sibling::dd[1]`);
 
@@ -65,8 +70,8 @@ test("explains observed, inferred, unknown, conflicting, negative, and skipped-i
   await expect(access).toContainText("LEDGER_TOKEN");
 
   const skipped = page.getByRole("table", { name: "Skipped inputs" });
-  await expect(skipped.getByRole("row").filter({ hasText: ".github/workflows/ci.yml" })).toContainText("parse failed");
-  await expect(page.getByRole("table", { name: "Other diagnostics" })).toContainText("unlocked dependency");
+  await expect(skipped.getByRole("row").filter({ hasText: ".github/workflows/ci.yml" })).toContainText("Could not be parsed");
+  await expect(page.getByRole("table", { name: "Other diagnostics" })).toContainText("Unlocked dependency");
 
   // Seeded snapshots have no mirror: the record still identifies the content.
   await managers.getByRole("link", { name: "yarn.lock" }).click();
@@ -83,6 +88,7 @@ test("shows an unavailable Service Dependency's call boundary, missing evidence,
 
   const payments = service(page, "https://payments.invalid");
   await expect(payments).toContainText("Boundary characterized");
+  await expand(payments);
   await expect(detail(payments, "Endpoint")).toContainText("derivation: literal; origin: https://payments.invalid");
   await expect(detail(payments, "Operations")).toContainText("POST /v1/charges");
   await expect(detail(payments, "Consumed response fields")).toContainText("status");
@@ -95,6 +101,7 @@ test("shows an unavailable Service Dependency's call boundary, missing evidence,
 
   const ledger = service(page, "https://ledger.corp.internal");
   await expect(ledger).toContainText("Boundary incomplete");
+  await expand(ledger);
   await expect(detail(ledger, "Authentication signals")).toContainText("template from process.env.LEDGER_TOKEN");
   await expect(detail(ledger, "Missing evidence")).toContainText("consumed response fields");
 
@@ -136,22 +143,54 @@ test("opens verified evidence excerpts from a real snapshot without rendering UR
   const source = insertSource(db, { name: "orders", ...resolveCloneUrl(`file://${repository}`, new SourceBoundary(config)), gitRef: null });
   const initiative = buildInitiative(db, { name: "Fleet assessment", sources: [source] });
   await page.goto(`/initiatives/${initiative.publicId}`);
-  await page.getByRole("button", { name: "Start assessment" }).click();
-  await expect(page.getByText("The assessment was started.")).toBeVisible();
+  await page.getByRole("button", { name: "Start Assessment" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" }).getByText("Assessment #1 was started.")).toBeVisible();
   await drainJobs(db, jobHandlers(db, config));
   const assessment = listAssessments(db, initiative.id)[0]!;
 
   await page.goto(`/assessments/${assessment.publicId}`);
-  await page.getByRole("link", { name: "View orders Profile" }).click();
+  await page.getByRole("link", { name: "orders Profile" }).click();
   await category(page, "package_managers").getByRole("link", { name: "yarn.lock" }).click();
   await expect(page.getByText("lockfile.package-manager")).toBeVisible();
   await expect(page.getByText("This evidence is the presence, type, or mode of the path itself")).toBeVisible();
 
   await page.goBack();
+  for (const summary of await page.locator("#services summary").all()) await summary.click();
   await page.locator("#services").getByRole("link", { name: "src/payments.ts:2" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "src/payments.ts:2" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Record" })).toContainText("Line 2");
   const excerpt = page.getByLabel("Excerpt of src/payments.ts");
   await expect(excerpt).toContainText("[redacted]@payments.invalid/v1/charges");
   await expect(excerpt).toContainText("2");
   await expect(page.locator("body")).not.toContainText("hunter2");
+});
+
+test("navigates between categories and keeps categories without facts compact", async ({ page, db }) => {
+  const { profile } = await seedOrders(db);
+  await page.goto(`/profiles/${profile.publicId}`);
+  // A current Profile has no alert.
+  await expect(page.locator("#page-alerts")).toBeEmpty();
+
+  const nav = page.getByRole("navigation", { name: "Profile sections" });
+  const managers = nav.getByRole("link", { name: /^Package manager/ }).first();
+  await managers.click();
+  await expect(page).toHaveURL(/#package_managers$/);
+  await expect(managers).toHaveAttribute("aria-current", "location");
+  await expect(category(page, "package_managers")).toBeInViewport();
+
+  // A category with nothing to show is one row in a list, not a card with a table.
+  const submodules = category(page, "submodules");
+  await expect(submodules).toHaveJSProperty("tagName", "LI");
+  await expect(submodules.getByRole("table")).toHaveCount(0);
+  await expect(submodules).toContainText("None detected");
+});
+
+test("links an evidence record to each ancestor, with no other way back", async ({ page, db }) => {
+  const { profile, initiative, assessment } = await seedOrders(db);
+  await page.goto(`/profiles/${profile.publicId}`);
+  await category(page, "package_managers").getByRole("link", { name: "yarn.lock" }).click();
+  const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
+  await expect(breadcrumbs.getByRole("link")).toHaveText(["Initiatives", initiative.name, "Assessment #1", "orders"]);
+  await expect(breadcrumbs.getByRole("link", { name: "Assessment #1" })).toHaveAttribute("href", `/assessments/${assessment.publicId}`);
+  await expect(page.locator("main").getByRole("link", { name: /back/i })).toHaveCount(0);
 });

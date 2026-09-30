@@ -1,0 +1,19 @@
+@layer components {
+  .copy {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: var(--size-control-sm);
+    height: var(--size-control-sm);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-tertiary);
+    vertical-align: middle;
+    transition: color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard);
+
+    &:hover { background: var(--color-bg-muted); color: var(--color-text); }
+    &[data-copied] { color: var(--color-success); }
+  }
+}
