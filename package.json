@@ -21,6 +21,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:visual": "CAPTURE_SCREENSHOTS=1 playwright test e2e/visual.spec.ts",
+    "test:fleet": "playwright test --config playwright.fleet.config.ts",
     "lint": "eslint --max-warnings=0 .",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint && npm test"
@@ -52,5 +53,10 @@
     "eslint-config-next": "16.3.7",
     "tsx": "4.23.15",
     "vitest": "5.0.2"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "$esbuild"
+    }
   }
 }

@@ -2,7 +2,7 @@
 
 Fabricate assesses independently managed Git repositories without running their code. It records evidence-backed facts about each repository and the relationships between repositories. It then compares those facts with published engineering Standards and reports every difference as a Finding.
 
-Fabricate is under active development. The assessment pipeline, Standard Library, and review screens are being built under the OpenSpec change `repository-assessment-foundation`. The safety rules below are requirements of that change, and each one is verified by tests as it lands.
+Fabricate implements the OpenSpec change `repository-assessment-foundation`: the repository catalog, Initiatives, static Assessments, Repository Profiles, Relationship Maps, the Standard Library, Evaluations, and the review screens for each. The safety rules below are requirements of that change. The end-to-end suites in `test/safety/` and `test/integration/` verify them against hostile and unavailable-service repositories.
 
 ## Requirements
 
@@ -21,7 +21,7 @@ npm run db:migrate
 npm run dev
 ```
 
-The committed `.npmrc` resolves the `@repo-facts` scope only from `REPO_FACTS_NPM_REGISTRY`. If the variable is unset, installation fails rather than falling back to a public registry. The lockfile records each package's SHA-512 integrity but no registry URL. Package lifecycle scripts are disabled for every dependency. If you develop `repo-facts` on the same machine, its `npm run registry` serves a local registry and prints the value to use.
+The committed `.npmrc` resolves the `@repo-facts` scope only from `REPO_FACTS_NPM_REGISTRY`. If the variable is unset, installation fails rather than falling back to a public registry. The lockfile records each package's SHA-512 integrity but no registry URL. Package lifecycle scripts are disabled for every dependency. If the registry requires authentication, sign in once with `npm login --scope=@repo-facts --registry "$REPO_FACTS_NPM_REGISTRY"`; the token stays in your user npm configuration and never enters this repository. If you develop `repo-facts` on the same machine, its `npm run registry` serves a local registry and prints the value to use.
 
 Open <http://localhost:3000>. `npm run dev` starts the web server and the worker together. Use `npm run dev:web` or `npm run dev:worker` to run one of them. If another process already listens on port 3000, including on the IPv6 loopback address, choose a free port with `PORT=3200 npm run dev`.
 
@@ -33,12 +33,15 @@ Both processes validate the configuration and check the Git version at startup. 
 npm test            # unit and integration tests (Vitest)
 npm run test:e2e    # browser tests (Playwright), against a dev server on port 3100
 npm run test:visual # screenshots of every product surface, for design review
+npm run test:fleet  # the synthetic fleet, assessed and evaluated through the product
 npm run typecheck
 npm run lint
 npm run build       # Next.js standalone server, dist/worker.cjs, and dist/migrate.cjs
 ```
 
 `npm run test:visual` seeds a representative Initiative, checks each product surface for horizontal overflow and overlapping content at 1280 and 375 pixels wide, and writes full-page screenshots to `verification/screenshots/`. The committed screenshots are the output of the last design review.
+
+`npm run test:fleet` needs the harness `fleet/` repositories next to this directory, or `FLEET_ROOT` set to their location. It starts its own server on port 3200 with `fleet/` as the only allowed root and a throwaway database and repository store in `tmp/fleet-run/`. It then imports the fleet, runs a baseline Assessment, authors two Standards in the editor, and runs an Evaluation. It never reads `fleet-kit/`.
 
 The lint rules forbid `eval`, the `Function` constructor, the `vm` module, computed `import()`, `require()`, and regular expressions built from data. Only `src/lib/git/runner.ts` may import `child_process`. A test in `test/lint/` keeps these rules in force.
 

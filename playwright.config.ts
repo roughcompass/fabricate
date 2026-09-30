@@ -7,6 +7,8 @@ const baseURL = `http://127.0.0.1:${E2E_PORT}`;
 // test resets the data through a route that exists only when FABRICATE_E2E=1.
 export default defineConfig({
   testDir: "e2e",
+  // The synthetic-fleet run has its own configuration (npm run test:fleet).
+  testIgnore: "fleet/**",
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),

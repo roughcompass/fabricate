@@ -259,7 +259,7 @@ export default async function MapPage({ params, searchParams }: { params: Promis
                       <>
                         One of:
                         <ul className={styles.candidates} aria-label="Candidates">
-                          {edge.candidates.map((candidate) => (
+                          {[...edge.candidates].sort((a, b) => nodeLabel(nodes.get(a)!).localeCompare(nodeLabel(nodes.get(b)!))).map((candidate) => (
                             <li key={candidate} className={styles.value}>
                               {nodeLink(candidate)}
                             </li>
