@@ -66,7 +66,7 @@ describe("draft validation", () => {
       "a value outside a closed vocabulary",
       { op: "every", collection: "service_dependencies", condition: { op: "in", selector: "service.endpoint_derivation", values: ["hardcoded"] } },
       "controls[0].condition.condition.values[0]",
-      '"hardcoded" is not an allowed endpoint derivation; choose literal, relative, configured, host_provided, unknown',
+      '"hardcoded" is not an allowed endpoint derivation; choose literal, relative, configured, host_provided',
     ],
     ["an invalid version range", { op: "semver_satisfies", selector: "repository.node_range", range: "latest-ish" }, "controls[0].condition.range", "Enter a semantic version range of at most 100 characters, such as >=18.0.0"],
     ["a missing parameter", { op: "exists", selector: "repository.resolved_version" }, "controls[0].condition.parameter", "Enter the package"],

@@ -171,6 +171,18 @@ export function releasesOf(db: Executor, standardId: number): StandardRelease[] 
   return db.select().from(standardReleases).where(eq(standardReleases.standardId, standardId)).orderBy(desc(standardReleases.version)).all();
 }
 
+export function standardById(db: Executor, id: number): Standard {
+  const standard = db.select().from(standards).where(eq(standards.id, id)).get();
+  if (!standard) throw new NotFoundError(`Standard ${id} does not exist`);
+  return standard;
+}
+
+export function releaseById(db: Executor, id: number): StandardRelease {
+  const release = db.select().from(standardReleases).where(eq(standardReleases.id, id)).get();
+  if (!release) throw new NotFoundError(`Standard Release ${id} does not exist`);
+  return release;
+}
+
 export function findRelease(db: Executor, publicId: string): StandardRelease | undefined {
   return db.select().from(standardReleases).where(eq(standardReleases.publicId, publicId)).get();
 }

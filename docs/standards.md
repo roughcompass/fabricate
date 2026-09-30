@@ -100,7 +100,7 @@ Collection `service_dependencies`, in scope `repository`, ranges over the reposi
 | `service.key` | string | The logical identity key |
 | `service.client` | string | How the service is called |
 | `service.protocol` | string | `http`, `graphql`, `websocket`, or `sse` |
-| `service.endpoint_derivation` | string | `literal`, `relative`, `configured`, `host_provided`, or `unknown` |
+| `service.endpoint_derivation` | string | `literal`, `relative`, `configured`, or `host_provided`; unknown when static analysis cannot establish the endpoint |
 | `service.characterizable` | boolean | Whether endpoint, operations, and consumed response fields are established |
 | `service.missing_evidence` | string_set | Service facts that are unknown or conflicting |
 | `service.operation_count` | number | Distinct operations the calls make |

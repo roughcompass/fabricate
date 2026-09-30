@@ -80,8 +80,8 @@ export const SELECTORS: readonly SelectorDefinition[] = [
   service("service.key", "Service identity", "string", "The logical identity key of the Service Dependency"),
   service("service.client", "Client kind", "string", "How the service is called", { choices: CLIENT_KINDS }),
   service("service.protocol", "Protocol", "string", "HTTP, GraphQL, WebSocket, or server-sent events", { choices: ["http", "graphql", "websocket", "sse"] }),
-  service("service.endpoint_derivation", "Endpoint derivation", "string", "Whether the destination is a literal, relative to the application, configured, provided by a host, or unknown", {
-    choices: ["literal", "relative", "configured", "host_provided", "unknown"],
+  service("service.endpoint_derivation", "Endpoint derivation", "string", "Whether the destination is a literal, relative to the application, configured, or provided by a host; an endpoint static analysis cannot establish reads as unknown", {
+    choices: ["literal", "relative", "configured", "host_provided"],
   }),
   service("service.characterizable", "Boundary characterizable", "boolean", "Whether endpoint, operations, and consumed response fields are all established"),
   service("service.missing_evidence", "Missing evidence", "string_set", "Service facts that are unknown or conflicting", { choices: SERVICE_FACTS }),
