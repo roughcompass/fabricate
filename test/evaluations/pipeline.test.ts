@@ -183,10 +183,13 @@ describe("Evaluation pipeline", () => {
 
         await Promise.all([runEvaluationRelease(db, { evaluation: evaluation.publicId, position: 0 }), runEvaluationRelease(other, { evaluation: evaluation.publicId, position: 0 })]);
         await runEvaluationRelease(db, { evaluation: evaluation.publicId, position: 0 });
-        const first = getEvaluation(db, evaluation.publicId);
+        // The last Release hands the Evaluation to its finalizer.
+        expect(getEvaluation(db, evaluation.publicId).state).toBe("finalizing");
+        const first = finalizeEvaluation(db, evaluation.publicId);
         const again = finalizeEvaluation(other, evaluation.publicId);
 
         expect(findingsOf(db, evaluation.id)).toHaveLength(2);
+        expect(first).toMatchObject({ state: "complete", resultDigest: expect.stringMatching(/^[0-9a-f]{64}$/) });
         expect(again).toMatchObject({ state: "complete", resultDigest: first.resultDigest, summary: first.summary });
       } finally {
         other.$client.close();

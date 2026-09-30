@@ -5,7 +5,9 @@ import { Timestamp } from "@/components/ui/format";
 import { Card, DetailsList, Page, PageHeader, ui } from "@/components/ui/layout";
 import { Notice } from "@/components/ui/notice";
 import { Mono, Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { ProgressPoller } from "@/components/progress-poller";
 import { findAssessment, targetReferenceLabel, targetsOf } from "@/lib/assessments/assessment-records";
+import { assessmentStatus } from "@/lib/assessments/status";
 import { getDb } from "@/lib/db/client";
 import { initiatives } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -20,9 +22,11 @@ export default async function AssessmentPage({ params, searchParams }: { params:
 
   const initiative = db.select().from(initiatives).where(eq(initiatives.id, assessment.initiativeId)).get()!;
   const targets = targetsOf(db, assessment.id);
+  const status = assessmentStatus(db, assessment);
 
   return (
     <Page>
+      {!status.terminal && <ProgressPoller url={`/api/assessments/${assessment.publicId}/status`} version={status.version} />}
       <PageHeader
         title={`Assessment ${assessment.publicId}`}
         back={{ href: `/initiatives/${initiative.publicId}`, label: initiative.name }}

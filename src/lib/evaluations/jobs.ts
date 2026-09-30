@@ -2,6 +2,7 @@ import { type JsonObject, digestOf, dump } from "@repo-facts/contract";
 import { targetsOf } from "@/lib/assessments/assessment-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { EVALUATION_RELEASE_MACHINE, isTerminal } from "@/lib/db/state-machines";
+import { enqueue } from "@/lib/jobs/queue";
 import { NonRetryableError } from "@/lib/jobs/worker";
 import { releaseById, releaseDocument, standardById } from "@/lib/standards/standard-records";
 import { evaluateReleaseControls } from "./controls";
@@ -20,10 +21,13 @@ import { transitionEvaluation, transitionEvaluationRelease } from "./transitions
  * an expired lease finds the Release complete and writes nothing. Releases
  * never share or suppress Findings, so overlapping Controls stay independent.
  *
- * The finalizer locks the Evaluation, waits until every pinned Release is
- * terminal, and completes it once with a summary and a canonical digest of its
- * normalized result; a repeated call changes nothing.
+ * The last Release to reach a terminal state moves the Evaluation to
+ * finalizing and enqueues its finalizer in the same transaction. The finalizer
+ * locks the Evaluation and completes it once with a summary and a canonical
+ * digest of its normalized result; a repeated call changes nothing.
  */
+
+export const FINALIZE_EVALUATION = "evaluation.finalize";
 
 export async function runEvaluationRelease(db: Executor, payload: { evaluation: string; position: number }): Promise<Evaluation> {
   const evaluation = getEvaluation(db, payload.evaluation);
@@ -34,7 +38,7 @@ export async function runEvaluationRelease(db: Executor, payload: { evaluation: 
       findings = evaluatePinned(db, evaluation, pinned);
     } catch (error) {
       failRelease(db, evaluation.publicId, payload.position, (error as Error).message);
-      return finalizeEvaluation(db, evaluation.publicId);
+      return getEvaluation(db, evaluation.publicId);
     }
     immediate(db, (tx) => {
       let current = getEvaluation(tx, evaluation.publicId);
@@ -50,9 +54,20 @@ export async function runEvaluationRelease(db: Executor, payload: { evaluation: 
         insertFinding(tx, { evaluation: current, evaluationRelease: release, ...(target && { target }), position, document });
       });
       transitionEvaluationRelease(tx, release, "complete");
+      requestEvaluationFinalization(tx, current.publicId);
     });
   }
-  return finalizeEvaluation(db, evaluation.publicId);
+  return getEvaluation(db, evaluation.publicId);
+}
+
+/** Moves the Evaluation to finalizing and enqueues its finalizer, once every pinned Release is terminal. */
+function requestEvaluationFinalization(db: Executor, evaluationPublicId: string): void {
+  let evaluation = getEvaluation(db, evaluationPublicId);
+  if (evaluation.state === "finalizing" || evaluation.state === "complete" || evaluation.state === "failed") return;
+  if (evaluationReleasesOf(db, evaluation.id).some((release) => !isTerminal(EVALUATION_RELEASE_MACHINE, release.state))) return;
+  if (evaluation.state === "queued") evaluation = transitionEvaluation(db, evaluation, "evaluating");
+  transitionEvaluation(db, evaluation, "finalizing");
+  enqueue(db, { kind: FINALIZE_EVALUATION, payload: { evaluation: evaluation.publicId }, idempotencyKey: `${FINALIZE_EVALUATION}:${evaluation.publicId}` });
 }
 
 /** The Findings of one pinned Release, from the Release and the Assessment's stored results alone. */
@@ -79,7 +94,7 @@ export function finalizeEvaluation(db: Executor, evaluationPublicId: string): Ev
     }
 
     if (evaluation.state === "queued") evaluation = transitionEvaluation(tx, evaluation, "evaluating");
-    evaluation = transitionEvaluation(tx, evaluation, "finalizing");
+    if (evaluation.state === "evaluating") evaluation = transitionEvaluation(tx, evaluation, "finalizing");
     const findings = findingsOf(tx, evaluation.id);
     const positions = new Map(pinned.map((release) => [release.id, release.position]));
     const summary = summarize({
@@ -111,5 +126,6 @@ function failRelease(db: Executor, evaluationPublicId: string, position: number,
     const release = evaluationReleasesOf(tx, evaluation.id).find((item) => item.position === position);
     if (!release || isTerminal(EVALUATION_RELEASE_MACHINE, release.state)) return;
     transitionEvaluationRelease(tx, release, "failed", { failureReason: reason.slice(0, 500) });
+    requestEvaluationFinalization(tx, evaluationPublicId);
   });
 }
