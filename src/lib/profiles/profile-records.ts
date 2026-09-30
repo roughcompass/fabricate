@@ -1,10 +1,10 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import type { Assessment, AssessmentTarget, SourceSnapshot } from "@/lib/assessments/assessment-records";
 import type { Executor } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { assessmentTargets, repositoryProfiles } from "@/lib/db/schema";
-import type { JsonObject, JsonValue } from "@repo-facts/contract";
+import { type JsonObject, type JsonValue, SKIPPED_INPUT_REASONS } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 
 /** Persistence for immutable Repository Profiles, one per pinned snapshot. */
@@ -71,7 +71,28 @@ export function profilesOf(db: Executor, assessmentId: number): { profile: Repos
     .all();
 }
 
+/** The most recent Profile of a repository source across Assessments, for noting that an earlier one is historical. */
+export function latestProfileOfSource(db: Executor, sourcePublicId: string): { profile: RepositoryProfile; target: AssessmentTarget } | undefined {
+  return db
+    .select({ profile: repositoryProfiles, target: assessmentTargets })
+    .from(repositoryProfiles)
+    .innerJoin(assessmentTargets, eq(assessmentTargets.id, repositoryProfiles.assessmentTargetId))
+    .where(eq(assessmentTargets.sourcePublicId, sourcePublicId))
+    .orderBy(desc(repositoryProfiles.id))
+    .get();
+}
+
 /** The Profile document, verified against its digest. */
 export function profileDocument(profile: RepositoryProfile): JsonObject {
   return readDocument("repositoryProfile", profile, `Repository Profile ${profile.publicId}`);
+}
+
+/** A Profile's diagnostics, split into inputs that were skipped or not understood and other notes. */
+export function profileDiagnostics(document: JsonObject): { skipped: JsonObject[]; notes: JsonObject[] } {
+  const facts = document.fact_document as JsonObject;
+  const diagnostics = (Array.isArray(facts.diagnostics) ? facts.diagnostics : []) as JsonObject[];
+  return {
+    skipped: diagnostics.filter((diagnostic) => SKIPPED_INPUT_REASONS.has(String(diagnostic.reason))),
+    notes: diagnostics.filter((diagnostic) => !SKIPPED_INPUT_REASONS.has(String(diagnostic.reason))),
+  };
 }

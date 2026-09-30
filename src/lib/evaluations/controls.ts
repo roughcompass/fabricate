@@ -122,7 +122,7 @@ function finding(release: ReleaseInput, control: JsonObject, subject: JsonObject
 }
 
 function reasoning(outcome: Outcome, applies: boolean, causes: readonly string[]): string {
-  const because = causes.length ? ` ${causes.join(" ")}` : "";
+  const because = causes.length ? ` ${causes.map((cause) => (/[.!?]$/.test(cause) ? cause : `${cause}.`)).join(" ")}` : "";
   switch (outcome) {
     case "meets":
       return "The Control applies, and the evidence shows the expected condition holds.";

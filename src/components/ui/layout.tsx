@@ -50,15 +50,18 @@ interface CardProps {
   flush?: boolean;
   children?: React.ReactNode;
   labelledBy?: string;
+  /** The title's heading level; 3 for cards grouped under a section heading. */
+  level?: 2 | 3;
 }
 
-export function Card({ title, description, actions, flush = false, children }: CardProps) {
+export function Card({ title, description, actions, flush = false, level = 2, children }: CardProps) {
+  const Heading = level === 3 ? "h3" : "h2";
   return (
     <section className={styles.card} aria-label={title}>
       {(title || actions) && (
         <div className={styles.cardHeader}>
           <div>
-            {title && <h2 className={styles.cardTitle}>{title}</h2>}
+            {title && <Heading className={styles.cardTitle}>{title}</Heading>}
             {description && <p className={styles.cardDescription}>{description}</p>}
           </div>
           {actions && <div className={styles.cluster}>{actions}</div>}

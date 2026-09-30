@@ -32,10 +32,13 @@ Both processes validate the configuration and check the Git version at startup. 
 ```sh
 npm test            # unit and integration tests (Vitest)
 npm run test:e2e    # browser tests (Playwright), against a dev server on port 3100
+npm run test:visual # screenshots of every product surface, for design review
 npm run typecheck
 npm run lint
 npm run build       # Next.js standalone server, dist/worker.cjs, and dist/migrate.cjs
 ```
+
+`npm run test:visual` seeds a representative Initiative, checks each product surface for horizontal overflow and overlapping content at 1280 and 375 pixels wide, and writes full-page screenshots to `verification/screenshots/`. The committed screenshots are the output of the last design review.
 
 The lint rules forbid `eval`, the `Function` constructor, the `vm` module, computed `import()`, `require()`, and regular expressions built from data. Only `src/lib/git/runner.ts` may import `child_process`. A test in `test/lint/` keeps these rules in force.
 
