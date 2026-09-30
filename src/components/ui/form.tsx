@@ -87,6 +87,29 @@ export function TextArea({ id, label, hint, optional, errors, ...textarea }: Tex
   );
 }
 
+interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "id" | "className"> {
+  id: string;
+  label: string;
+  hint?: React.ReactNode;
+  optional?: boolean;
+  errors?: readonly string[];
+  options: readonly { value: string; label: string }[];
+}
+
+export function Select({ id, label, hint, optional, errors, options, ...select }: SelectProps) {
+  return (
+    <Field id={id} label={label} hint={hint} optional={optional} errors={errors}>
+      <select id={id} className={styles.input} aria-describedby={describedBy(id, hint, errors)} aria-invalid={errors?.length ? true : undefined} {...select}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
+}
+
 export interface Choice {
   value: string;
   label: string;

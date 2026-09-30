@@ -109,8 +109,8 @@ export function saveDraft(db: Executor, draft: StandardDraft, expectedLockVersio
   return updated;
 }
 
-/** Starts a new draft from a Release. A Standard has at most one draft. */
-export function startDraftFromRelease(db: Executor, release: StandardRelease): StandardDraft {
+/** Starts a new draft from a Release, with +document+ as its content (default: the Release's). A Standard has at most one draft. */
+export function startDraftFromRelease(db: Executor, release: StandardRelease, document?: JsonObject): StandardDraft {
   return immediate(db, (tx) => {
     if (draftOf(tx, release.standardId)) {
       throw new ValidationError([{ field: "base", message: "This Standard already has a draft. Edit or publish it before starting another revision." }]);
@@ -118,7 +118,7 @@ export function startDraftFromRelease(db: Executor, release: StandardRelease): S
     const now = new Date();
     return tx
       .insert(standardDrafts)
-      .values({ standardId: release.standardId, basedOnReleaseId: release.id, document: release.document, createdAt: now, updatedAt: now })
+      .values({ standardId: release.standardId, basedOnReleaseId: release.id, document: document ? dump(document) : release.document, createdAt: now, updatedAt: now })
       .returning()
       .get();
   });
