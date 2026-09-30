@@ -1,6 +1,5 @@
 /** Names and supported versions of every versioned document Fabricate stores. */
 export const DOCUMENT_SCHEMAS = {
-  detectorConfiguration: { name: "fabricate.detector_configuration", versions: [1] },
   repositoryProfile: { name: "fabricate.repository_profile", versions: [1] },
   relationshipMap: { name: "fabricate.relationship_map", versions: [1] },
   standard: { name: "fabricate.standard", versions: [1] },

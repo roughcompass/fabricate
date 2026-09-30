@@ -9,10 +9,11 @@ const executionMessage =
 const executionModules = ["vm", "node:vm", "module", "node:module"];
 const processModules = ["child_process", "node:child_process"];
 
-// Detectors and reconciliation see a snapshot only through SnapshotReader.
-// They get no network, filesystem, process environment, Git, configuration,
-// or database access (design.md, decision 7).
-const isolationMessage = "Detectors see repository content only through SnapshotReader. See design.md, decision 7.";
+// Detection runs in the pinned @repo-facts bundle, whose own checks isolate
+// it. Profile document validation here is held to the same isolation: no
+// network, filesystem, process environment, Git, configuration, or database
+// access (design.md, decision 7).
+const isolationMessage = "Profile documents are validated as data only, with no ambient access. See design.md, decision 7.";
 const isolatedModules = ["dns", "http", "http2", "https", "net", "tls", "dgram", "fs", "fs/promises", "worker_threads", "cluster", "inspector"].flatMap((name) => [name, `node:${name}`]);
 const isolatedPatterns = ["@/lib/git/*", "@/lib/config", "@/lib/config/*", "@/lib/db/*", "@/lib/acquisition/*", "@/lib/jobs/*"];
 const isolatedGlobals = ["fetch", "WebSocket", "XMLHttpRequest", "EventSource", "process"].map((name) => ({ name, message: isolationMessage }));
@@ -73,10 +74,10 @@ const config = [
     },
   },
   {
-    files: ["src/lib/detectors/**/*.ts", "src/lib/profiles/schema.ts", "src/lib/profiles/reconcile.ts"],
+    files: ["src/lib/profiles/schema.ts"],
     rules: {
-      // The TypeScript variant lets a detector name a type from a restricted
-      // module; type imports are erased and cannot reach the module at runtime.
+      // The TypeScript variant allows naming a type from a restricted module;
+      // type imports are erased and cannot reach the module at runtime.
       "no-restricted-imports": "off",
       "@typescript-eslint/no-restricted-imports": [
         "error",

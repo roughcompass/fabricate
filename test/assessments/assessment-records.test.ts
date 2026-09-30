@@ -10,11 +10,13 @@ import {
   snapshotOf,
   targetsOf,
 } from "@/lib/assessments/assessment-records";
+import { detectorConfiguration } from "@repo-facts/bundle";
+import { dump, sha256 } from "@repo-facts/contract";
 import { getSource, setSourceEnabled, updateSource } from "@/lib/catalog/source-records";
+import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
-import { sha256 } from "@/lib/documents/canonical-json";
 import { deleteInitiative } from "@/lib/initiatives/initiative-records";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
@@ -44,9 +46,11 @@ describe("assessment records", () => {
   it("records the detector configuration canonically with its digest", () => {
     const { assessment } = buildAssessment(db, { sources: [buildSource(db)] });
 
-    expect(assessment.configuration).toBe('{"limits":{},"schema":"fabricate.detector_configuration","schema_version":1}');
+    const bundle = detectorConfiguration(getConfig().analysis);
+    expect(assessment.configuration).toBe(dump(bundle.configuration));
     expect(assessment.configurationDigest).toBe(sha256(assessment.configuration));
-    expect(configurationOf(assessment)).toEqual({ limits: {}, schema: "fabricate.detector_configuration", schema_version: 1 });
+    expect(assessment.configurationDigest).toBe(bundle.digest);
+    expect(configurationOf(assessment)).toEqual(bundle.configuration);
   });
 
   it("keeps copied source configuration when the catalog changes afterward", () => {

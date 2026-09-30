@@ -11,7 +11,7 @@
     "dev:web": "next dev",
     "dev:worker": "tsx watch --clear-screen=false src/worker/main.ts",
     "build": "next build && npm run build:worker",
-    "build:worker": "esbuild worker=src/worker/main.ts migrate=src/lib/db/migrate-cli.ts --bundle --platform=node --target=node24 --format=cjs --external:better-sqlite3 --outdir=dist --out-extension:.js=.cjs --log-level=warning",
+    "build:worker": "esbuild worker=src/worker/main.ts migrate=src/lib/db/migrate-cli.ts --bundle --platform=node --target=node24 --format=cjs --external:better-sqlite3 --external:@repo-facts/* --outdir=dist --out-extension:.js=.cjs --log-level=warning",
     "start": "next start",
     "worker": "node dist/worker.cjs",
     "db:generate": "drizzle-kit generate",
@@ -25,6 +25,8 @@
     "check": "npm run typecheck && npm run lint && npm test"
   },
   "dependencies": {
+    "@repo-facts/bundle": "0.1.0",
+    "@repo-facts/contract": "0.1.0",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.3",
     "next": "16.3.7",

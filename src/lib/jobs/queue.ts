@@ -1,7 +1,7 @@
 import { and, asc, eq, lte, or, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { jobs } from "@/lib/db/schema";
-import { type JsonObject, dump, parse } from "@/lib/documents/canonical-json";
+import { type JsonObject, dump, parseCanonical } from "@repo-facts/contract";
 import { redact } from "@/lib/git/redact";
 
 /**
@@ -48,7 +48,7 @@ export function enqueue(db: Executor, options: EnqueueOptions): Job {
 }
 
 export function jobPayload(job: Job): JsonObject {
-  return parse(job.payload) as JsonObject;
+  return parseCanonical(job.payload) as JsonObject;
 }
 
 export interface ClaimOptions {

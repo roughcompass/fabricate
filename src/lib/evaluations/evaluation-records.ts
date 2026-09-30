@@ -15,7 +15,7 @@ import {
   evaluations,
   findings,
 } from "@/lib/db/schema";
-import { type JsonObject, type JsonValue, digestOf, parse } from "@/lib/documents/canonical-json";
+import { type JsonObject, type JsonValue, digestOf, parseCanonical } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 import type { Initiative } from "@/lib/initiatives/initiative-records";
 import type { StandardRelease } from "@/lib/standards/standard-records";
@@ -122,7 +122,7 @@ export function evaluationReleasesOf(db: Executor, evaluationId: number): Evalua
 }
 
 export function coverageGapsOf(evaluation: Evaluation): JsonValue[] {
-  return parse(evaluation.coverageGaps) as JsonValue[];
+  return parseCanonical(evaluation.coverageGaps) as JsonValue[];
 }
 
 export interface NewFinding {

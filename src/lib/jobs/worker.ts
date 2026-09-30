@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import os from "node:os";
 import type { Executor } from "@/lib/db/client";
-import type { JsonObject } from "@/lib/documents/canonical-json";
+import type { JsonObject } from "@repo-facts/contract";
 import { DEFAULT_LEASE_MS, type Job, claimNext, fail, jobPayload, renewLease, succeed } from "./queue";
 
 /**

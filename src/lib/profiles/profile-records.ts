@@ -4,7 +4,7 @@ import type { Executor } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { assessmentTargets, repositoryProfiles } from "@/lib/db/schema";
-import type { JsonObject, JsonValue } from "@/lib/documents/canonical-json";
+import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 
 /** Persistence for immutable Repository Profiles, one per pinned snapshot. */
@@ -25,6 +25,7 @@ export function insertProfile(db: Executor, input: NewProfile): RepositoryProfil
   const issues = new IssueCollector();
   if (prepared.value.commit !== input.snapshot.commitSha) issues.add("document", "The Profile must describe the pinned commit");
   if (prepared.value.detector_release !== input.assessment.detectorRelease) issues.add("document", "The Profile must record the Assessment's detector release");
+  if (prepared.value.detector_configuration_digest !== input.assessment.configurationDigest) issues.add("document", "The Profile must record the Assessment's detector configuration digest");
   for (const problem of input.validate?.(prepared.value) ?? []) issues.add("document", problem);
   issues.throwIfAny();
 

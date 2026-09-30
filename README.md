@@ -8,16 +8,20 @@ Fabricate is under active development. The assessment pipeline, Standard Library
 
 - Node.js 24 or newer
 - Git 2.32 or newer, on `PATH`
+- The address of the internal npm registry that serves the `@repo-facts` packages, in `REPO_FACTS_NPM_REGISTRY`
 - Google Chrome, for browser tests. Playwright uses the installed Chrome instead of downloading a browser.
 - Docker, only to build the production image
 
 ## Set up a development environment
 
 ```sh
+export REPO_FACTS_NPM_REGISTRY=<internal registry URL>
 npm ci
 npm run db:migrate
 npm run dev
 ```
+
+The committed `.npmrc` resolves the `@repo-facts` scope only from `REPO_FACTS_NPM_REGISTRY`. If the variable is unset, installation fails rather than falling back to a public registry. The lockfile records each package's SHA-512 integrity but no registry URL. Package lifecycle scripts are disabled for every dependency. If you develop `repo-facts` on the same machine, its `npm run registry` serves a local registry and prints the value to use.
 
 Open <http://localhost:3000>. `npm run dev` starts the web server and the worker together. Use `npm run dev:web` or `npm run dev:worker` to run one of them. If another process already listens on port 3000, including on the IPv6 loopback address, choose a free port with `PORT=3200 npm run dev`.
 
@@ -77,18 +81,26 @@ Fabricate never stores credentials. It rejects clone URLs that embed a password 
 ## Run the production image
 
 ```sh
-docker build -t fabricate .
+docker build \
+  --secret id=repo_facts_registry,env=REPO_FACTS_NPM_REGISTRY \
+  --secret id=repo_facts_token,env=REPO_FACTS_NPM_TOKEN \
+  -t fabricate .
+REPO_FACTS_NPM_TOKEN=<the same token> node scripts/verify-image.mjs fabricate
 docker volume create fabricate_storage
 docker run --rm -v fabricate_storage:/app/storage fabricate node dist/migrate.cjs
 docker run -d -p 3000:3000 -v fabricate_storage:/app/storage fabricate
 docker run -d -v fabricate_storage:/app/storage fabricate node dist/worker.cjs
 ```
 
+The registry address and its token reach the build only as Docker build secrets. Omit the token secret for a registry that allows anonymous reads. Neither the address nor the token enters a build argument, a layer, or the image environment. `scripts/verify-image.mjs` checks the built image. It scans the image's history, configuration, and every file for the token and for any literal npm token. It also requires the image's `@repo-facts` packages to match the versions the lockfile pins. A registry on the build machine's loopback address is reachable from the build as `host.docker.internal`; pass `--add-host=host.docker.internal:host-gateway` if Docker doesn't define it.
+
 The image runs the web server by default. The worker and the migration command use the same image with a different command. The runtime stage has Node.js, Git, and the SSH client, but no npm, npx, Corepack, pnpm, or Yarn. Both processes run as the unprivileged `node` user. Pass settings as environment variables, for example `-e FABRICATE_ALLOWED_ROOTS=/repositories` together with a read-only bind mount.
 
 ## What an assessment does and does not do
 
 Fabricate uses Git only to fetch and read committed objects. Each Git command comes from a fixed list and runs without a shell. Repository hooks are disabled, submodules are not cloned, and only the `file`, `https`, and `ssh` transports are allowed.
+
+Detectors come from one pinned release of `@repo-facts/bundle`; `package.json` names its exact version. Each Assessment records that version as its detector release, along with the digest of the bundle's configuration under Fabricate's analysis limits. A Repository Profile embeds, unchanged, the fact document the bundle produced. Identical commits analyzed with the same release and configuration produce identical Profiles. Upgrading detectors means pinning a newer exact release. Earlier Profiles keep the release that produced them.
 
 Analysis reads the exact commit recorded for each repository. It never checks out a working tree, so uncommitted edits in a local repository never appear in results. Fabricate never runs anything a repository defines: hooks, Git filters, package lifecycle scripts, CI commands, builds, or tests. JavaScript and TypeScript files are parsed into syntax trees and never executed. Symbolic links are recorded without being followed. A file that exceeds an analysis budget is listed as skipped, and the facts it could affect are reported as unknown.
 

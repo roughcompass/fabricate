@@ -102,7 +102,9 @@ export function currentEnvironment(env: Readonly<Record<string, string | undefin
 }
 
 export function loadConfig(options: LoadOptions = {}): FabricateConfig {
-  const appRoot = path.resolve(options.appRoot ?? process.cwd());
+  // Not traced: the image copies config/ and drizzle/ itself, and tracing from the
+  // working directory would ship the whole project, tests included, in the server output.
+  const appRoot = path.resolve(/*turbopackIgnore: true*/ options.appRoot ?? process.cwd());
   const env = options.env ?? process.env;
   const environment = options.environment ?? currentEnvironment(env);
   const file = parse(fileSchema, options.file ?? readConfigFile(appRoot), "config/fabricate.json");

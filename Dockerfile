@@ -16,15 +16,31 @@ FROM node:${NODE_VERSION}-bookworm-slim AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build the Next.js standalone server and the bundled worker. node-gyp needs
-# Python to evaluate better-sqlite3's prebuild detection (and a compiler if no
-# prebuild matches); none of this reaches the runtime stage.
+# Build the Next.js standalone server and the bundled worker. Dependencies
+# install with lifecycle scripts disabled (see .npmrc), and better-sqlite3
+# ships prebuilt bindings, so nothing is compiled.
+#
+# The @repo-facts packages come from the internal registry. Its address, and a
+# token when the registry requires one, arrive as build secrets, never as build
+# arguments, image environment, or layer contents:
+#
+#   docker build --secret id=repo_facts_registry,env=REPO_FACTS_NPM_REGISTRY \
+#                --secret id=repo_facts_token,env=REPO_FACTS_NPM_TOKEN -t fabricate .
+#
+# The token goes to an npm user configuration on a tmpfs mount, and npm's cache
+# is a cache mount, so neither is committed to a layer. npm skips an optional
+# package that fails to download, and with scripts disabled esbuild cannot fetch
+# its platform binary itself, so the install step checks for it.
 FROM base AS build
-RUN apt-get update -qq \
-    && apt-get install --no-install-recommends -y python3 make g++ \
-    && rm -rf /var/lib/apt/lists/*
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+COPY package.json package-lock.json .npmrc ./
+COPY scripts/npm-userconfig.mjs ./scripts/
+RUN --mount=type=secret,id=repo_facts_registry,env=REPO_FACTS_NPM_REGISTRY,required=true \
+    --mount=type=secret,id=repo_facts_token,env=REPO_FACTS_NPM_TOKEN \
+    --mount=type=tmpfs,target=/run/npm \
+    --mount=type=cache,target=/root/.npm \
+    node scripts/npm-userconfig.mjs /run/npm/npmrc \
+    && npm ci --no-audit --no-fund --userconfig /run/npm/npmrc \
+    && ./node_modules/.bin/esbuild --version > /dev/null
 COPY . .
 RUN npm run build
 

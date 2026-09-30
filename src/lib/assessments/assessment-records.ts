@@ -4,7 +4,7 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId, isPublicId } from "@/lib/db/ids";
 import { REF_KINDS, type RefKind, assessmentTargets, assessments, sourceSnapshots } from "@/lib/db/schema";
-import { type JsonObject, digestOf, parse, sha256 } from "@/lib/documents/canonical-json";
+import { type JsonObject, digestOf, parseCanonical, sha256 } from "@repo-facts/contract";
 import type { Initiative } from "@/lib/initiatives/initiative-records";
 
 /**
@@ -119,7 +119,7 @@ export function configurationOf(assessment: Assessment): JsonObject {
   if (sha256(assessment.configuration) !== assessment.configurationDigest) {
     throw new Error(`Assessment ${assessment.publicId} configuration failed digest verification`);
   }
-  return parse(assessment.configuration) as JsonObject;
+  return parseCanonical(assessment.configuration) as JsonObject;
 }
 
 export function targetReferenceLabel(target: Pick<AssessmentTarget, "gitRef">): string {

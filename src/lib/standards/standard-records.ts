@@ -3,7 +3,7 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, StaleRecordError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { standardDrafts, standardReleases, standards } from "@/lib/db/schema";
-import { type JsonObject, type JsonValue, dump, parse } from "@/lib/documents/canonical-json";
+import { type JsonObject, type JsonValue, dump, parseCanonical } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 import { CURRENT_VERSION, DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
 
@@ -91,7 +91,7 @@ export function draftOf(db: Executor, standardId: number): StandardDraft | undef
 }
 
 export function draftDocument(draft: StandardDraft): JsonObject {
-  return parse(draft.document) as JsonObject;
+  return parseCanonical(draft.document) as JsonObject;
 }
 
 /** Saves a draft's structured document with optimistic locking. */

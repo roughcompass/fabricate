@@ -1,5 +1,5 @@
 import { ValidationError } from "@/lib/db/errors";
-import { type JsonObject, type JsonValue, dump, freeze, isCanonical, parse, sha256 } from "./canonical-json";
+import { type JsonObject, type JsonValue, dump, freeze, isCanonical, parseCanonical, sha256 } from "@repo-facts/contract";
 import { DOCUMENT_SCHEMAS, type DocumentKind } from "./schemas";
 
 /**
@@ -37,7 +37,7 @@ export function prepareDocument(kind: DocumentKind, input: JsonValue | string): 
     }
   }
 
-  const value = parse(text);
+  const value = parseCanonical(text);
   const problem = envelopeProblem(kind, value);
   if (problem) throw invalid("document", problem);
   return { text, digest: sha256(text), schemaVersion: (value as JsonObject).schema_version as number, value: freeze(value as JsonObject) };
@@ -47,7 +47,7 @@ export function readDocument(kind: DocumentKind, stored: { document: string; dig
   if (sha256(stored.document) !== stored.digest) throw new DocumentIntegrityError(`${label} failed digest verification`);
   if (!isCanonical(stored.document)) throw new DocumentIntegrityError(`${label} is not canonical JSON`);
 
-  const value = parse(stored.document);
+  const value = parseCanonical(stored.document);
   const problem = envelopeProblem(kind, value);
   if (problem) throw new DocumentIntegrityError(`${label}: ${problem}`);
   return freeze(value as JsonObject);

@@ -6,8 +6,9 @@ import { ScopeResolutionError } from "@/lib/assessments/scope-resolver";
 import { setSourceEnabled } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
 import { assessmentTargets, assessments, jobs } from "@/lib/db/schema";
-import { DETECTOR_RELEASE } from "@/lib/detectors/bundle";
-import { sha256 } from "@/lib/documents/canonical-json";
+import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
+import { sha256 } from "@repo-facts/contract";
+import { getConfig } from "@/lib/config";
 import { selectedReleases } from "@/lib/initiatives/initiative-records";
 import { jobPayload } from "@/lib/jobs/queue";
 import { drainJobs } from "@/lib/jobs/worker";
@@ -38,8 +39,12 @@ describe("assessment launch", () => {
       ["billing", null],
       ["orders", "main"],
     ]);
-    expect(assessment).toMatchObject({ state: "queued", detectorRelease: DETECTOR_RELEASE, configurationDigest: sha256(assessment.configuration) });
-    expect(configurationOf(assessment).release).toBe(DETECTOR_RELEASE);
+    // The pinned bundle's version is the detector release, and its configuration digest is the Assessment's.
+    const bundle = detectorConfiguration(getConfig().analysis);
+    expect(assessment).toMatchObject({ state: "queued", detectorRelease: DETECTOR_RELEASE, configurationDigest: bundle.digest });
+    expect(sha256(assessment.configuration)).toBe(bundle.digest);
+    expect(configurationOf(assessment)).toEqual(bundle.configuration);
+    expect(configurationOf(assessment)).toMatchObject({ schema: "repo_facts.detector_configuration", release: DETECTOR_RELEASE });
 
     const [job] = db.select().from(jobs).all();
     expect(job).toMatchObject({ kind: COORDINATE_ASSESSMENT, state: "queued" });

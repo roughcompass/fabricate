@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { isUniqueViolation } from "@/lib/db/errors";
-import { DETECTOR_RELEASE, detectorConfiguration } from "@/lib/detectors/bundle";
+import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
 import { getInitiative } from "@/lib/initiatives/initiative-records";
 import { enqueue } from "@/lib/jobs/queue";
@@ -43,7 +43,8 @@ export function launchAssessment(db: Executor, initiativePublicId: string, launc
         initiative,
         launchToken: token,
         detectorRelease: DETECTOR_RELEASE,
-        configuration: detectorConfiguration(config),
+        // The bundle's configuration under this deployment's analysis limits; its digest is the Assessment's.
+        configuration: detectorConfiguration(config.analysis).configuration,
         profileSchemaVersion: CURRENT_VERSION.repositoryProfile,
         relationshipSchemaVersion: CURRENT_VERSION.relationshipMap,
         sources,

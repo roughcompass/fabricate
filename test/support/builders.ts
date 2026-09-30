@@ -1,8 +1,10 @@
 import crypto from "node:crypto";
+import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
+import type { Budgets, JsonObject } from "@repo-facts/contract";
 import { createAssessment } from "@/lib/assessments/assessment-records";
 import { type RepositorySource, insertSource, listSources } from "@/lib/catalog/source-records";
+import { getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
-import type { JsonObject } from "@/lib/documents/canonical-json";
 import { type Standard, type StandardRelease, blankDraftDocument, createStandard, insertRelease } from "@/lib/standards/standard-records";
 import { type Initiative, createInitiative } from "@/lib/initiatives/initiative-records";
 
@@ -16,14 +18,17 @@ export function buildSource(db: Executor, overrides: Partial<{ name: string; clo
   return insertSource(db, { name, cloneUrl, canonicalUrl, gitRef: overrides.gitRef ?? null, enabled: overrides.enabled ?? true });
 }
 
-/** An Assessment over +sources+ (default: every enabled source), written directly without launching jobs. */
-export function buildAssessment(db: Executor, options: { initiative?: Initiative; sources?: readonly RepositorySource[] } = {}) {
+/**
+ * An Assessment over +sources+ (default: every enabled source), written directly without launching jobs.
+ * Like a launched one, it records the pinned bundle's release and configuration.
+ */
+export function buildAssessment(db: Executor, options: { initiative?: Initiative; sources?: readonly RepositorySource[]; limits?: Budgets } = {}) {
   const sources = options.sources ?? listSources(db, { enabled: true });
   return createAssessment(db, {
     initiative: options.initiative ?? buildInitiative(db),
     launchToken: crypto.randomUUID(),
-    detectorRelease: "test",
-    configuration: { schema: "fabricate.detector_configuration", schema_version: 1, limits: {} },
+    detectorRelease: DETECTOR_RELEASE,
+    configuration: detectorConfiguration(options.limits ?? getConfig().analysis).configuration,
     profileSchemaVersion: 1,
     relationshipSchemaVersion: 1,
     sources,

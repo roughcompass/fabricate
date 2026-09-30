@@ -4,7 +4,7 @@ import type { AssessmentTarget } from "@/lib/assessments/assessment-records";
 import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
-import type { JsonObject } from "@/lib/documents/canonical-json";
+import type { JsonObject } from "@repo-facts/contract";
 import {
   type Evaluation,
   type EvaluationRelease,

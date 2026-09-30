@@ -4,7 +4,7 @@ import { mirrorPath } from "@/lib/acquisition/mirror";
 import { internalRefFor } from "@/lib/assessments/assessment-records";
 import type { FabricateConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
-import { parse } from "@/lib/documents/canonical-json";
+import { parseCanonical } from "@repo-facts/contract";
 import { acquire, acquisitionConfig, registerLocalSource } from "../support/acquisition";
 import { createTestDb } from "../support/db";
 import { GitFixture, git } from "../support/git-fixture";
@@ -49,7 +49,7 @@ describe("snapshot pinning", () => {
     expect(snapshot.internalRef).toBe(internalRefFor(snapshot.publicId));
     expect(git(gitDir, ["rev-parse", snapshot.internalRef]).trim()).toBe(commit);
     expect(git(gitDir, ["rev-parse", `${commit}^{tree}`]).trim()).toBe(snapshot.treeSha);
-    expect(parse(snapshot.acquisitionMetadata)).toEqual({
+    expect(parseCanonical(snapshot.acquisitionMetadata)).toEqual({
       clone_url: `file://${work.path}`,
       protocol: "file",
       ref_kind: "branch",

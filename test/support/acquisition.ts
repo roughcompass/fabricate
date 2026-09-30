@@ -31,6 +31,7 @@ export function acquiringTarget(db: Db, source: RepositorySource): AssessmentTar
 }
 
 export async function acquire(db: Db, config: FabricateConfig, source: RepositorySource, options: { runner?: GitRunner; signal?: AbortSignal } = {}) {
-  const target = acquiringTarget(db, source);
-  return { target, snapshot: await acquireSnapshot(db, target, { config, runner: options.runner, signal: options.signal }) };
+  const { assessment, targets } = buildAssessment(db, { sources: [source], limits: config.analysis });
+  const target = transitionTarget(db, targets[0]!, "acquiring");
+  return { assessment, target, snapshot: await acquireSnapshot(db, target, { config, runner: options.runner, signal: options.signal }) };
 }

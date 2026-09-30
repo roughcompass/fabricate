@@ -4,7 +4,7 @@ import type { Executor } from "@/lib/db/client";
 import { IssueCollector } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { relationshipMaps } from "@/lib/db/schema";
-import type { JsonObject, JsonValue } from "@/lib/documents/canonical-json";
+import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 
 /** Persistence for the immutable Relationship Map, one per Assessment. */

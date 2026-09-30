@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { type AssessmentTarget, type SourceSnapshot, recordSnapshot } from "@/lib/assessments/assessment-records";
 import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
-import { sha256 } from "@/lib/documents/canonical-json";
+import { sha256 } from "@repo-facts/contract";
 import { DocumentIntegrityError, prepareDocument, readDocument } from "@/lib/documents/digested";
 import { profileDocument, insertProfile, profilesOf } from "@/lib/profiles/profile-records";
 import { insertRelationshipMap, mapDocument } from "@/lib/relationships/map-records";
@@ -56,7 +56,8 @@ describe("digested documents", () => {
     const profileBody = (overrides: Record<string, unknown> = {}) => ({
       schema: "fabricate.repository_profile",
       schema_version: 1,
-      detector_release: "test",
+      detector_release: assessment.detectorRelease,
+      detector_configuration_digest: assessment.configurationDigest,
       commit: snapshot.commitSha,
       categories: {},
       ...overrides,
@@ -86,12 +87,12 @@ describe("digested documents", () => {
       expect(() => insertProfile(db, { assessment, target, snapshot, document })).toThrow(/UNIQUE constraint failed/);
       expect(() => rawRun(db, "update repository_profiles set document = '{}' where id = ?", profile.id)).toThrow(/immutable/);
       expect(() => rawRun(db, "delete from repository_profiles where id = ?", profile.id)).toThrow(/retained/);
-      expect(() => profileDocument({ ...profile, document: profile.document.replace("test", "tset") })).toThrow(/digest verification/);
+      expect(() => profileDocument({ ...profile, document: profile.document.replace("repository_profile", "repository_profilx") })).toThrow(/digest verification/);
     });
 
-    it("rejects a Profile for another commit or detector release", () => {
-      const error = captureValidation(() => insertProfile(db, { assessment, target, snapshot, document: profileBody({ commit: sha1("other"), detector_release: "other" }) }));
-      expect(error.issues).toHaveLength(2);
+    it("rejects a Profile for another commit, detector release, or detector configuration", () => {
+      const error = captureValidation(() => insertProfile(db, { assessment, target, snapshot, document: profileBody({ commit: sha1("other"), detector_release: "other", detector_configuration_digest: "0".repeat(64) }) }));
+      expect(error.issues).toHaveLength(3);
     });
 
     it("rejects a Profile for a target that is not being analyzed", () => {

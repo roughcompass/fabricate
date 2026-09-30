@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { StaleRecordError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
-import { sha256 } from "@/lib/documents/canonical-json";
+import { sha256 } from "@repo-facts/contract";
 import { createInitiative, selectedReleases, updateInitiative } from "@/lib/initiatives/initiative-records";
 import {
   blankDraftDocument,

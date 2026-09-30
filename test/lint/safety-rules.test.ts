@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 // Proves the lint rules that keep application code from executing, loading,
 // or evaluating data (design.md, decision 6) stay in force.
 const eslint = new ESLint();
+const PROFILE_SCHEMA = "src/lib/profiles/schema.ts";
 
 async function violations(code: string, filePath = "src/lib/example.ts") {
   const [result] = await eslint.lintText(code, { filePath });
@@ -41,18 +42,17 @@ describe("safety lint rules", () => {
     ["fetch", 'export const call = () => fetch("https://example.invalid");', "no-restricted-globals"],
     ["WebSocket", 'export const open = () => new WebSocket("wss://example.invalid");', "no-restricted-globals"],
     ["the process environment", "export const token = () => process.env.TOKEN;", "no-restricted-globals"],
-  ])("keeps detectors away from %s", async (_name, code, rule) => {
-    expect(await violations(code, "src/lib/detectors/example.ts")).toContainEqual(expect.stringContaining(rule));
-    expect(await violations(code, "src/lib/profiles/reconcile.ts")).toContainEqual(expect.stringContaining(rule));
+  ])("keeps Profile document validation away from %s", async (_name, code, rule) => {
+    expect(await violations(code, PROFILE_SCHEMA)).toContainEqual(expect.stringContaining(rule));
   });
 
-  it("lets detectors name types from isolated modules", async () => {
-    expect(await violations('import type { FabricateConfig } from "@/lib/config";\nexport type Limits = FabricateConfig["analysis"];', "src/lib/detectors/example.ts")).toEqual([]);
+  it("lets Profile document validation name types from isolated modules", async () => {
+    expect(await violations('import type { FabricateConfig } from "@/lib/config";\nexport type Limits = FabricateConfig["analysis"];', PROFILE_SCHEMA)).toEqual([]);
   });
 
-  it("still applies the execution rules to detectors", async () => {
-    expect(await violations("export const run = (code: string) => eval(code);", "src/lib/detectors/example.ts")).toContainEqual(expect.stringContaining("no-eval"));
-    expect(await violations('import { spawn } from "node:child_process";\nexport default spawn;', "src/lib/detectors/example.ts")).toContainEqual(
+  it("still applies the execution rules to Profile document validation", async () => {
+    expect(await violations("export const run = (code: string) => eval(code);", PROFILE_SCHEMA)).toContainEqual(expect.stringContaining("no-eval"));
+    expect(await violations('import { spawn } from "node:child_process";\nexport default spawn;', PROFILE_SCHEMA)).toContainEqual(
       expect.stringContaining("no-restricted-imports"),
     );
   });
