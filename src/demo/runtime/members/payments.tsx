@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useBusSubscription, usePersona, usePublish } from "../runtime-context";
+import { useBusSubscription, useProfile, usePublish } from "../runtime-context";
 import { Icon } from "./icons";
 import { blockMainThread } from "./planted";
 import { Badge, Button, Field, Muted, Panel, Select, Stat, Table, Td, TextInput, Th, Tr, uiStyles } from "./ui";
@@ -196,8 +196,7 @@ const ACTIVITY = [
 const TONES = { Settled: "positive", "Pending approval": "accent", Failed: "negative", Approved: "positive" } as const;
 
 export function PaymentActivity() {
-  const persona = usePersona();
-  const approver = persona.role === "Approver";
+  const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
   const [recalculated, setRecalculated] = useState<number>(0);
   return (

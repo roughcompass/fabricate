@@ -24,6 +24,9 @@ const PAIRS: (readonly [foreground: string, background: string, minimum: number]
   ["--color-text", "--color-accent-subtle", 4.5],
   ["--color-on-primary", "--color-primary", 4.5],
   ["--color-on-primary", "--color-primary-hover", 4.5],
+  // The demo toolbar's pill and tooltips.
+  ["--color-text-inverse", "--color-bg-inverse", 4.5],
+  ["--color-focus", "--color-bg-inverse", 3],
   ["--color-on-danger", "--color-danger", 4.5],
   ["--color-on-danger", "--color-danger-hover", 4.5],
   ...STATUSES.flatMap((status) => [

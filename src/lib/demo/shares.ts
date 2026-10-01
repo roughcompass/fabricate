@@ -3,13 +3,20 @@ import { z } from "zod";
 import type { Executor } from "@/lib/db/client";
 import { demoShares } from "@/lib/db/schema";
 import { ENVIRONMENTS } from "./catalog";
+import { profileFieldsSchema } from "./profile-fields";
 import { base64Url } from "./workspace-key";
 import { keyDigest } from "./workspaces";
 
 /**
  * Share links (template-demo/toolbar spec; design.md, decision 11). A link
  * carries a random token and captures one view's route, overrides, theme, and
- * persona. Only the token's digest is stored.
+ * session profile. Only the token's digest is stored.
+ *
+ * The profile is a snapshot of its name, persona, and region, which the
+ * recipient sees without it joining their own profiles. `persona` stays the
+ * id of the matching built-in profile: links from before profiles carry only
+ * that, and open as that built-in profile (toolbar-updates design.md,
+ * decision 7).
  */
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
@@ -19,6 +26,7 @@ export const shareStateSchema = z.strictObject({
   overrides: z.record(z.string().regex(/^[a-z0-9-]{1,60}$/), z.strictObject({ version: z.string().min(1).max(40), environment: z.enum(ENVIRONMENTS) })),
   theme: z.enum(["light", "dark"]),
   persona: z.string().regex(/^[a-z-]{1,40}$/),
+  profile: profileFieldsSchema.optional(),
 });
 
 export type ShareState = z.infer<typeof shareStateSchema>;

@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db/client";
 import { type DemoView, resolveView, viewTemplate } from "@/lib/demo/access";
 import { BRANDS } from "@/lib/demo/catalog";
 import { demoEnabled, requireDemo } from "@/lib/demo/guard";
+import { listProfiles } from "@/lib/demo/profiles";
 import { currentWorkspace } from "@/lib/demo/request";
 import { runtimeDescriptor, shareCookieName } from "@/lib/demo/runtime-view";
 import type { Workspace } from "@/lib/demo/workspaces";
@@ -38,7 +39,9 @@ export async function generateMetadata({ params }: { params: Promise<{ applicati
 export default async function RunLayout({ children, params }: { children: React.ReactNode; params: Promise<{ applicationId: string }> }) {
   requireDemo();
   const resolved = await resolve((await params).applicationId);
-  const descriptor = resolved && runtimeDescriptor(resolved.view, resolved.workspace, resolved.token);
+  // The visitor's own profiles, whoever's view this is: a share link never carries the sharer's.
+  const profiles = resolved?.workspace ? listProfiles(getDb(), resolved.workspace.id) : [];
+  const descriptor = resolved && runtimeDescriptor(resolved.view, resolved.workspace, resolved.token, profiles);
   if (!descriptor) notFound();
   return (
     <PortalRuntime descriptor={descriptor}>

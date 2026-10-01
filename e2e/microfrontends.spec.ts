@@ -1,19 +1,21 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { templateBySlug } from "../src/lib/demo/catalog";
 import { createApplication, validateDeployInput } from "../src/lib/demo/deployments";
 import { WORKSPACE_COOKIE } from "../src/lib/demo/workspace-key";
 import { ensureWorkspace } from "../src/lib/demo/workspaces";
-import { setView, waitForRegions } from "./support/demo";
+import { expectToolbarOnTop, openTool, setView, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
 
 /** Microfrontends in the toolbar (template-demo/microfrontends spec). */
+
+type Box = { x: number; y: number; width: number; height: number };
 
 const region = (page: Page, member: string) => page.locator(`[data-demo-mfe="${member}"]`);
 const panel = (page: Page) => page.getByRole("dialog", { name: "Microfrontends" });
 const member = (page: Page, id: string) => panel(page).locator(`[data-member="${id}"]`);
 
 async function openPanel(page: Page) {
-  await page.getByRole("button", { name: "Open microfrontends" }).click();
+  await openTool(page, "microfrontends");
   await expect(panel(page)).toBeVisible();
 }
 
@@ -96,7 +98,7 @@ test.describe("select mode", () => {
     await region(page, "payee-list").hover();
     await expect(page.locator('[data-select-outline="payee-list"]')).toContainText("Payee list · 1.4.2");
     // The toolbar itself is never selectable.
-    await page.getByRole("button", { name: "Open timing" }).hover();
+    await page.getByRole("button", { name: /^Open toolbar menu/ }).hover();
     await expect(page.locator("[data-select-outline]")).toHaveCount(0);
 
     // Choosing a region does not operate the application underneath.
@@ -139,6 +141,57 @@ test("shows which microfrontend serves each route in the zone indicator", async 
   await expect(zone).toContainText("Payment activity");
   await page.reload();
   await expect(page.getByRole("status", { name: "Zone indicator" })).toContainText("Payment activity");
+});
+
+test.describe("overlays beside the toolbar", () => {
+  const pill = (page: Page) => page.getByRole("complementary", { name: "Demo toolbar" });
+  const zone = (page: Page) => page.getByRole("status", { name: "Zone indicator" });
+  const boxOf = async (locator: Locator) => (await locator.boundingBox())!;
+  const overlap = (a: Box, b: Box) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+  test("moves the zone indicator left of an open panel, and neither covers the pill", async ({ page }) => {
+    await openPanel(page);
+    await panel(page).getByLabel("Zone indicator").check();
+    await expect(zone(page)).toBeVisible();
+    await expect.poll(async () => overlap(await boxOf(zone(page)), await boxOf(panel(page)))).toBe(false);
+    expect(overlap(await boxOf(zone(page)), await boxOf(pill(page)))).toBe(false);
+    expect(overlap(await boxOf(panel(page)), await boxOf(pill(page)))).toBe(false);
+    await expectToolbarOnTop(page);
+
+    // With the panel closed, it goes back to the top right.
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => page.viewportSize()!.width - (await boxOf(zone(page)).then((box) => box.x + box.width))).toBeLessThan(16);
+  });
+
+  test("shows the zone indicator in full on a narrow viewport, clear of the pill", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await openPanel(page);
+    await panel(page).getByLabel("Zone indicator").check();
+    await page.keyboard.press("Escape");
+    await expect(zone(page)).toBeVisible();
+    const box = await boxOf(zone(page));
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(375);
+    expect(overlap(box, await boxOf(pill(page)))).toBe(false);
+  });
+
+  test("places a debug label that would fall under the pill beside it", async ({ page }) => {
+    // A region docked to the right edge, level with the pill, puts its label under the pill.
+    await page.addStyleTag({ content: '[data-demo-mfe="payee-list"] { position: fixed !important; top: calc(50% - 40px) !important; right: 0 !important; width: 240px !important; }' });
+    await openPanel(page);
+    await panel(page).getByLabel("Enable debug mode").check();
+    await page.keyboard.press("Escape");
+    const label = page.locator('[data-debug-label="payee-list"]');
+    await expect(label).toBeVisible();
+    const region = await boxOf(page.locator('[data-demo-mfe="payee-list"]'));
+    expect(overlap({ x: region.x + 4, y: region.y + 4, width: (await boxOf(label)).width, height: (await boxOf(label)).height }, await boxOf(pill(page)))).toBe(true);
+    await expect.poll(async () => overlap(await boxOf(label), await boxOf(pill(page)))).toBe(false);
+    expect((await boxOf(label)).x + (await boxOf(label)).width).toBeLessThanOrEqual((await boxOf(pill(page))).x);
+    await expectToolbarOnTop(page);
+    await page.getByRole("button", { name: /^Open toolbar menu/ }).click();
+    await expect(page.getByRole("dialog", { name: "Demo toolbar" })).toBeVisible();
+  });
 });
 
 test("explains each routing decision in debug mode for a dev application", async ({ page, context, db }) => {

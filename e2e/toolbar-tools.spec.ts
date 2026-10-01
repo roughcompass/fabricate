@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
-import { waitForRegions } from "./support/demo";
+import { openTool, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
 
-/** The toolbar's Accessibility, Timing, and Settings tools (template-demo/toolbar spec). */
+/** The toolbar's Accessibility, Timing, Session, and Settings tools (template-demo/toolbar spec). */
 
 const region = (page: Page, member: string) => page.locator(`[data-demo-mfe="${member}"]`);
 const panel = (page: Page, name: string) => page.getByRole("dialog", { name });
@@ -12,13 +12,13 @@ async function open(page: Page, slug: string) {
   await waitForRegions(page);
 }
 
-async function openTool(page: Page, button: string, name: string) {
-  await page.getByRole("button", { name: button }).click();
+async function openPanel(page: Page, id: string, name: string) {
+  await openTool(page, id);
   await expect(panel(page, name)).toBeVisible();
 }
 
 async function swapPayeeList(page: Page, version: string) {
-  await openTool(page, "Open microfrontends", "Microfrontends");
+  await openPanel(page, "microfrontends", "Microfrontends");
   await panel(page, "Microfrontends").locator('[data-member="payee-list"]').click();
   await panel(page, "Microfrontends").getByRole("radio", { name: new RegExp(`^${version.replaceAll(".", "\\.")}`) }).check();
   await panel(page, "Microfrontends").getByRole("button", { name: "Reload preview" }).click();
@@ -29,7 +29,7 @@ async function swapPayeeList(page: Page, version: string) {
 test.describe("accessibility tool", () => {
   test("audits, swaps to the fixed version, and re-audits clean", async ({ page, db: _db }) => {
     await open(page, "payments-workspace");
-    await openTool(page, "Open accessibility audit", "Accessibility");
+    await openPanel(page, "accessibility", "Accessibility");
     const audit = panel(page, "Accessibility");
     await audit.getByRole("button", { name: "Run audit" }).click();
     await expect(audit.getByRole("status")).toContainText("have violations");
@@ -46,7 +46,7 @@ test.describe("accessibility tool", () => {
     await expect(page.locator("[data-audit-outline]").first()).toBeVisible();
 
     await swapPayeeList(page, "2.0.0");
-    await openTool(page, "Open accessibility audit", "Accessibility");
+    await openPanel(page, "accessibility", "Accessibility");
     await expect(audit.locator("[data-audit-stale]")).toContainText("may be out of date");
     await audit.getByRole("button", { name: "Run audit again" }).click();
     await expect(audit.getByRole("status")).toHaveText("No violations found.");
@@ -58,7 +58,7 @@ test.describe("accessibility tool", () => {
   test("locates a violation on the page and hides outlines without losing results", async ({ page, db: _db }) => {
     await page.setViewportSize({ width: 1280, height: 600 });
     await open(page, "payments-workspace");
-    await openTool(page, "Open accessibility audit", "Accessibility");
+    await openPanel(page, "accessibility", "Accessibility");
     const audit = panel(page, "Accessibility");
     await audit.getByRole("button", { name: "Run audit" }).click();
     const result = audit.locator('[data-rule="label"]');
@@ -84,7 +84,7 @@ test.describe("accessibility tool", () => {
 test.describe("timing tool", () => {
   test("shows the load waterfall in scripted order with the slow member flagged", async ({ page, db: _db }) => {
     await open(page, "payments-workspace");
-    await openTool(page, "Open timing", "Timing");
+    await openPanel(page, "timing", "Timing");
     const loads = panel(page, "Timing").getByRole("list", { name: "Microfrontend loads" }).locator("[data-load-member]");
     expect(await loads.evaluateAll((items) => items.map((item) => item.getAttribute("data-load-member")))).toEqual(["payments-shell", "payee-list", "transfer-form", "payment-activity"]);
     await expect(loads.and(page.locator("[data-slowest]"))).toHaveAttribute("data-load-member", "payment-activity");
@@ -94,7 +94,7 @@ test.describe("timing tool", () => {
   test("rates the planted interaction poor, attributes it, and ranks its region first", async ({ page, db: _db }) => {
     await open(page, "payments-workspace");
     await region(page, "payment-activity").getByRole("button", { name: "Recalculate totals" }).click();
-    await openTool(page, "Open timing", "Timing");
+    await openPanel(page, "timing", "Timing");
     const timing = panel(page, "Timing");
     const interaction = timing.getByRole("list", { name: "Recorded interactions" }).locator('[data-interaction-member="payment-activity"]').first();
     await expect(interaction).toHaveAttribute("data-rating", "poor");
@@ -119,7 +119,7 @@ test.describe("timing tool without Event Timing", () => {
     });
     await open(page, "payments-workspace");
     await region(page, "payment-activity").getByRole("button", { name: "Recalculate totals" }).click();
-    await openTool(page, "Open timing", "Timing");
+    await openPanel(page, "timing", "Timing");
     const timing = panel(page, "Timing");
     await expect(timing).toContainText("Approximate: this browser does not support the Event Timing API");
     const interaction = timing.locator('[data-interaction-member="payment-activity"]').first();
@@ -128,11 +128,22 @@ test.describe("timing tool without Event Timing", () => {
   });
 });
 
+test.describe("session tool", () => {
+  test("reveals Approve actions when an Approver profile signs in", async ({ page, db: _db }) => {
+    await open(page, "payments-workspace");
+    await expect(region(page, "payment-activity").getByRole("button", { name: /^Approve / })).toHaveCount(0);
+    await openPanel(page, "session", "Session");
+    await panel(page, "Session").getByRole("radio", { name: /^Sam Rivera/ }).check();
+    await expect(region(page, "payment-activity").getByRole("button", { name: "Approve PMT-3302" })).toBeVisible();
+    await expect(page.locator("[data-demo-portal]")).toContainText("Approver · New York");
+  });
+});
+
 test.describe("settings tool", () => {
   test("switches to the dark theme without reloading the page", async ({ page, db: _db }) => {
     await open(page, "payments-workspace");
     await page.evaluate(() => ((window as unknown as { __marker: boolean }).__marker = true));
-    await openTool(page, "Open settings", "Settings");
+    await openPanel(page, "settings", "Settings");
     await panel(page, "Settings").getByRole("radio", { name: "Dark" }).check();
     await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-theme", "dark");
     expect(await page.evaluate(() => (window as unknown as { __marker?: boolean }).__marker)).toBe(true);
@@ -141,22 +152,13 @@ test.describe("settings tool", () => {
     await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-theme", "dark");
   });
 
-  test("reveals Approve actions for the Approver role", async ({ page, db: _db }) => {
-    await open(page, "payments-workspace");
-    await expect(region(page, "payment-activity").getByRole("button", { name: /^Approve / })).toHaveCount(0);
-    await openTool(page, "Open settings", "Settings");
-    await panel(page, "Settings").getByRole("radio", { name: "Sam Rivera · Approver" }).check();
-    await expect(region(page, "payment-activity").getByRole("button", { name: "Approve PMT-3302" })).toBeVisible();
-    await expect(page.locator("[data-demo-portal]")).toContainText("Approver · New York");
-  });
-
   test("publishes a message that the price chart receives, and logs it", async ({ page, db: _db }) => {
     await open(page, "market-watch");
     // Move the chart off ACME first, so publishing ACME visibly changes it.
     await region(page, "watchlist").locator('[data-demo-anchor="chart-GLBX"]').click();
     await expect(region(page, "price-chart")).toContainText("Price chart · GLBX");
 
-    await openTool(page, "Open settings", "Settings");
+    await openPanel(page, "settings", "Settings");
     const settings = panel(page, "Settings");
     await settings.getByLabel("Topic", { exact: true }).selectOption("instrument:selected");
     await settings.getByLabel("Payload").fill('{"symbol": "ACME"}');
@@ -173,7 +175,7 @@ test.describe("settings tool", () => {
 
   test("rejects a payload that is not valid JSON", async ({ page, db: _db }) => {
     await open(page, "market-watch");
-    await openTool(page, "Open settings", "Settings");
+    await openPanel(page, "settings", "Settings");
     const settings = panel(page, "Settings");
     await settings.getByLabel("Payload").fill("{symbol: ACME}");
     await settings.getByRole("button", { name: "Publish message" }).click();

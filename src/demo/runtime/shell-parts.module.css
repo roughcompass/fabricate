@@ -50,12 +50,13 @@
   .menuItem[aria-current="true"] { background: var(--rt-color-highlight); }
   .menuSecondary, .menuNote { color: var(--rt-color-muted); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
 
-  /* The user menu: the persona's initials, name, and role. */
+  /* The user menu: the session profile's initials, name, persona, and region. */
   .session { display: inline-flex; flex: none; }
   .avatar { display: inline-grid; flex: none; place-content: center; width: var(--size-control-sm); height: var(--size-control-sm); border-radius: var(--radius-full); background: var(--rt-color-accent); color: var(--rt-color-on-accent); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); line-height: var(--line-height-caption); }
-  .sessionText { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
-  .personaName { font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); white-space: nowrap; }
-  .personaRole { color: var(--rt-color-on-header-muted); font-size: var(--font-size-caption); line-height: var(--line-height-caption); white-space: nowrap; }
+  .sessionText { display: flex; flex-direction: column; align-items: flex-start; max-width: var(--rt-size-session); text-align: left; }
+  .personaName, .personaRole { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .personaName { font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); }
+  .personaRole { color: var(--rt-color-on-header-muted); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
 
   /* Narrow screens show only the initials; the name and role stay for assistive technology. */
   @media (max-width: 767px) {

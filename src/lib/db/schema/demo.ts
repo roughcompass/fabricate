@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { createdAt, id, publicId, sqlList, timestamp } from "./columns";
+import { PERSONAS } from "../../demo/catalog/types";
+import { createdAt, id, publicId, sqlList, timestamp, updatedAt } from "./columns";
 
 // Template demo data (design.md, decision 4). These tables never reference
 // catalog, assessment, evaluation, or standard rows, and nothing outside
@@ -111,7 +112,7 @@ export const demoThreads = sqliteTable(
   ],
 );
 
-/** A comment in a thread. Plain text; replies from a reset workspace keep their author's name. */
+/** A comment in a thread, as written, formatting markers included; replies from a reset workspace keep their author's name. */
 export const demoComments = sqliteTable(
   "demo_comments",
   {
@@ -158,5 +159,38 @@ export const demoShares = sqliteTable(
     check("demo_shares_token_digest", sql`length(${t.tokenDigest}) = 64`),
     check("demo_shares_target", sql`(${t.applicationId} IS NULL) <> (${t.referenceSlug} IS NULL)`),
     check("demo_shares_state", sql`json_valid(${t.state}) AND json_type(${t.state}) = 'object'`),
+  ],
+);
+
+/**
+ * A session profile a visitor created: who is using a running application,
+ * with a persona and a region (template-demo/toolbar spec; design.md,
+ * decision 6). Profiles belong to the workspace, so every application the
+ * visitor opens offers them. name_key is the name lowercased in code (SQLite's
+ * lower() folds only ASCII), unique within the workspace; the built-in
+ * profiles' names are refused in code.
+ */
+export const demoProfiles = sqliteTable(
+  "demo_profiles",
+  {
+    id: id(),
+    publicId: publicId(),
+    workspaceId: integer("workspace_id")
+      .notNull()
+      .references(() => demoWorkspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    nameKey: text("name_key").notNull(),
+    persona: text("persona", { enum: PERSONAS }).notNull(),
+    region: text("region").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("demo_profiles_name").on(t.workspaceId, t.nameKey),
+    index("demo_profiles_workspace").on(t.workspaceId, t.createdAt),
+    check("demo_profiles_public_id", sql`${t.publicId} GLOB 'dpf_*'`),
+    check("demo_profiles_name", sql`length(trim(${t.name})) BETWEEN 1 AND 60`),
+    check("demo_profiles_persona", sql.raw(`persona IN (${sqlList(PERSONAS)})`)),
+    check("demo_profiles_region", sql`length(trim(${t.region})) BETWEEN 1 AND 60`),
   ],
 );

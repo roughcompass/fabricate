@@ -6,7 +6,7 @@ import { type DemoView, resolveView } from "./access";
 import { demoUnavailable } from "./guard";
 import { currentWorkspace, writableWorkspace } from "./request";
 import { shareCookieName } from "./runtime-view";
-import type { Workspace } from "./workspaces";
+import { DemoLimitError, type Workspace } from "./workspaces";
 
 /**
  * Shared plumbing for the demo's JSON route handlers: the demo switch, view
@@ -58,12 +58,13 @@ export async function jsonBody(request: Request): Promise<Record<string, unknown
   return Response.json({ error: "Expected a JSON object" }, { status: 400 });
 }
 
-/** Runs a write, turning validation problems into a 400 response. */
+/** Runs a write, turning validation problems and workspace limits into a 400 response. */
 export function attempt(work: () => Response): Response {
   try {
     return work();
   } catch (error) {
     if (error instanceof ValidationError) return invalid(error);
+    if (error instanceof DemoLimitError) return Response.json({ errors: { base: [error.message] } }, { status: 400 });
     throw error;
   }
 }

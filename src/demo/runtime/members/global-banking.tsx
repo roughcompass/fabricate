@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useBusSubscription, usePersona, usePublish } from "../runtime-context";
+import { useBusSubscription, useProfile, usePublish } from "../runtime-context";
 import { Icon } from "./icons";
 import { blockMainThread } from "./planted";
 import { Badge, Button, Field, Muted, Panel, Stat, Table, Td, TextInput, Th, Tr, uiStyles } from "./ui";
@@ -159,8 +159,7 @@ const DOCUMENTS = [
 const DOC_TONES = { Received: "positive", "Awaiting review": "accent", Missing: "negative", Approved: "positive" } as const;
 
 export function DocumentReview() {
-  const persona = usePersona();
-  const approver = persona.role === "Approver";
+  const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
   const [verified, setVerified] = useState(false);
   return (

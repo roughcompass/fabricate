@@ -1,4 +1,4 @@
-import type { EnvironmentId } from "@/lib/demo/catalog";
+import type { EnvironmentId, Profile } from "@/lib/demo/catalog";
 import type { ShareState } from "@/lib/demo/shares";
 import type { HintState } from "@/lib/demo/workspaces";
 
@@ -22,6 +22,12 @@ export interface RuntimeDescriptor {
   readonly shareToken: string | null;
   readonly displayName: string | null;
   readonly hints: HintState;
+  /** The visitor's own session profiles, so the first render can show a custom active profile. */
+  readonly profiles: readonly Profile[];
   /** The simulated address shown for the application. */
   readonly url: string;
+  /** Whether the application's simulated build has finished; reference deployments are always ready. */
+  readonly status: "ready" | "building";
+  /** The application's page in Fabricate, or its template's page for a reference deployment or a shared view. */
+  readonly pageHref: string;
 }

@@ -74,7 +74,7 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
             confirmLabel="Reset demo"
             tone="danger"
           >
-            <p>Your applications, comments, and share links are removed. The templates and other visitors&apos; work are not affected.</p>
+            <p>Your applications, comments, share links, and session profiles are removed. The templates and other visitors&apos; work are not affected.</p>
           </ConfirmDialog>
         }
         alerts={<OutcomeToast outcome={demoOutcome(param(params, "notice"))} strip={["notice"]} />}

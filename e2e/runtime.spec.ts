@@ -291,11 +291,11 @@ test.describe("slow microfrontends and roles", () => {
     });
   }
 
-  test("shows Approve actions only to the Approver role", async ({ page, db: _db }) => {
+  test("shows Approve actions only to a profile with the Approver persona", async ({ page, db: _db }) => {
     await page.goto("/run/ref-payments-workspace");
     await waitForRegions(page);
     await expect(region(page, "payment-activity").getByRole("button", { name: /^Approve/ })).toHaveCount(0);
-    await setView(page, { personaId: "approver" });
+    await setView(page, { profileId: "approver" });
     await expect(page.getByText("Sam Rivera")).toBeVisible();
     await expect(region(page, "payment-activity").getByRole("button", { name: "Approve PMT-3302" })).toBeVisible();
     await region(page, "payment-activity").getByRole("button", { name: "Approve PMT-3302" }).click();

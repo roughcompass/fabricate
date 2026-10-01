@@ -29,6 +29,8 @@
     --rt-size-chart: 180px;
     --rt-size-content: 1280px;
     --rt-size-menu: 280px;
+    /* The longest the header's user name and persona run before an ellipsis; session profile names reach 60 characters. */
+    --rt-size-session: 200px;
     --rt-radius-panel: 6px;
     --rt-radius-control: 4px;
     --rt-shadow-panel: 0 1px 2px light-dark(rgb(16 24 40 / 0.05), rgb(0 0 0 / 0.4));

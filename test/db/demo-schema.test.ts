@@ -110,10 +110,12 @@ describe("demo schema", () => {
     try {
       fs.cpSync(MIGRATIONS_FOLDER, folder, { recursive: true });
       const journalFile = path.join(folder, "meta", "_journal.json");
-      const journal = JSON.parse(fs.readFileSync(journalFile, "utf8")) as { entries: { tag: string }[] };
-      journal.entries = journal.entries.filter((entry) => entry.tag !== "0014_demo_origin");
+      // A database from before the origin migration has none of it or what came after.
+      const journal = JSON.parse(fs.readFileSync(journalFile, "utf8")) as { entries: { idx: number; tag: string }[] };
+      const origin = journal.entries.find((entry) => entry.tag === "0014_demo_origin")!.idx;
+      for (const entry of journal.entries.filter((candidate) => candidate.idx >= origin)) fs.rmSync(path.join(folder, `${entry.tag}.sql`));
+      journal.entries = journal.entries.filter((entry) => entry.idx < origin);
       fs.writeFileSync(journalFile, JSON.stringify(journal));
-      fs.rmSync(path.join(folder, "0014_demo_origin.sql"));
 
       const earlier = openDatabase(":memory:");
       migrateDatabase(earlier, folder);

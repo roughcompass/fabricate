@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOverlappingContent, test } from "./support/fixtures";
-import { setView, waitForRegions } from "./support/demo";
+import { openTool, setView, waitForRegions } from "./support/demo";
 import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
 import { paths } from "./support/paths";
 
@@ -159,13 +159,13 @@ test("captures each toolbar tool over every hero application, in both themes", a
   fs.rmSync(output, { recursive: true, force: true });
   fs.mkdirSync(output, { recursive: true });
   const heroes = ["payments-workspace", "client-onboarding", "market-watch", "operations-console"];
-  const tools: [name: string, button: string, dialog: string][] = [
-    ["microfrontends", "Open microfrontends", "Microfrontends"],
-    ["accessibility", "Open accessibility audit", "Accessibility"],
-    ["timing", "Open timing", "Timing"],
-    ["settings", "Open settings", "Settings"],
-    ["share", "Open sharing", "Share"],
-    ["comments", "Open comments", "Comments"],
+  const tools: [id: string, dialog: string][] = [
+    ["microfrontends", "Microfrontends"],
+    ["accessibility", "Accessibility"],
+    ["timing", "Timing"],
+    ["settings", "Settings"],
+    ["share", "Share"],
+    ["comments", "Comments"],
   ];
   await page.setViewportSize({ width: 1280, height: 900 });
   for (const theme of THEMES) {
@@ -186,8 +186,8 @@ test("captures each toolbar tool over every hero application, in both themes", a
         await expect(composer).toBeHidden();
         await page.getByRole("dialog", { name: "Comment 1" }).getByRole("button", { name: "Close comment" }).click();
       }
-      for (const [name, button, dialog] of tools) {
-        await page.getByRole("button", { name: button }).click();
+      for (const [name, dialog] of tools) {
+        await openTool(page, name);
         const panel = page.getByRole("dialog", { name: dialog });
         await expect(panel).toBeVisible();
         if (name === "accessibility") {
@@ -201,4 +201,79 @@ test("captures each toolbar tool over every hero application, in both themes", a
     }
   }
   expect(fs.readdirSync(output)).toHaveLength(heroes.length * tools.length * THEMES.length);
+});
+
+/**
+ * Captures the toolbar's own states at desktop and 375px widths, in both
+ * operator themes: at rest, the open and filtered menu, each tool panel, the
+ * Session create form, the composer with its formatting bar, and the hidden
+ * tab.
+ */
+test("captures the toolbar's states at desktop and mobile width, in both operator themes", async ({ page, context, db: _db, baseURL }) => {
+  const output = path.join(OUTPUT, "toolbar-states");
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  const panels: [id: string, dialog: string][] = [
+    ["comments", "Comments"],
+    ["share", "Share"],
+    ["microfrontends", "Microfrontends"],
+    ["accessibility", "Accessibility"],
+    ["timing", "Timing"],
+    ["session", "Session"],
+    ["settings", "Settings"],
+    ["shortcuts", "Preferences / Keyboard shortcuts"],
+  ];
+  const menu = page.getByRole("dialog", { name: "Demo toolbar" });
+  let count = 0;
+  const capture = async (name: string, theme: string, viewport: string) => {
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: path.join(output, `${name}-${viewport}-${theme}.jpg`), type: "jpeg", quality: 75 });
+    count++;
+  };
+  for (const theme of THEMES) {
+    await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await page.goto("/run/ref-payments-workspace");
+      await waitForRegions(page);
+      await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+      await capture("rest", theme, viewport.name);
+
+      await page.getByRole("button", { name: /^Open toolbar menu/ }).click();
+      await expect(menu).toBeVisible();
+      await capture("menu", theme, viewport.name);
+      await page.keyboard.type("set");
+      await capture("menu-filtered", theme, viewport.name);
+      await page.keyboard.press("Escape");
+
+      for (const [id, dialog] of panels) {
+        await openTool(page, id);
+        await expect(page.getByRole("dialog", { name: dialog })).toBeVisible();
+        await capture(`panel-${id}`, theme, viewport.name);
+        await page.keyboard.press("Escape");
+      }
+
+      await openTool(page, "session");
+      await page.getByRole("dialog", { name: "Session" }).getByRole("button", { name: "New profile" }).click();
+      await expect(page.getByRole("form", { name: "New profile" })).toBeVisible();
+      await capture("session-create", theme, viewport.name);
+      await page.keyboard.press("Escape");
+
+      await openTool(page, "comment");
+      await page.locator('[data-demo-anchor="send-payment"]').click();
+      const composer = page.getByRole("dialog", { name: "New comment" });
+      await composer.getByLabel("Comment", { exact: true }).fill("Make this **primary**");
+      await composer.getByRole("button", { name: "Formatting" }).click();
+      await expect(composer.getByRole("group", { name: "Formatting" })).toBeVisible();
+      await capture("composer", theme, viewport.name);
+      await composer.getByLabel("Comment", { exact: true }).press("Escape");
+
+      await page.keyboard.press(".");
+      await expect(page.getByRole("button", { name: "Show toolbar" })).toBeVisible();
+      await capture("hidden", theme, viewport.name);
+      await page.keyboard.press(".");
+    }
+  }
+  expect(fs.readdirSync(output)).toHaveLength(count);
+  expect(count).toBe((panels.length + 6) * VIEWPORTS.length * THEMES.length);
 });

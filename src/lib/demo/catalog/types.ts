@@ -102,11 +102,22 @@ export interface Template {
   readonly app: AppDefinition;
 }
 
-export interface Persona {
+/** The access types a session profile can have. */
+export const PERSONAS = ["Analyst", "Approver", "Administrator"] as const;
+export type Persona = (typeof PERSONAS)[number];
+
+/**
+ * Who is using a running application: a person, with a persona (their access
+ * type) and a region. Built-in profiles are constants; a visitor's own are
+ * stored in their workspace, and a share link can carry a snapshot of one.
+ */
+export interface Profile {
+  /** A built-in id (`analyst`, `approver`, `administrator`), a public id, or `shared` for a share link's snapshot. */
   readonly id: string;
   readonly name: string;
-  readonly role: "Analyst" | "Approver" | "Administrator";
+  readonly persona: Persona;
   readonly region: string;
+  readonly builtIn: boolean;
 }
 
 export interface LoadEntry {

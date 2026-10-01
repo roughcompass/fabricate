@@ -13,6 +13,7 @@ import { routeHref, useCurrentRoute, useRuntime, useViewState } from "../../runt
 import { findAnchorElement } from "./anchors";
 import { useShell } from "./comment-layer";
 import { useComments } from "./comments-state";
+import { CommentBody } from "./comment-body";
 import styles from "./comments.module.css";
 
 /**
@@ -102,7 +103,9 @@ export function CommentsPanel() {
                   <strong>{first.authorName}</strong> <RelativeTime value={new Date(first.createdAt)} />
                   {thread.comments.length > 1 && <span>{` · ${thread.comments.length - 1} ${thread.comments.length === 2 ? "reply" : "replies"}`}</span>}
                 </p>
-                <p className={styles.commentBody}>{first.body}</p>
+                <p className={styles.commentBody}>
+                  <CommentBody body={first.body} />
+                </p>
                 <p className={styles.location}>{here || thread.status === "resolved" ? location : `Not visible in this view · ${location}`}</p>
                 <div className={styles.popoverActions}>
                   {thread.status === "resolved" ? (

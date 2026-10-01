@@ -80,7 +80,7 @@ FABRICATE_DEMO=true npm run dev:web
 
 For a hosted demo that self-serve visitors can reach, run the production image with `-e FABRICATE_DEMO=true`. To turn the demo off again, restart without the override.
 
-Each visitor gets an anonymous workspace, which is tied to their browser by an httpOnly cookie and needs no sign-in. A workspace holds the visitor's applications, comments, and share links, and other visitors cannot see it except through a share link. DE FabLab stores only a digest of the cookie. A workspace can hold 25 applications, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted, together with their applications, comments, and share links. The demo's tables are separate from catalog, assessment, evaluation, and standard data. See [docs/template-demo.md](docs/template-demo.md) for the presenter script.
+Each visitor gets an anonymous workspace, which is tied to their browser by an httpOnly cookie and needs no sign-in. A workspace holds the visitor's applications, comments, share links, and session profiles, and other visitors cannot see it except through a share link. DE FabLab stores only a digest of the cookie. A workspace can hold 25 applications and 20 custom session profiles, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted, together with their applications, comments, share links, and session profiles. The demo's tables are separate from catalog, assessment, evaluation, and standard data. See [docs/template-demo.md](docs/template-demo.md) for the presenter script.
 
 ### Source roots
 

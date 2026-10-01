@@ -2,10 +2,11 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { createContext, use, useEffect, useEffectEvent, useMemo, useSyncExternalStore } from "react";
-import { type AppDefinition, type AppRoute, type Persona, type Template, personaById, routeByPath, startRoute } from "@/lib/demo/catalog";
+import { type AppDefinition, type AppRoute, type Profile, type Template, routeByPath, startRoute } from "@/lib/demo/catalog";
 import { type MemberRouting, resolveRouting } from "@/lib/demo/routing";
 import type { Bus } from "./bus";
 import type { RuntimeDescriptor } from "./descriptor";
+import { type ProfilesStore, resolveProfile } from "./profiles";
 import { type Activity, type ViewState, type ViewStore, effectiveVersions } from "./view-store";
 
 export interface Runtime {
@@ -14,6 +15,10 @@ export interface Runtime {
   readonly app: AppDefinition;
   readonly store: ViewStore;
   readonly bus: Bus;
+  /** The visitor's own session profiles. */
+  readonly profiles: ProfilesStore;
+  /** A share link's profile snapshot, when the view came from one that carries it. */
+  readonly sharedProfile: Profile | null;
 }
 
 export const RuntimeContext = createContext<Runtime | null>(null);
@@ -37,8 +42,15 @@ export function useActivity(): Activity {
   return useSyncExternalStore(store.subscribe, store.getActivity, store.getActivity);
 }
 
-export function usePersona(): Persona {
-  return personaById(useViewState().personaId);
+export function useCustomProfiles(): readonly Profile[] {
+  const { profiles } = useRuntime();
+  return useSyncExternalStore(profiles.subscribe, profiles.getProfiles, profiles.getProfiles);
+}
+
+/** The active session profile: who is using the application, with their persona and region. */
+export function useProfile(): Profile {
+  const { sharedProfile } = useRuntime();
+  return resolveProfile(useViewState().profileId, useCustomProfiles(), sharedProfile);
 }
 
 export function useVersions(): Record<string, string> {

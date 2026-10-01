@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useBusSubscription, usePersona, usePublish } from "../runtime-context";
+import { useBusSubscription, useProfile, usePublish } from "../runtime-context";
 import { Icon } from "./icons";
 import { blockMainThread } from "./planted";
 import { Badge, Button, Field, Muted, Panel, Select, Stat, Table, Td, TextInput, Th, Tr, uiStyles } from "./ui";
@@ -232,8 +232,7 @@ const TRADES = [
 ] as const;
 
 export function TradeBlotter() {
-  const persona = usePersona();
-  const approver = persona.role === "Approver";
+  const approver = useProfile().persona === "Approver";
   const [allocated, setAllocated] = useState<readonly string[]>([]);
   const [exposure, setExposure] = useState("$1.42M");
   return (

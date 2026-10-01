@@ -1,13 +1,14 @@
 "use client";
 
 import { useTrackedRects } from "../geometry";
+import { Placed } from "../placed";
 import { useAudit } from "./audit-state";
 import styles from "./accessibility.module.css";
 
 /**
  * The audit drawn on the page: every affected element outlined in its
- * impact's color and labeled with its result number. The selected result's
- * elements are highlighted.
+ * impact's color and labeled with its result number, placed clear of the
+ * toolbar. The selected result's elements are highlighted.
  */
 export function AuditOverlay() {
   const audit = useAudit();
@@ -46,7 +47,9 @@ export function AuditOverlay() {
               data-highlighted={highlighted || undefined}
               data-audit-outline={result.number}
             >
-              <span className={styles.outlineLabel}>{result.number}</span>
+              <Placed follow preferred={(size) => ({ top: rect.top + 2 - size.height, left: rect.left })} className={styles.outlineLabel}>
+                {result.number}
+              </Placed>
             </div>
           );
         }),

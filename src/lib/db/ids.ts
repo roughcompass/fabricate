@@ -19,6 +19,7 @@ export const PUBLIC_ID_PREFIXES = {
   demoApplication: "app",
   demoThread: "thr",
   demoComment: "cmt",
+  demoProfile: "dpf",
 } as const;
 
 export type PublicIdPrefix = (typeof PUBLIC_ID_PREFIXES)[keyof typeof PUBLIC_ID_PREFIXES];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useBusSubscription, usePersona, usePublish } from "../runtime-context";
+import { useBusSubscription, useProfile, usePublish } from "../runtime-context";
 import { Icon } from "./icons";
 import { blockMainThread } from "./planted";
 import { Badge, Button, Field, Muted, Panel, Select, Table, Td, Th, Tr, uiStyles } from "./ui";
@@ -144,8 +144,7 @@ const CHANGES = [
 ] as const;
 
 export function ChangeCalendar() {
-  const persona = usePersona();
-  const approver = persona.role === "Approver";
+  const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
   const [checked, setChecked] = useState(false);
   return (

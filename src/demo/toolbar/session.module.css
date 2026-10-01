@@ -1,0 +1,18 @@
+@layer components {
+  /* The Session tool: the visitor's own profiles, and the form that creates or edits one. */
+  .section { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+  .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .sectionTitle { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .muted { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+
+  .list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+  .row { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border-subtle); }
+  .row:last-child { border-bottom: 0; }
+  .rowText { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
+  .rowName { overflow: hidden; font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); text-overflow: ellipsis; white-space: nowrap; }
+  .rowMeta { overflow: hidden; color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); text-overflow: ellipsis; white-space: nowrap; }
+
+  .form { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-subtle); }
+  .formTitle { font-size: var(--font-size-secondary); font-weight: var(--font-weight-semibold); line-height: var(--line-height-secondary); }
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+}

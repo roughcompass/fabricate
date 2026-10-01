@@ -74,6 +74,8 @@ describe("demo switch off", () => {
     const shares = await import("@/app/api/demo/shares/route");
     const replies = await import("@/app/api/demo/threads/[threadId]/comments/route");
     const status = await import("@/app/api/demo/threads/[threadId]/status/route");
+    const profiles = await import("@/app/api/demo/profiles/route");
+    const profile = await import("@/app/api/demo/profiles/[profileId]/route");
     const post = (body: unknown) => new Request("http://localhost/api/demo", { method: "POST", body: JSON.stringify(body) });
 
     expect((await share.GET(new Request(`http://localhost/s/${token}`), { params: Promise.resolve({ token }) })).status).toBe(404);
@@ -82,6 +84,17 @@ describe("demo switch off", () => {
     expect((await shares.POST(post({ application: applicationId, state: { route: "watch", overrides: {}, theme: "light", persona: "analyst" } }))).status).toBe(404);
     expect((await replies.POST(post({ application: applicationId, body: "Hi" }), { params: Promise.resolve({ threadId: "thr_0000000000000000" }) })).status).toBe(404);
     expect((await status.POST(post({ application: applicationId, status: "resolved" }), { params: Promise.resolve({ threadId: "thr_0000000000000000" }) })).status).toBe(404);
+    // Whatever the body: the switch is checked before anything is read.
+    const malformed = () => new Request("http://localhost/api/demo", { method: "POST", body: "not json" });
+    expect((await status.POST(post({}), { params: Promise.resolve({ threadId: "thr_0000000000000000" }) })).status).toBe(404);
+    expect((await threads.POST(malformed())).status).toBe(404);
+    expect((await shares.POST(malformed())).status).toBe(404);
+    expect((await replies.POST(malformed(), { params: Promise.resolve({ threadId: "thr_0000000000000000" }) })).status).toBe(404);
+    expect((await profiles.POST(malformed())).status).toBe(404);
+    expect((await profiles.GET()).status).toBe(404);
+    expect((await profiles.POST(post({ name: "Priya Shah", persona: "Approver", region: "Mumbai" }))).status).toBe(404);
+    expect((await profile.PATCH(post({ name: "Priya Shah", persona: "Approver", region: "Mumbai" }), { params: Promise.resolve({ profileId: "dpf_0000000000000000" }) })).status).toBe(404);
+    expect((await profile.DELETE(post({}), { params: Promise.resolve({ profileId: "dpf_0000000000000000" }) })).status).toBe(404);
   });
 
   it("refuses the demo's Server Actions", async () => {

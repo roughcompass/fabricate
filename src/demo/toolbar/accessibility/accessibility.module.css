@@ -53,7 +53,7 @@
   .outline[data-impact="critical"], .outline[data-impact="serious"] { border-color: var(--color-error); }
   .outline[data-impact="moderate"] { border-color: var(--color-warning); }
   .outline[data-highlighted] { background: var(--color-focus-ring); box-shadow: var(--shadow-focus); }
-  .outlineLabel { position: absolute; top: 0; left: 0; min-width: var(--size-icon); padding: 0 var(--space-1); border-radius: var(--radius-sm); background: var(--color-neutral); color: var(--color-bg); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); line-height: var(--line-height-caption); text-align: center; transform: translate(-2px, -100%); }
+  .outlineLabel { position: fixed; min-width: var(--size-icon); padding: 0 var(--space-1); border-radius: var(--radius-sm); background: var(--color-neutral); color: var(--color-bg); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); line-height: var(--line-height-caption); text-align: center; }
   .outline[data-impact="critical"] .outlineLabel, .outline[data-impact="serious"] .outlineLabel { background: var(--color-error); }
   .outline[data-impact="moderate"] .outlineLabel { background: var(--color-warning); }
 }

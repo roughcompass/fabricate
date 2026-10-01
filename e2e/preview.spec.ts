@@ -1,6 +1,6 @@
 import type { Frame, Page } from "@playwright/test";
 import { templateBySlug } from "../src/lib/demo/catalog";
-import { waitForRegions } from "./support/demo";
+import { startComment, waitForRegions } from "./support/demo";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { expectCurrentItem } from "./support/shell";
 
@@ -161,7 +161,7 @@ test("keeps a visitor's comments on a reference deployment private to their work
   await page.goto("/templates/payments-workspace/preview");
   const [full] = await Promise.all([context.waitForEvent("page"), page.getByRole("link", { name: /Open full screen/ }).click()]);
   await waitForRegions(full);
-  await full.keyboard.press("c");
+  await startComment(full);
   await full.locator('[data-demo-anchor="send-payment"]').click();
   const composer = full.getByRole("dialog", { name: "New comment" });
   await composer.getByLabel("Your name").fill("Sam Rivera");
@@ -177,6 +177,6 @@ test("keeps a visitor's comments on a reference deployment private to their work
   await waitForRegions(theirs);
   await expect(theirs.getByRole("complementary", { name: "Demo toolbar" })).toBeVisible();
   await expect(theirs.locator("[data-comment-pin]")).toHaveCount(0);
-  await expect(theirs.getByRole("button", { name: "Open comments" })).not.toContainText("1");
+  await expect(theirs.getByRole("button", { name: /^Open toolbar menu/ })).toHaveAccessibleName("Open toolbar menu");
   await other.close();
 });

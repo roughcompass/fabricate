@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent, useState } from "react";
 import { type AppRoute, loadSequence, routeByPath, shellOf, templateBySlug } from "@/lib/demo/catalog";
 import { createBus } from "./bus";
 import type { RuntimeDescriptor } from "./descriptor";
+import { createProfilesStore, sharedProfileOf } from "./profiles";
 import { MicrofrontendRegion } from "./region";
 import { LoadedContext, type Runtime, RuntimeContext, useCurrentRoute, useRuntime } from "./runtime-context";
 import { PortalShell } from "./shell";
@@ -17,7 +18,15 @@ import styles from "./portal-runtime.module.css";
 export function PortalRuntime({ descriptor, children }: { descriptor: RuntimeDescriptor; children?: React.ReactNode }) {
   const [runtime] = useState<Runtime>(() => {
     const template = templateBySlug(descriptor.templateSlug)!;
-    return { descriptor, template, app: template.app, store: createViewStore(template.app, descriptor.environment, descriptor.viewKey, descriptor.shareState, descriptor.shareToken), bus: createBus() };
+    return {
+      descriptor,
+      template,
+      app: template.app,
+      store: createViewStore(template.app, descriptor.environment, descriptor.viewKey, descriptor.shareState, descriptor.shareToken),
+      bus: createBus(),
+      profiles: createProfilesStore(descriptor.profiles),
+      sharedProfile: sharedProfileOf(descriptor.shareState),
+    };
   });
   return (
     <RuntimeContext value={runtime}>

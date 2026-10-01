@@ -1,4 +1,4 @@
-import { visitorContext, waitForRegions } from "./support/demo";
+import { openTool, visitorContext, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
 import { openItem } from "./support/shell";
 import { paths } from "./support/paths";
@@ -52,13 +52,13 @@ test("runs the presenter storyline from the create page to a reset", async ({ pa
   await expect(app.locator("[data-demo-portal]")).toHaveAttribute("data-shell", "access");
 
   // Audit, swap the payee list to its fixed version, and audit again.
-  await app.getByRole("button", { name: "Open accessibility audit" }).click();
+  await openTool(app, "accessibility");
   const audit = app.getByRole("dialog", { name: "Accessibility" });
   await audit.getByRole("button", { name: "Run audit" }).click();
   await expect(audit.locator("[data-audit-result]")).toHaveCount(3);
   await expect(audit.getByRole("button", { name: /Form elements must have labels/ })).toBeVisible();
 
-  await app.getByRole("button", { name: "Open microfrontends" }).click();
+  await openTool(app, "microfrontends");
   const microfrontends = app.getByRole("dialog", { name: "Microfrontends" });
   await microfrontends.locator('[data-member="payee-list"]').click();
   await microfrontends.getByRole("radio", { name: /^2\.0\.0/ }).check();
@@ -66,7 +66,7 @@ test("runs the presenter storyline from the create page to a reset", async ({ pa
   await expect(app.locator('[data-demo-mfe="payee-list"]')).toHaveAttribute("data-demo-version", "2.0.0");
   await waitForRegions(app);
 
-  await app.getByRole("button", { name: "Open accessibility audit" }).click();
+  await openTool(app, "accessibility");
   await expect(audit.locator("[data-audit-stale]")).toBeVisible();
   await audit.getByRole("button", { name: "Run audit again" }).click();
   await expect(audit.getByRole("status")).toHaveText("No violations found.");
@@ -80,7 +80,7 @@ test("runs the presenter storyline from the create page to a reset", async ({ pa
   await composer.getByLabel("Comment", { exact: true }).fill("Make this the primary action");
   await composer.getByRole("button", { name: "Post comment" }).click();
   await expect(app.locator('[data-comment-pin="1"]')).toBeVisible();
-  await app.getByRole("button", { name: "Open sharing" }).click();
+  await openTool(app, "share");
   const link = await app.getByRole("dialog", { name: "Share" }).getByLabel("Link to this view").inputValue();
 
   // A colleague opens the link in their own browser and replies.

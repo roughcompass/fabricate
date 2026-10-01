@@ -1,5 +1,5 @@
-import type { Page } from "@playwright/test";
-import { waitForRegions } from "./support/demo";
+import type { Locator, Page } from "@playwright/test";
+import { expectToolbarOnTop, openTool, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
 
 /** Guided hints for self-serve visitors (template-demo/demo-mode spec). */
@@ -14,7 +14,7 @@ async function openRunning(page: Page, slug: string) {
 }
 
 async function openSettings(page: Page) {
-  await page.getByRole("button", { name: "Open settings" }).click();
+  await openTool(page, "settings");
   return page.getByRole("dialog", { name: "Settings" });
 }
 
@@ -35,29 +35,54 @@ test("walks a first-time visitor through the create page, and does not repeat", 
   await expect(hint(page)).toHaveCount(0);
 });
 
-test("points a first running application's visitor to the Accessibility tool, and remembers a dismissal", async ({ page, db: _db }) => {
+test("opens the toolbar menu for a first running application's visitor, points to its items, and remembers a dismissal", async ({ page, db: _db }) => {
   await openRunning(page, "payments-workspace");
   const first = page.getByRole("dialog", { name: "Hint 1 of 3: Audit accessibility" });
   await expect(first).toBeVisible();
   await expect(first.getByRole("button", { name: "Next hint" })).toBeVisible();
   await expect(first.getByRole("button", { name: "Dismiss hints" })).toBeVisible();
-  // The hint sits just above the Accessibility tool.
-  const tool = (await page.getByRole("button", { name: "Open accessibility audit" }).boundingBox())!;
-  const card = (await first.boundingBox())!;
-  expect(card.y + card.height).toBeLessThanOrEqual(tool.y);
-  expect(card.x).toBeLessThanOrEqual(tool.x + tool.width);
-  expect(card.x + card.width).toBeGreaterThanOrEqual(tool.x);
+  const menu = page.getByRole("dialog", { name: "Demo toolbar" });
+  await expect(menu).toBeVisible();
+
+  // The hint sits to the left of the menu, level with the Accessibility item, and covers neither the menu nor the pill.
+  const expectBeside = async (card: Locator, item: string) => {
+    const [box, target, menuBox, pill] = await Promise.all([card.boundingBox(), menu.getByRole("option", { name: item }).boundingBox(), menu.boundingBox(), page.getByRole("complementary", { name: "Demo toolbar" }).boundingBox()]);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(menuBox!.x);
+    expect(box!.y).toBeLessThan(target!.y + target!.height);
+    expect(box!.y + box!.height).toBeGreaterThan(target!.y);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(pill!.x);
+  };
+  await expectBeside(first, "Accessibility");
+  await expectToolbarOnTop(page);
 
   await first.getByRole("button", { name: "Next hint" }).click();
-  await expect(page.getByRole("dialog", { name: "Hint 2 of 3: Swap microfrontend versions" })).toBeVisible();
+  const second = page.getByRole("dialog", { name: "Hint 2 of 3: Swap microfrontend versions" });
+  await expect(second).toBeVisible();
+  await expectBeside(second, "Microfrontends");
   const stored = page.waitForResponse((response) => response.url().endsWith("/api/demo/hints") && response.ok());
   await hint(page).getByRole("button", { name: "Dismiss hints" }).click();
   await expect(hint(page)).toHaveCount(0);
+  // The hints opened the menu, so dismissing them closes it.
+  await expect(menu).toBeHidden();
   await stored;
 
   await openRunning(page, "market-watch");
   await page.waitForTimeout(500);
   await expect(hint(page)).toHaveCount(0);
+  await expect(menu).toBeHidden();
+});
+
+test("walks through the last hint to the Comment item, and finishes", async ({ page, db: _db }) => {
+  await openRunning(page, "payments-workspace");
+  await hint(page).getByRole("button", { name: "Next hint" }).click();
+  await hint(page).getByRole("button", { name: "Next hint" }).click();
+  const last = page.getByRole("dialog", { name: "Hint 3 of 3: Comment on anything" });
+  await expect(last).toBeVisible();
+  const [card, item] = await Promise.all([last.boundingBox(), page.getByRole("dialog", { name: "Demo toolbar" }).getByRole("option", { name: "Comment", exact: true }).boundingBox()]);
+  expect(card!.x + card!.width).toBeLessThanOrEqual(item!.x);
+  await last.getByRole("button", { name: "Finish hints" }).click();
+  await expect(hint(page)).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Demo toolbar" })).toBeHidden();
 });
 
 test("replays the hints from the toolbar's Settings", async ({ page, db: _db }) => {
@@ -92,8 +117,9 @@ test("never shows hints once they are turned off", async ({ page, db: _db }) => 
   // Turning them back on keeps finished sequences finished, and shows the rest.
   await openRunning(page, "client-onboarding");
   await (await openSettings(page)).getByLabel("Show guided hints").check();
-  await page.keyboard.press("Escape");
+  // The hints open the menu in place of the Settings panel.
   await expect(page.getByRole("dialog", { name: "Hint 1 of 3: Audit accessibility" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Settings" })).toBeHidden();
 });
 
 test("shows no hints inside preview mode's frame", async ({ page, db: _db }) => {

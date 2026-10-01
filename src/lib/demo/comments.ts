@@ -12,7 +12,8 @@ import { COMMENT_LIMIT, normalizeDisplayName } from "./workspaces";
  * Comment threads anchored to rendered elements (template-demo/toolbar spec).
  * Every operation is scoped to one view: a thread belongs to an application
  * (or a reference deployment) as seen from one workspace, so a visitor never
- * reads or changes another view's threads. Bodies are plain text.
+ * reads or changes another view's threads. Bodies are stored as written,
+ * Markdown markers included; comment-format.ts styles them only for display.
  */
 
 export interface CommentRecord {

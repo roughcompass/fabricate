@@ -5,17 +5,19 @@ import { ToolPanel } from "@/components/toolbar/tool-panel";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { TextInput } from "@/components/ui/form";
-import { useCurrentRoute, useRuntime, useViewState } from "../runtime/runtime-context";
+import { builtInProfileFor } from "@/lib/demo/catalog";
+import { useCurrentRoute, useProfile, useRuntime, useViewState } from "../runtime/runtime-context";
 import styles from "./tools.module.css";
 
 /**
  * Share: a link to the current view, capturing its route, microfrontend
- * overrides, theme, and persona. Anyone with the link can view the
- * application and its comments, and add comments.
+ * overrides, theme, and a snapshot of the active session profile. Anyone with
+ * the link can view the application and its comments, and add comments.
  */
 export function SharePanel() {
   const { descriptor } = useRuntime();
   const view = useViewState();
+  const profile = useProfile();
   const route = useCurrentRoute();
   const [link, setLink] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -27,7 +29,11 @@ export function SharePanel() {
     fetch("/api/demo/shares", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ application: descriptor.applicationId, state: { route: route.path, overrides: view.overrides, theme: view.theme, persona: view.personaId } }),
+      body: JSON.stringify({
+        application: descriptor.applicationId,
+        // persona stays the matching built-in profile's id, for anything that reads links from before profiles.
+        state: { route: route.path, overrides: view.overrides, theme: view.theme, persona: builtInProfileFor(profile.persona).id, profile: { name: profile.name, persona: profile.persona, region: profile.region } },
+      }),
     })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
       .then((data: { path: string }) => setLink(`${window.location.origin}${data.path}`))
@@ -54,7 +60,7 @@ export function SharePanel() {
           {failed ? "The link could not be created. Try again." : "Creating a link…"}
         </p>
       )}
-      <p className={styles.muted}>{`The link opens ${route.label} with this view's microfrontend versions, ${view.theme} theme, and persona. Changes the recipient makes do not affect your view.`}</p>
+      <p className={styles.muted}>{`The link opens ${route.label} with this view's microfrontend versions, ${view.theme} theme, and ${profile.name} signed in. Changes the recipient makes do not affect your view.`}</p>
       <div className={styles.actions}>
         <Button onClick={() => create()} disabled={creating} icon="link">
           Create new link

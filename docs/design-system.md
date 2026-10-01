@@ -89,6 +89,24 @@ Status always appears as a colored indicator next to a text label, never as colo
 
 The portal shells of the template demo, the microfrontends they host, and the template preview images are application content. They use their own brand palettes (see Runtime tokens) and are outside this palette and its accent rule. The demo toolbar and its panels are operator interface: they use the monochrome palette with the blue accent, even over a branded portal.
 
+#### Demo toolbar
+
+The toolbar's pill, its hidden-state tab, and its tooltips sit on an inverse surface, dark in both themes, like Vercel's toolbar. Its menu and panels stay on `--color-bg-elevated`.
+
+| Token | Role |
+| --- | --- |
+| `--color-bg-inverse` | The pill, the tab, and tooltips |
+| `--color-text-inverse` | Text and icons on the inverse surface (4.5:1), and the fill of an active pill button |
+| `--color-border-inverse` | The pill's edge, and a pill button's hover fill |
+
+The contrast check covers text-inverse on bg-inverse at 4.5:1 and the focus color on bg-inverse at 3:1.
+
+**Nothing overlays the toolbar.** The toolbar renders two layers (`src/components/toolbar/demo-toolbar.tsx`):
+- **The controls** (`data-demo-toolbar="controls"`): the pill or tab, the tooltips, the menu, and the open panel, in a host with `popover="manual"`. It enters the browser's top layer on mount, so no page content or stacking order can paint over it. When the page opens another top-layer element, the host goes back on top. It is sized to its contents, so it takes no pointer events beside the controls.
+- **The overlays** (`data-demo-toolbar="overlays"`): outlines, pins, tints, labels, banners, guided hints, and the comment composer, in a fixed layer below the controls. The layer takes no pointer events except where an overlay is interactive.
+
+Outlines, tints, and pins mark page elements, so they stay on their elements and pass beneath the controls. Floating overlays never intersect the controls: the zone indicator, debug and outline labels, audit result numbers, mode banners, guided hints, and the composer are positioned with `placeOutside` (`src/demo/toolbar/placement.ts`), usually through `<Placed>` (`placed.tsx`). It tries the overlay's preferred position, then left of the control it would cover, then above it, then below it, within the viewport and `--space-2` from every edge. The controls' rectangles come from `toolbar-bounds.ts`, which observes the pill, the menu, and the panel. On a viewport too narrow for a guided hint beside the open menu, the menu gives up room at its bottom for the hint.
+
 ### Themes
 
 Colors are defined once with `light-dark()`, so the theme follows `color-scheme`. With no preference set, the interface follows the operating system. The operator can choose System, Light, or Dark with the theme control in the application shell. The choice is stored in the `fabricate-theme` cookie, and the root layout renders it as `data-theme` on `<html>`, so the first paint is already correct and no inline script is needed. Any element with `data-theme` switches its subtree, which the gallery uses to show both themes side by side. A custom property holding `light-dark()` is resolved on the element that declares it, so the color and shadow tokens are declared on `:root, [data-theme]`: each themed element redeclares them and resolves them against its own color scheme. Other tokens are declared on `:root` only.

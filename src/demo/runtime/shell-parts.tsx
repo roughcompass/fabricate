@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { BRANDS } from "@/lib/demo/catalog";
 import { Icon, type IconName } from "./members/icons";
-import { useEmbedded, usePersona, useRuntime, useViewState } from "./runtime-context";
+import { useEmbedded, useProfile, useRuntime, useViewState } from "./runtime-context";
 import styles from "./shell-parts.module.css";
 
 /** Pieces both portal shells share: the portal root, header menus, and the user menu. */
@@ -112,30 +112,32 @@ export function MenuList({ title, items }: { title: string; items: readonly { pr
   );
 }
 
-/** The user menu at the right end of the header: the session persona, with their role and region. */
+/** The user menu at the right end of the header: the active session profile, with its persona and region. */
 export function UserMenu({ tone = "header" }: { tone?: "header" | "dark" }) {
-  const persona = usePersona();
+  const profile = useProfile();
   return (
     <div className={styles.session} data-demo-anchor="portal-session">
       <HeaderMenu
-        label={`User menu for ${persona.name}`}
+        label={`User menu for ${profile.name}`}
         tone={tone}
         trigger={
           <>
             <span className={styles.avatar} aria-hidden="true">
-              {initials(persona.name)}
+              {initials(profile.name)}
             </span>
             <span className={styles.sessionText}>
-              <span className={styles.personaName}>{persona.name}</span>
-              <span className={styles.personaRole}>{`${persona.role} · ${persona.region}`}</span>
+              <span className={styles.personaName} title={profile.name}>
+                {profile.name}
+              </span>
+              <span className={styles.personaRole}>{`${profile.persona} · ${profile.region}`}</span>
             </span>
             <Icon name="chevronDown" size={14} />
           </>
         }
       >
-        <p className={styles.menuTitle}>{persona.name}</p>
-        <p className={styles.menuSecondary}>{`${persona.role} · ${persona.region}`}</p>
-        <p className={styles.menuNote}>The persona and role come from the session context. Change them in the toolbar&apos;s Settings.</p>
+        <p className={styles.menuTitle}>{profile.name}</p>
+        <p className={styles.menuSecondary}>{`${profile.persona} · ${profile.region}`}</p>
+        <p className={styles.menuNote}>The profile comes from the session context. Change it in the toolbar&apos;s Session tool.</p>
       </HeaderMenu>
     </div>
   );

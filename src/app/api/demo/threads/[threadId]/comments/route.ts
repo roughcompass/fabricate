@@ -1,10 +1,14 @@
 import { getDb } from "@/lib/db/client";
 import { attempt, jsonBody, stringField, writableView } from "@/lib/demo/api";
 import { addComment, authorName, listThreads } from "@/lib/demo/comments";
+import { demoUnavailable } from "@/lib/demo/guard";
 import { setDisplayName } from "@/lib/demo/workspaces";
 
 /** Replies to a thread in the visitor's view. */
 export async function POST(request: Request, { params }: { params: Promise<{ threadId: string }> }) {
+  // The demo switch comes first, so a disabled demo answers not found whatever the body.
+  const unavailable = demoUnavailable();
+  if (unavailable) return unavailable;
   const body = await jsonBody(request);
   if (body instanceof Response) return body;
   const resolved = await writableView(stringField(body, "application", 80));

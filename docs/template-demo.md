@@ -9,10 +9,23 @@ Everything in the demo is simulated. See [What is simulated](#what-is-simulated)
 1. Start DE FabLab with the demo on: `FABRICATE_DEMO=true npm run dev:web`, or use the hosted demo.
 2. Open **Salt Patterns** in the sidebar, then **New application**. The create page, "Let's build something new", opens. The demo adds two sections: **Applications**, for your applications and the BitBucket import, and **Salt Patterns**, for the templates.
 3. If you rehearsed in this browser, reset the demo first: on the create page, open **More actions** (⋯) and choose **Reset demo**.
-4. Turn guided hints off, so they do not appear during the talk. Open any running application, for example a reference deployment from preview mode's **Open full screen**. Open **Settings** in the toolbar and clear **Show guided hints**. The choice applies to your whole workspace.
-5. Use Chrome or Edge. Interaction timing uses the Event Timing API. Other browsers show approximate times, labeled as such.
+4. Turn guided hints off, so they do not appear during the talk. Open any running application, for example a reference deployment from preview mode's **Open full screen**. Open the toolbar menu, choose **Settings**, and clear **Show guided hints**. The choice applies to your whole workspace.
+5. Create a session profile for someone your audience knows, such as their head of payments. In the running application, press **P** to open **Session**, select **New profile**, and enter their name, the **Approver** persona, and their region. The profile is saved in your workspace and offered in every application, so you can sign it in during beat 10.
+6. Use Chrome or Edge. Interaction timing uses the Event Timing API. Other browsers show approximate times, labeled as such.
 
 The storyline is deterministic: templates, build stages, load order, audit results, and timings are the same on every run and in every workspace. Run `npx playwright test e2e/demo-storyline.spec.ts --repeat-each=3` to rehearse the whole flow automatically.
+
+## The toolbar
+
+Every running application shows the toolbar as a dark pill at the middle of the right edge. At rest it holds a Demo marker and the menu button. While a tool's panel is open, or comment mode is on, the pill also shows that tool's button; select it to close the tool. Hover over or focus a button to see its name and key.
+
+The menu button opens the toolbar menu beside the pill:
+- **What do you need?** Type to filter the tools by name or by words such as "a11y", "persona", or "theme". Use the arrow keys to move, Enter to open, and Esc to close.
+- **The running application.** Its name, environment, and status. Select it to open the application's page in DE FabLab in a new tab.
+- **Shortcuts.** One round button for each tool.
+- **The tools, grouped.** Collaboration (Comment, Comments, Share), Inspect (Microfrontends, Accessibility, Timing), Runtime (Session, Settings), and More (Keyboard shortcuts, Hide toolbar).
+
+Tool panels open to the left of the pill, and **Back to menu** in a panel's header returns to the menu. **Hide toolbar**, or **.**, shrinks the toolbar to a tab at the edge; select the tab or press **.** again to bring it back. Nothing on the page, and none of the toolbar's own outlines, labels, or hints, ever covers the toolbar.
 
 ## Presenter script
 
@@ -24,13 +37,14 @@ Each beat lists what to do, then the point to make.
 4. **Template detail.** Open **Payments workspace**. Show its brand, portal, provider, and the microfrontends it is made of.
 5. **Preview mode.** Select **Preview template**. Switch between **Mobile**, **Tablet**, and **Desktop**, and turn the device to **Landscape**. The application inside the frame lays out at the real device size. Open the **Code** tab and select `microfrontends.json`: the shell is the default application, and each child microfrontend owns a route or a slot. Copy the `npx` command, which is how a developer would start locally.
 6. **Deploy.** Select **Deploy template**, keep **Sandbox**, and select **Create application**. The simulated build log plays. Select **Skip build** to move on, then **Visit application**. The application opens in a new tab.
-7. **Accessibility.** Press **A** or select the accessibility tool, then **Run audit**. The payee list's version 1.4.2 has planted defects: a search field without a label, faint text, and icon buttons without names. Select a result to scroll to it on the page.
+7. **Accessibility.** Press **A**, or open the toolbar menu and type "a11y", then **Run audit**. The payee list's version 1.4.2 has planted defects: a search field without a label, faint text, and icon buttons without names. Select a result to scroll to it on the page.
 8. **Swap a microfrontend.** Press **M**, choose **Payee list**, choose **2.0.0**, and select **Reload preview**. Only that region reloads; anything typed in the transfer form stays. Back in the accessibility tool, the results are marked out of date. Select **Run audit again**: no violations.
 9. **Timing.** Select **Recalculate totals** in Payment activity, then press **T**. The waterfall shows the shell loading first and the slow payment activity flagged. The planted interaction is rated Poor. Turn on **Hot spots** to tint the costliest region.
-10. **Settings.** Press **S**. Switch to the dark theme, and change the persona to **Sam Rivera · Approver**: Approve buttons appear in Payment activity. In the Markets template, publish `instrument:selected` with `{"symbol": "GLBX"}` and watch the chart follow.
-11. **Comment.** Press **C** and select **Send payment**, then post a comment. The pin stays on the button when the window is resized. A comment on a payee row, which belongs to a payee list version, is listed as not visible in this view after the payee list changes version, with **Go to comment** to bring that version back.
-12. **Share.** Press **L**. Copy the link and open it in a private window: the recipient sees the same versions, theme, and comment, and can reply. Their changes never affect your view.
-13. **Reset.** Back on the create page, choose **More actions**, then **Reset demo**. Your applications, comments, and share links are removed. The share link now answers not found.
+10. **Session.** Press **P** and sign in the profile you created for your audience, or **Sam Rivera**, an Approver: the shell shows them as the user, and Approve buttons appear in Payment activity. Each profile has a persona, which decides what microfrontends show, and a region.
+11. **Settings.** Press **S**. Switch to the dark theme. In the Markets template, publish `instrument:selected` with `{"symbol": "GLBX"}` and watch the chart follow.
+12. **Comment.** Press **C** and select **Send payment**. A "+" marks the spot. Type in **Start a new thread…**; select a word, choose **Aa**, then **Bold**. Post with the send button or Cmd+Enter. The pin stays on the button when the window is resized. A comment on a payee row, which belongs to a payee list version, is listed as not visible in this view after the payee list changes version, with **Go to comment** to bring that version back.
+13. **Share.** Press **L**. Copy the link and open it in a private window: the recipient sees the same versions, theme, signed-in profile, and comment, and can reply. The profile isn't added to the recipient's own profiles, and their changes never affect your view.
+14. **Reset.** Back on the create page, choose **More actions**, then **Reset demo**. Your applications, comments, share links, and session profiles are removed. The share link now answers not found.
 
 To import instead of deploying (beat 6), open **Applications** and select **Import from BitBucket**, pick the PAY project's **payee-hub** repository, and select **Import application**. You can also paste `https://bitbucket.deweb.example/projects/PAY/repos/payee-hub` into the create page's prompt bar, which opens the same import form.
 
@@ -39,24 +53,25 @@ To import instead of deploying (beat 6), open **Applications** and select **Impo
 | Key | Action |
 | --- | --- |
 | C | Start or stop comment mode |
-| M | Open microfrontends |
-| A | Open the accessibility audit |
-| T | Open timing |
-| S | Open settings |
-| L | Open sharing |
-| . | Collapse or show the toolbar |
-| ? | Show keyboard shortcuts |
-| Esc | Close the open panel or leave the current mode |
+| M | Open Microfrontends |
+| A | Open Accessibility |
+| T | Open Timing |
+| P | Open Session |
+| S | Open Settings |
+| L | Open Share |
+| . | Hide or show the toolbar |
+| ? | Open Keyboard shortcuts |
+| Esc | Close the menu or the open panel, or leave the current mode |
 
-Shortcuts never fire while you are typing in a field. They can be turned off in the shortcuts panel; Esc always works.
+Shortcuts never fire while you are typing in a field. The menu's **Keyboard shortcuts** item opens **Preferences / Keyboard shortcuts**, which lists them and can turn single-key shortcuts off; Esc always works.
 
 ## Self-serve visitors
 
-Visitors need no account. Each browser gets an anonymous workspace the first time it opens a demo page; it holds that visitor's applications, comments, and share links, and nobody else can see them except through a share link. Comments on a template's reference deployment are private to the visitor's workspace until they share the view.
+Visitors need no account. Each browser gets an anonymous workspace the first time it opens a demo page; it holds that visitor's applications, comments, share links, and session profiles, and nobody else can see them except through a share link. Comments on a template's reference deployment are private to the visitor's workspace until they share the view.
 
-The first time a visitor opens the create page, and again the first time they open a running application, a short sequence of guided hints appears. A visitor can dismiss the hints, replay them, or turn them off from the toolbar's **Settings**. Their choice is remembered for their workspace.
+The first time a visitor opens the create page, and again the first time they open a running application, a short sequence of guided hints appears. In a running application, the hints open the toolbar menu and point to its Accessibility, Microfrontends, and Comment items. A visitor can dismiss the hints, replay them, or turn them off from the toolbar's **Settings**. Their choice is remembered for their workspace.
 
-A workspace can hold 25 applications, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted.
+A workspace can hold 25 applications and 20 custom session profiles, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted.
 
 ## Hosting the demo
 

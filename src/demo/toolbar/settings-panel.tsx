@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import { ToolPanel } from "@/components/toolbar/tool-panel";
 import { Button } from "@/components/ui/button";
 import { Checkbox, ChoiceGroup, Select, TextArea, TextInput } from "@/components/ui/form";
-import { PERSONAS, memberById } from "@/lib/demo/catalog";
+import { memberById } from "@/lib/demo/catalog";
 import type { BusMessage } from "../runtime/bus";
 import { useRuntime, useViewState } from "../runtime/runtime-context";
 import { parsePayload, topicError } from "./bus-publish";
@@ -27,9 +27,9 @@ function formatTime(ms: number): string {
 }
 
 /**
- * The Settings tool: the running application's theme and session persona,
- * applied to every microfrontend at once, and the event bus, whose messages
- * the visitor can watch and publish.
+ * The Settings tool: the running application's theme, applied to every
+ * microfrontend at once, and the event bus, whose messages the visitor can
+ * watch and publish. Who is signed in is the Session tool's.
  */
 export function SettingsPanel() {
   const { app, store, bus } = useRuntime();
@@ -63,16 +63,6 @@ export function SettingsPanel() {
           { value: "light", label: "Light" },
           { value: "dark", label: "Dark" },
         ]}
-      />
-      <ChoiceGroup
-        key={`persona-${view.personaId}`}
-        id="runtime-persona"
-        name="runtime-persona"
-        legend="Session persona and role"
-        type="radio"
-        selected={[view.personaId]}
-        onChange={(event) => store.setPersona(event.currentTarget.value)}
-        choices={PERSONAS.map((persona) => ({ value: persona.id, label: `${persona.name} · ${persona.role}`, description: persona.region }))}
       />
 
       <section className={styles.section} aria-labelledby="bus-log-title">

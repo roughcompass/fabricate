@@ -1,28 +1,31 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { useToolbar } from "@/components/toolbar/toolbar-context";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { TextArea, TextInput } from "@/components/ui/form";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { memberById, shellOf } from "@/lib/demo/catalog";
+import { FORMAT_MARKERS, commentText, toggleMarker } from "@/lib/demo/comment-format";
 import type { ThreadRecord } from "@/lib/demo/comments";
 import { useCurrentRoute, useRouting, useRuntime } from "../../runtime/runtime-context";
 import { type Rect, useTrackedRects } from "../geometry";
+import { Placed, type Preferred, bottomCenter } from "../placed";
 import { type Placement, type Shell, anchorElementFor, findAnchorElement, placementFor } from "./anchors";
+import { CommentBody } from "./comment-body";
 import { type FieldErrors, useComments } from "./comments-state";
 import styles from "./comments.module.css";
 
-/** Matches --size-toast, the popover width. */
-const POPOVER_WIDTH = 380;
+/** Matches --space-3: the gap between a point and the popover beside it. */
 const MARGIN = 12;
 
-/** A popover position beside a point, kept inside the viewport. */
-function popoverPosition(x: number, y: number): { top: number; left: number } {
-  const width = Math.min(POPOVER_WIDTH, window.innerWidth - 2 * MARGIN);
-  const left = x + MARGIN + width < window.innerWidth ? x + MARGIN : Math.max(MARGIN, x - MARGIN - width);
-  const top = Math.min(Math.max(MARGIN, y - MARGIN), Math.max(MARGIN, window.innerHeight - 320));
-  return { top, left };
+/**
+ * Where a popover beside a point prefers to go: to its right, or to its left
+ * when the right has no room. <Placed> then keeps it clear of the toolbar.
+ */
+function beside(point: { x: number; y: number }): Preferred {
+  return (box, viewport) => ({ left: point.x + MARGIN + box.width <= viewport.width - MARGIN ? point.x + MARGIN : point.x - MARGIN - box.width, top: point.y - MARGIN });
 }
 
 function excerpt(text: string): string {
@@ -66,10 +69,12 @@ export function CommentLayer() {
         if (element) elements.set(thread.id, element);
       }
       if (hovered) elements.set("__hovered", hovered);
+      const drafted = draft && findAnchorElement(draft.placement, shell);
+      if (drafted) elements.set("__draft", drafted);
       return elements;
     },
     true,
-    `${shown.map(({ thread }) => thread.id).join(",")}|${hovered ? "h" : ""}|${route.path}|${shell.version}`,
+    `${shown.map(({ thread }) => thread.id).join(",")}|${hovered ? "h" : ""}|${draft ? `${draft.placement.member}:${draft.placement.anchor}` : ""}|${route.path}|${shell.version}`,
   );
 
   const choose = useEffectEvent((element: Element, point: { x: number; y: number } | null) => {
@@ -119,14 +124,17 @@ export function CommentLayer() {
   const hoveredRect = active ? rects.get("__hovered") : undefined;
   const open = comments.openThread ? numbered.find(({ thread }) => thread.id === comments.openThread) : undefined;
   const openRect = open ? rects.get(open.thread.id) : undefined;
+  // The draft's point follows its element, as a posted pin does; until it is measured, the point that was chosen.
+  const draftRect = draft ? rects.get("__draft") : undefined;
+  const draftPoint = draft ? (draftRect ? pinPoint(draftRect, draft.placement) : { x: draft.x, y: draft.y }) : null;
 
   return (
     <>
       {active && (
         <div className={styles.layer} data-overlay="">
-          <p className={styles.banner} role="status">
+          <Placed preferred={bottomCenter} className={styles.banner} role="status">
             Choose any element to comment on it. Press Esc to cancel.
-          </p>
+          </Placed>
           {hoveredRect && <div className={styles.outline} style={{ top: hoveredRect.top, left: hoveredRect.left, width: hoveredRect.width, height: hoveredRect.height }} data-comment-outline="" />}
         </div>
       )}
@@ -143,7 +151,7 @@ export function CommentLayer() {
               type="button"
               className={styles.pin}
               style={{ top: point.y, left: point.x }}
-              aria-label={`Comment ${number} by ${first?.authorName ?? "unknown"}: ${excerpt(first?.body ?? "")}`}
+              aria-label={`Comment ${number} by ${first?.authorName ?? "unknown"}: ${excerpt(commentText(first?.body ?? ""))}`}
               aria-expanded={comments.openThread === thread.id}
               data-comment-pin={number}
               onClick={() => comments.setOpenThread(comments.openThread === thread.id ? null : thread.id)}
@@ -152,62 +160,129 @@ export function CommentLayer() {
             </button>
           );
         })}
+        {draftPoint && (
+          <span className={styles.draftPin} style={{ top: draftPoint.y, left: draftPoint.x }} aria-hidden="true" data-comment-draft-pin="">
+            <Icon name="plus" size={14} />
+          </span>
+        )}
       </div>
 
-      {draft && <Composer draft={draft} onClose={() => setDraft(null)} />}
+      {draft && draftPoint && <Composer draft={draft} at={draftPoint} onClose={() => setDraft(null)} />}
       {open && openRect && open.thread.status === "open" && <ThreadPopover thread={open.thread} number={open.number} at={pinPoint(openRect, open.thread)} />}
     </>
   );
 }
 
-function Composer({ draft, onClose }: { draft: { placement: Placement; x: number; y: number }; onClose: () => void }) {
+/**
+ * The composer, beside the "+" marker on the chosen element: a field with
+ * the small formatting subset, an Aa control that shows the formatting bar,
+ * and a send button. Cmd+Enter or Ctrl+Enter posts.
+ */
+function Composer({ draft, at, onClose }: { draft: { placement: Placement }; at: { x: number; y: number }; onClose: () => void }) {
   const comments = useComments();
   const route = useCurrentRoute();
   const { app } = useRuntime();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [pending, setPending] = useState(false);
+  const [body, setBody] = useState("");
+  const [formatting, setFormatting] = useState(false);
+  // The selection to restore after a formatting button changes the text.
+  const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const form = useRef<HTMLFormElement>(null);
-  const position = popoverPosition(draft.x, draft.y);
+  const barId = useId();
+  const field = () => form.current?.querySelector<HTMLTextAreaElement>("#comment-body") ?? null;
 
   useEffect(() => {
     form.current?.querySelector<HTMLElement>("input, textarea")?.focus();
   }, []);
 
+  useEffect(() => {
+    const textarea = field();
+    if (!selection || !textarea) return;
+    textarea.focus();
+    textarea.setSelectionRange(selection.start, selection.end);
+  }, [selection]);
+
+  const format = (marker: string) => {
+    const textarea = field();
+    if (!textarea) return;
+    const next = toggleMarker({ value: body, start: textarea.selectionStart, end: textarea.selectionEnd }, marker);
+    setBody(next.value);
+    setSelection({ start: next.start, end: next.end });
+  };
+
   return (
-    <form
-      ref={form}
-      className={styles.popover}
-      style={position}
-      role="dialog"
-      aria-label="New comment"
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.stopPropagation();
-          onClose();
-        }
-      }}
-      onSubmit={async (event) => {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
-        setPending(true);
-        const outcome = await comments.create({ route: route.path, ...draft.placement, body: String(data.get("body") ?? ""), ...(data.has("authorName") ? { authorName: String(data.get("authorName")) } : {}) });
-        setPending(false);
-        if (outcome.ok) {
-          onClose();
-          if (outcome.id) comments.setOpenThread(outcome.id);
-        } else setErrors(outcome.errors);
-      }}
-    >
-      <p className={styles.popoverMeta}>{`On ${memberById(app, draft.placement.member)?.name ?? draft.placement.member} ${draft.placement.memberVersion}`}</p>
-      {!comments.displayName && <TextInput id="comment-author" name="authorName" label="Your name" description="Shown with your comments." errors={errors.authorName} maxLength={60} required />}
-      <TextArea id="comment-body" name="body" label="Comment" rows={3} errors={errors.body} maxLength={2000} required />
-      <div className={styles.popoverActions}>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button type="submit" variant="primary" disabled={pending}>
-          Post comment
-        </Button>
-      </div>
-    </form>
+    <Placed preferred={beside(at)} className={styles.popoverFrame}>
+      <form
+        ref={form}
+        className={styles.popover}
+        role="dialog"
+        aria-label="New comment"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.stopPropagation();
+            onClose();
+          } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            form.current?.requestSubmit();
+          }
+        }}
+        onSubmit={async (event) => {
+          event.preventDefault();
+          if (!body.trim() || pending) return;
+          const data = new FormData(event.currentTarget);
+          setPending(true);
+          const outcome = await comments.create({ route: route.path, ...draft.placement, body, ...(data.has("authorName") ? { authorName: String(data.get("authorName")) } : {}) });
+          setPending(false);
+          if (outcome.ok) {
+            onClose();
+            if (outcome.id) comments.setOpenThread(outcome.id);
+          } else setErrors(outcome.errors);
+        }}
+      >
+        <p className={styles.popoverMeta}>{`On ${memberById(app, draft.placement.member)?.name ?? draft.placement.member} ${draft.placement.memberVersion}`}</p>
+        {!comments.displayName && <TextInput id="comment-author" name="authorName" label="Your name" description="Shown with your comments." errors={errors.authorName} maxLength={60} required />}
+        <TextArea
+          id="comment-body"
+          name="body"
+          label="Comment"
+          hideLabel
+          placeholder="Start a new thread…"
+          description="Use **bold**, *italic*, ~~strikethrough~~, or `code`."
+          rows={3}
+          errors={errors.body}
+          maxLength={2000}
+          required
+          value={body}
+          onChange={(event) => setBody(event.currentTarget.value)}
+        />
+        {formatting && (
+          <div id={barId} role="group" aria-label="Formatting" className={styles.formatBar}>
+            {(
+              [
+                ["bold", "Bold", FORMAT_MARKERS.bold],
+                ["italic", "Italic", FORMAT_MARKERS.italic],
+                ["strikethrough", "Strikethrough", FORMAT_MARKERS.strikethrough],
+                ["code", "Code", FORMAT_MARKERS.code],
+              ] as const
+            ).map(([icon, label, marker]) => (
+              // Pressing a button keeps the field's focus and selection, so the format applies where the visitor was.
+              <Button key={icon} size="sm" variant="tertiary" icon={icon} label={label} onMouseDown={(event) => event.preventDefault()} onClick={() => format(marker)} />
+            ))}
+          </div>
+        )}
+        <div className={styles.composerActions}>
+          <button type="button" className={styles.formatToggle} aria-expanded={formatting} aria-controls={formatting ? barId : undefined} aria-label="Formatting" title="Formatting" onClick={() => setFormatting((current) => !current)}>
+            <Icon name="textSize" size={16} />
+          </button>
+          <span className={styles.spacer} />
+          <Button size="sm" variant="tertiary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" size="sm" variant="primary" icon="arrowUp" label="Post comment" disabled={!body.trim() || pending} />
+        </div>
+      </form>
+    </Placed>
   );
 }
 
@@ -215,63 +290,65 @@ function ThreadPopover({ thread, number, at }: { thread: ThreadRecord; number: n
   const comments = useComments();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [pending, setPending] = useState(false);
-  const position = popoverPosition(at.x, at.y);
 
   return (
-    <div
-      className={styles.popover}
-      style={position}
-      role="dialog"
-      aria-label={`Comment ${number}`}
-      data-thread-popover={thread.id}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.stopPropagation();
-          comments.setOpenThread(null);
-        }
-      }}
-    >
-      <div className={styles.threadHeader}>
-        <h2 className={styles.threadTitle}>{`Comment ${number}`}</h2>
-        <Button size="sm" onClick={() => void comments.setStatus(thread.id, "resolved").then(() => comments.setOpenThread(null))}>
-          Resolve thread
-        </Button>
-        <Button size="sm" variant="tertiary" icon="x" label="Close comment" onClick={() => comments.setOpenThread(null)} />
-      </div>
-      <ol className={styles.threadComments}>
-        {thread.comments.map((comment) => (
-          <li key={comment.id} className={styles.comment}>
-            <p className={styles.commentMeta}>
-              <strong>{comment.authorName}</strong> <RelativeTime value={new Date(comment.createdAt)} />
-            </p>
-            <p className={styles.commentBody}>{comment.body}</p>
-          </li>
-        ))}
-      </ol>
-      <form
-        className={styles.reply}
-        onSubmit={async (event) => {
-          event.preventDefault();
-          const formElement = event.currentTarget;
-          const data = new FormData(formElement);
-          setPending(true);
-          const outcome = await comments.reply(thread.id, String(data.get("body") ?? ""), data.has("authorName") ? String(data.get("authorName")) : undefined);
-          setPending(false);
-          if (outcome.ok) {
-            formElement.reset();
-            setErrors({});
-          } else setErrors(outcome.errors);
+    <Placed preferred={beside(at)} className={styles.popoverFrame}>
+      <div
+        className={styles.popover}
+        role="dialog"
+        aria-label={`Comment ${number}`}
+        data-thread-popover={thread.id}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.stopPropagation();
+            comments.setOpenThread(null);
+          }
         }}
       >
-        {!comments.displayName && <TextInput id={`reply-author-${thread.id}`} name="authorName" label="Your name" errors={errors.authorName} maxLength={60} required />}
-        <TextArea id={`reply-${thread.id}`} name="body" label="Reply" rows={2} errors={errors.body} maxLength={2000} required />
-        <div className={styles.popoverActions}>
-          <Button type="submit" variant="primary" size="sm" disabled={pending}>
-            Post reply
+        <div className={styles.threadHeader}>
+          <h2 className={styles.threadTitle}>{`Comment ${number}`}</h2>
+          <Button size="sm" onClick={() => void comments.setStatus(thread.id, "resolved").then(() => comments.setOpenThread(null))}>
+            Resolve thread
           </Button>
+          <Button size="sm" variant="tertiary" icon="x" label="Close comment" onClick={() => comments.setOpenThread(null)} />
         </div>
-      </form>
-    </div>
+        <ol className={styles.threadComments}>
+          {thread.comments.map((comment) => (
+            <li key={comment.id} className={styles.comment}>
+              <p className={styles.commentMeta}>
+                <strong>{comment.authorName}</strong> <RelativeTime value={new Date(comment.createdAt)} />
+              </p>
+              <p className={styles.commentBody}>
+                <CommentBody body={comment.body} />
+              </p>
+            </li>
+          ))}
+        </ol>
+        <form
+          className={styles.reply}
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const formElement = event.currentTarget;
+            const data = new FormData(formElement);
+            setPending(true);
+            const outcome = await comments.reply(thread.id, String(data.get("body") ?? ""), data.has("authorName") ? String(data.get("authorName")) : undefined);
+            setPending(false);
+            if (outcome.ok) {
+              formElement.reset();
+              setErrors({});
+            } else setErrors(outcome.errors);
+          }}
+        >
+          {!comments.displayName && <TextInput id={`reply-author-${thread.id}`} name="authorName" label="Your name" errors={errors.authorName} maxLength={60} required />}
+          <TextArea id={`reply-${thread.id}`} name="body" label="Reply" rows={2} errors={errors.body} maxLength={2000} required />
+          <div className={styles.popoverActions}>
+            <Button type="submit" variant="primary" size="sm" disabled={pending}>
+              Post reply
+            </Button>
+          </div>
+        </form>
+      </div>
+    </Placed>
   );
 }
 

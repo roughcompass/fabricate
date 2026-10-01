@@ -1,4 +1,4 @@
-import type { Brand, BrandId, Persona, Provider, ProviderId } from "./types";
+import type { Brand, BrandId, Persona, Profile, Provider, ProviderId } from "./types";
 
 /**
  * The four portal brands (design.md, decision 20). Payments, Global Banking,
@@ -21,15 +21,24 @@ export const PROVIDERS: Readonly<Record<ProviderId, Provider>> = {
   community: { id: "community", label: "Community" },
 };
 
-/** Session personas the portal shell provides to every microfrontend. */
-export const PERSONAS: readonly Persona[] = [
-  { id: "analyst", name: "Jordan Lee", role: "Analyst", region: "London" },
-  { id: "approver", name: "Sam Rivera", role: "Approver", region: "New York" },
-  { id: "administrator", name: "Alex Morgan", role: "Administrator", region: "Singapore" },
+/**
+ * The built-in session profiles, one per persona. Their ids predate profiles
+ * (they were persona ids), so stored views and old share links still resolve.
+ */
+export const BUILT_IN_PROFILES: readonly Profile[] = [
+  { id: "analyst", name: "Jordan Lee", persona: "Analyst", region: "London", builtIn: true },
+  { id: "approver", name: "Sam Rivera", persona: "Approver", region: "New York", builtIn: true },
+  { id: "administrator", name: "Alex Morgan", persona: "Administrator", region: "Singapore", builtIn: true },
 ];
 
-export const DEFAULT_PERSONA = PERSONAS[0]!;
+/** Jordan Lee, the profile a view falls back to when its own no longer exists. */
+export const DEFAULT_PROFILE = BUILT_IN_PROFILES[0]!;
 
-export function personaById(id: string | undefined): Persona {
-  return PERSONAS.find((persona) => persona.id === id) ?? DEFAULT_PERSONA;
+export function builtInProfile(id: string | undefined): Profile | undefined {
+  return BUILT_IN_PROFILES.find((profile) => profile.id === id);
+}
+
+/** The built-in profile with a persona, whose id a share link stores for links from before profiles. */
+export function builtInProfileFor(persona: Persona): Profile {
+  return BUILT_IN_PROFILES.find((profile) => profile.persona === persona)!;
 }

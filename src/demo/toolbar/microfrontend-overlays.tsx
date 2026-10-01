@@ -7,6 +7,7 @@ import { memberById, shellOf } from "@/lib/demo/catalog";
 import { environmentLabel } from "@/lib/demo/routing";
 import { useCurrentRoute, useRouting, useRuntime } from "../runtime/runtime-context";
 import { type Rect, memberOf, regionElements, useTrackedRects } from "./geometry";
+import { Placed, bottomCenter, topRight } from "./placed";
 import styles from "./overlays.module.css";
 
 const box = (rect: Rect) => ({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
@@ -81,19 +82,21 @@ export function SelectOverlay({ onChoose }: { onChoose: (member: string) => void
   const rect = hovered ? rects.get(hovered) : undefined;
   return (
     <div className={styles.layer} data-overlay="">
-      <p className={styles.banner} role="status">
+      <Placed preferred={bottomCenter} className={styles.banner} role="status">
         Select a microfrontend on the page. Press Esc to cancel.
-      </p>
+      </Placed>
       {hovered && rect && (
         <div className={styles.outline} style={box(rect)} data-select-outline={hovered}>
-          <span className={styles.outlineLabel}>{label(hovered)}</span>
+          <Placed follow preferred={(size) => ({ top: rect.top - size.height, left: rect.left })} className={styles.outlineLabel}>
+            {label(hovered)}
+          </Placed>
         </div>
       )}
     </div>
   );
 }
 
-/** The zone indicator: which microfrontend serves the current route, from where. */
+/** The zone indicator: which microfrontend serves the current route, from where. It sits top right, left of an open menu or panel. */
 export function ZoneIndicator() {
   const prefs = useToolbarPrefs();
   const { app } = useRuntime();
@@ -102,13 +105,13 @@ export function ZoneIndicator() {
   if (!prefs.zoneIndicator) return null;
   const owner = routing[route.owner]!;
   return (
-    <div className={styles.zone} data-overlay="" role="status" aria-label="Zone indicator">
+    <Placed preferred={topRight} className={styles.zone} data-overlay="" role="status" aria-label="Zone indicator">
       <span className={styles.zoneTitle}>Zone</span>
       <span>{memberById(app, route.owner)!.name}</span>
       <code className={styles.zoneVersion}>{owner.version}</code>
       <span>{environmentLabel(owner)}</span>
       {owner.reason === "override" && <span className={styles.zoneFlag}>Overridden</span>}
-    </div>
+    </Placed>
   );
 }
 
@@ -131,9 +134,9 @@ export function DebugLabels() {
         const route = routing[member];
         if (!route) return null;
         return (
-          <div key={member} className={styles.debugLabel} style={{ top: rect.top + 4, left: rect.left + 4 }} data-debug-label={member}>
+          <Placed key={member} follow preferred={() => ({ top: rect.top + 4, left: rect.left + 4 })} className={styles.debugLabel} data-debug-label={member}>
             {`${member}@${route.version} · ${environmentLabel(route)} · ${route.reason}`}
-          </div>
+          </Placed>
         );
       })}
     </div>

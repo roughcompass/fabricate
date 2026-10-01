@@ -59,6 +59,11 @@
     --color-text-secondary: light-dark(#666666, #a1a1a1);
     --color-text-tertiary: light-dark(#8f8f8f, #737373);
 
+    /* An inverse surface: the demo toolbar's pill and its tooltips, dark in both themes. */
+    --color-bg-inverse: light-dark(#1a1a1a, #2a2a2a);
+    --color-text-inverse: light-dark(#ffffff, #ededed);
+    --color-border-inverse: light-dark(#3d3d3d, #4d4d4d);
+
     /* Monochrome emphasis: primary buttons, checked controls, selected states, filled marks. */
     --color-primary: light-dark(#171717, #ededed);
     --color-primary-hover: light-dark(#383838, #cccccc);

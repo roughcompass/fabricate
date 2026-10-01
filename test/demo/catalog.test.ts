@@ -4,10 +4,13 @@ import { describe, expect, it } from "vitest";
 import {
   BRAND_IDS,
   BRANDS,
+  BUILT_IN_PROFILES,
   PERSONAS,
   REFERENCE_PREFIX,
   TEMPLATES,
   type AppDefinition,
+  builtInProfile,
+  builtInProfileFor,
   loadSequence,
   memberById,
   plantedVersions,
@@ -173,8 +176,15 @@ describe("template catalog", () => {
     }
   });
 
-  it("offers an Analyst, an Approver, and an Administrator persona", () => {
-    expect(PERSONAS.map((persona) => persona.role)).toEqual(["Analyst", "Approver", "Administrator"]);
+  it("offers a built-in profile for each persona, keeping the persona ids", () => {
+    expect(BUILT_IN_PROFILES.map((profile) => [profile.id, profile.name, profile.persona, profile.region])).toEqual([
+      ["analyst", "Jordan Lee", "Analyst", "London"],
+      ["approver", "Sam Rivera", "Approver", "New York"],
+      ["administrator", "Alex Morgan", "Administrator", "Singapore"],
+    ]);
+    expect(PERSONAS.map((persona) => builtInProfileFor(persona).persona)).toEqual(["Analyst", "Approver", "Administrator"]);
+    expect(builtInProfile("approver")?.name).toBe("Sam Rivera");
+    expect(builtInProfile("nobody")).toBeUndefined();
   });
 
   it("describes routing for operators", () => {

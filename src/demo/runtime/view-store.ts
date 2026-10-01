@@ -1,14 +1,20 @@
-import { type AppDefinition, DEFAULT_PERSONA, type EnvironmentId, type LoadEntry, PERSONAS, memberById } from "@/lib/demo/catalog";
+import { type AppDefinition, DEFAULT_PROFILE, type EnvironmentId, type LoadEntry, builtInProfile, memberById } from "@/lib/demo/catalog";
 import { resolveRouting } from "@/lib/demo/routing";
 import type { ShareState } from "@/lib/demo/shares";
 import { readStored, writeStored } from "./storage";
 
 /**
  * The state of one view of a running application, kept outside React and
- * read with useSyncExternalStore. Theme, persona, and microfrontend overrides
- * persist in the browser for the view; the server renders the defaults (or a
- * share link's captured state), so hydration never mismatches.
+ * read with useSyncExternalStore. Theme, session profile, and microfrontend
+ * overrides persist in the browser for the view; the server renders the
+ * defaults (or a share link's captured state), so hydration never mismatches.
  */
+
+/** The id of a share link's profile snapshot, which the recipient sees without it joining their own profiles. */
+export const SHARED_PROFILE_ID = "shared";
+
+// A built-in profile, a share link's snapshot, or one of the visitor's own. Which exist is resolved on render.
+const PROFILE_ID = /^(?:[a-z]{1,20}|dpf_[a-z0-9]{16})$/;
 
 export type RuntimeTheme = "light" | "dark";
 
@@ -19,7 +25,8 @@ export interface Override {
 
 export interface ViewState {
   readonly theme: RuntimeTheme;
-  readonly personaId: string;
+  /** The active session profile's id; one that no longer resolves falls back to Jordan Lee. */
+  readonly profileId: string;
   readonly overrides: Readonly<Record<string, Override>>;
 }
 
@@ -49,7 +56,7 @@ export interface ViewStore {
   getServerState(): ViewState;
   getActivity(): Activity;
   setTheme(theme: RuntimeTheme): void;
-  setPersona(personaId: string): void;
+  setProfile(profileId: string): void;
   /** Applies overrides, reloading only the members whose version changed. */
   applyOverrides(overrides: Readonly<Record<string, Override>>): void;
   /** Records a route's scripted load sequence; `startedAt` is when the route began loading. */
@@ -61,18 +68,22 @@ function parseState(app: AppDefinition, value: unknown): ViewState | null {
   if (!value || typeof value !== "object") return null;
   const raw = value as Record<string, unknown>;
   const theme = raw.theme === "dark" ? "dark" : "light";
-  const personaId = PERSONAS.some((persona) => persona.id === raw.personaId) ? (raw.personaId as string) : DEFAULT_PERSONA.id;
+  // Views stored before profiles kept a persona id, which is a built-in profile's id.
+  const stored = raw.profileId ?? raw.personaId;
+  const profileId = typeof stored === "string" && PROFILE_ID.test(stored) ? stored : DEFAULT_PROFILE.id;
   const overrides: Record<string, Override> = {};
   for (const [member, override] of Object.entries((raw.overrides ?? {}) as Record<string, Override>)) {
     const known = memberById(app, member);
     if (known && known.versions.some((version) => version.version === override?.version) && ["production", "sandbox", "dev"].includes(override?.environment)) overrides[member] = { version: override.version, environment: override.environment };
   }
-  return { theme, personaId, overrides };
+  return { theme, profileId, overrides };
 }
 
+/** A share link's state: its snapshot profile, or for a link from before profiles, the built-in profile its persona names. */
 export function stateFromShare(app: AppDefinition, share: ShareState | null): ViewState {
-  if (!share) return { theme: "light", personaId: DEFAULT_PERSONA.id, overrides: {} };
-  return parseState(app, { theme: share.theme, personaId: share.persona, overrides: share.overrides })!;
+  if (!share) return { theme: "light", profileId: DEFAULT_PROFILE.id, overrides: {} };
+  const profileId = share.profile ? SHARED_PROFILE_ID : (builtInProfile(share.persona) ?? DEFAULT_PROFILE).id;
+  return parseState(app, { theme: share.theme, profileId, overrides: share.overrides })!;
 }
 
 export function createViewStore(app: AppDefinition, deployed: EnvironmentId, viewKey: string, share: ShareState | null, shareToken: string | null): ViewStore {
@@ -125,9 +136,9 @@ export function createViewStore(app: AppDefinition, deployed: EnvironmentId, vie
       persist();
       setActivity({ changes: activity.changes + 1 });
     },
-    setPersona(personaId) {
-      if (state.personaId === personaId || !PERSONAS.some((persona) => persona.id === personaId)) return;
-      state = { ...state, personaId };
+    setProfile(profileId) {
+      if (state.profileId === profileId || !PROFILE_ID.test(profileId)) return;
+      state = { ...state, profileId };
       persist();
       setActivity({ changes: activity.changes + 1 });
     },

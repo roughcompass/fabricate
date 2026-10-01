@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db/client";
 import { attempt, jsonBody, readableView, stringField, writableView } from "@/lib/demo/api";
 import { authorName, createThread, listThreads, threadInputSchema } from "@/lib/demo/comments";
+import { demoUnavailable } from "@/lib/demo/guard";
 import { setDisplayName } from "@/lib/demo/workspaces";
 
 /** The comment threads of the view the visitor may open, with their display name. */
@@ -13,6 +14,9 @@ export async function GET(request: Request) {
 
 /** Starts a thread on a rendered element, with its first comment. */
 export async function POST(request: Request) {
+  // The demo switch comes first, so a disabled demo answers not found whatever the body.
+  const unavailable = demoUnavailable();
+  if (unavailable) return unavailable;
   const body = await jsonBody(request);
   if (body instanceof Response) return body;
   const resolved = await writableView(stringField(body, "application", 80));

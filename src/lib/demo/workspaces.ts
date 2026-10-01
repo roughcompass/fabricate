@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { and, count, eq, lt } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
-import { demoApplications, demoShares, demoThreads, demoWorkspaces } from "@/lib/db/schema";
+import { demoApplications, demoProfiles, demoShares, demoThreads, demoWorkspaces } from "@/lib/db/schema";
 import { isWorkspaceKey } from "./workspace-key";
 import { type HintState, parseHints } from "./hints";
 
@@ -116,8 +116,8 @@ export function assertApplicationCapacity(db: Executor, workspaceId: number): vo
 
 /**
  * Clears a workspace: its applications (with their threads and share links),
- * its threads and share links on reference deployments, and its guidance
- * state. Other workspaces and the reference deployments are untouched. The
+ * its threads and share links on reference deployments, its custom session
+ * profiles, and its guidance state. Other workspaces and the reference deployments are untouched. The
  * reset epoch advances so state the browser kept from before is ignored.
  */
 export function resetWorkspace(db: Executor, workspaceId: number): Workspace {
@@ -126,6 +126,7 @@ export function resetWorkspace(db: Executor, workspaceId: number): Workspace {
     // Threads on the workspace's own applications went with them; these are its reference-deployment threads.
     tx.delete(demoThreads).where(eq(demoThreads.viewWorkspaceId, workspaceId)).run();
     tx.delete(demoShares).where(eq(demoShares.viewWorkspaceId, workspaceId)).run();
+    tx.delete(demoProfiles).where(eq(demoProfiles.workspaceId, workspaceId)).run();
     const current = tx.select().from(demoWorkspaces).where(eq(demoWorkspaces.id, workspaceId)).get();
     if (!current) throw new ValidationError([{ field: "workspace", message: "This demo workspace no longer exists" }]);
     return toWorkspace(
