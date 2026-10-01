@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { FilterRail } from "@/components/ui/filter-rail";
 import { ToggleGroup } from "@/components/ui/toggle-group";
-import { Checkbox, ChoiceGroup, FormFooter, FormSection, Select, TextArea, TextInput } from "@/components/ui/form";
+import { Checkbox, ChoiceGroup, FormFooter, FormNote, FormSection, Select, TextArea, TextInput } from "@/components/ui/form";
 import { MediaCard } from "@/components/ui/media-card";
 import { Menu, MenuAction, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { type Outcome, OutcomeToast, param } from "@/components/ui/outcome-toast";
@@ -183,9 +183,12 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
         <Specimen
           id="form-controls"
           title="Form controls"
-          description="Label, control, then description or error. Every control shares one boundary, fill, and focus ring."
+          description="Label, control, then description or error. Every control shares one boundary, fill, and focus ring. A form note states something that holds whatever is entered."
           render={(theme) => (
             <div className={styles.stack}>
+              <FormNote title="Deploys to DE Web Managed Hosting" icon="cloud">
+                DE Web Managed Hosting builds and runs your application in the environment you choose below.
+              </FormNote>
               <FormSection title="Section" description="A titled group of fields.">
                 <TextInput id={`${theme}-name`} label="Name" description="A display name." defaultValue="orders" />
                 <TextInput id={`${theme}-url`} label="Clone URL" mono placeholder="https://git.example.com/acme/orders.git" />
@@ -570,7 +573,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
         <Specimen
           id="tabs"
           title="Tabs and breadcrumbs"
-          description="Tabs switch views of one page and show counts; a toggle group picks one of a few choices; breadcrumbs link a record's ancestors."
+          description="Tabs switch views of one page and show counts; a toggle group picks one of a few choices, with labels or as icons with tooltips; breadcrumbs link a record's ancestors."
           render={() => (
             <>
               <Tabs label="Filter Repositories">
@@ -589,6 +592,18 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 label="Device"
                 name="device"
                 selected="tablet"
+                options={[
+                  { value: "mobile", label: "Mobile", icon: "smartphone" },
+                  { value: "tablet", label: "Tablet", icon: "tablet" },
+                  { value: "desktop", label: "Desktop", icon: "monitor" },
+                ]}
+              />
+              <ToggleGroup
+                action="/design-system"
+                label="Device, as icons"
+                name="device"
+                selected="desktop"
+                iconOnly
                 options={[
                   { value: "mobile", label: "Mobile", icon: "smartphone" },
                   { value: "tablet", label: "Tablet", icon: "tablet" },

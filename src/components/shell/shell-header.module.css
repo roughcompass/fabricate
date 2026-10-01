@@ -32,6 +32,8 @@
     white-space: nowrap;
   }
   .placeholder { display: block; width: var(--size-label); height: var(--space-5); border-radius: var(--radius-sm); background: var(--color-bg-muted); }
+  /* A focused page's skeleton: where the back button will be. */
+  .backPlaceholder { display: block; width: var(--size-control-md); height: var(--size-control-md); border-radius: var(--radius-md); background: var(--color-bg-muted); }
 
   /* Open navigation exists only where the sidebar is a drawer; Show sidebar only where it is inline and hidden. */
   .openNavigation, .showSidebar { display: none; }

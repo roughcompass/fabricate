@@ -2,10 +2,10 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DetailSkeleton, FormSkeleton, ListSkeleton } from "@/components/ui/skeleton";
+import { DetailSkeleton, FocusedSkeleton, FormSkeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { type SkeletonKind, skeletonFor } from "./skeleton-routes";
 
-const SKELETONS: Record<SkeletonKind, () => React.ReactNode> = { list: ListSkeleton, detail: DetailSkeleton, form: FormSkeleton };
+const SKELETONS: Record<SkeletonKind, () => React.ReactNode> = { list: ListSkeleton, detail: DetailSkeleton, form: FormSkeleton, focused: FocusedSkeleton };
 /** Fast navigations finish before this, so they never flash a skeleton. */
 const DELAY = 150;
 /** A navigation that has not finished by then has failed or been abandoned. */

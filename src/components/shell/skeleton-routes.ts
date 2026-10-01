@@ -1,5 +1,5 @@
 /** Which page skeleton matches the page at a path; null for paths with none. */
-export type SkeletonKind = "list" | "detail" | "form";
+export type SkeletonKind = "list" | "detail" | "form" | "focused";
 
 const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/(assessments|repositories|standards)\/new\/?$/, "form"],
@@ -9,7 +9,8 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "detail"],
   // The template demo's operator pages; running applications have no skeleton.
   [/^\/templates\/[^/]+\/deploy\/?$/, "form"],
-  [/^\/templates\/[^/]+\/preview\/?$/, "detail"],
+  // Preview mode is a focused page: its skeleton hides the sidebar as soon as the navigation starts.
+  [/^\/templates\/[^/]+\/preview\/?$/, "focused"],
   [/^\/applications\/import\/?$/, "list"],
   [/^\/applications\/import\/[^/]+\/[^/]+\/?$/, "form"],
   [/^\/new\/?$/, "list"],

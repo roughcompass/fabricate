@@ -183,6 +183,7 @@ Sizes are `sm` (28px) for table rows, filter bars, and toolbars; `md` (36px) eve
 | `FormSection` | A titled group of fields |
 | `FormFooter` | Cancel, then the primary action, right-aligned; stacked and full width on narrow screens, including inside a `Panel` footer |
 | `FormAlert` | One error not tied to a field, such as a concurrent edit, at the top of the form |
+| `FormNote` | A statement that holds whatever the visitor enters, such as where the result is hosted: an icon, a title, and a sentence, recessed on `--color-bg-subtle` with no border, after any `FormAlert` and before the first field. It has no tone and no live role, so it is never an alert. The deploy form's "Deploys to DE Web Managed Hosting" is the one in use |
 
 Mark optional fields with `optional`; required fields carry no marker. Check boxes and radios are one drawn control: 16px, a strong boundary, the accent when selected.
 
@@ -284,6 +285,13 @@ Both settings persist for a year in two cookies that the browser may write, so t
 
 **Below 1024px the sidebar is a drawer.** The content takes the whole width, and Open navigation in the shell header opens the sidebar. The sidebar is a native popover (`popover="auto"`), so opening it, Escape, a click outside, and the return of focus to Open navigation all work without JavaScript; from 1024px its styles restate the browser's popover defaults so the same element is the inline sidebar. The drawer slides in over `--color-overlay`, and closes when an item is chosen, when a page opens, and when the viewport widens to 1024px.
 
+**A focused page hides the sidebar.** A focused page gives the content column to one subject, and preview mode is the only one. It renders `ShellHeader` with `back` (`{ href, label }`, such as "Back to Payments workspace"). The header then:
+- carries `data-shell-header="focused"`
+- holds a tertiary, icon-only back link (`arrowLeft`) in place of Show sidebar and Open navigation, named and titled by the label, which works without JavaScript
+- keeps the title as the page's only `h1`, with `visually-hidden`
+
+The page has no `PageHeader`. In `app-shell.module.css`, `.shell:has([data-shell-header="focused"])` hides `.sidebar` at every width and, from 1024px, uses the hidden grid columns. The rule skips a header inside a `[hidden]` subtree, such as the page a navigation skeleton covers. The server renders the rule's match, so the sidebar is hidden from the first paint. The `fabricate-sidebar` cookie and `data-sidebar` are left as the operator set them, so the next page shows the sidebar as they left it. The `focused` navigation skeleton (`FocusedSkeleton`, with `back="placeholder"`) matches the rule too, so the sidebar hides as soon as a navigation to preview mode starts. `ShellHeader` stays out of the component gallery, since a focused specimen would hide the gallery's own sidebar.
+
 Running demo applications are not operator pages: they render in the `(runtime)` route group, full-bleed inside their portal shell, with no `AppShell`.
 
 ### Page header
@@ -315,7 +323,7 @@ A detail page leads with an overview under its header, as a `StatGroup` or a `De
 
 ### Forms
 
-Create and edit forms use `Page width="form"` and one `Panel` whose footer holds Cancel and the primary action. Submit labels read "Create <noun>" for new records and "Save changes" for edits; the draft editor uses "Save draft". A record's destructive action sits in a separate danger `Panel` after the form, confirmed with `ConfirmDialog`.
+Create and edit forms use `Page width="form"` and one `Panel` whose footer holds Cancel and the primary action. A fact about every submission, such as where a deployed application runs, goes in a `FormNote` at the top of the form, not in a page alert or the page description. Submit labels read "Create <noun>" for new records and "Save changes" for edits; the draft editor uses "Save draft". A record's destructive action sits in a separate danger `Panel` after the form, confirmed with `ConfirmDialog`.
 
 ### Filters
 

@@ -1,16 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ButtonContent, buttonProps } from "@/components/ui/button-content";
+import { buttonProps } from "@/components/ui/button-content";
+import { Icon } from "@/components/ui/icon";
+import { Tooltip } from "@/components/ui/tooltip";
 import styles from "./preview.module.css";
 
+/** The browser window's border, left and right: 1px each. */
+const WINDOW_BORDER = 2;
+
 /**
- * The reference deployment, running in a frame at a device's size. The
- * application inside lays out at that size, so its own breakpoints apply;
- * when the device is wider than the space available, the frame scales down
- * to fit.
+ * The reference deployment, running in a frame at a device's size, inside a
+ * browser window that shows its simulated address (design.md, decision 6).
+ * The application inside lays out at the device's size, so its own
+ * breakpoints apply; when the device is wider than the space inside the gray
+ * container's padding, the window and the frame scale down together to fit.
+ * The title bar keeps its height, and is decoration only.
  */
-export function DeviceFrame({ src, width, height, title, label }: { src: string; width: number; height: number; title: string; label: string }) {
+export function DeviceFrame({ src, width, height, title, label, address }: { src: string; width: number; height: number; title: string; label: string; address: string }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState<number | null>(null);
 
@@ -22,16 +29,27 @@ export function DeviceFrame({ src, width, height, title, label }: { src: string;
     return () => observer.disconnect();
   }, []);
 
-  const scale = available ? Math.min(1, available / width) : 1;
+  // The window's border sits outside the frame, so the frame fits in what the border leaves.
+  const scale = available ? Math.min(1, (available - WINDOW_BORDER) / width) : 1;
   return (
     <div className={styles.stage}>
       <p className={styles.size}>
         <span data-frame-size="">{label}</span>
         {scale < 1 && <span className={styles.scale}>{`Shown at ${Math.round(scale * 100)}%`}</span>}
       </p>
-      <div ref={viewport} className={styles.viewport}>
-        <div className={styles.device} style={{ width: width * scale, height: height * scale }} data-device-frame="">
-          <iframe src={src} title={title} className={styles.frame} style={{ width, height, transform: `scale(${scale})` }} data-preview-frame="" />
+      <div ref={viewport} className={styles.viewport} data-preview-container="">
+        <div className={styles.window} style={{ width: width * scale + WINDOW_BORDER }} data-browser-window="">
+          <div className={styles.titleBar} aria-hidden="true" data-title-bar="">
+            <span className={styles.dots}>
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+            </span>
+            <span className={styles.address}>{address}</span>
+          </div>
+          <div className={styles.device} style={{ width: width * scale, height: height * scale }} data-device-frame="">
+            <iframe src={src} title={title} className={styles.frame} style={{ width, height, transform: `scale(${scale})` }} data-preview-frame="" />
+          </div>
         </div>
       </div>
     </div>
@@ -40,29 +58,30 @@ export function DeviceFrame({ src, width, height, title, label }: { src: string;
 
 /**
  * Opens the reference deployment with its toolbar in a new tab, at the route
- * the frame shows now: the visitor may have navigated inside it.
+ * the frame shows now: the visitor may have navigated inside it. An icon
+ * button, named and with a tooltip.
  */
 export function FullScreenLink({ href, prefix }: { href: string; prefix: string }) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener"
-      {...buttonProps("secondary", "sm")}
-      onClick={(event) => {
-        const frame = document.querySelector<HTMLIFrameElement>("[data-preview-frame]");
-        try {
-          const path = frame?.contentWindow?.location.pathname;
-          if (path?.startsWith(prefix)) event.currentTarget.href = path;
-        } catch {
-          // The frame is always same-origin; keep the start route if it cannot be read.
-        }
-      }}
-    >
-      <ButtonContent icon="external" size="sm">
-        Open full screen
-        <span className="visually-hidden"> (opens in a new tab)</span>
-      </ButtonContent>
-    </a>
+    <Tooltip content="Open full screen">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener"
+        {...buttonProps("secondary", "sm", true)}
+        onClick={(event) => {
+          const frame = document.querySelector<HTMLIFrameElement>("[data-preview-frame]");
+          try {
+            const path = frame?.contentWindow?.location.pathname;
+            if (path?.startsWith(prefix)) event.currentTarget.href = path;
+          } catch {
+            // The frame is always same-origin; keep the start route if it cannot be read.
+          }
+        }}
+      >
+        <Icon name="external" size={16} />
+        <span className="visually-hidden">Open full screen (opens in a new tab)</span>
+      </a>
+    </Tooltip>
   );
 }

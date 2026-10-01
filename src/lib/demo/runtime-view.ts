@@ -2,7 +2,7 @@ import type { RuntimeDescriptor } from "@/demo/runtime/descriptor";
 import { type DemoView, viewApplicationId, viewTemplate } from "./access";
 import { buildProgress } from "./build";
 import type { Profile } from "./catalog";
-import { DEMO_DOMAIN, applicationUrl, buildScriptFor } from "./deployments";
+import { applicationUrl, buildScriptFor, referenceUrl } from "./deployments";
 import type { Workspace } from "./workspaces";
 
 /** The cookie that remembers a share link's token for one application (design.md, decision 11). */
@@ -31,7 +31,7 @@ export function runtimeDescriptor(view: DemoView, visitor: Workspace | null, sha
     displayName: visitor?.displayName ?? null,
     hints: visitor?.hints ?? {},
     profiles,
-    url: application ? applicationUrl(application) : `https://${template.slug}-preview.${DEMO_DOMAIN}`,
+    url: application ? applicationUrl(application) : referenceUrl(template.slug),
     status: application && buildProgress(buildScriptFor(application, template), application.createdAt.getTime(), now, application.buildSkippedAt?.getTime() ?? null).status === "building" ? "building" : "ready",
     // Only the owner can open an application's page; everyone else goes to the template.
     pageHref: application && view.access === "owner" ? `/applications/${application.publicId}` : `/templates/${template.slug}`,

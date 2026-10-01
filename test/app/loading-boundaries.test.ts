@@ -32,7 +32,10 @@ describe("navigation skeletons", () => {
     ["/templates", "list"],
     ["/templates/market-watch", "detail"],
     ["/templates/market-watch/deploy", "form"],
-    ["/templates/market-watch/preview", "detail"],
+    ["/templates/market-watch/preview", "focused"],
+    ["/templates/payments-workspace/preview", "focused"],
+    ["/templates/payments-workspace/deploy", "form"],
+    ["/templates/payments-workspace", "detail"],
     ["/applications", "list"],
     ["/applications/app_abc", "detail"],
   ])("shows the %s page's skeleton as %s", (pathname, kind) => {

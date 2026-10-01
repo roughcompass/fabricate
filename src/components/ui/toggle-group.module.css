@@ -23,4 +23,6 @@
     &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
     &[aria-pressed="true"] { background: var(--color-bg-muted); color: var(--color-text); }
   }
+  /* An icon-only option is square. */
+  .iconOnly { justify-content: center; width: var(--size-control-sm); padding: 0; }
 }

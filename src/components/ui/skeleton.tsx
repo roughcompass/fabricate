@@ -79,3 +79,26 @@ export function FormSkeleton() {
     </Page>
   );
 }
+
+/**
+ * A focused page's skeleton, for preview mode: the focused shell header with
+ * a placeholder for its back button, which hides the sidebar as soon as the
+ * navigation starts, then the command row, the tab row, and the gray
+ * container.
+ */
+export function FocusedSkeleton() {
+  return (
+    <Page busy>
+      <ShellHeader back="placeholder" />
+      <div className={styles.commandRow}>
+        <Skeleton width="long" height="control" />
+      </div>
+      <div className={styles.tabRow}>
+        <Skeleton width="short" height="control" />
+      </div>
+      <div className={styles.container}>
+        <Skeleton height="block" />
+      </div>
+    </Page>
+  );
+}

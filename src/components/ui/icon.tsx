@@ -45,6 +45,8 @@ const PATHS = {
   target: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-5a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-3.5h.01",
   chevronUp: "m6 15 6-6 6 6",
   refresh: "M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5",
+  // A device on its side, with an arrow turning it: the preview's Landscape toggle.
+  rotate: "M4 10h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2zM8 4a8 8 0 0 1 11 2.5M19 2v4.5h-4.5",
   smartphone: "M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm4 16h.01",
   tablet: "M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm6 16h.01",
   external: "M14 4h6v6M10 14 20 4M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5",

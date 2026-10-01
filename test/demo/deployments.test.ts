@@ -3,7 +3,9 @@ import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { demoComments, demoShares, demoThreads } from "@/lib/db/schema";
 import { applicationCount } from "@/lib/demo/workspaces";
+import { resolveView } from "@/lib/demo/access";
 import { templateBySlug } from "@/lib/demo/catalog";
+import { runtimeDescriptor } from "@/lib/demo/runtime-view";
 import {
   BITBUCKET_HOST,
   createApplication,
@@ -11,6 +13,7 @@ import {
   deleteApplication,
   isProjectKey,
   isRepositoryName,
+  referenceUrl,
   repositoryUrl,
   simulatedUrl,
   validateDeployInput,
@@ -77,6 +80,17 @@ describe("simulated deployment values", () => {
     expect(simulatedUrl(1, "Payments workspace", "sandbox")).toBe(url);
     expect(simulatedUrl(2, "Payments workspace", "sandbox")).not.toBe(url);
     expect(simulatedUrl(1, "Payments workspace", "dev")).toMatch(/\.dev\.deweb\.example$/);
+  });
+
+  it("gives each reference deployment one address, which preview mode and the running application share", () => {
+    expect(referenceUrl("payments-workspace")).toBe("https://payments-workspace-preview.deweb.example");
+    const db = createTestDb();
+    try {
+      const view = resolveView(db, "ref-payments-workspace", null)!;
+      expect(runtimeDescriptor(view, null, null)!.url).toBe(referenceUrl("payments-workspace"));
+    } finally {
+      db.$client.close();
+    }
   });
 
   it("places repositories on the reserved example domain", () => {

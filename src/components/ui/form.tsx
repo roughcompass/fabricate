@@ -1,4 +1,4 @@
-import { Icon } from "./icon";
+import { Icon, type IconName } from "./icon";
 import styles from "./form.module.css";
 
 export const formStyles = styles;
@@ -242,6 +242,25 @@ export function FormFooter({ children }: { children: React.ReactNode }) {
 }
 
 /** An error that is not about one field, such as a concurrent edit; focused after a rejected submission. */
+/**
+ * A statement about the form that holds whatever the visitor enters, such as
+ * where the result runs: a neutral, recessed block with an icon, a title, and
+ * a sentence. Unlike FormAlert it has no tone and no live role, and it never
+ * reports a problem. It has no border, so it sits inside a form's Panel
+ * without nesting surfaces.
+ */
+export function FormNote({ title, icon = "info", children }: { title: string; icon?: IconName; children: React.ReactNode }) {
+  return (
+    <div className={styles.note} data-form-note="">
+      <Icon name={icon} className={styles.noteIcon} />
+      <div className={styles.noteBody}>
+        <p className={styles.noteTitle}>{title}</p>
+        <div className={styles.noteText}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function FormAlert({ id, title, children }: { id: string; title?: string; children: React.ReactNode }) {
   return (
     <div id={id} className={styles.alert} role="alert" tabIndex={-1}>

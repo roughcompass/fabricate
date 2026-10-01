@@ -148,6 +148,13 @@
   .alertBody { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
   .alertTitle { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
 
+  /* A form note: recessed on the subtle fill, with no border, so it never nests a surface inside the form's Panel. */
+  .note { display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-bg-subtle); }
+  .noteIcon { flex: none; margin-top: 2px; color: var(--color-text-secondary); }
+  .noteBody { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+  .noteTitle { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .noteText { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+
   @container content (max-width: 767px) {
     .footer { flex-direction: column-reverse; align-items: stretch; }
     .footer > * { width: 100%; }

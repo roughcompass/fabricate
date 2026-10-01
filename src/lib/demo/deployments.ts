@@ -78,6 +78,11 @@ export function applicationUrl(application: Pick<DemoApplication, "workspaceId" 
   return simulatedUrl(application.workspaceId, application.name, application.environment);
 }
 
+/** A template's reference deployment's simulated address, shown in preview mode's browser window. */
+export function referenceUrl(slug: string): string {
+  return `https://${slug}-preview.${DEMO_DOMAIN}`;
+}
+
 /** The scripted stages of an application's simulated build. */
 export function buildScriptFor(application: DemoApplication, template: Template): StageScript[] {
   const project = application.bitbucketProject;

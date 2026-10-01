@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useSyncExternalStore } from "react";
 import { ButtonLink } from "@/components/ui/button";
-import { ChoiceGroup, FormAlert, FormFooter, FormSection, TextInput, formStyles } from "@/components/ui/form";
+import { ChoiceGroup, FormAlert, FormFooter, FormNote, FormSection, TextInput, formStyles } from "@/components/ui/form";
 import { Panel } from "@/components/ui/panel";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { useFocusFirstInvalid } from "@/components/ui/use-focus-first-invalid";
@@ -43,6 +43,10 @@ export function DeployForm({ action, initial, cancelHref }: DeployFormProps) {
       >
         <div className={formStyles.form}>
           {state.errors.base && <FormAlert id="deploy-form-alert">{state.errors.base.join(" ")}</FormAlert>}
+          {/* Where the application runs, whichever environment is chosen: a form note, not a page alert (design.md, decision 8). */}
+          <FormNote title="Deploys to DE Web Managed Hosting" icon="cloud">
+            DE Web Managed Hosting builds and runs your application in the environment you choose below.
+          </FormNote>
           <TextInput
             id="deploy-name"
             name="name"

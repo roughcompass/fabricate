@@ -57,6 +57,33 @@ test("creates a sandbox application with the defaults and watches its build fini
   await expect(log(page)).toBeHidden();
 });
 
+test.describe("the hosting note", () => {
+  const note = (page: Page) => page.locator("[data-form-note]");
+
+  test("opens the form above Application name, as part of the form rather than a page alert", async ({ page, db: _db }) => {
+    await page.goto("/templates/payments-workspace/deploy");
+    await expect(note(page)).toContainText("Deploys to DE Web Managed Hosting");
+    await expect(note(page)).toContainText("DE Web Managed Hosting builds and runs your application in the environment you choose below.");
+    // It doesn't repeat the page description's word on simulation.
+    await expect(note(page)).not.toContainText(/simulat/i);
+    const [box, field] = [(await note(page).boundingBox())!, (await page.getByLabel("Application name").boundingBox())!];
+    expect(box.y + box.height).toBeLessThanOrEqual(field.y);
+    expect(await note(page).evaluate((element) => Boolean(element.closest("form")))).toBe(true);
+    await expect(note(page)).not.toHaveAttribute("role", /.+/);
+    // No alert in the page content (Next's route announcer, outside it, has the alert role too).
+    await expect(page.locator("main").getByRole("alert")).toHaveCount(0);
+  });
+
+  test("stays in place for a dev environment, still naming DE Web Managed Hosting", async ({ page, db: _db }) => {
+    await page.goto("/templates/payments-workspace/deploy");
+    const before = (await note(page).boundingBox())!;
+    await page.getByLabel("Dev environment").check();
+    await expect(page.getByLabel("BitBucket project")).toBeVisible();
+    await expect(note(page)).toContainText("Deploys to DE Web Managed Hosting");
+    expect((await note(page).boundingBox())!.y).toBe(before.y);
+  });
+});
+
 test("resumes the build where it was after a reload", async ({ page, db: _db }) => {
   await page.goto("/templates/market-watch/deploy");
   await page.getByRole("button", { name: "Create application" }).click();

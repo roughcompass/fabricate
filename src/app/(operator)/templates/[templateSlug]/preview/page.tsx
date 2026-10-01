@@ -5,14 +5,17 @@ import { ButtonLink } from "@/components/ui/button";
 import { CodeBlock } from "@/components/ui/code-block";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Icon } from "@/components/ui/icon";
-import { Page, PageHeader } from "@/components/ui/page";
+import { ShellHeader } from "@/components/shell/shell-header";
+import { Page } from "@/components/ui/page";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { ToggleGroup } from "@/components/ui/toggle-group";
 import { referenceId, startRoute, templateBySlug } from "@/lib/demo/catalog";
+import { referenceUrl } from "@/lib/demo/deployments";
 import { requireDemo } from "@/lib/demo/guard";
 import { DEVICES, DEVICE_IDS, ORIENTATION_LABELS, type PreviewState, frameSize, parsePreviewState, previewHref, scaffoldCommand, sizeLabel } from "@/lib/demo/preview";
 import { type TemplateFile, templateFiles } from "@/lib/demo/template-files";
 import { DeviceFrame, FullScreenLink } from "./device-frame";
+import { LandscapeToggle } from "./landscape-toggle";
 import styles from "./preview.module.css";
 
 type Params = Record<string, string | string[] | undefined>;
@@ -89,9 +92,13 @@ function FileTree({ files, selected, hrefFor }: { files: readonly TemplateFile[]
 }
 
 /**
- * Preview mode (template-preview spec), modeled on shadcn blocks: the
- * reference deployment in a device frame, or the template's code, with the
- * scaffold command and Deploy template. Every choice lives in the address.
+ * Preview mode (template-preview spec), modeled on shadcn blocks: a focused
+ * page, with no sidebar or page header, whose header holds a back button to
+ * the template. The scaffold command and Deploy template sit above the tabs;
+ * the Preview tab shows the reference deployment in a browser window at a
+ * device's size, with the device, Landscape, and full-screen controls as
+ * icons, and the Code tab shows the template's files. Every choice lives in
+ * the address.
  */
 export default async function PreviewPage({ params, searchParams }: { params: Promise<{ templateSlug: string }>; searchParams: Promise<Params> }) {
   requireDemo();
@@ -108,14 +115,17 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
 
   return (
     <Page>
-      <PageHeader
-        breadcrumbs={[
-          { href: "/templates", label: "Salt Patterns" },
-          { href: `/templates/${template.slug}`, label: template.title },
-        ]}
-        title={template.title}
-        description="Preview the running reference deployment at a device's size, read its code, or scaffold it on your machine."
-      />
+      <ShellHeader title={`Preview ${template.title}`} back={{ href: `/templates/${template.slug}`, label: `Back to ${template.title}` }} />
+
+      <div className={styles.commandRow}>
+        <div className={styles.command} data-scaffold-command="">
+          <code className={styles.commandText}>{command}</code>
+          <CopyButton value={command} label="Copy command" />
+        </div>
+        <ButtonLink href={`/templates/${template.slug}/deploy`} variant="primary" size="sm" icon="cloud">
+          Deploy template
+        </ButtonLink>
+      </div>
 
       <div className={styles.controls}>
         <Tabs label="Preview mode">
@@ -126,27 +136,13 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
             Code
           </TabLink>
         </Tabs>
-        <div className={styles.controlGroup}>
-          <ToggleGroup action={action} label="Device" name="device" selected={state.device} keep={keepFrom(state, "device")} options={DEVICE_IDS.map((id) => ({ value: id, label: DEVICES[id].label, icon: DEVICE_ICONS[id] }))} />
-          <ToggleGroup
-            action={action}
-            label="Orientation"
-            name="orientation"
-            selected={state.orientation}
-            keep={keepFrom(state, "orientation")}
-            options={(["portrait", "landscape"] as const).map((orientation) => ({ value: orientation, label: ORIENTATION_LABELS[orientation] }))}
-          />
-          <FullScreenLink href={`${reference}/${route.path}`} prefix={reference} />
-        </div>
-        <div className={styles.controlGroup}>
-          <div className={styles.command} data-scaffold-command="">
-            <code className={styles.commandText}>{command}</code>
-            <CopyButton value={command} label="Copy command" />
+        {state.view === "preview" && (
+          <div className={styles.previewControls}>
+            <ToggleGroup action={action} label="Device" name="device" selected={state.device} keep={keepFrom(state, "device")} iconOnly options={DEVICE_IDS.map((id) => ({ value: id, label: DEVICES[id].label, icon: DEVICE_ICONS[id] }))} />
+            <LandscapeToggle action={action} orientation={state.orientation} keep={keepFrom(state, "orientation")} />
+            <FullScreenLink href={`${reference}/${route.path}`} prefix={reference} />
           </div>
-          <ButtonLink href={`/templates/${template.slug}/deploy`} variant="primary" size="sm" icon="cloud">
-            Deploy template
-          </ButtonLink>
-        </div>
+        )}
       </div>
 
       {state.view === "preview" ? (
@@ -157,6 +153,7 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
           height={size.height}
           title={`${template.title} on ${DEVICES[state.device].label}, ${ORIENTATION_LABELS[state.orientation]}`}
           label={sizeLabel(state.device, state.orientation)}
+          address={referenceUrl(template.slug)}
         />
       ) : (
         <div className={styles.code}>
