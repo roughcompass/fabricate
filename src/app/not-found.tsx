@@ -9,7 +9,7 @@ export default async function NotFound() {
   const { theme, sidebar } = await shellPreferences();
   return (
     <AppShell theme={theme} sidebar={sidebar} demo={getConfig().demoEnabled}>
-      <NotFoundPage noun="Page" listHref="/" listLabel="Initiatives" />
+      <NotFoundPage noun="Page" listHref="/assessments" listLabel="Assessments" />
     </AppShell>
   );
 }

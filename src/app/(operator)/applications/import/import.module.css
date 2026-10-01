@@ -1,0 +1,16 @@
+@layer pages {
+  /* The project choice above the repository list. */
+  .import { display: flex; flex-direction: column; gap: var(--space-4); }
+  /* Rows divided by rules: the panel around them is the only border. */
+  .repositories { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+  .repository { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; }
+  .repository + .repository { border-top: 1px solid var(--color-border); }
+  .repositoryIcon { flex: none; color: var(--color-text-secondary); }
+  .repositoryText { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+  .repositoryName { font-family: var(--font-family-mono); font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); }
+  .repositoryMeta { color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+
+  @container content (max-width: 767px) {
+    .repository { flex-wrap: wrap; }
+  }
+}

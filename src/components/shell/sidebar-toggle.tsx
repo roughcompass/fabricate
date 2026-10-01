@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { setSidebarVisibility } from "@/app/sidebar-actions";
-import { buttonClass } from "@/components/ui/button-content";
+import { buttonProps } from "@/components/ui/button-content";
 import { Icon } from "@/components/ui/icon";
 import { SIDEBAR_HIDDEN, SIDEBAR_HIDDEN_COOKIE } from "@/lib/web/sidebar";
 
@@ -32,7 +32,7 @@ export function SidebarToggle({ to }: { to: "hidden" | "shown" }) {
       <button
         type={hydrated ? "button" : "submit"}
         onClick={hydrated ? () => apply(to) : undefined}
-        className={buttonClass("tertiary", "md", true)}
+        {...buttonProps("tertiary", "md", true)}
         aria-label={label}
         title={label}
         data-sidebar-toggle={to}

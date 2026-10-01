@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
-import { type ButtonSize, type ButtonVariant, ButtonContent, buttonClass } from "./button-content";
+import { type ButtonSize, type ButtonVariant, ButtonContent, buttonProps } from "./button-content";
 import { Icon, type IconName } from "./icon";
 import styles from "./menu.module.css";
 
@@ -49,7 +49,7 @@ export function Menu({ label, triggerText, icon = "more", variant = "tertiary", 
         ref={trigger}
         type="button"
         popoverTarget={`menu-${id}`}
-        className={buttonClass(variant, size, !triggerText)}
+        {...buttonProps(variant, size, !triggerText)}
         aria-label={triggerText ? undefined : label}
         title={triggerText ? undefined : label}
         style={{ anchorName: `--menu-${id}` } as React.CSSProperties}

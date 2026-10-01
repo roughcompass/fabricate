@@ -1,6 +1,6 @@
 # Standards
 
-A Standard describes desired engineering state as machine-evaluable Controls. An operator edits a Standard as a draft and publishes immutable Releases. An Evaluation compares one Assessment's Repository Profiles and Relationship Map with the Releases an Initiative selects. Each Control produces a Finding per subject: Meets, Gap, Indeterminate, or Not applicable.
+A Standard describes desired engineering state as machine-evaluable Controls. An operator edits a Standard as a draft and publishes immutable Releases. An Evaluation compares one Run's Repository Profiles and Relationship Map with the Releases an Assessment selects. Each Control produces a Finding per subject: Meets, Gap, Indeterminate, or Not applicable.
 
 Controls are data. The validator matches every operator against a closed list and resolves every field name in the registries below. It never interprets a string as code, a regular expression, a shell command, a property path, or a function name.
 

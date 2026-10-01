@@ -32,8 +32,8 @@ export function ToastDemo() {
     <div data-toast-demo="">
       <Button onClick={() => toast({ title: "orders was added.", tone: "success" })}>Success</Button>{" "}
       <Button onClick={() => toast({ title: "Cancellation was requested.", tone: "info" })}>Info</Button>{" "}
-      <Button onClick={() => toast({ title: "Added 3 of 5 selected Sources.", description: "2 candidates could not be added.", tone: "warning" })}>Warning</Button>{" "}
-      <Button onClick={() => toast({ title: "billing could not be enabled.", description: "Another enabled Source has the same clone URL.", tone: "error" })}>Error</Button>{" "}
+      <Button onClick={() => toast({ title: "Added 3 of 5 selected Repositories.", description: "2 candidates could not be added.", tone: "warning" })}>Warning</Button>{" "}
+      <Button onClick={() => toast({ title: "billing could not be enabled.", description: "Another enabled Repository has the same clone URL.", tone: "error" })}>Error</Button>{" "}
       <Button
         onClick={() => {
           setCount(count + 1);
@@ -64,9 +64,9 @@ export function AlertDemo() {
       <Button onClick={() => setShown(true)}>Raise a page alert</Button>
       {shown && (
         <PageAlertPortal>
-          <Alert tone="error" title="The Assessment was not started" live>
+          <Alert tone="error" title="The Run was not started" live>
             <ul>
-              <li>billing is disabled. Enable it or remove it from the Initiative.</li>
+              <li>billing is disabled. Enable it or remove it from the Assessment.</li>
             </ul>
           </Alert>
         </PageAlertPortal>

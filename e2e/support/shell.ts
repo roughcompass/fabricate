@@ -12,6 +12,13 @@ export async function openSection(page: Page, name: string): Promise<void> {
   await nav.getByRole("link", { name, exact: true }).click();
 }
 
+/** Opens a section, then one of its sub-menu items, such as New application in Salt Patterns. */
+export async function openItem(page: Page, section: string, item: string): Promise<void> {
+  await openSection(page, section);
+  await expect(primaryNavigation(page).locator("#sidebar-section-title")).toHaveText(section);
+  await primaryNavigation(page).getByRole("link", { name: item, exact: true }).click();
+}
+
 /**
  * Waits until the page has hydrated, before clicking controls that work only
  * with JavaScript: the shell's Hide sidebar control submits a form until then,

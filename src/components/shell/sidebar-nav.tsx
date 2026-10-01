@@ -95,15 +95,28 @@ export function SidebarNav({ demo }: { demo: boolean }) {
               {located.section.label}
             </p>
           </div>
-          <ul className={styles.list} aria-labelledby="sidebar-section-title">
-            {located.section.items.map((item) => (
-              <li key={item.id}>
-                <Link href={item.href} className={styles.item} aria-current={item.id === located.item.id ? "page" : undefined} data-item={item.id}>
-                  <span className={styles.label}>{item.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {/* The first group is named by the section heading; each later group by its own. */}
+          {located.section.groups.map((group, index) => {
+            const headingId = index === 0 ? "sidebar-section-title" : `sidebar-group-${located.section.id}-${index}`;
+            return (
+              <div key={group.label ?? located.section.id} className={styles.group}>
+                {index > 0 && (
+                  <p id={headingId} className={styles.groupHeading}>
+                    {group.label}
+                  </p>
+                )}
+                <ul className={styles.list} aria-labelledby={headingId}>
+                  {group.items.map((item) => (
+                    <li key={item.id}>
+                      <Link href={item.href} className={styles.item} aria-current={item.id === located.item.id ? "page" : undefined} data-item={item.id}>
+                        <span className={styles.label}>{item.label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       )}
     </nav>

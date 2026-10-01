@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button-content";
+import { buttonProps } from "@/components/ui/button-content";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Page } from "@/components/ui/page";
 import { ShellHeader } from "./shell-header";
@@ -34,15 +34,20 @@ export function SystemPage({ icon, title, children, actions }: SystemPageProps) 
 
 /**
  * A record that does not exist, with a link to the list of its section.
- * `sentenceNoun` is the noun mid-sentence, for nouns that are not capitalized domain terms.
+ * `sentenceNoun` is the noun mid-sentence, for nouns that are not capitalized
+ * domain terms. A demo page passes `demo`, the demo setting: while the demo is
+ * disabled the whole area is unavailable, so the page names no record and
+ * links to the Assessments list, never back to a page that is itself not
+ * found (page-patterns spec, not-found states).
  */
-export function NotFoundPage({ noun, listHref, listLabel, sentenceNoun }: { noun: string; listHref: string; listLabel: string; sentenceNoun?: string }) {
+export function NotFoundPage({ noun, listHref, listLabel, sentenceNoun, demo = true }: { noun: string; listHref: string; listLabel: string; sentenceNoun?: string; demo?: boolean }) {
+  if (!demo) return <NotFoundPage noun="Page" listHref="/assessments" listLabel="Assessments" />;
   return (
     <SystemPage
       icon="help"
       title={`${noun} not found`}
       actions={
-        <Link href={listHref} className={buttonClass("primary")}>
+        <Link href={listHref} {...buttonProps("primary")}>
           {`Go to ${listLabel}`}
         </Link>
       }

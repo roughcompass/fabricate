@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { buildSource } from "../test/support/builders";
 import { expect, test } from "./support/fixtures";
+import { paths } from "./support/paths";
 
 /** The design system's foundations: bundled typefaces and the theme preference. */
 
@@ -17,7 +18,7 @@ test("renders text in Geist Sans and identifiers in Geist Mono, served by the ap
     if (request.resourceType() === "font") fonts.push(request.url());
   });
 
-  await page.goto("/sources");
+  await page.goto(paths.repositories);
   await page.evaluate(() => document.fonts.ready);
 
   const firstFamily = (locator: ReturnType<Page["locator"]>) => locator.first().evaluate((element) => getComputedStyle(element).fontFamily.split(",")[0]!.trim());
@@ -34,7 +35,7 @@ test("renders text in Geist Sans and identifiers in Geist Mono, served by the ap
 
 test("keeps a chosen theme across reloads and renders it on the server", async ({ page, db: _db }) => {
   await page.emulateMedia({ colorScheme: "light" });
-  await page.goto("/sources");
+  await page.goto(paths.repositories);
   await expectBackground(page, LIGHT);
 
   await page.getByRole("button", { name: "Dark theme" }).click();
@@ -54,7 +55,7 @@ test("keeps a chosen theme across reloads and renders it on the server", async (
 
 test("follows the operating system when the preference is System", async ({ page, db: _db }) => {
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.goto("/sources");
+  await page.goto(paths.repositories);
   await expectBackground(page, DARK);
   await page.emulateMedia({ colorScheme: "light" });
   await expectBackground(page, LIGHT);
@@ -64,7 +65,7 @@ test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
   test("changes the theme preference", async ({ page, db: _db }) => {
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     await page.getByRole("button", { name: "Dark theme" }).click();
     await page.waitForLoadState("load");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");

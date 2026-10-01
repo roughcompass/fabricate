@@ -18,35 +18,37 @@ function routes(directory = OPERATOR): string[] {
 
 /** The section and item each route marks current; null for pages outside every section. */
 const EXPECTED: Record<string, [section: string, item: string] | null> = {
-  "/": ["initiatives", "all-initiatives"],
-  "/initiatives/new": ["initiatives", "new-initiative"],
-  "/initiatives/[initiativeId]": ["initiatives", "all-initiatives"],
-  "/initiatives/[initiativeId]/edit": ["initiatives", "all-initiatives"],
-  "/assessments/[assessmentId]": ["initiatives", "all-initiatives"],
-  "/assessments/[assessmentId]/map": ["initiatives", "all-initiatives"],
-  "/assessments/[assessmentId]/evidence/[evidenceId]": ["initiatives", "all-initiatives"],
-  "/evaluations/[evaluationId]": ["initiatives", "all-initiatives"],
-  "/evaluations/[evaluationId]/findings/[findingId]": ["initiatives", "all-initiatives"],
-  "/profiles/[profileId]": ["initiatives", "all-initiatives"],
-  "/sources": ["sources", "all-sources"],
-  "/sources/new": ["sources", "add-source"],
-  "/sources/import": ["sources", "import-sources"],
-  "/sources/[sourceId]/edit": ["sources", "all-sources"],
-  "/standards": ["standards", "all-standards"],
-  "/standards/new": ["standards", "new-standard"],
-  "/standards/[standardId]": ["standards", "all-standards"],
-  "/standards/[standardId]/edit": ["standards", "all-standards"],
-  "/standards/[standardId]/draft": ["standards", "all-standards"],
-  "/standards/[standardId]/publish": ["standards", "all-standards"],
-  "/standards/[standardId]/releases/[releaseId]": ["standards", "all-standards"],
-  "/new": ["templates", "new-application"],
-  "/new/import": ["templates", "new-application"],
-  "/templates": ["templates", "gallery"],
-  "/templates/[templateSlug]": ["templates", "gallery"],
-  "/templates/[templateSlug]/deploy": ["templates", "gallery"],
-  "/templates/[templateSlug]/preview": ["templates", "gallery"],
-  "/applications": ["templates", "applications"],
-  "/applications/[applicationId]": ["templates", "applications"],
+  "/": null,
+  "/assessments": ["assessments", "all-assessments"],
+  "/assessments/new": ["assessments", "new-assessment"],
+  "/assessments/[initiativeId]": ["assessments", "all-assessments"],
+  "/assessments/[initiativeId]/edit": ["assessments", "all-assessments"],
+  "/runs/[assessmentId]": ["assessments", "all-assessments"],
+  "/runs/[assessmentId]/map": ["assessments", "all-assessments"],
+  "/runs/[assessmentId]/evidence/[evidenceId]": ["assessments", "all-assessments"],
+  "/evaluations/[evaluationId]": ["assessments", "all-assessments"],
+  "/evaluations/[evaluationId]/findings/[findingId]": ["assessments", "all-assessments"],
+  "/profiles/[profileId]": ["assessments", "all-assessments"],
+  "/repositories": ["assessments", "all-repositories"],
+  "/repositories/new": ["assessments", "new-repository"],
+  "/repositories/import": ["assessments", "import-repositories"],
+  "/repositories/[sourceId]/edit": ["assessments", "all-repositories"],
+  "/standards": ["assessments", "all-standards"],
+  "/standards/new": ["assessments", "new-standard"],
+  "/standards/[standardId]": ["assessments", "all-standards"],
+  "/standards/[standardId]/edit": ["assessments", "all-standards"],
+  "/standards/[standardId]/draft": ["assessments", "all-standards"],
+  "/standards/[standardId]/publish": ["assessments", "all-standards"],
+  "/standards/[standardId]/releases/[releaseId]": ["assessments", "all-standards"],
+  "/applications": ["applications", "all-applications"],
+  "/applications/[applicationId]": ["applications", "all-applications"],
+  "/applications/import": ["applications", "import-bitbucket"],
+  "/applications/import/[project]/[repository]": ["applications", "import-bitbucket"],
+  "/new": ["salt-patterns", "new-application"],
+  "/templates": ["salt-patterns", "all-salt-patterns"],
+  "/templates/[templateSlug]": ["salt-patterns", "all-salt-patterns"],
+  "/templates/[templateSlug]/deploy": ["salt-patterns", "all-salt-patterns"],
+  "/templates/[templateSlug]/preview": ["salt-patterns", "all-salt-patterns"],
   "/design-system": null,
   "/design-system/error-demo": null,
 };
@@ -65,24 +67,41 @@ describe("sidebar navigation", () => {
     }
   });
 
-  it("opens each section at its first sub-menu item, in the spec's order", () => {
-    expect(SECTIONS.map((section) => [section.label, section.items.map((item) => item.label)])).toEqual([
-      ["Initiatives", ["All Initiatives", "New Initiative"]],
-      ["Sources", ["All Sources", "Add Source", "Import Sources"]],
-      ["Standards", ["All Standards", "New Standard"]],
-      ["Templates", ["New application", "Gallery", "Applications"]],
+  it("opens each section at its first sub-menu item, with the groups in the spec's order", () => {
+    expect(SECTIONS.map((section) => [section.label, section.groups.map((group) => [group.label ?? null, group.items.map((item) => item.label)])])).toEqual([
+      [
+        "Assessments",
+        [
+          [null, ["All Assessments", "New Assessment"]],
+          ["Repositories", ["All Repositories", "New Repository", "Import Repositories"]],
+          ["Standards", ["All Standards", "New Standard"]],
+        ],
+      ],
+      ["Applications", [[null, ["All Applications", "Import from BitBucket"]]]],
+      ["Salt Patterns", [[null, ["All Salt Patterns", "New application"]]]],
     ]);
-    expect(SECTIONS.find((section) => section.id === "templates")!.items[0]!.href).toBe("/new");
+    for (const section of SECTIONS) expect(section.items).toEqual(section.groups.flatMap((group) => group.items));
   });
 
-  it("marks a create page as its own item rather than the list", () => {
-    expect(locate("/initiatives/new", true)?.item.id).toBe("new-initiative");
-    expect(locate("/sources/new", true)?.item.id).toBe("add-source");
-    expect(locate("/sources/import/", true)?.item.id).toBe("import-sources");
+  it("opens each section at the list titled with the section's name", () => {
+    expect(SECTIONS.map((section) => [section.label, section.items[0]!.href])).toEqual([
+      ["Assessments", "/assessments"],
+      ["Applications", "/applications"],
+      ["Salt Patterns", "/templates"],
+    ]);
   });
 
-  it("leaves Templates out, and its pages outside every section, while the demo is disabled", () => {
-    expect(visibleSections(false).map((section) => section.label)).toEqual(["Initiatives", "Sources", "Standards"]);
-    for (const route of ["/new", "/new/import", "/templates", "/templates/payments-hub/preview", "/applications/app-1"]) expect(locate(route, false), route).toBeNull();
+  it("marks a create or import page as its own item rather than the list", () => {
+    expect(locate("/assessments/new", true)?.item.id).toBe("new-assessment");
+    expect(locate("/repositories/new", true)?.item.id).toBe("new-repository");
+    expect(locate("/repositories/import/", true)?.item.id).toBe("import-repositories");
+    expect(locate("/applications/import", true)?.item.id).toBe("import-bitbucket");
+    expect(locate("/applications/import/PAY/payee-hub", true)?.item.id).toBe("import-bitbucket");
+    expect(locate("/applications/app_0123456789abcdef", true)?.item.id).toBe("all-applications");
+  });
+
+  it("shows only Assessments, and leaves the demo's pages outside every section, while the demo is disabled", () => {
+    expect(visibleSections(false).map((section) => section.label)).toEqual(["Assessments"]);
+    for (const route of ["/new", "/templates", "/templates/payments-hub/preview", "/applications", "/applications/app-1", "/applications/import/PAY/payee-hub"]) expect(locate(route, false), route).toBeNull();
   });
 });

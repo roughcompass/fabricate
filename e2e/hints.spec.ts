@@ -20,11 +20,10 @@ async function openSettings(page: Page) {
 
 test("walks a first-time visitor through the create page, and does not repeat", async ({ page, db: _db }) => {
   await page.goto("/new");
-  await expect(page.getByRole("dialog", { name: "Hint 1 of 3: Describe what you need" })).toBeVisible();
+  // Two hints: the import moved to the Applications section.
+  await expect(page.getByRole("dialog", { name: "Hint 1 of 2: Describe what you need" })).toBeVisible();
   await hint(page).getByRole("button", { name: "Next hint" }).click();
-  await expect(page.getByRole("dialog", { name: "Hint 2 of 3: Import a repository" })).toBeVisible();
-  await hint(page).getByRole("button", { name: "Next hint" }).click();
-  await expect(page.getByRole("dialog", { name: "Hint 3 of 3: Start from a template" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Hint 2 of 2: Start from a template" })).toBeVisible();
   const stored = page.waitForResponse((response) => response.url().endsWith("/api/demo/hints") && response.ok());
   await hint(page).getByRole("button", { name: "Finish hints" }).click();
   await expect(hint(page)).toHaveCount(0);
@@ -71,7 +70,7 @@ test("replays the hints from the toolbar's Settings", async ({ page, db: _db }) 
   await expect(page.getByRole("dialog", { name: "Hint 1 of 3: Audit accessibility" })).toBeVisible();
   // Replaying covers the create page too.
   await page.goto("/new");
-  await expect(page.getByRole("dialog", { name: "Hint 1 of 3: Describe what you need" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Hint 1 of 2: Describe what you need" })).toBeVisible();
 });
 
 test("never shows hints once they are turned off", async ({ page, db: _db }) => {

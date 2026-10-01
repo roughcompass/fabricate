@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { importSources } from "@/app/(operator)/sources/import/actions";
+import { importSources } from "@/app/(operator)/repositories/import/actions";
 import { listSources } from "@/lib/catalog/source-records";
 import { type Db, setDb } from "@/lib/db/client";
 import { createTestDb } from "../support/db";
@@ -19,7 +19,7 @@ describe("directory import Server Action", () => {
     const form = new FormData();
     form.set("directory", "/srv/repositories");
     const location = await redirectOf(importSources(form));
-    expect(location).toBe(`/sources/import?directory=${encodeURIComponent("/srv/repositories")}&notice=none-selected`);
+    expect(location).toBe(`/repositories/import?directory=${encodeURIComponent("/srv/repositories")}&notice=none-selected`);
     expect(listSources(db)).toEqual([]);
   });
 });

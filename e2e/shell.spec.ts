@@ -1,10 +1,15 @@
 import type { Page } from "@playwright/test";
+import { templateBySlug } from "../src/lib/demo/catalog";
+import { createApplication, validateDeployInput } from "../src/lib/demo/deployments";
+import { WORKSPACE_COOKIE } from "../src/lib/demo/workspace-key";
+import { ensureWorkspace } from "../src/lib/demo/workspaces";
 import { findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { profilesOf } from "../src/lib/profiles/profile-records";
 import { buildSource } from "../test/support/builders";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate, seedResults } from "./support/results";
 import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
+import { paths } from "./support/paths";
 
 // operator-interface/page-patterns spec: the application shell and the
 // sidebar navigation that drills into each section. The narrow-viewport
@@ -22,69 +27,88 @@ async function expectSubmenu(page: Page, section: string, items: string[], curre
   for (const item of items.filter((name) => name !== current)) await expect(nav.getByRole("link", { name: item, exact: true })).not.toHaveAttribute("aria-current");
 }
 
+/** The Assessments sub-menu: its own items, then the Repositories and Standards groups. */
+const ASSESSMENTS_ITEMS = ["All Assessments", "New Assessment", "All Repositories", "New Repository", "Import Repositories", "All Standards", "New Standard"];
+
+/** Creates a sandbox application in the browser's demo workspace. */
+async function seedApplication(page: Page, db: Parameters<typeof ensureWorkspace>[0]) {
+  await page.goto("/new");
+  const key = (await page.context().cookies()).find((cookie) => cookie.name === WORKSPACE_COOKIE)!.value;
+  const workspace = ensureWorkspace(db, key);
+  return createApplication(db, workspace.id, templateBySlug("market-watch")!, validateDeployInput({ name: "Desk", environment: "sandbox", project: "", repository: "" }));
+}
+
 test.describe("on a wide viewport", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   test("renders the shell with a skip link and the current section's sub-menu", async ({ page, db: _db }) => {
-    await page.goto("/");
-    await expect(page).toHaveTitle("Initiatives · Fabricate");
+    await page.goto(paths.assessments);
+    await expect(page).toHaveTitle("Assessments · DE FabLab");
     await expect(page.getByRole("link", { name: "Skip to content" })).toBeAttached();
-    await expect(page.getByRole("link", { name: "Fabricate home" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "DE FabLab home" })).toHaveAttribute("href", paths.assessments);
     await expect(page.getByRole("button", { name: "Dark theme" })).toBeVisible();
-    await expectSubmenu(page, "Initiatives", ["All Initiatives", "New Initiative"], "All Initiatives");
+    await expectSubmenu(page, "Assessments", ASSESSMENTS_ITEMS, "All Assessments");
     // The section menu is not shown while a section's sub-menu is.
-    await expect(primary(page).getByRole("link", { name: "Sources", exact: true })).toBeHidden();
+    await expect(primary(page).getByRole("link", { name: "Applications", exact: true })).toBeHidden();
   });
 
-  test("Choosing a section opens its first page and its sub-menu", async ({ page, db: _db }) => {
-    await page.goto("/");
-    await primary(page).getByRole("link", { name: "Show all sections" }).click();
-    await primary(page).getByRole("link", { name: "Sources", exact: true }).click();
-    await expect(page).toHaveURL(/\/sources$/);
-    await expectSubmenu(page, "Sources", ["All Sources", "Add Source", "Import Sources"], "All Sources");
+  test("Choosing a section opens its first page and its sub-menu, in groups", async ({ page, db: _db }) => {
+    await page.goto("/design-system");
+    await primary(page).getByRole("link", { name: "Assessments", exact: true }).click();
+    await expect(page).toHaveURL(/\/assessments$/);
+    await expectSubmenu(page, "Assessments", ASSESSMENTS_ITEMS, "All Assessments");
+    await expect(primary(page).getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["All Assessments", "New Assessment"]);
+    await expect(primary(page).getByRole("list", { name: "Repositories" }).getByRole("link")).toHaveText(["All Repositories", "New Repository", "Import Repositories"]);
+    await expect(primary(page).getByRole("list", { name: "Standards" }).getByRole("link")).toHaveText(["All Standards", "New Standard"]);
   });
 
-  test("Record page: a Repository Profile marks All Initiatives", async ({ page, db }) => {
+  test("Repositories within Assessments: the Repositories list marks All Repositories", async ({ page, db: _db }) => {
+    await page.goto(paths.repositories);
+    await expectSubmenu(page, "Assessments", ASSESSMENTS_ITEMS, "All Repositories");
+    await expect(primary(page).getByRole("list", { name: "Repositories" }).getByRole("link", { name: "All Repositories" })).toHaveAttribute("aria-current", "page");
+  });
+
+  test("Record page: a Repository Profile marks All Assessments", async ({ page, db }) => {
     const { assessment } = await seedResults(db);
     const profile = profilesOf(db, assessment.id)[0]!.profile;
     await page.goto(`/profiles/${profile.publicId}`);
-    await expectSubmenu(page, "Initiatives", ["All Initiatives", "New Initiative"], "All Initiatives");
+    await expectSubmenu(page, "Assessments", ASSESSMENTS_ITEMS, "All Assessments");
   });
 
-  test("Current section on a deep page: a Finding marks All Initiatives", async ({ page, db }) => {
+  test("Current section on a deep page: a Finding marks All Assessments", async ({ page, db }) => {
     const { initiative, assessment } = await seedResults(db);
     const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
     const finding = findingsOf(db, evaluation.id)[0]!;
     await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
-    await expectSubmenu(page, "Initiatives", ["All Initiatives", "New Initiative"], "All Initiatives");
+    await expectSubmenu(page, "Assessments", ASSESSMENTS_ITEMS, "All Assessments");
   });
 
-  test("Create page: Add Source is current, not All Sources", async ({ page, db: _db }) => {
-    await page.goto("/sources/new");
-    await expectSubmenu(page, "Sources", ["All Sources", "Add Source", "Import Sources"], "Add Source");
+  test("Create page: New Repository is current, not All Repositories", async ({ page, db: _db }) => {
+    await page.goto(paths.newRepository);
+    await expectSubmenu(page, "Assessments", ASSESSMENTS_ITEMS, "New Repository");
   });
 
   test("Returning to all sections keeps the page and focuses the current section", async ({ page, db }) => {
     const { assessment } = await seedResults(db);
-    await page.goto(`/assessments/${assessment.publicId}`);
+    await page.goto(paths.run(assessment.publicId));
     const nav = primary(page);
     await nav.getByRole("link", { name: "Show all sections" }).click();
-    const initiatives = nav.getByRole("link", { name: "Initiatives", exact: true });
-    await expect(initiatives).toHaveAttribute("aria-current", "true");
-    await expect(initiatives).toBeFocused();
-    for (const section of ["Sources", "Standards", "Templates"]) await expect(nav.getByRole("link", { name: section, exact: true })).not.toHaveAttribute("aria-current");
-    await expect(page).toHaveURL(new RegExp(`/assessments/${assessment.publicId}$`));
-    await expect(nav.getByRole("link", { name: "All Initiatives" })).toBeHidden();
+    const assessments = nav.getByRole("link", { name: "Assessments", exact: true });
+    await expect(assessments).toHaveAttribute("aria-current", "true");
+    await expect(assessments).toBeFocused();
+    for (const section of ["Applications", "Salt Patterns"]) await expect(nav.getByRole("link", { name: section, exact: true })).not.toHaveAttribute("aria-current");
+    await expect(page).toHaveURL(new RegExp(`${paths.run(assessment.publicId)}$`));
+    await expect(nav.getByRole("link", { name: "All Assessments" })).toBeHidden();
 
     // Opening another page shows that page's sub-menu again.
-    await nav.getByRole("link", { name: "Standards", exact: true }).click();
-    await expectSubmenu(page, "Standards", ["All Standards", "New Standard"], "All Standards");
+    await nav.getByRole("link", { name: "Applications", exact: true }).click();
+    await expectSubmenu(page, "Applications", ["All Applications", "Import from BitBucket"], "All Applications");
   });
 
   test("Page outside every section: the gallery shows the section menu with nothing current", async ({ page, db: _db }) => {
     await page.goto("/design-system");
     const nav = primary(page);
-    for (const section of ["Initiatives", "Sources", "Standards", "Templates"]) {
+    for (const section of ["Assessments", "Applications", "Salt Patterns"]) {
       await expect(nav.getByRole("link", { name: section, exact: true })).toBeVisible();
       await expect(nav.getByRole("link", { name: section, exact: true })).not.toHaveAttribute("aria-current");
     }
@@ -94,12 +118,33 @@ test.describe("on a wide viewport", () => {
   // The browser-test server runs with the template demo enabled; the
   // demo-disabled navigation is covered by test/components/app-shell.test.ts
   // and test/components/navigation.test.ts.
-  test("the Templates section opens the create page", async ({ page, db: _db }) => {
-    await page.goto("/");
-    await primary(page).getByRole("link", { name: "Show all sections" }).click();
-    await primary(page).getByRole("link", { name: "Templates", exact: true }).click();
-    await expect(page).toHaveURL(/\/new$/);
-    await expectSubmenu(page, "Templates", ["New application", "Gallery", "Applications"], "New application");
+  test("Sections open their pages: each section opens the page titled with its name", async ({ page, db: _db }) => {
+    for (const [section, url] of [["Assessments", /\/assessments$/], ["Applications", /\/applications$/], ["Salt Patterns", /\/templates$/]] as const) {
+      await page.goto("/design-system");
+      await primary(page).getByRole("link", { name: section, exact: true }).click();
+      await expect(page).toHaveURL(url);
+      await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText(section);
+      await expect(primary(page).locator("#sidebar-section-title")).toHaveText(section);
+    }
+  });
+
+  test("Sub-menu items open their pages: each Repositories item opens the page it names", async ({ page, db: _db }) => {
+    for (const [item, title] of [["All Repositories", "Repositories"], ["New Repository", "New Repository"], ["Import Repositories", "Import Repositories"]] as const) {
+      await page.goto(paths.assessments);
+      await primary(page).getByRole("link", { name: item, exact: true }).click();
+      await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText(title);
+    }
+  });
+
+  test("Applications section on a deep page: an application page marks All Applications", async ({ page, db }) => {
+    const application = await seedApplication(page, db);
+    await page.goto(`/applications/${application.publicId}`);
+    await expectSubmenu(page, "Applications", ["All Applications", "Import from BitBucket"], "All Applications");
+  });
+
+  test("Templates section on a deep page: a template detail page marks All Salt Patterns", async ({ page, db: _db }) => {
+    await page.goto("/templates/market-watch");
+    await expectSubmenu(page, "Salt Patterns", ["All Salt Patterns", "New application"], "All Salt Patterns");
   });
 
   test.describe("without JavaScript", () => {
@@ -107,14 +152,14 @@ test.describe("on a wide viewport", () => {
 
     test("Returning without JavaScript shows the section menu, and a section opens its sub-menu", async ({ page, db }) => {
       const { assessment } = await seedResults(db);
-      await page.goto(`/assessments/${assessment.publicId}`);
+      await page.goto(paths.run(assessment.publicId));
       const nav = primary(page);
       await nav.getByRole("link", { name: "Show all sections" }).click();
       await expect(page).toHaveURL(/#sidebar-sections$/);
-      await expect(nav.getByRole("link", { name: "Initiatives", exact: true })).toHaveAttribute("aria-current", "true");
-      await nav.getByRole("link", { name: "Standards", exact: true }).click();
-      await expect(page).toHaveURL(/\/standards$/);
-      await expectSubmenu(page, "Standards", ["All Standards", "New Standard"], "All Standards");
+      await expect(nav.getByRole("link", { name: "Assessments", exact: true })).toHaveAttribute("aria-current", "true");
+      await nav.getByRole("link", { name: "Applications", exact: true }).click();
+      await expect(page).toHaveURL(/\/applications$/);
+      await expectSubmenu(page, "Applications", ["All Applications", "Import from BitBucket"], "All Applications");
     });
   });
 });
@@ -127,9 +172,9 @@ test.describe("the shell header", () => {
 
   test("Title in the header: an Assessment's name, centered, is the page's only h1", async ({ page, db }) => {
     const { assessment } = await seedResults(db);
-    await page.goto(`/assessments/${assessment.publicId}`);
+    await page.goto(paths.run(assessment.publicId));
     const title = header(page).getByRole("heading", { level: 1 });
-    await expect(title).toHaveText("Assessment #1");
+    await expect(title).toHaveText("Run #1");
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     const [titleBox, headerBox] = [(await title.boundingBox())!, (await header(page).boundingBox())!];
     expect(Math.abs(titleBox.x + titleBox.width / 2 - (headerBox.x + headerBox.width / 2))).toBeLessThan(2);
@@ -137,7 +182,7 @@ test.describe("the shell header", () => {
 
   test("Title appears once: the page content does not repeat an Initiative's name", async ({ page, db }) => {
     const { initiative } = await seedResults(db);
-    await page.goto(`/initiatives/${initiative.publicId}`);
+    await page.goto(paths.assessment(initiative.publicId));
     await expect(header(page).getByRole("heading", { level: 1 })).toHaveText("Fleet assessment");
     await expect(page.locator("[data-page-header]")).not.toContainText("Fleet assessment");
   });
@@ -150,8 +195,31 @@ test.describe("the shell header", () => {
     await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
     await expect(header(page).getByRole("heading", { level: 1 })).toHaveText(control.title as string);
     const crumbs = page.locator("[data-page-header]").getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
-    await expect(crumbs).toHaveText(["Initiatives", "Fleet assessment", "Evaluation #1"]);
+    await expect(crumbs).toHaveText(["Assessments", "Fleet assessment", "Evaluation #1"]);
   });
+
+  for (const theme of ["light", "dark"] as const) {
+    test(`Solid header: in the ${theme} theme, the header behind the create page's title is a solid surface, distinct from the canvas`, async ({ page, db: _db, baseURL }) => {
+      await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+      await page.goto("/new");
+      await expect(header(page).getByRole("heading", { level: 1 })).toHaveText("Let's build something new");
+      const [fill, canvas, surface] = await page.evaluate(() => {
+        const header = document.querySelector("[data-shell-header]")!;
+        const probe = (variable: string) => {
+          const element = document.createElement("div");
+          element.style.background = `var(${variable})`;
+          header.append(element);
+          const color = getComputedStyle(element).backgroundColor;
+          element.remove();
+          return color;
+        };
+        return [getComputedStyle(header).backgroundColor, probe("--color-canvas"), probe("--color-bg")];
+      });
+      expect(fill).toBe(surface);
+      expect(fill).not.toBe(canvas);
+      expect(fill).not.toMatch(/rgba\(.*, 0(\.\d+)?\)$/);
+    });
+  }
 
   test("Scrolling a long page keeps the header and the sidebar in view", async ({ page, db }) => {
     const { initiative, assessment } = await seedResults(db);
@@ -162,7 +230,15 @@ test.describe("the shell header", () => {
     expect((await header(page).boundingBox())!.y).toBe(0);
     expect((await page.locator("#sidebar").boundingBox())!.y).toBe(0);
     await expect(header(page).getByRole("heading", { level: 1 })).toBeInViewport();
-    await expect(primary(page).getByRole("link", { name: "All Initiatives" })).toBeInViewport();
+    await expect(primary(page).getByRole("link", { name: "All Assessments" })).toBeInViewport();
+    // Nothing scrolled beneath the header shows through it: the header is the topmost element across its box.
+    const box = (await header(page).boundingBox())!;
+    const covered = await page.evaluate(({ x, y, width, height }) => {
+      const header = document.querySelector("[data-shell-header]")!;
+      const points = [0.25, 0.5, 0.75].flatMap((fx) => [0.2, 0.8].map((fy) => [x + width * fx, y + height * fy] as const));
+      return points.every(([px, py]) => header.contains(document.elementFromPoint(px, py)));
+    }, box);
+    expect(covered).toBe(true);
   });
 
   test("every surface has exactly one h1, in the shell header", async ({ page, context, db, sourcesDir }) => {
@@ -186,7 +262,7 @@ test.describe("an adjustable sidebar", () => {
 
   test("Hiding and showing: the sidebar stays hidden across pages and comes back at its width", async ({ page, db: _db, baseURL }) => {
     await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "320", url: baseURL! }]);
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     await expect.poll(async () => (await sidebar(page).boundingBox())?.width).toBe(320);
     await hideSidebar(page).click();
     await expect(sidebar(page)).toBeHidden();
@@ -218,7 +294,7 @@ test.describe("an adjustable sidebar", () => {
   }
 
   test("Resizing by dragging: the server renders the remembered width on the next load", async ({ page, context, db: _db }) => {
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     await expect(resizer(page)).toHaveAttribute("aria-valuenow", "256");
     await dragBy(page, 64);
     await expect.poll(() => sidebarWidth(page)).toBe(320);
@@ -226,20 +302,20 @@ test.describe("an adjustable sidebar", () => {
     await expect(resizer(page)).toHaveAttribute("aria-valuetext", "320 pixels");
 
     // The next response already carries the width, so the page loads at it without shifting.
-    expect(await (await context.request.get("/sources")).text()).toContain("--_sidebar-width:320px");
+    expect(await (await context.request.get(paths.repositories)).text()).toContain("--_sidebar-width:320px");
     await page.reload();
     expect(await sidebarWidth(page)).toBe(320);
   });
 
   test("Dragging past the limit stops at 400px", async ({ page, db: _db }) => {
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     await dragBy(page, 300);
     await expect.poll(() => sidebarWidth(page)).toBe(400);
     await expect(resizer(page)).toHaveAttribute("aria-valuenow", "400");
   });
 
   test("Resizing with the keyboard: Right Arrow widens by 16px, Home and End go to the limits", async ({ page, db: _db }) => {
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     await resizer(page).focus();
     await page.keyboard.press("ArrowRight");
     await expect.poll(() => sidebarWidth(page)).toBe(272);
@@ -253,7 +329,7 @@ test.describe("an adjustable sidebar", () => {
 
   test("Restoring the default width with a double-click", async ({ page, db: _db, baseURL }) => {
     await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "360", url: baseURL! }]);
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     expect(await sidebarWidth(page)).toBe(360);
     await resizer(page).dblclick();
     await expect.poll(() => sidebarWidth(page)).toBe(256);
@@ -261,7 +337,7 @@ test.describe("an adjustable sidebar", () => {
 
   test("Out-of-range stored width renders at the maximum", async ({ page, db: _db, baseURL }) => {
     await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "9999", url: baseURL! }]);
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     expect(await sidebarWidth(page)).toBe(400);
     await expect(resizer(page)).toHaveAttribute("aria-valuenow", "400");
   });
@@ -270,7 +346,7 @@ test.describe("an adjustable sidebar", () => {
     test.use({ javaScriptEnabled: false });
 
     test("Hiding without JavaScript renders the next page with the sidebar hidden", async ({ page, db: _db }) => {
-      await page.goto("/sources");
+      await page.goto(paths.repositories);
       await hideSidebar(page).click();
       await expect(sidebar(page)).toBeHidden();
       await expect(showSidebar(page)).toBeVisible();
@@ -294,7 +370,7 @@ test.describe("a wide sidebar on a laptop", () => {
       ["Evaluation", surfaceUrl(surfaces.get("08-evaluation")!)],
       ["Profile", surfaceUrl(surfaces.get("06-profile")!)],
       ["Relationship Map", surfaceUrl(surfaces.get("07-map")!)],
-      ["Sources list", "/sources"],
+      ["Repositories list", paths.repositories],
       ["Templates gallery", "/templates"],
       ["Standard draft editor", surfaceUrl(surfaces.get("04-draft")!)],
     ];
@@ -331,7 +407,7 @@ test.describe("an outcome toast beside a wide sidebar", () => {
 
   test("the live toast stays on the viewport", async ({ page, db, baseURL }) => {
     const source = await setUp(page, db, baseURL!);
-    await page.goto(`/sources?notice=added&source=${source.publicId}`);
+    await page.goto(`${paths.repositories}?notice=added&source=${source.publicId}`);
     await expect.poll(async () => (await page.locator("#sidebar").boundingBox())?.width).toBe(400);
     await expectOnViewport(page, page.getByRole("listitem").filter({ hasText: "source-00 was added." }).first());
   });
@@ -341,7 +417,7 @@ test.describe("an outcome toast beside a wide sidebar", () => {
 
     test("the server-rendered toast inside the page stays on the viewport", async ({ page, db, baseURL }) => {
       const source = await setUp(page, db, baseURL!);
-      await page.goto(`/sources?notice=added&source=${source.publicId}`);
+      await page.goto(`${paths.repositories}?notice=added&source=${source.publicId}`);
       await expectOnViewport(page, page.getByRole("status").filter({ hasText: "source-00 was added." }).first());
     });
   });
@@ -354,20 +430,20 @@ test.describe("on a narrow viewport", () => {
   const openNavigation = (page: Page) => page.locator("[data-shell-header]").getByRole("button", { name: "Open navigation" });
 
   test("Shell on a narrow viewport: the header shows Open navigation and the title, and no sidebar sits beside the content", async ({ page, db: _db }) => {
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     await expect(openNavigation(page)).toBeVisible();
-    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Sources" })).toBeVisible();
+    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Repositories" })).toBeVisible();
     await expect(page.locator("#sidebar")).toBeHidden();
     await expect(primary(page)).toBeHidden();
     await expectNoHorizontalOverflow(page);
   });
 
   test("Opening the drawer shows the section's sub-menu and the theme control; Escape returns focus", async ({ page, db: _db }) => {
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     await openNavigation(page).click();
     const drawer = page.locator("#sidebar");
     await expect(drawer).toBeVisible();
-    await expectSubmenu(page, "Sources", ["All Sources", "Add Source", "Import Sources"], "All Sources");
+    await expectSubmenu(page, "Assessments", ASSESSMENTS_ITEMS, "All Repositories");
     await expect(drawer.getByRole("button", { name: "Dark theme" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
@@ -375,22 +451,22 @@ test.describe("on a narrow viewport", () => {
   });
 
   test("choosing an item closes the drawer and opens the page", async ({ page, db: _db }) => {
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     await openNavigation(page).click();
-    await primary(page).getByRole("link", { name: "Add Source" }).click();
-    await expect(page).toHaveURL(/\/sources\/new$/);
+    await primary(page).getByRole("link", { name: "New Repository" }).click();
+    await expect(page).toHaveURL(/\/repositories\/new$/);
     await expect(page.locator("#sidebar")).toBeHidden();
-    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("New Source");
+    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("New Repository");
   });
 
   test.describe("on a touch device", () => {
     test.use({ hasTouch: true });
 
     test("gives Open navigation and every drawer item a 44px target", async ({ page, db: _db }) => {
-      await page.goto("/sources");
+      await page.goto(paths.repositories);
       expect((await openNavigation(page).boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await openNavigation(page).click();
-      for (const item of ["All Sources", "Add Source", "Import Sources"]) {
+      for (const item of ["All Repositories", "New Repository", "Import Repositories"]) {
         expect((await primary(page).getByRole("link", { name: item, exact: true }).boundingBox())!.height, item).toBeGreaterThanOrEqual(44);
       }
       await expectNoHorizontalOverflow(page);
@@ -400,12 +476,12 @@ test.describe("on a narrow viewport", () => {
   test.describe("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });
 
-    test("Drawer without JavaScript: it opens, and choosing Add Source opens that page", async ({ page, db: _db }) => {
-      await page.goto("/sources");
+    test("Drawer without JavaScript: it opens, and choosing New Repository opens that page", async ({ page, db: _db }) => {
+      await page.goto(paths.repositories);
       await openNavigation(page).click();
       await expect(page.locator("#sidebar")).toBeVisible();
-      await primary(page).getByRole("link", { name: "Add Source" }).click();
-      await expect(page).toHaveURL(/\/sources\/new$/);
+      await primary(page).getByRole("link", { name: "New Repository" }).click();
+      await expect(page).toHaveURL(/\/repositories\/new$/);
       await expect(page.locator("#sidebar")).toBeHidden();
     });
   });

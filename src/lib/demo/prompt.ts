@@ -1,13 +1,13 @@
 import { BITBUCKET_HOST } from "./bitbucket";
 import { TEMPLATES, type Template } from "./catalog";
-import { findRepository } from "./catalog/repositories";
+import { DEFAULT_PROJECT, findRepository } from "./catalog/repositories";
 import { EMPTY_QUERY, SEARCH_LIMIT, galleryHref, galleryOrder } from "./gallery";
 
 /**
  * The create page's prompt bar and quick-start chips (template-gallery spec,
  * design.md decision 17). A description opens the gallery searched for it; a
- * URL of a repository in the demo's BitBucket opens its import; any other URL
- * is refused.
+ * URL of a repository in the demo's BitBucket opens its import form, under
+ * Applications; any other URL is refused.
  */
 
 export type PromptRoute = { readonly kind: "redirect"; readonly href: string } | { readonly kind: "error"; readonly message: string };
@@ -15,8 +15,14 @@ export type PromptRoute = { readonly kind: "redirect"; readonly href: string } |
 const URL_LIKE = /^(https?:\/\/|[a-z0-9-]+(\.[a-z0-9-]+)+\/)/i;
 const REPOSITORY_PATH = /^\/projects\/([A-Z][A-Z0-9]{1,9})\/repos\/([a-z][a-z0-9-]*[a-z0-9])\/?(browse\/?)?$/;
 
+/** The import form for one repository, in the Applications section (deployments spec). */
 export function importHref(project: string, repository: string): string {
-  return `/new/import?${new URLSearchParams({ project, repository })}`;
+  return `/applications/import/${encodeURIComponent(project)}/${encodeURIComponent(repository)}`;
+}
+
+/** The Import from BitBucket page with a project chosen; the default project needs no parameter. */
+export function importPageHref(project: string = DEFAULT_PROJECT): string {
+  return project === DEFAULT_PROJECT ? "/applications/import" : `/applications/import?${new URLSearchParams({ project })}`;
 }
 
 function parseUrl(text: string): URL | null {

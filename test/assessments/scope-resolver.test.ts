@@ -81,7 +81,7 @@ describe("scope resolution", () => {
 
     const problems = problemsOf(() => resolveScope(db, initiative));
     expect(problems.map((problem) => problem.sourceName)).toEqual(["billing", "orders"]);
-    expect(problems[0]?.message).toBe(`billing (${billing!.publicId}) is disabled. Enable it in Sources or remove it from this initiative's scope.`);
+    expect(problems[0]?.message).toBe(`billing (${billing!.publicId}) is disabled. Enable it in Repositories or remove it from this Assessment's scope.`);
   });
 
   it("reports a selected source that no longer exists", () => {

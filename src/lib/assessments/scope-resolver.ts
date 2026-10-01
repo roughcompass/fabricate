@@ -72,7 +72,7 @@ function explicitSources(db: Executor, initiative: Initiative): RepositorySource
       problems.push({
         sourcePublicId: source.publicId,
         sourceName: source.name,
-        message: `${source.name} (${source.publicId}) is disabled. Enable it in Sources or remove it from this initiative's scope.`,
+        message: `${source.name} (${source.publicId}) is disabled. Enable it in Repositories or remove it from this Assessment's scope.`,
       });
     }
   }

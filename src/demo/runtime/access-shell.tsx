@@ -151,11 +151,8 @@ export function AccessShell({ children }: { children: React.ReactNode }) {
           <main className={styles.main}>
             <nav aria-label="Breadcrumb" className={styles.breadcrumbs}>
               <ol className={styles.crumbs}>
-                <li className={styles.crumb}>
-                  <Link href={routeHref(start)} className={styles.crumbLink}>
-                    {brand.label}
-                  </Link>
-                </li>
+                {/* The brand has no page of its own in the demo, so its crumb is plain text. */}
+                <li className={styles.crumb}>{brand.label}</li>
                 <li className={styles.crumb}>
                   <Link href={routeHref(start)} className={styles.crumbLink}>
                     {descriptor.applicationName}

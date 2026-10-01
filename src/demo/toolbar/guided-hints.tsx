@@ -142,7 +142,6 @@ function HintSequenceView({ sequence, hints, onFinish }: { sequence: HintSequenc
 
 export const CREATE_HINTS: readonly Hint[] = [
   { target: '[data-hint-target="prompt"]', title: "Describe what you need", text: "Type what you want to build to search the templates, or paste a repository URL from the demo's BitBucket to import it.", placement: "below" },
-  { target: '[data-hint-target="import"] h2', title: "Import a repository", text: "Pick a repository in the demo's BitBucket and deploy it to a dev environment.", placement: "below" },
   { target: '[data-hint-target="solutions"] h2', title: "Start from a template", text: "Choose a portal brand to see its templates, preview them at a device's size, and deploy your own copy.", placement: "below" },
 ];
 

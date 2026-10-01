@@ -139,8 +139,8 @@ for (const [width, narrow] of [[1280, false], [375, true]] as const) {
     const specimen = light(page, "Page header");
     const header = specimen.locator("header").first();
     await expect(header.getByRole("navigation", { name: "Breadcrumb" })).toBeVisible();
-    await expect(header.getByRole("heading", { level: 3, name: "Assessment #3" })).toBeVisible();
-    await expect(header.getByRole("button", { name: "Start Assessment" })).toBeVisible();
+    await expect(header.getByRole("heading", { level: 3, name: "Run #3" })).toBeVisible();
+    await expect(header.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
     if (narrow) {
       await expect(header.getByRole("link", { name: "Edit" })).toBeHidden();
       await header.getByRole("button", { name: "More actions" }).click();

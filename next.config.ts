@@ -19,6 +19,28 @@ const nextConfig: NextConfig = {
   turbopack: { root },
   poweredByHeader: false,
   reactStrictMode: true,
+  // Addresses from before the interface vocabulary changed (page-patterns
+  // spec, "Every link opens the page it names"). Old Assessment pages are
+  // told apart from the new ones by their public ID prefix: a model
+  // Assessment (asm_) is now a Run, while /assessments/ini_… is an Assessment.
+  redirects() {
+    return [
+      { source: "/initiatives/new", destination: "/assessments/new", permanent: true },
+      { source: "/initiatives/:id(ini_[a-z0-9]{16})/:rest*", destination: "/assessments/:id/:rest*", permanent: true },
+      { source: "/assessments/:id(asm_[a-z0-9]{16})/:rest*", destination: "/runs/:id/:rest*", permanent: true },
+      { source: "/sources/:rest*", destination: "/repositories/:rest*", permanent: true },
+      // The BitBucket import moved under Applications; Next passes the old query through, which the form ignores.
+      {
+        source: "/new/import",
+        has: [
+          { type: "query", key: "project", value: "(?<project>[A-Z][A-Z0-9]{1,9})" },
+          { type: "query", key: "repository", value: "(?<repository>[a-z][a-z0-9-]*)" },
+        ],
+        destination: "/applications/import/:project/:repository",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

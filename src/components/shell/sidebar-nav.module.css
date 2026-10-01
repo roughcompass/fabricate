@@ -47,4 +47,15 @@
     &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
   }
   .heading { overflow: hidden; font-weight: var(--font-weight-medium); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* A sub-menu group after the first, such as Repositories under Assessments, starts with a caption heading. */
+  .group + .group { margin-top: var(--space-4); }
+  .groupHeading {
+    margin: 0 0 var(--space-1);
+    padding: 0 var(--space-3);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-caption);
+  }
 }

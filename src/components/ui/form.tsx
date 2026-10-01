@@ -190,7 +190,7 @@ interface ChoiceGroupProps {
 /** Radio or check box choices rendered as selectable cards. */
 export function ChoiceGroup({ id, name, legend, type, choices, selected, description, optional, errors, columns = false, onChange }: ChoiceGroupProps) {
   return (
-    <fieldset className={styles.fieldset} aria-describedby={describedBy(id, description, errors)} aria-invalid={errors?.length ? true : undefined}>
+    <fieldset id={id} className={styles.fieldset} aria-describedby={describedBy(id, description, errors)} aria-invalid={errors?.length ? true : undefined}>
       <legend className={styles.legend}>
         {legend}
         {optional && <span className={styles.optional}> (optional)</span>}

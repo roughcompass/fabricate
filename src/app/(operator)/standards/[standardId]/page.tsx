@@ -97,7 +97,7 @@ export default async function StandardPage({ params, searchParams }: { params: P
         )}
       </Section>
 
-      <Section title="Release history" description="Every published Release, newest first; Initiatives select Releases to evaluate against.">
+      <Section title="Release history" description="Every published Release, newest first; Assessments select Releases to evaluate against.">
         <Panel flush>
           {releases.length ? (
             <Table

@@ -104,7 +104,7 @@ export async function processTarget(db: Executor, targetPublicId: string, option
 }
 
 function checkCancellation(db: Executor, assessmentId: number): void {
-  if (assessmentById(db, assessmentId).cancelRequestedAt) throw new Canceled("The Assessment was canceled");
+  if (assessmentById(db, assessmentId).cancelRequestedAt) throw new Canceled("The Run was canceled");
 }
 
 /** Moves the Assessment to finalizing and enqueues the finalizer, once every target is terminal. */

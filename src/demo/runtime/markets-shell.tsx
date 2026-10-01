@@ -82,11 +82,10 @@ export function MarketsShell({ children }: { children: React.ReactNode }) {
         <div className={styles.footerRow}>
           <span className={styles.footerWordmark}>J.P.Morgan</span>
           <ul className={styles.footerLinks} aria-label="Legal">
+            {/* Illustrative entries: plain text, since the demo has no such pages (page-patterns spec, placeholder links). */}
             {FOOTER_LINKS.map((label) => (
-              <li key={label}>
-                <a href="#portal-footer" className={styles.footerLink}>
-                  {label}
-                </a>
+              <li key={label} className={styles.footerItem}>
+                {label}
               </li>
             ))}
           </ul>

@@ -15,7 +15,7 @@ export async function verifyStartup(processName: "server" | "worker"): Promise<v
   if (pending > 0) {
     throw new Error(
       `The database at ${config.database} has ${pending} pending migration(s). ` +
-        "Run `npm run db:migrate`, or `node dist/migrate.cjs` in the production image, before starting Fabricate.",
+        "Run `npm run db:migrate`, or `node dist/migrate.cjs` in the production image, before starting DE FabLab.",
     );
   }
 

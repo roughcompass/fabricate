@@ -54,7 +54,7 @@ interface Contributor {
   references: Reference[];
 }
 
-const NO_SERVED_ORIGIN = "No Profile in this Assessment records the origin an application is served from, so a URL cannot be matched to a repository";
+const NO_SERVED_ORIGIN = "No Profile in this Run records the origin an application is served from, so a URL cannot be matched to a repository";
 
 export function resolveRelationships(input: { targets: readonly ResolverTarget[]; outOfScope: readonly CatalogIdentity[] }): JsonObject {
   const map = new MapBuilder();
@@ -130,7 +130,7 @@ function resolvePackage(map: MapBuilder, catalog: CatalogLabels, contributor: Co
     return;
   }
   const to = map.node({ kind: "package", name });
-  map.edge(contributor, { type: "package_dependency", reference, to, state: "unresolved", rule: "package.unresolved", reason: `No repository in this Assessment produces ${name}`, details }, [[contributor, reference.evidence]]);
+  map.edge(contributor, { type: "package_dependency", reference, to, state: "unresolved", rule: "package.unresolved", reason: `No repository in this Run produces ${name}`, details }, [[contributor, reference.evidence]]);
 }
 
 function resolveComposition(map: MapBuilder, catalog: CatalogLabels, contributor: Contributor, reference: Reference, producers: Map<string, Candidate[]>, remotes: Map<string, Candidate[]>) {
@@ -167,7 +167,7 @@ function resolveComposition(map: MapBuilder, catalog: CatalogLabels, contributor
     return;
   }
   const to = map.node({ kind: "unresolved_endpoint", reference: { type: reference.type, identifier: reference.identifier } });
-  const reason = `No repository in this Assessment declares ${noun}${details.url ? `, and its URL cannot be matched: ${NO_SERVED_ORIGIN.charAt(0).toLowerCase()}${NO_SERVED_ORIGIN.slice(1)}` : ""}`;
+  const reason = `No repository in this Run declares ${noun}${details.url ? `, and its URL cannot be matched: ${NO_SERVED_ORIGIN.charAt(0).toLowerCase()}${NO_SERVED_ORIGIN.slice(1)}` : ""}`;
   map.edge(contributor, { type: "composition", reference, to, state: "unresolved", rule, reason, details }, [[contributor, reference.evidence]]);
 }
 
@@ -178,7 +178,7 @@ function resolveAmong(map: MapBuilder, contributor: Contributor, reference: Refe
   if (nodes.length === 1) {
     map.edge(contributor, { type: options.type, reference, to: nodes[0]!, state: "resolved", rule: options.rule, details: options.details }, cited);
   } else {
-    map.edge(contributor, { type: options.type, reference, to: null, candidates: nodes, state: "ambiguous", rule: options.rule, reason: `${nodes.length} repositories in this Assessment declare ${options.noun}`, details: options.details }, cited);
+    map.edge(contributor, { type: options.type, reference, to: null, candidates: nodes, state: "ambiguous", rule: options.rule, reason: `${nodes.length} repositories in this Run declare ${options.noun}`, details: options.details }, cited);
   }
 }
 
@@ -298,8 +298,8 @@ class CatalogLabels {
     const basis = byUrl.length ? "observed" : "inferred";
     const nodes = matches.map((source) => this.map.node({ kind: "out_of_scope_source", source: { public_id: source.public_id, name: source.name, canonical_url: source.canonical_url } })).sort(compareCodeUnits);
     const how = byUrl.length ? `the declared Git URL ${url}` : `the name ${name}`;
-    if (nodes.length === 1) return { to: nodes[0]!, state: "out_of_scope", rule, basis, reason: `A catalog source outside this Assessment's scope matches ${how}; it was not analyzed` };
-    return { to: null, candidates: nodes, state: "ambiguous", rule, basis, reason: `${nodes.length} catalog sources outside this Assessment's scope match ${how}; none was analyzed` };
+    if (nodes.length === 1) return { to: nodes[0]!, state: "out_of_scope", rule, basis, reason: `A catalog repository outside this Run's scope matches ${how}; it was not analyzed` };
+    return { to: null, candidates: nodes, state: "ambiguous", rule, basis, reason: `${nodes.length} catalog repositories outside this Run's scope match ${how}; none was analyzed` };
   }
 }
 

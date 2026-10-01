@@ -20,7 +20,7 @@ describe("initiative records", () => {
 
     expect(isPublicId(initiative.publicId, "ini")).toBe(true);
     expect(selectedSources(db, initiative.id)).toEqual([]);
-    expect(scopeLabel(initiative, 0)).toBe("All enabled Sources");
+    expect(scopeLabel(initiative, 0)).toBe("All enabled Repositories");
   });
 
   it("records exactly the explicitly selected sources", () => {

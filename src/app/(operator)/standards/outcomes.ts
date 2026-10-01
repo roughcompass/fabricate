@@ -38,5 +38,5 @@ export function publishOutcome(code: string | undefined, standard: { publicId: s
 }
 
 export function releaseOutcome(code: string | undefined, release: { publicId: string; version: number }): Outcome | undefined {
-  return code === "published" ? { id: `published:${release.publicId}`, tone: "success", title: `Release v${release.version} was published.`, description: "Initiatives can now select it." } : undefined;
+  return code === "published" ? { id: `published:${release.publicId}`, tone: "success", title: `Release v${release.version} was published.`, description: "Assessments can now select it." } : undefined;
 }

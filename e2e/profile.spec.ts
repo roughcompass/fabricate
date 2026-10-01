@@ -12,6 +12,7 @@ import { manifest } from "../test/support/profiles";
 import { seedAssessment } from "../test/support/scenarios";
 import { ORDERS, serverConfig } from "./support/results";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, gitRepo, test } from "./support/fixtures";
+import { paths } from "./support/paths";
 
 const category = (page: Page, id: string) => page.locator(`#${id}`);
 const service = (page: Page, key: string) => page.locator("#services").getByRole("region", { name: key, exact: true });
@@ -142,13 +143,13 @@ test("opens verified evidence excerpts from a real snapshot without rendering UR
   });
   const source = insertSource(db, { name: "orders", ...resolveCloneUrl(`file://${repository}`, new SourceBoundary(config)), gitRef: null });
   const initiative = buildInitiative(db, { name: "Fleet assessment", sources: [source] });
-  await page.goto(`/initiatives/${initiative.publicId}`);
-  await page.getByRole("button", { name: "Start Assessment" }).click();
-  await expect(page.getByRole("region", { name: "Notifications" }).getByText("Assessment #1 was started.")).toBeVisible();
+  await page.goto(paths.assessment(initiative.publicId));
+  await page.getByRole("button", { name: "Start Run" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" }).getByText("Run #1 was started.")).toBeVisible();
   await drainJobs(db, jobHandlers(db, config));
   const assessment = listAssessments(db, initiative.id)[0]!;
 
-  await page.goto(`/assessments/${assessment.publicId}`);
+  await page.goto(paths.run(assessment.publicId));
   await page.getByRole("link", { name: "orders Profile" }).click();
   await category(page, "package_managers").getByRole("link", { name: "yarn.lock" }).click();
   await expect(page.getByText("lockfile.package-manager")).toBeVisible();
@@ -190,7 +191,7 @@ test("links an evidence record to each ancestor, with no other way back", async 
   await page.goto(`/profiles/${profile.publicId}`);
   await category(page, "package_managers").getByRole("link", { name: "yarn.lock" }).click();
   const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
-  await expect(breadcrumbs.getByRole("link")).toHaveText(["Initiatives", initiative.name, "Assessment #1", "orders"]);
-  await expect(breadcrumbs.getByRole("link", { name: "Assessment #1" })).toHaveAttribute("href", `/assessments/${assessment.publicId}`);
+  await expect(breadcrumbs.getByRole("link")).toHaveText(["Assessments", initiative.name, "Run #1", "orders"]);
+  await expect(breadcrumbs.getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(assessment.publicId));
   await expect(page.locator("main").getByRole("link", { name: /back/i })).toHaveCount(0);
 });

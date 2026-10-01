@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { SystemPage } from "@/components/shell/system-page";
-import { buttonClass } from "@/components/ui/button-content";
+import { buttonProps } from "@/components/ui/button-content";
 
 /**
  * An unexpected failure while rendering a page, inside the application shell.
@@ -16,11 +16,11 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
       title="Something went wrong"
       actions={
         <>
-          <button type="button" className={buttonClass("primary")} onClick={() => retry()}>
+          <button type="button" {...buttonProps("primary")} onClick={() => retry()}>
             Try again
           </button>
-          <Link href="/" className={buttonClass("secondary")}>
-            Go to Initiatives
+          <Link href="/assessments" {...buttonProps("secondary")}>
+            Go to Assessments
           </Link>
         </>
       }

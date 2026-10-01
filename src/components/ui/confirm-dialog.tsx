@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useSyncExternalStore } from "react";
-import { type ButtonSize, type ButtonVariant, ButtonContent, buttonClass } from "./button-content";
+import { type ButtonSize, type ButtonVariant, ButtonContent, buttonProps } from "./button-content";
 import type { IconName } from "./icon";
 import { Menu, MenuButton } from "./menu";
 import { SubmitButton } from "./submit-button";
@@ -14,11 +14,11 @@ interface ConfirmDialogProps {
   /** Hidden fields submitted with the action. */
   fields?: Record<string, string>;
   trigger: { label: string; icon?: IconName; variant?: ButtonVariant; size?: ButtonSize };
-  /** Names the action and its object, such as "Cancel Assessment #3?". */
+  /** Names the action and its object, such as "Cancel Run #3?". */
   title: string;
   /** The consequence, stated once. */
   children: React.ReactNode;
-  /** The verb, such as "Cancel Assessment". */
+  /** The verb, such as "Cancel Run". */
   confirmLabel: string;
   tone?: "danger" | "default";
   /**
@@ -68,7 +68,7 @@ export function ConfirmDialog({ action, fields = {}, trigger, title, children, c
         <button
           ref={opener}
           type={hydrated ? "button" : "submit"}
-          className={buttonClass(trigger.variant ?? "secondary", trigger.size ?? "md")}
+          {...buttonProps(trigger.variant ?? "secondary", trigger.size ?? "md")}
           aria-haspopup={hydrated ? "dialog" : undefined}
           onClick={hydrated ? open : undefined}
         >
@@ -88,7 +88,7 @@ export function ConfirmDialog({ action, fields = {}, trigger, title, children, c
             </div>
           </div>
           <div className={styles.footer}>
-            <button ref={cancel} type="button" className={buttonClass("secondary")} onClick={() => dialog.current?.close()}>
+            <button ref={cancel} type="button" {...buttonProps("secondary")} onClick={() => dialog.current?.close()}>
               Cancel
             </button>
             <SubmitButton variant={danger ? "danger" : "primary"}>{confirmLabel}</SubmitButton>

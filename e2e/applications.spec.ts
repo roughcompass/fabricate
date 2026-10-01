@@ -24,7 +24,7 @@ test("lists the visitor's applications newest first and opens one", async ({ pag
   createApplication(db, workspace.id, templateBySlug("payments-workspace")!, sandbox("Newer payments"), new Date(Date.now() - 60 * 1000));
 
   await page.getByRole("link", { name: "View applications" }).click();
-  await expect(page).toHaveTitle("Applications · Fabricate");
+  await expect(page).toHaveTitle("Applications · DE FabLab");
   const table = page.getByRole("table", { name: "Applications" });
   const rows = table.locator("tbody tr");
   await expect(rows).toHaveCount(2);
@@ -43,11 +43,31 @@ test("lists the visitor's applications newest first and opens one", async ({ pag
   await expect(page.getByRole("heading", { level: 1, name: "Newer payments" })).toBeVisible();
 });
 
-test("shows an empty state that leads to the gallery", async ({ page, db: _db }) => {
+test("No applications yet: the empty state leads to the Salt Patterns gallery and to the import", async ({ page, db: _db }) => {
   await page.goto("/applications");
   await expect(page.getByText("No applications yet")).toBeVisible();
-  await page.getByRole("main").getByRole("link", { name: "Browse templates" }).click();
+  const empty = page.getByRole("main").locator("[data-page-header] ~ *");
+  await expect(empty.getByRole("link", { name: "Import from BitBucket" })).toHaveAttribute("href", "/applications/import");
+  await empty.getByRole("link", { name: "Browse Salt Patterns" }).click();
   await expect(page).toHaveURL(/\/templates$/);
+});
+
+test("Header actions: Start with a template is the only primary action, beside Import from BitBucket, with no breadcrumbs", async ({ page, db: _db }) => {
+  await page.goto("/applications");
+  const header = page.locator("[data-page-header]");
+  await expect(header.getByRole("navigation", { name: "Breadcrumb" })).toHaveCount(0);
+  await expect(header.getByRole("link", { name: "Start with a template" })).toHaveAttribute("data-variant", "primary");
+  await expect(header.getByRole("link", { name: "Import from BitBucket" })).toHaveAttribute("href", "/applications/import");
+  await expect(header.locator('[data-variant="primary"]')).toHaveCount(1);
+});
+
+test("Visit while building: the row menu presents Visit application as unavailable until the build is ready", async ({ page, context, db }) => {
+  const workspace = await workspaceOf(page, context, db);
+  createApplication(db, workspace.id, templateBySlug("market-watch")!, sandbox("Fresh desk"));
+  await page.goto("/applications");
+  await page.getByRole("button", { name: "Actions for Fresh desk" }).click();
+  await expect(page.getByRole("button", { name: /Visit application/ })).toBeDisabled();
+  await expect(page.getByRole("link", { name: /Visit application/ })).toHaveCount(0);
 });
 
 test("does not show another visitor's application", async ({ page, context, browser, db }) => {
@@ -81,6 +101,16 @@ test("deletes an application with its share link after confirmation", async ({ p
   await expect(page.getByText("No applications yet")).toBeVisible();
   expect(findShare(db, token)).toBeNull();
   expect((await page.request.get(`/s/${token}`)).status()).toBe(404);
+
+  // Share link that no longer resolves, and the deleted application's own address: a not-found page with a way back.
+  for (const address of [`/s/${token}`, `/run/${application.publicId}`]) {
+    const response = await page.goto(address);
+    expect(response?.status(), address).toBe(404);
+    await expect(page.getByRole("heading", { level: 1, name: "Application not available" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
+    await page.getByRole("link", { name: "Go to Applications" }).click();
+    await expect(page).toHaveURL(/\/applications$/);
+  }
 });
 
 test("resets the demo after confirmation, leaving the gallery unchanged", async ({ page, context, db }) => {

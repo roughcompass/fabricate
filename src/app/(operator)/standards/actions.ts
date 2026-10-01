@@ -90,7 +90,8 @@ export async function publishStandard(standardId: string, formData: FormData): P
     releaseId = publishDraft(getDb(), standardId, integer(formData, "lockVersion") ?? -1).publicId;
   } catch (error) {
     if (error instanceof StaleRecordError) redirect(`/standards/${standardId}/publish?notice=stale`);
-    if (error instanceof ValidationError) redirect(`/standards/${standardId}/publish?notice=invalid`);
+    // The publication review lists the problems itself, so the redirect carries no notice (feedback spec).
+    if (error instanceof ValidationError) redirect(`/standards/${standardId}/publish`);
     throw error;
   }
   redirect(`/standards/${standardId}/releases/${releaseId}?notice=published`);

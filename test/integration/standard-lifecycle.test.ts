@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import type { JsonObject } from "@repo-facts/contract";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { createInitiative } from "@/app/(operator)/initiatives/actions";
-import type { InitiativeFormState } from "@/app/(operator)/initiatives/form-state";
+import { createInitiative } from "@/app/(operator)/assessments/actions";
+import type { InitiativeFormState } from "@/app/(operator)/assessments/form-state";
 import { createStandard, publishStandard, reviseStandard, saveDraft } from "@/app/(operator)/standards/actions";
 import { ControlList } from "@/app/(operator)/standards/control-view";
 import type { DraftSaveState } from "@/app/(operator)/standards/form-state";
@@ -121,7 +121,7 @@ describe("Standard lifecycle", () => {
     for (const fragment of ["key", "severity", "service.nonexistent", "evaluate", "services-configurable", '"__proto__" is not an allowed protocol', '"constructor" is not an allowed protocol']) expect(messages.join("\n"), fragment).toContain(fragment);
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
 
-    expect(await redirectOf(publishStandard(standardId, form({ lockVersion: draft().lockVersion })))).toBe(`/standards/${standardId}/publish?notice=invalid`);
+    expect(await redirectOf(publishStandard(standardId, form({ lockVersion: draft().lockVersion })))).toBe(`/standards/${standardId}/publish`);
     expect(releasesOf(db, getStandard(db, standardId).id)).toEqual([]);
   });
 

@@ -1,6 +1,6 @@
 # Design System
 
-This document is the source of truth for Fabricate's operator interface: its tokens, components, page patterns, feedback rules, and content standard. The tokens live in [`src/app/globals.css`](../src/app/globals.css) and the components in [`src/components/ui/`](../src/components/ui/). In development, the component gallery at `/design-system` renders every component in every variant and state, in both themes.
+This document is the source of truth for DE FabLab's operator interface: its tokens, components, page patterns, feedback rules, and content standard. The tokens live in [`src/app/globals.css`](../src/app/globals.css) and the components in [`src/components/ui/`](../src/components/ui/). In development, the component gallery at `/design-system` renders every component in every variant and state, in both themes.
 
 The direction is simple and usable: white content surfaces on a light gray canvas, monochrome emphasis with one blue accent, compact controls, and hierarchy that comes from type and spacing rather than boxes.
 
@@ -168,7 +168,7 @@ Sizes are `sm` (28px) for table rows, filter bars, and toolbars; `md` (36px) eve
 
 Mark optional fields with `optional`; required fields carry no marker. Check boxes and radios are one drawn control: 16px, a strong boundary, the accent when selected.
 
-**SearchField** (`search-field.tsx`) is the one search input: a leading search icon, the input, and, while it has a value, a Clear search control. It comes in the three control sizes, uses the text input's boundary and focus ring, and submits with its form, so searching works without JavaScript. Give it `clearHref`, the same page without the search, so the clear control is a link. The Sources list and the template gallery use it.
+**SearchField** (`search-field.tsx`) is the one search input: a leading search icon, the input, and, while it has a value, a Clear search control. It comes in the three control sizes, uses the text input's boundary and focus ring, and submits with its form, so searching works without JavaScript. Give it `clearHref`, the same page without the search, so the clear control is a link. The Repositories list and the Salt Patterns gallery use it.
 
 ### Status and values
 
@@ -178,13 +178,13 @@ Mark optional fields with `optional`; required fields carry no marker. Check box
 
 **CopyButton** (`copy-button.tsx`, client) copies a full value and confirms it visually and to screen readers. It is hidden until JavaScript runs.
 
-**countLabel** (`count.ts`) writes a count with its noun: "1 Finding", "6 Sources".
+**countLabel** (`count.ts`) writes a count with its noun: "1 Finding", "6 Repositories".
 
 **RelativeTime** (`relative-time.tsx`) shows "3 hours ago" within the last week and a date otherwise, with the full UTC time in its tooltip and `dateTime`. The formatting lives in `time.ts`.
 
 ### Layout and content
 
-Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: the sidebar, the shell header, and the page background are `--color-canvas`, and every container of record content is a bordered `--color-bg` surface. That covers `Panel`, `StatGroup`, `MediaCard`, `CodeBlock`, `Disclosure`'s panel variant, `EmptyState`, form controls, and a `DescriptionList` that stands on its own. A surface always has a border as well as its fill, so it stands apart from the canvas in both themes; in dark, the canvas is black and surfaces are near-black. Page headers, breadcrumbs, section headings and descriptions, `Tabs`, `FilterBar`, `FilterRail`, and `SectionNav` stay transparent, on the canvas. Surfaces never nest: a list or empty state inside a `Panel` stays plain, and a standalone one sits in a `Panel` or takes `surface`.
+Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: the sidebar and the page background are `--color-canvas`, the shell header is a solid `--color-bg` bar with a bottom border, and every container of record content is a bordered `--color-bg` surface. That covers `Panel`, `StatGroup`, `MediaCard`, `CodeBlock`, `Disclosure`'s panel variant, `EmptyState`, form controls, and a `DescriptionList` that stands on its own. A surface always has a border as well as its fill, so it stands apart from the canvas in both themes; in dark, the canvas is black and surfaces are near-black. Page headers, breadcrumbs, section headings and descriptions, `Tabs`, `FilterBar`, `FilterRail`, and `SectionNav` stay transparent, on the canvas. Surfaces never nest: a list or empty state inside a `Panel` stays plain, and a standalone one sits in a `Panel` or takes `surface`.
 
 | Component | Use |
 | --- | --- |
@@ -201,7 +201,7 @@ Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: t
 | `Breadcrumbs` (`breadcrumbs.tsx`) | A record's linked ancestors |
 | `FilterBar` (`filter-bar.tsx`, client) | Compact filters above their results, two per row on a phone; applies on change, or with Apply without JavaScript |
 | `FilterRail` (`filter-rail.tsx`, client) | Check box filters beside their results: a heading (`title`, "Filter templates" in the gallery) with a Clear action while any filter or search is active, then one collapsible group per filter whose heading shows how many of its options are checked. Each option is a tinted row with how many results it would match; a checked row takes the selection tint. On narrow screens the rail becomes a Filters disclosure with the active count above the results. Applies on change, or with Apply without JavaScript. Only the template gallery uses it; every other filterable view uses `FilterBar` |
-| `MediaCard` (`media-card.tsx`) | A record as a card: the title, a description clamped to two lines, and a footer for tags and badges, above a 16:10 preview image set at an angle in the card's lower part and cropped by its edge. Every card in a row is the same height. The title link covers the card and is its only focus stop; without `href` the card shows as unavailable. Only the template pages use cards (the gallery and the create page's Build your solution); every other list is a `Table` |
+| `MediaCard` (`media-card.tsx`) | A record as a card: the title, a description clamped to two lines, and a footer for tags and badges, above a 16:10 preview image set at an angle in the card's lower part and cropped by its edge. Hovering over the card, or focusing its link, straightens the preview to the card's full width so the whole image shows; only the transform animates, the card keeps its size, and reduced motion makes the change instant. Every card in a row is the same height. The title link covers the card and is its only focus stop; without `href` the card shows as unavailable. Only the template pages use cards (the gallery and the create page's Build your solution); every other list is a `Table` |
 | `SectionNav` (`section-nav.tsx`, client) | Navigation to the sections of a long page with each section's state: in view beside the content on wide screens, a disclosure on narrow ones, with the section in view marked current |
 | `Tooltip` (`tooltip.tsx`) | A short explanation on hover and keyboard focus |
 | `ProgressBar` (`progress-bar.tsx`) | Finished work out of the total |
@@ -230,9 +230,9 @@ Each event is reported in exactly one place, chosen by its kind. The same messag
 
 **Form errors** (`form.tsx`, with `use-focus-first-invalid.ts`, client). A field error appears once, under its field, and never again in a summary. After a rejected submission, `useFocusFirstInvalid` moves focus to the first invalid field, or to the `FormAlert` when the error is not about a field.
 
-**Confirmations** (`confirm-dialog.tsx`, client). Deleting an Initiative, canceling an Assessment, and publishing a Release are confirmed in a native modal dialog that names the action and its object, states the consequence once, and offers Cancel and a verb-labeled confirm; destructive confirmations use the danger variant and focus Cancel first. Escape and Cancel close it without acting, and focus returns to the trigger. Before JavaScript runs, the trigger submits the action directly. Browser prompts such as `window.confirm` are never used.
+**Confirmations** (`confirm-dialog.tsx`, client). Deleting an Assessment, canceling a Run, and publishing a Release are confirmed in a native modal dialog that names the action and its object, states the consequence once, and offers Cancel and a verb-labeled confirm; destructive confirmations use the danger variant and focus Cancel first. Escape and Cancel close it without acting, and focus returns to the trigger. Before JavaScript runs, the trigger submits the action directly. Browser prompts such as `window.confirm` are never used.
 
-**Loading, not found, and errors.** `NavigationFeedback` (`src/components/shell/`) shows the list, detail, or form skeleton of the page being opened when a navigation to another path takes longer than 150 milliseconds; `skeletonFor()` picks it from the path. Routes have no `loading.tsx`: a Suspense boundary around a large page makes React stream the page behind its fallback, which only a script reveals, so browsers without JavaScript would see only the skeleton. `not-found.tsx` in each section explains that the record does not exist and links to that section's list, and `error.tsx` offers Try again and a link to Initiatives without showing internal details. `global-error.tsx` covers a failure in the root layout.
+**Loading, not found, and errors.** `NavigationFeedback` (`src/components/shell/`) shows the list, detail, or form skeleton of the page being opened when a navigation to another path takes longer than 150 milliseconds; `skeletonFor()` picks it from the path. Routes have no `loading.tsx`: a Suspense boundary around a large page makes React stream the page behind its fallback, which only a script reveals, so browsers without JavaScript would see only the skeleton. `not-found.tsx` in each section explains that the record does not exist and links to that section's list, and `error.tsx` offers Try again and a link to Assessments without showing internal details. `global-error.tsx` covers a failure in the root layout.
 
 ## Page patterns
 
@@ -243,21 +243,20 @@ Every page follows one of a few patterns, built from `Page` and `PageHeader` (`p
 `AppShell` (`src/components/shell/app-shell.tsx`) frames every page, in the manner of Vercel's dashboard: a skip link; a full-height sidebar on the canvas; and the content column, which holds the main region. The sidebar holds the product mark, the navigation, and, in its footer, the theme switcher. The sidebar is fixed to the viewport over its reserved grid column, so it never shifts at the end of a long page.
 
 **Navigation drills into sections.** `SidebarNav` (`sidebar-nav.tsx`, client) shows one of two menus, both defined in `navigation.ts`:
-- **The section menu:** Initiatives, Sources, and Standards, plus Templates while the template demo is enabled, each with an icon and a chevron.
-- **A section's sub-menu:** headed by the section's name, with Show all sections beside the heading.
+- **The section menu:** Assessments, plus Applications and Salt Patterns while the template demo is enabled, each with an icon and a chevron.
+- **A section's sub-menu:** headed by the section's name, with Show all sections beside the heading. Its items come in groups (`NavGroup`); every group after the first has a caption heading that names its list for assistive technology.
 
-| Section | Sub-menu |
+| Section | Sub-menu groups |
 | --- | --- |
-| Initiatives | All Initiatives, New Initiative |
-| Sources | All Sources, Add Source, Import Sources |
-| Standards | All Standards, New Standard |
-| Templates | New application, Gallery, Applications |
+| Assessments | All Assessments, New Assessment · **Repositories:** All Repositories, New Repository, Import Repositories · **Standards:** All Standards, New Standard |
+| Applications | All Applications, Import from BitBucket |
+| Salt Patterns | All Salt Patterns, New application |
 
-Choosing a section opens its first item. Every page shows its section's sub-menu with one item current: a record's pages mark the list item for their records (an Assessment marks All Initiatives, a template preview marks Gallery), and the create and import pages mark their own items. `locate()` resolves a path to its section and item; its patterns never overlap, and a unit test checks every operator route against it. A page outside every section, such as this gallery, shows the section menu.
+Choosing a section opens its first item, the list titled with the section's name. Every page shows its section's sub-menu with one item current: a record's pages mark the list item for their records (a Run marks All Assessments, a Repository's edit page marks All Repositories, a template preview marks All Salt Patterns), and the create and import pages mark their own items. An item named "All" and a record type opens the list with that title; every other item opens the page that creates or imports what it names. `locate()` resolves a path to its section and item; its patterns never overlap, and a unit test checks every operator route against it. A page outside every section, such as this gallery, shows the section menu.
 
 Show all sections shows the section menu without leaving the page and moves focus to the current section. Without JavaScript it is a link to `#sidebar-sections`, and a `:target` rule shows the section menu. Every navigation shows the new page's sub-menu again. The current item takes `--color-bg-selected` and the medium weight, and is exposed as `aria-current`.
 
-**The shell header names the page.** `ShellHeader` (`shell-header.tsx`) is a sticky bar across the content column, on the canvas, `--size-header` tall. It holds the page's title, centered, as its only `h1` at the heading size. A long title truncates with an ellipsis, with the full text in the `h1` and its tooltip. The title is page data the layout cannot see, so pages render the header themselves: through `PageHeader`, and directly in `SystemPage` and the page skeletons. Because the header spans the column, `Page` sets the measure (`--size-content`, or `--size-form` for forms) and the `--space-gutter` edges for every other part of the page.
+**The shell header names the page.** `ShellHeader` (`shell-header.tsx`) is a sticky bar across the content column, `--size-header` tall, with a solid `--color-bg` fill that sets it apart from the canvas and hides anything scrolled beneath it. It holds the page's title, centered, as its only `h1` at the heading size. A long title truncates with an ellipsis, with the full text in the `h1` and its tooltip. The title is page data the layout cannot see, so pages render the header themselves: through `PageHeader`, and directly in `SystemPage` and the page skeletons. Because the header spans the column, `Page` sets the measure (`--size-content`, or `--size-form` for forms) and the `--space-gutter` edges for every other part of the page.
 
 **The sidebar can be resized and hidden.** From 1024px, the operator adjusts the sidebar two ways:
 - **Resize.** `SidebarResizer` (`sidebar-resizer.tsx`, client) is a vertical `separator`, named Resize sidebar, on the sidebar's edge, with a 24px target straddling the border. Dragging it resizes the sidebar from 200 to 400px (`--size-sidebar-min` to `--size-sidebar-max`), writing the width straight to the shell's `--_sidebar-width` on each animation frame rather than rendering React. Left Arrow and Right Arrow move it by 16px, Home and End go to the limits, and a double-click restores the 256px default (`--size-sidebar`). It announces the width as "320 pixels". Resizing needs JavaScript; without it the sidebar keeps its stored or default width.
@@ -279,18 +278,18 @@ Records are named for people, never by public ID:
 
 | Record | Name |
 | --- | --- |
-| Assessment | "Assessment #3", its sequence within its Initiative |
-| Evaluation | "Evaluation #2", its sequence within its Initiative |
+| Run | "Run #3", its sequence within its Assessment |
+| Evaluation | "Evaluation #2", its sequence within its Assessment |
 | Release | The Standard's name and version, "Engineering baseline v2" |
 | Profile | The repository name |
 | Finding | The Control title, with the subject in the meta line |
 | Evidence | The file location |
 
-Public IDs appear only in a page's Details area, with a copy control. Each detail page's browser title names the record and its parent: "Assessment #3 · Checkout platform migration · Fabricate". Sequence numbers come from `assessmentNumber` and `evaluationNumber`, which count the Initiative's records in creation order. They are stable only because Assessments and Evaluations are never deleted: **a change that makes either deletable must persist the numbers first.**
+Public IDs appear only in a page's Details area, with a copy control. Each detail page's browser title names the record and its parent: "Run #3 · Checkout platform migration · DE FabLab". Sequence numbers come from `assessmentNumber` and `evaluationNumber`, which count the model Initiative's records in creation order. They are stable only because Runs and Evaluations are never deleted: **a change that makes either deletable must persist the numbers first.**
 
 ### Lists
 
-A list page is a header and a `Panel` holding a `Table`. The primary cell links to the record; row actions are `sm` controls in `RowActions`, usually a `Menu`. Filter tabs show counts. An empty list shows an `EmptyState` in the list area with the action that fills it. The Sources list adds a search that works without JavaScript. The tabs and filters sit on the canvas above the white table. The template gallery is the one list that is not a table: it shows templates as a grid of white `MediaCard`s on the canvas, with the same empty state and search rules; with no match, its empty state sits in a flush `Panel`.
+A list page is a header and a `Panel` holding a `Table`. The primary cell links to the record; row actions are `sm` controls in `RowActions`, usually a `Menu`. Filter tabs show counts. An empty list shows an `EmptyState` in the list area with the action that fills it. The Repositories list adds a search that works without JavaScript. The tabs and filters sit on the canvas above the white table. The template gallery is the one list that is not a table: it shows templates as a grid of white `MediaCard`s on the canvas, with the same empty state and search rules; with no match, its empty state sits in a flush `Panel`.
 
 ### Detail pages
 
@@ -320,9 +319,19 @@ From 375px up, and at every sidebar width, nothing overflows horizontally and no
 
 ## Content standard
 
-- **Case.** Sentence case everywhere. These domain terms are capitalized wherever they name the concept: Initiative, Source, Standard, Release, Control, Assessment, Evaluation, Finding, Profile, Relationship Map, and Service Dependency. So: "Start Assessment", "New Initiative", "Add Source", "Start a draft from v2".
-- **Buttons** are a verb and a noun: "Create Initiative", "Save changes", "Publish v2". Cancel is just "Cancel".
+- **Vocabulary.** The interface names three records differently from the code, which keeps the model's names. Pages, labels, toasts, and browser titles always use the interface name, and never show "Initiative" or "Source" as the name of a record:
+
+  | Model term (code, tables, public ID prefix) | Interface name |
+  | --- | --- |
+  | Initiative (`initiatives`, `ini_`) | Assessment |
+  | Assessment (`assessments`, `asm_`) | Run |
+  | Repository Source (`repository_sources`, `src_`) | Repository |
+
+  Route folders take the interface's URL segments but keep the model's dynamic segments, so a route still reads in model terms: `assessments/[initiativeId]/`, `runs/[assessmentId]/`, and `repositories/[sourceId]/`.
+- **Case.** Sentence case everywhere. These domain terms are capitalized wherever they name the concept: Assessment, Run, Repository, Standard, Release, Control, Evaluation, Finding, Profile, Relationship Map, and Service Dependency. So: "Start Run", "New Assessment", "New Repository", "Start a draft from v2".
+- **Buttons** are a verb and a noun: "Create Assessment", "Save changes", "Publish v2". Cancel is just "Cancel".
 - **Descriptions** are one sentence at most. They don't restate what is true of every record, such as that results never change after they are written; that belongs here, not on pages.
+- **Links** open the page they name. A sidebar section opens the list titled with its name; an item named "All" and a record type opens that list, and every other item opens the page that creates or imports what it names. A breadcrumb reads the title of the page it opens, and a link or button that names a page, such as "Go to Repositories" or "Browse Salt Patterns", opens the page with that title. A link that names a field, such as Select a Release, opens its page at that field. An action shows as unavailable until its destination can open, as Visit application does while a build runs. Text in a demo portal that looks like a link either opens a page of the running application or is plain text. A demo address that no longer resolves, such as a deleted application or an expired share link, shows a not-found page with a way back, and a not-found page never links to a page that is itself not found. Addresses from before the rename redirect permanently to their new ones. `e2e/links.spec.ts` crawls every page and enforces these rules, the vocabulary, and the primary-action fill.
 - **Labels** use operator words: "ID", "Commit", "Digest", "Detector release". Never raw identifiers, underscores, or codes; the status registry turns values into words.
-- **Empty states** are a short title ("No Sources yet"), one sentence on what fills the area, and the action that does.
-- **Numbers and times.** Counts read "6 Sources" or "1 Finding". Times are relative within a week, with the full UTC time on hover.
+- **Empty states** are a short title ("No Repositories yet"), one sentence on what fills the area, and the action that does.
+- **Numbers and times.** Counts read "6 Repositories" or "1 Finding". Irregular plurals pass their plural: `countLabel(n, "Repository", "Repositories")`. Times are relative within a week, with the full UTC time on hover.

@@ -70,7 +70,7 @@ function repositoryFinding(release: ReleaseInput, control: JsonObject, target: T
 }
 
 function relationshipFinding(release: ReleaseInput, control: JsonObject, map: EvaluationInputs["map"]): JsonObject {
-  const context: Context = map ? mapContext(map.document) : repositoryContext(null, "The Assessment has no Relationship Map");
+  const context: Context = map ? mapContext(map.document) : repositoryContext(null, "The Run has no Relationship Map");
   const subject = {
     type: "relationship_map",
     key: "relationship_map",

@@ -88,13 +88,8 @@
   .footerRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-6); }
   .footerWordmark { color: var(--rt-color-text); font-family: var(--rt-font-family-display); font-size: var(--font-size-subtitle); font-weight: var(--font-weight-semibold); line-height: var(--line-height-subtitle); }
   .footerLinks { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; padding: 0; list-style: none; }
-  .footerLink {
-    color: var(--rt-color-text);
-    text-decoration-line: none;
-
-    &:hover { text-decoration-line: underline; }
-    &:focus-visible { outline: 2px solid var(--rt-color-accent); outline-offset: 2px; }
-  }
+  /* Illustrative legal entries: text, not links. */
+  .footerItem { color: var(--rt-color-text); }
 
   @media (max-width: 767px) {
     .topBar { gap: var(--space-1); padding: 0 var(--space-2); }

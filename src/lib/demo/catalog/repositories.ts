@@ -43,6 +43,9 @@ export const BITBUCKET_REPOSITORIES: readonly BitbucketRepository[] = [
   { project: "OPS", name: "flag-console", description: "Feature flags across environments.", templateSlug: "feature-flag-console", defaultBranch: "main", updated: "2026-08-27" },
 ];
 
+/** The project the import page shows until the visitor chooses another. */
+export const DEFAULT_PROJECT = BITBUCKET_PROJECTS[0]!.key;
+
 export function projectByKey(key: string): BitbucketProject | undefined {
   return BITBUCKET_PROJECTS.find((project) => project.key === key);
 }

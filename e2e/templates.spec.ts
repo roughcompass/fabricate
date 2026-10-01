@@ -8,12 +8,12 @@ const cards = (page: Page) => page.getByRole("article");
 const cardTitles = (page: Page) => page.getByRole("article").getByRole("heading").allTextContents();
 const rail = (page: Page) => page.getByRole("form", { name: "Filter templates" });
 
-test("titles the gallery Find your template, with the search, the filter rail, and every template", async ({ page, db: _db }) => {
+test("Opening the gallery: titled Salt Patterns, with the search, the filter rail, and every template", async ({ page, db: _db }) => {
   await page.goto("/templates");
-  await expect(page).toHaveTitle("Find your template · Fabricate");
-  await expect(page.getByRole("heading", { level: 1, name: "Find your template" })).toBeVisible();
+  await expect(page).toHaveTitle("Salt Patterns · DE FabLab");
+  await expect(page.getByRole("heading", { level: 1, name: "Salt Patterns" })).toBeVisible();
   await expect(page.getByText("Jumpstart your app development process with pre-built solutions from DE Web and our community.")).toBeVisible();
-  await expectCurrentItem(page, "Templates", "Gallery");
+  await expectCurrentItem(page, "Salt Patterns", "All Salt Patterns");
 
   // The search spans the page above the rail and the results.
   const search = page.getByRole("searchbox", { name: "Search templates" });
@@ -131,6 +131,66 @@ test("opens a template from its card with the keyboard", async ({ page, db: _db 
   await expect(page).toHaveURL(/\/templates\/market-watch$/);
 });
 
+/** A card's preview frame and media area, and the preview's own aspect ratio. */
+async function preview(card: ReturnType<typeof cards>) {
+  return card.evaluate((element) => {
+    const image = element.querySelector("img")!;
+    const frame = image.parentElement!;
+    const media = frame.parentElement!;
+    const box = (node: Element) => {
+      const rect = node.getBoundingClientRect();
+      return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    };
+    return { transform: getComputedStyle(frame).transform, duration: getComputedStyle(frame).transitionDuration, frame: box(frame), media: box(media), ratio: image.naturalWidth / image.naturalHeight };
+  });
+}
+
+// template-gallery spec, template cards: hover and focus straighten the angled preview.
+test.describe("template card previews", () => {
+  test.use({ reducedMotion: "no-preference" });
+
+  test("Hovering over a card straightens its preview to the card's full width, with the whole image visible", async ({ page, db: _db }) => {
+    await page.goto("/templates");
+    const card = cards(page).filter({ hasText: "Market watch" });
+    await expect(card.locator("img")).toHaveJSProperty("complete", true);
+    const before = (await card.boundingBox())!;
+    expect((await preview(card)).transform).not.toBe("none");
+
+    await card.hover();
+    await expect.poll(async () => (await preview(card)).transform).toBe("none");
+    await expect.poll(async () => {
+      const { frame, media } = await preview(card);
+      return Math.abs(frame.left - media.left) < 1 && Math.abs(frame.top - media.top) < 1 && Math.abs(frame.width - media.width) < 1;
+    }).toBe(true);
+    const { frame, media, ratio } = await preview(card);
+    // The frame has the image's own ratio and fits the media area, so nothing is cropped.
+    expect(Math.abs(frame.width / frame.height - ratio)).toBeLessThan(0.02);
+    expect(frame.height).toBeLessThanOrEqual(media.height + 1);
+    expect(await card.boundingBox()).toEqual(before);
+
+    await page.mouse.move(0, 0);
+    await expect.poll(async () => (await preview(card)).transform).not.toBe("none");
+  });
+
+  test("Focusing a card straightens its preview, as hovering does", async ({ page, db: _db }) => {
+    await page.goto("/templates");
+    await cards(page).filter({ hasText: "Client onboarding" }).getByRole("link", { name: "Client onboarding" }).focus();
+    await page.keyboard.press("Tab");
+    const card = cards(page).filter({ hasText: "Market watch" });
+    await expect(card.getByRole("link", { name: "Market watch" })).toBeFocused();
+    await expect.poll(async () => (await preview(card)).transform).toBe("none");
+  });
+});
+
+test("Reduced motion: a card's preview straightens at once, without an animation", async ({ page, db: _db }) => {
+  // The browser tests run with reduced motion (playwright.config.ts).
+  await page.goto("/templates");
+  const card = cards(page).filter({ hasText: "Market watch" });
+  expect((await preview(card)).duration.split(",").every((value) => parseFloat(value) <= 0.001)).toBe(true);
+  await card.hover();
+  expect((await preview(card)).transform).toBe("none");
+});
+
 test("collapses the filters into a disclosure at 375px without overflowing", async ({ page, db: _db }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/templates?brand=markets&provider=community");
@@ -164,8 +224,8 @@ test.describe("without JavaScript", () => {
 test.describe("template detail", () => {
   test("names the brand, the provider, and each microfrontend, with Deploy and Preview", async ({ page, db: _db }) => {
     await page.goto("/templates/market-watch");
-    await expect(page).toHaveTitle("Market watch · Templates · Fabricate");
-    await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Templates" })).toHaveAttribute("href", "/templates");
+    await expect(page).toHaveTitle("Market watch · Salt Patterns · DE FabLab");
+    await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Salt Patterns" })).toHaveAttribute("href", "/templates");
     await expect(page.getByRole("heading", { level: 1, name: "Market watch" })).toBeVisible();
     await expect(page.getByRole("img", { name: /Preview of the Market watch template/ })).toBeVisible();
 
@@ -176,9 +236,17 @@ test.describe("template detail", () => {
     await expect(overview).toContainText("Watchlist, Order ticket, Price chart, Trade blotter");
     const members = page.getByRole("table", { name: "Microfrontends in this template" });
     for (const name of ["Markets shell", "Watchlist", "Order ticket", "Price chart", "Trade blotter"]) await expect(members).toContainText(name);
-    await expectCurrentItem(page, "Templates", "Gallery");
+    await expectCurrentItem(page, "Salt Patterns", "All Salt Patterns");
 
     await expect(page.getByRole("link", { name: "Deploy template" })).toHaveAttribute("href", "/templates/market-watch/deploy");
+  });
+
+  test("Breadcrumb names its page: Salt Patterns opens the page titled Salt Patterns", async ({ page, db: _db }) => {
+    await page.goto("/templates/market-watch");
+    const crumbs = page.locator("[data-page-header]").getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
+    await expect(crumbs.first()).toHaveText("Salt Patterns");
+    await crumbs.first().click();
+    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Salt Patterns");
   });
 
   test("shows a community template's author", async ({ page, db: _db }) => {
@@ -199,6 +267,6 @@ test.describe("template detail", () => {
     expect(response?.status()).toBe(404);
     await expect(page.getByRole("heading", { level: 1, name: "Template not found" })).toBeVisible();
     await expect(page.getByText("This template does not exist.")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Go to templates" })).toHaveAttribute("href", "/templates");
+    await expect(page.getByRole("link", { name: "Go to Salt Patterns" })).toHaveAttribute("href", "/templates");
   });
 });

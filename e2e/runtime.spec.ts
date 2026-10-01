@@ -74,6 +74,8 @@ test.describe("portal shells", () => {
     const crumbs = page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("listitem");
     await expect(crumbs).toHaveText(["Payments", "Payments workspace", "Activity"]);
     await expect(crumbs.last()).toHaveAttribute("aria-current", "page");
+    // The brand has no page of its own in the demo, so its crumb is text, not a link.
+    await expect(crumbs.first().getByRole("link")).toHaveCount(0);
     await expect(page.getByRole("heading", { level: 1, name: "Activity" })).toBeVisible();
   });
 
@@ -131,7 +133,9 @@ test.describe("portal shells", () => {
     expect(await title.evaluate((element) => getComputedStyle(element).fontFamily)).toMatch(/serif/);
     const footer = page.getByRole("contentinfo");
     await expect(footer).toContainText("J.P.Morgan");
-    for (const link of ["Terms of Use", "Disclosures", "Security", "Privacy", "Cookies Policy", "Contact Us"]) await expect(footer.getByRole("link", { name: link })).toBeVisible();
+    // Placeholder portal links: the legal entries are plain text, not links.
+    for (const entry of ["Terms of Use", "Disclosures", "Security", "Privacy", "Cookies Policy", "Contact Us"]) await expect(footer.getByText(entry, { exact: true })).toBeVisible();
+    await expect(footer.getByRole("link")).toHaveCount(0);
   });
 
   test("uses near-black bars and a deep blue title band in the dark Markets theme", async ({ page, db: _db }) => {

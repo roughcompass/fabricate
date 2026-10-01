@@ -7,7 +7,12 @@ import { shareCookieName } from "@/lib/demo/runtime-view";
 import { findShare } from "@/lib/demo/shares";
 import { WORKSPACE_COOKIE_MAX_AGE } from "@/lib/demo/workspace-key";
 
-const notFound = () => new NextResponse("Not found", { status: 404 });
+/**
+ * A share link that no longer resolves opens the running application's
+ * not-found page, which offers a way back (page-patterns spec), rather than a
+ * bare 404. A relative Location keeps the browser on the host it used.
+ */
+const notFound = () => new NextResponse(null, { status: 303, headers: { Location: "/run/unavailable" } });
 
 /**
  * Opens a share link: remembers its token for the application in an httpOnly

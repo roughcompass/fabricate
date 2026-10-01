@@ -56,7 +56,7 @@ const load = cache((publicId: string) => {
 
 export async function generateMetadata({ params }: { params: Promise<{ profileId: string }> }): Promise<Metadata> {
   const found = load((await params).profileId);
-  return { title: found ? `${found.target.sourceName} · Assessment #${found.number}` : "Profile not found" };
+  return { title: found ? `${found.target.sourceName} · Run #${found.number}` : "Profile not found" };
 }
 
 /** Why a category has no facts, in one sentence. */
@@ -92,9 +92,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ profil
     <Page>
       <PageHeader
         breadcrumbs={[
-          { href: "/", label: "Initiatives" },
-          { href: `/initiatives/${initiative.publicId}`, label: initiative.name },
-          { href: `/assessments/${assessment.publicId}`, label: `Assessment #${number}` },
+          { href: "/assessments", label: "Assessments" },
+          { href: `/assessments/${initiative.publicId}`, label: initiative.name },
+          { href: `/runs/${assessment.publicId}`, label: `Run #${number}` },
         ]}
         title={target.sourceName}
         meta={[

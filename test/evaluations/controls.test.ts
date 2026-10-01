@@ -113,7 +113,7 @@ describe("relationship Controls", () => {
     expect(by["root-composes-orders"]).toMatchObject({ outcome: "meets", subject: { type: "relationship_map", key: "relationship_map", map: { coverage_complete: false, coverage_gaps: 1 } } });
     // spa-reports failed, so its edge is unresolved rather than absent.
     expect(by["root-composes-reports"]).toMatchObject({ outcome: "indeterminate" });
-    expect((by["root-composes-reports"]!.causes as JsonObject[]).map((cause) => cause.reason).join(" ")).toMatch(/No repository in this Assessment declares a package named spa-reports/);
+    expect((by["root-composes-reports"]!.causes as JsonObject[]).map((cause) => cause.reason).join(" ")).toMatch(/No repository in this Run declares a package named spa-reports/);
     // Relationships reports might declare are unknown; orders contributed, so a missing edge from it is a real Gap.
     expect(by["reports-declares-something"]).toMatchObject({ outcome: "indeterminate", causes: [{ reason: "reports has no Profile (failed), so its relationships are not known" }] });
     expect(by["orders-depends-on-nothing-missing"]).toMatchObject({ outcome: "gap" });

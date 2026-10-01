@@ -30,7 +30,4 @@
     .handle { display: none; }
   }
 
-  /* While dragging, the page follows the pointer without selecting text or animating. */
-  :global([data-resizing]) { cursor: col-resize; user-select: none; }
-  :global([data-resizing]) * { transition: none; }
 }

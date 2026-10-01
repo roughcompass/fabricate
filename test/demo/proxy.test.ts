@@ -53,14 +53,14 @@ describe("demo workspace proxy", () => {
     expect(keys.size).toBe(50);
   });
 
-  it.each(["/new", "/new/import", "/templates", "/templates/market-watch", "/templates/market-watch/deploy", "/applications", "/applications/app_0000000000000001", "/run/ref-market-watch/watch", "/s/abc", "/api/demo/comments"])(
+  it.each(["/new", "/applications/import", "/templates", "/templates/market-watch", "/templates/market-watch/deploy", "/applications", "/applications/app_0000000000000001", "/run/ref-market-watch/watch", "/s/abc", "/api/demo/comments"])(
     "runs on the demo path %s",
     (url) => {
       expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);
     },
   );
 
-  it.each(["/", "/sources", "/standards", "/initiatives/new", "/assessments/asm_0000000000000001", "/design-system", "/api/health", "/api/test/reset", "/templatesx", "/running", "/newsroom"])(
+  it.each(["/", "/repositories", "/standards", "/assessments/new", "/runs/asm_0000000000000001", "/design-system", "/api/health", "/api/test/reset", "/templatesx", "/running", "/newsroom"])(
     "never runs on the operator path %s",
     (url) => {
       expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false);

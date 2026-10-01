@@ -28,7 +28,7 @@ export function EvidenceList({ ids, records, assessmentId }: { ids: readonly Jso
         const record = records[id] as JsonObject;
         return (
           <li key={id}>
-            <Link href={`/assessments/${assessmentId}/evidence/${id}`} className={styles.location}>
+            <Link href={`/runs/${assessmentId}/evidence/${id}`} className={styles.location}>
               {evidenceLocation(record)}
             </Link>
             <span className={styles.source}>

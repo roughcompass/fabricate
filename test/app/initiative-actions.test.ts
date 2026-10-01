@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createInitiative, deleteInitiative, startAssessment, updateInitiative } from "@/app/(operator)/initiatives/actions";
-import type { InitiativeFormState } from "@/app/(operator)/initiatives/form-state";
+import { createInitiative, deleteInitiative, startAssessment, updateInitiative } from "@/app/(operator)/assessments/actions";
+import type { InitiativeFormState } from "@/app/(operator)/assessments/form-state";
 import { listAssessments, targetsOf } from "@/lib/assessments/assessment-records";
 import { setSourceEnabled } from "@/lib/catalog/source-records";
 import { type Db, setDb } from "@/lib/db/client";
@@ -37,7 +37,7 @@ describe("initiative Server Actions", () => {
     const location = await redirectOf(createInitiative(blank, form({ name: "Modernize", objective: "Upgrade", selectionMode: "all_enabled", standardReleasePublicIds: [first.publicId, second.publicId] })));
 
     const [initiative] = listInitiatives(db);
-    expect(location).toBe(`/initiatives/${initiative!.publicId}?notice=created`);
+    expect(location).toBe(`/assessments/${initiative!.publicId}?notice=created`);
     expect(initiative).toMatchObject({ selectionMode: "all_enabled" });
     expect(selectedReleases(db, initiative!.id).map(({ release }) => release.id).sort()).toEqual([first.id, second.id].sort());
   });
@@ -68,7 +68,7 @@ describe("initiative Server Actions", () => {
     const initiative = buildInitiative(db);
     const fields = { name: "Renamed", selectionMode: "all_enabled", lockVersion: 0 };
 
-    expect(await redirectOf(updateInitiative(initiative.publicId, blank, form(fields)))).toBe(`/initiatives/${initiative.publicId}?notice=updated`);
+    expect(await redirectOf(updateInitiative(initiative.publicId, blank, form(fields)))).toBe(`/assessments/${initiative.publicId}?notice=updated`);
     expect((await updateInitiative(initiative.publicId, blank, form(fields))).errors.base?.[0]).toMatch(/changed by someone else/);
     expect(getInitiative(db, initiative.publicId).name).toBe("Renamed");
   });
@@ -78,8 +78,8 @@ describe("initiative Server Actions", () => {
     buildAssessment(db, { initiative: assessed, sources: [buildSource(db)] });
     const fresh = buildInitiative(db);
 
-    expect(await redirectOf(deleteInitiative(form({ publicId: assessed.publicId })))).toBe(`/initiatives/${assessed.publicId}?notice=retained`);
-    expect(await redirectOf(deleteInitiative(form({ publicId: fresh.publicId })))).toBe("/?notice=deleted");
+    expect(await redirectOf(deleteInitiative(form({ publicId: assessed.publicId })))).toBe(`/assessments/${assessed.publicId}?notice=retained`);
+    expect(await redirectOf(deleteInitiative(form({ publicId: fresh.publicId })))).toBe("/assessments?notice=deleted");
     expect(listInitiatives(db).map((initiative) => initiative.id)).toEqual([assessed.id]);
   });
 
@@ -90,10 +90,10 @@ describe("initiative Server Actions", () => {
 
     const first = await redirectOf(startAssessment(initiative.publicId, { problems: [] }, form({ launchToken: token })));
     const [assessment] = listAssessments(db, initiative.id);
-    expect(first).toBe(`/assessments/${assessment!.publicId}?notice=started`);
+    expect(first).toBe(`/runs/${assessment!.publicId}?notice=started`);
     expect(targetsOf(db, assessment!.id).map((target) => target.sourceName)).toEqual(["orders"]);
 
-    expect(await redirectOf(startAssessment(initiative.publicId, { problems: [] }, form({ launchToken: token })))).toBe(`/assessments/${assessment!.publicId}?notice=already-started`);
+    expect(await redirectOf(startAssessment(initiative.publicId, { problems: [] }, form({ launchToken: token })))).toBe(`/runs/${assessment!.publicId}?notice=already-started`);
     expect(listAssessments(db, initiative.id)).toHaveLength(1);
     expect(db.select().from(jobs).all()).toHaveLength(1);
   });
@@ -104,7 +104,7 @@ describe("initiative Server Actions", () => {
     setSourceEnabled(db, orders.publicId, false);
 
     const state = await startAssessment(initiative.publicId, { problems: [] }, form({ launchToken: crypto.randomUUID() }));
-    expect(state.problems).toEqual([`orders (${orders.publicId}) is disabled. Enable it in Sources or remove it from this initiative's scope.`]);
+    expect(state.problems).toEqual([`orders (${orders.publicId}) is disabled. Enable it in Repositories or remove it from this Assessment's scope.`]);
     expect(listAssessments(db, initiative.id)).toEqual([]);
     expect(db.select().from(jobs).all()).toEqual([]);
   });

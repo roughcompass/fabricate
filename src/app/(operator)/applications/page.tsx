@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { MenuItem } from "@/components/ui/menu";
+import { MenuButton, MenuItem } from "@/components/ui/menu";
 import { OutcomeToast, param } from "@/components/ui/outcome-toast";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
@@ -44,14 +44,14 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
   return (
     <Page>
       <PageHeader
-        breadcrumbs={[{ href: "/templates", label: "Templates" }]}
         title="Applications"
-        description="Applications you created from templates in this browser. Their builds and deployments are simulated."
+        description="Applications you created or imported in this browser. Their builds and deployments are simulated."
         primaryAction={
           <ButtonLink href="/templates" variant="primary" icon="plus">
             Start with a template
           </ButtonLink>
         }
+        secondaryActions={[{ href: "/applications/import", label: "Import from BitBucket", icon: "git" }]}
         alerts={<OutcomeToast outcome={demoOutcome(param(params, "notice"))} strip={["notice"]} />}
       />
 
@@ -97,11 +97,17 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
                       trigger={{ label: "Delete application", icon: "trash" }}
                       menu={{
                         label: `Actions for ${application.name}`,
-                        items: (
-                          <MenuItem href={`/run/${application.publicId}`} icon="arrowRight" newTab>
-                            Visit application
-                          </MenuItem>
-                        ),
+                        // As on the application page, Visit application waits for the build.
+                        items:
+                          status === "ready" ? (
+                            <MenuItem href={`/run/${application.publicId}`} icon="arrowRight" newTab>
+                              Visit application
+                            </MenuItem>
+                          ) : (
+                            <MenuButton icon="arrowRight" disabled>
+                              Visit application<span className="visually-hidden"> (available when the build finishes)</span>
+                            </MenuButton>
+                          ),
                       }}
                       title={`Delete ${application.name}?`}
                       confirmLabel="Delete application"
@@ -119,12 +125,17 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
             title="No applications yet"
             icon="layers"
             action={
-              <ButtonLink href="/templates" variant="primary">
-                Browse templates
-              </ButtonLink>
+              <>
+                <ButtonLink href="/applications/import" icon="git">
+                  Import from BitBucket
+                </ButtonLink>
+                <ButtonLink href="/templates" variant="primary">
+                  Browse Salt Patterns
+                </ButtonLink>
+              </>
             }
           >
-            Deploy a template to create your first application.
+            Deploy a template or import a repository to create your first application.
           </EmptyState>
         )}
       </Panel>

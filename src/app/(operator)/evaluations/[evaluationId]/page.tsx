@@ -101,13 +101,13 @@ export default async function EvaluationPage({ params, searchParams }: { params:
       {!status.terminal && <ProgressPoller url={`/api/evaluations/${evaluation.publicId}/status`} version={status.version} />}
       <PageHeader
         breadcrumbs={[
-          { href: "/", label: "Initiatives" },
-          { href: `/initiatives/${initiative.publicId}`, label: initiative.name },
+          { href: "/assessments", label: "Assessments" },
+          { href: `/assessments/${initiative.publicId}`, label: initiative.name },
         ]}
         title={name}
         status={<Status state={evaluation.state} />}
         meta={[
-          <Link key="assessment" href={`/assessments/${assessment.publicId}`}>{`Assessment #${found.assessmentNumber}`}</Link>,
+          <Link key="assessment" href={`/runs/${assessment.publicId}`}>{`Run #${found.assessmentNumber}`}</Link>,
           countLabel(releases.length, "Release"),
           <span key="started">
             Started <RelativeTime value={evaluation.createdAt} />
@@ -120,7 +120,7 @@ export default async function EvaluationPage({ params, searchParams }: { params:
               ]
             : []),
         ]}
-        description="A diagnostic comparison of one Assessment with the Standard Releases pinned when the Evaluation started."
+        description="A diagnostic comparison of one Run with the Standard Releases pinned when the Evaluation started."
         alerts={
           <>
             <OutcomeToast outcome={evaluationOutcome(param(query, "notice"), evaluation, name)} />
@@ -130,7 +130,7 @@ export default async function EvaluationPage({ params, searchParams }: { params:
               </Alert>
             )}
             {gaps.length > 0 && (
-              <Alert tone="warning" title={`${countLabel(gaps.length, "repository", "repositories")} in the Assessment had no Profile`}>
+              <Alert tone="warning" title={`${countLabel(gaps.length, "repository", "repositories")} in the Run had no Profile`}>
                 {gaps.length === 1
                   ? "What it could contain is unknown, so Controls that depend on it are Indeterminate rather than Meets or Gap."
                   : "What they could contain is unknown, so Controls that depend on them are Indeterminate rather than Meets or Gap."}

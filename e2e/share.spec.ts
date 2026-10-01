@@ -62,9 +62,14 @@ test("opens a shared view elsewhere with its versions, theme, and comments, and 
   await other.close();
 });
 
-test("refuses an unknown share link", async ({ page, db: _db }) => {
+test("refuses an unknown share link with a way back to Applications", async ({ page, db: _db }) => {
   const response = await page.goto(`/s/${"A".repeat(43)}`);
   expect(response?.status()).toBe(404);
+  await expect(page).toHaveURL(/\/run\/unavailable$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Application not available" })).toBeVisible();
+  await expect(page.getByText("This link no longer opens an application.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Go to Applications" })).toHaveAttribute("href", "/applications");
+  await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
 });
 
 test("shares a reference deployment view, including its otherwise private comments", async ({ page, browser, db: _db }) => {

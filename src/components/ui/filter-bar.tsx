@@ -3,7 +3,7 @@
 import Form from "next/form";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
-import { buttonClass } from "./button-content";
+import { buttonProps } from "./button-content";
 import styles from "./filter-bar.module.css";
 
 const subscribeNever = () => () => {};
@@ -35,11 +35,11 @@ export function FilterBar({ action, label, filtered, clearHref, keep = {}, child
       ))}
       <div className={styles.filters}>{children}</div>
       <div className={styles.actions}>
-        <button type="submit" className={buttonClass("secondary", "sm")} hidden={hydrated}>
+        <button type="submit" {...buttonProps("secondary", "sm")} hidden={hydrated}>
           Apply
         </button>
         {filtered && (
-          <Link href={clearHref} className={buttonClass("tertiary", "sm")} scroll={false}>
+          <Link href={clearHref} {...buttonProps("tertiary", "sm")} scroll={false}>
             Clear filters
           </Link>
         )}

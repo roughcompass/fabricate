@@ -31,7 +31,7 @@ export async function verifyGit(runner = new GitRunner()): Promise<GitCapability
     throw error;
   }
   if (!capability.supported) {
-    throw new GitError("git_unsupported", `Git ${capability.version} at ${capability.executable} is unsupported; Fabricate requires ${MINIMUM_GIT_VERSION} or newer`);
+    throw new GitError("git_unsupported", `Git ${capability.version} at ${capability.executable} is unsupported; DE FabLab requires ${MINIMUM_GIT_VERSION} or newer`);
   }
   return capability;
 }

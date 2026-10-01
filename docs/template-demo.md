@@ -1,13 +1,13 @@
 # Template demo
 
-The template demo shows how a team could start an application from a pre-built solution: describe what they need or pick a template, preview it at a device's size, deploy it, and then inspect the running application with a Vercel-style toolbar. It runs inside Fabricate, behind the `demo.enabled` setting (see [Configure Fabricate](../README.md#template-demo)).
+The template demo shows how a team could start an application from a pre-built solution: describe what they need or pick a template, preview it at a device's size, deploy it, and then inspect the running application with a Vercel-style toolbar. It runs inside DE FabLab, behind the `demo.enabled` setting (see [Configure DE FabLab](../README.md#template-demo)).
 
 Everything in the demo is simulated. See [What is simulated](#what-is-simulated) before you present it.
 
 ## Before you present
 
-1. Start Fabricate with the demo on: `FABRICATE_DEMO=true npm run dev:web`, or use the hosted demo.
-2. Open **Templates** in the primary navigation. The create page, "Let's build something new", opens.
+1. Start DE FabLab with the demo on: `FABRICATE_DEMO=true npm run dev:web`, or use the hosted demo.
+2. Open **Salt Patterns** in the sidebar, then **New application**. The create page, "Let's build something new", opens. The demo adds two sections: **Applications**, for your applications and the BitBucket import, and **Salt Patterns**, for the templates.
 3. If you rehearsed in this browser, reset the demo first: on the create page, open **More actions** (⋯) and choose **Reset demo**.
 4. Turn guided hints off, so they do not appear during the talk. Open any running application, for example a reference deployment from preview mode's **Open full screen**. Open **Settings** in the toolbar and clear **Show guided hints**. The choice applies to your whole workspace.
 5. Use Chrome or Edge. Interaction timing uses the Event Timing API. Other browsers show approximate times, labeled as such.
@@ -18,8 +18,8 @@ The storyline is deterministic: templates, build stages, load order, audit resul
 
 Each beat lists what to do, then the point to make.
 
-1. **Create page.** Show the prompt bar, the quick-start chips, **Import Git Repository**, and **Build your solution**. Teams start from words, an existing repository, or a template.
-2. **Build your solution.** Keep **Payments** chosen, then select **Browse all**. The gallery, "Find your template", opens with the Payments filter applied. Templates are grouped by the portal brand they render in: Payments, Global Banking, and Other use J.P. Morgan Access; Markets uses J.P. Morgan Markets.
+1. **Create page.** Show the prompt bar, the quick-start chips, and **Build your solution**. Teams start from words, a pasted repository URL, or a template.
+2. **Build your solution.** Keep **Payments** chosen, then select **Browse all**. The gallery, "Salt Patterns", opens with the Payments filter applied. Templates are grouped by the portal brand they render in: Payments, Global Banking, and Other use J.P. Morgan Access; Markets uses J.P. Morgan Markets.
 3. **Filter and search.** Add a provider filter, collapse a group, and select **Clear**. Search for "onboarding". Point out the count of selected options in each group heading.
 4. **Template detail.** Open **Payments workspace**. Show its brand, portal, provider, and the microfrontends it is made of.
 5. **Preview mode.** Select **Preview template**. Switch between **Mobile**, **Tablet**, and **Desktop**, and turn the device to **Landscape**. The application inside the frame lays out at the real device size. Open the **Code** tab and select `microfrontends.json`: the shell is the default application, and each child microfrontend owns a route or a slot. Copy the `npx` command, which is how a developer would start locally.
@@ -32,7 +32,7 @@ Each beat lists what to do, then the point to make.
 12. **Share.** Press **L**. Copy the link and open it in a private window: the recipient sees the same versions, theme, and comment, and can reply. Their changes never affect your view.
 13. **Reset.** Back on the create page, choose **More actions**, then **Reset demo**. Your applications, comments, and share links are removed. The share link now answers not found.
 
-To import instead of deploying (beat 6), choose **Continue with BitBucket** on the create page, pick the PAY project's **payee-hub** repository, and select **Import application**. You can also paste `https://bitbucket.deweb.example/projects/PAY/repos/payee-hub` into the prompt bar.
+To import instead of deploying (beat 6), open **Applications** and select **Import from BitBucket**, pick the PAY project's **payee-hub** repository, and select **Import application**. You can also paste `https://bitbucket.deweb.example/projects/PAY/repos/payee-hub` into the create page's prompt bar, which opens the same import form.
 
 ### Toolbar shortcuts
 
@@ -60,9 +60,9 @@ A workspace can hold 25 applications, and each comment can be up to 2,000 charac
 
 ## Hosting the demo
 
-The demo is off in production. To host it for self-serve visitors, run the production image with `-e FABRICATE_DEMO=true`. To take it down, restart without the override: every demo page, running application, share link, and demo endpoint then answers not found, and nothing else in Fabricate changes. The demo's tables are separate from catalog, assessment, evaluation, and standard data, so they can stay in the database or be dropped later.
+The demo is off in production. To host it for self-serve visitors, run the production image with `-e FABRICATE_DEMO=true`. To take it down, restart without the override: every demo page, running application, share link, and demo endpoint then answers not found, and nothing else in DE FabLab changes. The demo's tables are separate from catalog, assessment, evaluation, and standard data, so they can stay in the database or be dropped later.
 
-Apply database migrations (`npm run db:migrate`) after updating Fabricate. The demo adds its own migrations, such as `0014_demo_origin.sql`, which records whether an application came from a template or an import.
+Apply database migrations (`npm run db:migrate`) after updating DE FabLab. The demo adds its own migrations, such as `0014_demo_origin.sql`, which records whether an application came from a template or an import.
 
 ## Resetting
 
@@ -72,8 +72,8 @@ A visitor resets only their own workspace, from **More actions** on the create p
 
 - **Builds and deployments.** Nothing is built or deployed. The build log is a script whose progress follows the clock, and application URLs are made up on the reserved `deweb.example` domain.
 - **BitBucket.** The projects (PAY, GB, MKT, and OPS) and their repositories are fictional, and each repository is built from a catalog template. The demo never contacts BitBucket, GitHub, or GitLab; GitHub and GitLab are shown as unavailable.
-- **The scaffold command.** `npx @deweb/create-app@latest my-app --template <slug>` is illustrative. The `@deweb/create-app` package does not exist, and Fabricate never runs the command. The files in preview mode's Code tab are generated from the catalog to show what a template would contain.
-- **Applications.** Microfrontends are components shipped with Fabricate, with deliberately planted accessibility defects and a deliberately slow interaction so the toolbar always has something real to find. The audit, timing, comments, and share links do work, on that content.
+- **The scaffold command.** `npx @deweb/create-app@latest my-app --template <slug>` is illustrative. The `@deweb/create-app` package does not exist, and DE FabLab never runs the command. The files in preview mode's Code tab are generated from the catalog to show what a template would contain.
+- **Applications.** Microfrontends are components shipped with DE FabLab, with deliberately planted accessibility defects and a deliberately slow interaction so the toolbar always has something real to find. The audit, timing, comments, and share links do work, on that content.
 - **Portal shells.** The J.P. Morgan Access and J.P. Morgan Markets shells are illustrative. Their names appear as plain-text wordmarks only; no logos or other brand assets are copied, and all data in them is fictional. Keep the demo internal.
 
 ## Regenerating previews

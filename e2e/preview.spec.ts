@@ -2,6 +2,7 @@ import type { Frame, Page } from "@playwright/test";
 import { templateBySlug } from "../src/lib/demo/catalog";
 import { waitForRegions } from "./support/demo";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
+import { expectCurrentItem } from "./support/shell";
 
 /** Preview mode (template-preview spec). */
 
@@ -23,11 +24,19 @@ async function choose(page: Page, group: string, name: string) {
   await expect(pressed(page, group)).toHaveText(name);
 }
 
+test("Section in preview mode: the Salt Patterns sub-menu marks All Salt Patterns, and the first breadcrumb is Salt Patterns", async ({ page, db: _db }) => {
+  await page.goto("/templates/market-watch/preview");
+  await expectCurrentItem(page, "Salt Patterns", "All Salt Patterns");
+  const crumbs = page.locator("[data-page-header]").getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
+  await expect(crumbs.first()).toHaveText("Salt Patterns");
+  await expect(crumbs.first()).toHaveAttribute("href", "/templates");
+});
+
 test("opens from Preview template in the same tab, on the Preview tab with the Desktop device in landscape", async ({ page, db: _db }) => {
   await page.goto("/templates/market-watch");
   await page.getByRole("link", { name: "Preview template" }).click();
   await expect(page).toHaveURL(/\/templates\/market-watch\/preview$/);
-  await expect(page).toHaveTitle("Preview Market watch · Fabricate");
+  await expect(page).toHaveTitle("Preview Market watch · DE FabLab");
   await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Market watch" })).toHaveAttribute("href", "/templates/market-watch");
 
   await expect(page.getByRole("navigation", { name: "Preview mode" }).getByRole("link", { name: "Preview" })).toHaveAttribute("aria-current", "page");

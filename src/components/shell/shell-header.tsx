@@ -1,4 +1,4 @@
-import { buttonClass } from "@/components/ui/button-content";
+import { buttonProps } from "@/components/ui/button-content";
 import { Icon } from "@/components/ui/icon";
 import { SidebarToggle } from "./sidebar-toggle";
 import styles from "./shell-header.module.css";
@@ -23,7 +23,7 @@ export function ShellHeader({ title }: { title?: string }) {
         </span>
         {/* A native popover invoker, so the drawer opens without JavaScript. */}
         <span className={styles.openNavigation}>
-          <button type="button" popoverTarget={SIDEBAR_ID} className={buttonClass("tertiary", "md", true)} aria-label="Open navigation" title="Open navigation">
+          <button type="button" popoverTarget={SIDEBAR_ID} {...buttonProps("tertiary", "md", true)} aria-label="Open navigation" title="Open navigation">
             <Icon name="menu" />
           </button>
         </span>

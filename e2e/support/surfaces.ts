@@ -15,6 +15,7 @@ import { manifest } from "../../test/support/profiles";
 import { publishStandard, seedAssessment, selectReleases } from "../../test/support/scenarios";
 import { gitRepo } from "./fixtures";
 import { BASELINE_CONTROLS, ORDERS, SERVICE_CONTROLS, evaluate } from "./results";
+import { paths } from "./paths";
 
 /**
  * Every product surface, seeded with data that exercises it: the operator
@@ -56,14 +57,14 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
   for (const name of ["payments", "ledger"]) gitRepo(path.join(sourcesDir, name));
 
   return [
-    ["01-initiatives", "/"],
-    ["02-initiative", `/initiatives/${initiative.publicId}`],
-    ["02-initiative-new", "/initiatives/new"],
-    ["02-initiative-edit", `/initiatives/${initiative.publicId}/edit`],
-    ["03-sources", "/sources"],
-    ["03-source-new", "/sources/new"],
-    ["03-source-edit", `/sources/${sources[0]!.publicId}/edit`],
-    ["03-import", `/sources/import?directory=${encodeURIComponent(sourcesDir)}`],
+    ["01-assessments", paths.assessments],
+    ["02-initiative", paths.assessment(initiative.publicId)],
+    ["02-initiative-new", paths.newAssessment],
+    ["02-initiative-edit", paths.assessmentEdit(initiative.publicId)],
+    ["03-sources", paths.repositories],
+    ["03-source-new", paths.newRepository],
+    ["03-source-edit", paths.repositoryEdit(sources[0]!.publicId)],
+    ["03-import", `${paths.importRepositories}?directory=${encodeURIComponent(sourcesDir)}`],
     ["04-standards", "/standards"],
     ["04-standard", `/standards/${baselineStandard.publicId}`],
     ["04-standard-published", `/standards/${servicesStandard.publicId}`],
@@ -72,16 +73,16 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["04-draft", `/standards/${baselineStandard.publicId}/draft`],
     ["04-publish", `/standards/${baselineStandard.publicId}/publish`],
     ["04-release", `/standards/${servicesStandard.publicId}/releases/${services.publicId}`],
-    ["05-assessment", `/assessments/${assessment.publicId}`],
+    ["05-assessment", paths.run(assessment.publicId)],
     ["06-profile", `/profiles/${orders.publicId}`],
-    ["06-evidence", `/assessments/${assessment.publicId}/evidence/${evidenceId}`],
-    ["07-map", `/assessments/${assessment.publicId}/map`],
-    ["07-map-nodes", `/assessments/${assessment.publicId}/map?view=nodes`],
+    ["06-evidence", paths.evidence(assessment.publicId, evidenceId)],
+    ["07-map", paths.runMap(assessment.publicId)],
+    ["07-map-nodes", `${paths.runMap(assessment.publicId)}?view=nodes`],
     ["08-evaluation", `/evaluations/${evaluation.publicId}`],
     ["08-finding-gap", `/evaluations/${evaluation.publicId}/findings/${gap.publicId}`],
     ["08-finding-indeterminate", `/evaluations/${evaluation.publicId}/findings/${indeterminate.publicId}`],
     ["09-design-system", "/design-system"],
-    ["09-not-found", "/assessments/asm_doesnotexist0000"],
+    ["09-not-found", "/runs/asm_doesnotexist0000"],
   ];
 }
 
@@ -106,8 +107,8 @@ export async function seedDemoSurfaces(page: Page, context: BrowserContext, db: 
   return [
     ["10-create", "/new"],
     ["10-create-markets", "/new?brand=markets"],
-    ["10-import", "/new?provider=bitbucket"],
-    ["10-import-form", "/new/import?project=PAY&repository=payee-hub"],
+    ["10-import", "/applications/import"],
+    ["10-import-form", "/applications/import/PAY/payee-hub"],
     ["11-gallery", "/templates"],
     ["11-gallery-filtered", "/templates?brand=payments&brand=markets&provider=de-web"],
     ["12-template", "/templates/payments-workspace"],

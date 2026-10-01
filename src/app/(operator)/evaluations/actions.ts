@@ -6,7 +6,7 @@ import { NotFoundError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
 import { EvaluationStartError, startEvaluation } from "@/lib/evaluations/start";
 import { text } from "@/lib/web/form-data";
-import type { LaunchState } from "../initiatives/form-state";
+import type { LaunchState } from "../assessments/form-state";
 
 /** Evaluates an existing Assessment against the Releases the Initiative selects now; resubmitting returns the same Evaluation. */
 export async function startEvaluationAction(initiativePublicId: string, assessmentPublicId: string, _previous: LaunchState, formData: FormData): Promise<LaunchState> {

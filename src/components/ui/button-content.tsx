@@ -10,6 +10,16 @@ export function buttonClass(variant: ButtonVariant = "secondary", size: ButtonSi
   return [styles.button, styles[variant], styles[size], iconOnly && styles.iconOnly].filter(Boolean).join(" ");
 }
 
+/**
+ * A button's class and its variant as `data-variant`, for every element styled
+ * as a button. The attribute lets checks find each page's primary action
+ * without depending on generated class names (design-system spec, "Each
+ * page's primary action uses the primary button").
+ */
+export function buttonProps(variant: ButtonVariant = "secondary", size: ButtonSize = "md", iconOnly = false): { className: string; "data-variant": ButtonVariant } {
+  return { className: buttonClass(variant, size, iconOnly), "data-variant": variant };
+}
+
 /** A button's icon and label; an icon-only button takes its accessible name from `label`. */
 export function ButtonContent({ icon, size = "md", children }: { icon?: IconName; size?: ButtonSize; children?: React.ReactNode }) {
   return (

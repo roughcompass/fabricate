@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { type ButtonSize, type ButtonVariant, ButtonContent, buttonClass } from "./button-content";
+import { type ButtonSize, type ButtonVariant, ButtonContent, buttonProps } from "./button-content";
 import type { IconName } from "./icon";
 import { SubmitButton } from "./submit-button";
 import styles from "./button.module.css";
 
-export { type ButtonSize, type ButtonVariant, buttonClass } from "./button-content";
+export { type ButtonSize, type ButtonVariant, buttonClass, buttonProps } from "./button-content";
 
 interface CommonProps {
   variant?: ButtonVariant;
@@ -19,7 +19,7 @@ type ButtonLinkProps = CommonProps & Omit<React.ComponentProps<typeof Link>, "cl
 export function ButtonLink({ variant, size = "md", icon, label, children, ...props }: ButtonLinkProps) {
   const iconOnly = !children;
   return (
-    <Link className={buttonClass(variant, size, iconOnly)} aria-label={iconOnly ? label : undefined} title={iconOnly ? label : undefined} {...props}>
+    <Link {...buttonProps(variant, size, iconOnly)} aria-label={iconOnly ? label : undefined} title={iconOnly ? label : undefined} {...props}>
       <ButtonContent icon={icon} size={size}>
         {children}
       </ButtonContent>
@@ -32,7 +32,7 @@ type ButtonProps = CommonProps & Omit<React.ButtonHTMLAttributes<HTMLButtonEleme
 export function Button({ variant, size = "md", icon, label, children, type = "button", ...props }: ButtonProps) {
   const iconOnly = !children;
   return (
-    <button type={type} className={buttonClass(variant, size, iconOnly)} aria-label={iconOnly ? label : undefined} title={iconOnly ? label : undefined} {...props}>
+    <button type={type} {...buttonProps(variant, size, iconOnly)} aria-label={iconOnly ? label : undefined} title={iconOnly ? label : undefined} {...props}>
       <ButtonContent icon={icon} size={size}>
         {children}
       </ButtonContent>

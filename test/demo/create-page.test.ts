@@ -20,7 +20,7 @@ describe("prompt bar", () => {
   });
 
   it("opens the import of a repository in the demo's BitBucket, with or without a scheme", () => {
-    const expected = { kind: "redirect", href: "/new/import?project=PAY&repository=payee-hub" };
+    const expected = { kind: "redirect", href: "/applications/import/PAY/payee-hub" };
     expect(routePrompt(`https://${BITBUCKET_HOST}/projects/PAY/repos/payee-hub`)).toEqual(expected);
     expect(routePrompt(`${BITBUCKET_HOST}/projects/PAY/repos/payee-hub/browse`)).toEqual(expected);
   });

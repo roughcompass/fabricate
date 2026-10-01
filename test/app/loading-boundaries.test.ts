@@ -7,19 +7,19 @@ import { skeletonFor } from "@/components/shell/skeleton-routes";
 describe("navigation skeletons", () => {
   it.each([
     ["/", "list"],
-    ["/sources", "list"],
-    ["/sources/import", "list"],
+    ["/repositories", "list"],
+    ["/repositories/import", "list"],
     ["/standards", "list"],
-    ["/initiatives/new", "form"],
-    ["/initiatives/ini_abc/edit", "form"],
-    ["/sources/new", "form"],
-    ["/sources/src_abc/edit", "form"],
+    ["/assessments/new", "form"],
+    ["/assessments/ini_abc/edit", "form"],
+    ["/repositories/new", "form"],
+    ["/repositories/src_abc/edit", "form"],
     ["/standards/new", "form"],
     ["/standards/std_abc/edit", "form"],
-    ["/initiatives/ini_abc", "detail"],
-    ["/assessments/asm_abc", "detail"],
-    ["/assessments/asm_abc/map", "detail"],
-    ["/assessments/asm_abc/evidence/ev_1", "detail"],
+    ["/assessments/ini_abc", "detail"],
+    ["/runs/asm_abc", "detail"],
+    ["/runs/asm_abc/map", "detail"],
+    ["/runs/asm_abc/evidence/ev_1", "detail"],
     ["/evaluations/evl_abc", "detail"],
     ["/evaluations/evl_abc/findings/fnd_1", "detail"],
     ["/profiles/prf_abc", "detail"],
@@ -27,7 +27,8 @@ describe("navigation skeletons", () => {
     ["/standards/std_abc/draft", "detail"],
     ["/standards/std_abc/releases/rel_1", "detail"],
     ["/new", "list"],
-    ["/new/import", "form"],
+    ["/applications/import", "list"],
+    ["/applications/import/PAY/payee-hub", "form"],
     ["/templates", "list"],
     ["/templates/market-watch", "detail"],
     ["/templates/market-watch/deploy", "form"],
@@ -47,7 +48,7 @@ describe("navigation skeletons", () => {
 
   it("has a not-found page for each section", () => {
     expect(fs.existsSync(path.resolve("src/app/not-found.tsx")), "root").toBe(true);
-    for (const section of ["initiatives", "assessments", "evaluations", "profiles", "sources", "standards", "new", "templates", "applications"]) {
+    for (const section of ["assessments", "runs", "evaluations", "profiles", "repositories", "standards", "new", "templates", "applications"]) {
       expect(fs.existsSync(path.resolve("src/app/(operator)", section, "not-found.tsx")), section).toBe(true);
     }
   });

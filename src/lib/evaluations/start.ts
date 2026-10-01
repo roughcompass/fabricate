@@ -51,13 +51,13 @@ export function startEvaluation(db: Executor, initiativePublicId: string, assess
 
       const assessment = getAssessment(tx, assessmentPublicId);
       const problems: string[] = [];
-      if (assessment.initiativeId !== initiative.id) problems.push("The Assessment belongs to a different Initiative.");
-      if (assessment.state !== "complete" && assessment.state !== "complete_with_issues") problems.push(`The Assessment is ${assessment.state.replaceAll("_", " ")}; evaluate a finished Assessment.`);
-      if (profilesOf(tx, assessment.id).length === 0) problems.push("The Assessment has no Repository Profile, so there is no current-state evidence to evaluate.");
-      if (!mapOf(tx, assessment.id)) problems.push("The Assessment has no Relationship Map.");
+      if (assessment.initiativeId !== initiative.id) problems.push("The Run belongs to a different Assessment.");
+      if (assessment.state !== "complete" && assessment.state !== "complete_with_issues") problems.push(`The Run is ${assessment.state.replaceAll("_", " ")}; evaluate a finished Assessment.`);
+      if (profilesOf(tx, assessment.id).length === 0) problems.push("The Run has no Repository Profile, so there is no current-state evidence to evaluate.");
+      if (!mapOf(tx, assessment.id)) problems.push("The Run has no Relationship Map.");
 
       const selected = selectedReleases(tx, initiative.id);
-      if (selected.length === 0) problems.push("Select at least one published Standard Release for the Initiative.");
+      if (selected.length === 0) problems.push("Select at least one published Standard Release for the Assessment.");
       for (const { release, standard } of selected) {
         const label = releaseLabel(standard, release);
         let document: JsonObject;

@@ -11,6 +11,7 @@ import { jobHandlers } from "../../src/lib/jobs/registry";
 import { drainJobs } from "../../src/lib/jobs/worker";
 import { profileDocument, profilesOf } from "../../src/lib/profiles/profile-records";
 import { FLEET_DATABASE, FLEET_ENV, FLEET_ROOT } from "./env";
+import { paths } from "../support/paths";
 
 /**
  * The synthetic fleet, assessed and evaluated through the product: import the
@@ -57,24 +58,24 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
   const run = () => drainJobs(db, jobHandlers(db, config));
 
   await test.step("register only file:// sources under fleet/", async () => {
-    await page.goto("/sources/import");
+    await page.goto(paths.importRepositories);
     await page.getByLabel("Absolute path").fill(FLEET_ROOT);
     await page.getByRole("button", { name: "Preview" }).click();
     for (const name of REPOSITORIES) await expect(page.getByRole("checkbox", { name: `Import ${name}` })).toBeChecked();
-    await page.getByRole("button", { name: `Add ${REPOSITORIES.length} Sources` }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Sources" })).toBeVisible();
+    await page.getByRole("button", { name: `Add ${REPOSITORIES.length} Repositories` }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Repositories" })).toBeVisible();
     const sources = listSources(db);
     expect(sources.map((source) => source.name).sort()).toEqual(REPOSITORIES);
     for (const source of sources) expect(source.cloneUrl).toBe(`file://${FLEET_ROOT}/${source.name}`);
   });
 
   await test.step("run a full baseline Assessment", async () => {
-    await page.goto("/initiatives/new");
+    await page.goto(paths.newAssessment);
     await page.getByLabel("Name").fill("Fleet baseline");
     await page.getByLabel("Objective").fill("Establish the current state of every fleet repository");
-    await page.getByRole("button", { name: "Create Initiative" }).click();
-    await page.getByRole("button", { name: "Start Assessment" }).click();
-    await expect(toast(page, "Assessment #1 was started.")).toBeVisible();
+    await page.getByRole("button", { name: "Create Assessment" }).click();
+    await page.getByRole("button", { name: "Start Run" }).click();
+    await expect(toast(page, "Run #1 was started.")).toBeVisible();
     await run();
     await expect(header(page)).toContainText("Complete");
     const assessment = listAssessments(db, listInitiatives(db)[0]!.id)[0]!;
@@ -157,12 +158,12 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
 
   await test.step("run a diagnostic Evaluation of the baseline Assessment", async () => {
     const initiative = listInitiatives(db)[0]!;
-    await page.goto(`/initiatives/${initiative.publicId}/edit`);
+    await page.goto(paths.assessmentEdit(initiative.publicId));
     const releases = page.getByRole("group", { name: "Standard Releases" });
     await releases.getByLabel("Fleet engineering baseline v1").check();
     await releases.getByLabel("Fleet relationships v1").check();
     await page.getByRole("button", { name: "Save changes" }).click();
-    await page.getByRole("table", { name: "Assessment history" }).getByRole("button", { name: "Start Evaluation" }).click();
+    await page.getByRole("table", { name: "Run history" }).getByRole("button", { name: "Start Evaluation" }).click();
     await expect(toast(page, "Evaluation #1 was started.")).toBeVisible();
     await run();
     await expect(header(page)).toContainText("Complete");

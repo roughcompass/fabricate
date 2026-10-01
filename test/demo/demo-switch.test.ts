@@ -38,15 +38,17 @@ describe("demo switch off", () => {
     setConfig(withOverrides(getConfig(), { demo: { enabled: true } }));
   });
 
-  it("renders the not-found page for the create page, the import form, the gallery, a template, its deploy form, and the Applications list", async () => {
+  it("renders the not-found page for the create page, the import page and form, the gallery, a template, its deploy form, and the Applications list", async () => {
     const { default: Create } = await import("@/app/(operator)/new/page");
-    const { default: Import } = await import("@/app/(operator)/new/import/page");
+    const { default: ImportList } = await import("@/app/(operator)/applications/import/page");
+    const { default: Import } = await import("@/app/(operator)/applications/import/[project]/[repository]/page");
     const { default: Gallery } = await import("@/app/(operator)/templates/page");
     const { default: Template } = await import("@/app/(operator)/templates/[templateSlug]/page");
     const { default: Deploy } = await import("@/app/(operator)/templates/[templateSlug]/deploy/page");
     const { default: Applications } = await import("@/app/(operator)/applications/page");
     expect(await redirectOf(Create({ searchParams: Promise.resolve({}) }))).toBe("not-found");
-    expect(await redirectOf(Import({ searchParams: Promise.resolve({ project: "PAY", repository: "payee-hub" }) }))).toBe("not-found");
+    expect(await redirectOf(ImportList({ searchParams: Promise.resolve({}) }))).toBe("not-found");
+    expect(await redirectOf(Import({ params: Promise.resolve({ project: "PAY", repository: "payee-hub" }) }))).toBe("not-found");
     expect(await redirectOf(Gallery({ searchParams: Promise.resolve({}) }))).toBe("not-found");
     expect(await redirectOf(Template({ params: Promise.resolve({ templateSlug: "market-watch" }) }))).toBe("not-found");
     expect(await redirectOf(Deploy({ params: Promise.resolve({ templateSlug: "market-watch" }) }))).toBe("not-found");
@@ -86,7 +88,8 @@ describe("demo switch off", () => {
     const { resetDemo } = await import("@/app/(operator)/templates/actions");
     const { skipBuildAction, deleteApplicationAction } = await import("@/app/(operator)/applications/actions");
     const { createApplicationAction } = await import("@/app/(operator)/templates/[templateSlug]/deploy/actions");
-    const { submitPrompt, importRepositoryAction } = await import("@/app/(operator)/new/actions");
+    const { submitPrompt } = await import("@/app/(operator)/new/actions");
+    const { importRepositoryAction } = await import("@/app/(operator)/applications/import/actions");
     const form = new FormData();
     form.set("application", applicationId);
     expect(await redirectOf(resetDemo())).toBe("not-found");

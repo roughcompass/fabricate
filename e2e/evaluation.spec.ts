@@ -32,7 +32,7 @@ test("summarizes each Release separately and filters Findings by Release, outcom
   const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
   await page.goto(`/evaluations/${evaluation.publicId}`);
   await expect(header(page)).toContainText("Complete");
-  await expect(page.getByText("1 repository in the Assessment had no Profile")).toBeVisible();
+  await expect(page.getByText("1 repository in the Run had no Profile")).toBeVisible();
 
   const summary = page.getByRole("table", { name: "Summary by Release" });
   await expect(summary.getByRole("row").filter({ hasText: "Engineering baseline v1" })).toContainText("Gaps found");
@@ -117,7 +117,7 @@ test("explains a Gap: expected state, observed facts, evidence, reasoning, and g
   // The outcome appears once, in the header.
   await expect(header(page)).toContainText("Gap");
   await expect(page.locator("main").getByText("Gap", { exact: true })).toHaveCount(1);
-  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Initiatives", initiative.name, "Evaluation #1"]);
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Assessments", initiative.name, "Evaluation #1"]);
   const result = page.getByRole("region", { name: "Result" });
   await expect(result).toContainText("The Control applies, and the evidence shows the expected condition does not hold.");
   await expect(result.getByRole("link", { name: "orders Profile" })).toBeVisible();

@@ -110,7 +110,7 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
     <Page>
       <PageHeader
         breadcrumbs={[
-          { href: "/templates", label: "Templates" },
+          { href: "/templates", label: "Salt Patterns" },
           { href: `/templates/${template.slug}`, label: template.title },
         ]}
         title={template.title}

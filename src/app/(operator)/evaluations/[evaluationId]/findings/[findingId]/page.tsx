@@ -78,7 +78,7 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
         <span>{`${String(subject.name)} (no Profile)`}</span>
       )
     ) : map ? (
-      <Link href={`/assessments/${assessment.publicId}/map`}>Relationship Map</Link>
+      <Link href={`/runs/${assessment.publicId}/map`}>Relationship Map</Link>
     ) : (
       <span>Relationship Map (not available)</span>
     );
@@ -87,8 +87,8 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
     <Page>
       <PageHeader
         breadcrumbs={[
-          { href: "/", label: "Initiatives" },
-          { href: `/initiatives/${initiative.publicId}`, label: initiative.name },
+          { href: "/assessments", label: "Assessments" },
+          { href: `/assessments/${initiative.publicId}`, label: initiative.name },
           { href: `/evaluations/${evaluation.publicId}`, label: `Evaluation #${number}` },
         ]}
         title={String(control.title)}
@@ -161,7 +161,7 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
       </Section>
 
       {guidance && (
-        <Section title="Diagnostic guidance" description="This guidance is diagnostic: Fabricate does not act on it, or check that following it would change this Finding.">
+        <Section title="Diagnostic guidance" description="This guidance is diagnostic: DE FabLab does not act on it, or check that following it would change this Finding.">
           <p>{String(guidance.text)}</p>
         </Section>
       )}

@@ -29,6 +29,12 @@
   [hidden] { display: none !important; }
 }
 
+@layer components {
+  /* While the sidebar is dragged, the whole shell follows the pointer without selecting text or animating. */
+  [data-resizing] { cursor: col-resize; user-select: none; }
+  [data-resizing] * { transition: none; }
+}
+
 @layer tokens {
   :root { color-scheme: light dark; }
 

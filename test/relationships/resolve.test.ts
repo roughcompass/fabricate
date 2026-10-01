@@ -67,7 +67,7 @@ describe("package relationships", () => {
     const map = resolved([await ui(), other, await app()]);
 
     expect(view(map, (edge) => edge.reference.identifier.name === "@acme/ui" && edge.type === "package_dependency")).toEqual(["app -package_dependency/ambiguous-> [ui, ui-fork]"]);
-    expect(edgeFor(map, "package_dependency", { name: "@acme/ui" }).reason).toBe("2 repositories in this Assessment declare a package named @acme/ui");
+    expect(edgeFor(map, "package_dependency", { name: "@acme/ui" }).reason).toBe("2 repositories in this Run declare a package named @acme/ui");
   });
 
   it("resolves consumers of a workspace package to the repository that contains it, which uses the package internally", async () => {
@@ -129,7 +129,7 @@ describe("composition, iframe, and runtime-contract relationships", () => {
     expect(edge).toMatchObject({ rule: "composition.federation-name", details: { mechanism: "module-federation", name: "mfAdmin", url: "http://127.0.0.1:9101/remoteEntry.js" } });
     expect(new Set(edge.evidence.map((id) => map.evidence[id]!.path))).toEqual(new Set(["webpack.config.cjs"]));
     expect(new Set(edge.evidence.map((id) => map.evidence[id]!.commit)).size).toBe(2);
-    expect(edgeFor(map, "composition", { mechanism: "module-federation", name: "mfBilling" }).reason).toMatch(/No repository in this Assessment declares a Module Federation remote named mfBilling, and its URL cannot be matched/);
+    expect(edgeFor(map, "composition", { mechanism: "module-federation", name: "mfBilling" }).reason).toMatch(/No repository in this Run declares a Module Federation remote named mfBilling, and its URL cannot be matched/);
   });
 
   it("marks a federation name declared by two remotes ambiguous", async () => {

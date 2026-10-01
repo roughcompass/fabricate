@@ -11,8 +11,8 @@ import { THEME_COOKIE, parseTheme } from "@/lib/web/theme";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { default: "Fabricate", template: "%s · Fabricate" },
-  applicationName: "Fabricate",
+  title: { default: "DE FabLab", template: "%s · DE FabLab" },
+  applicationName: "DE FabLab",
   icons: { icon: "/icon.svg" },
 };
 

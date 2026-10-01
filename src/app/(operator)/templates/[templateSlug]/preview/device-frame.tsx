@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ButtonContent, buttonClass } from "@/components/ui/button-content";
+import { ButtonContent, buttonProps } from "@/components/ui/button-content";
 import styles from "./preview.module.css";
 
 /**
@@ -48,7 +48,7 @@ export function FullScreenLink({ href, prefix }: { href: string; prefix: string 
       href={href}
       target="_blank"
       rel="noopener"
-      className={buttonClass("secondary", "sm")}
+      {...buttonProps("secondary", "sm")}
       onClick={(event) => {
         const frame = document.querySelector<HTMLIFrameElement>("[data-preview-frame]");
         try {

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { listSources } from "../src/lib/catalog/source-records";
 import { expect, expectNoHorizontalOverflow, gitRepo, test } from "./support/fixtures";
+import { paths } from "./support/paths";
 
 test("previews a directory without changing the catalog and imports exactly the selected candidates", async ({ page, db, sourcesDir }) => {
   gitRepo(path.join(sourcesDir, "orders"));
@@ -9,7 +10,7 @@ test("previews a directory without changing the catalog and imports exactly the 
   fs.mkdirSync(path.join(sourcesDir, "notes"));
   gitRepo(path.join(sourcesDir, "fleet-kit"));
 
-  await page.goto("/sources/import");
+  await page.goto(paths.importRepositories);
   await page.getByLabel("Absolute path").fill(sourcesDir);
   await page.getByRole("button", { name: "Preview" }).click();
 
@@ -20,21 +21,21 @@ test("previews a directory without changing the catalog and imports exactly the 
   await expect(candidates).not.toContainText("fleet-kit");
   expect(listSources(db)).toEqual([]);
 
-  await expect(page.getByRole("button", { name: "Add 2 Sources" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Add 2 Repositories" })).toBeEnabled();
   await page.getByRole("checkbox", { name: "Import billing" }).uncheck();
-  await page.getByRole("button", { name: "Add 1 Source" }).click();
+  await page.getByRole("button", { name: "Add 1 Repository" }).click();
 
-  await expect(page.getByRole("region", { name: "Notifications" }).getByText("Added 1 Source.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Notifications" }).getByText("Added 1 Repository.")).toBeVisible();
   expect(listSources(db).map((source) => [source.name, source.cloneUrl])).toEqual([["orders", `file://${fs.realpathSync(path.join(sourcesDir, "orders"))}`]]);
 
-  await page.goto(`/sources/import?directory=${encodeURIComponent(sourcesDir)}`);
+  await page.goto(`${paths.importRepositories}?directory=${encodeURIComponent(sourcesDir)}`);
   await expect(page.getByText("Already registered as orders")).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Import orders" })).toBeDisabled();
   await expect(page.getByRole("checkbox", { name: "Import orders" })).not.toBeChecked();
 });
 
 test("rejects directories outside the allowed roots", async ({ page, db: _db }) => {
-  await page.goto("/sources/import?directory=%2F");
+  await page.goto(`${paths.importRepositories}?directory=%2F`);
 
   await expect(page.getByText("is outside the allowed source roots")).toBeVisible();
   await expect(page.getByLabel("Absolute path")).toHaveAttribute("aria-invalid", "true");
@@ -47,7 +48,7 @@ test("the import preview stays usable at mobile width", async ({ page, sourcesDi
   fs.symlinkSync("/usr", path.join(sourcesDir, "escape-to-a-directory-outside-the-allowed-roots"));
   await page.setViewportSize({ width: 375, height: 812 });
 
-  await page.goto(`/sources/import?directory=${encodeURIComponent(sourcesDir)}`);
+  await page.goto(`${paths.importRepositories}?directory=${encodeURIComponent(sourcesDir)}`);
   await expect(page.getByRole("checkbox", { name: "Import a-repository-with-a-rather-long-directory-name" })).toBeChecked();
   await expectNoHorizontalOverflow(page);
 });
@@ -55,16 +56,16 @@ test("the import preview stays usable at mobile width", async ({ page, sourcesDi
 test("selects every candidate at once and will not add an empty selection", async ({ page, db, sourcesDir }) => {
   gitRepo(path.join(sourcesDir, "orders"));
   gitRepo(path.join(sourcesDir, "billing"));
-  await page.goto(`/sources/import?directory=${encodeURIComponent(sourcesDir)}`);
+  await page.goto(`${paths.importRepositories}?directory=${encodeURIComponent(sourcesDir)}`);
 
   const all = page.getByRole("checkbox", { name: "Select every importable repository" });
   await expect(all).toBeChecked();
   await all.uncheck();
   await expect(page.getByRole("checkbox", { name: "Import orders" })).not.toBeChecked();
-  await expect(page.getByRole("button", { name: "Add 0 Sources" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Add 0 Repositories" })).toBeDisabled();
   await page.getByRole("checkbox", { name: "Import orders" }).check();
   await expect(all).toHaveJSProperty("indeterminate", true);
-  await expect(page.getByRole("button", { name: "Add 1 Source" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Add 1 Repository" })).toBeEnabled();
   expect(listSources(db)).toEqual([]);
 });
 
@@ -73,9 +74,9 @@ test.describe("without JavaScript", () => {
 
   test("asks for a selection instead of adding nothing", async ({ page, db, sourcesDir }) => {
     gitRepo(path.join(sourcesDir, "orders"));
-    await page.goto(`/sources/import?directory=${encodeURIComponent(sourcesDir)}`);
+    await page.goto(`${paths.importRepositories}?directory=${encodeURIComponent(sourcesDir)}`);
     await page.getByRole("checkbox", { name: "Import orders" }).uncheck();
-    await page.getByRole("button", { name: "Add selected Sources" }).click();
+    await page.getByRole("button", { name: "Add selected Repositories" }).click();
 
     await expect(page.getByRole("alert")).toContainText("Select at least one repository to add.");
     await expect(page.getByText(/^Added/)).toHaveCount(0);

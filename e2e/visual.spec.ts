@@ -3,6 +3,7 @@ import path from "node:path";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOverlappingContent, test } from "./support/fixtures";
 import { setView, waitForRegions } from "./support/demo";
 import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
+import { paths } from "./support/paths";
 
 /**
  * Captures every product surface at desktop and mobile width, in the light and
@@ -65,18 +66,18 @@ test("captures the shell's sidebar states in both themes", async ({ page, db: _d
 
     await page.setViewportSize(VIEWPORTS[0]!);
     await page.context().addCookies([{ name: "fabricate-sidebar", value: "hidden", url: baseURL! }]);
-    await page.goto("/");
+    await page.goto(paths.assessments);
     await expect(page.locator("#sidebar")).toBeHidden();
     await capture("sidebar-hidden-desktop", theme);
     await page.context().clearCookies({ name: "fabricate-sidebar" });
 
-    await page.goto("/");
+    await page.goto(paths.assessments);
     await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Show all sections" }).click();
-    await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Standards", exact: true })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Salt Patterns", exact: true })).toBeVisible();
     await capture("section-menu-desktop", theme);
 
     await page.setViewportSize(VIEWPORTS[1]!);
-    await page.goto("/sources");
+    await page.goto(paths.repositories);
     await page.getByRole("button", { name: "Open navigation" }).click();
     await expect(page.locator("#sidebar")).toBeVisible();
     await capture("drawer-open-mobile", theme);

@@ -24,16 +24,29 @@ const shellOf = (tree: ReactNode) => elements(tree).find((element) => "data-side
 // operator-interface/page-patterns spec: the application shell, and the
 // sidebar that can be resized and hidden.
 describe("application shell", () => {
-  it("shows only Initiatives, Sources, and Standards when the demo is disabled", () => {
+  it("shows only Assessments when the demo is disabled", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
-    expect(visibleSections(nav.props.demo as boolean).map((section) => section.label)).toEqual(["Initiatives", "Sources", "Standards"]);
+    expect(visibleSections(nav.props.demo as boolean).map((section) => section.label)).toEqual(["Assessments"]);
   });
 
-  it("adds Templates, opening the create page, when the demo is enabled", () => {
+  it("adds Applications and Salt Patterns when the demo is enabled, each opening its list", () => {
     const nav = elements(AppShell({ theme: "system", demo: true, children: null })).find((element) => element.type === SidebarNav)!;
     const sections = visibleSections(nav.props.demo as boolean);
-    expect(sections.map((section) => section.label)).toEqual(["Initiatives", "Sources", "Standards", "Templates"]);
-    expect(sections.at(-1)!.items[0]!.href).toBe("/new");
+    expect(sections.map((section) => [section.label, section.items[0]!.href])).toEqual([
+      ["Assessments", "/assessments"],
+      ["Applications", "/applications"],
+      ["Salt Patterns", "/templates"],
+    ]);
+  });
+
+  it("groups Repositories and Standards under Assessments, each group after the first with a heading", () => {
+    const [assessments] = visibleSections(false);
+    expect(assessments!.groups.map((group) => group.label)).toEqual([undefined, "Repositories", "Standards"]);
+  });
+
+  it("names the product DE FabLab and links its mark to the Assessments list", () => {
+    const brand = elements(AppShell({ theme: "system", children: null })).find((element) => element.props["aria-label"] === "DE FabLab home")!;
+    expect(brand.props.href).toBe("/assessments");
   });
 
   it("renders a shown, 256px sidebar by default", () => {

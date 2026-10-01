@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Alert } from "@/components/ui/alert";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ButtonLink, Button } from "@/components/ui/button";
-import { buttonClass } from "@/components/ui/button-content";
+import { buttonProps } from "@/components/ui/button-content";
 import { CodeBlock } from "@/components/ui/code-block";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -156,7 +156,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
               </Row>
               <Row label="With icons">
                 <Button variant="primary" icon="plus">
-                  New Initiative
+                  New Assessment
                 </Button>
                 <ButtonLink href="#buttons" icon="edit">
                   Edit
@@ -169,10 +169,10 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 <Button variant="primary" disabled>
                   Disabled
                 </Button>
-                <button type="button" className={buttonClass("primary")} data-pending aria-busy>
+                <button type="button" {...buttonProps("primary")} data-pending aria-busy>
                   Pending
                 </button>
-                <button type="button" className={buttonClass("secondary")} data-pending aria-busy>
+                <button type="button" {...buttonProps("secondary")} data-pending aria-busy>
                   Pending
                 </button>
               </Row>
@@ -217,8 +217,8 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 columns
                 selected={["all_enabled"]}
                 choices={[
-                  { value: "all_enabled", label: "All enabled Sources", description: "Every Source enabled when an Assessment starts." },
-                  { value: "explicit", label: "Selected Sources", description: "Exactly the Sources chosen below." },
+                  { value: "all_enabled", label: "All enabled Repositories", description: "Every Repository enabled when a Run starts." },
+                  { value: "explicit", label: "Selected Repositories", description: "Exactly the Repositories chosen below." },
                 ]}
               />
               <ChoiceGroup
@@ -326,8 +326,8 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
               <Panel title="Panel" description="With a header, a body, and a footer." actions={<Button size="sm">Action</Button>} footer={<Button size="sm" variant="primary">Save changes</Button>}>
                 <p>Panel content.</p>
               </Panel>
-              <Panel title="Danger zone" tone="danger" footer={<Button size="sm" variant="danger" icon="trash">Delete Initiative</Button>}>
-                <p>Only Initiatives without Assessments can be deleted.</p>
+              <Panel title="Danger zone" tone="danger" footer={<Button size="sm" variant="danger" icon="trash">Delete Assessment</Button>}>
+                <p>Only Assessments without Runs can be deleted.</p>
               </Panel>
             </>
           )}
@@ -341,7 +341,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
             <>
               <DescriptionList
                 items={[
-                  ["Repositories", "6 selected Sources"],
+                  ["Repositories", "6 selected Repositories"],
                   ["Commit", <ShortValue key="commit" value={DIGEST} label="commit" />],
                   ["Finished", null],
                 ]}
@@ -349,7 +349,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
               <DescriptionList
                 layout="columns"
                 items={[
-                  ["Scope", "6 Sources"],
+                  ["Scope", "6 Repositories"],
                   ["Detector release", <Tag key="release">0.1.0</Tag>],
                   ["Started", <RelativeTime key="started" value={ago(2 * HOUR)} />],
                 ]}
@@ -359,7 +359,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 layout="columns"
                 items={[
                   ["Owner", "Platform engineering"],
-                  ["Sources", "6 selected"],
+                  ["Repositories", "6 selected"],
                   ["Created", <RelativeTime key="created" value={ago(30 * HOUR)} />],
                 ]}
               />
@@ -424,7 +424,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
           description="A title, one sentence, and the action that fills the area."
           render={() => (
             <Panel flush>
-              <EmptyState title="No Sources yet" icon="git" action={<Button variant="primary" icon="plus">Add Source</Button>}>
+              <EmptyState title="No Repositories yet" icon="git" action={<Button variant="primary" icon="plus">New Repository</Button>}>
                 Register a Git repository or import a local directory.
               </EmptyState>
             </Panel>
@@ -462,12 +462,12 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
             <>
               <Panel flush>
                 <Table
-                  label={`Sources, ${theme}`}
+                  label={`Repositories, ${theme}`}
                   head={
                     <>
                       <Th>Name</Th>
                       <Th>Status</Th>
-                      <Th align="numeric">Assessments</Th>
+                      <Th align="numeric">Runs</Th>
                       <Th align="actions" hidden>
                         Actions
                       </Th>
@@ -484,7 +484,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                     <Td label="Status">
                       <Status state="enabled" />
                     </Td>
-                    <Td label="Assessments" align="numeric">
+                    <Td label="Runs" align="numeric">
                       3
                     </Td>
                     <Td align="actions">
@@ -508,7 +508,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                     <Td label="Status">
                       <Status state="disabled" />
                     </Td>
-                    <Td label="Assessments" align="numeric">
+                    <Td label="Runs" align="numeric">
                       0
                     </Td>
                     <Td align="actions" />
@@ -518,7 +518,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
               <Panel flush>
                 <Table label={`Empty table, ${theme}`} head={<Th>Name</Th>}>
                   <EmptyRow columns={1}>
-                    <EmptyState title="No disabled Sources">Every Source is enabled.</EmptyState>
+                    <EmptyState title="No disabled Repositories">Every Repository is enabled.</EmptyState>
                   </EmptyRow>
                 </Table>
               </Panel>
@@ -573,7 +573,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
           description="Tabs switch views of one page and show counts; a toggle group picks one of a few choices; breadcrumbs link a record's ancestors."
           render={() => (
             <>
-              <Tabs label="Filter Sources">
+              <Tabs label="Filter Repositories">
                 <TabLink href="#tabs" active count={7}>
                   All
                 </TabLink>
@@ -597,9 +597,9 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
               />
               <Breadcrumbs
                 items={[
-                  { href: "#tabs", label: "Initiatives" },
+                  { href: "#tabs", label: "Assessments" },
                   { href: "#tabs", label: "Checkout platform migration" },
-                  { href: "#tabs", label: "Assessment #1" },
+                  { href: "#tabs", label: "Run #1" },
                 ]}
               />
             </>
@@ -763,7 +763,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
           single
           render={() => (
             <Row label="Triggers">
-              <ConfirmDialog action={confirmDemo} trigger={{ label: "Cancel Assessment", icon: "slash" }} title="Cancel Assessment #3?" confirmLabel="Cancel Assessment" tone="danger">
+              <ConfirmDialog action={confirmDemo} trigger={{ label: "Cancel Run", icon: "slash" }} title="Cancel Run #3?" confirmLabel="Cancel Run" tone="danger">
                 <p>Repositories that have not finished stop at their next check. Completed Profiles are kept.</p>
               </ConfirmDialog>
               <ConfirmDialog action={confirmDemo} trigger={{ label: "Publish v2", icon: "lock", variant: "primary" }} title="Publish Engineering baseline v2?" confirmLabel="Publish v2">
@@ -795,28 +795,28 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 alerts={false}
                 headingLevel={3}
                 breadcrumbs={[
-                  { href: "#page-header", label: "Initiatives" },
+                  { href: "#page-header", label: "Assessments" },
                   { href: "#page-header", label: "Checkout platform migration" },
                 ]}
-                title="Assessment #3"
+                title="Run #3"
                 status={<Status state="complete_with_issues" />}
-                meta={[<span key="scope">6 Sources</span>, <RelativeTime key="started" value={ago(2 * HOUR)} />, <Tag key="release">0.1.0</Tag>]}
+                meta={[<span key="scope">6 Repositories</span>, <RelativeTime key="started" value={ago(2 * HOUR)} />, <Tag key="release">0.1.0</Tag>]}
                 description="Each repository is pinned to a commit and analyzed without running its code."
                 secondaryActions={[{ href: "#page-header", label: "Edit", icon: "edit" }]}
                 primaryAction={
                   <Button variant="primary" icon="play">
-                    Start Assessment
+                    Start Evaluation
                   </Button>
                 }
               />
               <PageHeader
                 alerts={false}
                 headingLevel={3}
-                title="Sources"
-                secondaryActions={[{ href: "#page-header", label: "Import directory", icon: "folder" }]}
+                title="Repositories"
+                secondaryActions={[{ href: "#page-header", label: "Import Repositories", icon: "folder" }]}
                 primaryAction={
                   <Button variant="primary" icon="plus">
-                    New Source
+                    New Repository
                   </Button>
                 }
               />

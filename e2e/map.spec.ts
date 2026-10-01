@@ -4,6 +4,7 @@ import { manifest } from "../test/support/profiles";
 import { seedAssessment } from "../test/support/scenarios";
 import type { Db } from "../src/lib/db/client";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
+import { paths } from "./support/paths";
 
 /** A map with resolved, ambiguous, unresolved, and out-of-scope edges, and one coverage gap. */
 async function seedMap(db: Db) {
@@ -28,7 +29,7 @@ const row = (page: Page, text: string) => relationships(page).getByRole("row").f
 
 test("reviews every resolution state and the coverage gap", async ({ page, db }) => {
   const assessment = await seedMap(db);
-  await page.goto(`/assessments/${assessment.publicId}`);
+  await page.goto(paths.run(assessment.publicId));
   await page.getByRole("link", { name: /Review the Relationship Map/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Relationship Map" })).toBeVisible();
   // One alert names each gap; no separate gaps table repeats it.
@@ -45,10 +46,10 @@ test("reviews every resolution state and the coverage gap", async ({ page, db })
 
   const ambiguous = row(page, "@acme/ui").filter({ hasText: "Ambiguous" });
   await expect(ambiguous.getByRole("list", { name: "Candidates" }).getByRole("listitem")).toHaveText(["ui-a", "ui-b"]);
-  await expect(ambiguous).toContainText("2 repositories in this Assessment declare a package named @acme/ui");
+  await expect(ambiguous).toContainText("2 repositories in this Run declare a package named @acme/ui");
 
   await expect(row(page, "left-pad")).toContainText("Unresolved");
-  await expect(row(page, "left-pad")).toContainText("No repository in this Assessment produces left-pad");
+  await expect(row(page, "left-pad")).toContainText("No repository in this Run produces left-pad");
   await expect(row(page, "left-pad")).toContainText("A repository that was not assessed might resolve it.");
 
   await expect(row(page, "legacy-ui")).toContainText("Out of scope");
@@ -60,7 +61,7 @@ test("reviews every resolution state and the coverage gap", async ({ page, db })
 
 test("filters relationships as soon as a filter changes and announces the result", async ({ page, db }) => {
   const assessment = await seedMap(db);
-  await page.goto(`/assessments/${assessment.publicId}/map`);
+  await page.goto(paths.runMap(assessment.publicId));
   const form = page.getByRole("form", { name: "Filter relationships" });
   const status = page.getByRole("status").filter({ hasText: "relationship" });
   const total = await relationships(page).locator("tbody tr").count();
@@ -102,7 +103,7 @@ test("filters relationships as soon as a filter changes and announces the result
 
 test("opens a shared Nodes address on the Nodes tab", async ({ page, db }) => {
   const assessment = await seedMap(db);
-  await page.goto(`/assessments/${assessment.publicId}/map?view=nodes`);
+  await page.goto(`${paths.runMap(assessment.publicId)}?view=nodes`);
   await expect(page.getByRole("table", { name: "Nodes" })).toBeVisible();
   await expect(relationships(page)).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Relationship Map views" }).getByRole("link", { name: /^Nodes/ })).toHaveAttribute("aria-current", "page");
@@ -110,7 +111,7 @@ test("opens a shared Nodes address on the Nodes tab", async ({ page, db }) => {
 
 test("navigates from a relationship to its evidence with the keyboard", async ({ page, db }) => {
   const assessment = await seedMap(db);
-  await page.goto(`/assessments/${assessment.publicId}/map?state=out_of_scope`);
+  await page.goto(`${paths.runMap(assessment.publicId)}?state=out_of_scope`);
   const evidence = row(page, "legacy-ui").getByRole("link", { name: /^package\.json / });
   await evidence.focus();
   await page.keyboard.press("Enter");
@@ -122,7 +123,7 @@ test("navigates from a relationship to its evidence with the keyboard", async ({
 test("the map stays readable at mobile width", async ({ page, db }) => {
   const assessment = await seedMap(db);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto(`/assessments/${assessment.publicId}/map`);
+  await page.goto(paths.runMap(assessment.publicId));
   await expect(relationships(page)).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await expectNoOverlappingContent(page);

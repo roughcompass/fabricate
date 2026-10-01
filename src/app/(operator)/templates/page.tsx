@@ -14,7 +14,7 @@ import { requireDemo } from "@/lib/demo/guard";
 import { TemplateBadges } from "./template-badges";
 import styles from "./templates.module.css";
 
-export const metadata: Metadata = { title: "Find your template" };
+export const metadata: Metadata = { title: "Salt Patterns" };
 
 export default async function TemplatesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   requireDemo();
@@ -27,7 +27,7 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
 
   return (
     <Page>
-      <PageHeader title="Find your template" description="Jumpstart your app development process with pre-built solutions from DE Web and our community." />
+      <PageHeader title="Salt Patterns" description="Jumpstart your app development process with pre-built solutions from DE Web and our community." />
 
       <Form key={query.search} action="/templates" scroll={false} className={styles.search} role="search" aria-label="Search templates">
         {query.brands.map((brand) => (
@@ -66,7 +66,7 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
 
         <section className={styles.results} aria-labelledby="templates-results">
           <h2 id="templates-results" className="visually-hidden">
-            Templates
+            Salt Patterns
           </h2>
           <p className={styles.count} role="status">{`Showing ${templates.length} of ${countLabel(TEMPLATES.length, "template")}`}</p>
 

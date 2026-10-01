@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { type ButtonSize, type ButtonVariant, ButtonContent, buttonClass } from "./button-content";
+import { type ButtonSize, type ButtonVariant, ButtonContent, buttonProps } from "./button-content";
 import type { IconName } from "./icon";
 
 interface SubmitButtonProps {
@@ -34,7 +34,7 @@ export function SubmitButton({ children, variant = "primary", size = "md", icon,
       type="submit"
       name={name}
       value={value}
-      className={buttonClass(variant, size, iconOnly)}
+      {...buttonProps(variant, size, iconOnly)}
       disabled={pending || disabled}
       aria-busy={pending || undefined}
       data-pending={pending || undefined}

@@ -3,7 +3,7 @@
 import Form from "next/form";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
-import { buttonClass } from "./button-content";
+import { buttonProps } from "./button-content";
 import { formStyles } from "./form";
 import { Icon } from "./icon";
 import styles from "./filter-rail.module.css";
@@ -66,7 +66,7 @@ export function FilterRail({ action, label, title = label, headingLevel = 2, gro
           <div className={styles.head}>
             <Heading className={styles.title}>{title}</Heading>
             {filtered && (
-              <Link href={clearHref} className={buttonClass("tertiary", "sm")} scroll={false}>
+              <Link href={clearHref} {...buttonProps("tertiary", "sm")} scroll={false}>
                 Clear
               </Link>
             )}
@@ -101,7 +101,7 @@ export function FilterRail({ action, label, title = label, headingLevel = 2, gro
             );
           })}
           <div className={styles.actions}>
-            <button type="submit" className={buttonClass("secondary", "sm")} hidden={hydrated}>
+            <button type="submit" {...buttonProps("secondary", "sm")} hidden={hydrated}>
               Apply
             </button>
           </div>

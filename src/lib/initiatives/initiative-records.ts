@@ -91,7 +91,7 @@ export function deleteInitiative(db: Executor, publicId: string): void {
     const initiative = getInitiative(tx, publicId);
     const assessed = tx.select({ id: assessments.id }).from(assessments).where(eq(assessments.initiativeId, initiative.id)).limit(1).get();
     if (assessed) {
-      throw new ValidationError([{ field: "base", message: `${initiative.name} has Assessments and is retained so their history stays reviewable` }]);
+      throw new ValidationError([{ field: "base", message: `${initiative.name} has Runs and is retained so their history stays reviewable` }]);
     }
     tx.delete(initiatives).where(eq(initiatives.id, initiative.id)).run();
   });
@@ -142,8 +142,8 @@ export function selectedReleases(db: Executor, initiativeId: number): { release:
 }
 
 export function scopeLabel(initiative: Initiative, selectedCount: number): string {
-  if (initiative.selectionMode === "all_enabled") return "All enabled Sources";
-  return `${selectedCount} selected ${selectedCount === 1 ? "Source" : "Sources"}`;
+  if (initiative.selectionMode === "all_enabled") return "All enabled Repositories";
+  return `${selectedCount} selected ${selectedCount === 1 ? "Repository" : "Repositories"}`;
 }
 
 function normalize(input: InitiativeInput): Required<InitiativeInput> {

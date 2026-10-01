@@ -14,7 +14,7 @@ import styles from "../templates.module.css";
 
 export async function generateMetadata({ params }: { params: Promise<{ templateSlug: string }> }): Promise<Metadata> {
   const template = templateBySlug((await params).templateSlug);
-  return { title: template ? `${template.title} · Templates` : "Template not found" };
+  return { title: template ? `${template.title} · Salt Patterns` : "Template not found" };
 }
 
 export default async function TemplatePage({ params }: { params: Promise<{ templateSlug: string }> }) {
@@ -26,7 +26,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
   return (
     <Page>
       <PageHeader
-        breadcrumbs={[{ href: "/templates", label: "Templates" }]}
+        breadcrumbs={[{ href: "/templates", label: "Salt Patterns" }]}
         title={template.title}
         description={template.description}
         extraActions={

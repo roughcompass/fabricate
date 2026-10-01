@@ -31,7 +31,7 @@ test("creates a sandbox application with the defaults and watches its build fini
   test.setTimeout(60_000);
   await page.goto("/templates/payments-workspace");
   await page.getByRole("link", { name: "Deploy template" }).click();
-  await expect(page).toHaveTitle("Deploy Payments workspace · Fabricate");
+  await expect(page).toHaveTitle("Deploy Payments workspace · DE FabLab");
   await expect(page.getByLabel("Application name")).toHaveValue("Payments workspace");
   await expect(page.getByLabel("Sandbox")).toBeChecked();
   await expect(page.getByLabel("BitBucket project")).toBeHidden();
@@ -44,7 +44,7 @@ test("creates a sandbox application with the defaults and watches its build fini
   await expect(page.getByText("Available when the build finishes")).toBeVisible();
   await expect(log(page)).toContainText("Queued");
   await expect(log(page)).toContainText("Cloning template");
-  await expectCurrentItem(page, "Templates", "Applications");
+  await expectCurrentItem(page, "Applications", "All Applications");
 
   await expect(page.getByText("Ready", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
   const visit = page.getByRole("link", { name: /Visit application/ });

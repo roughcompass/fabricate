@@ -21,7 +21,7 @@ export default async function DeployPage({ params }: { params: Promise<{ templat
     <Page width="form">
       <PageHeader
         breadcrumbs={[
-          { href: "/templates", label: "Templates" },
+          { href: "/templates", label: "Salt Patterns" },
           { href: `/templates/${template.slug}`, label: template.title },
         ]}
         title={`Deploy ${template.title}`}

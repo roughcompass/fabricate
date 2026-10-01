@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionButton, ButtonLink } from "@/components/ui/button";
-import { buttonClass } from "@/components/ui/button-content";
+import { buttonProps } from "@/components/ui/button-content";
 import { CopyButton } from "@/components/ui/copy-button";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -88,7 +88,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ ap
             </ButtonLink>
           ) : (
             <span className={styles.pendingAction}>
-              <button type="button" className={buttonClass("primary")} disabled aria-describedby="visit-pending">
+              <button type="button" {...buttonProps("primary")} disabled aria-describedby="visit-pending">
                 <Icon name="arrowRight" size={16} />
                 Visit application
               </button>

@@ -1,5 +1,5 @@
 import { NotFoundPage } from "@/components/shell/system-page";
 
 export default function NotFound() {
-  return <NotFoundPage noun="Evaluation" listHref="/" listLabel="Initiatives" />;
+  return <NotFoundPage noun="Evaluation" listHref="/assessments" listLabel="Assessments" />;
 }

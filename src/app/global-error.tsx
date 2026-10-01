@@ -3,7 +3,7 @@
 import "./globals.css";
 import Link from "next/link";
 import { SystemPage } from "@/components/shell/system-page";
-import { buttonClass } from "@/components/ui/button-content";
+import { buttonProps } from "@/components/ui/button-content";
 
 /**
  * A failure in the root layout itself. It replaces the whole document, so it
@@ -14,23 +14,23 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
   return (
     <html lang="en">
       <body>
-        <title>Something went wrong · Fabricate</title>
+        <title>Something went wrong · DE FabLab</title>
         <main>
           <SystemPage
             icon="alert"
             title="Something went wrong"
             actions={
               <>
-                <button type="button" className={buttonClass("primary")} onClick={() => retry()}>
+                <button type="button" {...buttonProps("primary")} onClick={() => retry()}>
                   Try again
                 </button>
-                <Link href="/" className={buttonClass("secondary")}>
-                  Go to Initiatives
+                <Link href="/assessments" {...buttonProps("secondary")}>
+                  Go to Assessments
                 </Link>
               </>
             }
           >
-            <p>Fabricate could not be shown. If trying again does not work, the server log has the details.</p>
+            <p>DE FabLab could not be shown. If trying again does not work, the server log has the details.</p>
             {error.digest && <p>{`Reference ${error.digest}`}</p>}
           </SystemPage>
         </main>

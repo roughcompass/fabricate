@@ -92,8 +92,12 @@
   .checkboxOnly { display: inline-flex; align-items: center; }
   .checkboxOnly .checkbox { margin: 0; }
 
-  /* Choice cards: a radio or check box with its label and description. */
-  .fieldset { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: 0; border: 0; }
+  /*
+   * Choice cards: a radio or check box with its label and description. A group
+   * a link opens at, such as an Assessment's Standard Releases, clears the
+   * sticky header.
+   */
+  .fieldset { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: 0; border: 0; scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
   .legend { padding: 0; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium); }
   .choices { display: grid; gap: var(--space-2); }
   .columns { grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--size-label)), 1fr)); }
