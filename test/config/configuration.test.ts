@@ -14,6 +14,7 @@ const shared: Settings = {
   repositoryStorage: "storage/repositories",
   gitCredentialHelper: null,
   analysis: { maxBlobBytes: 1024, maxFiles: 10, maxTotalBytes: 4096 },
+  demo: { enabled: false },
 };
 
 describe("configuration", () => {
@@ -123,5 +124,52 @@ describe("configuration", () => {
       const config = loadConfig({ appRoot: process.cwd(), environment, env: {} });
       expect(config.deniedRoots).toContain(path.join(path.dirname(process.cwd()), "fleet-kit"));
     }
+  });
+
+  describe("template demo switch", () => {
+    it("is on in development and test, and off in production, by default", () => {
+      const committed = (environment: "development" | "test" | "production") => loadConfig({ appRoot: process.cwd(), environment, env: {} }).demoEnabled;
+
+      expect(committed("development")).toBe(true);
+      expect(committed("test")).toBe(true);
+      expect(committed("production")).toBe(false);
+    });
+
+    it.each([
+      ["true", true],
+      ["TRUE", true],
+      ["1", true],
+      ["false", false],
+      ["0", false],
+    ])("accepts FABRICATE_DEMO=%s", (value, expected) => {
+      expect(load({ shared }, { FABRICATE_DEMO: value }).demoEnabled).toBe(expected);
+      expect(load({ shared: { ...shared, demo: { enabled: true } } }, { FABRICATE_DEMO: value }).demoEnabled).toBe(expected);
+    });
+
+    it("lets the override enable the demo in production", () => {
+      const config = loadConfig({ appRoot: process.cwd(), environment: "production", env: { FABRICATE_DEMO: "true" } });
+      expect(config.demoEnabled).toBe(true);
+    });
+
+    it("ignores a blank override", () => {
+      expect(load({ shared }, { FABRICATE_DEMO: " " }).demoEnabled).toBe(false);
+    });
+
+    it.each([["yes"], ["on"], ["2"]])("rejects FABRICATE_DEMO=%s", (value) => {
+      expect(() => load({ shared }, { FABRICATE_DEMO: value })).toThrow(/FABRICATE_DEMO must be true, false, 1, or 0/);
+    });
+
+    it("rejects a missing, non-boolean, or extended demo setting", () => {
+      const { demo: _omitted, ...missing } = shared;
+      expect(() => load({ shared: missing })).toThrow(ConfigurationError);
+      expect(() => load({ shared: { ...shared, demo: { enabled: "yes" } } })).toThrow(ConfigurationError);
+      expect(() => load({ shared: { ...shared, demo: { enabled: true, extra: 1 } } })).toThrow(ConfigurationError);
+    });
+
+    it("survives overrides of other settings", () => {
+      const enabled = load({ shared: { ...shared, demo: { enabled: true } } });
+      expect(withOverrides(enabled, { workerConcurrency: 1 }).demoEnabled).toBe(true);
+      expect(withOverrides(enabled, { demo: { enabled: false } }).demoEnabled).toBe(false);
+    });
   });
 });

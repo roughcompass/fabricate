@@ -64,8 +64,23 @@ Environment variables override the file:
 | `analysis.maxBlobBytes` | `FABRICATE_MAX_BLOB_BYTES` | 1048576 |
 | `analysis.maxFiles` | `FABRICATE_MAX_FILES` | 4000 |
 | `analysis.maxTotalBytes` | `FABRICATE_MAX_TOTAL_BYTES` | 67108864 |
+| `demo.enabled` | `FABRICATE_DEMO` | `false`; `true` in development and test |
 
-List variables use the platform path separator, which is `:` on macOS and Linux. Run `npm run config` to print the effective settings.
+List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_DEMO` accepts `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+
+### Template demo
+
+The template demo is an interactive demonstration of starting an application from a template, inside Fabricate. Its deployments are simulated: the demo never builds or deploys code, runs a repository's commands, or contacts BitBucket or any other service. When `demo.enabled` is on, the primary navigation shows Templates. When it is off, every demo page, running application, share link, and demo endpoint answers not found, and no other part of Fabricate changes.
+
+To run the demo locally, start the web server with the switch on, then open Templates:
+
+```sh
+FABRICATE_DEMO=true npm run dev:web
+```
+
+For a hosted demo that self-serve visitors can reach, run the production image with `-e FABRICATE_DEMO=true`. To turn the demo off again, restart without the override.
+
+Each visitor gets an anonymous workspace, which is tied to their browser by an httpOnly cookie and needs no sign-in. A workspace holds the visitor's applications, comments, and share links, and other visitors cannot see it except through a share link. Fabricate stores only a digest of the cookie. A workspace can hold 25 applications, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted, together with their applications, comments, and share links. The demo's tables are separate from catalog, assessment, evaluation, and standard data. See [docs/template-demo.md](docs/template-demo.md) for the presenter script.
 
 ### Source roots
 

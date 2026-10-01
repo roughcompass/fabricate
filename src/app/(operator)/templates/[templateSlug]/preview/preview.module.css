@@ -1,0 +1,46 @@
+@layer pages {
+  /* The control row: tabs, device and orientation, full screen, the command, and Deploy. */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .controlGroup { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+
+  .command { display: inline-flex; align-items: center; gap: var(--space-1); max-width: 100%; min-height: var(--size-control-sm); padding: 0 var(--space-1) 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-subtle); }
+  .commandText { overflow: hidden; font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); text-overflow: ellipsis; white-space: nowrap; }
+
+  /* The device frame, centered, with its size above it. */
+  .stage { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+  .size { display: flex; justify-content: center; gap: var(--space-3); color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+  .scale { font-family: var(--font-family-sans); }
+  .viewport { display: flex; justify-content: center; width: 100%; padding: var(--space-6) 0; overflow: hidden; border-radius: var(--radius-xl); background: var(--color-bg-muted); }
+  .device { position: relative; flex: none; overflow: hidden; border: 1px solid var(--color-border-strong); border-radius: var(--radius-lg); background: var(--color-bg); box-shadow: var(--shadow-menu); }
+  .frame { position: absolute; top: 0; left: 0; border: 0; transform-origin: top left; }
+
+  /* The Code tab: the file tree beside the selected file. */
+  .code { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+  .tree { padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+  .treeList { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  .treeList .treeList { padding-left: var(--space-3); }
+  .folder { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+  .file {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-caption);
+    text-decoration-line: none;
+
+    &:hover { background: var(--color-bg-muted); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+    &[aria-current="true"] { background: var(--color-accent-subtle); }
+  }
+  .fileName { overflow-wrap: anywhere; }
+  .source { min-width: 0; }
+
+  @media (max-width: 767px) {
+    .code { grid-template-columns: minmax(0, 1fr); }
+    .viewport { padding: var(--space-3) 0; }
+  }
+}

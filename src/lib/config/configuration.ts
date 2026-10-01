@@ -35,6 +35,11 @@ const settingsSchema = z.strictObject({
     maxFiles: positiveInteger,
     maxTotalBytes: positiveInteger,
   }),
+  // The template demo: off by default, on in development and test. A hosted
+  // demo turns it on with FABRICATE_DEMO=true.
+  demo: z.strictObject({
+    enabled: z.boolean(),
+  }),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -60,6 +65,7 @@ export const ENV_KEYS = {
   maxBlobBytes: "FABRICATE_MAX_BLOB_BYTES",
   maxFiles: "FABRICATE_MAX_FILES",
   maxTotalBytes: "FABRICATE_MAX_TOTAL_BYTES",
+  demoEnabled: "FABRICATE_DEMO",
 } as const;
 
 export interface AnalysisBudgets {
@@ -83,6 +89,8 @@ export interface FabricateConfig {
   readonly repositoryStorage: string;
   readonly gitCredentialHelper: string | null;
   readonly analysis: AnalysisBudgets;
+  /** Whether the template demo's pages, running applications, and endpoints exist. */
+  readonly demoEnabled: boolean;
   /** The settings this configuration was built from, before mandatory additions. */
   readonly settings: Settings;
 }
@@ -120,7 +128,7 @@ export function withOverrides(
   config: FabricateConfig,
   overrides: Partial<Omit<Settings, "analysis">> & { analysis?: Partial<Settings["analysis"]> },
 ): FabricateConfig {
-  const settings = { ...config.settings, ...overrides, analysis: { ...config.settings.analysis, ...overrides.analysis } };
+  const settings = { ...config.settings, ...overrides, analysis: { ...config.settings.analysis, ...overrides.analysis }, demo: { ...config.settings.demo, ...overrides.demo } };
   return buildConfig(settings, { appRoot: config.appRoot, environment: config.environment });
 }
 
@@ -170,6 +178,7 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
     repositoryStorage: resolve(settings.repositoryStorage),
     gitCredentialHelper: settings.gitCredentialHelper,
     analysis: { ...settings.analysis },
+    demoEnabled: settings.demo.enabled,
     settings,
   });
 }
@@ -188,6 +197,14 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     return Number(value);
   };
   const list = (key: string) => text(key)?.split(path.delimiter).filter((entry) => entry.trim() !== "");
+  const boolean = (key: string) => {
+    const value = text(key)?.toLowerCase();
+    if (value === undefined) return undefined;
+    if (value === "true" || value === "1") return true;
+    if (value === "false" || value === "0") return false;
+    throw new ConfigurationError(`${key} must be true, false, 1, or 0 (got ${JSON.stringify(env[key])})`);
+  };
+  const demo: Record<string, unknown> = { ...(settings.demo as Record<string, unknown>) };
 
   const assignments: [Record<string, unknown>, string, unknown][] = [
     [result, "allowedRoots", list(ENV_KEYS.allowedRoots)],
@@ -201,9 +218,11 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [analysis, "maxBlobBytes", integer(ENV_KEYS.maxBlobBytes)],
     [analysis, "maxFiles", integer(ENV_KEYS.maxFiles)],
     [analysis, "maxTotalBytes", integer(ENV_KEYS.maxTotalBytes)],
+    [demo, "enabled", boolean(ENV_KEYS.demoEnabled)],
   ];
   for (const [target, key, value] of assignments) if (value !== undefined) target[key] = value;
   result.analysis = analysis;
+  if (Object.keys(demo).length > 0) result.demo = demo;
   return result;
 }
 

@@ -1,0 +1,78 @@
+/*
+ * Runtime tokens for the template demo's portal shells (design.md,
+ * decisions 15 and 20). The portals are application content, not operator
+ * interface, so they have their own palettes: one for the J.P. Morgan Access
+ * shell (Payments, Global Banking, and Other) and one for the J.P. Morgan
+ * Markets shell. Both are restrained: neutral surfaces, text, and borders,
+ * with one muted accent for selection and indicators. Names mirror the
+ * interface token families with an rt- prefix, and only stylesheets under
+ * src/demo/runtime/ may use them.
+ *
+ * Every portal root carries data-demo-portal, data-shell, and data-theme. The
+ * tokens are declared on that root so light-dark() resolves against the
+ * running application's own theme, not the operator's. Text, links, and
+ * controls meet WCAG contrast in both themes (test/demo/runtime-contrast.test.ts);
+ * --rt-color-defect-faint is the one deliberate exception, planted for the
+ * accessibility audit.
+ */
+@layer runtime-tokens {
+  [data-demo-portal] {
+    --rt-font-family-brand: "Helvetica Neue", Arial, system-ui, sans-serif;
+    --rt-font-family-heading: var(--rt-font-family-brand);
+    --rt-font-family-display: Georgia, "Times New Roman", serif;
+    --rt-size-header: 56px;
+    --rt-size-nav: 248px;
+    --rt-size-side: 320px;
+    --rt-size-chart: 180px;
+    --rt-size-content: 1280px;
+    --rt-size-menu: 280px;
+    --rt-radius-panel: 6px;
+    --rt-radius-control: 4px;
+    --rt-shadow-panel: 0 1px 2px light-dark(rgb(16 24 40 / 0.05), rgb(0 0 0 / 0.4));
+    --rt-shadow-menu: 0 8px 24px light-dark(rgb(16 24 40 / 0.14), rgb(0 0 0 / 0.6));
+
+    --rt-color-positive: light-dark(#1b7340, #5fd394);
+    --rt-color-negative: light-dark(#b3261e, #ff8a80);
+    --rt-color-skeleton: light-dark(rgb(16 24 40 / 0.08), rgb(255 255 255 / 0.08));
+    --rt-color-backdrop: light-dark(rgb(16 24 40 / 0.4), rgb(0 0 0 / 0.6));
+  }
+
+  /* J.P. Morgan Access: a white header, a left navigation, and a muted blue for selection. */
+  [data-demo-portal][data-shell="access"] {
+    --rt-color-surface: light-dark(#f4f5f7, #121417);
+    --rt-color-panel: light-dark(#ffffff, #1a1d21);
+    --rt-color-header: light-dark(#ffffff, #16191c);
+    --rt-color-on-header: light-dark(#1b1f24, #e7e9ec);
+    --rt-color-on-header-muted: light-dark(#545b64, #a4abb4);
+    --rt-color-nav: light-dark(#ffffff, #16191c);
+    --rt-color-text: light-dark(#1b1f24, #e7e9ec);
+    --rt-color-muted: light-dark(#545b64, #a4abb4);
+    --rt-color-border: light-dark(#dde1e6, #2e3339);
+    --rt-color-field-border: light-dark(#7b838d, #6f7781);
+    --rt-color-accent: light-dark(#285a9c, #8ab4f0);
+    --rt-color-on-accent: light-dark(#ffffff, #0d1b2e);
+    --rt-color-highlight: light-dark(#eaf1fa, #1f2a38);
+    --rt-color-defect-faint: light-dark(#c5cad1, #3b4047);
+  }
+
+  /* J.P. Morgan Markets: two rows of top navigation and a dark title band; near-black bars in the dark theme. */
+  [data-demo-portal][data-shell="markets"] {
+    --rt-color-surface: light-dark(#f6f7f9, #0e0f11);
+    --rt-color-panel: light-dark(#ffffff, #17191c);
+    --rt-color-header: light-dark(#ffffff, #08090a);
+    --rt-color-on-header: light-dark(#15191e, #eceef1);
+    --rt-color-on-header-muted: light-dark(#5a616b, #a3a9b1);
+    --rt-color-subbar: light-dark(#f6f7f9, #111214);
+    --rt-color-band: light-dark(#13294b, #0b2a5b);
+    --rt-color-on-band: #ffffff;
+    --rt-color-on-band-muted: light-dark(#c9d3e1, #bccbe2);
+    --rt-color-text: light-dark(#15191e, #eceef1);
+    --rt-color-muted: light-dark(#565d66, #a3a9b1);
+    --rt-color-border: light-dark(#dfe3e8, #2a2e33);
+    --rt-color-field-border: light-dark(#7a828c, #6e7680);
+    --rt-color-accent: light-dark(#1d5299, #8fb6ee);
+    --rt-color-on-accent: light-dark(#ffffff, #0a1830);
+    --rt-color-highlight: light-dark(#e8eff8, #1c2735);
+    --rt-color-defect-faint: light-dark(#c8ccd2, #383c42);
+  }
+}

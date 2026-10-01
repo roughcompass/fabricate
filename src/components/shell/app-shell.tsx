@@ -8,8 +8,9 @@ import styles from "./app-shell.module.css";
 /**
  * The frame around every page: a skip link, the sticky header with the product
  * mark, the primary navigation, and the theme control, and the main region.
+ * Templates appears in the navigation only while the template demo is enabled.
  */
-export function AppShell({ theme, children }: { theme: Theme; children: React.ReactNode }) {
+export function AppShell({ theme, demo = false, children }: { theme: Theme; demo?: boolean; children: React.ReactNode }) {
   return (
     <>
       <a className={styles.skip} href="#main">
@@ -29,6 +30,11 @@ export function AppShell({ theme, children }: { theme: Theme; children: React.Re
             </NavLink>
             <NavLink href="/sources">Sources</NavLink>
             <NavLink href="/standards">Standards</NavLink>
+            {demo && (
+              <NavLink href="/new" section={["/templates", "/applications"]}>
+                Templates
+              </NavLink>
+            )}
           </nav>
           <div className={styles.end}>
             <ThemeSwitcher current={theme} />

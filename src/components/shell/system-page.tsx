@@ -24,8 +24,11 @@ export function SystemPage({ icon, title, children, actions }: SystemPageProps) 
   );
 }
 
-/** A record that does not exist, with a link to the list of its section. */
-export function NotFoundPage({ noun, listHref, listLabel }: { noun: string; listHref: string; listLabel: string }) {
+/**
+ * A record that does not exist, with a link to the list of its section.
+ * `sentenceNoun` is the noun mid-sentence, for nouns that are not capitalized domain terms.
+ */
+export function NotFoundPage({ noun, listHref, listLabel, sentenceNoun }: { noun: string; listHref: string; listLabel: string; sentenceNoun?: string }) {
   return (
     <SystemPage
       icon="help"
@@ -36,7 +39,7 @@ export function NotFoundPage({ noun, listHref, listLabel }: { noun: string; list
         </Link>
       }
     >
-      <p>{`This ${noun === "Page" ? "page" : noun} does not exist. It may have been deleted, or the address may be mistyped.`}</p>
+      <p>{`This ${sentenceNoun ?? (noun === "Page" ? "page" : noun)} does not exist. It may have been deleted, or the address may be mistyped.`}</p>
     </SystemPage>
   );
 }

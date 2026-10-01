@@ -1,0 +1,98 @@
+@layer components {
+  .rail { min-width: 0; }
+
+  /* Narrow screens: a disclosure above the results, the same toggle as a Disclosure. */
+  .summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--size-control-lg);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    font-weight: var(--font-weight-medium);
+    list-style: none;
+    cursor: pointer;
+
+    &::-webkit-details-marker { display: none; }
+    &:hover { border-color: var(--color-border-strong); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  }
+  .chevron, .groupChevron { flex: none; color: var(--color-text-secondary); transition: transform var(--duration-fast) var(--ease-standard); }
+  .disclosure[open] > .summary { margin-bottom: var(--space-4); }
+  .disclosure[open] > .summary .chevron { transform: rotate(90deg); }
+  .badge {
+    display: inline-grid;
+    place-content: center;
+    min-width: var(--size-icon-lg);
+    height: var(--size-icon-lg);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-full);
+    background: var(--color-accent-subtle);
+    color: var(--color-text);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-caption);
+  }
+
+  .content { display: flex; flex-direction: column; gap: var(--space-4); }
+
+  /* The rail's heading, with Clear beside it while anything is filtered. */
+  .head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--size-control-sm); }
+  .title { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+
+  /* Each group collapses; its heading keeps the number of checked options. */
+  .group { display: flex; flex-direction: column; min-width: 0; padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+  .groupSummary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--size-control-sm);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-secondary);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-secondary);
+    list-style: none;
+    cursor: pointer;
+
+    &::-webkit-details-marker { display: none; }
+    &:hover .groupName { text-decoration-line: underline; }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  }
+  .group[open] > .groupSummary { margin-bottom: var(--space-2); }
+  .group[open] > .groupSummary .groupChevron { transform: rotate(90deg); }
+  .groupName { flex: 1 1 auto; min-width: 0; }
+  .selectedCount { flex: none; padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--color-accent-subtle); color: var(--color-text); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); }
+
+  .options { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; margin: 0; padding: 0; border: 0; }
+
+  /* An option is a tinted tile; a checked one takes the selection tint. */
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-subtle);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+
+    &:hover { background: var(--color-bg-muted); }
+    &:has(input:checked) { border-color: var(--color-accent); background: var(--color-accent-subtle); }
+    &:has(input:disabled) { color: var(--color-text-tertiary); cursor: not-allowed; }
+    &:has(input:disabled):hover { background: var(--color-bg-subtle); }
+  }
+  .optionLabel { flex: 1 1 auto; min-width: 0; }
+  .count { flex: none; color: var(--color-text-secondary); font-size: var(--font-size-secondary); font-variant-numeric: tabular-nums; line-height: var(--line-height-body); }
+
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .actions:has(> [hidden]:only-child) { display: none; }
+
+  /* Wide screens: the rail is always open beside the results, with no toggle. */
+  @supports selector(::details-content) {
+    @media (min-width: 768px) {
+      .summary { display: none; }
+      .disclosure::details-content { content-visibility: visible; }
+    }
+  }
+}

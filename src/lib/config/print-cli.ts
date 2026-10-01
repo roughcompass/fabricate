@@ -12,6 +12,7 @@ console.log(`Repository storage: ${config.repositoryStorage}`);
 console.log(`Git timeout:        ${config.gitTimeoutSeconds}s (lock wait ${config.gitLockTimeoutSeconds}s)`);
 console.log(`Credential helper:  ${config.gitCredentialHelper ?? "(none)"}`);
 console.log(`Worker concurrency: ${config.workerConcurrency}`);
+console.log(`Template demo:      ${config.demoEnabled ? "enabled" : "disabled"}`);
 console.log(
   `Analysis budgets:   ${Object.entries(config.analysis)
     .map(([key, value]) => `${key}=${value}`)

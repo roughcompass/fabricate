@@ -1,0 +1,110 @@
+@layer runtime {
+  .portal {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--rt-color-surface);
+    color: var(--rt-color-text);
+    font-family: var(--rt-font-family-brand);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+  }
+
+  /* Two rows of navigation: the portal's top bar, then the application's routes. */
+  .header { position: sticky; top: 0; z-index: var(--z-header); background: var(--rt-color-header); color: var(--rt-color-on-header); }
+  .topBar { display: flex; align-items: center; gap: var(--space-3); min-width: 0; height: var(--rt-size-header); padding: 0 var(--space-4) 0 var(--space-2); border-bottom: 1px solid var(--rt-color-border); }
+  .wordmark {
+    display: inline-flex;
+    flex: none;
+    align-items: baseline;
+    gap: var(--space-1);
+    color: var(--rt-color-on-header);
+    font-size: var(--font-size-subtitle);
+    line-height: var(--line-height-subtitle);
+    text-decoration-line: none;
+    white-space: nowrap;
+
+    &:focus-visible { outline: 2px solid var(--rt-color-accent); outline-offset: 2px; border-radius: var(--rt-radius-control); }
+  }
+  .wordmarkName { font-family: var(--rt-font-family-display); font-weight: var(--font-weight-semibold); }
+  .wordmarkProduct { font-weight: var(--font-weight-regular); }
+
+  /* Primary tabs, marked along their top edge. */
+  .sections { flex: 1 1 auto; align-self: stretch; min-width: 0; overflow-x: auto; }
+  .sectionList { display: flex; height: 100%; margin: 0; padding: 0; list-style: none; }
+  .section { display: flex; align-items: center; padding: 0 var(--space-3); border-top: 2px solid transparent; color: var(--rt-color-on-header-muted); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); white-space: nowrap; }
+  .section:has(.sectionLink[aria-current="page"]) { border-top-color: var(--rt-color-accent); }
+  .sectionLink {
+    color: var(--rt-color-on-header);
+    font-weight: var(--font-weight-semibold);
+    text-decoration-line: none;
+
+    &:focus-visible { outline: 2px solid var(--rt-color-accent); outline-offset: 2px; }
+  }
+  .actions { display: flex; flex: none; align-items: center; gap: var(--space-1); margin-left: auto; }
+
+  /* The application's routes, the current one underlined. */
+  .routes { border-bottom: 1px solid var(--rt-color-border); background: var(--rt-color-subbar); overflow-x: auto; }
+  .routeList { display: flex; gap: var(--space-2); margin: 0; padding: 0 var(--space-6); list-style: none; }
+  .routeLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--size-control-lg);
+    padding: 0 var(--space-2);
+    border-bottom: 2px solid transparent;
+    color: var(--rt-color-on-header-muted);
+    font-size: var(--font-size-secondary);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-secondary);
+    text-decoration-line: none;
+    white-space: nowrap;
+
+    &:hover { color: var(--rt-color-on-header); }
+    &:focus-visible { outline: 2px solid var(--rt-color-accent); outline-offset: -2px; }
+    &[aria-current="page"] { border-bottom-color: var(--rt-color-accent); color: var(--rt-color-on-header); font-weight: var(--font-weight-semibold); }
+  }
+
+  /* The dark title band at the top of every page, with a serif title. */
+  .band { background: var(--rt-color-band); color: var(--rt-color-on-band); }
+  .bandInner { display: flex; flex-direction: column; gap: var(--space-1); max-width: var(--rt-size-content); margin: 0 auto; padding: var(--space-8) var(--space-6); }
+  .bandEyebrow { color: var(--rt-color-on-band-muted); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); letter-spacing: var(--letter-spacing-caps); line-height: var(--line-height-caption); text-transform: uppercase; }
+  .title { color: var(--rt-color-on-band); font-family: var(--rt-font-family-display); font-size: var(--font-size-display); font-weight: var(--font-weight-regular); line-height: var(--line-height-display); }
+  .tagline { color: var(--rt-color-on-band-muted); }
+
+  .main { display: flex; flex: 1 1 auto; flex-direction: column; gap: var(--space-4); width: 100%; max-width: var(--rt-size-content); min-width: 0; margin: 0 auto; padding: var(--space-6); }
+
+  .footer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    /* Room below the footer, so the demo toolbar floating over the page never covers it. */
+    padding: var(--space-6) var(--space-6) var(--space-16);
+    border-top: 1px solid var(--rt-color-border);
+    background: var(--rt-color-panel);
+    color: var(--rt-color-muted);
+    font-size: var(--font-size-secondary);
+    line-height: var(--line-height-secondary);
+  }
+  .footerRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-6); }
+  .footerWordmark { color: var(--rt-color-text); font-family: var(--rt-font-family-display); font-size: var(--font-size-subtitle); font-weight: var(--font-weight-semibold); line-height: var(--line-height-subtitle); }
+  .footerLinks { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; padding: 0; list-style: none; }
+  .footerLink {
+    color: var(--rt-color-text);
+    text-decoration-line: none;
+
+    &:hover { text-decoration-line: underline; }
+    &:focus-visible { outline: 2px solid var(--rt-color-accent); outline-offset: 2px; }
+  }
+
+  @media (max-width: 767px) {
+    .topBar { gap: var(--space-1); padding: 0 var(--space-2); }
+    .wordmark { font-size: var(--font-size-body); line-height: var(--line-height-body); }
+    .sections { display: none; }
+    .actions { gap: 0; }
+    .routeList { padding: 0 var(--space-4); }
+    .bandInner { padding: var(--space-6) var(--space-4); }
+    .title { font-size: var(--font-size-title); line-height: var(--line-height-title); }
+    .main { padding: var(--space-4); }
+    .footer { padding: var(--space-4) var(--space-4) var(--space-16); }
+  }
+}

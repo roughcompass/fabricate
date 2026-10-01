@@ -8,10 +8,18 @@ import { type Declaration, scanCss, stylesheets } from "../support/css";
  * decision 2): no literal colors, no lengths off the scales, no undefined or
  * mistyped token references, and no !important outside the reset,
  * visually hidden, and reduced-motion rules.
+ *
+ * The template demo's portal runtime has its own token set (template demo
+ * design.md, decision 15): runtime tokens are named --rt-<type>-… and defined
+ * in RUNTIME_TOKENS under @layer runtime-tokens. Only stylesheets under
+ * src/demo/runtime/ may use them, and those sit in @layer runtime and select
+ * only by class, so portal styles can never reach the toolbar or the page.
  */
 
 const ROOT = path.resolve(".");
 const GLOBALS = "src/app/globals.css";
+const RUNTIME_DIR = "src/demo/runtime/";
+const RUNTIME_TOKENS = "src/demo/runtime/tokens.css";
 
 /** Every stylesheet is migrated; this list must stay empty. */
 const NOT_YET_MIGRATED = new Set<string>([]);
@@ -59,9 +67,34 @@ function definedIn(source: string): Set<string> {
 }
 
 const GLOBAL_TOKENS = definedIn(fs.readFileSync(path.join(ROOT, GLOBALS), "utf8"));
+const RUNTIME_TOKEN_SET = fs.existsSync(path.join(ROOT, RUNTIME_TOKENS)) ? definedIn(fs.readFileSync(path.join(ROOT, RUNTIME_TOKENS), "utf8")) : new Set<string>();
+
+const isRuntime = (file: string) => file.startsWith(RUNTIME_DIR);
 
 function isTokenDefinition(file: string, declaration: Declaration): boolean {
-  return file === GLOBALS && declaration.context[0] === "@layer tokens" && declaration.property.startsWith("--");
+  if (!declaration.property.startsWith("--")) return false;
+  if (file === GLOBALS) return declaration.context[0] === "@layer tokens";
+  return file === RUNTIME_TOKENS && declaration.context[0] === "@layer runtime-tokens";
+}
+
+/** A runtime token's type is the type of the interface token it mirrors: --rt-color-… is a color. */
+function typeName(name: string): string {
+  return name.startsWith("--rt-") ? `--${name.slice("--rt-".length)}` : name;
+}
+
+/**
+ * Runtime stylesheets select only by class (or nest under one): no element,
+ * universal, :root, or :global selectors.
+ */
+function selectorProblem(prelude: string): string | null {
+  if (prelude.startsWith("@") || /^(from|to|\d+%)(\s*,\s*(from|to|\d+%))*$/.test(prelude)) return null;
+  if (/:root\b|:global\b/.test(prelude)) return `selects with "${prelude}"`;
+  for (const selector of prelude.split(",")) {
+    for (const compound of selector.trim().split(/\s*[>+~]\s*|\s+/).filter(Boolean)) {
+      if (/^(\*|[a-z])/i.test(compound)) return `selects an element with "${compound}"`;
+    }
+  }
+  return null;
 }
 
 function importantAllowed(file: string, declaration: Declaration): boolean {
@@ -70,18 +103,38 @@ function importantAllowed(file: string, declaration: Declaration): boolean {
 }
 
 /** Every violation in one stylesheet, as "file:line property: reason". */
-export function violations(file: string, source: string): string[] {
+export function violations(file: string, source: string, runtimeTokens: ReadonlySet<string> = RUNTIME_TOKEN_SET): string[] {
   const local = definedIn(source);
   const problems: string[] = [];
   const report = (declaration: Declaration, reason: string) => problems.push(`${file}:${declaration.line} ${declaration.property}: ${reason}`);
-  const expectedLayer = file.startsWith("src/components/") ? "@layer components" : file.startsWith("src/app/") && file !== GLOBALS ? "@layer pages" : null;
+  // The demo toolbar's tools (src/demo/toolbar/) are operator interface, like shared components.
+  const expectedLayer = file.startsWith("src/components/") || file.startsWith("src/demo/toolbar/")
+    ? "@layer components"
+    : file === RUNTIME_TOKENS
+      ? "@layer runtime-tokens"
+      : isRuntime(file)
+        ? "@layer runtime"
+        : file.startsWith("src/app/") && file !== GLOBALS
+          ? "@layer pages"
+          : null;
+  const known = (name: string) => GLOBAL_TOKENS.has(name) || local.has(name) || EXTERNAL_TOKENS.has(name) || (isRuntime(file) && runtimeTokens.has(name));
+  const reportedSelectors = new Set<string>();
 
   for (const declaration of scanCss(source)) {
     const { property, value } = declaration;
     const references = [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map((match) => match[1]!);
 
     for (const name of references) {
-      if (!GLOBAL_TOKENS.has(name) && !local.has(name) && !EXTERNAL_TOKENS.has(name)) report(declaration, `references undefined token ${name}`);
+      if (!known(name)) report(declaration, `references undefined token ${name}`);
+    }
+    if (isRuntime(file) && file !== RUNTIME_TOKENS) {
+      for (const prelude of declaration.context) {
+        const problem = selectorProblem(prelude);
+        if (problem && !reportedSelectors.has(prelude)) {
+          reportedSelectors.add(prelude);
+          report(declaration, problem);
+        }
+      }
     }
     if (declaration.important && !importantAllowed(file, declaration)) report(declaration, "uses !important");
     if (expectedLayer && !declaration.context.includes(expectedLayer)) report(declaration, `is outside ${expectedLayer}`);
@@ -100,7 +153,7 @@ export function violations(file: string, source: string): string[] {
     const rule = RULES.find(([pattern]) => pattern.test(property))?.[1];
     if (!rule) continue;
     for (const name of references) {
-      const typed = rule.prefixes.some((prefix) => name.startsWith(prefix));
+      const typed = rule.prefixes.some((prefix) => typeName(name).startsWith(prefix));
       if (!typed && !(local.has(name) && name.startsWith("--_"))) report(declaration, `uses ${name}, which is not a ${rule.prefixes.join(" or ")} token`);
     }
     if (property.startsWith("transition") || property.startsWith("animation")) {
@@ -147,6 +200,49 @@ describe("design token check", () => {
   it("rejects rules outside the stylesheet's cascade layer", () => {
     expect(check(".a { color: var(--color-text); }")).toContainEqual(expect.stringContaining("outside @layer components"));
     expect(check(".a { color: var(--color-text); }", "src/app/example/page.module.css")).toContainEqual(expect.stringContaining("outside @layer pages"));
+  });
+
+  describe("portal runtime stylesheets", () => {
+    const SAMPLE_TOKENS = new Set(["--rt-color-brand", "--rt-size-rail"]);
+    const runtime = (css: string) => violations("src/demo/runtime/shells/payments/shell.module.css", css, SAMPLE_TOKENS);
+    const tokens = `@layer runtime-tokens { .runtime { --rt-color-brand: light-dark(#26337a, #9fb0ff); --rt-size-rail: 240px; } }`;
+
+    it("accepts runtime token definitions with literal values in the token file", () => {
+      expect(check(tokens, RUNTIME_TOKENS)).toEqual([]);
+    });
+
+    it("rejects a literal color in a runtime stylesheet", () => {
+      expect(runtime("@layer runtime { .shell { color: #26337a; } }")).toContainEqual(expect.stringContaining("literal color"));
+    });
+
+    it("rejects a runtime token in an interface stylesheet", () => {
+      expect(violations("src/components/ui/example.module.css", "@layer components { .a { color: var(--rt-color-brand); } }", SAMPLE_TOKENS)).toContainEqual(
+        expect.stringContaining("undefined token --rt-color-brand"),
+      );
+    });
+
+    it("accepts runtime and interface tokens of the matching type in a runtime stylesheet", () => {
+      expect(runtime("@layer runtime { .shell { color: var(--rt-color-brand); width: var(--rt-size-rail); padding: var(--space-2); & .title { font-size: var(--font-size-title); } } }")).toEqual([]);
+    });
+
+    it("rejects a runtime token of the wrong type", () => {
+      expect(runtime("@layer runtime { .shell { padding: var(--rt-color-brand); } }")).toContainEqual(expect.stringContaining("not a --space- or --size- token"));
+    });
+
+    it.each([
+      [":global", "@layer runtime { :global(.toolbar) { color: var(--color-text); } }"],
+      [":root", "@layer runtime { :root { color: var(--color-text); } }"],
+      ["an element", "@layer runtime { body { color: var(--color-text); } }"],
+      ["a descendant element", "@layer runtime { .shell button { color: var(--color-text); } }"],
+      ["the universal selector", "@layer runtime { * { color: var(--color-text); } }"],
+    ])("rejects %s selector in a runtime stylesheet", (_label, css) => {
+      expect(runtime(css)).toContainEqual(expect.stringMatching(/selects/));
+    });
+
+    it("requires runtime stylesheets to sit in @layer runtime", () => {
+      expect(runtime(".shell { color: var(--color-text); }")).toContainEqual(expect.stringContaining("outside @layer runtime"));
+      expect(check(".runtime { --rt-color-brand: #26337a; }", RUNTIME_TOKENS)).toContainEqual(expect.stringContaining("outside @layer runtime-tokens"));
+    });
   });
 
   it("accepts a compliant stylesheet", () => {

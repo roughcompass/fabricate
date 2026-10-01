@@ -1,0 +1,108 @@
+@layer components {
+  /* The toolbar floats over the running application; it uses operator tokens, never the portal's. */
+  .root { position: fixed; inset: auto 0 var(--space-4) 0; z-index: var(--z-toast); display: flex; flex-direction: column; align-items: center; gap: var(--space-2); pointer-events: none; color: var(--color-text); font-family: var(--font-family-sans); font-size: var(--font-size-body); line-height: var(--line-height-body); }
+  .root > * { pointer-events: auto; }
+  /* Overlays drawn over the page never take its pointer events. */
+  .root > [data-overlay] { pointer-events: none; }
+  /* The bar and its panel stay above the overlays drawn over the page, such as audit outlines. */
+  .bar, .handle, .panel { position: relative; z-index: var(--z-raised); }
+
+  .bar {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    max-width: calc(100vw - 2 * var(--space-4));
+    padding: var(--space-1);
+    overflow-x: auto;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-full);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-toast);
+  }
+  .demoLabel { padding: 0 var(--space-2); color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); letter-spacing: var(--letter-spacing-caps); line-height: var(--line-height-caption); text-transform: uppercase; }
+  .divider { width: 1px; height: var(--size-icon-lg); background: var(--color-border); }
+
+  .toolButton, .iconButton {
+    position: relative;
+    display: inline-grid;
+    flex: none;
+    place-content: center;
+    width: var(--size-control-md);
+    height: var(--size-control-md);
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+
+    &:hover { background: var(--color-bg-muted); color: var(--color-text); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+    &[data-active] { background: var(--color-accent-subtle); color: var(--color-text); }
+  }
+  .iconButton { width: var(--size-control-sm); height: var(--size-control-sm); }
+  .count {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: inline-grid;
+    place-content: center;
+    min-width: var(--size-icon);
+    height: var(--size-icon);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-caption);
+  }
+
+  .handle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: var(--size-control-sm);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-full);
+    background: var(--color-bg-elevated);
+    color: var(--color-text-secondary);
+    box-shadow: var(--shadow-menu);
+    cursor: pointer;
+
+    &:hover { color: var(--color-text); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    width: min(var(--size-dialog), calc(100vw - 2 * var(--space-4)));
+    max-height: min(70vh, calc(100vh - var(--size-header) * 2));
+    overflow: hidden;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-dialog);
+
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  }
+  .panelWide { width: min(var(--size-form), calc(100vw - 2 * var(--space-4))); }
+  .panelHeader { display: flex; align-items: flex-start; gap: var(--space-2); padding: var(--space-3) var(--space-3) var(--space-2) var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .panelHeading { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+  .panelTitle { font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); line-height: var(--line-height-heading); }
+  .panelDescription { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .panelBody { display: flex; flex-direction: column; gap: var(--space-4); min-height: 0; padding: var(--space-4); overflow-y: auto; }
+
+  .muted { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+
+  .shortcuts { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; }
+  .shortcut { display: grid; grid-template-columns: var(--size-control-lg) 1fr; align-items: center; gap: var(--space-3); }
+  .kbd { display: inline-grid; place-content: center; min-width: var(--size-control-sm); height: var(--size-control-sm); padding: 0 var(--space-1); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-bg-subtle); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+
+  @media (max-width: 767px) {
+    .root { inset: auto 0 var(--space-2) 0; }
+    .toolButton { width: var(--size-control-sm); height: var(--size-control-sm); }
+  }
+}

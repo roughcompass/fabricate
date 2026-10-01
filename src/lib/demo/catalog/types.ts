@@ -1,0 +1,123 @@
+/**
+ * Types for the template demo's catalog: templates, the microfrontends group
+ * each template deploys as, and the scripts that make loading and building
+ * deterministic. Everything here is static data shipped with the code, so it
+ * is identical in every workspace and on every run (design.md, decision 2).
+ */
+
+export const BRAND_IDS = ["payments", "global-banking", "markets", "other"] as const;
+export type BrandId = (typeof BRAND_IDS)[number];
+
+export const PROVIDER_IDS = ["de-web", "community"] as const;
+export type ProviderId = (typeof PROVIDER_IDS)[number];
+
+export const ENVIRONMENTS = ["production", "sandbox", "dev"] as const;
+export type EnvironmentId = (typeof ENVIRONMENTS)[number];
+
+/** Accessibility rules an older version deliberately breaks, by automated-audit rule id. */
+export type PlantedRule = "label" | "color-contrast" | "button-name" | "image-alt";
+
+/** The portal shells: J.P. Morgan Access (left navigation) and J.P. Morgan Markets (two-row top navigation). */
+export type ShellKind = "access" | "markets";
+
+export interface Brand {
+  readonly id: BrandId;
+  readonly label: string;
+  /** The portal shell applications of this brand render in. */
+  readonly shell: ShellKind;
+  /** The portal's name, shown as a text wordmark: the shells are illustrative and use no logo images. */
+  readonly portalName: string;
+  readonly tagline: string;
+}
+
+export interface Provider {
+  readonly id: ProviderId;
+  readonly label: string;
+}
+
+export interface MemberVersion {
+  readonly version: string;
+  readonly prerelease?: boolean;
+  /** What a viewer sees change in this version. */
+  readonly summary: string;
+  /** Planted defects: the audit must find these rules in this version, and only here. */
+  readonly planted?: readonly PlantedRule[];
+}
+
+/** Where a member renders: as a route's owner, or in a slot on another route. */
+export type MemberRouting = { readonly kind: "shell" } | { readonly kind: "route"; readonly path: string } | { readonly kind: "slot"; readonly route: string; readonly slot: string };
+
+export interface GroupMember {
+  readonly id: string;
+  readonly name: string;
+  readonly role: "default" | "child";
+  readonly owner: string;
+  readonly routing: MemberRouting;
+  readonly versions: readonly MemberVersion[];
+  readonly defaultVersion: string;
+  /** Scripted load duration in milliseconds. */
+  readonly loadMs: number;
+  /** Scripted duration when a version change reloads this member. */
+  readonly swapMs: number;
+  /** Planted slow interaction: a handler that blocks the main thread. */
+  readonly slowInteraction?: { readonly label: string; readonly blockMs: number };
+  readonly publishes?: readonly string[];
+  readonly subscribes?: readonly string[];
+  /** Renders differently for the Approver role. */
+  readonly roleDependent?: boolean;
+}
+
+export type RegionArea = "main" | "side" | "wide";
+
+export interface AppRoute {
+  /** Path within the application, without a leading slash. */
+  readonly path: string;
+  readonly label: string;
+  /** The member that owns this route (its zone). */
+  readonly owner: string;
+  /** Members rendered on this route, in load order. */
+  readonly regions: readonly { readonly member: string; readonly area: RegionArea }[];
+}
+
+/** A template's microfrontends group and its routes. */
+export interface AppDefinition {
+  /** Which runtime implementation renders the members: a hero's own, or the shared generic app. */
+  readonly kind: "hero" | "generic";
+  readonly members: readonly GroupMember[];
+  readonly routes: readonly AppRoute[];
+}
+
+export interface Template {
+  readonly slug: string;
+  readonly title: string;
+  readonly description: string;
+  readonly brand: BrandId;
+  readonly provider: ProviderId;
+  /** Shown for community templates. */
+  readonly author?: string;
+  readonly tags: readonly string[];
+  readonly hero: boolean;
+  readonly version: string;
+  readonly preview: { readonly src: string; readonly alt: string };
+  readonly app: AppDefinition;
+}
+
+export interface Persona {
+  readonly id: string;
+  readonly name: string;
+  readonly role: "Analyst" | "Approver" | "Administrator";
+  readonly region: string;
+}
+
+export interface LoadEntry {
+  readonly member: string;
+  readonly version: string;
+  readonly startMs: number;
+  readonly durationMs: number;
+}
+
+export interface StageScript {
+  readonly name: string;
+  readonly durationMs: number;
+  readonly lines: readonly string[];
+}

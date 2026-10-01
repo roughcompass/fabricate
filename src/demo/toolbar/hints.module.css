@@ -1,0 +1,20 @@
+@layer components {
+  .hint {
+    position: fixed;
+    z-index: var(--z-toast);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-dialog);
+    color: var(--color-text);
+    font-family: var(--font-family-sans);
+  }
+  .step { color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); letter-spacing: var(--letter-spacing-caps); line-height: var(--line-height-caption); text-transform: uppercase; }
+  .title { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .text { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+}

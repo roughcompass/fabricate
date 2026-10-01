@@ -61,6 +61,9 @@ const STATES: Record<string, [label: string, tone: Tone]> = {
   gaps: ["Gaps found", "error"],
   undetermined: ["Undetermined", "warning"],
   conforms: ["Conforms", "success"],
+  // Template demo applications and their simulated builds.
+  building: ["Building", "progress"],
+  ready: ["Ready", "success"],
 };
 
 /** A readable label for a value without a mapping: underscores become spaces, first letter capitalized. */

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { importSources } from "@/app/sources/import/actions";
+import { importSources } from "@/app/(operator)/sources/import/actions";
 import { listSources } from "@/lib/catalog/source-records";
 import { type Db, setDb } from "@/lib/db/client";
 import { createTestDb } from "../support/db";

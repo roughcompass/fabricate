@@ -1,0 +1,9 @@
+@layer runtime {
+  /* A route's regions: the main region beside a side region, and wide regions below both. */
+  .grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); grid-template-areas: "main side"; gap: var(--space-4); align-items: stretch; }
+  .single { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main"; }
+
+  @media (max-width: 1023px) {
+    .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "side"; }
+  }
+}

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createInitiative, deleteInitiative, startAssessment, updateInitiative } from "@/app/initiatives/actions";
-import type { InitiativeFormState } from "@/app/initiatives/form-state";
+import { createInitiative, deleteInitiative, startAssessment, updateInitiative } from "@/app/(operator)/initiatives/actions";
+import type { InitiativeFormState } from "@/app/(operator)/initiatives/form-state";
 import { listAssessments, targetsOf } from "@/lib/assessments/assessment-records";
 import { setSourceEnabled } from "@/lib/catalog/source-records";
 import { type Db, setDb } from "@/lib/db/client";

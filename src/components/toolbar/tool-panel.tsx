@@ -1,0 +1,41 @@
+"use client";
+
+import { useEffect, useId, useRef } from "react";
+import { Icon } from "@/components/ui/icon";
+import { useToolbar } from "./toolbar-context";
+import styles from "./toolbar.module.css";
+
+/**
+ * A toolbar tool's panel: a labeled, non-modal dialog above the toolbar.
+ * Opening moves focus into it; closing, by its Close button or Escape,
+ * returns focus to what opened it.
+ */
+export function ToolPanel({ title, description, actions, children, wide = false }: { title: string; description?: string; actions?: React.ReactNode; children: React.ReactNode; wide?: boolean }) {
+  const { closeTool } = useToolbar();
+  const panel = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const element = panel.current;
+    const focusable = element?.querySelector<HTMLElement>("[data-autofocus], input, select, textarea, button:not([data-panel-close]), a[href]");
+    (focusable ?? element)?.focus();
+  }, []);
+
+  return (
+    <div ref={panel} role="dialog" aria-labelledby={titleId} className={[styles.panel, wide && styles.panelWide].filter(Boolean).join(" ")} tabIndex={-1} data-tool-panel="">
+      <div className={styles.panelHeader}>
+        <div className={styles.panelHeading}>
+          <h2 id={titleId} className={styles.panelTitle}>
+            {title}
+          </h2>
+          {description && <p className={styles.panelDescription}>{description}</p>}
+        </div>
+        {actions}
+        <button type="button" className={styles.iconButton} onClick={closeTool} aria-label={`Close ${title.toLowerCase()}`} title="Close" data-panel-close="">
+          <Icon name="x" size={14} />
+        </button>
+      </div>
+      <div className={styles.panelBody}>{children}</div>
+    </div>
+  );
+}

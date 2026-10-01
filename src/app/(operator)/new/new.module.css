@@ -1,0 +1,39 @@
+@layer pages {
+  /* The prompt bar and its quick-start chips, centered under the title. */
+  .start { display: flex; flex-direction: column; gap: var(--space-3); max-width: var(--size-prose); }
+  .prompt { display: flex; align-items: flex-start; gap: var(--space-2); }
+  .promptField { flex: 1 1 auto; min-width: 0; }
+  .chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+  .chipList { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+
+  /* Import on the left, the brand's templates on the right; stacked on narrow screens. */
+  .columns { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-6); align-items: start; }
+
+  .providers { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+  .unavailable { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+  .note { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+
+  .import { display: flex; flex-direction: column; gap: var(--space-4); }
+  /* Rows divided by rules: the panel around them is the only border. */
+  .repositories { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+  .repository { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; }
+  .repository + .repository { border-top: 1px solid var(--color-border); }
+  .repositoryIcon { flex: none; color: var(--color-text-secondary); }
+  .repositoryText { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+  .repositoryName { font-family: var(--font-family-mono); font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); }
+  .repositoryMeta { color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+
+  .browseAll { display: flex; justify-content: flex-end; }
+  .solutions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+
+  /* The import form's summary of what will be imported. */
+  .summary { display: flex; align-items: center; gap: var(--space-3); }
+
+  @media (max-width: 1024px) {
+    .columns { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 767px) {
+    .solutions { grid-template-columns: minmax(0, 1fr); }
+    .repository { flex-wrap: wrap; }
+  }
+}

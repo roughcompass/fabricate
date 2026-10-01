@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { test as base, expect, type Page } from "@playwright/test";
 import { type Db, openDatabase } from "../../src/lib/db/client";
+import { WORKSPACE_COOKIE, newWorkspaceKey } from "../../src/lib/demo/workspace-key";
+import { ensureWorkspace, setHints } from "../../src/lib/demo/workspaces";
 import { git } from "../../test/support/git-fixture";
 import { E2E_DATABASE, E2E_SOURCES } from "./env";
 
@@ -20,6 +22,12 @@ interface Fixtures {
 interface Options {
   /** Page and console errors a test provokes on purpose. */
   expectedErrors: RegExp[];
+  /**
+   * Whether the template demo's guided hints show. They are off unless a test
+   * turns them on, so that hints never cover what other tests use: the browser
+   * starts with a demo workspace whose hints are turned off.
+   */
+  guidedHints: boolean;
 }
 
 /**
@@ -29,6 +37,7 @@ interface Options {
  */
 export const test = base.extend<Fixtures & Options>({
   expectedErrors: [[], { option: true }],
+  guidedHints: [false, { option: true }],
   errorGuard: [
     async ({ page, expectedErrors }, provide) => {
       const errors: string[] = [];
@@ -43,10 +52,15 @@ export const test = base.extend<Fixtures & Options>({
     },
     { auto: true },
   ],
-  db: async ({ request }, provide) => {
+  db: async ({ request, context, baseURL, guidedHints }, provide) => {
     const response = await request.post("/api/test/reset");
     expect(response.status(), "the e2e server must run with FABRICATE_E2E=1").toBe(200);
     const db = openDatabase(E2E_DATABASE);
+    if (!guidedHints) {
+      const key = newWorkspaceKey();
+      setHints(db, ensureWorkspace(db, key).id, { off: true });
+      await context.addCookies([{ name: WORKSPACE_COOKIE, value: key, url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    }
     await provide(db);
     db.$client.close();
   },
@@ -80,11 +94,18 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
     const width = document.documentElement.clientWidth;
     // Content that escapes a scroll container's clip, such as an absolutely positioned child, still widens the page.
     const scrolls = document.documentElement.scrollWidth > width + 1 ? [`the page scrolls sideways (${document.documentElement.scrollWidth}px wide)`] : [];
+    // An element cut off by an ancestor that clips its overflow, such as a card's angled preview, shows only inside that ancestor.
+    const clippedInside = (element: Element) => {
+      for (let node = element.parentElement; node && node !== document.body; node = node.parentElement) {
+        if (/hidden|clip/.test(getComputedStyle(node).overflowX) && node.getBoundingClientRect().right <= width + 1) return true;
+      }
+      return false;
+    };
     return scrolls.concat([...document.querySelectorAll("body *")]
       .filter((element) => {
         const rect = element.getBoundingClientRect();
         if (rect.width === 0 || getComputedStyle(element).position === "fixed") return false;
-        if (rect.right > width + 1) return true;
+        if (rect.right > width + 1) return !clippedInside(element);
         // Text wider than its own box is clipped by an ancestor, not wrapped.
         return element.children.length === 0 && element.scrollWidth > element.clientWidth + 1 && getComputedStyle(element).overflowX === "visible";
       })
@@ -111,8 +132,10 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
 export async function expectNoOverlappingContent(page: Page): Promise<void> {
   const overlaps = await page.evaluate(() => {
     const hidden = (element: Element | null) => {
-      // A closed <details> renders only its summary.
-      if (element?.closest("details:not([open])") && !element.closest("summary")) return true;
+      // A closed <details> renders only its own summary, not the summaries of details nested inside it.
+      for (let closed = element?.closest("details:not([open])"); closed; closed = closed.parentElement?.closest("details:not([open])") ?? null) {
+        if (!closed.querySelector(":scope > summary")?.contains(element)) return true;
+      }
       for (let node = element; node; node = node.parentElement) {
         const style = getComputedStyle(node);
         if (style.visibility === "hidden" || style.display === "none" || style.clipPath !== "none") return true;

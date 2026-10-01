@@ -4,7 +4,6 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { AppShell } from "@/components/shell/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
 import { THEME_COOKIE, parseTheme } from "@/lib/web/theme";
 
@@ -28,9 +27,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} data-theme={theme === "system" ? undefined : theme}>
       <body>
-        <ToastProvider>
-          <AppShell theme={theme}>{children}</AppShell>
-        </ToastProvider>
+        {/* Operator pages add the application shell in (operator)/layout.tsx; running demo applications render without it. */}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

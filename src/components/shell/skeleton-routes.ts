@@ -7,6 +7,13 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/(sources|standards)?\/?$/, "list"],
   [/^\/sources\/import\/?$/, "list"],
   [/^\/(initiatives|assessments|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "detail"],
+  // The template demo's operator pages; running applications have no skeleton.
+  [/^\/templates\/[^/]+\/deploy\/?$/, "form"],
+  [/^\/templates\/[^/]+\/preview\/?$/, "detail"],
+  [/^\/new\/import\/?$/, "form"],
+  [/^\/new\/?$/, "list"],
+  [/^\/(templates|applications)\/?$/, "list"],
+  [/^\/(templates|applications)\/[^/]+\/?$/, "detail"],
 ];
 
 export function skeletonFor(pathname: string): SkeletonKind | null {

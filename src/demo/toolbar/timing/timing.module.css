@@ -1,0 +1,41 @@
+@layer components {
+  .section { display: flex; flex-direction: column; gap: var(--space-2); }
+  .section + .section { padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+  .sectionTitle { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .note, .meta { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .summary { font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .actions { display: flex; gap: var(--space-2); }
+
+  /* The load waterfall: one row per load, a bar offset by its start. */
+  .waterfall, .interactions, .spots { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+  .load { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--space-3); padding: var(--space-1) 0; font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .loadName { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+  .loadName code { color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); }
+  .loadTimes { color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); white-space: nowrap; }
+  .track { position: relative; grid-column: 1 / -1; height: var(--size-dot); border-radius: var(--radius-full); background: var(--color-bg-muted); }
+  .bar { position: absolute; top: 0; bottom: 0; border-radius: var(--radius-full); background: var(--color-text-tertiary); }
+  .bar[data-kind="swap"] { background: var(--color-accent); }
+  .bar[data-slowest] { background: var(--color-warning); }
+  .marker, .slowFlag { padding: 0 var(--space-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-full); color: var(--color-text); font-size: var(--font-size-caption); line-height: var(--line-height-secondary); }
+  .slowFlag { border-color: var(--color-warning-border); background: var(--color-warning-bg); }
+
+  .interaction, .spot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-3); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .interactionText { display: flex; flex-direction: column; min-width: 0; }
+  .interactionTime { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--font-family-mono); font-size: var(--font-size-caption); white-space: nowrap; }
+  .rating { display: inline-block; padding: 0 var(--space-2); border: 1px solid var(--color-success-border); border-radius: var(--radius-full); background: var(--color-success-bg); color: var(--color-text); font-family: var(--font-family-sans); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); }
+  .rating[data-rating="needs-improvement"] { border-color: var(--color-warning-border); background: var(--color-warning-bg); }
+  .rating[data-rating="poor"] { border-color: var(--color-error-border); background: var(--color-error-bg); }
+  .spot[data-level="high"] { border-color: var(--color-error-border); }
+  .spot[data-level="medium"] { border-color: var(--color-warning-border); }
+
+  /* Hot-spot tints over the page's regions. */
+  .layer { position: fixed; inset: 0; pointer-events: none; }
+  .tint { position: fixed; border: 2px solid var(--color-neutral-border); border-radius: var(--radius-md); }
+  .tint[data-level="medium"] { border-color: var(--color-warning); }
+  .tint[data-level="high"] { border-color: var(--color-error); }
+  /* The fill is translucent; the label above it stays opaque for contrast. */
+  .tint::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--color-neutral-bg); opacity: 0.55; }
+  .tint[data-level="medium"]::before { background: var(--color-warning-bg); opacity: 0.7; }
+  .tint[data-level="high"]::before { background: var(--color-error-bg); opacity: 0.8; }
+  .tintLabel { position: absolute; top: var(--space-1); right: var(--space-1); padding: 0 var(--space-2); border-radius: var(--radius-sm); background: var(--color-bg-elevated); color: var(--color-text); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-secondary); }
+}

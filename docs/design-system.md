@@ -34,6 +34,10 @@ Literal lengths are limited to `0`, `1px`, and `2px`, for hairline borders and o
 
 Shared components (`src/components/`) wrap their rules in `@layer components`, and route stylesheets (`src/app/`) wrap theirs in `@layer pages`. The layer order is `reset, tokens, base, components, pages`, so composition rules win over component defaults however the stylesheets load.
 
+#### Runtime tokens
+
+The template demo's running applications render inside fictional portal shells, which are application content, not operator interface. Their brand palettes and any other runtime-only values are a separate token set in `src/demo/runtime/tokens.css`, under `@layer runtime-tokens`. Runtime token names mirror the interface families with an `rt-` prefix, such as `--rt-color-*` and `--rt-size-*`, and a runtime token counts as the type it mirrors. Only stylesheets under `src/demo/runtime/` may use runtime tokens, and they may also use interface tokens. Those stylesheets wrap their rules in `@layer runtime` and select only by class or by nesting under a class: no element, universal, `:root`, or `:global` selectors. As a result, portal styles cannot reach the toolbar or anything outside the portal. Deliberately defective values, such as the low-contrast text planted for the accessibility audit, are runtime tokens too. The same automated check enforces all of this.
+
 ### Color
 
 The palette is neutral gray with a single teal accent.
@@ -75,6 +79,8 @@ Status has five tones, and each has a foreground, a background, and a border:
 
 Status always appears as a colored indicator next to a text label, never as color alone.
 
+The portal shells of the template demo, the microfrontends they host, and the template preview images are application content. They use their own brand palettes (see Runtime tokens) and are outside this palette and its accent rule. The demo toolbar and its panels are operator interface: they use the neutral palette with the teal accent, even over a branded portal.
+
 ### Themes
 
 Colors are defined once with `light-dark()`, so the theme follows `color-scheme`. With no preference set, the interface follows the operating system. The operator can choose System, Light, or Dark with the switcher in the header. The choice is stored in the `fabricate-theme` cookie, and the root layout renders it as `data-theme` on `<html>`, so the first paint is already correct and no inline script is needed. Any element with `data-theme` switches its subtree, which the gallery uses to show both themes side by side. A custom property holding `light-dark()` is resolved on the element that declares it, so the color and shadow tokens are declared on `:root, [data-theme]`: each themed element redeclares them and resolves them against its own color scheme. Other tokens are declared on `:root` only.
@@ -104,6 +110,7 @@ Headings use the semibold weight, with slightly tighter letter spacing at larger
 | `--size-control-lg` | 40px | Emphasized standalone actions |
 | `--size-touch` | 44px | Every control size on coarse-pointer devices |
 | `--size-icon-sm`, `--size-icon`, `--size-icon-lg` | 14, 16, 20px | Icons in small controls, normal controls, and the brand mark |
+| `--size-card` | 272px | The narrowest media card in a grid |
 | `--size-form` | 640px | Every create and edit form |
 | `--size-content` | 1200px | The maximum page width |
 | `--size-header` | 56px | The application header |
@@ -152,6 +159,8 @@ Sizes are `sm` (28px) for table rows, filter bars, and toolbars; `md` (36px) eve
 
 Mark optional fields with `optional`; required fields carry no marker. Check boxes and radios are one drawn control: 16px, a strong boundary, the accent when selected.
 
+**SearchField** (`search-field.tsx`) is the one search input: a leading search icon, the input, and, while it has a value, a Clear search control. It comes in the three control sizes, uses the text input's boundary and focus ring, and submits with its form, so searching works without JavaScript. Give it `clearHref`, the same page without the search, so the clear control is a link. The Sources list and the template gallery use it.
+
 ### Status and values
 
 **Status** (`status.tsx`) is the single registry for how states, outcomes, fact states, resolution states, severities, and enumerated values are shown. `Status` renders a colored dot and a label; in-progress states pulse. `Severity` renders a small bar and the capitalized label. `statusLabel`, `severityLabel`, `severityOptions`, `diagnosticReason`, `edgeBasis`, and `humanize` turn values into words, so no raw identifier or underscore reaches an operator. A version is text ("v2"), never a status.
@@ -177,8 +186,11 @@ Mark optional fields with `optional`; required fields carry no marker. Check box
 | `CodeBlock` (`code-block.tsx`) | Cited lines with numbers and a copy control; long lines wrap |
 | `Table` (`table.tsx`) | A quiet header, a linked primary cell, `RowActions` that keep rows one height, `EmptyRow`, and stacked rows on narrow screens; `scroll` for many numeric columns, which also stacks on narrow screens. Give every cell a `label`, since stacked rows show it |
 | `Tabs` (`tabs.tsx`) | Views of one page, with count badges |
+| `ToggleGroup` (`toggle-group.tsx`, client) | Mutually exclusive choices as a row of buttons, the chosen one pressed (`aria-pressed`), such as preview mode's Mobile, Tablet, and Desktop. The choice lives in the URL: each button submits a GET form, so it works without JavaScript, and navigates in place with it |
 | `Breadcrumbs` (`breadcrumbs.tsx`) | A record's linked ancestors |
 | `FilterBar` (`filter-bar.tsx`, client) | Compact filters above their results, two per row on a phone; applies on change, or with Apply without JavaScript |
+| `FilterRail` (`filter-rail.tsx`, client) | Check box filters beside their results: a heading (`title`, "Filter templates" in the gallery) with a Clear action while any filter or search is active, then one collapsible group per filter whose heading shows how many of its options are checked. Each option is a tinted row with how many results it would match; a checked row takes the selection tint. On narrow screens the rail becomes a Filters disclosure with the active count above the results. Applies on change, or with Apply without JavaScript. Only the template gallery uses it; every other filterable view uses `FilterBar` |
+| `MediaCard` (`media-card.tsx`) | A record as a card: the title, a description clamped to two lines, and a footer for tags and badges, above a 16:10 preview image set at an angle in the card's lower part and cropped by its edge. Every card in a row is the same height. The title link covers the card and is its only focus stop; without `href` the card shows as unavailable. Only the template pages use cards (the gallery and the create page's Build your solution); every other list is a `Table` |
 | `SectionNav` (`section-nav.tsx`, client) | Navigation to the sections of a long page with each section's state: in view beside the content on wide screens, a disclosure on narrow ones, with the section in view marked current |
 | `Tooltip` (`tooltip.tsx`) | A short explanation on hover and keyboard focus |
 | `ProgressBar` (`progress-bar.tsx`) | Finished work out of the total |
@@ -217,7 +229,7 @@ Every page follows one of a few patterns, built from `Page` and `PageHeader` (`p
 
 ### Application shell
 
-`AppShell` (`src/components/shell/app-shell.tsx`) frames every page: a skip link; a sticky header with the product mark, the primary navigation (Initiatives, Sources, Standards), and the theme switcher; and the main region, with one maximum width (`--size-content`) and `--space-gutter` at the edges. A navigation item is current on every page of its section: Initiatives covers Initiatives, Assessments, Evaluations, and Profiles. Below 640px the theme switcher becomes a menu, and below 768px the product name hides beside its mark.
+`AppShell` (`src/components/shell/app-shell.tsx`) frames every page: a skip link; a sticky header with the product mark, the primary navigation (Initiatives, Sources, Standards, and Templates while the template demo is enabled), and the theme switcher; and the main region, with one maximum width (`--size-content`) and `--space-gutter` at the edges. A navigation item is current on every page of its section: Initiatives covers Initiatives, Assessments, Evaluations, and Profiles, and Templates covers templates and applications. Below 640px the theme switcher becomes a menu, and below 768px the product name hides beside its mark; with four sections, the links also tighten so everything fits at 375px. Running demo applications are not operator pages: they render in the `(runtime)` route group, full-bleed inside their portal shell, with no `AppShell`.
 
 ### Page header
 
@@ -240,7 +252,7 @@ Public IDs appear only in a page's Details area, with a copy control. Each detai
 
 ### Lists
 
-A list page is a header and a `Panel` holding a `Table`. The primary cell links to the record; row actions are `sm` controls in `RowActions`, usually a `Menu`. Filter tabs show counts. An empty list shows an `EmptyState` in the list area with the action that fills it. The Sources list adds a search that works without JavaScript.
+A list page is a header and a `Panel` holding a `Table`. The primary cell links to the record; row actions are `sm` controls in `RowActions`, usually a `Menu`. Filter tabs show counts. An empty list shows an `EmptyState` in the list area with the action that fills it. The Sources list adds a search that works without JavaScript. The template gallery is the one list that is not a table: it shows templates as a grid of `MediaCard`s, with the same empty state and search rules.
 
 ### Detail pages
 
@@ -252,7 +264,7 @@ Create and edit forms use `Page width="form"` and one `Panel` whose footer holds
 
 ### Filters
 
-`FilterBar` sits directly above the results it filters, in the same section, with the result count beside the results. Filters live in the URL and apply on change; a Clear action appears while any filter is active.
+`FilterBar` sits directly above the results it filters, in the same section, with the result count beside the results. Filters live in the URL and apply on change; a Clear action appears while any filter is active. The template gallery instead puts its filters in a `FilterRail` beside the results, which becomes a Filters disclosure above them on narrow screens; the other rules are the same.
 
 ### Long results
 

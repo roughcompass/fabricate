@@ -57,5 +57,10 @@
     .name { display: none; }
     .nav { gap: 0; }
     .main { padding-top: var(--space-6); }
+
+    /* With Templates as a fourth section, links tighten so the mark, every section, and the theme control fit at 375px. */
+    .inner:has(.nav > :nth-child(4)) { gap: var(--space-2); }
+    .nav:has(> :nth-child(4)) > a { padding: 0 var(--space-1); font-size: var(--font-size-secondary); }
+    .nav:has(> :nth-child(4)) > a[aria-current="page"]::after { left: var(--space-1); right: var(--space-1); }
   }
 }

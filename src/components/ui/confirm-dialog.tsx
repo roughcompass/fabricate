@@ -3,6 +3,7 @@
 import { useId, useRef, useSyncExternalStore } from "react";
 import { type ButtonSize, type ButtonVariant, ButtonContent, buttonClass } from "./button-content";
 import type { IconName } from "./icon";
+import { Menu, MenuButton } from "./menu";
 import { SubmitButton } from "./submit-button";
 import styles from "./confirm-dialog.module.css";
 
@@ -20,6 +21,11 @@ interface ConfirmDialogProps {
   /** The verb, such as "Cancel Assessment". */
   confirmLabel: string;
   tone?: "danger" | "default";
+  /**
+   * Puts the trigger in an overflow menu, after any other `items`, instead of
+   * showing it as a button. `label` is the menu's accessible name.
+   */
+  menu?: { label: string; items?: React.ReactNode; variant?: ButtonVariant; size?: ButtonSize };
 }
 
 /**
@@ -28,7 +34,7 @@ interface ConfirmDialogProps {
  * and Cancel close it without acting, and focus returns to the trigger. Before
  * JavaScript runs, the trigger submits the action directly.
  */
-export function ConfirmDialog({ action, fields = {}, trigger, title, children, confirmLabel, tone = "default" }: ConfirmDialogProps) {
+export function ConfirmDialog({ action, fields = {}, trigger, title, children, confirmLabel, tone = "default", menu }: ConfirmDialogProps) {
   const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
@@ -36,34 +42,43 @@ export function ConfirmDialog({ action, fields = {}, trigger, title, children, c
   const titleId = useId();
   const descriptionId = useId();
   const danger = tone === "danger";
+  const form = useRef<HTMLFormElement>(null);
+  const open = () => {
+    dialog.current?.showModal();
+    // The safe choice is focused for destructive actions, the action otherwise.
+    const target = danger ? cancel.current : dialog.current?.querySelector<HTMLButtonElement>('button[type="submit"]');
+    target?.focus();
+  };
+  // Focus returns to what opened the dialog: the trigger, or the menu that held it.
+  const returnFocus = () => (menu ? form.current?.querySelector<HTMLButtonElement>("button[popovertarget]") : opener.current)?.focus();
 
   return (
-    <form action={action} className={styles.form}>
+    <form ref={form} action={action} className={styles.form}>
       {Object.entries(fields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <button
-        ref={opener}
-        type={hydrated ? "button" : "submit"}
-        className={buttonClass(trigger.variant ?? "secondary", trigger.size ?? "md")}
-        aria-haspopup={hydrated ? "dialog" : undefined}
-        onClick={
-          hydrated
-            ? () => {
-                dialog.current?.showModal();
-                // The safe choice is focused for destructive actions, the action otherwise.
-                const target = danger ? cancel.current : dialog.current?.querySelector<HTMLButtonElement>('button[type="submit"]');
-                target?.focus();
-              }
-            : undefined
-        }
-      >
-        <ButtonContent icon={trigger.icon} size={trigger.size}>
-          {trigger.label}
-        </ButtonContent>
-      </button>
+      {menu ? (
+        <Menu label={menu.label} variant={menu.variant} size={menu.size}>
+          {menu.items}
+          <MenuButton icon={trigger.icon} tone={danger ? "danger" : "default"} submit={!hydrated} onClick={hydrated ? open : undefined}>
+            {trigger.label}
+          </MenuButton>
+        </Menu>
+      ) : (
+        <button
+          ref={opener}
+          type={hydrated ? "button" : "submit"}
+          className={buttonClass(trigger.variant ?? "secondary", trigger.size ?? "md")}
+          aria-haspopup={hydrated ? "dialog" : undefined}
+          onClick={hydrated ? open : undefined}
+        >
+          <ButtonContent icon={trigger.icon} size={trigger.size}>
+            {trigger.label}
+          </ButtonContent>
+        </button>
+      )}
       {hydrated && (
-        <dialog ref={dialog} className={styles.dialog} aria-labelledby={titleId} aria-describedby={descriptionId} onClose={() => opener.current?.focus()}>
+        <dialog ref={dialog} className={styles.dialog} aria-labelledby={titleId} aria-describedby={descriptionId} onClose={returnFocus}>
           <div className={styles.body}>
             <h2 id={titleId} className={styles.title}>
               {title}

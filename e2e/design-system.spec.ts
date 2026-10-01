@@ -130,8 +130,53 @@ test("applies a filter as soon as it changes and offers to clear it", async ({ p
   await expect(page.getByText("No filter")).toBeVisible();
 });
 
+test("applies a filter rail option as soon as it changes and shows each option's count", async ({ page }) => {
+  await page.goto("/design-system#filter-rail");
+  const rail = page.getByRole("form", { name: "Filter rail demo" });
+  await expect(rail.getByRole("button", { name: "Apply" })).toBeHidden();
+  await expect(rail.getByRole("group", { name: "Kind" })).toContainText("Policy4Plugin2Retired0");
+  await expect(rail.getByRole("checkbox", { name: /Retired/ })).toBeDisabled();
+  await rail.getByRole("checkbox", { name: /Plugin/ }).check();
+  await expect(page).toHaveURL(/kind=plugin/);
+  await expect(page.getByText("Filtered to plugin")).toBeVisible();
+  await rail.getByRole("link", { name: "Clear" }).click();
+  await expect(page.getByText("No filter")).toBeVisible();
+});
+
+test("collapses the filter rail into a Filters disclosure with the active count on a narrow screen", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/design-system?kind=policy#filter-rail");
+  const rail = page.getByRole("form", { name: "Filter rail demo" });
+  const checkbox = rail.getByRole("checkbox", { name: /Policy/ });
+  await expect(checkbox).toBeHidden();
+  await rail.locator("summary").first().click();
+  await expect(rail.locator("summary").first()).toContainText("1 active");
+  await expect(checkbox).toBeVisible();
+  await expect(checkbox).toBeChecked();
+});
+
+test("opens a media card from anywhere on the card, with the title as its one focus stop", async ({ page }) => {
+  await page.goto("/design-system#media-card");
+  const card = light(page, "Media card").getByRole("article").filter({ hasText: "Market watch" });
+  const box = (await card.locator("p").boundingBox())!;
+  await page.mouse.click(box.x + 4, box.y + 4);
+  await expect(page).toHaveURL(/card=light/);
+
+  await expect(light(page, "Media card").getByRole("article").filter({ hasText: "Unavailable card" }).getByRole("link")).toHaveCount(0);
+});
+
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
+
+  test("applies filter rail options with the Apply button", async ({ page }) => {
+    await page.goto("/design-system#filter-rail");
+    const rail = page.getByRole("form", { name: "Filter rail demo" });
+    await rail.getByRole("checkbox", { name: /Policy/ }).check();
+    await rail.getByRole("checkbox", { name: /Plugin/ }).check();
+    await rail.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/kind=policy&kind=plugin/);
+    await expect(page.getByText("Filtered to policy and plugin")).toBeVisible();
+  });
 
   test("opens a menu and applies filters with the Apply button", async ({ page }) => {
     await page.goto("/design-system");

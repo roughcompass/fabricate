@@ -1,0 +1,56 @@
+@layer components {
+  /* One boundary around the icon, the input, and the clear control, sharing the text input's states. */
+  .field {
+    --_height: var(--size-control-md);
+    --_inset: var(--space-3);
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: var(--_height);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+
+    &:hover { border-color: var(--color-text-secondary); }
+    &:has(.input:focus-visible) { border-color: var(--color-focus); box-shadow: var(--shadow-focus); }
+    &:has(.input:disabled) { background: var(--color-bg-subtle); color: var(--color-text-tertiary); }
+  }
+  .sm { --_height: var(--size-control-sm); --_inset: var(--space-2); font-size: var(--font-size-secondary); }
+  .md { font-size: var(--font-size-body); }
+  .lg { --_height: var(--size-control-lg); }
+
+  .icon { flex: none; margin-left: var(--_inset); color: var(--color-text-secondary); pointer-events: none; }
+
+  .input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding: 0 var(--_inset) 0 var(--space-2);
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: var(--line-height-body);
+    appearance: none;
+
+    &::placeholder { color: var(--color-text-tertiary); }
+    &:focus-visible { outline: none; }
+    &::-webkit-search-cancel-button { appearance: none; }
+  }
+
+  .clear {
+    display: inline-grid;
+    flex: none;
+    place-content: center;
+    width: var(--size-control-sm);
+    height: 100%;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-md);
+
+    &:hover { color: var(--color-text); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+  }
+}

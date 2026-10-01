@@ -77,12 +77,13 @@ export function Menu({ label, triggerText, icon = "more", variant = "tertiary", 
   );
 }
 
-/** A menu item that navigates. */
-export function MenuItem({ href, icon, children }: { href: string; icon?: IconName; children: React.ReactNode }) {
+/** A menu item that navigates; `newTab` opens the page in a new browser tab. */
+export function MenuItem({ href, icon, newTab = false, children }: { href: string; icon?: IconName; newTab?: boolean; children: React.ReactNode }) {
   return (
-    <Link href={href} className={styles.item}>
+    <Link href={href} className={styles.item} {...(newTab && { target: "_blank", rel: "noopener" })}>
       {icon && <Icon name={icon} size={14} />}
       {children}
+      {newTab && <span className="visually-hidden"> (opens in a new tab)</span>}
     </Link>
   );
 }
@@ -102,10 +103,24 @@ export function MenuAction({ action, fields = {}, icon, tone = "default", childr
   );
 }
 
-/** A menu item that runs client code. */
-export function MenuButton({ onClick, icon, disabled, tone = "default", children }: { onClick: () => void; icon?: IconName; disabled?: boolean; tone?: "default" | "danger"; children: React.ReactNode }) {
+/** A menu item that runs client code; with `submit`, it submits its form instead, as before JavaScript runs. */
+export function MenuButton({
+  onClick,
+  icon,
+  disabled,
+  tone = "default",
+  submit = false,
+  children,
+}: {
+  onClick?: () => void;
+  icon?: IconName;
+  disabled?: boolean;
+  tone?: "default" | "danger";
+  submit?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <button type="button" className={styles.item} data-tone={tone} onClick={onClick} disabled={disabled}>
+    <button type={submit ? "submit" : "button"} className={styles.item} data-tone={tone} onClick={onClick} disabled={disabled}>
       {icon && <Icon name={icon} size={14} />}
       {children}
     </button>

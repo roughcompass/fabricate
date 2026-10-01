@@ -23,6 +23,11 @@ describe("status registry", () => {
     expect(states.filter((state) => !hasStatus(state))).toEqual([]);
   });
 
+  it("shows a template demo application as building, then ready", () => {
+    expect(statusOf("building")).toEqual({ label: "Building", tone: "progress" });
+    expect(statusOf("ready")).toEqual({ label: "Ready", tone: "success" });
+  });
+
   it("shows the canceling state while a cancellation is pending", () => {
     expect(statusOf("canceling")).toEqual({ label: "Canceling", tone: "progress" });
   });

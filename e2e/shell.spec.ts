@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { evaluate, seedResults } from "./support/results";
@@ -27,14 +28,30 @@ test("marks Initiatives current on a Finding, deep within its section", async ({
   await expect(navigation.getByRole("link", { name: "Standards" })).not.toHaveAttribute("aria-current", "page");
 });
 
-test("fits the header at 375px: the mark, all three sections, and the theme control", async ({ page, db: _db }) => {
+/** The header's items, left to right, do not overlap and fit inside the viewport. */
+async function expectHeaderFits(page: Page) {
+  const header = page.getByRole("banner");
+  const items = [
+    header.getByRole("link", { name: "Fabricate home" }),
+    ...["Initiatives", "Sources", "Standards", "Templates"].map((section) => header.getByRole("link", { name: section })),
+    header.getByRole("button", { name: "Theme" }),
+  ];
+  let previousRight = 0;
+  for (const item of items) {
+    await expect(item).toBeVisible();
+    const box = (await item.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(previousRight - 0.5);
+    previousRight = box.x + box.width;
+  }
+  expect(previousRight).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await expectNoHorizontalOverflow(page);
+}
+
+// The browser-test server runs in the test environment, where the template demo is enabled.
+test("fits the header at 375px: the mark, all four sections, and the theme control", async ({ page, db: _db }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
-  const header = page.getByRole("banner");
-  await expect(header.getByRole("link", { name: "Fabricate home" })).toBeVisible();
-  for (const section of ["Initiatives", "Sources", "Standards"]) await expect(header.getByRole("link", { name: section })).toBeVisible();
-  await expect(header.getByRole("button", { name: "Theme" })).toBeVisible();
-  await expectNoHorizontalOverflow(page);
+  await expectHeaderFits(page);
 });
 
 test.describe("on a touch device", () => {
@@ -43,6 +60,6 @@ test.describe("on a touch device", () => {
   test("still fits the header with 44px targets", async ({ page, db: _db }) => {
     await page.goto("/");
     await expect(page.getByRole("banner").getByRole("button", { name: "Theme" })).toBeVisible();
-    await expectNoHorizontalOverflow(page);
+    await expectHeaderFits(page);
   });
 });

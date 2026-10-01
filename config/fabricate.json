@@ -12,14 +12,19 @@
       "maxBlobBytes": 1048576,
       "maxFiles": 4000,
       "maxTotalBytes": 67108864
+    },
+    "demo": {
+      "enabled": false
     }
   },
   "development": {
-    "allowedRoots": ["../fleet"]
+    "allowedRoots": ["../fleet"],
+    "demo": { "enabled": true }
   },
   "test": {
     "database": "tmp/test/fabricate.sqlite3",
-    "repositoryStorage": "tmp/test/repositories"
+    "repositoryStorage": "tmp/test/repositories",
+    "demo": { "enabled": true }
   },
   "production": {}
 }
