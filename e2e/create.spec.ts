@@ -24,19 +24,12 @@ test("opens from the Templates navigation item with the prompt bar, chips, impor
   await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Templates" })).toHaveAttribute("aria-current", "page");
 
   // In order: the prompt bar, the chips, the Import Git Repository panel, and Build your solution.
-  const order = await page.evaluate(() => {
-    const at = (element: Element | null) => element?.getBoundingClientRect().top ?? -1;
-    return [
-      at(document.querySelector("#new-prompt")),
-      at(document.querySelector('[aria-label="Quick-start templates"]')),
-      at([...document.querySelectorAll("h2")].find((heading) => heading.textContent === "Import Git Repository") ?? null),
-      at([...document.querySelectorAll("h2")].find((heading) => heading.textContent === "Build your solution") ?? null),
-    ];
+  const ordered = await page.evaluate(() => {
+    const heading = (text: string) => [...document.querySelectorAll("h2")].find((element) => element.textContent === text) ?? null;
+    const parts = [document.querySelector("#new-prompt"), document.querySelector('[aria-label="Quick-start templates"]'), heading("Import Git Repository"), heading("Build your solution")];
+    return parts.every(Boolean) && parts.every((part, index) => index === 0 || Boolean(parts[index - 1]!.compareDocumentPosition(part!) & Node.DOCUMENT_POSITION_FOLLOWING));
   });
-  expect(order.every((top) => top >= 0)).toBe(true);
-  expect(order[0]).toBeLessThan(order[1]!);
-  expect(order[1]).toBeLessThan(order[2]!);
-  expect(order[2]).toBeLessThanOrEqual(order[3]!);
+  expect(ordered).toBe(true);
 
   await expect(chips(page)).toHaveText(chipTemplates(0).map((template) => template.title));
   await expect(page.getByRole("link", { name: "View applications" })).toBeVisible();
