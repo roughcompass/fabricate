@@ -270,7 +270,7 @@ export default async function EvaluationPage({ params, searchParams }: { params:
       </Section>
 
       <Disclosure summary="Details" variant="plain">
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["Evaluator version", <Tag key="evaluator">{evaluation.evaluatorVersion}</Tag>],
             ["Started", <RelativeTime key="started" value={evaluation.startedAt} />],

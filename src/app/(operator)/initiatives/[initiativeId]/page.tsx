@@ -93,7 +93,7 @@ export default async function InitiativePage({ params, searchParams }: { params:
       />
 
       <Section title="Overview">
-        <DescriptionList
+        <DescriptionList surface
           layout="columns"
           items={[
             ["Repositories", scope],
@@ -249,7 +249,7 @@ export default async function InitiativePage({ params, searchParams }: { params:
       </Section>
 
       <Disclosure summary="Details" variant="plain">
-        <DescriptionList
+        <DescriptionList surface
           items={[
             [
               "ID",

@@ -26,7 +26,7 @@
   }
   .hint { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
 
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     .stat { padding: var(--space-3) var(--space-4); }
   }
 }

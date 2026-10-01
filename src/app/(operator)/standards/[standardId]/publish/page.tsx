@@ -90,7 +90,7 @@ export default async function PublishPage({ params, searchParams }: { params: Pr
       />
 
       <Section title="Publication">
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["Release", `v${nextVersion}`],
             ["From draft version", preview.draft.lockVersion],

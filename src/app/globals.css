@@ -39,10 +39,12 @@
    * resolve against its own color-scheme.
    */
   :root, [data-theme] {
-    /* Neutral surfaces, text, and borders. */
+    /* Neutral canvas, surfaces, text, and borders. Content surfaces (--color-bg) sit on the canvas. */
+    --color-canvas: light-dark(#fafafa, #000000);
     --color-bg: light-dark(#ffffff, #0a0a0a);
     --color-bg-subtle: light-dark(#fafafa, #111111);
     --color-bg-muted: light-dark(#f2f2f2, #1c1c1c);
+    --color-bg-selected: light-dark(#ededed, #232323);
     --color-bg-elevated: light-dark(#ffffff, #171717);
     --color-border: light-dark(#ebebeb, #2e2e2e);
     --color-border-subtle: light-dark(#f2f2f2, #1f1f1f);
@@ -51,14 +53,18 @@
     --color-text-secondary: light-dark(#666666, #a1a1a1);
     --color-text-tertiary: light-dark(#8f8f8f, #737373);
 
-    /* The single accent: primary actions, links, selection, focus, progress. */
-    --color-accent: light-dark(#008297, #2bb3c4);
-    --color-accent-hover: light-dark(#006e80, #5ccad7);
-    --color-accent-subtle: light-dark(#e6f4f6, #0f2a30);
-    --color-on-accent: light-dark(#ffffff, #0a0a0a);
-    --color-link: light-dark(#007385, #2bb3c4);
-    --color-focus: light-dark(#008297, #2bb3c4);
-    --color-focus-ring: light-dark(rgb(0 130 151 / 0.2), rgb(43 179 196 / 0.3));
+    /* Monochrome emphasis: primary buttons, checked controls, selected states, filled marks. */
+    --color-primary: light-dark(#171717, #ededed);
+    --color-primary-hover: light-dark(#383838, #cccccc);
+    --color-on-primary: light-dark(#ffffff, #0a0a0a);
+
+    /* The single accent, blue: links, focus, the selection highlight, and in-progress status. */
+    --color-accent: light-dark(#0068d6, #52a8ff);
+    --color-accent-hover: light-dark(#0057b3, #7ab8ff);
+    --color-accent-subtle: light-dark(#e5f1ff, #0f2847);
+    --color-link: light-dark(#0068d6, #52a8ff);
+    --color-focus: light-dark(#0068d6, #52a8ff);
+    --color-focus-ring: light-dark(rgb(0 104 214 / 0.2), rgb(82 168 255 / 0.3));
 
     /* Destructive confirmation. */
     --color-danger: light-dark(#cf222e, #da3633);
@@ -78,9 +84,9 @@
     --color-neutral: light-dark(#666666, #a1a1a1);
     --color-neutral-bg: light-dark(#f2f2f2, #1c1c1c);
     --color-neutral-border: light-dark(#e0e0e0, #333333);
-    --color-progress: light-dark(#007385, #2bb3c4);
-    --color-progress-bg: light-dark(#e6f4f6, #0f2a30);
-    --color-progress-border: light-dark(#a6d8df, #1d5560);
+    --color-progress: light-dark(#0068d6, #52a8ff);
+    --color-progress-bg: light-dark(#eaf4ff, #0b1d33);
+    --color-progress-border: light-dark(#b3d7ff, #1a3d66);
 
     /* Shadow and overlay colors. */
     --color-shadow: light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.5));
@@ -93,7 +99,7 @@
     --shadow-toast: 0 8px 24px var(--color-shadow-strong);
     --shadow-sticky: 0 -8px 24px var(--color-shadow);
     --shadow-focus: 0 0 0 3px var(--color-focus-ring);
-    --shadow-selected: 0 0 0 1px var(--color-accent);
+    --shadow-selected: 0 0 0 1px var(--color-primary);
   }
 
   :root {
@@ -106,7 +112,6 @@
     --font-size-body: 14px;
     --font-size-heading: 16px;
     --font-size-subtitle: 20px;
-    --font-size-title: 24px;
     --font-size-display: 32px;
 
     --line-height-caption: 16px;
@@ -114,13 +119,11 @@
     --line-height-body: 20px;
     --line-height-heading: 24px;
     --line-height-subtitle: 28px;
-    --line-height-title: 32px;
     --line-height-display: 40px;
 
     --letter-spacing-normal: 0;
     --letter-spacing-heading: -0.01em;
     --letter-spacing-subtitle: -0.015em;
-    --letter-spacing-title: -0.02em;
     --letter-spacing-display: -0.03em;
     --letter-spacing-caps: 0.04em;
 
@@ -163,6 +166,10 @@
     --size-prose: 720px;
     --size-content: 1200px;
     --size-header: 56px;
+    /* The sidebar's default width and its resize limits; src/lib/web/sidebar.ts mirrors them. */
+    --size-sidebar: 256px;
+    --size-sidebar-min: 200px;
+    --size-sidebar-max: 400px;
 
     --radius-sm: 4px;
     --radius-md: 6px;
@@ -204,21 +211,23 @@
 }
 
 @layer base {
-  html { background: var(--color-bg); scrollbar-gutter: stable; }
+  /* The canvas is the page background; content sits on white surfaces over it. */
+  html { background: var(--color-canvas); scrollbar-gutter: stable; }
 
   body {
-    background: var(--color-bg);
+    background: var(--color-canvas);
     color: var(--color-text);
     font-family: var(--font-family-sans);
     font-size: var(--font-size-body);
     line-height: var(--line-height-body);
   }
 
+  /* The page title, in the shell header: the heading step, like section headings. */
   h1 {
-    font-size: var(--font-size-title);
+    font-size: var(--font-size-heading);
     font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-title);
-    letter-spacing: var(--letter-spacing-title);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-heading);
   }
   h2 {
     font-size: var(--font-size-heading);

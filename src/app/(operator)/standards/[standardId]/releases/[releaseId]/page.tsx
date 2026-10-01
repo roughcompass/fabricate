@@ -62,7 +62,7 @@ export default async function ReleasePage({ params, searchParams }: { params: Pr
       />
 
       <Section title="Release">
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["Published", <RelativeTime key="published" value={release.publishedAt} />],
             ["Controls", Array.isArray(controls) ? controls.length : 0],
@@ -78,7 +78,7 @@ export default async function ReleasePage({ params, searchParams }: { params: Pr
       </Section>
 
       <Disclosure summary="Details" variant="plain">
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["Content digest", <Tag key="digest" copy label="digest">{release.digest}</Tag>],
             ["From draft version", release.draftLockVersion],

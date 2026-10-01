@@ -29,10 +29,10 @@
   /* The import form's summary of what will be imported. */
   .summary { display: flex; align-items: center; gap: var(--space-3); }
 
-  @media (max-width: 1024px) {
+  @container content (max-width: 1024px) {
     .columns { grid-template-columns: minmax(0, 1fr); }
   }
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     .solutions { grid-template-columns: minmax(0, 1fr); }
     .repository { flex-wrap: wrap; }
   }

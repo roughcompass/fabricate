@@ -229,7 +229,7 @@ export default async function AssessmentPage({ params, searchParams }: { params:
       )}
 
       <Disclosure summary="Details" variant="plain">
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["Detector release", <Tag key="release">{assessment.detectorRelease}</Tag>],
             ["Configuration digest", <ShortValue key="digest" value={assessment.configurationDigest} label="digest" />],

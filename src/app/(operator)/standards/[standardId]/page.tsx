@@ -141,7 +141,7 @@ export default async function StandardPage({ params, searchParams }: { params: P
       </Section>
 
       <Disclosure summary="Details" variant="plain">
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["ID", <Tag key="id" copy label="ID">{standard.publicId}</Tag>],
             ["Created", <RelativeTime key="created" value={standard.createdAt} />],

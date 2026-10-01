@@ -31,7 +31,7 @@
 
     &:hover { background: var(--color-bg-muted); }
     &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
-    &[aria-pressed="true"] { border-color: var(--color-accent); background: var(--color-accent-subtle); }
+    &[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-bg-selected); }
   }
   .number { display: inline-grid; flex: none; place-content: center; min-width: var(--size-icon-lg); height: var(--size-icon-lg); padding: 0 var(--space-1); border-radius: var(--radius-full); color: var(--color-bg); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); line-height: var(--line-height-caption); }
   .number[data-impact="critical"], .number[data-impact="serious"] { background: var(--color-error); }

@@ -57,7 +57,7 @@
   .narrow[open] > .summary { margin-bottom: var(--space-3); }
   .narrow[open] > .summary .chevron { transform: rotate(90deg); }
 
-  @media (max-width: 1023px) {
+  @container content (max-width: 1023px) {
     .wide { display: none; }
     .narrow { display: block; }
   }

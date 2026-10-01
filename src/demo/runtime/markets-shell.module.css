@@ -103,7 +103,7 @@
     .actions { gap: 0; }
     .routeList { padding: 0 var(--space-4); }
     .bandInner { padding: var(--space-6) var(--space-4); }
-    .title { font-size: var(--font-size-title); line-height: var(--line-height-title); }
+    .title { font-size: var(--rt-font-size-title); line-height: var(--rt-line-height-title); }
     .main { padding: var(--space-4); }
     .footer { padding: var(--space-4) var(--space-4) var(--space-16); }
   }

@@ -16,7 +16,7 @@
   .preview { position: relative; grid-area: preview; aspect-ratio: 16 / 10; margin: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-muted); }
   .previewImage { object-fit: cover; object-position: top center; }
 
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     .layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
     .detail { grid-template-columns: minmax(0, 1fr); grid-template-areas: "overview" "preview"; gap: var(--space-6); }
   }

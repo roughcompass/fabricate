@@ -7,7 +7,8 @@ import { seedAssessment } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { ORDERS, seedResults, serverConfig } from "./support/results";
 
-const header = (page: Page) => page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+// The page header: status, meta, and actions; the title is in the shell header.
+const header = (page: Page) => page.locator("[data-page-header]");
 
 test("starts a second Evaluation against the same Assessment after changing only the Release selection", async ({ page, db }) => {
   const { initiative, assessment } = await seedResults(db);

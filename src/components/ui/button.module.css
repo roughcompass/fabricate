@@ -54,9 +54,9 @@
   .iconOnly { width: var(--_height); padding: 0; }
 
   .primary {
-    --_fg: var(--color-on-accent);
-    background: var(--color-accent);
-    &:hover:not(:disabled) { background: var(--color-accent-hover); }
+    --_fg: var(--color-on-primary);
+    background: var(--color-primary);
+    &:hover:not(:disabled) { background: var(--color-primary-hover); }
   }
 
   .secondary {

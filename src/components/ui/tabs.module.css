@@ -25,7 +25,7 @@
       bottom: -1px;
       height: 2px;
       border-radius: var(--radius-full);
-      background: var(--color-accent);
+      background: var(--color-primary);
     }
   }
 
@@ -42,7 +42,7 @@
     font-variant-numeric: tabular-nums;
   }
 
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     .bar { flex-direction: column-reverse; align-items: stretch; }
     .aside { flex-basis: auto; }
   }

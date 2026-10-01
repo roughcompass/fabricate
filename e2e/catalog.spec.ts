@@ -82,7 +82,7 @@ test("searches Sources by name or clone URL, keeping the search in the address",
   const rows = page.getByRole("table", { name: "Repository Sources" }).locator("tbody tr");
   await expect(rows).toHaveCount(2);
   await expect(rows.filter({ hasText: "accounts" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: /^All/ })).toContainText("2");
+  await expect(page.getByRole("navigation", { name: "Filter Sources" }).getByRole("link", { name: /^All/ })).toContainText("2");
 
   await search.fill("nothing-matches");
   await search.press("Enter");

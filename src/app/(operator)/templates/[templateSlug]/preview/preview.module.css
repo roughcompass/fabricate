@@ -34,12 +34,12 @@
 
     &:hover { background: var(--color-bg-muted); }
     &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
-    &[aria-current="true"] { background: var(--color-accent-subtle); }
+    &[aria-current="true"] { background: var(--color-bg-selected); }
   }
   .fileName { overflow-wrap: anywhere; }
   .source { min-width: 0; }
 
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     .code { grid-template-columns: minmax(0, 1fr); }
     .viewport { padding: var(--space-3) 0; }
   }

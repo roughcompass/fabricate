@@ -28,7 +28,7 @@
   .plain > .content { padding-top: var(--space-3); }
 
   /* On narrow screens the aside moves below a label that needs the room, still right-aligned. */
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     .summary { flex-wrap: wrap; }
     .aside { flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
   }

@@ -26,7 +26,7 @@
 
     &:hover { background: var(--color-bg-muted); }
     &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
-    &[aria-pressed="true"] { border-color: var(--color-accent); background: var(--color-accent-subtle); }
+    &[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-bg-selected); }
   }
   .memberName { display: flex; flex-direction: column; font-weight: var(--font-weight-medium); }
   .memberRole { color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: var(--line-height-caption); }

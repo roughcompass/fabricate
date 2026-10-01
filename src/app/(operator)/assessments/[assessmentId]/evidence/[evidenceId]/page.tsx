@@ -87,7 +87,7 @@ export default async function EvidencePage({ params }: { params: Promise<{ asses
       />
 
       <Section title="Record">
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["Repository", owner.target.sourceName],
             ["Commit", record.commit ? <ShortValue key="commit" value={record.commit} label="commit" /> : "Working tree"],

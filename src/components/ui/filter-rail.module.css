@@ -10,6 +10,7 @@
     padding: var(--space-2) var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
+    background: var(--color-bg);
     font-weight: var(--font-weight-medium);
     list-style: none;
     cursor: pointer;
@@ -28,7 +29,7 @@
     height: var(--size-icon-lg);
     padding: 0 var(--space-1);
     border-radius: var(--radius-full);
-    background: var(--color-accent-subtle);
+    background: var(--color-bg-muted);
     color: var(--color-text);
     font-size: var(--font-size-caption);
     line-height: var(--line-height-caption);
@@ -61,11 +62,11 @@
   .group[open] > .groupSummary { margin-bottom: var(--space-2); }
   .group[open] > .groupSummary .groupChevron { transform: rotate(90deg); }
   .groupName { flex: 1 1 auto; min-width: 0; }
-  .selectedCount { flex: none; padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--color-accent-subtle); color: var(--color-text); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); }
+  .selectedCount { flex: none; padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--color-bg-muted); color: var(--color-text); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); }
 
   .options { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; margin: 0; padding: 0; border: 0; }
 
-  /* An option is a tinted tile; a checked one takes the selection tint. */
+  /* An option is a tinted tile; a checked one takes the selected fill and the primary border. */
   .option {
     display: flex;
     align-items: flex-start;
@@ -78,7 +79,7 @@
     transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
 
     &:hover { background: var(--color-bg-muted); }
-    &:has(input:checked) { border-color: var(--color-accent); background: var(--color-accent-subtle); }
+    &:has(input:checked) { border-color: var(--color-primary); background: var(--color-bg-selected); }
     &:has(input:disabled) { color: var(--color-text-tertiary); cursor: not-allowed; }
     &:has(input:disabled):hover { background: var(--color-bg-subtle); }
   }
@@ -90,7 +91,7 @@
 
   /* Wide screens: the rail is always open beside the results, with no toggle. */
   @supports selector(::details-content) {
-    @media (min-width: 768px) {
+    @container content (min-width: 768px) {
       .summary { display: none; }
       .disclosure::details-content { content-visibility: visible; }
     }

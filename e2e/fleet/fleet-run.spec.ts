@@ -26,7 +26,8 @@ test.setTimeout(600_000);
 const REPOSITORIES = ["acme-platform", "legacy-portal", "mf-admin", "mf-billing", "mf-shell", "spa-orders", "spa-reports", "spa-root"];
 const ANALYTICS_CONSUMERS = ["mf-admin", "mf-billing", "mf-shell", "spa-orders", "spa-reports", "spa-root"];
 
-const header = (page: Page) => page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+// The page header: status, meta, and actions; the title is in the shell header.
+const header = (page: Page) => page.locator("[data-page-header]");
 const toast = (page: Page, text: string | RegExp) => page.getByRole("region", { name: "Notifications" }).getByText(text);
 const control = (page: Page, number: number) => page.getByRole("region", { name: new RegExp(`^Control ${number}\\b`) });
 const builder = (scope: ReturnType<typeof control>, legend: string) => scope.getByRole("group", { name: legend, exact: true });

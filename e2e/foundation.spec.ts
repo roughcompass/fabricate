@@ -6,8 +6,9 @@ import { expect, test } from "./support/fixtures";
 
 // Retrying, because reduced motion gives every property a near-zero transition.
 const expectBackground = (page: Page, color: string) => expect(page.locator("body")).toHaveCSS("background-color", color);
-const LIGHT = "rgb(255, 255, 255)";
-const DARK = "rgb(10, 10, 10)";
+// The page background is the canvas: light gray in the light theme, black in the dark.
+const LIGHT = "rgb(250, 250, 250)";
+const DARK = "rgb(0, 0, 0)";
 
 test("renders text in Geist Sans and identifiers in Geist Mono, served by the application", async ({ page, db }) => {
   const source = buildSource(db, { name: "orders" });

@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { buildInitiative } from "../test/support/builders";
 import { expect, test } from "./support/fixtures";
+import { waitForHydration } from "./support/shell";
 
 /** The feedback infrastructure, exercised through the component gallery's demos. */
 
@@ -12,6 +13,8 @@ test.describe("toasts", () => {
   test.beforeEach(async ({ page }) => {
     await page.clock.install();
     await page.goto("/design-system#feedback");
+    // The demo buttons are client-only; a click before hydration does nothing.
+    await waitForHydration(page);
   });
 
   test("dismisses a success toast after six seconds", async ({ page }) => {
@@ -98,6 +101,8 @@ test.describe("confirmation dialogs", () => {
     await page.goto("/design-system#dialog");
     const trigger = page.getByRole("button", { name: "Cancel Assessment" });
     const dialog = page.getByRole("dialog", { name: "Cancel Assessment #3?" });
+    // Before JavaScript runs, the trigger submits the action directly; it opens the dialog once hydrated.
+    await expect(trigger).toHaveAttribute("type", "button");
 
     await trigger.click();
     await expect(dialog).toBeVisible();
@@ -117,7 +122,10 @@ test.describe("confirmation dialogs", () => {
 
   test("run the action once confirmed", async ({ page }) => {
     await page.goto("/design-system#dialog");
-    await page.getByRole("button", { name: "Publish v2" }).click();
+    const trigger = page.getByRole("button", { name: "Publish v2" });
+    // Before JavaScript runs, the trigger submits the action directly; it opens the dialog once hydrated.
+    await expect(trigger).toHaveAttribute("type", "button");
+    await trigger.click();
     const dialog = page.getByRole("dialog", { name: "Publish Engineering baseline v2?" });
     await expect(dialog).toContainText("from draft version 7");
     await dialog.getByRole("button", { name: "Publish v2" }).click();
@@ -182,7 +190,15 @@ test.describe("without JavaScript", () => {
 test("shows a not-found page inside the shell for an unknown Assessment", async ({ page, db: _db }) => {
   await page.goto("/assessments/asm_doesnotexist0000");
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1, name: "Assessment not found" })).toBeVisible();
+  await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Assessment not found" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Go to Initiatives" })).toHaveAttribute("href", "/");
+});
+
+test("shows a not-found page inside the shell for an unknown URL", async ({ page, db: _db }) => {
+  const response = await page.goto("/no-such-page");
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
+  await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to Initiatives" })).toHaveAttribute("href", "/");
 });
 
@@ -192,7 +208,7 @@ test.describe("an unexpected error", () => {
   test("shows the error page without internal details", async ({ page }) => {
     await page.goto("/design-system/error-demo");
     const main = page.locator("main");
-    await expect(main.getByRole("heading", { level: 1, name: "Something went wrong" })).toBeVisible();
+    await expect(main.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Something went wrong" })).toBeVisible();
     await expect(main.getByRole("button", { name: "Try again" })).toBeVisible();
     await expect(main.getByRole("link", { name: "Go to Initiatives" })).toBeVisible();
     await expect(main).not.toContainText("internal detail");

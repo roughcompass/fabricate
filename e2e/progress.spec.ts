@@ -28,7 +28,8 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
   await expect(started).toBeVisible();
   // The outcome leaves the address at once, so no refresh can bring it back.
   await expect(page).not.toHaveURL(/notice=/);
-  const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+  // The page header carries the status; the title is in the shell header.
+  const header = page.locator("[data-page-header]");
   await expect(header).toContainText("Queued");
 
   // Jobs run one at a time from the test process, using the inline queue.

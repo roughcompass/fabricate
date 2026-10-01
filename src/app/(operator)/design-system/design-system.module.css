@@ -15,7 +15,14 @@
     min-width: 0;
     padding: var(--space-6);
     border-radius: var(--radius-xl);
-    background: var(--color-bg-subtle);
+    /*
+     * Each theme's canvas, so the specimens show their surfaces as pages do. A
+     * frame stands in for a page, not a content container, so its edge is an
+     * outline rather than a border.
+     */
+    outline: 1px solid var(--color-border);
+    outline-offset: -1px;
+    background: var(--color-canvas);
     color: var(--color-text);
   }
 
@@ -27,7 +34,13 @@
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--size-nav)), 1fr)); gap: var(--space-4); }
   .railDemo { display: grid; grid-template-columns: var(--size-nav) 1fr; gap: var(--space-6); align-items: start; }
 
-  @media (max-width: 767px) {
+  /* Color specimen: each swatch takes its token through --_swatch, set on the element. */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--size-label)), 1fr)); gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+  .swatchItem { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .swatch { --_swatch: var(--color-bg); height: var(--size-control-lg); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--_swatch); }
+  .swatchRole { color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+
+  @container content (max-width: 767px) {
     .railDemo { grid-template-columns: 1fr; }
   }
 }

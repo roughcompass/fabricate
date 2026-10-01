@@ -1,5 +1,6 @@
 import { visitorContext, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
+import { openSection } from "./support/shell";
 
 /**
  * The presenter storyline in one flow (docs/template-demo.md): from the create
@@ -10,9 +11,9 @@ test("runs the presenter storyline from the create page to a reset", async ({ pa
   test.setTimeout(180_000);
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  // The create page, opened from the Templates navigation item.
+  // The create page, opened from the Templates section in the sidebar.
   await page.goto("/");
-  await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Templates" }).click();
+  await openSection(page, "Templates");
   await expect(page.getByRole("heading", { level: 1, name: "Let's build something new" })).toBeVisible();
 
   // Build your solution: Payments is chosen, its hero first; Browse all keeps the brand.

@@ -4,6 +4,7 @@ import { useActionState, useId, useRef, useState } from "react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Panel } from "@/components/ui/panel";
 import { Select, TextArea, TextInput } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { Menu, MenuButton, MenuSeparator } from "@/components/ui/menu";
@@ -182,16 +183,18 @@ export function StandardEditor({ action, initial, document, catalog, publishHref
       )}
 
       {controls.length === 0 ? (
-        <EmptyState
-          title="No Controls yet"
-          action={
-            <Button icon="plus" onClick={add}>
-              Add Control
-            </Button>
-          }
-        >
-          A Standard needs at least one Control before it can be published.
-        </EmptyState>
+        <Panel flush>
+          <EmptyState
+            title="No Controls yet"
+            action={
+              <Button icon="plus" onClick={add}>
+                Add Control
+              </Button>
+            }
+          >
+            A Standard needs at least one Control before it can be published.
+          </EmptyState>
+        </Panel>
       ) : (
         <ol className={styles.controls}>
           {controls.map((control, index) => (

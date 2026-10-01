@@ -15,7 +15,8 @@
     &:hover:not([aria-disabled="true"]) .frame { transform: perspective(var(--size-content)) rotateX(8deg) rotateY(-14deg) rotateZ(3deg) translate(-2%, -3%); }
     &:active:not([aria-disabled="true"]) { box-shadow: none; }
     &:has(.link:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-    &[aria-disabled="true"] { background: var(--color-bg-subtle); color: var(--color-text-secondary); }
+    /* Unavailable: muted, so it still stands apart from the canvas. */
+    &[aria-disabled="true"] { background: var(--color-bg-muted); color: var(--color-text-secondary); }
     &[aria-disabled="true"] .image { opacity: 0.6; }
   }
 

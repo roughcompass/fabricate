@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
+import { expectCurrentItem } from "./support/shell";
 
 /** The Find your template gallery (template-gallery spec). */
 
@@ -12,7 +13,7 @@ test("titles the gallery Find your template, with the search, the filter rail, a
   await expect(page).toHaveTitle("Find your template · Fabricate");
   await expect(page.getByRole("heading", { level: 1, name: "Find your template" })).toBeVisible();
   await expect(page.getByText("Jumpstart your app development process with pre-built solutions from DE Web and our community.")).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Templates" })).toHaveAttribute("aria-current", "page");
+  await expectCurrentItem(page, "Templates", "Gallery");
 
   // The search spans the page above the rail and the results.
   const search = page.getByRole("searchbox", { name: "Search templates" });
@@ -175,7 +176,7 @@ test.describe("template detail", () => {
     await expect(overview).toContainText("Watchlist, Order ticket, Price chart, Trade blotter");
     const members = page.getByRole("table", { name: "Microfrontends in this template" });
     for (const name of ["Markets shell", "Watchlist", "Order ticket", "Price chart", "Trade blotter"]) await expect(members).toContainText(name);
-    await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Templates" })).toHaveAttribute("aria-current", "page");
+    await expectCurrentItem(page, "Templates", "Gallery");
 
     await expect(page.getByRole("link", { name: "Deploy template" })).toHaveAttribute("href", "/templates/market-watch/deploy");
   });

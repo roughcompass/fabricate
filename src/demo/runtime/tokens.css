@@ -20,6 +20,9 @@
     --rt-font-family-brand: "Helvetica Neue", Arial, system-ui, sans-serif;
     --rt-font-family-heading: var(--rt-font-family-brand);
     --rt-font-family-display: Georgia, "Times New Roman", serif;
+    /* Portal page titles; the operator interface's own scale has no 24px step. */
+    --rt-font-size-title: 24px;
+    --rt-line-height-title: 32px;
     --rt-size-header: 56px;
     --rt-size-nav: 248px;
     --rt-size-side: 320px;

@@ -100,7 +100,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ ap
         }
       />
 
-      <DescriptionList
+      <DescriptionList surface
         items={[
           [
             "URL",

@@ -96,7 +96,7 @@
   .saveError { color: var(--color-error); }
   .saveActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     /* The name and key over the title, which wraps rather than truncating; the severity and menu stay beside them. */
     .toggle { padding-block: var(--space-1); }
     .controlText { flex-direction: column; align-items: flex-start; gap: 2px; }

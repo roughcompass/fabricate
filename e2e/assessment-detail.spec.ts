@@ -6,7 +6,8 @@ import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } 
 
 const files = (name: string) => ({ "package.json": manifest({ name, version: "1.0.0" }) });
 
-const header = (page: Page) => page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+// The page header: status, meta, and actions; the title is in the shell header.
+const header = (page: Page) => page.locator("[data-page-header]");
 const scope = (page: Page) => page.getByRole("table", { name: "Assessment scope" });
 
 async function expectLaidOut(page: Page) {

@@ -1,3 +1,4 @@
+import { ShellHeader } from "@/components/shell/shell-header";
 import { PageAlerts } from "./alert";
 import { Breadcrumbs, type Crumb } from "./breadcrumbs";
 import { ButtonLink } from "./button";
@@ -5,10 +6,15 @@ import type { IconName } from "./icon";
 import { Menu, MenuItem } from "./menu";
 import styles from "./page.module.css";
 
-/** A page body: `content` for lists and detail pages, `form` for every create and edit form. */
-export function Page({ width = "content", children }: { width?: "content" | "form"; children: React.ReactNode }) {
+/**
+ * A page body: `content` for lists and detail pages, `form` for every create
+ * and edit form. It spans the content column: the shell header runs its full
+ * width, and everything else is centered at the page's measure. `busy` marks
+ * a loading skeleton.
+ */
+export function Page({ width = "content", busy = false, children }: { width?: "content" | "form"; busy?: boolean; children: React.ReactNode }) {
   return (
-    <div className={styles.page} data-width={width}>
+    <div className={styles.page} data-width={width} aria-busy={busy || undefined} aria-label={busy ? "Loading" : undefined}>
       {children}
     </div>
   );
@@ -37,63 +43,92 @@ interface PageHeaderProps {
   extraActions?: React.ReactNode;
   /** Conditions that need attention, shown in the page-alert slot below the header; `false` omits the slot, as in the gallery's specimens. */
   alerts?: React.ReactNode | false;
-  /** The title's heading level; only the gallery's specimens lower it, so each page keeps one `h1`. */
+  /**
+   * 1 for a page: the title goes in the shell header as the page's only `h1`.
+   * 3 for the gallery's specimens: the title stays in the header, inline.
+   */
   headingLevel?: 1 | 3;
 }
 
+/**
+ * The top of a page (operator-interface/page-patterns spec): the title in the
+ * shell header, then breadcrumbs, the status and meta line, the description,
+ * and the actions. The title is never repeated in the page.
+ */
 export function PageHeader({ breadcrumbs, title, status, meta, description, primaryAction, secondaryActions = [], extraActions, alerts, headingLevel = 1 }: PageHeaderProps) {
-  const Heading = headingLevel === 1 ? "h1" : "h3";
+  const inline = headingLevel === 3;
   const collapse = Boolean(primaryAction) && secondaryActions.length > 0;
   const hasActions = Boolean(primaryAction || extraActions || secondaryActions.length);
+  const hasCrumbs = Boolean(breadcrumbs && breadcrumbs.length > 0);
+  const hasMeta = Boolean(status) || Boolean(meta && meta.length > 0);
+  const hasHeading = inline || hasMeta || Boolean(description);
+  const metaItems = meta?.map((item, index) => (
+    <span key={index} className={styles.metaItem}>
+      {item}
+    </span>
+  ));
+
   return (
     <>
-      <header className={styles.header}>
-        {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}
-        <div className={styles.titleRow}>
-          <div className={styles.heading}>
-            <div className={styles.titleLine}>
-              <Heading className={styles.title}>{title}</Heading>
-              {status}
-            </div>
-            {meta && meta.length > 0 && (
-              <div className={styles.meta}>
-                {meta.map((item, index) => (
-                  <span key={index} className={styles.metaItem}>
-                    {item}
-                  </span>
-                ))}
-              </div>
-            )}
-            {description && <p className={styles.description}>{description}</p>}
-          </div>
-          {hasActions && (
-            <div className={styles.actions}>
-              {secondaryActions.length > 0 && (
-                <span className={collapse ? styles.wide : styles.always}>
-                  {secondaryActions.map((action) => (
-                    <ButtonLink key={action.label} href={action.href} icon={action.icon}>
-                      {action.label}
-                    </ButtonLink>
-                  ))}
-                </span>
+      {!inline && <ShellHeader title={title} />}
+      {(hasCrumbs || hasHeading || hasActions) && (
+        <header className={styles.header} data-page-header="">
+          {hasCrumbs && <Breadcrumbs items={breadcrumbs!} />}
+          {(hasHeading || hasActions) && (
+            <div className={styles.titleRow}>
+              {hasHeading ? (
+                <div className={styles.heading}>
+                  {inline ? (
+                    <>
+                      <div className={styles.titleLine}>
+                        <h3 className={styles.title}>{title}</h3>
+                        {status}
+                      </div>
+                      {metaItems && metaItems.length > 0 && <div className={styles.meta}>{metaItems}</div>}
+                    </>
+                  ) : (
+                    hasMeta && (
+                      <div className={styles.meta}>
+                        {status && <span className={styles.status}>{status}</span>}
+                        {metaItems}
+                      </div>
+                    )
+                  )}
+                  {description && <p className={styles.description}>{description}</p>}
+                </div>
+              ) : (
+                <span className={styles.spacer} />
               )}
-              {collapse && (
-                <span className={styles.narrow}>
-                  <Menu label="More actions" variant="secondary" size="md">
-                    {secondaryActions.map((action) => (
-                      <MenuItem key={action.label} href={action.href} icon={action.icon}>
-                        {action.label}
-                      </MenuItem>
-                    ))}
-                  </Menu>
-                </span>
+              {hasActions && (
+                <div className={styles.actions}>
+                  {secondaryActions.length > 0 && (
+                    <span className={collapse ? styles.wide : styles.always}>
+                      {secondaryActions.map((action) => (
+                        <ButtonLink key={action.label} href={action.href} icon={action.icon}>
+                          {action.label}
+                        </ButtonLink>
+                      ))}
+                    </span>
+                  )}
+                  {collapse && (
+                    <span className={styles.narrow}>
+                      <Menu label="More actions" variant="secondary" size="md">
+                        {secondaryActions.map((action) => (
+                          <MenuItem key={action.label} href={action.href} icon={action.icon}>
+                            {action.label}
+                          </MenuItem>
+                        ))}
+                      </Menu>
+                    </span>
+                  )}
+                  {extraActions}
+                  {primaryAction}
+                </div>
               )}
-              {extraActions}
-              {primaryAction}
             </div>
           )}
-        </div>
-      </header>
+        </header>
+      )}
       {alerts !== false && <PageAlerts>{alerts}</PageAlerts>}
     </>
   );

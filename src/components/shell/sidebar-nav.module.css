@@ -1,0 +1,50 @@
+@layer components {
+  .nav { flex: 1 1 auto; min-height: 0; padding: var(--space-2); overflow-y: auto; }
+
+  /*
+   * One menu at a time: the sub-menu within a section, the section menu
+   * outside every section or after Show all sections. Without JavaScript,
+   * Show all sections targets the section menu, which then takes over.
+   */
+  .sections, .list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  .sections:focus { outline: none; }
+  .nav[data-view="submenu"] .sections { display: none; }
+  .nav[data-view="sections"] .submenu { display: none; }
+  .nav:has(.sections:target) .sections { display: flex; }
+  .nav:has(.sections:target) .submenu { display: none; }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--size-control-md);
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    text-decoration-line: none;
+    transition: background var(--duration-fast) var(--ease-standard);
+
+    &:hover { background: var(--color-bg-muted); color: var(--color-text); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+    /* The current item: a neutral fill and a heavier weight, never a hue. */
+    &[aria-current] { background: var(--color-bg-selected); font-weight: var(--font-weight-medium); }
+  }
+  .icon { flex: none; color: var(--color-text-secondary); }
+  .label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chevron { flex: none; color: var(--color-text-tertiary); }
+
+  /* The sub-menu's heading: Show all sections, then the section's name, centered. */
+  .head { display: grid; grid-template-columns: var(--size-control-md) minmax(0, 1fr) var(--size-control-md); align-items: center; min-height: var(--size-control-md); margin-bottom: var(--space-1); }
+  .back {
+    display: inline-grid;
+    place-items: center;
+    width: var(--size-control-md);
+    height: var(--size-control-md);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+
+    &:hover { background: var(--color-bg-muted); color: var(--color-text); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+  }
+  .heading { overflow: hidden; font-weight: var(--font-weight-medium); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+}

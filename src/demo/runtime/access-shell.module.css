@@ -111,7 +111,7 @@
     &:focus-visible { outline: 2px solid var(--rt-color-accent); outline-offset: 2px; }
   }
   .titleRow { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
-  .title { color: var(--rt-color-text); font-size: var(--font-size-title); font-weight: var(--font-weight-semibold); line-height: var(--line-height-title); }
+  .title { color: var(--rt-color-text); font-size: var(--rt-font-size-title); font-weight: var(--font-weight-semibold); line-height: var(--rt-line-height-title); }
   .tagline { color: var(--rt-color-muted); }
 
   .footer {

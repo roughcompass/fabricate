@@ -49,6 +49,10 @@ const PATHS = {
   tablet: "M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm6 16h.01",
   external: "M14 4h6v6M10 14 20 4M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5",
   code: "m8 8-5 4 5 4m8-8 5 4-5 4M14 4l-4 16",
+  chevronLeft: "m15 6-6 6 6 6",
+  menu: "M4 7h16M4 12h16M4 17h16",
+  sidebar: "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm4 0v16",
+  checklist: "M10 6h10M10 12h10M10 18h10M4 6l1.5 1.5L8 5M4 12l1.5 1.5L8 11M4 18l1.5 1.5L8 17",
 } as const;
 
 export type IconName = keyof typeof PATHS;

@@ -2,7 +2,7 @@
 
 This document is the source of truth for Fabricate's operator interface: its tokens, components, page patterns, feedback rules, and content standard. The tokens live in [`src/app/globals.css`](../src/app/globals.css) and the components in [`src/components/ui/`](../src/components/ui/). In development, the component gallery at `/design-system` renders every component in every variant and state, in both themes.
 
-The direction is simple and usable: neutral surfaces, one accent, compact controls, and hierarchy that comes from type and spacing rather than boxes.
+The direction is simple and usable: white content surfaces on a light gray canvas, monochrome emphasis with one blue accent, compact controls, and hierarchy that comes from type and spacing rather than boxes.
 
 Two automated checks keep the system consistent:
 - [`test/lint/design-tokens.test.ts`](../test/lint/design-tokens.test.ts) fails when a stylesheet uses a literal color, a length off the scales, an undefined token, a token of the wrong type, or `!important` outside the reset, visually hidden, and reduced-motion rules.
@@ -16,11 +16,11 @@ Every visual value is a token, and every token name starts with its type. A styl
 
 | Family | Tokens | Used by |
 | --- | --- | --- |
-| `--color-*` | Surfaces, text, borders, accent, danger, status, shadow and overlay colors (below) | `color`, `background`, borders, `outline`, `fill`, `stroke`, `accent-color` |
+| `--color-*` | Canvas, surfaces, text, borders, primary, accent, danger, status, shadow and overlay colors (below) | `color`, `background`, borders, `outline`, `fill`, `stroke`, `accent-color` |
 | `--font-family-*` | `sans`, `mono` | `font-family` |
-| `--font-size-*` | `caption`, `secondary`, `body`, `heading`, `subtitle`, `title`, `display` | `font-size` |
+| `--font-size-*` | `caption`, `secondary`, `body`, `heading`, `subtitle`, `display` | `font-size` |
 | `--line-height-*` | One per font size | `line-height` |
-| `--letter-spacing-*` | `normal`, `heading`, `subtitle`, `title`, `display`, `caps` | `letter-spacing` |
+| `--letter-spacing-*` | `normal`, `heading`, `subtitle`, `display`, `caps` | `letter-spacing` |
 | `--font-weight-*` | `regular` (400), `medium` (500), `semibold` (600) | `font-weight` |
 | `--space-*` | `1` to `16` on a 4px scale, and `gutter` for page edges | `margin`, `padding`, `gap`, `inset` |
 | `--size-*` | Control heights, icons, and layout widths (below) | `width`, `height`, and their limits |
@@ -40,13 +40,15 @@ The template demo's running applications render inside fictional portal shells, 
 
 ### Color
 
-The palette is neutral gray with a single teal accent.
+The palette is neutral gray with monochrome emphasis and a single blue accent.
 
 | Token | Role |
 | --- | --- |
-| `--color-bg` | Page and panel background |
-| `--color-bg-subtle` | Recessed areas: table headers, code, sidebars |
-| `--color-bg-muted` | Hover fills, tags, the selected option of a segmented control |
+| `--color-canvas` | The light gray (black in dark) behind everything: the page background, the sidebar, and the header |
+| `--color-bg` | Content surfaces on the canvas: panels, tables, forms, cards, and inputs |
+| `--color-bg-subtle` | Recessed areas inside a surface: table headers, code, panel footers |
+| `--color-bg-muted` | Hover fills, tags, counts, the selected option of a segmented control |
+| `--color-bg-selected` | A selected item: the current navigation item, a pressed toggle, a checked filter option |
 | `--color-bg-elevated` | Menus, dialogs, and toasts |
 | `--color-border` | Panels, tables, and dividers |
 | `--color-border-subtle` | Dividers inside a panel |
@@ -55,15 +57,21 @@ The palette is neutral gray with a single teal accent.
 | `--color-text-secondary` | Descriptions, labels, metadata |
 | `--color-text-tertiary` | Placeholders and disabled text only |
 
-The accent (`--color-accent`, with `-hover`, `-subtle`, and `--color-on-accent`) is reserved for:
+Emphasis is monochrome. The primary color (`--color-primary`, with `-hover` and `--color-on-primary` for content on it) is near-black in the light theme and near-white in the dark theme. It fills:
 - primary buttons
-- links in running text (`--color-link`)
-- the current navigation item and selected tab
-- selected checkboxes, radios, and choice cards
-- focus indicators (`--color-focus`, and `--color-focus-ring` for inputs)
-- in-progress status
+- checked checkboxes and radios, and the boundary of selected choice cards (`--shadow-selected` adds the ring)
+- the selected tab's indicator
+- filled marks, such as counts and numbered pins
 
-Secondary and tertiary actions are neutral. Links inside tables are neutral and underline on hover.
+A selected item, such as the current navigation item or a pressed toggle, takes `--color-bg-selected` with a heavier weight or a primary border, never a hue.
+
+Blue is the single accent (`--color-accent`, with `-hover` and `-subtle`). It is reserved for:
+- links in running text (`--color-link`)
+- focus indicators (`--color-focus`, and `--color-focus-ring` for inputs)
+- in-progress status and informational feedback (`--color-progress`)
+- the text selection highlight and the outline of an element being targeted (`--color-accent-subtle`)
+
+Nothing fills with the accent and carries text. Secondary and tertiary actions are neutral. Links inside tables are neutral and underline on hover.
 
 `--color-danger` fills the confirm button of a destructive dialog, and nothing else.
 
@@ -79,11 +87,11 @@ Status has five tones, and each has a foreground, a background, and a border:
 
 Status always appears as a colored indicator next to a text label, never as color alone.
 
-The portal shells of the template demo, the microfrontends they host, and the template preview images are application content. They use their own brand palettes (see Runtime tokens) and are outside this palette and its accent rule. The demo toolbar and its panels are operator interface: they use the neutral palette with the teal accent, even over a branded portal.
+The portal shells of the template demo, the microfrontends they host, and the template preview images are application content. They use their own brand palettes (see Runtime tokens) and are outside this palette and its accent rule. The demo toolbar and its panels are operator interface: they use the monochrome palette with the blue accent, even over a branded portal.
 
 ### Themes
 
-Colors are defined once with `light-dark()`, so the theme follows `color-scheme`. With no preference set, the interface follows the operating system. The operator can choose System, Light, or Dark with the switcher in the header. The choice is stored in the `fabricate-theme` cookie, and the root layout renders it as `data-theme` on `<html>`, so the first paint is already correct and no inline script is needed. Any element with `data-theme` switches its subtree, which the gallery uses to show both themes side by side. A custom property holding `light-dark()` is resolved on the element that declares it, so the color and shadow tokens are declared on `:root, [data-theme]`: each themed element redeclares them and resolves them against its own color scheme. Other tokens are declared on `:root` only.
+Colors are defined once with `light-dark()`, so the theme follows `color-scheme`. With no preference set, the interface follows the operating system. The operator can choose System, Light, or Dark with the theme control in the application shell. The choice is stored in the `fabricate-theme` cookie, and the root layout renders it as `data-theme` on `<html>`, so the first paint is already correct and no inline script is needed. Any element with `data-theme` switches its subtree, which the gallery uses to show both themes side by side. A custom property holding `light-dark()` is resolved on the element that declares it, so the color and shadow tokens are declared on `:root, [data-theme]`: each themed element redeclares them and resolves them against its own color scheme. Other tokens are declared on `:root` only.
 
 ### Typography
 
@@ -94,12 +102,11 @@ Text is set in Geist Sans, and code, identifiers, digests, commit SHAs, paths, a
 | `caption` | 12 / 16 | Table headers, badges, captions |
 | `secondary` | 13 / 18 | Secondary lines, metadata, identifiers |
 | `body` | 14 / 20 | Body text, controls, table cells |
-| `heading` | 16 / 24 | Section and panel headings |
+| `heading` | 16 / 24 | Headings: the page title in the shell header, and section and panel headings |
 | `subtitle` | 20 / 28 | Subsection headings in long documents |
-| `title` | 24 / 32 | Page titles |
 | `display` | 32 / 40 | Large numerals in stat groups |
 
-Headings use the semibold weight, with slightly tighter letter spacing at larger sizes. Hierarchy comes from size and weight together; light weights are not used.
+Headings use the semibold weight, with slightly tighter letter spacing at larger sizes. Hierarchy comes from size, weight, and place together: the page title is quiet, like Vercel's, and stands out by sitting centered in the shell header. Light weights are not used. The portal shells' 24px page titles are a runtime token (`--rt-font-size-title`), not part of this scale.
 
 ### Sizing and density
 
@@ -113,7 +120,9 @@ Headings use the semibold weight, with slightly tighter letter spacing at larger
 | `--size-card` | 272px | The narrowest media card in a grid |
 | `--size-form` | 640px | Every create and edit form |
 | `--size-content` | 1200px | The maximum page width |
-| `--size-header` | 56px | The application header |
+| `--size-header` | 56px | The shell header, and the sidebar's brand row beside it |
+| `--size-sidebar` | 256px | The sidebar's default width |
+| `--size-sidebar-min`, `--size-sidebar-max` | 200, 400px | The limits of a resized sidebar, and the drawer's widest |
 
 On coarse-pointer devices, the control tokens all resolve to 44px, so touch targets grow without component changes. No interactive target is smaller than 24px by 24px.
 
@@ -175,13 +184,15 @@ Mark optional fields with `optional`; required fields carry no marker. Check box
 
 ### Layout and content
 
+Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: the sidebar, the shell header, and the page background are `--color-canvas`, and every container of record content is a bordered `--color-bg` surface. That covers `Panel`, `StatGroup`, `MediaCard`, `CodeBlock`, `Disclosure`'s panel variant, `EmptyState`, form controls, and a `DescriptionList` that stands on its own. A surface always has a border as well as its fill, so it stands apart from the canvas in both themes; in dark, the canvas is black and surfaces are near-black. Page headers, breadcrumbs, section headings and descriptions, `Tabs`, `FilterBar`, `FilterRail`, and `SectionNav` stay transparent, on the canvas. Surfaces never nest: a list or empty state inside a `Panel` stays plain, and a standalone one sits in a `Panel` or takes `surface`.
+
 | Component | Use |
 | --- | --- |
 | `Section` (`section.tsx`) | A titled part of a page, separated by heading and spacing, with no border |
-| `Panel` (`panel.tsx`) | A bordered container for a table, form, list, or code, with an optional header and footer; `tone="danger"` for a danger zone. Panels never nest. |
-| `DescriptionList` (`description-list.tsx`) | Terms and values; `rows` beside each other, `columns` for overviews |
+| `Panel` (`panel.tsx`) | A bordered surface for a table, form, list, or code, with an optional header and footer; `tone="danger"` for a danger zone. Panels never nest. |
+| `DescriptionList` (`description-list.tsx`) | Terms and values; `rows` beside each other, `columns` for overviews. `surface` sets a list that stands on its own, such as an overview or Details, on a bordered surface with panel padding; inside a `Panel`, leave it plain |
 | `StatGroup` (`stat-group.tsx`) | Key figures in one divided row; cells fill each row, and a phone shows two per row |
-| `EmptyState` (`empty-state.tsx`) | A title, one sentence, and the action that fills the area, inside the area it replaces |
+| `EmptyState` (`empty-state.tsx`) | A title, one sentence, and the action that fills the area, inside the panel or list it replaces; one that stands on its own sits in a flush `Panel` |
 | `Disclosure` (`disclosure.tsx`) | A native `<details>`: `panel` for grouped results, `plain` for secondary details. On narrow screens the `aside` moves below a label that needs the room |
 | `CodeBlock` (`code-block.tsx`) | Cited lines with numbers and a copy control; long lines wrap |
 | `Table` (`table.tsx`) | A quiet header, a linked primary cell, `RowActions` that keep rows one height, `EmptyRow`, and stacked rows on narrow screens; `scroll` for many numeric columns, which also stacks on narrow screens. Give every cell a `label`, since stacked rows show it |
@@ -229,11 +240,38 @@ Every page follows one of a few patterns, built from `Page` and `PageHeader` (`p
 
 ### Application shell
 
-`AppShell` (`src/components/shell/app-shell.tsx`) frames every page: a skip link; a sticky header with the product mark, the primary navigation (Initiatives, Sources, Standards, and Templates while the template demo is enabled), and the theme switcher; and the main region, with one maximum width (`--size-content`) and `--space-gutter` at the edges. A navigation item is current on every page of its section: Initiatives covers Initiatives, Assessments, Evaluations, and Profiles, and Templates covers templates and applications. Below 640px the theme switcher becomes a menu, and below 768px the product name hides beside its mark; with four sections, the links also tighten so everything fits at 375px. Running demo applications are not operator pages: they render in the `(runtime)` route group, full-bleed inside their portal shell, with no `AppShell`.
+`AppShell` (`src/components/shell/app-shell.tsx`) frames every page, in the manner of Vercel's dashboard: a skip link; a full-height sidebar on the canvas; and the content column, which holds the main region. The sidebar holds the product mark, the navigation, and, in its footer, the theme switcher. The sidebar is fixed to the viewport over its reserved grid column, so it never shifts at the end of a long page.
+
+**Navigation drills into sections.** `SidebarNav` (`sidebar-nav.tsx`, client) shows one of two menus, both defined in `navigation.ts`:
+- **The section menu:** Initiatives, Sources, and Standards, plus Templates while the template demo is enabled, each with an icon and a chevron.
+- **A section's sub-menu:** headed by the section's name, with Show all sections beside the heading.
+
+| Section | Sub-menu |
+| --- | --- |
+| Initiatives | All Initiatives, New Initiative |
+| Sources | All Sources, Add Source, Import Sources |
+| Standards | All Standards, New Standard |
+| Templates | New application, Gallery, Applications |
+
+Choosing a section opens its first item. Every page shows its section's sub-menu with one item current: a record's pages mark the list item for their records (an Assessment marks All Initiatives, a template preview marks Gallery), and the create and import pages mark their own items. `locate()` resolves a path to its section and item; its patterns never overlap, and a unit test checks every operator route against it. A page outside every section, such as this gallery, shows the section menu.
+
+Show all sections shows the section menu without leaving the page and moves focus to the current section. Without JavaScript it is a link to `#sidebar-sections`, and a `:target` rule shows the section menu. Every navigation shows the new page's sub-menu again. The current item takes `--color-bg-selected` and the medium weight, and is exposed as `aria-current`.
+
+**The shell header names the page.** `ShellHeader` (`shell-header.tsx`) is a sticky bar across the content column, on the canvas, `--size-header` tall. It holds the page's title, centered, as its only `h1` at the heading size. A long title truncates with an ellipsis, with the full text in the `h1` and its tooltip. The title is page data the layout cannot see, so pages render the header themselves: through `PageHeader`, and directly in `SystemPage` and the page skeletons. Because the header spans the column, `Page` sets the measure (`--size-content`, or `--size-form` for forms) and the `--space-gutter` edges for every other part of the page.
+
+**The sidebar can be resized and hidden.** From 1024px, the operator adjusts the sidebar two ways:
+- **Resize.** `SidebarResizer` (`sidebar-resizer.tsx`, client) is a vertical `separator`, named Resize sidebar, on the sidebar's edge, with a 24px target straddling the border. Dragging it resizes the sidebar from 200 to 400px (`--size-sidebar-min` to `--size-sidebar-max`), writing the width straight to the shell's `--_sidebar-width` on each animation frame rather than rendering React. Left Arrow and Right Arrow move it by 16px, Home and End go to the limits, and a double-click restores the 256px default (`--size-sidebar`). It announces the width as "320 pixels". Resizing needs JavaScript; without it the sidebar keeps its stored or default width.
+- **Hide.** `SidebarToggle` (`sidebar-toggle.tsx`, client) is Hide sidebar in the sidebar's brand row and Show sidebar in the shell header, which appears only while the sidebar is hidden. While hidden, the content takes the full width. Before JavaScript runs, each is a form posting to the `setSidebarVisibility` Server Action (`src/app/sidebar-actions.ts`); once hydrated, it switches the shell's `data-sidebar` at once, writes the same cookie, and moves focus to the opposite control.
+
+Both settings persist for a year in two cookies that the browser may write, so they are not `httpOnly`: `fabricate-sidebar-width` (whole pixels) and `fabricate-sidebar` (`hidden`, or absent). The `(operator)` layout and the root `not-found.tsx` read them through `shellPreferences()`, so the server renders the stored width and state and a page never shifts as it loads. `src/lib/web/sidebar.ts` parses them: a width outside the limits is clamped to the nearest limit, and anything that is not a whole number falls back to the default.
+
+**Below 1024px the sidebar is a drawer.** The content takes the whole width, and Open navigation in the shell header opens the sidebar. The sidebar is a native popover (`popover="auto"`), so opening it, Escape, a click outside, and the return of focus to Open navigation all work without JavaScript; from 1024px its styles restate the browser's popover defaults so the same element is the inline sidebar. The drawer slides in over `--color-overlay`, and closes when an item is chosen, when a page opens, and when the viewport widens to 1024px.
+
+Running demo applications are not operator pages: they render in the `(runtime)` route group, full-bleed inside their portal shell, with no `AppShell`.
 
 ### Page header
 
-`PageHeader` holds, in order: breadcrumbs of the record's ancestors (none on top-level lists), the title with an optional status, an optional meta line of short facts, an optional one-sentence description, and the actions. A header has at most one primary action. Other actions are `secondaryActions` (links) or `extraActions` (controls such as a confirmation dialog). On narrow screens, when there is a primary action, the secondary links move into a "More actions" menu. The page-alert slot follows the header. The title is the page's only `h1`; the gallery's specimens lower it with `headingLevel`.
+`PageHeader` puts the page's title in the shell header, as the page's only `h1`, and never repeats it in the page. The header in the page holds, in order: breadcrumbs of the record's ancestors (none on top-level lists), an optional status with an optional meta line of short facts, an optional one-sentence description, and the actions. A list page with nothing else shows just its actions, at the end of the row. A header has at most one primary action. Other actions are `secondaryActions` (links) or `extraActions` (controls such as a confirmation dialog). On narrow screens, when there is a primary action, the secondary links move into a "More actions" menu. The page-alert slot follows the header. The gallery's specimens pass `headingLevel={3}`, which keeps the title inline in the header instead.
 
 ### Record names and titles
 
@@ -252,11 +290,11 @@ Public IDs appear only in a page's Details area, with a copy control. Each detai
 
 ### Lists
 
-A list page is a header and a `Panel` holding a `Table`. The primary cell links to the record; row actions are `sm` controls in `RowActions`, usually a `Menu`. Filter tabs show counts. An empty list shows an `EmptyState` in the list area with the action that fills it. The Sources list adds a search that works without JavaScript. The template gallery is the one list that is not a table: it shows templates as a grid of `MediaCard`s, with the same empty state and search rules.
+A list page is a header and a `Panel` holding a `Table`. The primary cell links to the record; row actions are `sm` controls in `RowActions`, usually a `Menu`. Filter tabs show counts. An empty list shows an `EmptyState` in the list area with the action that fills it. The Sources list adds a search that works without JavaScript. The tabs and filters sit on the canvas above the white table. The template gallery is the one list that is not a table: it shows templates as a grid of white `MediaCard`s on the canvas, with the same empty state and search rules; with no match, its empty state sits in a flush `Panel`.
 
 ### Detail pages
 
-A detail page leads with an overview under its header, as a `StatGroup` or a `DescriptionList` in columns, then `Section`s in order of importance. Sections are separated by headings and spacing; only tables, code, and grouped controls sit in panels, and panels never nest. Technical metadata (detector release, digests, evaluator version, draft version, public ID) goes last, in a plain `Disclosure` named Details.
+A detail page leads with an overview under its header, as a `StatGroup` or a `DescriptionList surface` in columns, then `Section`s in order of importance. Sections are separated by headings and spacing on the canvas; the overview, tables, description lists, code, and grouped controls sit on surfaces, and surfaces never nest. Technical metadata (detector release, digests, evaluator version, draft version, public ID) goes last, in a plain `Disclosure` named Details whose `DescriptionList` takes `surface`.
 
 ### Forms
 
@@ -276,7 +314,9 @@ Each Control is a collapsible panel whose summary shows its key, title, severity
 
 ### Narrow screens
 
-From 375px up, nothing overflows horizontally and nothing overlaps. Tables become stacked label and value rows, header secondary actions move into a menu, and section navigation collapses.
+From 375px up, and at every sidebar width, nothing overflows horizontally and nothing overlaps. Tables become stacked label and value rows, header secondary actions move into a menu, and section navigation collapses.
+
+**Content width.** Page layouts respond to the width of the content column, not the viewport: the shell's column is a size container named `content`, and component and route stylesheets write `@container content (max-width: 767px)`, `(min-width: 768px)`, `(max-width: 1023px)`, or `(max-width: 1024px)`. Below 1024px the column is the whole viewport, so phones and tablets get the same layouts as before; from 1024px it is the viewport less the sidebar, so a wide sidebar moves the content into its narrow layouts instead of overflowing. Viewport width queries remain only where the viewport is the reference: the shell (`app-shell`, `shell-header`, `sidebar-resizer`), the fixed toast viewports (`toast`, `flash-toast`), the gutter step in `globals.css`, and the demo's toolbar and portal runtime, which render outside the shell. The design-token check rejects a viewport width query anywhere else.
 
 ## Content standard
 

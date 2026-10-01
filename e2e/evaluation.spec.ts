@@ -6,7 +6,8 @@ import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } 
 import { evaluate, seedResults } from "./support/results";
 
 const releaseGroup = (page: Page, release: string) => page.getByRole("region", { name: release, exact: true });
-const header = (page: Page) => page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+// The page header: status, meta, and actions; the title is in the shell header.
+const header = (page: Page) => page.locator("[data-page-header]");
 const findingRows = (page: Page) => page.locator('table[aria-label$=" Findings"] tbody tr');
 const status = (page: Page) => page.getByRole("status").filter({ hasText: "Finding" });
 
@@ -30,7 +31,7 @@ test("summarizes each Release separately and filters Findings by Release, outcom
   const { initiative, assessment } = await seedResults(db);
   const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
   await page.goto(`/evaluations/${evaluation.publicId}`);
-  await expect(page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) })).toContainText("Complete");
+  await expect(header(page)).toContainText("Complete");
   await expect(page.getByText("1 repository in the Assessment had no Profile")).toBeVisible();
 
   const summary = page.getByRole("table", { name: "Summary by Release" });

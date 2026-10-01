@@ -285,7 +285,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ profil
           )}
 
           <Disclosure summary="Details" variant="plain">
-            <DescriptionList
+            <DescriptionList surface
               items={[
                 ["Commit", <Tag key="commit" copy label="commit">{commit}</Tag>],
                 ["Detector release", <Tag key="release">{String(document.detector_release)}</Tag>],

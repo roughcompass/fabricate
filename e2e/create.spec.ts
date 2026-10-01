@@ -4,6 +4,7 @@ import { BRANDS, TEMPLATES } from "../src/lib/demo/catalog";
 import { galleryOrder } from "../src/lib/demo/gallery";
 import { chipTemplates } from "../src/lib/demo/prompt";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
+import { expectCurrentItem, openSection } from "./support/shell";
 
 /** The create page and the BitBucket import (template-gallery and deployments specs). */
 
@@ -15,13 +16,13 @@ async function submitPrompt(page: Page, text: string) {
   await page.getByRole("button", { name: "Start building" }).click();
 }
 
-test("opens from the Templates navigation item with the prompt bar, chips, import, and Build your solution", async ({ page, db: _db }) => {
+test("opens from the Templates section with the prompt bar, chips, import, and Build your solution", async ({ page, db: _db }) => {
   await page.goto("/");
-  await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Templates" }).click();
+  await openSection(page, "Templates");
   await expect(page).toHaveURL(/\/new$/);
   await expect(page).toHaveTitle("Let's build something new · Fabricate");
   await expect(page.getByRole("heading", { level: 1, name: "Let's build something new" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Templates" })).toHaveAttribute("aria-current", "page");
+  await expectCurrentItem(page, "Templates", "New application");
 
   // In order: the prompt bar, the chips, the Import Git Repository panel, and Build your solution.
   const ordered = await page.evaluate(() => {

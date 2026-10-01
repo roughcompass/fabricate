@@ -7,7 +7,7 @@ import { contrast, themeTokens } from "../support/css";
 // contrast in both themes: 4.5:1 for text, 3:1 for control boundaries and focus.
 const globals = fs.readFileSync(path.resolve("src/app/globals.css"), "utf8");
 
-const BACKGROUNDS = ["--color-bg", "--color-bg-subtle", "--color-bg-muted", "--color-bg-elevated"];
+const BACKGROUNDS = ["--color-canvas", "--color-bg", "--color-bg-subtle", "--color-bg-muted", "--color-bg-selected", "--color-bg-elevated"];
 const STATUSES = ["success", "warning", "error", "neutral", "progress"];
 
 const PAIRS: (readonly [foreground: string, background: string, minimum: number])[] = [
@@ -18,10 +18,12 @@ const PAIRS: (readonly [foreground: string, background: string, minimum: number]
     ["--color-error", background, 4.5] as const,
     ["--color-border-strong", background, 3] as const,
     ["--color-focus", background, 3] as const,
+    // Checked check boxes and radios, selected boundaries, and filled marks use the primary color.
+    ["--color-primary", background, 3] as const,
   ]),
   ["--color-text", "--color-accent-subtle", 4.5],
-  ["--color-on-accent", "--color-accent", 4.5],
-  ["--color-on-accent", "--color-accent-hover", 4.5],
+  ["--color-on-primary", "--color-primary", 4.5],
+  ["--color-on-primary", "--color-primary-hover", 4.5],
   ["--color-on-danger", "--color-danger", 4.5],
   ["--color-on-danger", "--color-danger-hover", 4.5],
   ...STATUSES.flatMap((status) => [

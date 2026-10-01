@@ -98,7 +98,7 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
 
       <Section title="Result">
         <p className={styles.reasoning}>{String(document.reasoning)}</p>
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["Subject", subjectLink],
             ...(typeof subject.commit === "string" ? ([["Commit", <ShortValue key="commit" value={subject.commit} label="commit" />]] as [string, React.ReactNode][]) : []),
@@ -131,7 +131,7 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
       )}
 
       <Section title="Expected state" description={String(control.rationale)}>
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["Applies when", <ExpressionView key="applicability" expression={control.applicability ?? null} />],
             ["Expected", <ExpressionView key="condition" expression={control.condition ?? null} />],
@@ -167,7 +167,7 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
       )}
 
       <Disclosure summary="Details" variant="plain">
-        <DescriptionList
+        <DescriptionList surface
           items={[
             ["Evaluator version", String(document.evaluator_version)],
             ["ID", <Tag key="id" copy label="ID">{finding.publicId}</Tag>],

@@ -19,17 +19,80 @@ test("renders every component section in both themes", async ({ page }) => {
   expect(await page.locator("[data-panel] [data-panel]").count()).toBe(0);
   // The dark frame resolves the dark palette while the page stays light.
   await page.emulateMedia({ colorScheme: "light" });
-  await expect(page.getByRole("region", { name: "Buttons, dark" })).toHaveCSS("background-color", "rgb(17, 17, 17)");
+  await expect(page.getByRole("region", { name: "Buttons, dark" })).toHaveCSS("background-color", "rgb(0, 0, 0)");
   await expect(light(page, "Buttons")).toHaveCSS("background-color", "rgb(250, 250, 250)");
 });
 
-test("sizes controls at 36px by default and keeps primary text on the accent readable", async ({ page }) => {
+test("sizes controls at 36px by default and fills primary buttons with the monochrome primary color", async ({ page }) => {
   await page.goto("/design-system");
   const buttons = light(page, "Buttons");
   expect(await height(buttons.locator('[data-size-sample="md"]'))).toBe(36);
   expect(await height(buttons.locator('[data-size-sample="sm"]'))).toBe(28);
-  await expect(buttons.getByRole("button", { name: "Primary", exact: true })).toHaveCSS("color", "rgb(255, 255, 255)");
+  const primary = buttons.getByRole("button", { name: "Primary", exact: true });
+  await expect(primary).toHaveCSS("background-color", "rgb(23, 23, 23)");
+  await expect(primary).toHaveCSS("color", "rgb(255, 255, 255)");
+  // Inverted in the dark theme.
+  const darkPrimary = page.getByRole("region", { name: "Buttons, dark" }).getByRole("button", { name: "Primary", exact: true });
+  await expect(darkPrimary).toHaveCSS("background-color", "rgb(237, 237, 237)");
+  await expect(darkPrimary).toHaveCSS("color", "rgb(10, 10, 10)");
   await expect(buttons.getByRole("link", { name: "Edit" })).toHaveCSS("text-decoration-line", "none");
+});
+
+// operator-interface/design-system: monochrome palette with a single blue accent.
+test("uses the primary color for selection and blue only for links and focus", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/design-system");
+  const form = light(page, "Form controls");
+  await expect(form.getByLabel("Checked", { exact: true })).toHaveCSS("background-color", "rgb(23, 23, 23)");
+  await expect(page.getByRole("list", { name: "Components" }).getByRole("link").first()).toHaveCSS("color", "rgb(0, 104, 214)");
+  const input = form.getByLabel("Name", { exact: true });
+  await input.focus();
+  await expect(input).toHaveCSS("border-top-color", "rgb(0, 104, 214)");
+});
+
+// operator-interface/page-patterns: content sits on white surfaces over a gray canvas.
+test("puts every content container on a surface over the canvas, in both themes", async ({ page }) => {
+  await page.goto("/design-system");
+  const canvas = { light: "rgb(250, 250, 250)", dark: "rgb(0, 0, 0)" };
+  const surface = { light: "rgb(255, 255, 255)", dark: "rgb(10, 10, 10)" };
+  for (const theme of ["light", "dark"] as const) {
+    for (const title of ["Section and panel", "Stat group", "Media card", "Empty state", "Code block", "Disclosure", "Table"]) {
+      const frame = page.getByRole("region", { name: `${title}, ${theme}` });
+      await expect(frame, `${title}, ${theme}`).toHaveCSS("background-color", canvas[theme]);
+      // Panels, code blocks, stat cells (the group's own fill draws its dividers), cards, and disclosure panels.
+      const backgrounds = await frame.evaluate((element) =>
+        [...element.querySelectorAll("[data-panel]:not(dl), dl[data-panel] > div, article:not([aria-disabled]), details")].filter((node) => getComputedStyle(node).borderTopWidth !== "0px" || node.matches("dl > div")).map((node) => getComputedStyle(node).backgroundColor),
+      );
+      expect(backgrounds.length, `${title}, ${theme}`).toBeGreaterThan(0);
+      expect(new Set(backgrounds), `${title}, ${theme}`).toEqual(new Set([surface[theme]]));
+    }
+    const unavailable = page.getByRole("region", { name: `Media card, ${theme}` }).locator("article[aria-disabled]");
+    await expect(unavailable).not.toHaveCSS("background-color", canvas[theme]);
+  }
+});
+
+test("shows description lists both plain and on a surface", async ({ page }) => {
+  await page.goto("/design-system#description-list");
+  for (const [theme, surface] of [["light", "rgb(255, 255, 255)"], ["dark", "rgb(10, 10, 10)"]] as const) {
+    const frame = page.getByRole("region", { name: `Description list, ${theme}` });
+    await expect(frame.locator("dl:not([data-panel])")).toHaveCount(2);
+    await expect(frame.locator("dl[data-panel]")).toHaveCount(2);
+    for (const list of await frame.locator("dl[data-panel]").all()) await expect(list).toHaveCSS("background-color", surface);
+  }
+});
+
+test("shows every role color in both themes", async ({ page }) => {
+  await page.goto("/design-system");
+  const swatch = (theme: "light" | "dark", token: string) => page.getByRole("region", { name: `Color, ${theme}` }).locator(`[data-swatch="${token}"] > span`).first();
+  for (const theme of ["light", "dark"] as const) {
+    await expect(page.getByRole("region", { name: `Color, ${theme}` }).locator("[data-swatch]")).toHaveCount(7);
+  }
+  await expect(swatch("light", "--color-canvas")).toHaveCSS("background-color", "rgb(250, 250, 250)");
+  await expect(swatch("dark", "--color-canvas")).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  await expect(swatch("light", "--color-primary")).toHaveCSS("background-color", "rgb(23, 23, 23)");
+  await expect(swatch("dark", "--color-primary")).toHaveCSS("background-color", "rgb(237, 237, 237)");
+  await expect(swatch("light", "--color-accent")).toHaveCSS("background-color", "rgb(0, 104, 214)");
+  await expect(swatch("dark", "--color-accent")).toHaveCSS("background-color", "rgb(82, 168, 255)");
 });
 
 test("draws check boxes, inputs, and selects consistently", async ({ page }) => {

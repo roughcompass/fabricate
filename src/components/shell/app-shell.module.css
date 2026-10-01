@@ -6,61 +6,116 @@
     z-index: var(--z-toast);
     padding: var(--space-2) var(--space-4);
     border-radius: var(--radius-md);
-    background: var(--color-accent);
-    color: var(--color-on-accent);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     text-decoration-line: none;
-    &:focus { top: var(--space-2); color: var(--color-on-accent); }
+    &:focus { top: var(--space-2); color: var(--color-on-primary); }
   }
 
-  .header {
-    position: sticky;
-    top: 0;
+  /* The sidebar column takes the operator's width, set inline from their cookie. */
+  .shell {
+    --_sidebar-width: var(--size-sidebar);
+    display: grid;
+    grid-template-columns: var(--_sidebar-width) minmax(0, 1fr);
+    min-height: 100dvh;
+    background: var(--color-canvas);
+  }
+
+  /*
+   * The sidebar is one element in two roles. From 1024px it is fixed to the
+   * viewport over its reserved column, rather than sticky: a sticky sidebar is
+   * held inside the shell, so content overflowing the shell by a pixel would
+   * shift it at the end of a long page. It carries the popover attribute for
+   * its drawer role, so these rules restate everything the browser's popover
+   * styles set.
+   */
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
     z-index: var(--z-header);
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-bg);
-  }
-  .inner {
     display: flex;
-    align-items: stretch;
-    gap: var(--space-6);
-    max-width: calc(var(--size-content) + 2 * var(--space-gutter));
-    height: var(--size-header);
-    margin: 0 auto;
-    padding: 0 var(--space-gutter);
+    flex-direction: column;
+    width: var(--_sidebar-width);
+    height: 100dvh;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-inline-end: 1px solid var(--color-border);
+    background: var(--color-canvas);
+    color: var(--color-text);
   }
 
-  .brand {
-    display: inline-flex;
+  /* Below 1024px the content takes the whole width, and the sidebar is a drawer over it. */
+  @media (max-width: 1023px) {
+    .shell { grid-template-columns: minmax(0, 1fr); }
+    .sidebar {
+      width: min(var(--size-sidebar-max), 100vw - var(--space-12));
+      box-shadow: var(--shadow-dialog);
+      transition: transform var(--duration-base) var(--ease-emphasized);
+    }
+    .sidebar:not(:popover-open) { display: none; }
+    .sidebar::backdrop { background: var(--color-overlay); }
+    @starting-style {
+      .sidebar:popover-open { transform: translateX(-100%); }
+    }
+  }
+
+  .brandRow {
+    display: flex;
     flex: none;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-2);
+    height: var(--size-header);
+    padding: 0 var(--space-3) 0 var(--space-4);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
     color: var(--color-text);
     font-weight: var(--font-weight-semibold);
     letter-spacing: var(--letter-spacing-heading);
     text-decoration-line: none;
     &:hover { color: var(--color-text); }
   }
-  .mark { width: var(--size-icon-lg); height: var(--size-icon-lg); color: var(--color-accent); }
+  /* Monochrome, in the brand's text color. */
+  .mark { flex: none; width: var(--size-icon-lg); height: var(--size-icon-lg); color: currentcolor; }
+  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  .nav { display: flex; align-items: stretch; gap: var(--space-1); min-width: 0; }
-  .end { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
-
-  .main {
-    max-width: calc(var(--size-content) + 2 * var(--space-gutter));
-    margin: 0 auto;
-    padding: var(--space-8) var(--space-gutter) var(--space-16);
-    &:focus { outline: none; }
+  /* Hiding applies to the inline sidebar; the drawer is dismissed instead. */
+  .hideSidebar { display: contents; }
+  @media (max-width: 1023px) {
+    .hideSidebar { display: none; }
+  }
+  @media (min-width: 1024px) {
+    .shell[data-sidebar="hidden"] { grid-template-columns: 0 minmax(0, 1fr); }
+    .shell[data-sidebar="hidden"] .sidebar { display: none; }
   }
 
-  @media (max-width: 767px) {
-    .inner { gap: var(--space-3); }
-    .name { display: none; }
-    .nav { gap: 0; }
-    .main { padding-top: var(--space-6); }
+  .footer {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-border);
+  }
+  .footerLabel { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
 
-    /* With Templates as a fourth section, links tighten so the mark, every section, and the theme control fit at 375px. */
-    .inner:has(.nav > :nth-child(4)) { gap: var(--space-2); }
-    .nav:has(> :nth-child(4)) > a { padding: 0 var(--space-1); font-size: var(--font-size-secondary); }
-    .nav:has(> :nth-child(4)) > a[aria-current="page"]::after { left: var(--space-1); right: var(--space-1); }
+  /* Page layouts respond to this column's width, not the viewport's, so a wide sidebar never squeezes them. */
+  .column { grid-column: 2; min-width: 0; container: content / inline-size; }
+  @media (max-width: 1023px) {
+    .column { grid-column: 1; }
+  }
+
+  /* Pages set their own measure and gutters (Page), so the shell header can span the column. */
+  .main {
+    padding-bottom: var(--space-16);
+    &:focus { outline: none; }
   }
 }

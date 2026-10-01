@@ -1,0 +1,36 @@
+@layer components {
+  /* A 24px target straddling the sidebar's border; the line it draws highlights on hover, focus, and drag. */
+  .handle {
+    position: absolute;
+    top: 0;
+    right: calc(-1 * var(--space-3));
+    bottom: 0;
+    z-index: var(--z-raised);
+    width: var(--space-6);
+    cursor: col-resize;
+    touch-action: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: calc(50% - 1px);
+      width: 2px;
+      background: transparent;
+      transition: background var(--duration-fast) var(--ease-standard);
+    }
+    &:hover::after, &:focus-visible::after { background: var(--color-focus); }
+    &:focus-visible { outline: none; }
+  }
+  :global([data-resizing]) .handle::after { background: var(--color-focus); }
+
+  /* The handle exists only where the sidebar is inline. */
+  @media (max-width: 1023px) {
+    .handle { display: none; }
+  }
+
+  /* While dragging, the page follows the pointer without selecting text or animating. */
+  :global([data-resizing]) { cursor: col-resize; user-select: none; }
+  :global([data-resizing]) * { transition: none; }
+}

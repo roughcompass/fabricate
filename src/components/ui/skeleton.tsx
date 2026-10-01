@@ -1,3 +1,5 @@
+import { ShellHeader } from "@/components/shell/shell-header";
+import { Page } from "./page";
 import styles from "./skeleton.module.css";
 
 type Width = "short" | "medium" | "long" | "full";
@@ -7,12 +9,12 @@ export function Skeleton({ width = "full", height = "text" }: { width?: Width; h
   return <span className={styles.skeleton} data-width={width} data-height={height} aria-hidden="true" />;
 }
 
-/** The page header and a table: for list pages. */
+/** The shell header with a title placeholder, the page header, and a table: for list pages. */
 export function ListSkeleton() {
   return (
-    <div className={styles.page} aria-busy="true" aria-label="Loading">
+    <Page busy>
+      <ShellHeader />
       <div className={styles.header}>
-        <Skeleton width="short" height="title" />
         <Skeleton width="medium" />
       </div>
       <div className={styles.panel}>
@@ -24,17 +26,17 @@ export function ListSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </Page>
   );
 }
 
-/** Breadcrumbs, a header, an overview row, and a table: for detail pages. */
+/** The shell header, breadcrumbs and a meta line, an overview row, and a table: for detail pages. */
 export function DetailSkeleton() {
   return (
-    <div className={styles.page} aria-busy="true" aria-label="Loading">
+    <Page busy>
+      <ShellHeader />
       <div className={styles.header}>
         <Skeleton width="medium" />
-        <Skeleton width="medium" height="title" />
         <Skeleton width="long" />
       </div>
       <div className={styles.stats}>
@@ -54,17 +56,17 @@ export function DetailSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </Page>
   );
 }
 
-/** A header and a column of fields: for create and edit forms. */
+/** The shell header, breadcrumbs, and a column of fields: for create and edit forms. */
 export function FormSkeleton() {
   return (
-    <div className={styles.form} aria-busy="true" aria-label="Loading">
+    <Page width="form" busy>
+      <ShellHeader />
       <div className={styles.header}>
         <Skeleton width="medium" />
-        <Skeleton width="medium" height="title" />
       </div>
       <div className={styles.panelPadded}>
         {Array.from({ length: 3 }, (_, index) => (
@@ -74,6 +76,6 @@ export function FormSkeleton() {
           </div>
         ))}
       </div>
-    </div>
+    </Page>
   );
 }

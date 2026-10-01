@@ -49,6 +49,8 @@ test("opens from Preview template in the same tab, on the Preview tab with the D
 });
 
 test("lays the application out at the tablet's size in landscape", async ({ page, db: _db }) => {
+  // Wide enough for the 1180px tablet beside the sidebar, so it is shown at full size.
+  await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/templates/market-watch/preview");
   await choose(page, "Device", "Tablet");
   await expect(pressed(page, "Orientation")).toHaveText("Portrait");

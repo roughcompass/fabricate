@@ -97,6 +97,24 @@ function selectorProblem(prelude: string): string | null {
   return null;
 }
 
+/**
+ * Page layouts respond to the content column's width through `@container
+ * content` (vercel-application-shell design.md, decision 7). Viewport width
+ * queries remain only where the viewport is the reference: the shell itself,
+ * the fixed toast viewports, the gutter step, and the demo's toolbar and
+ * portal runtime, which render outside the shell.
+ */
+const VIEWPORT_QUERY_FILES = new Set([
+  GLOBALS,
+  "src/components/shell/app-shell.module.css",
+  "src/components/shell/shell-header.module.css",
+  "src/components/shell/sidebar-resizer.module.css",
+  "src/components/ui/toast.module.css",
+  "src/components/ui/flash-toast.module.css",
+]);
+const viewportQueryAllowed = (file: string) => VIEWPORT_QUERY_FILES.has(file) || file.startsWith("src/components/toolbar/") || file.startsWith("src/demo/");
+const WIDTH_QUERY = /^@media\b.*\b(min|max)-width\b/;
+
 function importantAllowed(file: string, declaration: Declaration): boolean {
   if (declaration.context.some((prelude) => /visually-?hidden/i.test(prelude))) return true;
   return file === GLOBALS && declaration.context.some((prelude) => prelude === "@layer reset" || prelude.includes("prefers-reduced-motion"));
@@ -119,6 +137,7 @@ export function violations(file: string, source: string, runtimeTokens: Readonly
           : null;
   const known = (name: string) => GLOBAL_TOKENS.has(name) || local.has(name) || EXTERNAL_TOKENS.has(name) || (isRuntime(file) && runtimeTokens.has(name));
   const reportedSelectors = new Set<string>();
+  const reportedQueries = new Set<string>();
 
   for (const declaration of scanCss(source)) {
     const { property, value } = declaration;
@@ -126,6 +145,14 @@ export function violations(file: string, source: string, runtimeTokens: Readonly
 
     for (const name of references) {
       if (!known(name)) report(declaration, `references undefined token ${name}`);
+    }
+    if (!viewportQueryAllowed(file)) {
+      for (const prelude of declaration.context) {
+        if (WIDTH_QUERY.test(prelude) && !reportedQueries.has(prelude)) {
+          reportedQueries.add(prelude);
+          report(declaration, `is in a viewport width query "${prelude}"; use @container content`);
+        }
+      }
     }
     if (isRuntime(file) && file !== RUNTIME_TOKENS) {
       for (const prelude of declaration.context) {
@@ -179,11 +206,23 @@ describe("design token check", () => {
   });
 
   it("rejects a token of the wrong type", () => {
-    expect(check("@layer components { .a { color: var(--font-size-title); } }")).toContainEqual(expect.stringContaining("not a --color- token"));
+    expect(check("@layer components { .a { color: var(--font-size-heading); } }")).toContainEqual(expect.stringContaining("not a --color- token"));
   });
 
   it("rejects an undefined token", () => {
     expect(check("@layer components { .a { color: var(--color-imaginary); } }")).toContainEqual(expect.stringContaining("undefined token --color-imaginary"));
+  });
+
+  it("rejects a viewport width query in a component or route stylesheet", () => {
+    const narrow = "@layer components { @media (max-width: 767px) { .a { gap: var(--space-2); } } }";
+    expect(check(narrow)).toContainEqual(expect.stringContaining("use @container content"));
+    expect(check(narrow.replace("components", "pages"), "src/app/(operator)/example/example.module.css")).toContainEqual(expect.stringContaining("use @container content"));
+  });
+
+  it("accepts a container query anywhere, and viewport queries where the viewport is the reference", () => {
+    expect(check("@layer components { @container content (max-width: 767px) { .a { gap: var(--space-2); } } }")).toEqual([]);
+    expect(check("@layer components { @media (max-width: 1023px) { .a { gap: var(--space-2); } } }", "src/components/shell/app-shell.module.css")).toEqual([]);
+    expect(check("@layer components { @media (pointer: coarse) { .a { gap: var(--space-2); } } }")).toEqual([]);
   });
 
   it("rejects !important outside the allowed rules", () => {
@@ -222,7 +261,7 @@ describe("design token check", () => {
     });
 
     it("accepts runtime and interface tokens of the matching type in a runtime stylesheet", () => {
-      expect(runtime("@layer runtime { .shell { color: var(--rt-color-brand); width: var(--rt-size-rail); padding: var(--space-2); & .title { font-size: var(--font-size-title); } } }")).toEqual([]);
+      expect(runtime("@layer runtime { .shell { color: var(--rt-color-brand); width: var(--rt-size-rail); padding: var(--space-2); & .title { font-size: var(--font-size-heading); } } }")).toEqual([]);
     });
 
     it("rejects a runtime token of the wrong type", () => {
@@ -258,7 +297,7 @@ describe("design token check", () => {
         transition: background var(--duration-fast) var(--ease-standard);
         &:hover { background: var(--color-bg-muted); }
       }
-      @media (max-width: 767px) { .a { padding: var(--space-1); } }
+      @container content (max-width: 767px) { .a { padding: var(--space-1); } }
     }`;
     expect(check(css)).toEqual([]);
   });

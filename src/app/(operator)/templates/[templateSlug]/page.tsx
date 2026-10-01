@@ -43,7 +43,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
 
       <div className={styles.detail}>
         <div className={styles.overview}>
-          <DescriptionList
+          <DescriptionList surface
             items={[
               ["Brand", brand.label],
               ["Portal", brand.portalName],

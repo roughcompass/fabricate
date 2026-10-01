@@ -48,7 +48,7 @@
   }
 
   /* Rows become labelled blocks on narrow screens, so nothing scrolls sideways. */
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     .table {
       & thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
       & tr { display: block; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }

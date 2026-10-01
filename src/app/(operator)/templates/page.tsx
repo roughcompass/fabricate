@@ -3,6 +3,7 @@ import Form from "next/form";
 import { ButtonLink } from "@/components/ui/button";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Panel } from "@/components/ui/panel";
 import { FilterRail } from "@/components/ui/filter-rail";
 import { MediaCard } from "@/components/ui/media-card";
 import { Page, PageHeader } from "@/components/ui/page";
@@ -84,17 +85,19 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
               ))}
             </ul>
           ) : (
-            <EmptyState
-              title="No templates match"
-              icon="search"
-              action={
-                <ButtonLink href={clearHref} variant="primary">
-                  Clear filters
-                </ButtonLink>
-              }
-            >
-              {query.search ? `No template matches “${query.search}” with the chosen filters.` : "No template matches the chosen filters."}
-            </EmptyState>
+            <Panel flush>
+              <EmptyState
+                title="No templates match"
+                icon="search"
+                action={
+                  <ButtonLink href={clearHref} variant="primary">
+                    Clear filters
+                  </ButtonLink>
+                }
+              >
+                {query.search ? `No template matches “${query.search}” with the chosen filters.` : "No template matches the chosen filters."}
+              </EmptyState>
+            </Panel>
           )}
         </section>
       </div>

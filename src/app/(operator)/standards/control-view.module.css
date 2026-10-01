@@ -12,7 +12,7 @@
   .id { color: var(--color-text-secondary); font-size: var(--font-size-caption); }
   .muted { color: var(--color-text-secondary); }
 
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     .item { padding: var(--space-4); }
     .tree { padding-left: var(--space-3); }
   }

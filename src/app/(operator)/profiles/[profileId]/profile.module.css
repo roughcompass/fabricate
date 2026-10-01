@@ -11,7 +11,7 @@
   .muted { color: var(--color-text-secondary); }
   .alertLink { font-weight: var(--font-weight-medium); }
 
-  @media (max-width: 1023px) {
+  @container content (max-width: 1023px) {
     .layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
   }
 }

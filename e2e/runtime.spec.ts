@@ -123,8 +123,9 @@ test.describe("portal shells", () => {
     await expect(page).toHaveURL(/\/run\/ref-market-watch\/blotter$/);
     const blotter = tabs.getByRole("link", { name: "Blotter" });
     await expect(blotter).toHaveAttribute("aria-current", "page");
-    expect(await blotter.evaluate((element) => getComputedStyle(element).borderBottomColor)).not.toBe("rgba(0, 0, 0, 0)");
-    expect(await tabs.getByRole("link", { name: "Watch" }).evaluate((element) => getComputedStyle(element).borderBottomColor)).toBe("rgba(0, 0, 0, 0)");
+    // Polled: under reduced motion the underline still takes one near-zero transition frame.
+    await expect.poll(() => blotter.evaluate((element) => getComputedStyle(element).borderBottomColor)).not.toBe("rgba(0, 0, 0, 0)");
+    await expect.poll(() => tabs.getByRole("link", { name: "Watch" }).evaluate((element) => getComputedStyle(element).borderBottomColor)).toBe("rgba(0, 0, 0, 0)");
     const title = page.getByRole("heading", { level: 1, name: "Blotter" });
     await expect(title).toBeVisible();
     expect(await title.evaluate((element) => getComputedStyle(element).fontFamily)).toMatch(/serif/);

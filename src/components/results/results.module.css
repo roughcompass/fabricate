@@ -12,7 +12,7 @@
   .line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); overflow-wrap: anywhere; }
   .detail { overflow-wrap: anywhere; }
 
-  @media (max-width: 767px) {
+  @container content (max-width: 767px) {
     .trace { padding-left: var(--space-3); }
   }
 }

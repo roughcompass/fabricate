@@ -14,7 +14,7 @@
   .loadTimes { color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); white-space: nowrap; }
   .track { position: relative; grid-column: 1 / -1; height: var(--size-dot); border-radius: var(--radius-full); background: var(--color-bg-muted); }
   .bar { position: absolute; top: 0; bottom: 0; border-radius: var(--radius-full); background: var(--color-text-tertiary); }
-  .bar[data-kind="swap"] { background: var(--color-accent); }
+  .bar[data-kind="swap"] { background: var(--color-primary); }
   .bar[data-slowest] { background: var(--color-warning); }
   .marker, .slowFlag { padding: 0 var(--space-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-full); color: var(--color-text); font-size: var(--font-size-caption); line-height: var(--line-height-secondary); }
   .slowFlag { border-color: var(--color-warning-border); background: var(--color-warning-bg); }
