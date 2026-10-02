@@ -17,7 +17,7 @@ The storyline is deterministic: templates, build stages, load order, audit resul
 
 ## The toolbar
 
-Every running application shows the toolbar as a dark pill at the middle of the right edge. At rest it holds a Demo marker and the menu button. While a tool's panel is open, or comment mode is on, the pill also shows that tool's button; select it to close the tool. Hover over or focus a button to see its name and key.
+Every running application shows the toolbar as a dark pill at the middle of the right edge. At rest it holds only the menu button. While a tool's panel is open, or comment mode is on, the pill also shows that tool's button; select it to close the tool. Hover over or focus a button to see its name and key.
 
 The menu button opens the toolbar menu beside the pill:
 - **What do you need?** Type to filter the tools by name or by words such as "a11y", "persona", or "theme". Use the arrow keys to move, Enter to open, and Esc to close.

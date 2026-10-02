@@ -223,7 +223,7 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
     ["settings", "Settings"],
     ["shortcuts", "Preferences / Keyboard shortcuts"],
   ];
-  const menu = page.getByRole("dialog", { name: "Demo toolbar" });
+  const menu = page.getByRole("dialog", { name: "Toolbar", exact: true });
   let count = 0;
   const capture = async (name: string, theme: string, viewport: string) => {
     await expectNoHorizontalOverflow(page);

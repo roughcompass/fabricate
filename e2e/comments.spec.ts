@@ -195,7 +195,7 @@ test.describe("the composer", () => {
     // The middle of its left part, which is clear of the pill.
     await page.mouse.click(box.x + 6, box.y + box.height / 2);
     await expect(composer(page)).toBeVisible();
-    const pill = (await page.getByRole("complementary", { name: "Demo toolbar" }).boundingBox())!;
+    const pill = (await page.getByRole("complementary", { name: "Toolbar", exact: true }).boundingBox())!;
     await expect.poll(async () => (await composer(page).boundingBox())!.x + (await composer(page).boundingBox())!.width).toBeLessThanOrEqual(pill.x);
     await expectToolbarOnTop(page);
   });

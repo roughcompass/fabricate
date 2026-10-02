@@ -41,12 +41,12 @@ test("opens the toolbar menu for a first running application's visitor, points t
   await expect(first).toBeVisible();
   await expect(first.getByRole("button", { name: "Next hint" })).toBeVisible();
   await expect(first.getByRole("button", { name: "Dismiss hints" })).toBeVisible();
-  const menu = page.getByRole("dialog", { name: "Demo toolbar" });
+  const menu = page.getByRole("dialog", { name: "Toolbar", exact: true });
   await expect(menu).toBeVisible();
 
   // The hint sits to the left of the menu, level with the Accessibility item, and covers neither the menu nor the pill.
   const expectBeside = async (card: Locator, item: string) => {
-    const [box, target, menuBox, pill] = await Promise.all([card.boundingBox(), menu.getByRole("option", { name: item }).boundingBox(), menu.boundingBox(), page.getByRole("complementary", { name: "Demo toolbar" }).boundingBox()]);
+    const [box, target, menuBox, pill] = await Promise.all([card.boundingBox(), menu.getByRole("option", { name: item }).boundingBox(), menu.boundingBox(), page.getByRole("complementary", { name: "Toolbar", exact: true }).boundingBox()]);
     expect(box!.x + box!.width).toBeLessThanOrEqual(menuBox!.x);
     expect(box!.y).toBeLessThan(target!.y + target!.height);
     expect(box!.y + box!.height).toBeGreaterThan(target!.y);
@@ -78,11 +78,11 @@ test("walks through the last hint to the Comment item, and finishes", async ({ p
   await hint(page).getByRole("button", { name: "Next hint" }).click();
   const last = page.getByRole("dialog", { name: "Hint 3 of 3: Comment on anything" });
   await expect(last).toBeVisible();
-  const [card, item] = await Promise.all([last.boundingBox(), page.getByRole("dialog", { name: "Demo toolbar" }).getByRole("option", { name: "Comment", exact: true }).boundingBox()]);
+  const [card, item] = await Promise.all([last.boundingBox(), page.getByRole("dialog", { name: "Toolbar", exact: true }).getByRole("option", { name: "Comment", exact: true }).boundingBox()]);
   expect(card!.x + card!.width).toBeLessThanOrEqual(item!.x);
   await last.getByRole("button", { name: "Finish hints" }).click();
   await expect(hint(page)).toHaveCount(0);
-  await expect(page.getByRole("dialog", { name: "Demo toolbar" })).toBeHidden();
+  await expect(page.getByRole("dialog", { name: "Toolbar", exact: true })).toBeHidden();
 });
 
 test("replays the hints from the toolbar's Settings", async ({ page, db: _db }) => {

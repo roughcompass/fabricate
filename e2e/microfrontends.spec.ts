@@ -144,7 +144,7 @@ test("shows which microfrontend serves each route in the zone indicator", async 
 });
 
 test.describe("overlays beside the toolbar", () => {
-  const pill = (page: Page) => page.getByRole("complementary", { name: "Demo toolbar" });
+  const pill = (page: Page) => page.getByRole("complementary", { name: "Toolbar", exact: true });
   const zone = (page: Page) => page.getByRole("status", { name: "Zone indicator" });
   const boxOf = async (locator: Locator) => (await locator.boundingBox())!;
   const overlap = (a: Box, b: Box) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
@@ -190,7 +190,7 @@ test.describe("overlays beside the toolbar", () => {
     expect((await boxOf(label)).x + (await boxOf(label)).width).toBeLessThanOrEqual((await boxOf(pill(page))).x);
     await expectToolbarOnTop(page);
     await page.getByRole("button", { name: /^Open toolbar menu/ }).click();
-    await expect(page.getByRole("dialog", { name: "Demo toolbar" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Toolbar", exact: true })).toBeVisible();
   });
 });
 

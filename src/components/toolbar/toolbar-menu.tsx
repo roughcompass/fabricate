@@ -54,7 +54,7 @@ export function ToolbarMenu({ context, commentCount, highlight, onClose }: { con
     <div role="dialog" aria-labelledby={titleId} className={styles.menu} data-toolbar-menu="">
       <div className={styles.menuHeader}>
         <h2 id={titleId} className={styles.menuTitle}>
-          Demo toolbar
+          Toolbar
         </h2>
         <kbd className={styles.keyChip}>Esc</kbd>
       </div>

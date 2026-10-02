@@ -40,7 +40,7 @@ test("opens a shared view elsewhere with its versions, theme, and comments, and 
   await waitForRegions(recipient);
   // A first-time visitor gets the guided hints, which open the toolbar menu; this one dismisses them.
   await recipient.locator("[data-hint]").getByRole("button", { name: "Dismiss hints" }).click();
-  await expect(recipient.getByRole("dialog", { name: "Demo toolbar" })).toBeHidden();
+  await expect(recipient.getByRole("dialog", { name: "Toolbar", exact: true })).toBeHidden();
   await expect(recipient.locator('[data-demo-mfe="payee-list"]')).toHaveAttribute("data-demo-version", "2.0.0");
   await expect(recipient.locator("[data-demo-portal]")).toHaveAttribute("data-theme", "dark");
   await expect(recipient.locator('[data-comment-pin="1"]')).toBeVisible();

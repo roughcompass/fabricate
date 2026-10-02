@@ -10,8 +10,8 @@ import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 /** The toolbar over every running application (template-demo/toolbar spec). */
 
 const require = createRequire(import.meta.url);
-const toolbar = (page: Page) => page.getByRole("complementary", { name: "Demo toolbar" });
-const menu = (page: Page) => page.getByRole("dialog", { name: "Demo toolbar" });
+const toolbar = (page: Page) => page.getByRole("complementary", { name: "Toolbar", exact: true });
+const menu = (page: Page) => page.getByRole("dialog", { name: "Toolbar", exact: true });
 const menuButton = (page: Page) => page.getByRole("button", { name: /^Open toolbar menu/ });
 const tooltip = (page: Page) => page.getByRole("tooltip");
 
@@ -30,11 +30,11 @@ test.beforeEach(async ({ page, db: _db }) => {
 });
 
 test.describe("the pill", () => {
-  test("docks to the middle of the right edge with the Demo marker and the menu button only", async ({ page }) => {
+  test("docks to the middle of the right edge with the menu button only, and no Demo label", async ({ page }) => {
     const pill = toolbar(page);
     await expect(pill).toBeVisible();
-    await expect(pill.getByText("Demo", { exact: true })).toBeVisible();
-    await expect(pill).toHaveAccessibleDescription("This is a demonstration. Builds and deployments are simulated.");
+    await expect(pill).not.toContainText(/demo/i);
+    await expect(pill).toHaveAccessibleDescription("Builds and deployments are simulated.");
     await expect(pill.getByRole("button")).toHaveCount(1);
     await expect(menuButton(page)).toBeVisible();
 

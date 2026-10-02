@@ -61,7 +61,7 @@ export async function visitorContext(browser: Browser, db: Db, baseURL: string):
   return context;
 }
 
-const menuDialog = (page: Page) => page.getByRole("dialog", { name: "Demo toolbar" });
+const menuDialog = (page: Page) => page.getByRole("dialog", { name: "Toolbar", exact: true });
 
 /** Opens the toolbar menu from the pill. */
 export async function openToolbarMenu(page: Page) {

@@ -217,7 +217,7 @@ test("opens full screen in a new tab with the toolbar, at the route shown in the
   await full.waitForLoadState("domcontentloaded");
   expect(new URL(full.url()).pathname).toBe(`/run/ref-client-onboarding/${template.app.routes[0]!.path}`);
   await waitForRegions(full);
-  await expect(full.getByRole("complementary", { name: "Demo toolbar" })).toBeVisible();
+  await expect(full.getByRole("complementary", { name: "Toolbar", exact: true })).toBeVisible();
   await full.close();
 
   // After navigating inside the frame, full screen opens that route.
@@ -249,7 +249,7 @@ test("keeps a visitor's comments on a reference deployment private to their work
   await visitor.goto("/templates/payments-workspace/preview");
   const [theirs] = await Promise.all([other.waitForEvent("page"), visitor.getByRole("link", { name: /Open full screen/ }).click()]);
   await waitForRegions(theirs);
-  await expect(theirs.getByRole("complementary", { name: "Demo toolbar" })).toBeVisible();
+  await expect(theirs.getByRole("complementary", { name: "Toolbar", exact: true })).toBeVisible();
   await expect(theirs.locator("[data-comment-pin]")).toHaveCount(0);
   await expect(theirs.getByRole("button", { name: /^Open toolbar menu/ })).toHaveAccessibleName("Open toolbar menu");
   await other.close();

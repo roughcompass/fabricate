@@ -160,10 +160,9 @@ export function DemoToolbar({ panels, overlays, commentCount = 0, context }: { p
             <Icon name="chevronLeft" size={14} />
           </button>
         ) : (
-          <aside ref={boundRef("pill")} className={styles.pill} aria-label="Demo toolbar" aria-describedby="demo-toolbar-description">
-            <span className={styles.demoLabel}>Demo</span>
+          <aside ref={boundRef("pill")} className={styles.pill} aria-label="Toolbar" aria-describedby="demo-toolbar-description">
             <span id="demo-toolbar-description" className="visually-hidden">
-              This is a demonstration. Builds and deployments are simulated.
+              Builds and deployments are simulated.
             </span>
             {active && (
               <button
