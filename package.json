@@ -7,9 +7,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "concurrently --names web,worker --prefix-colors blue,magenta \"npm:dev:web\" \"npm:dev:worker\"",
+    "dev": "concurrently --kill-others --names web,worker --prefix-colors blue,magenta --passthrough-arguments \"npm:dev:web -- {@}\" \"npm:dev:worker\" --",
     "dev:web": "next dev",
-    "dev:worker": "tsx watch --clear-screen=false src/worker/main.ts",
+    "dev:worker": "node scripts/dev-worker.mjs",
     "build": "next build && npm run build:worker",
     "build:worker": "esbuild worker=src/worker/main.ts migrate=src/lib/db/migrate-cli.ts --bundle --platform=node --target=node24 --format=cjs --external:better-sqlite3 --external:@repo-facts/* --outdir=dist --out-extension:.js=.cjs --log-level=warning",
     "start": "next start",

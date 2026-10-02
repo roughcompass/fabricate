@@ -23,7 +23,7 @@ npm run dev
 
 The committed `.npmrc` resolves the `@repo-facts` scope only from `REPO_FACTS_NPM_REGISTRY`. If the variable is unset, installation fails rather than falling back to a public registry. The lockfile records each package's SHA-512 integrity but no registry URL. Package lifecycle scripts are disabled for every dependency. If the registry requires authentication, sign in once with `npm login --scope=@repo-facts --registry "$REPO_FACTS_NPM_REGISTRY"`; the token stays in your user npm configuration and never enters this repository. If you develop `repo-facts` on the same machine, its `npm run registry` serves a local registry and prints the value to use.
 
-Open <http://localhost:3000>. `npm run dev` starts the web server and the worker together. Use `npm run dev:web` or `npm run dev:worker` to run one of them. If another process already listens on port 3000, including on the IPv6 loopback address, choose a free port with `PORT=3200 npm run dev`.
+Open <http://localhost:3000>. `npm run dev` starts the web server and the worker together, and stops both if either one stops, so runs never sit queued with no worker to pick them up. The worker restarts when its code or the configuration changes, and after it exits on its own. Use `npm run dev:web` or `npm run dev:worker` to run one of them. If another process already listens on port 3000, including on the IPv6 loopback address, choose a free port with `PORT=3200 npm run dev` or `npm run dev -- --port 3200`. Only one development server can run in a checkout: if one is already running, `npm run dev` stops and names it.
 
 Both processes validate the configuration and check the Git version at startup. If either check fails, the process exits with the reason instead of serving requests or running jobs.
 
@@ -75,7 +75,7 @@ The template demo is an interactive demonstration of starting an application fro
 To run the demo locally, start the web server with the switch on, then open Salt Patterns:
 
 ```sh
-FABRICATE_DEMO=true npm run dev:web
+FABRICATE_DEMO=true npm run dev
 ```
 
 For a hosted demo that self-serve visitors can reach, run the production image with `-e FABRICATE_DEMO=true`. To turn the demo off again, restart without the override.

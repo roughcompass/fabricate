@@ -6,7 +6,7 @@ Everything in the demo is simulated. See [What is simulated](#what-is-simulated)
 
 ## Before you present
 
-1. Start DE FabLab with the demo on: `FABRICATE_DEMO=true npm run dev:web`, or use the hosted demo.
+1. Start DE FabLab with the demo on: `FABRICATE_DEMO=true npm run dev`, or use the hosted demo.
 2. Open **Salt Patterns** in the sidebar, then **New application**. The create page, "Let's build something new", opens. The demo adds two sections: **Applications**, for your applications and the BitBucket import, and **Salt Patterns**, for the templates.
 3. If you rehearsed in this browser, reset the demo first: on the create page, open **More actions** (⋯) and choose **Reset demo**.
 4. Turn guided hints off, so they do not appear during the talk. Open any running application, for example a reference deployment from preview mode's **Open full screen**. Open the toolbar menu, choose **Settings**, and clear **Show guided hints**. The choice applies to your whole workspace.
