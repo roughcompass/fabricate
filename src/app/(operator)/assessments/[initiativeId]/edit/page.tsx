@@ -7,7 +7,7 @@ import { Panel } from "@/components/ui/panel";
 import { listAssessments } from "@/lib/assessments/assessment-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
-import { findInitiative, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
+import { findInitiative, isSystemOwned, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
 import { deleteInitiative, updateInitiative } from "../../actions";
 import { releaseChoices, sourceChoices } from "../../choices";
 import { InitiativeForm } from "../../initiative-form";
@@ -52,7 +52,7 @@ export default async function EditInitiativePage({ params }: { params: Promise<{
         submitLabel="Save changes"
         cancelHref={`/assessments/${initiative.publicId}`}
       />
-      {!assessed && (
+      {!assessed && !isSystemOwned(initiative) && (
         <Panel
           title="Delete Assessment"
           description="Only an Assessment without Runs can be deleted."

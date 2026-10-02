@@ -67,8 +67,10 @@ Environment variables override the file:
 | `analysis.maxFiles` | `FABRICATE_MAX_FILES` | 4000 |
 | `analysis.maxTotalBytes` | `FABRICATE_MAX_TOTAL_BYTES` | 67108864 |
 | `demo.enabled` | `FABRICATE_DEMO` | `false`; `true` in development and test |
+| `deConsole.source` | `FABRICATE_DE_CONSOLE_SOURCE` | none; an export file or `https://` endpoint, see [docs/ownership.md](docs/ownership.md#the-de-console-import) |
+| `deConsole.refreshMinutes` | `FABRICATE_DE_CONSOLE_REFRESH_MINUTES` | 60 |
 
-List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_DEMO` accepts `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+The DE Console endpoint's read-only token comes only from `FABRICATE_DE_CONSOLE_TOKEN`, never from the file. List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_DEMO` accepts `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
 
 ### Template demo
 

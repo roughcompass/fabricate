@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createdAt, id, lockVersion, publicId, sqlList, updatedAt } from "./columns";
 
 export const SELECTION_MODES = ["all_enabled", "explicit"] as const;
@@ -45,11 +45,17 @@ export const initiatives = sqliteTable(
     name: text("name").notNull(),
     objective: text("objective").notNull().default(""),
     selectionMode: text("selection_mode", { enum: SELECTION_MODES }).notNull().default("all_enabled"),
+    /**
+     * Set on a system-owned initiative: the one repository it assesses when
+     * the repository is claimed. Null on initiatives operators create.
+     */
+    claimRepositorySourceId: integer("claim_repository_source_id").references((): AnySQLiteColumn => repositorySources.id, { onDelete: "restrict" }),
     lockVersion: lockVersion(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
+    uniqueIndex("initiatives_claim_repository_source").on(t.claimRepositorySourceId),
     check("initiatives_public_id", sql`${t.publicId} GLOB 'ini_*'`),
     check("initiatives_name", sql`length(trim(${t.name})) BETWEEN 1 AND 120`),
     check("initiatives_objective", sql`length(${t.objective}) <= 2000`),

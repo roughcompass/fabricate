@@ -156,6 +156,42 @@ export const ownershipAssertions = sqliteTable(
   ],
 );
 
+export const DE_CONSOLE_READ_TRIGGERS = ["claim", "schedule"] as const;
+export const DE_CONSOLE_READ_STATUSES = ["succeeded", "failed"] as const;
+export type DeConsoleReadTrigger = (typeof DE_CONSOLE_READ_TRIGGERS)[number];
+
+/**
+ * One attempt to read the DE Console. Assertions are recorded only when a
+ * value changes, so these rows say when its values were last confirmed, and
+ * whether the latest attempt failed.
+ */
+export const deConsoleReads = sqliteTable(
+  "de_console_reads",
+  {
+    id: id(),
+    trigger: text("trigger", { enum: DE_CONSOLE_READ_TRIGGERS }).notNull(),
+    status: text("status", { enum: DE_CONSOLE_READ_STATUSES }).notNull(),
+    readAt: timestamp("read_at").notNull(),
+    /** The export's own time, when it states one. */
+    exportedAt: timestamp("exported_at"),
+    applications: integer("applications"),
+    /** How many assertions the read recorded: the values that changed. */
+    recorded: integer("recorded"),
+    error: text("error"),
+  },
+  (t) => [
+    index("de_console_reads_status_read_at").on(t.status, t.readAt),
+    check("de_console_reads_trigger", sql.raw(`"trigger" IN (${sqlList(DE_CONSOLE_READ_TRIGGERS)})`)),
+    check(
+      "de_console_reads_outcome",
+      sql`CASE ${t.status}
+        WHEN 'succeeded' THEN ${t.applications} >= 0 AND ${t.recorded} >= 0 AND ${t.error} IS NULL
+        WHEN 'failed' THEN ${t.applications} IS NULL AND ${t.recorded} IS NULL AND length(${t.error}) BETWEEN 1 AND 500
+        ELSE 0 END`,
+    ),
+  ],
+);
+
 /** An assertion that replaces an earlier one about the same subject and attribute. */
 export const ownershipSupersessions = sqliteTable(
   "ownership_supersessions",

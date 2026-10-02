@@ -6,10 +6,11 @@ import { OutcomeToast, param } from "@/components/ui/outcome-toast";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
+import { Section } from "@/components/ui/section";
 import { Status } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TagList } from "@/components/ui/tag";
-import { assessmentNumber, listAssessments } from "@/lib/assessments/assessment-records";
+import { type Assessment, assessmentNumber, listAssessments } from "@/lib/assessments/assessment-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { listInitiatives, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
@@ -31,6 +32,10 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
       releases: selectedReleases(db, initiative.id).map(({ release, standard }) => releaseLabel(standard, release)),
       latest: latest && { assessment: latest, number: assessmentNumber(db, latest) },
     };
+  });
+  const claims = listInitiatives(db, { systemOwned: true }).map((initiative) => {
+    const latest = listAssessments(db, initiative.id)[0];
+    return { initiative, repository: selectedSources(db, initiative.id)[0], latest: latest && { assessment: latest, number: assessmentNumber(db, latest) } };
   });
   const create = (
     <ButtonLink href="/assessments/new" variant="primary" icon="plus">
@@ -73,16 +78,7 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
                   <TagList values={releases} />
                 </Td>
                 <Td label="Latest Run">
-                  {latest ? (
-                    <>
-                      <Link href={`/runs/${latest.assessment.publicId}`}>{`Run #${latest.number}`}</Link>
-                      <Secondary>
-                        <Status state={latest.assessment.state} size="sm" /> · <RelativeTime value={latest.assessment.createdAt} />
-                      </Secondary>
-                    </>
-                  ) : (
-                    <Secondary>Not assessed yet</Secondary>
-                  )}
+                  <LatestRun latest={latest} />
                 </Td>
               </tr>
             ))}
@@ -93,6 +89,49 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
           </EmptyState>
         )}
       </Panel>
+
+      {claims.length > 0 && (
+        <Section title="Created for claims" description="Claiming a Repository creates an Assessment of it alone, reused for later claims.">
+          <Panel flush>
+            <Table
+              label="Assessments created for claims"
+              head={
+                <>
+                  <Th>Assessment</Th>
+                  <Th>Repository</Th>
+                  <Th>Latest Run</Th>
+                </>
+              }
+            >
+              {claims.map(({ initiative, repository, latest }) => (
+                <tr key={initiative.publicId}>
+                  <Td label="Assessment">
+                    <Primary>
+                      <Link href={`/assessments/${initiative.publicId}`}>{initiative.name}</Link>
+                    </Primary>
+                  </Td>
+                  <Td label="Repository">{repository ? <Link href={`/repositories/claim/${repository.publicId}`}>{repository.name}</Link> : <Secondary>None</Secondary>}</Td>
+                  <Td label="Latest Run">
+                    <LatestRun latest={latest} />
+                  </Td>
+                </tr>
+              ))}
+            </Table>
+          </Panel>
+        </Section>
+      )}
     </Page>
+  );
+}
+
+function LatestRun({ latest }: { latest: { assessment: Assessment; number: number } | undefined }) {
+  if (!latest) return <Secondary>Not assessed yet</Secondary>;
+  return (
+    <>
+      <Link href={`/runs/${latest.assessment.publicId}`}>{`Run #${latest.number}`}</Link>
+      <Secondary>
+        <Status state={latest.assessment.state} size="sm" /> · <RelativeTime value={latest.assessment.createdAt} />
+      </Secondary>
+    </>
   );
 }

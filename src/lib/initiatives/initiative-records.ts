@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
@@ -61,12 +61,53 @@ export function createInitiative(db: Executor, input: InitiativeInput): Initiati
   });
 }
 
+/**
+ * The system-owned initiative that assesses +source+ alone for claims,
+ * created on first use and reused afterward (design decision 4).
+ */
+export function claimInitiative(db: Executor, source: RepositorySource): Initiative {
+  return immediate(db, (tx) => {
+    const existing = tx.select().from(initiatives).where(eq(initiatives.claimRepositorySourceId, source.id)).get();
+    if (existing) return existing;
+    const now = new Date();
+    const initiative = tx
+      .insert(initiatives)
+      .values({
+        publicId: generatePublicId("ini"),
+        name: `Claim: ${source.name}`,
+        objective: "Assesses one claimed repository. The system created it, and reuses it for later claims.",
+        selectionMode: "explicit",
+        claimRepositorySourceId: source.id,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning()
+      .get();
+    replaceSourceSelections(tx, initiative, [source]);
+    return initiative;
+  });
+}
+
+export function isSystemOwned(initiative: Pick<Initiative, "claimRepositorySourceId">): boolean {
+  return initiative.claimRepositorySourceId !== null;
+}
+
+/** A system-owned initiative keeps its one repository; its name and Releases can change. */
+function refuseScopeChange(db: Executor, initiative: Initiative, input: Required<InitiativeInput>): void {
+  if (!isSystemOwned(initiative)) return;
+  const own = selectedSources(db, initiative.id).map((source) => source.publicId);
+  if (input.selectionMode !== "explicit" || input.sourcePublicIds.length !== 1 || input.sourcePublicIds[0] !== own[0]) {
+    throw new ValidationError([{ field: "sources", message: "This Assessment was created for a claimed Repository, and its scope can't change" }]);
+  }
+}
+
 export function updateInitiative(db: Executor, publicId: string, expectedLockVersion: number, input: InitiativeInput): Initiative {
   return immediate(db, (tx) => {
     const current = getInitiative(tx, publicId);
     if (current.lockVersion !== expectedLockVersion) throw new StaleRecordError(`${current.name} was changed by someone else`);
 
     const values = normalize(input);
+    refuseScopeChange(tx, current, values);
     const previouslySelected = new Set(selectedSources(tx, current.id).map((source) => source.id));
     const selections = validate(tx, values, previouslySelected);
 
@@ -89,6 +130,7 @@ export function updateInitiative(db: Executor, publicId: string, expectedLockVer
 export function deleteInitiative(db: Executor, publicId: string): void {
   immediate(db, (tx) => {
     const initiative = getInitiative(tx, publicId);
+    if (isSystemOwned(initiative)) throw new ValidationError([{ field: "base", message: `${initiative.name} was created for a claimed Repository and is retained` }]);
     const assessed = tx.select({ id: assessments.id }).from(assessments).where(eq(assessments.initiativeId, initiative.id)).limit(1).get();
     if (assessed) {
       throw new ValidationError([{ field: "base", message: `${initiative.name} has Runs and is retained so their history stays reviewable` }]);
@@ -113,8 +155,10 @@ export function initiativeById(db: Executor, id: number): Initiative {
   return initiative;
 }
 
-export function listInitiatives(db: Executor): Initiative[] {
-  return db.select().from(initiatives).orderBy(sql`lower(${initiatives.name})`, asc(initiatives.publicId)).all();
+/** Initiatives operators created, or with +systemOwned+, those the system created for claims. */
+export function listInitiatives(db: Executor, options: { systemOwned?: boolean } = {}): Initiative[] {
+  const owner = options.systemOwned ? isNotNull(initiatives.claimRepositorySourceId) : isNull(initiatives.claimRepositorySourceId);
+  return db.select().from(initiatives).where(owner).orderBy(sql`lower(${initiatives.name})`, asc(initiatives.publicId)).all();
 }
 
 /** The explicit selections of an initiative, in catalog order. */

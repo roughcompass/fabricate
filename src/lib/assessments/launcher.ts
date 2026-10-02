@@ -38,7 +38,9 @@ export function launchAssessment(db: Executor, initiativePublicId: string, launc
       const previous = findAssessmentByLaunchToken(tx, initiative.id, token);
       if (previous) return { assessment: previous, targets: [], duplicate: true };
 
-      const sources = resolveScope(tx, initiative);
+      // A system-owned initiative assesses its claimed repository's default branch, whatever reference the catalog sets.
+      const resolved = resolveScope(tx, initiative);
+      const sources = initiative.claimRepositorySourceId === null ? resolved : resolved.map((source) => ({ ...source, gitRef: null }));
       const { assessment, targets } = createAssessment(tx, {
         initiative,
         launchToken: token,

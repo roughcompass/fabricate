@@ -141,6 +141,20 @@
       "when": 1790951751090,
       "tag": "0019_projection_version_2_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1790968274400,
+      "tag": "0020_de_console_reads_claim_initiatives",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790968284523,
+      "tag": "0021_claim_initiative_triggers",
+      "breakpoints": true
     }
   ]
 }

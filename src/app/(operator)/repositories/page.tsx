@@ -49,7 +49,10 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
       <PageHeader
         title="Repositories"
         description="Git repositories available to Assessments. Edits and disabling apply to Runs started afterward."
-        secondaryActions={[{ href: "/repositories/import", label: "Import Repositories", icon: "folder" }]}
+        secondaryActions={[
+          { href: "/repositories/import", label: "Import Repositories", icon: "folder" },
+          { href: "/repositories/claim", label: "Claim a Repository", icon: "user" },
+        ]}
         primaryAction={create}
         alerts={<OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"), param(query, "failed"))} />}
       />
