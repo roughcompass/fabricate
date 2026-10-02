@@ -18,6 +18,7 @@ import { MediaCard } from "@/components/ui/media-card";
 import { Menu, MenuAction, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { type Outcome, OutcomeToast, param } from "@/components/ui/outcome-toast";
 import { Page, PageHeader } from "@/components/ui/page";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -30,6 +31,9 @@ import { EmptyRow, Primary, RowActions, Secondary, Table, Td, Th } from "@/compo
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { ShortValue, Tag, TagList } from "@/components/ui/tag";
 import { Tooltip } from "@/components/ui/tooltip";
+import { Diagram } from "@/components/relationships/diagram";
+import { type DiagramEdge, diagramModel } from "@/lib/relationships/diagram";
+import type { DiagramData } from "@/lib/relationships/levels";
 import { confirmDemo, noopDemo, validateDemo } from "./actions";
 import { AlertDemo, FocusDemo, IndeterminateCheckbox, InjectedError, ToastDemo } from "./demos";
 import { Row, Specimen } from "./specimen";
@@ -61,6 +65,28 @@ const COLOR_ROLES: [token: string, role: string][] = [
   ["--color-progress", "In-progress status"],
 ];
 
+/** A portal diagram for the Diagram specimen: a host above the applications it loads, and the library they share. */
+function sampleDiagram(): DiagramData {
+  const box = (nodeId: string, row: number, detail: string, marks: string[] = []) => ({ nodeId, label: nodeId, detail, marks, href: "#diagram", row });
+  const edge = (edgeId: string, from: string, to: string, type: string, rule: string): DiagramEdge => ({ edgeId, from, to, type, state: "resolved", rule, basis: "observed", evidence: [], kind: "architecture", referenceIdentifier: {}, candidates: [] });
+  const rows = [
+    [box("access-shell", 0, "Access shell (SEAL-100)", ["Host"])],
+    [box("fx-board", 1, "FX Board (SEAL-200)", ["Also in Markets"]), box("payee-hub", 1, "Payee hub (SEAL-400)"), box("rates", 1, "Rates (SEAL-300)")],
+    [box("design-tokens", 2, "Design system (SEAL-500)")],
+  ];
+  const groups = new Map(rows.flat().map((item) => [item.nodeId, item.detail]));
+  const edges = [
+    edge("e1", "access-shell", "fx-board", "composition", "composition.federation-name"),
+    edge("e2", "access-shell", "fx-board", "composition", "composition.import-map-specifier"),
+    edge("e3", "access-shell", "payee-hub", "composition", "composition.federation-name"),
+    edge("e4", "access-shell", "rates", "composition", "composition.federation-name"),
+    edge("e5", "fx-board", "design-tokens", "package_dependency", "package.exact-name"),
+    edge("e6", "rates", "design-tokens", "package_dependency", "package.exact-name"),
+    { ...edge("e7", "payee-hub", "", "iframe", "iframe.served-origin"), to: null, state: "unresolved", referenceIdentifier: { url: "https://legacy.invalid" } },
+  ];
+  return { rows, model: diagramModel(groups, edges, (id) => id), thirdParty: [{ name: "react", href: "#diagram" }] };
+}
+
 /**
  * Every shared component in every variant and state, in both themes. Available
  * in development and test environments only.
@@ -89,6 +115,8 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
     ["code-block", "Code block"],
     ["table", "Table"],
     ["tabs", "Tabs and breadcrumbs"],
+    ["pagination", "Pagination"],
+    ["diagram", "Diagram"],
     ["menu", "Menu"],
     ["tooltip", "Tooltip and relative time"],
     ["progress", "Progress and skeleton"],
@@ -626,6 +654,20 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
           )}
         />
 
+
+        <Specimen
+          id="pagination"
+          title="Pagination"
+          description="Links between the pages of a long list, with the page in the address."
+          render={() => <Pagination label="Relationships pages" page={4} pages={12} href={(page) => `?page=${page}#pagination`} />}
+        />
+
+        <Specimen
+          id="diagram"
+          title="Diagram"
+          description="A Relationship Map diagram: boxes link to their focus, one arrow merges every signal between two repositories, a dashed stub marks an unmatched reference, and the text equivalent replaces the drawing on narrow screens."
+          render={(theme) => <Diagram id={`diagram-${theme}`} label="Access portal" data={sampleDiagram()} />}
+        />
         <Specimen
           id="menu"
           title="Menu"

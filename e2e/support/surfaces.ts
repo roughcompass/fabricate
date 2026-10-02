@@ -77,7 +77,7 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["06-profile", `/profiles/${orders.publicId}`],
     ["06-evidence", paths.evidence(assessment.publicId, evidenceId)],
     ["07-map", paths.runMap(assessment.publicId)],
-    ["07-map-nodes", `${paths.runMap(assessment.publicId)}?view=nodes`],
+    ["07-map-unassigned", `${paths.runMap(assessment.publicId)}/unassigned`],
     ["08-evaluation", `/evaluations/${evaluation.publicId}`],
     ["08-finding-gap", `/evaluations/${evaluation.publicId}/findings/${gap.publicId}`],
     ["08-finding-indeterminate", `/evaluations/${evaluation.publicId}/findings/${indeterminate.publicId}`],

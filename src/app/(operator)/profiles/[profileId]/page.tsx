@@ -27,6 +27,7 @@ import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { findProfile, latestProfileOfSource, profileDiagnostics, profileDocument } from "@/lib/profiles/profile-records";
 import { type FactDocument, categoryDefinitions } from "@/lib/profiles/states";
 import { type DependencyFilters as Filters, type SharedBlock, filterDependencies, profileView } from "@/lib/profiles/view";
+import { repositoryFocusHref } from "@/lib/relationships/map-view";
 import { eq } from "drizzle-orm";
 import styles from "./profile.module.css";
 
@@ -68,6 +69,8 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
     return <SharedTable key={block.kind} block={shown} context={context} filters={<DependencyFilters block={block} filters={filters} action={`${base}#dependencies`} shown={count} total={total} />} />;
   };
 
+  const mapHref = repositoryFocusHref(getDb(), assessment, target.id);
+
   return (
     <Page>
       <PageHeader
@@ -77,6 +80,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
           { href: `/runs/${assessment.publicId}`, label: `Run #${number}` },
         ]}
         title={target.sourceName}
+        secondaryActions={mapHref ? [{ href: mapHref, label: "Relationship Map", icon: "network" }] : undefined}
         meta={[
           <ShortValue key="commit" value={commit} label="commit" />,
           <span key="created">

@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import type { Assessment } from "@/lib/assessments/assessment-records";
-import type { Executor } from "@/lib/db/client";
+import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { relationshipMaps } from "@/lib/db/schema";
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
+import { projectMap } from "@/lib/projection/project";
 
 /** Persistence for the immutable Relationship Map, one per Assessment. */
 
@@ -26,19 +27,24 @@ export function insertRelationshipMap(db: Executor, input: NewRelationshipMap): 
   for (const problem of input.validate?.(prepared.value) ?? []) issues.add("document", problem);
   issues.throwIfAny();
 
-  return db
-    .insert(relationshipMaps)
-    .values({
-      publicId: generatePublicId("map"),
-      assessmentId: input.assessment.id,
-      schemaVersion: prepared.schemaVersion,
-      resolverVersion: resolverVersion as string,
-      document: prepared.text,
-      digest: prepared.digest,
-      createdAt: new Date(),
-    })
-    .returning()
-    .get();
+  // The map and its projection rows commit together or not at all.
+  return immediate(db, (tx) => {
+    const map = tx
+      .insert(relationshipMaps)
+      .values({
+        publicId: generatePublicId("map"),
+        assessmentId: input.assessment.id,
+        schemaVersion: prepared.schemaVersion,
+        resolverVersion: resolverVersion as string,
+        document: prepared.text,
+        digest: prepared.digest,
+        createdAt: new Date(),
+      })
+      .returning()
+      .get();
+    projectMap(tx, map, prepared.value);
+    return map;
+  });
 }
 
 export function mapOf(db: Executor, assessmentId: number): RelationshipMap | undefined {

@@ -7,6 +7,11 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
+/** The UTC date alone, such as "Oct 2, 2026", for a value that's current as of a day. */
+export function formatDate(value: Date): string {
+  return absoluteDate.format(value);
+}
+
 /** The full UTC time, for tooltips and machine-readable markup. */
 export function formatAbsolute(value: Date): string {
   return `${absoluteDateTime.format(value)} UTC`;

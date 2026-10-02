@@ -113,6 +113,34 @@
       "when": 1790871788595,
       "tag": "0015_demo_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1790951075521,
+      "tag": "0016_ontology_projection_ownership",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1790951079792,
+      "tag": "0017_projection_ownership_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1790951750755,
+      "tag": "0018_projection_version_2",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1790951751090,
+      "tag": "0019_projection_version_2_triggers",
+      "breakpoints": true
     }
   ]
 }

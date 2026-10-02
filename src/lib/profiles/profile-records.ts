@@ -1,11 +1,12 @@
 import { asc, desc, eq } from "drizzle-orm";
 import type { Assessment, AssessmentTarget, SourceSnapshot } from "@/lib/assessments/assessment-records";
-import type { Executor } from "@/lib/db/client";
+import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { assessmentTargets, repositoryProfiles } from "@/lib/db/schema";
 import { type JsonObject, type JsonValue, SKIPPED_INPUT_REASONS } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
+import { projectProfile } from "@/lib/projection/project";
 
 /** Persistence for immutable Repository Profiles, one per pinned snapshot. */
 
@@ -29,21 +30,26 @@ export function insertProfile(db: Executor, input: NewProfile): RepositoryProfil
   for (const problem of input.validate?.(prepared.value) ?? []) issues.add("document", problem);
   issues.throwIfAny();
 
-  return db
-    .insert(repositoryProfiles)
-    .values({
-      publicId: generatePublicId("prf"),
-      assessmentId: input.assessment.id,
-      assessmentTargetId: input.target.id,
-      sourceSnapshotId: input.snapshot.id,
-      schemaVersion: prepared.schemaVersion,
-      detectorRelease: input.assessment.detectorRelease,
-      document: prepared.text,
-      digest: prepared.digest,
-      createdAt: new Date(),
-    })
-    .returning()
-    .get();
+  // The Profile and its projection rows commit together or not at all.
+  return immediate(db, (tx) => {
+    const profile = tx
+      .insert(repositoryProfiles)
+      .values({
+        publicId: generatePublicId("prf"),
+        assessmentId: input.assessment.id,
+        assessmentTargetId: input.target.id,
+        sourceSnapshotId: input.snapshot.id,
+        schemaVersion: prepared.schemaVersion,
+        detectorRelease: input.assessment.detectorRelease,
+        document: prepared.text,
+        digest: prepared.digest,
+        createdAt: new Date(),
+      })
+      .returning()
+      .get();
+    projectProfile(tx, profile, prepared.value);
+    return profile;
+  });
 }
 
 export function findProfile(db: Executor, publicId: string): RepositoryProfile | undefined {

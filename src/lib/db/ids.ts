@@ -20,6 +20,11 @@ export const PUBLIC_ID_PREFIXES = {
   demoThread: "thr",
   demoComment: "cmt",
   demoProfile: "dpf",
+  ontologyRelease: "olr",
+  sealApplication: "sea",
+  lineOfBusiness: "lob",
+  portal: "ptl",
+  ownershipAssertion: "own",
 } as const;
 
 export type PublicIdPrefix = (typeof PUBLIC_ID_PREFIXES)[keyof typeof PUBLIC_ID_PREFIXES];

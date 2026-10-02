@@ -27,6 +27,8 @@ Open <http://localhost:3000>. `npm run dev` starts the web server and the worker
 
 Both processes validate the configuration and check the Git version at startup. If either check fails, the process exits with the reason instead of serving requests or running jobs.
 
+Neither process applies migrations, so run `npm run db:migrate` after pulling changes. When a change adds or alters the [assessment projection](docs/projection.md), also run `npm run projection:rebuild`, which recreates it from every stored Profile and Relationship Map.
+
 ## Run the checks
 
 ```sh
@@ -36,7 +38,7 @@ npm run test:visual # screenshots of every product surface, for design review
 npm run test:fleet  # the synthetic fleet, assessed and evaluated through the product
 npm run typecheck
 npm run lint
-npm run build       # Next.js standalone server, dist/worker.cjs, and dist/migrate.cjs
+npm run build       # Next.js standalone server, dist/worker.cjs, dist/migrate.cjs, and dist/projection-rebuild.cjs
 ```
 
 `npm run test:visual` seeds a representative Assessment, checks each product surface for horizontal overflow and overlapping content at 1280 and 375 pixels wide, and writes full-page screenshots to `verification/screenshots/`. The committed screenshots are the output of the last design review.

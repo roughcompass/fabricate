@@ -1,0 +1,23 @@
+@layer components {
+  .pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+  .position { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .pages { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+
+  .page, .step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--size-control-sm);
+    height: var(--size-control-sm);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-secondary);
+    text-decoration: none;
+
+    &:hover { background: var(--color-bg-muted); color: var(--color-text); }
+  }
+  .page[aria-current="page"] { background: var(--color-bg-selected); color: var(--color-text); font-weight: var(--font-weight-medium); }
+  .step[aria-disabled="true"] { color: var(--color-text-tertiary); pointer-events: none; }
+  .gap { color: var(--color-text-tertiary); padding: 0 var(--space-1); }
+}
