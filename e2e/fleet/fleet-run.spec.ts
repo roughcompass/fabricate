@@ -96,8 +96,9 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     expect(platform).toContainEqual(expect.objectContaining({ client: expect.objectContaining({ kind: "fetch" }), characterizable: false, endpoint: expect.objectContaining({ state: "unknown" }) }));
 
     await page.getByRole("link", { name: "mf-billing Profile" }).click();
-    const analytics = page.locator("#services").getByRole("region", { name: "package:@acme/analytics", exact: true });
-    await expect(analytics).toContainText("called through packaged");
+    // A Service Dependency's summary names its endpoint and client; its key is in its details.
+    const analytics = page.locator("#services").getByRole("region", { name: /^Same origin \/__analytics · Packaged client from @acme\/analytics/ });
+    await expect(analytics).toContainText("called through Packaged client from @acme/analytics");
     await expect(page.getByText("Static discovery does not prove entitlement, reachability, or integrated behavior", { exact: false })).toBeVisible();
   });
 

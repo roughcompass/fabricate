@@ -40,6 +40,8 @@ export interface SelectorDefinition {
   parameter?: { label: string; description: string };
   /** The closed vocabulary of a string value, when it has one. */
   choices?: readonly string[];
+  /** The Profile fact category a repository selector reads, which a Finding's Profile link opens. */
+  category?: string;
 }
 
 export interface CollectionDefinition {
@@ -62,39 +64,39 @@ const design = (id: string, label: string, type: ValueType, description: string,
 const DESIGN_SYSTEM = { label: "Design system", description: "The design system's catalog id, such as salt" };
 
 export const SELECTORS: readonly SelectorDefinition[] = [
-  profile("repository.languages", "Languages", "string_set", "Languages by committed file extension"),
-  profile("repository.package_managers", "Package managers", "string_set", "Package managers declared or implied by lockfiles"),
-  profile("repository.build_tools", "Build tools", "string_set", "Bundlers and compilers, by identifier"),
-  profile("repository.test_frameworks", "Test frameworks", "string_set", "Test runners, by identifier"),
-  profile("repository.frameworks", "Frameworks", "string_set", "Application frameworks, by identifier"),
-  profile("repository.ci_systems", "CI systems", "string_set", "CI systems with a supported definition"),
-  profile("repository.verification_command_kinds", "Verification command kinds", "string_set", "Kinds of declared verification commands, such as test, lint, and build"),
-  profile("repository.composition_mechanisms", "Composition mechanisms", "string_set", "Micro-frontend and composition mechanisms"),
-  profile("repository.packages_produced", "Packages produced", "string_set", "Package names this repository produces"),
-  profile("repository.packages_consumed", "Packages consumed", "string_set", "Package names this repository depends on"),
-  profile("repository.runtime_integrations", "Runtime integrations", "string_set", "Runtime contracts produced or consumed, such as postMessage"),
-  profile("repository.access_signal_kinds", "Access signal kinds", "string_set", "Kinds of credential, certificate, authentication, and network-zone signals, never their values"),
-  profile("repository.egress_route_kinds", "Proxy and gateway kinds", "string_set", "Kinds of proxy variables, development proxies, and gateway configuration"),
-  profile("repository.api_contract_kinds", "API contract kinds", "string_set", "Kinds of committed API contracts and generated schemas"),
-  profile("repository.test_substitute_kinds", "Test substitute kinds", "string_set", "Kinds of existing interceptors, mocks, stubs, and fixtures"),
-  profile("repository.submodule_count", "Submodules", "number", "Number of Git submodule declarations"),
-  profile("repository.workspace_count", "Workspace packages", "number", "Number of workspace package directories"),
-  profile("repository.node_range", "Node.js requirement", "version", "The Node.js versions the repository's declarations allow"),
-  profile("repository.declared_range", "Declared dependency range", "version", "The version range manifests declare for a direct dependency", { parameter: { label: "Package", description: "The dependency's exact package name" } }),
-  profile("repository.resolved_version", "Resolved dependency version", "version", "The versions lockfiles resolve for a direct dependency", { parameter: { label: "Package", description: "The dependency's exact package name" } }),
-  design("repository.design_systems", "Design systems", "string_set", "Design systems recognized from catalogs, by catalog id, such as salt"),
-  design("repository.design_system_theme_imported", "Theme stylesheet imported", "boolean", "Whether any source imports one of the design system's theme stylesheets", { parameter: DESIGN_SYSTEM }),
-  design("repository.design_system_provider", "Provider rendered", "boolean", "Whether any source renders one of the design system's provider components", { parameter: DESIGN_SYSTEM }),
-  design("repository.design_system_elements", "Design-system elements", "number", "The design system's component elements in app code", { parameter: DESIGN_SYSTEM }),
-  design("repository.design_system_raw_equivalents", "Intrinsic equivalents", "number", "Intrinsic elements in app code that the design system has a component for, such as a raw button", { parameter: DESIGN_SYSTEM }),
-  design("repository.design_system_customized_share", "Customized share", "number", "The whole-number percentage of the design system's component elements in app code that are customized", { parameter: DESIGN_SYSTEM }),
-  design("repository.design_system_adoption_share", "Adoption share", "number", "The whole-number percentage of design-system-relevant elements in app code that use the design system rather than an intrinsic equivalent", { parameter: DESIGN_SYSTEM }),
-  design("repository.design_system_token_share", "Token share", "number", "The whole-number percentage of token-capable declarations in app code whose value is one of the design system's tokens or a token alias", { parameter: DESIGN_SYSTEM }),
-  design("repository.design_system_internal_selectors", "Selectors into internals", "number", "Selectors in app code that name the design system's internal classes", { parameter: DESIGN_SYSTEM }),
-  design("repository.unknown_token_count", "Unknown tokens", "number", "References in app code to custom properties that carry a catalog's token prefix but aren't in the catalog"),
-  design("repository.token_redefinition_count", "Token redefinitions", "number", "Declarations in app code of a design system's custom properties"),
-  design("repository.global_element_selector_count", "Global element selectors", "number", "Unqualified element selectors in app code for tags that have a design-system equivalent"),
-  design("repository.important_count", "!important declarations", "number", "Declarations in app code marked !important"),
+  profile("repository.languages", "Languages", "string_set", "Languages by committed file extension", { category: "languages" }),
+  profile("repository.package_managers", "Package managers", "string_set", "Package managers declared or implied by lockfiles", { category: "package_managers" }),
+  profile("repository.build_tools", "Build tools", "string_set", "Bundlers and compilers, by identifier", { category: "build_tools" }),
+  profile("repository.test_frameworks", "Test frameworks", "string_set", "Test runners, by identifier", { category: "test_frameworks" }),
+  profile("repository.frameworks", "Frameworks", "string_set", "Application frameworks, by identifier", { category: "frameworks" }),
+  profile("repository.ci_systems", "CI systems", "string_set", "CI systems with a supported definition", { category: "ci_systems" }),
+  profile("repository.verification_command_kinds", "Verification command kinds", "string_set", "Kinds of declared verification commands, such as test, lint, and build", { category: "verification_commands" }),
+  profile("repository.composition_mechanisms", "Composition mechanisms", "string_set", "Micro-frontend and composition mechanisms", { category: "composition" }),
+  profile("repository.packages_produced", "Packages produced", "string_set", "Package names this repository produces", { category: "packages_produced" }),
+  profile("repository.packages_consumed", "Packages consumed", "string_set", "Package names this repository depends on", { category: "packages_consumed" }),
+  profile("repository.runtime_integrations", "Runtime integrations", "string_set", "Runtime contracts produced or consumed, such as postMessage", { category: "runtime_integrations" }),
+  profile("repository.access_signal_kinds", "Access signal kinds", "string_set", "Kinds of credential, certificate, authentication, and network-zone signals, never their values", { category: "access_signals" }),
+  profile("repository.egress_route_kinds", "Proxy and gateway kinds", "string_set", "Kinds of proxy variables, development proxies, and gateway configuration", { category: "egress_routes" }),
+  profile("repository.api_contract_kinds", "API contract kinds", "string_set", "Kinds of committed API contracts and generated schemas", { category: "api_contracts" }),
+  profile("repository.test_substitute_kinds", "Test substitute kinds", "string_set", "Kinds of existing interceptors, mocks, stubs, and fixtures", { category: "test_substitutes" }),
+  profile("repository.submodule_count", "Submodules", "number", "Number of Git submodule declarations", { category: "submodules" }),
+  profile("repository.workspace_count", "Workspace packages", "number", "Number of workspace package directories", { category: "workspaces" }),
+  profile("repository.node_range", "Node.js requirement", "version", "The Node.js versions the repository's declarations allow", { category: "runtime_requirements" }),
+  profile("repository.declared_range", "Declared dependency range", "version", "The version range manifests declare for a direct dependency", { category: "dependencies", parameter: { label: "Package", description: "The dependency's exact package name" } }),
+  profile("repository.resolved_version", "Resolved dependency version", "version", "The versions lockfiles resolve for a direct dependency", { category: "resolved_dependencies", parameter: { label: "Package", description: "The dependency's exact package name" } }),
+  design("repository.design_systems", "Design systems", "string_set", "Design systems recognized from catalogs, by catalog id, such as salt", { category: "design_systems" }),
+  design("repository.design_system_theme_imported", "Theme stylesheet imported", "boolean", "Whether any source imports one of the design system's theme stylesheets", { category: "design_systems", parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_provider", "Provider rendered", "boolean", "Whether any source renders one of the design system's provider components", { category: "design_systems", parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_elements", "Design-system elements", "number", "The design system's component elements in app code", { category: "ui_elements", parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_raw_equivalents", "Intrinsic equivalents", "number", "Intrinsic elements in app code that the design system has a component for, such as a raw button", { category: "ui_elements", parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_customized_share", "Customized share", "number", "The whole-number percentage of the design system's component elements in app code that are customized", { category: "ui_elements", parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_adoption_share", "Adoption share", "number", "The whole-number percentage of design-system-relevant elements in app code that use the design system rather than an intrinsic equivalent", { category: "ui_elements", parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_token_share", "Token share", "number", "The whole-number percentage of token-capable declarations in app code whose value is one of the design system's tokens or a token alias", { category: "style_values", parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_internal_selectors", "Selectors into internals", "number", "Selectors in app code that name the design system's internal classes", { category: "style_values", parameter: DESIGN_SYSTEM }),
+  design("repository.unknown_token_count", "Unknown tokens", "number", "References in app code to custom properties that carry a catalog's token prefix but aren't in the catalog", { category: "style_values" }),
+  design("repository.token_redefinition_count", "Token redefinitions", "number", "Declarations in app code of a design system's custom properties", { category: "style_values" }),
+  design("repository.global_element_selector_count", "Global element selectors", "number", "Unqualified element selectors in app code for tags that have a design-system equivalent", { category: "style_values" }),
+  design("repository.important_count", "!important declarations", "number", "Declarations in app code marked !important", { category: "style_values" }),
 
   service("service.key", "Service identity", "string", "The logical identity key of the Service Dependency"),
   service("service.client", "Client kind", "string", "How the service is called", { choices: CLIENT_KINDS }),
@@ -145,4 +147,10 @@ export const SUBJECT_SCOPE = { repository: "repository", relationship_map: "rela
 /** The input schema each scope reads. */
 export function schemaOfScope(scope: Scope): InputSchema {
   return scope === "repository" || scope === "service_dependency" ? "repository_profile" : "relationship_map";
+}
+
+/** Repository selectors that name no category, or one that +categories+ doesn't define, so a Finding's Profile link couldn't open it. */
+export function selectorCategoryProblems(categories: readonly string[], selectors: readonly SelectorDefinition[] = SELECTORS): string[] {
+  const known = new Set(categories);
+  return selectors.filter((selector) => selector.scope === "repository" && (!selector.category || !known.has(selector.category))).map((selector) => (selector.category ? `${selector.id} reads ${selector.category}, which isn't a category` : `${selector.id} names no category`));
 }

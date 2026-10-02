@@ -1,5 +1,6 @@
 @layer components {
   .muted { color: var(--color-text-secondary); }
+  .noValue { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); min-width: 0; overflow-wrap: anywhere; }
 
   .evidence { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
   .evidence li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); min-width: 0; }

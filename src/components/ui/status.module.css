@@ -22,6 +22,10 @@
     height: var(--size-dot);
     border-radius: var(--radius-full);
     background: var(--_tone);
+
+    /* The states with no value differ by shape as well as label: Unknown is hollow, Not covered a dash. */
+    &[data-indicator="ring"] { background: transparent; box-shadow: inset 0 0 0 2px var(--_tone); }
+    &[data-indicator="dash"] { height: 2px; }
   }
   .status[data-tone="progress"] .dot { animation: pulse var(--duration-spin) var(--ease-standard) infinite alternate; }
 

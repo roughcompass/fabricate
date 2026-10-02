@@ -2,12 +2,6 @@
   .layout { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-10); align-items: start; }
   .content { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
 
-  .compact { margin: 0; padding: 0; list-style: none; }
-  .compactRow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-4); scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
-  .compactRow + .compactRow { border-top: 1px solid var(--color-border-subtle); }
-  .compactName { min-width: 0; }
-
-  .candidates { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding-left: var(--space-4); }
   .muted { color: var(--color-text-secondary); }
   .alertLink { font-weight: var(--font-weight-medium); }
 

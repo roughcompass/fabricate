@@ -10,12 +10,14 @@ import { profilesOf } from "../src/lib/profiles/profile-records";
 import { buildInitiative, buildSource } from "../test/support/builders";
 import { manifest } from "../test/support/profiles";
 import { seedAssessment } from "../test/support/scenarios";
-import { ORDERS, serverConfig } from "./support/results";
+import { ORDERS, STOREFRONT, serverConfig } from "./support/results";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, gitRepo, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 
 const category = (page: Page, id: string) => page.locator(`#${id}`);
-const service = (page: Page, key: string) => page.locator("#services").getByRole("region", { name: key, exact: true });
+const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** A Service Dependency's panel, by the start of its summary: its endpoint. */
+const service = (page: Page, endpoint: string) => page.locator("#services").getByRole("region", { name: new RegExp(`^${escaped(endpoint)}`) });
 /** Opens a Service Dependency's panel. */
 const expand = async (region: Locator) => {
   await region.locator("summary").click();
@@ -23,6 +25,12 @@ const expand = async (region: Locator) => {
 };
 /** The value a details list gives for +term+. */
 const detail = (region: Locator, term: string) => region.locator(`xpath=.//dt[normalize-space()='${term}']/following-sibling::dd[1]`);
+/** Opens the evidence of the first row in +section+ that contains +text+, and returns the row. */
+const openEvidence = async (section: Locator, text: string) => {
+  const row = section.getByRole("row").filter({ hasText: text }).first();
+  await row.getByRole("button", { name: /^Show \d+ locations?$/ }).click();
+  return row;
+};
 
 async function seedOrders(db: Parameters<typeof seedAssessment>[0]) {
   const orders = buildSource(db, { name: "orders" });
@@ -30,6 +38,33 @@ async function seedOrders(db: Parameters<typeof seedAssessment>[0]) {
   const assessment = await seedAssessment(db, initiative, [orders], [ORDERS]);
   return { orders, initiative, assessment, profile: profilesOf(db, assessment.id)[0]!.profile };
 }
+
+async function seedStorefront(db: Parameters<typeof seedAssessment>[0]) {
+  const storefront = buildSource(db, { name: "storefront" });
+  const initiative = buildInitiative(db, { name: "Storefront review", sources: [storefront] });
+  const assessment = await seedAssessment(db, initiative, [storefront], [STOREFRONT]);
+  return { storefront, initiative, assessment, profile: profilesOf(db, assessment.id)[0]!.profile };
+}
+
+test("leads with an overview of what the repository is, then what needs attention", async ({ page, db }) => {
+  const { profile } = await seedStorefront(db);
+  await page.goto(`/profiles/${profile.publicId}`);
+  expect((await page.locator("main").getByRole("heading", { level: 2 }).allTextContents()).slice(0, 3)).toEqual(["Overview", "Needs attention", "Inventory"]);
+
+  const overview = page.getByRole("region", { name: "Overview" });
+  expect(await overview.locator("dt").allTextContents()).toEqual(["Packages", "Languages", "Framework", "Build", "Tests", "Tooling", "Runtime", "Composition", "Design system", "Scope"]);
+  await expect(detail(overview, "Framework")).toContainText("React 19.1.0");
+  await expect(detail(overview, "Framework").getByRole("link")).toHaveAttribute("href", "#frameworks");
+  await expect(detail(overview, "Build")).toContainText("Vite");
+  // An inferred value names its state; an observed one only for assistive technology.
+  await expect(detail(overview, "Tooling")).toContainText("Inferred");
+  // Unknown composition shows its state and reason, in the overview and in Needs attention.
+  await expect(detail(overview, "Composition")).toContainText("Unknown");
+  await expect(detail(overview, "Composition")).toContainText("cannot prove there is none");
+  const attention = page.getByRole("list", { name: "Needs attention" });
+  await expect(attention.getByRole("listitem").filter({ hasText: "Composition" })).toContainText("Unknown");
+  await expect(page.getByRole("group", { name: "Categories by state" })).toContainText("observed");
+});
 
 test("explains observed, inferred, unknown, conflicting, negative, and skipped-input facts", async ({ page, db }) => {
   const { profile } = await seedOrders(db);
@@ -41,10 +76,12 @@ test("explains observed, inferred, unknown, conflicting, negative, and skipped-i
   await expect(languages.getByText("Observed").first()).toBeVisible();
   await expect(languages.getByRole("row").filter({ hasText: "TypeScript" })).toBeVisible();
 
+  // An inference explains itself beside its value, and its evidence is a row's panel away.
   const managers = category(page, "package_managers");
   await expect(managers.getByText("Inferred").first()).toBeVisible();
-  await expect(managers).toContainText("yarn.lock is the lockfile yarn writes, so yarn manages this directory.");
-  await expect(managers.getByRole("link", { name: "yarn.lock" })).toBeVisible();
+  await expect(managers.getByText("yarn.lock is the lockfile yarn writes, so yarn manages this directory.")).toBeVisible();
+  const manager = await openEvidence(managers, "yarn");
+  await expect(manager.getByRole("link", { name: "yarn.lock" })).toBeVisible();
 
   const runtime = category(page, "runtime_requirements");
   await expect(runtime.getByText("Conflicting").first()).toBeVisible();
@@ -58,12 +95,16 @@ test("explains observed, inferred, unknown, conflicting, negative, and skipped-i
   await expect(ci.getByText("Unknown").first()).toBeVisible();
   await expect(ci).toContainText("1 relevant input could not be read or understood");
   await expect(ci).toContainText(".github/workflows/ci.yml");
-  await expect(category(page, "resolved_dependencies")).toContainText("no bounded search can establish this category");
+  // No lockfile entry resolves axios: its resolved version is unknown, never none detected.
+  const axios = category(page, "dependencies").getByRole("row").filter({ hasText: "axios" });
+  await expect(axios.getByText("Unknown")).toBeVisible();
+  await expect(axios).not.toContainText("None detected");
+  await expect(category(page, "resolved_dependencies").getByText("Unknown")).toBeVisible();
 
   const submodules = category(page, "submodules");
   await expect(submodules.getByText("None detected").first()).toBeVisible();
-  await expect(submodules).toContainText("None detected: no input this category reads exists in this commit.");
-  await expect(category(page, "test_frameworks")).toContainText("None detected after a complete search of 1 input.");
+  await expect(submodules).toContainText("No input this category reads exists in this commit");
+  await expect(category(page, "test_frameworks")).toContainText("After a complete search of 1 input");
 
   const access = category(page, "access_signals");
   await expect(access.getByText("Mixed").first()).toBeVisible();
@@ -73,12 +114,110 @@ test("explains observed, inferred, unknown, conflicting, negative, and skipped-i
   const skipped = page.getByRole("table", { name: "Skipped inputs" });
   await expect(skipped.getByRole("row").filter({ hasText: ".github/workflows/ci.yml" })).toContainText("Could not be parsed");
   await expect(page.getByRole("table", { name: "Other diagnostics" })).toContainText("Unlocked dependency");
+  await expect(page.getByRole("list", { name: "Needs attention" }).getByRole("link", { name: "1 skipped input" })).toHaveAttribute("href", "#diagnostics");
 
   // Seeded snapshots have no mirror: the record still identifies the content.
-  await managers.getByRole("link", { name: "yarn.lock" }).click();
+  await manager.getByRole("link", { name: "yarn.lock" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "yarn.lock" })).toBeVisible();
   await expect(page.getByText("lockfile.package-manager")).toBeVisible();
   await expect(page.getByText("Excerpt unavailable")).toBeVisible();
+});
+
+test("shows each category's search and rule, and a row's state only where it differs", async ({ page, db }) => {
+  const { profile } = await seedStorefront(db);
+  await page.goto(`/profiles/${profile.publicId}`);
+
+  // Every language is observed, as its category is: no row repeats the state.
+  const languages = category(page, "languages");
+  await expect(languages.getByRole("table").getByText("Observed")).toHaveCount(0);
+  await expect(languages.getByRole("row").filter({ hasText: "TypeScript" }).getByRole("button", { name: /^Show \d+ locations?$/ })).toBeVisible();
+
+  const dependencies = category(page, "dependencies").getByRole("list", { name: "Categories in Dependencies" }).getByRole("listitem").first();
+  await expect(dependencies).toContainText("Searched 1 input · complete");
+  await expect(dependencies).toContainText("Rule manifest.dependencies");
+
+  // A row's evidence panel holds its evidence, its fact key, and its raw value. The declaration and the consumed package cite the same location.
+  const react = await openEvidence(category(page, "dependencies"), "react-dom");
+  await expect(react.getByRole("link", { name: "package.json /dependencies/react-dom" }).first()).toBeVisible();
+  await expect(react.getByRole("link", { name: "package-lock.json /packages/node_modules/react-dom/version" })).toBeVisible();
+  await expect(react.getByText("package.json#dependencies/react-dom")).toBeVisible();
+  await expect(react.getByLabel("Raw value of package.json#dependencies/react-dom")).toContainText('"specifier": "19.1.0"');
+});
+
+test("shows dependencies and scripts in shared tables, and CI steps with their definition", async ({ page, db }) => {
+  const { profile } = await seedStorefront(db);
+  await page.goto(`/profiles/${profile.publicId}`);
+
+  const table = page.getByRole("table", { name: "Dependencies" });
+  await expect(table.getByRole("row").filter({ hasText: "react-dom" })).toHaveCount(1);
+  await expect(table.getByRole("row").filter({ hasText: "react-dom" })).toContainText("Production");
+  await expect(table.getByRole("row").filter({ hasText: "vitest" })).toContainText("Development");
+  for (const id of ["resolved_dependencies", "packages_consumed"]) await expect(page.getByRole("table", { name: id })).toHaveCount(0);
+  await expect(page.getByRole("table", { name: "Resolved versions" })).toHaveCount(0);
+  await expect(page.getByRole("table", { name: "Packages consumed" })).toHaveCount(0);
+  for (const column of ["Kind", "Declared", "Resolved", "Consumed"]) await expect(table.getByRole("columnheader").filter({ hasText: column })).toContainText("Observed");
+
+  const nav = page.getByRole("navigation", { name: "Profile sections" });
+  await nav.getByRole("link", { name: /^Resolved versions/ }).click();
+  await expect(page).toHaveURL(/#resolved_dependencies$/);
+  await expect(category(page, "resolved_dependencies")).toBeInViewport();
+  await expect(table).toBeInViewport();
+
+  const workflow = category(page, "ci_systems").getByRole("row").filter({ hasText: ".github/workflows/ci.yml" });
+  await expect(workflow).toContainText("GitHub Actions");
+  await expect(workflow).toContainText("npm test");
+  await expect(workflow).toContainText("ci · step 3 · Test");
+
+  const scripts = page.getByRole("table", { name: "Package scripts" });
+  await expect(scripts.getByRole("row").filter({ hasText: "vitest run" })).toContainText("Test");
+  await expect(scripts.getByRole("row").filter({ hasText: "start" })).toContainText("None");
+  await expect(page.getByRole("table", { name: "Verification commands" })).toHaveCount(0);
+});
+
+test("filters the Dependencies table by kind and package, in the URL", async ({ page, db }) => {
+  const { profile } = await seedStorefront(db);
+  await page.goto(`/profiles/${profile.publicId}`);
+  const table = page.getByRole("table", { name: "Dependencies" });
+  const packages = table.getByRole("row").filter({ hasText: /Production|Development/ });
+  await expect(packages).toHaveCount(6);
+
+  await page.locator("#filter-kind").selectOption("devDependencies");
+  await expect(page).toHaveURL(/kind=devDependencies/);
+  await expect(page.getByText("Showing 4 of 6 dependencies")).toBeVisible();
+  await expect(packages).toHaveCount(4);
+  await expect(table.getByRole("row").filter({ hasText: "Production" })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Clear filters" }).click();
+  await expect(page).not.toHaveURL(/kind=/);
+  await expect(packages).toHaveCount(6);
+
+  await page.goto(`/profiles/${profile.publicId}?package=REACT`);
+  await expect(page.getByText("Showing 2 of 6 dependencies")).toBeVisible();
+});
+
+test.describe("without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("applies the Dependencies filters with Apply", async ({ page, db }) => {
+    const { profile } = await seedStorefront(db);
+    await page.goto(`/profiles/${profile.publicId}`);
+    await page.locator("#filter-kind").selectOption("dependencies");
+    await page.getByRole("form", { name: "Filter dependencies" }).getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/kind=dependencies/);
+    await expect(page.getByText("Showing 2 of 6 dependencies")).toBeVisible();
+  });
+});
+
+test("keeps the navigation in view while the Profile scrolls", async ({ page, db }) => {
+  const { profile } = await seedStorefront(db);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/profiles/${profile.publicId}`);
+  const nav = page.getByRole("navigation", { name: "Profile sections" });
+  await category(page, "dependencies").evaluate((element) => element.scrollIntoView());
+  await expect(nav.getByRole("link", { name: /^Dependencies/ })).toHaveAttribute("aria-current", "location");
+  await expect(nav.getByRole("link", { name: /^Dependencies/ })).toBeInViewport();
+  await page.mouse.wheel(0, 2000);
+  await expect(nav.getByRole("list").first()).toBeInViewport();
 });
 
 test("shows an unavailable Service Dependency's call boundary, missing evidence, and static-only limitation", async ({ page, db }) => {
@@ -89,6 +228,8 @@ test("shows an unavailable Service Dependency's call boundary, missing evidence,
 
   const payments = service(page, "https://payments.invalid");
   await expect(payments).toContainText("Boundary characterized");
+  await expect(payments.locator("summary")).toContainText("called through fetch");
+  await expect(payments.locator("summary")).toContainText("at src/payments.ts:2");
   await expand(payments);
   await expect(detail(payments, "Endpoint")).toContainText("derivation: literal; origin: https://payments.invalid");
   await expect(detail(payments, "Operations")).toContainText("POST /v1/charges");
@@ -99,6 +240,7 @@ test("shows an unavailable Service Dependency's call boundary, missing evidence,
   await expect(detail(payments, "Test substitutes")).toContainText("None detected after a complete search");
   await expect(detail(payments, "Proxy expectation")).toContainText("Unknown");
   await expect(detail(payments, "Call sites").getByRole("link", { name: "src/payments.ts:2" })).toBeVisible();
+  await expect(detail(payments, "Key")).toHaveText("https://payments.invalid");
 
   const ledger = service(page, "https://ledger.corp.internal");
   await expect(ledger).toContainText("Boundary incomplete");
@@ -109,6 +251,18 @@ test("shows an unavailable Service Dependency's call boundary, missing evidence,
   // Nothing offers to connect, fabricate a response, or test the service.
   await expect(services.getByRole("button")).toHaveCount(0);
   await expect(services.getByRole("link", { name: /connect|test|mock|try/i })).toHaveCount(0);
+});
+
+test("summarizes an unresolved Service Dependency by its client and call site, not its key", async ({ page, db }) => {
+  const { profile } = await seedStorefront(db);
+  await page.goto(`/profiles/${profile.publicId}`);
+  const unresolved = service(page, "Unresolved endpoint");
+  await expect(unresolved.locator("summary")).toContainText("base is supplied by a caller");
+  await expect(unresolved.locator("summary")).toContainText("called through fetch");
+  await expect(unresolved.locator("summary")).toContainText("at src/client.ts:2");
+  await expect(unresolved.locator("summary")).not.toContainText("unresolved:src/client.ts:2");
+  await expand(unresolved);
+  await expect(detail(unresolved, "Key")).toHaveText("unresolved:src/client.ts:2");
 });
 
 test("marks an earlier Profile historical and links to the newest one", async ({ page, db }) => {
@@ -134,6 +288,24 @@ test("the Profile stays readable at mobile width", async ({ page, db }) => {
   await expectNoOverlappingContent(page);
 });
 
+test("stacks the overview, Needs attention, and shared tables at mobile width, with the navigation collapsed", async ({ page, db }) => {
+  const { profile } = await seedStorefront(db);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(`/profiles/${profile.publicId}`);
+  const nav = page.getByRole("navigation", { name: "Profile sections" });
+  await expect(nav.getByText("Jump to category")).toBeVisible();
+  await expect(nav.getByRole("link", { name: /^Languages/ })).toBeHidden();
+
+  await expect(page.getByRole("region", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Needs attention" })).toBeVisible();
+  // A table row becomes a stack of labeled values.
+  const react = page.getByRole("table", { name: "Dependencies" }).getByRole("row").filter({ hasText: "react-dom" });
+  await expect(react.locator("td").first()).toHaveCSS("display", "grid");
+  await expect(page.getByRole("table", { name: "Package scripts" }).getByRole("row").filter({ hasText: "vitest run" }).locator("td").first()).toHaveCSS("display", "grid");
+  await expectNoHorizontalOverflow(page);
+  await expectNoOverlappingContent(page);
+});
+
 test("opens verified evidence excerpts from a real snapshot without rendering URL credentials", async ({ page, db, sourcesDir }) => {
   const config = serverConfig();
   const repository = gitRepo(path.join(sourcesDir, "orders"), {
@@ -151,7 +323,8 @@ test("opens verified evidence excerpts from a real snapshot without rendering UR
 
   await page.goto(paths.run(assessment.publicId));
   await page.getByRole("link", { name: "orders Profile" }).click();
-  await category(page, "package_managers").getByRole("link", { name: "yarn.lock" }).click();
+  const manager = await openEvidence(category(page, "package_managers"), "yarn");
+  await manager.getByRole("link", { name: "yarn.lock" }).click();
   await expect(page.getByText("lockfile.package-manager")).toBeVisible();
   await expect(page.getByText("This evidence is the presence, type, or mode of the path itself")).toBeVisible();
 
@@ -159,6 +332,8 @@ test("opens verified evidence excerpts from a real snapshot without rendering UR
   for (const summary of await page.locator("#services summary").all()) await summary.click();
   await page.locator("#services").getByRole("link", { name: "src/payments.ts:2" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "src/payments.ts:2" })).toBeVisible();
+  // A call site's breadcrumb returns to the Service Dependencies.
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "orders" })).toHaveAttribute("href", /#services$/);
   await expect(page.getByRole("region", { name: "Record" })).toContainText("Line 2");
   const excerpt = page.getByLabel("Excerpt of src/payments.ts");
   await expect(excerpt).toContainText("[redacted]@payments.invalid/v1/charges");
@@ -189,11 +364,18 @@ test("navigates between categories and keeps categories without facts compact", 
 test("links an evidence record to each ancestor, with no other way back", async ({ page, db }) => {
   const { profile, initiative, assessment } = await seedOrders(db);
   await page.goto(`/profiles/${profile.publicId}`);
-  await category(page, "package_managers").getByRole("link", { name: "yarn.lock" }).click();
+  const manager = await openEvidence(category(page, "package_managers"), "yarn");
+  await manager.getByRole("link", { name: "yarn.lock" }).click();
   const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
   await expect(breadcrumbs.getByRole("link")).toHaveText(["Assessments", initiative.name, "Run #1", "orders"]);
   await expect(breadcrumbs.getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(assessment.publicId));
   await expect(page.locator("main").getByRole("link", { name: /back/i })).toHaveCount(0);
+
+  // The Profile breadcrumb returns to the category that cites the evidence.
+  await expect(breadcrumbs.getByRole("link", { name: "orders" })).toHaveAttribute("href", `/profiles/${profile.publicId}#package_managers`);
+  await breadcrumbs.getByRole("link", { name: "orders" }).click();
+  await expect(page).toHaveURL(/#package_managers$/);
+  await expect(category(page, "package_managers")).toBeInViewport();
 });
 
 const SALT_APP = {
@@ -209,19 +391,21 @@ test("shows design-system usage in the Interface categories, with each scope's n
   await page.goto(`/profiles/${profilesOf(db, assessment.id)[0]!.profile.publicId}`);
 
   await expect(page.getByRole("heading", { level: 2, name: "Interface" })).toBeVisible();
+  await expect(detail(page.getByRole("region", { name: "Overview" }), "Design system")).toContainText("Salt");
   const systems = category(page, "design_systems");
   await expect(systems.getByRole("row").filter({ hasText: "salt" })).toContainText("theme stylesheet: true");
   const button = category(page, "ui_elements").getByRole("row").filter({ hasText: "component:salt:Button" });
   await expect(button).toContainText("package: @salt-ds/core · app: sites 2, as is 1, customized 1");
   await expect(button).toContainText("stories: sites 1, customized 1, mechanisms (style 1)");
-  // Zero counts and empty scopes are left out.
-  await expect(button).not.toContainText("tests:");
-  await expect(button).not.toContainText(" 0,");
+  // Zero counts and empty scopes are left out of the value; the raw value in the row's evidence panel keeps them.
+  const value = button.getByRole("cell").nth(1);
+  await expect(value).not.toContainText("tests:");
+  await expect(value).not.toContainText(" 0,");
   await expect(category(page, "ui_elements").getByRole("row").filter({ hasText: "intrinsic:button" })).toContainText("equivalent: salt:Button · group: equivalent · app: sites 1, unstyled 1");
   await expect(category(page, "style_values").getByRole("row").filter({ hasText: "declarations:color" })).toContainText("app: raw 1");
 });
 
-test("shows a version 1 Profile's facts unchanged, with the design-system categories unknown", async ({ page, db }) => {
+test("shows a version 1 Profile's facts unchanged, with the design-system categories not covered", async ({ page, db }) => {
   const orders = buildSource(db, { name: "orders" });
   const assessment = await seedAssessment(db, buildInitiative(db, { name: "Earlier release", sources: [orders] }), [orders], [ORDERS], { profileVersion1: true });
   const profile = profilesOf(db, assessment.id)[0]!.profile;
@@ -231,6 +415,12 @@ test("shows a version 1 Profile's facts unchanged, with the design-system catego
   await expect(category(page, "languages").getByRole("row").filter({ hasText: "TypeScript" })).toBeVisible();
   const interfaceCategories = page.getByRole("list", { name: "Interface categories without facts" });
   for (const label of ["Design systems", "UI elements", "Style values"]) {
-    await expect(interfaceCategories.getByRole("listitem").filter({ hasText: label })).toContainText("Unknown");
+    const item = interfaceCategories.getByRole("listitem").filter({ hasText: label });
+    await expect(item).toContainText("Not covered");
+    await expect(item).not.toContainText("Unknown");
   }
+  const designSystem = detail(page.getByRole("region", { name: "Overview" }), "Design system");
+  await expect(designSystem).toContainText("Not covered");
+  await expect(designSystem).toContainText(/Detector release \S+ doesn't report this category/);
+  await expect(page.getByRole("list", { name: "Needs attention" }).getByRole("listitem").filter({ hasText: "Design systems, UI elements, Style values" })).toContainText("Not covered");
 });

@@ -14,7 +14,9 @@ import { ShortValue, Tag } from "@/components/ui/tag";
 import { assessmentNumber, findAssessment, snapshotOf } from "@/lib/assessments/assessment-records";
 import { getDb } from "@/lib/db/client";
 import { initiativeById } from "@/lib/initiatives/initiative-records";
+import { evidenceSection } from "@/lib/profiles/links";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
+import type { FactDocument } from "@/lib/profiles/states";
 import { openSnapshot } from "@/lib/snapshot/open";
 
 const REFUSALS: Record<string, string> = {
@@ -32,10 +34,15 @@ const load = cache((assessmentId: string, evidenceId: string) => {
   const assessment = findAssessment(db, assessmentId);
   if (!assessment) return undefined;
   const owner = profilesOf(db, assessment.id)
-    .map(({ profile, target }) => ({ profile, target, record: ((profileDocument(profile).fact_document as JsonObject).evidence as JsonObject | undefined)?.[evidenceId] }))
+    .map(({ profile, target }) => {
+      const facts = profileDocument(profile).fact_document as JsonObject;
+      return { profile, target, facts, record: (facts.evidence as JsonObject | undefined)?.[evidenceId] };
+    })
     .find((item) => item.record);
   if (!owner) return undefined;
-  return { assessment, owner, initiative: initiativeById(db, assessment.initiativeId), number: assessmentNumber(db, assessment) };
+  // The Profile breadcrumb returns to the section that cites this evidence.
+  const section = evidenceSection(owner.facts as unknown as FactDocument, evidenceId);
+  return { assessment, owner, section, initiative: initiativeById(db, assessment.initiativeId), number: assessmentNumber(db, assessment) };
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ assessmentId: string; evidenceId: string }> }): Promise<Metadata> {
@@ -58,7 +65,7 @@ export default async function EvidencePage({ params }: { params: Promise<{ asses
   const db = getDb();
   const found = load(assessmentId, evidenceId);
   if (!found) notFound();
-  const { assessment, owner, initiative, number } = found;
+  const { assessment, owner, section, initiative, number } = found;
   const record = owner.record as unknown as Evidence;
   const snapshot = snapshotOf(db, owner.target.id)!;
   const resolved = await resolve(owner.target, snapshot, record);
@@ -72,7 +79,7 @@ export default async function EvidencePage({ params }: { params: Promise<{ asses
           { href: "/assessments", label: "Assessments" },
           { href: `/assessments/${initiative.publicId}`, label: initiative.name },
           { href: `/runs/${assessment.publicId}`, label: `Run #${number}` },
-          { href: `/profiles/${owner.profile.publicId}`, label: owner.target.sourceName },
+          { href: `/profiles/${owner.profile.publicId}${section ? `#${section}` : ""}`, label: owner.target.sourceName },
         ]}
         title={evidenceLocation(owner.record as JsonObject)}
         description="Committed content that a fact, relationship, or Finding cites, re-read from the pinned snapshot and verified against its recorded digests."

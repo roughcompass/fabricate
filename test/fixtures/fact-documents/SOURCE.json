@@ -1,0 +1,10 @@
+{
+  "repository": "repo-facts",
+  "release": "0.2.0",
+  "commit": "2e700e6d90d99438d18e6c7472e79d01ecfa3305",
+  "files": {
+    "federation-shell.json": "fixtures/federation-shell/expected.json",
+    "npm-workspace.json": "fixtures/npm-workspace/expected.json",
+    "salt-application.json": "fixtures/salt-application/expected.json"
+  }
+}

@@ -1,4 +1,4 @@
-import type { JsonObject } from "@repo-facts/contract";
+import { type JsonObject, SHARED_CATEGORIES } from "@repo-facts/contract";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,6 +19,7 @@ import { findings } from "@/lib/db/schema";
 import { evaluationNumber, findEvaluation, findingDocument } from "@/lib/evaluations/evaluation-records";
 import type { TraceNode } from "@/lib/evaluations/interpreter";
 import { initiativeById } from "@/lib/initiatives/initiative-records";
+import { findingCategory } from "@/lib/profiles/links";
 import { releaseById, standardById } from "@/lib/standards/standard-records";
 import { COLLECTION_BY_ID, SELECTOR_BY_ID } from "@/lib/standards/registry";
 import styles from "./finding.module.css";
@@ -70,10 +71,13 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
   const profile = subject.profile as JsonObject | null | undefined;
   const map = subject.map as JsonObject | null | undefined;
   const releaseLink = <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{`${standard.name} v${release.version}`}</Link>;
+  // The Profile link opens the category the Control reads, and names it.
+  const category = findingCategory(condition, applicability);
+  const categoryLabel = category ? SHARED_CATEGORIES.find((definition) => definition.id === category)?.label : undefined;
   const subjectLink =
     subject.type === "repository" ? (
       profile ? (
-        <Link href={`/profiles/${String(profile.public_id)}`}>{`${String(subject.name)} Profile`}</Link>
+        <Link href={`/profiles/${String(profile.public_id)}${category && categoryLabel ? `#${category}` : ""}`}>{category && categoryLabel ? `${categoryLabel} in the ${String(subject.name)} Profile` : `${String(subject.name)} Profile`}</Link>
       ) : (
         <span>{`${String(subject.name)} (no Profile)`}</span>
       )

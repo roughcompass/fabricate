@@ -66,6 +66,8 @@ A Standard has at most 100 Controls. An expression nests at most 8 levels, a gro
 
 Each selector reads one typed value in a scope. A Control's expressions start in its subject's scope. Quantifiers move to the scope of their collection's items. A selector marked with a parameter reads one named item, such as a package.
 
+Each repository selector also names the Profile fact category it reads, such as `ci_systems` for `repository.ci_systems` (`category` in `src/lib/standards/registry.ts`). A Finding's link to its Profile opens that category, and a registry test requires every repository selector to name a category the installed contract defines.
+
 ### Repository Profile, versions 1 and 2
 
 Profile version 2 embeds the fact document of repo-facts 0.2.0, which adds the design-system categories. Runs from detector release 0.2.0 record version 2, and Runs from 0.1.0 keep version 1.

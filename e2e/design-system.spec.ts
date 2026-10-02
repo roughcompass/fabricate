@@ -95,6 +95,21 @@ test("shows every role color in both themes", async ({ page }) => {
   await expect(swatch("dark", "--color-accent")).toHaveCSS("background-color", "rgb(82, 168, 255)");
 });
 
+test("tells the states with no value apart by their indicators", async ({ page }) => {
+  await page.goto("/design-system");
+  const status = light(page, "Status and severity");
+  const drawing = (state: string) =>
+    status.locator(`span:has(> [data-state="${state}"]) > [data-indicator]`).evaluate((element) => {
+      const style = getComputedStyle(element);
+      return `${style.backgroundColor} ${style.boxShadow} ${style.height}`;
+    });
+  await expect(status.getByText("Unknown", { exact: true })).toBeVisible();
+  await expect(status.getByText("None detected", { exact: true })).toBeVisible();
+  await expect(status.getByText("Not covered", { exact: true })).toBeVisible();
+  const drawings = [await drawing("unknown"), await drawing("absent"), await drawing("not_covered")];
+  expect(new Set(drawings).size, drawings.join(" | ")).toBe(3);
+});
+
 test("draws check boxes, inputs, and selects consistently", async ({ page }) => {
   await page.goto("/design-system");
   const form = light(page, "Form controls");

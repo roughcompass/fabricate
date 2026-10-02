@@ -2,6 +2,11 @@ import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import Link from "next/link";
 import styles from "./results.module.css";
 
+/** A JSON pointer as a reader writes it: `~1` is a slash and `~0` a tilde (RFC 6901), so `/dependencies/@scope~1name` reads `/dependencies/@scope/name`. */
+function readablePointer(pointer: string): string {
+  return pointer.replaceAll("~1", "/").replaceAll("~0", "~");
+}
+
 /** Where an evidence record points: a line range, a structured-data pointer, or a tree entry. */
 export function evidenceLocation(record: JsonObject): string {
   const location = (record.location ?? {}) as JsonObject;
@@ -11,15 +16,16 @@ export function evidenceLocation(record: JsonObject): string {
     const end = Number(location.end ?? start);
     return `${path}:${start}${end !== start ? `–${end}` : ""}`;
   }
-  if (location.kind === "pointer") return `${path} ${String(location.pointer)}`;
+  if (location.kind === "pointer") return `${path} ${readablePointer(String(location.pointer))}`;
   return path;
 }
 
 /**
  * The evidence behind a fact, relationship, or Finding: each record's
- * committed location, linked to a view of the cited lines, with its detector and rule.
+ * committed location, linked to a view of the cited lines, with its detector
+ * and rule unless +source+ is false, as on a Profile, whose category headings name the rule once.
  */
-export function EvidenceList({ ids, records, assessmentId }: { ids: readonly JsonValue[]; records: JsonObject; assessmentId: string }) {
+export function EvidenceList({ ids, records, assessmentId, source = true }: { ids: readonly JsonValue[]; records: JsonObject; assessmentId: string; source?: boolean }) {
   const cited = ids.map(String).filter((id) => records[id]);
   if (!cited.length) return <span className={styles.muted}>No evidence</span>;
   return (
@@ -31,9 +37,11 @@ export function EvidenceList({ ids, records, assessmentId }: { ids: readonly Jso
             <Link href={`/runs/${assessmentId}/evidence/${id}`} className={styles.location}>
               {evidenceLocation(record)}
             </Link>
-            <span className={styles.source}>
-              {String(record.detector)} · {String(record.rule)}
-            </span>
+            {source && (
+              <span className={styles.source}>
+                {String(record.detector)} · {String(record.rule)}
+              </span>
+            )}
           </li>
         );
       })}

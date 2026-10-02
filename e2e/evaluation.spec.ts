@@ -120,7 +120,9 @@ test("explains a Gap: expected state, observed facts, evidence, reasoning, and g
   await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Assessments", initiative.name, "Evaluation #1"]);
   const result = page.getByRole("region", { name: "Result" });
   await expect(result).toContainText("The Control applies, and the evidence shows the expected condition does not hold.");
+  // A Control that reads only Service Dependencies links to the top of the Profile.
   await expect(result.getByRole("link", { name: "orders Profile" })).toBeVisible();
+  await expect(result.getByRole("link", { name: "orders Profile" })).not.toHaveAttribute("href", /#/);
 
   const expected = page.getByRole("region", { name: "Expected state" });
   await expect(expected).toContainText("Every item in Service Dependencies");
@@ -164,6 +166,18 @@ test("lists every Indeterminate cause, including a missing Profile", async ({ pa
   expect(String((billing.document.causes as JsonObject[])[0]!.reason)).toContain("billing has no Profile");
   await page.goto(`/evaluations/${evaluation.publicId}/findings/${billing.finding.publicId}`);
   await expect(page.getByRole("region", { name: "Result" })).toContainText("billing (no Profile)");
+});
+
+test("opens the Profile at the category a Finding's Control reads", async ({ page, db }) => {
+  const { initiative, assessment } = await seedResults(db);
+  const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+  const finding = findingsOf(db, evaluation.id, { controlKey: "has-ci" }).find((candidate) => (findingDocument(candidate).subject as JsonObject).name === "orders")!;
+  await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
+
+  await page.getByRole("region", { name: "Result" }).getByRole("link", { name: "CI systems in the orders Profile" }).click();
+  await expect(page).toHaveURL(/\/profiles\/prf_\w+#ci_systems$/);
+  await expect(page.locator("#ci_systems")).toBeInViewport();
+  await expect(page.getByRole("navigation", { name: "Profile sections" }).getByRole("link", { name: /^CI systems/ })).toHaveAttribute("aria-current", "location");
 });
 
 test("Evaluation pages stay readable at mobile width", async ({ page, db }) => {

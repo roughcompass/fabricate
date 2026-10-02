@@ -2,13 +2,16 @@ import styles from "./status.module.css";
 
 /**
  * The single registry for how states, outcomes, severities, and other
- * enumerated values are shown: every value has one label and one tone, and
- * operators never see a raw identifier.
+ * enumerated values are shown: every value has one label, one tone, and one
+ * indicator, and operators never see a raw identifier.
  */
 
 export type Tone = "neutral" | "success" | "warning" | "error" | "progress";
 
-const STATES: Record<string, [label: string, tone: Tone]> = {
+/** The indicator's shape. The states that carry no value each have their own, so they differ without their labels. */
+export type Indicator = "dot" | "ring" | "dash";
+
+const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]> = {
   // Assessments, targets, Evaluations, and pinned Releases.
   queued: ["Queued", "neutral"],
   pending: ["Pending", "neutral"],
@@ -31,8 +34,10 @@ const STATES: Record<string, [label: string, tone: Tone]> = {
   inferred: ["Inferred", "progress"],
   mixed: ["Mixed", "progress"],
   conflicting: ["Conflicting", "warning"],
-  unknown: ["Unknown", "neutral"],
+  unknown: ["Unknown", "neutral", "ring"],
   absent: ["None detected", "neutral"],
+  // A category that the Profile's detector release didn't define.
+  not_covered: ["Not covered", "neutral", "dash"],
   // Relationship resolution.
   resolved: ["Resolved", "success"],
   ambiguous: ["Ambiguous", "warning"],
@@ -77,9 +82,9 @@ export function hasStatus(state: string): boolean {
   return Object.hasOwn(STATES, state);
 }
 
-export function statusOf(state: string): { label: string; tone: Tone } {
-  const [label, tone] = STATES[state] ?? [humanize(state), "neutral"];
-  return { label, tone };
+export function statusOf(state: string): { label: string; tone: Tone; indicator: Indicator } {
+  const [label, tone, indicator = "dot"] = STATES[state] ?? [humanize(state), "neutral"];
+  return { label, tone, indicator };
 }
 
 export function statusLabel(state: string): string {
@@ -91,7 +96,7 @@ export function Status({ state, label, size = "md" }: { state: string; label?: s
   const status = statusOf(state);
   return (
     <span className={styles.status} data-tone={status.tone} data-size={size}>
-      <span className={styles.dot} aria-hidden="true" />
+      <span className={styles.dot} data-indicator={status.indicator} aria-hidden="true" />
       <span data-state={state}>{label ?? status.label}</span>
     </span>
   );
@@ -149,6 +154,84 @@ const DIAGNOSTIC_REASONS: Record<string, string> = {
 /** Why an input was skipped or noted, in words. */
 export function diagnosticReason(reason: string): string {
   return DIAGNOSTIC_REASONS[reason] ?? humanize(reason);
+}
+
+const DEPENDENCY_KINDS: Record<string, string> = {
+  dependencies: "Production",
+  devDependencies: "Development",
+  peerDependencies: "Peer",
+  optionalDependencies: "Optional",
+};
+
+/** The kind of a direct dependency, by the manifest field that declares it. */
+export function dependencyKind(field: string): string {
+  return DEPENDENCY_KINDS[field] ?? humanize(field);
+}
+
+const CHECK_KINDS: Record<string, string> = {
+  e2e: "End-to-end",
+  test: "Test",
+  lint: "Lint",
+  typecheck: "Typecheck",
+  build: "Build",
+  format: "Format",
+  audit: "Audit",
+};
+
+/** What a declared verification command checks. */
+export function checkKind(kind: string): string {
+  return CHECK_KINDS[kind] ?? humanize(kind);
+}
+
+const CI_SYSTEMS: Record<string, string> = {
+  "github-actions": "GitHub Actions",
+  "gitlab-ci": "GitLab CI",
+  "azure-pipelines": "Azure Pipelines",
+  "bitbucket-pipelines": "Bitbucket Pipelines",
+  buildkite: "Buildkite",
+  circleci: "CircleCI",
+  drone: "Drone",
+  jenkins: "Jenkins",
+  travis: "Travis CI",
+};
+
+/** A CI system by its product name. */
+export function ciSystem(system: string): string {
+  return CI_SYSTEMS[system] ?? humanize(system);
+}
+
+const RUNTIMES: Record<string, string> = { node: "Node.js", npm: "npm", pnpm: "pnpm", yarn: "Yarn", bun: "Bun", deno: "Deno" };
+
+/** A runtime or package manager whose version a repository declares. */
+export function runtimeName(runtime: string): string {
+  return RUNTIMES[runtime] ?? humanize(runtime);
+}
+
+// Kinds and mechanisms that fact values name, where the readable form isn't the identifier with spaces.
+const KINDS: Record<string, string> = {
+  "import-map": "Import map",
+  "module-federation": "Module Federation",
+  "single-spa": "single-spa",
+  iframe: "iframe",
+  postMessage: "postMessage",
+  openapi: "OpenAPI",
+  graphql_schema: "GraphQL schema",
+  graphql_operations: "GraphQL operations",
+  graphql_interceptor: "GraphQL interceptor",
+  // Service Dependency clients.
+  fetch: "fetch",
+  axios: "axios",
+  websocket: "WebSocket",
+  event_source: "EventSource",
+  graphql: "GraphQL",
+  generated: "Generated client",
+  packaged: "Packaged client",
+  host_adapter: "Host adapter",
+};
+
+/** The kind or mechanism a fact value names, such as a credential file or Module Federation. */
+export function kindLabel(kind: string): string {
+  return KINDS[kind] ?? humanize(kind);
 }
 
 const EDGE_BASES: Record<string, string> = {

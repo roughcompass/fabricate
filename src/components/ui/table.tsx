@@ -37,9 +37,10 @@ export function Th({ children, align, hidden }: { children?: React.ReactNode; al
   );
 }
 
-export function Td({ label, align, children }: { label?: string; align?: Align; children?: React.ReactNode }) {
+/** A cell; +span+ lets one cell take several columns, as a row whose value doesn't fit them does. */
+export function Td({ label, align, span, children }: { label?: string; align?: Align; span?: number; children?: React.ReactNode }) {
   return (
-    <td data-label={label} className={align ? styles[align] : undefined}>
+    <td data-label={label} className={align ? styles[align] : undefined} colSpan={span}>
       <div className={styles.cell}>{children}</div>
     </td>
   );

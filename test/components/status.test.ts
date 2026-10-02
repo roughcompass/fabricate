@@ -1,6 +1,6 @@
 import { CATEGORY_STATES, FACT_STATES } from "@repo-facts/contract";
 import { describe, expect, it } from "vitest";
-import { diagnosticReason, hasStatus, severityLabel, severityOptions, statusOf } from "@/components/ui/status";
+import { checkKind, dependencyKind, diagnosticReason, hasStatus, severityLabel, severityOptions, statusOf } from "@/components/ui/status";
 import { ASSESSMENT_STATES, EVALUATION_RELEASE_STATES, EVALUATION_STATES, OUTCOMES, SEVERITIES, TARGET_STATES } from "@/lib/db/schema";
 import { RESOLUTION_STATES } from "@/lib/relationships/schema";
 
@@ -24,12 +24,24 @@ describe("status registry", () => {
   });
 
   it("shows a template demo application as building, then ready", () => {
-    expect(statusOf("building")).toEqual({ label: "Building", tone: "progress" });
-    expect(statusOf("ready")).toEqual({ label: "Ready", tone: "success" });
+    expect(statusOf("building")).toEqual({ label: "Building", tone: "progress", indicator: "dot" });
+    expect(statusOf("ready")).toEqual({ label: "Ready", tone: "success", indicator: "dot" });
   });
 
   it("shows the canceling state while a cancellation is pending", () => {
-    expect(statusOf("canceling")).toEqual({ label: "Canceling", tone: "progress" });
+    expect(statusOf("canceling")).toEqual({ label: "Canceling", tone: "progress", indicator: "dot" });
+  });
+
+  it("gives each state with no value its own neutral indicator", () => {
+    expect(statusOf("unknown")).toEqual({ label: "Unknown", tone: "neutral", indicator: "ring" });
+    expect(statusOf("absent")).toEqual({ label: "None detected", tone: "neutral", indicator: "dot" });
+    expect(statusOf("not_covered")).toEqual({ label: "Not covered", tone: "neutral", indicator: "dash" });
+  });
+
+  it("labels dependency kinds by manifest field, and check kinds by what they check", () => {
+    expect(["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].map(dependencyKind)).toEqual(["Production", "Development", "Peer", "Optional"]);
+    expect(["e2e", "test", "lint", "typecheck", "build", "format", "audit"].map(checkKind)).toEqual(["End-to-end", "Test", "Lint", "Typecheck", "Build", "Format", "Audit"]);
+    expect(dependencyKind("bundledDependencies")).toBe("BundledDependencies");
   });
 
   it("capitalizes every severity and orders the options most severe first", () => {
@@ -38,7 +50,7 @@ describe("status registry", () => {
   });
 
   it("humanizes values that have no mapping", () => {
-    expect(statusOf("waiting_for_review")).toEqual({ label: "Waiting for review", tone: "neutral" });
+    expect(statusOf("waiting_for_review")).toEqual({ label: "Waiting for review", tone: "neutral", indicator: "dot" });
     expect(diagnosticReason("brand_new_reason")).toBe("Brand new reason");
     expect(diagnosticReason("parse_failed")).toBe("Could not be parsed");
   });
