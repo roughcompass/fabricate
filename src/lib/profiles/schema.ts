@@ -1,9 +1,9 @@
 import { type FactDocument, type JsonObject, digestOf, factDocumentProblems } from "@repo-facts/contract";
 import { z } from "zod";
-import { DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
+import { CURRENT_VERSION, DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
 
 /**
- * Repository Profile document, version 1.
+ * Repository Profile document, version 2.
  *
  * A Profile is an envelope around the `repo_facts.fact_document` that the
  * pinned detector bundle produced for one snapshot. It records the source
@@ -15,10 +15,15 @@ import { DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
  * Run identity and times live on the Profile record, not in the document, so
  * identical snapshots analyzed with the same release and configuration
  * produce identical Profile documents.
+ *
+ * Version 2 embeds fact document version 2 (repo-facts 0.2.0), which adds the
+ * design-system categories. Version 1 Profiles, from repo-facts 0.1.0, are
+ * kept as stored; version 2 extends version 1, so readers of version 1 read
+ * either.
  */
 
 export const PROFILE_SCHEMA = DOCUMENT_SCHEMAS.repositoryProfile.name;
-export const PROFILE_SCHEMA_VERSION = 1;
+export const PROFILE_SCHEMA_VERSION = CURRENT_VERSION.repositoryProfile;
 
 export interface ProfileSource {
   public_id: string;

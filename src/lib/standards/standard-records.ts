@@ -31,7 +31,8 @@ export function blankDraftDocument(): JsonObject {
   };
 }
 
-export function createStandard(db: Executor, metadata: StandardMetadata): { standard: Standard; draft: StandardDraft } {
+/** Creates a Standard and its draft: blank, or +document+, such as a starter's. */
+export function createStandard(db: Executor, metadata: StandardMetadata, document: JsonObject = blankDraftDocument()): { standard: Standard; draft: StandardDraft } {
   return immediate(db, (tx) => {
     const values = normalizeMetadata(metadata);
     validateMetadata(tx, values);
@@ -40,7 +41,7 @@ export function createStandard(db: Executor, metadata: StandardMetadata): { stan
       const standard = tx.insert(standards).values({ ...values, publicId: generatePublicId("std"), createdAt: now, updatedAt: now }).returning().get();
       const draft = tx
         .insert(standardDrafts)
-        .values({ standardId: standard.id, document: dump(blankDraftDocument()), createdAt: now, updatedAt: now })
+        .values({ standardId: standard.id, document: dump(document), createdAt: now, updatedAt: now })
         .returning()
         .get();
       return { standard, draft };

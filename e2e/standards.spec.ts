@@ -213,3 +213,27 @@ test("refuses to offer publication for a draft with problems, listing them once"
   await expect(page.getByText(/was not published/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Publish/ })).toHaveCount(0);
 });
+
+test("starts a Standard from the Salt adherence starter, then reviews and publishes it", async ({ page, db }) => {
+  await page.goto("/standards/new");
+  const startFrom = page.getByRole("group", { name: "Start from" });
+  await expect(startFrom.getByRole("button", { name: "Blank" })).toHaveAttribute("aria-pressed", "true");
+  await startFrom.getByRole("button", { name: "Salt adherence" }).click();
+  await expect(page).toHaveURL(/\/standards\/new\?starter=salt-adherence$/);
+  await expect(startFrom.getByRole("button", { name: "Salt adherence" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Name")).toHaveValue("Salt adherence");
+
+  await page.getByRole("button", { name: "Create Standard" }).click();
+  await expect(page).toHaveURL(/\/standards\/std_[a-z0-9]+\/draft/);
+  await expect(control(page, 10)).toBeVisible();
+  const [standard] = listStandards(db);
+  expect((draftDocument(draftOf(db, standard!.id)!).controls as JsonObject[]).map((item) => item.key)).toContain("salt-theme-stylesheet");
+
+  await page.goto(`/standards/${standard!.publicId}`);
+  await page.getByRole("link", { name: "Review and publish" }).click();
+  await expect(page.getByRole("article", { name: "Control salt-theme-stylesheet" })).toContainText("repository.design_system_theme_imported");
+  await page.getByRole("button", { name: "Publish v1" }).click();
+  await page.getByRole("dialog", { name: "Publish Salt adherence v1?" }).getByRole("button", { name: "Publish v1" }).click();
+  await expect(toasts(page).getByText("Release v1 was published.")).toBeVisible();
+  expect(releasesOf(db, standard!.id).map((release) => release.profileSchemaVersions)).toEqual(["[2]"]);
+});

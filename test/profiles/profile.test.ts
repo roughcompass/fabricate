@@ -7,6 +7,7 @@ import { ValidationError } from "@/lib/db/errors";
 import { AnalysisMismatchError, analyzeSnapshot } from "@/lib/profiles/analyze";
 import { type RepositoryProfile, insertProfile, profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { PROFILE_SCHEMA, buildProfile, profileProblems } from "@/lib/profiles/schema";
+import { asProfileVersion1 } from "../support/scenarios";
 import { type FileTree, SnapshotFixture } from "../support/snapshot";
 
 const APP: FileTree = {
@@ -40,16 +41,18 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
 
     expect(document).toMatchObject({
       schema: PROFILE_SCHEMA,
-      schema_version: 1,
+      schema_version: 2,
       source: { public_id: target.sourcePublicId, name: "app", clone_url: target.cloneUrl, git_ref: null },
       commit: snapshot.commitSha,
       detector_release: DETECTOR_RELEASE,
       detector_configuration_digest: assessment.configurationDigest,
     });
-    expect(document.fact_document).toMatchObject({ schema: "repo_facts.fact_document", commit: snapshot.commitSha, detector_release: DETECTOR_RELEASE });
+    // Profile version 2 embeds fact document version 2, with the design-system categories.
+    expect(document.fact_document).toMatchObject({ schema: "repo_facts.fact_document", schema_version: 2, commit: snapshot.commitSha, detector_release: DETECTOR_RELEASE });
+    expect(Object.keys(factDocument(document).categories!)).toEqual(expect.arrayContaining(["design_systems", "ui_elements", "style_values"]));
     expect(document.fact_document_digest).toBe(digestOf(document.fact_document).digest);
     expect(profileProblems(document)).toEqual([]);
-    expect(profile).toMatchObject({ detectorRelease: DETECTOR_RELEASE, schemaVersion: 1, sourceSnapshotId: snapshot.id, assessmentTargetId: target.id });
+    expect(profile).toMatchObject({ detectorRelease: DETECTOR_RELEASE, schemaVersion: 2, sourceSnapshotId: snapshot.id, assessmentTargetId: target.id });
     // Run identity and times stay on the record, so they cannot change the document.
     expect(dump(document)).not.toContain(assessment.publicId);
   });
@@ -121,6 +124,22 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
     expect(profileProblems(document)).toContainEqual(expect.stringMatching(/fact_document: .*without evidence/));
     expect(() => insertProfile(snapshots.db, { assessment: acquired.assessment, target, snapshot: acquired.snapshot, document, validate: profileProblems })).toThrow(ValidationError);
     expect(profilesOf(snapshots.db, acquired.assessment.id)).toEqual([]);
+  });
+
+  it("keeps reading a stored version 1 Profile, from detector release 0.1.0, unchanged", async () => {
+    snapshots = SnapshotFixture.create("profile");
+    const acquired = await snapshots.acquireFiles(APP);
+    const target = transitionTarget(snapshots.db, acquired.target, "analyzing");
+    const reference = await analyzeAcquired(await snapshots.acquireCommitted());
+
+    // What 0.1.0 stored: fact document version 1, without the design-system categories, in a version 1 envelope.
+    const document = asProfileVersion1(JSON.parse(reference.profile.document) as JsonObject);
+
+    // A historical Profile is stored as it was written; nothing re-validates it against the newer contract.
+    const stored = insertProfile(snapshots.db, { assessment: acquired.assessment, target, snapshot: acquired.snapshot, document });
+    expect(stored.schemaVersion).toBe(1);
+    expect(profileDocument(stored)).toEqual(document);
+    expect((profileDocument(stored).fact_document as JsonObject).schema_version).toBe(1);
   });
 
   it("rejects an envelope whose embedded fact document does not match its digest, commit, or release", async () => {

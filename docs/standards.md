@@ -10,7 +10,7 @@ A draft and a Release share one document, `fabricate.standard` version 1:
 
 | Field | Meaning |
 | --- | --- |
-| `input_schemas` | The Repository Profile and Relationship Map versions the Controls read, such as `{ "repository_profile": [1], "relationship_map": [1] }` |
+| `input_schemas` | The Repository Profile and Relationship Map versions the Controls read, such as `{ "repository_profile": [2], "relationship_map": [1] }` |
 | `controls` | One or more Controls |
 | `standard` | On a Release only: the Standard's name and purpose when it was published |
 
@@ -66,9 +66,13 @@ A Standard has at most 100 Controls. An expression nests at most 8 levels, a gro
 
 Each selector reads one typed value in a scope. A Control's expressions start in its subject's scope. Quantifiers move to the scope of their collection's items. A selector marked with a parameter reads one named item, such as a package.
 
-### Repository Profile, version 1
+### Repository Profile, versions 1 and 2
 
-Scope `repository`:
+Profile version 2 embeds the fact document of repo-facts 0.2.0, which adds the design-system categories. Runs from detector release 0.2.0 record version 2, and Runs from 0.1.0 keep version 1.
+
+Version 2 *extends* version 1: every version 1 field below reads the same from a version 2 Profile. So a Release that declares version 1 also evaluates version 2 Runs, without being republished. The design-system fields exist only in version 2, so a Control that reads one must declare `repository_profile: [2]`. A Release that declares only version 2 refuses a version 1 Run as incompatible. New drafts declare version 2, the current version.
+
+Scope `repository`, versions 1 and 2:
 
 | Selector | Type | Reads |
 | --- | --- | --- |
@@ -92,6 +96,31 @@ Scope `repository`:
 | `repository.node_range` | version | The Node.js versions the declarations allow |
 | `repository.declared_range` | version, with a package parameter | The range manifests declare for a direct dependency |
 | `repository.resolved_version` | version, with a package parameter | The versions lockfiles resolve for a direct dependency |
+
+Design-system fields, in scope `repository`, version 2 only. They read the `design_systems`, `ui_elements`, and `style_values` categories. A design-system parameter is the design system's catalog id, such as `salt`:
+
+| Selector | Type | Reads |
+| --- | --- | --- |
+| `repository.design_systems` | string_set | Design systems recognized from catalogs, by catalog id |
+| `repository.design_system_theme_imported` | boolean, with a design-system parameter | Whether any source imports one of its theme stylesheets |
+| `repository.design_system_provider` | boolean, with a design-system parameter | Whether any source renders one of its providers, such as `SaltProvider` |
+| `repository.design_system_elements` | number, with a design-system parameter | Its component elements |
+| `repository.design_system_raw_equivalents` | number, with a design-system parameter | Intrinsic elements it has a component for, such as a raw `button` |
+| `repository.design_system_customized_share` | number, with a design-system parameter | The whole-number percentage of its component elements that are customized |
+| `repository.design_system_adoption_share` | number, with a design-system parameter | The whole-number percentage of design-system-relevant elements that use it rather than an intrinsic equivalent |
+| `repository.design_system_token_share` | number, with a design-system parameter | The whole-number percentage of token-capable declarations whose value is one of its tokens or a token alias |
+| `repository.design_system_internal_selectors` | number, with a design-system parameter | Selectors that name its internal classes, such as `.saltButton-primary` |
+| `repository.unknown_token_count` | number | References to custom properties that carry a catalog's token prefix but aren't in the catalog |
+| `repository.token_redefinition_count` | number | Declarations of a design system's custom properties |
+| `repository.global_element_selector_count` | number | Unqualified element selectors for tags that have a design-system equivalent |
+| `repository.important_count` | number | `!important` declarations |
+
+Counts and shares read the app scope only; story and test files don't count. A design-system field is unknown, with the reason, when:
+- the category it reads skipped an input, such as an SCSS file
+- a share has nothing to divide, such as a customized share with no component elements
+- the Profile is version 1, whose fact document has no design-system categories
+
+A theme or provider field is false for a design system the Profile doesn't recognize, but only after a complete search.
 
 Collection `service_dependencies`, in scope `repository`, ranges over the repository's Service Dependencies in scope `service_dependency`:
 
@@ -146,6 +175,25 @@ Collection `coverage_gaps` ranges over scoped repositories without a Profile in 
 | --- | --- | --- |
 | `gap.state` | string | `failed` or `canceled` |
 | `gap.repository` | string | The repository's source name |
+
+## Starter Standards
+
+The New Standard page can start from a starter instead of a blank draft. A starter fills in the name, the purpose, and the draft's Controls. The operator then edits and publishes it like any other draft. Starters live in [`src/lib/standards/starters.ts`](../src/lib/standards/starters.ts), and every starter's document passes validation as provided.
+
+**Salt adherence** declares Repository Profile version 2. Every one of its Controls applies only when `repository.design_systems` contains `salt`, so it's Not applicable for other repositories. Its thresholds are starting points:
+
+| Control | Severity | Expects |
+| --- | --- | --- |
+| `salt-theme-stylesheet` | high | The Salt theme stylesheet is imported |
+| `salt-provider` | high | A `SaltProvider` is rendered |
+| `salt-internal-selectors` | high | No selectors into Salt internals |
+| `salt-unknown-tokens` | high | No unknown `--salt-` tokens |
+| `salt-adoption` | medium | An adoption share of at least 90 |
+| `salt-token-share` | medium | A token share of at least 80 |
+| `salt-token-redefinitions` | medium | No redefined Salt tokens |
+| `salt-customization` | low | A customized share of at most 25 |
+| `salt-global-element-rules` | low | No global rules for elements Salt replaces |
+| `salt-important` | low | No `!important` declarations |
 
 ## Digests and publication
 

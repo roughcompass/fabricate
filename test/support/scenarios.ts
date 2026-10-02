@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
-import type { JsonObject, MemoryFile } from "@repo-facts/contract";
+import { type JsonObject, type MemoryFile, digestOf } from "@repo-facts/contract";
 import { type Assessment, createAssessment, getAssessment, recordSnapshot } from "@/lib/assessments/assessment-records";
 import { requestCancellation, transitionAssessment, transitionTarget } from "@/lib/assessments/transitions";
 import type { RepositorySource } from "@/lib/catalog/source-records";
@@ -13,6 +13,7 @@ import { finalizeRelationshipMap } from "@/lib/relationships/finalize";
 import { publishDraft } from "@/lib/standards/publish";
 import { type StandardRelease, createStandard, saveDraft } from "@/lib/standards/standard-records";
 import { memoryProfile, sha1 } from "./profiles";
+import { CURRENT_VERSION } from "@/lib/documents/schemas";
 
 /** How one target of a seeded Assessment ends. */
 export type Outcome = Readonly<Record<string, MemoryFile>> | "failed" | "canceled";
@@ -24,13 +25,13 @@ export type Outcome = Readonly<Record<string, MemoryFile>> | "failed" | "cancele
  * as orchestration would. No Git is involved, so evidence excerpts are not
  * available for these snapshots.
  */
-export async function seedAssessment(db: Db, initiative: Initiative, sources: readonly RepositorySource[], outcomes: readonly Outcome[], options: { cancel?: boolean } = {}): Promise<Assessment> {
+export async function seedAssessment(db: Db, initiative: Initiative, sources: readonly RepositorySource[], outcomes: readonly Outcome[], options: { cancel?: boolean; profileVersion1?: boolean } = {}): Promise<Assessment> {
   const { assessment, targets } = createAssessment(db, {
     initiative,
     launchToken: crypto.randomUUID(),
     detectorRelease: DETECTOR_RELEASE,
     configuration: detectorConfiguration(getConfig().analysis).configuration,
-    profileSchemaVersion: 1,
+    profileSchemaVersion: options.profileVersion1 ? 1 : CURRENT_VERSION.repositoryProfile,
     relationshipSchemaVersion: 1,
     sources,
   });
@@ -49,7 +50,8 @@ export async function seedAssessment(db: Db, initiative: Initiative, sources: re
     const snapshot = recordSnapshot(db, acquiring, { commitSha: sha1(`commit:${target.publicId}`), treeSha: sha1(`tree:${target.publicId}`), refKind: "default_branch", resolvedRef: "refs/heads/main", acquisitionMetadata: {} });
     const analyzing = transitionTarget(db, acquiring, "analyzing");
     const { document } = await memoryProfile(outcome, { public_id: target.sourcePublicId, name: target.sourceName }, snapshot.commitSha);
-    insertProfile(db, { assessment, target: analyzing, snapshot, document, validate: profileProblems });
+    if (options.profileVersion1) insertProfile(db, { assessment, target: analyzing, snapshot, document: asProfileVersion1(document) });
+    else insertProfile(db, { assessment, target: analyzing, snapshot, document, validate: profileProblems });
     transitionTarget(db, analyzing, "complete");
   }
   const finalizing = transitionAssessment(db, getAssessment(db, assessment.publicId), "finalizing");
@@ -75,4 +77,17 @@ export function selectReleases(db: Db, initiative: Initiative, releases: readonl
     sourcePublicIds: selectedSources(db, current.id).map((source) => source.publicId),
     standardReleasePublicIds: releases.map((release) => release.publicId),
   });
+}
+
+/**
+ * A Profile as detector release 0.1.0 stored it: a version 1 envelope around
+ * fact document version 1, without the design-system categories. Historical
+ * Profiles are kept as written, so nothing validates them against the newer
+ * contract.
+ */
+export function asProfileVersion1(document: JsonObject): JsonObject {
+  const factDocument = structuredClone(document.fact_document) as JsonObject & { categories: Record<string, unknown> };
+  for (const id of ["design_systems", "ui_elements", "style_values"]) delete factDocument.categories[id];
+  factDocument.schema_version = 1;
+  return { ...document, schema_version: 1, fact_document: factDocument, fact_document_digest: digestOf(factDocument).digest };
 }

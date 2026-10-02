@@ -7,6 +7,7 @@ import { NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/error
 import { isPublicId } from "@/lib/db/ids";
 import { publishDraft, reviseRelease } from "@/lib/standards/publish";
 import * as records from "@/lib/standards/standard-records";
+import { findStarter } from "@/lib/standards/starters";
 import { validateStandard } from "@/lib/standards/validate";
 import { errorsFrom, integer, text } from "@/lib/web/form-data";
 import type { DraftSaveState, StandardFormState, StandardFormValues } from "./form-state";
@@ -24,9 +25,11 @@ function assertStandardId(publicId: string): void {
 
 export async function createStandard(_previous: StandardFormState, formData: FormData): Promise<StandardFormState> {
   const values = readMetadata(formData);
+  // A starter supplies the draft; an unknown starter id starts blank rather than guessing.
+  const starter = findStarter(text(formData, "starter", 100));
   let publicId: string;
   try {
-    publicId = records.createStandard(getDb(), values).standard.publicId;
+    publicId = records.createStandard(getDb(), values, starter?.document).standard.publicId;
   } catch (error) {
     if (error instanceof ValidationError) return { values, errors: errorsFrom(error) };
     throw error;

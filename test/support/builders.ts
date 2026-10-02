@@ -7,6 +7,7 @@ import { getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { type Standard, type StandardRelease, blankDraftDocument, createStandard, insertRelease } from "@/lib/standards/standard-records";
 import { type Initiative, createInitiative } from "@/lib/initiatives/initiative-records";
+import { CURRENT_VERSION } from "@/lib/documents/schemas";
 
 const suffix = () => crypto.randomBytes(3).toString("hex");
 
@@ -29,7 +30,7 @@ export function buildAssessment(db: Executor, options: { initiative?: Initiative
     launchToken: crypto.randomUUID(),
     detectorRelease: DETECTOR_RELEASE,
     configuration: detectorConfiguration(options.limits ?? getConfig().analysis).configuration,
-    profileSchemaVersion: 1,
+    profileSchemaVersion: CURRENT_VERSION.repositoryProfile,
     relationshipSchemaVersion: 1,
     sources,
   });

@@ -41,8 +41,13 @@ describe("Evaluation pipeline", () => {
 
   /** Publishes a Standard with +controls+ and returns its Release. */
   function publish(name: string, ...controls: JsonObject[]): StandardRelease {
+    return publishFor([1], name, ...controls);
+  }
+
+  /** Publishes a Standard that declares +profileVersions+ of the Repository Profile. */
+  function publishFor(profileVersions: number[], name: string, ...controls: JsonObject[]): StandardRelease {
     const { standard, draft } = createStandard(db, { name, purpose: `${name} expectations` });
-    const saved = saveDraft(db, draft, draft.lockVersion, { schema: "fabricate.standard", schema_version: 1, input_schemas: { repository_profile: [1], relationship_map: [1] }, controls });
+    const saved = saveDraft(db, draft, draft.lockVersion, { schema: "fabricate.standard", schema_version: 1, input_schemas: { repository_profile: profileVersions, relationship_map: [1] }, controls });
     return publishDraft(db, standard.publicId, saved.lockVersion);
   }
 
@@ -57,7 +62,7 @@ describe("Evaluation pipeline", () => {
       launchToken: crypto.randomUUID(),
       detectorRelease: (await import("@repo-facts/bundle")).DETECTOR_RELEASE,
       configuration: (await import("@repo-facts/bundle")).detectorConfiguration((await import("@/lib/config")).getConfig().analysis).configuration,
-      profileSchemaVersion: 1,
+      profileSchemaVersion: 2,
       relationshipSchemaVersion: 1,
       sources,
     });
@@ -100,7 +105,8 @@ describe("Evaluation pipeline", () => {
       const token = crypto.randomUUID();
       const { evaluation, releases, duplicate } = startEvaluation(db, updated.publicId, partial.publicId, token);
       expect(duplicate).toBe(false);
-      expect(evaluation).toMatchObject({ state: "queued", evaluatorVersion: "1", profileSchemaVersion: 1, relationshipSchemaVersion: 1 });
+      // The Releases read Profile v1; the Assessment's v2 Profiles extend it.
+      expect(evaluation).toMatchObject({ state: "queued", evaluatorVersion: "1", profileSchemaVersion: 2, relationshipSchemaVersion: 1 });
       expect(releases.map((release) => release.releaseDigest)).toEqual([a!.digest, b!.digest]);
       expect(parseCanonical(evaluation.coverageGaps)).toEqual([{ target: expect.any(String), source: { public_id: failing.publicId, name: "billing" }, state: "failed", reason: "remote_unavailable" }]);
       expect(db.select().from(jobs).all().filter((job) => job.kind === EVALUATE_RELEASE).map((job) => job.idempotencyKey)).toEqual([`${EVALUATE_RELEASE}:${evaluation.publicId}:0`, `${EVALUATE_RELEASE}:${evaluation.publicId}:1`]);
@@ -135,9 +141,10 @@ describe("Evaluation pipeline", () => {
       })();
       expectRefusal(selected.publicId, failedOnly.publicId, /is failed.*no Repository Profile/);
 
-      // A Release that reads only Profile v1 cannot evaluate an Assessment with Profile v2.
-      const v2 = createAssessment(db, { initiative: selected, launchToken: crypto.randomUUID(), detectorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 2, relationshipSchemaVersion: 1, sources: [buildSource(db, { name: "future" })] }).assessment;
-      expectRefusal(selected.publicId, v2.publicId, /supports Repository Profile v1, but the Assessment has v2/);
+      // A Release that reads only Profile v2 cannot evaluate an Assessment from detector release 0.1.0, with Profile v1.
+      const v2Only = select(selected, [publishFor([2], "Design system", control("uses-pnpm", manager("pnpm")))]);
+      const v1 = createAssessment(db, { initiative: v2Only, launchToken: crypto.randomUUID(), detectorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [buildSource(db, { name: "earlier" })] }).assessment;
+      expectRefusal(v2Only.publicId, v1.publicId, /supports Repository Profile v2, but the Assessment has v1/);
       expect(db.select().from(jobs).all().filter((job) => job.kind === EVALUATE_RELEASE)).toEqual([]);
     });
   });

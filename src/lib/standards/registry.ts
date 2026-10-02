@@ -16,8 +16,11 @@ import { EDGE_TYPES, NODE_KINDS, RESOLUTION_STATES } from "@/lib/relationships/s
 export const INPUT_SCHEMAS = ["repository_profile", "relationship_map"] as const;
 export type InputSchema = (typeof INPUT_SCHEMAS)[number];
 
-/** Input schema versions this release can evaluate. */
-export const SUPPORTED_VERSIONS: Readonly<Record<InputSchema, readonly number[]>> = { repository_profile: [1], relationship_map: [1] };
+/** Input schema versions this release can evaluate. Profile version 2 extends version 1 with the design-system fields. */
+export const SUPPORTED_VERSIONS: Readonly<Record<InputSchema, readonly number[]>> = { repository_profile: [1, 2], relationship_map: [1] };
+
+/** Every Repository Profile version: the fields of version 1 are fields of every later version. */
+const PROFILE_VERSIONS = SUPPORTED_VERSIONS.repository_profile;
 
 export const SCOPES = ["repository", "service_dependency", "relationship_map", "edge", "node", "coverage_gap"] as const;
 export type Scope = (typeof SCOPES)[number];
@@ -51,9 +54,12 @@ export interface CollectionDefinition {
   versions: readonly number[];
 }
 
-const profile = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "repository", type, schema: "repository_profile", versions: [1], ...extra });
-const service = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "service_dependency", type, schema: "repository_profile", versions: [1], ...extra });
+const profile = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "repository", type, schema: "repository_profile", versions: PROFILE_VERSIONS, ...extra });
+const service = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "service_dependency", type, schema: "repository_profile", versions: PROFILE_VERSIONS, ...extra });
 const graph = (scope: Scope, id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope, type, schema: "relationship_map", versions: [1], ...extra });
+// Design-system fields exist from Profile version 2, which embeds repo-facts fact document version 2. Counts and shares read the app scope.
+const design = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "repository", type, schema: "repository_profile", versions: [2], ...extra });
+const DESIGN_SYSTEM = { label: "Design system", description: "The design system's catalog id, such as salt" };
 
 export const SELECTORS: readonly SelectorDefinition[] = [
   profile("repository.languages", "Languages", "string_set", "Languages by committed file extension"),
@@ -76,6 +82,19 @@ export const SELECTORS: readonly SelectorDefinition[] = [
   profile("repository.node_range", "Node.js requirement", "version", "The Node.js versions the repository's declarations allow"),
   profile("repository.declared_range", "Declared dependency range", "version", "The version range manifests declare for a direct dependency", { parameter: { label: "Package", description: "The dependency's exact package name" } }),
   profile("repository.resolved_version", "Resolved dependency version", "version", "The versions lockfiles resolve for a direct dependency", { parameter: { label: "Package", description: "The dependency's exact package name" } }),
+  design("repository.design_systems", "Design systems", "string_set", "Design systems recognized from catalogs, by catalog id, such as salt"),
+  design("repository.design_system_theme_imported", "Theme stylesheet imported", "boolean", "Whether any source imports one of the design system's theme stylesheets", { parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_provider", "Provider rendered", "boolean", "Whether any source renders one of the design system's provider components", { parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_elements", "Design-system elements", "number", "The design system's component elements in app code", { parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_raw_equivalents", "Intrinsic equivalents", "number", "Intrinsic elements in app code that the design system has a component for, such as a raw button", { parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_customized_share", "Customized share", "number", "The whole-number percentage of the design system's component elements in app code that are customized", { parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_adoption_share", "Adoption share", "number", "The whole-number percentage of design-system-relevant elements in app code that use the design system rather than an intrinsic equivalent", { parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_token_share", "Token share", "number", "The whole-number percentage of token-capable declarations in app code whose value is one of the design system's tokens or a token alias", { parameter: DESIGN_SYSTEM }),
+  design("repository.design_system_internal_selectors", "Selectors into internals", "number", "Selectors in app code that name the design system's internal classes", { parameter: DESIGN_SYSTEM }),
+  design("repository.unknown_token_count", "Unknown tokens", "number", "References in app code to custom properties that carry a catalog's token prefix but aren't in the catalog"),
+  design("repository.token_redefinition_count", "Token redefinitions", "number", "Declarations in app code of a design system's custom properties"),
+  design("repository.global_element_selector_count", "Global element selectors", "number", "Unqualified element selectors in app code for tags that have a design-system equivalent"),
+  design("repository.important_count", "!important declarations", "number", "Declarations in app code marked !important"),
 
   service("service.key", "Service identity", "string", "The logical identity key of the Service Dependency"),
   service("service.client", "Client kind", "string", "How the service is called", { choices: CLIENT_KINDS }),
@@ -110,7 +129,7 @@ export const SELECTORS: readonly SelectorDefinition[] = [
 ];
 
 export const COLLECTIONS: readonly CollectionDefinition[] = [
-  { id: "service_dependencies", label: "Service Dependencies", description: "The repository's outbound Service Dependencies", scope: "repository", item: "service_dependency", schema: "repository_profile", versions: [1] },
+  { id: "service_dependencies", label: "Service Dependencies", description: "The repository's outbound Service Dependencies", scope: "repository", item: "service_dependency", schema: "repository_profile", versions: PROFILE_VERSIONS },
   { id: "edges", label: "Relationships", description: "Every edge in the Relationship Map", scope: "relationship_map", item: "edge", schema: "relationship_map", versions: [1] },
   { id: "nodes", label: "Nodes", description: "Every node in the Relationship Map", scope: "relationship_map", item: "node", schema: "relationship_map", versions: [1] },
   { id: "coverage_gaps", label: "Coverage gaps", description: "Scoped repositories that did not contribute a Profile", scope: "relationship_map", item: "coverage_gap", schema: "relationship_map", versions: [1] },

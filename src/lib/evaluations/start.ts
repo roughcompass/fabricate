@@ -4,6 +4,7 @@ import { type Assessment, LAUNCH_TOKEN, getAssessment, targetsOf } from "@/lib/a
 import { type Executor, immediate } from "@/lib/db/client";
 import { isUniqueViolation } from "@/lib/db/errors";
 import { DocumentIntegrityError } from "@/lib/documents/digested";
+import { readableBy } from "@/lib/documents/schemas";
 import { getInitiative, selectedReleases } from "@/lib/initiatives/initiative-records";
 import { enqueue } from "@/lib/jobs/queue";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
@@ -71,8 +72,8 @@ export function startEvaluation(db: Executor, initiativePublicId: string, assess
         const subjects = new Set((Array.isArray(document.controls) ? document.controls : []).map((control) => (control as JsonObject).subject));
         const profileVersions = JSON.parse(release.profileSchemaVersions) as number[];
         const mapVersions = JSON.parse(release.relationshipSchemaVersions) as number[];
-        if (subjects.has("repository") && !profileVersions.includes(assessment.profileSchemaVersion)) problems.push(`${label} supports Repository Profile v${profileVersions.join(", v") || "none"}, but the Assessment has v${assessment.profileSchemaVersion}.`);
-        if (subjects.has("relationship_map") && !mapVersions.includes(assessment.relationshipSchemaVersion)) problems.push(`${label} supports Relationship Map v${mapVersions.join(", v") || "none"}, but the Assessment has v${assessment.relationshipSchemaVersion}.`);
+        if (subjects.has("repository") && !readableBy("repositoryProfile", assessment.profileSchemaVersion, profileVersions)) problems.push(`${label} supports Repository Profile v${profileVersions.join(", v") || "none"}, but the Assessment has v${assessment.profileSchemaVersion}.`);
+        if (subjects.has("relationship_map") && !readableBy("relationshipMap", assessment.relationshipSchemaVersion, mapVersions)) problems.push(`${label} supports Relationship Map v${mapVersions.join(", v") || "none"}, but the Assessment has v${assessment.relationshipSchemaVersion}.`);
       }
       if (problems.length) throw new EvaluationStartError(problems);
 

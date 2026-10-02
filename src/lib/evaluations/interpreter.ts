@@ -421,8 +421,115 @@ function readRepository(categories: JsonObject, selector: string, parameter: str
       // Resolved versions are not a bounded search, so no lockfile entry never proves absence.
       return versionsOf(categories, "resolved_dependencies", (_fact, value) => value.name === parameter, (value) => (typeof value.version === "string" ? value.version : null), false);
     default:
+      return readDesignSystem(categories, selector, parameter);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Design-system fields (Repository Profile version 2)
+//
+// They read the design_systems, ui_elements, and style_values categories of
+// repo-facts fact document version 2. Counts and shares read the app scope,
+// so stories and tests don't count. Fact keys are compared exactly or by
+// prefix; nothing in a key or a parameter is interpreted as a pattern.
+
+const APP_SCOPE = "app";
+
+function readDesignSystem(categories: JsonObject, selector: string, parameter: string | undefined): Reading {
+  const system = parameter ?? "";
+  const keyed = (key: string) => (fact: JsonObject) => fact.key === key;
+  const prefixed = (prefix: string) => (fact: JsonObject) => String(fact.key).startsWith(prefix);
+  const sites = (scope: JsonObject) => scope.sites;
+  const count = (scope: JsonObject) => scope.count;
+  switch (selector) {
+    case "repository.design_systems":
+      return present(categories, "design_systems") ?? setOf(categories, "design_systems", (fact) => [String(fact.key)]);
+    case "repository.design_system_theme_imported":
+      return designSystemFlag(categories, system, "theme_stylesheet");
+    case "repository.design_system_provider":
+      return designSystemFlag(categories, system, "provider");
+    case "repository.design_system_elements":
+      return appSum(categories, "ui_elements", prefixed(`component:${system}:`), sites);
+    case "repository.design_system_raw_equivalents":
+      return appSum(categories, "ui_elements", (fact) => String(fact.key).startsWith("intrinsic:") && String(record(fact.value).equivalent ?? "").startsWith(`${system}:`), sites);
+    case "repository.design_system_customized_share":
+      return appShare(categories, "ui_elements", system, "customized_share");
+    case "repository.design_system_adoption_share":
+      return appShare(categories, "ui_elements", system, "adoption_share");
+    case "repository.design_system_token_share":
+      return appShare(categories, "style_values", system, "token_share");
+    case "repository.design_system_internal_selectors":
+      return appSum(categories, "style_values", keyed(`internal-selector:${system}`), count);
+    case "repository.unknown_token_count":
+      return appSum(categories, "style_values", prefixed("unknown-token:"), count);
+    case "repository.token_redefinition_count":
+      return appSum(categories, "style_values", prefixed("redefinition:"), count);
+    case "repository.global_element_selector_count":
+      return appSum(categories, "style_values", prefixed("element-selector:"), count);
+    case "repository.important_count":
+      return appSum(categories, "style_values", keyed("important"), count);
+    default:
       return unknownReading(`${selector} is not a repository field`);
   }
+}
+
+const CATEGORY_LABELS: Readonly<Record<string, string>> = { design_systems: "design systems", ui_elements: "UI elements", style_values: "style values" };
+
+/** Unknown when the Profile's fact document has no such category: it was created before Repository Profile version 2. */
+function present(categories: JsonObject, id: string): Reading | null {
+  return categories[id] === undefined ? unknownReading(`The Profile has no ${CATEGORY_LABELS[id] ?? id} facts; it predates Repository Profile version 2`) : null;
+}
+
+/** Why a category's search can't support a count, or null when it was complete with nothing skipped. */
+function incomplete(categories: JsonObject, id: string): string | null {
+  const search = record(record(categories[id]).search);
+  const skipped = list(search.skipped).map(String);
+  if (skipped.length) return `The ${CATEGORY_LABELS[id] ?? id} search skipped ${skipped.join(", ")}`;
+  return search.complete === true ? null : `The ${CATEGORY_LABELS[id] ?? id} search was incomplete`;
+}
+
+/** A sum over the app scope of the matching facts; a matching fact that is missing contributes nothing after a complete search. */
+function appSum(categories: JsonObject, id: string, matches: (fact: JsonObject) => boolean, field: (scope: JsonObject) => JsonValue | undefined): Reading {
+  const missing = present(categories, id);
+  if (missing) return missing;
+  const facts = category(categories, id).facts.filter(matches);
+  const evidence = facts.flatMap((fact) => list(fact.evidence).map(String));
+  const reason = incomplete(categories, id);
+  if (reason) return unknownReading(reason, evidence);
+  let total = 0;
+  for (const fact of facts) {
+    const value = field(record(record(fact.value)[APP_SCOPE]));
+    if ((fact.state !== "observed" && fact.state !== "inferred") || typeof value !== "number") return unknownReading(`The ${CATEGORY_LABELS[id] ?? id} fact ${String(fact.key)} is not established`, evidence);
+    total += value;
+  }
+  return known(total, evidence);
+}
+
+/** A whole-number share from the design system's summary, in the app scope; unknown when it has nothing to divide. */
+function appShare(categories: JsonObject, id: string, system: string, field: string): Reading {
+  const missing = present(categories, id);
+  if (missing) return missing;
+  const summary = category(categories, id).facts.find((fact) => fact.key === `summary:${system}`);
+  const evidence = summary ? list(summary.evidence).map(String) : [];
+  const reason = incomplete(categories, id);
+  if (reason) return unknownReading(reason, evidence);
+  const value = summary ? record(record(summary.value)[APP_SCOPE])[field] : undefined;
+  if (typeof value !== "number") return unknownReading(`The ${field.replaceAll("_", " ")} for ${system} has nothing to divide in app code`, evidence);
+  return known(value, evidence);
+}
+
+/** Whether a recognized design system's theme stylesheet or provider was found; false when the design system isn't recognized after a complete search. */
+function designSystemFlag(categories: JsonObject, system: string, field: "theme_stylesheet" | "provider"): Reading {
+  const missing = present(categories, "design_systems");
+  if (missing) return missing;
+  const fact = category(categories, "design_systems").facts.find((item) => item.key === system);
+  const evidence = fact ? list(fact.evidence).map(String) : [];
+  const established = fact !== undefined && (fact.state === "observed" || fact.state === "inferred");
+  if (established && record(fact.value)[field] === true) return known(true, evidence);
+  // Not found is false only after a complete search: a skipped input may hold the import or the provider.
+  const reason = incomplete(categories, "design_systems");
+  if (reason) return unknownReading(reason, evidence);
+  return fact && !established ? unknownReading(`The ${system} design-system fact is not established`, evidence) : known(false, evidence);
 }
 
 export function serviceContext(service: JsonObject): Context {

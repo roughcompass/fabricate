@@ -20,6 +20,7 @@ export function formatValue(value: JsonValue | undefined, depth = 0): string {
     case "absent":
       return "none";
   }
+  if (isScoped(record)) return formatScoped(record);
   const keys = Object.keys(record).sort().join(",");
   // A named identity, such as { kind: "origin", value: "https://…" }, and an HTTP operation.
   if (keys === "kind,value" && typeof record.kind === "string") return `${formatValue(record.value, depth + 1)} (${record.kind.replaceAll("_", " ")})`;
@@ -39,4 +40,43 @@ export function factText(state: string, value: JsonValue | undefined): string {
     return typeof reason === "string" ? reason : "Not established by static evidence";
   }
   return formatValue(value);
+}
+
+// Counts split by scope, as the design-system facts report them: { app, stories, tests }.
+const SCOPES = ["app", "stories", "tests"] as const;
+
+const isObject = (value: JsonValue | undefined): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
+
+function isScoped(record: JsonObject): boolean {
+  return SCOPES.every((scope) => isObject(record[scope]));
+}
+
+/** Any other fields first, then each scope that has a non-zero count, such as `app: sites 4, customized 2, mechanisms (class name 2)`. */
+function formatScoped(record: JsonObject): string {
+  const fields = Object.entries(record)
+    .filter(([key]) => !(SCOPES as readonly string[]).includes(key))
+    .map(([key, item]) => `${key.replaceAll("_", " ")}: ${formatValue(item, 1)}`);
+  const scopes = SCOPES.flatMap((scope) => {
+    const counts = scopeCounts(record[scope] as JsonObject);
+    return counts ? [`${scope}: ${counts}`] : [];
+  });
+  return [...fields, ...(scopes.length ? scopes : ["no counts in any scope"])].join(" · ");
+}
+
+// Each scope leads with its headline count; stored documents sort their keys.
+const HEADLINE = ["sites", "elements", "count", "definitions", "declarations"];
+
+/** A scope's counts, leaving out zeros. A share of 0 is a result, not a missing count, so it stays. */
+function scopeCounts(counts: JsonObject): string | null {
+  const ordered = Object.entries(counts).sort(([a], [b]) => (HEADLINE.includes(a) ? HEADLINE.indexOf(a) : HEADLINE.length) - (HEADLINE.includes(b) ? HEADLINE.indexOf(b) : HEADLINE.length));
+  const parts = ordered.flatMap(([key, item]) => {
+    const label = key.replaceAll("_", " ");
+    if (typeof item === "number") return item !== 0 || key.endsWith("_share") ? [`${label} ${item}`] : [];
+    if (isObject(item)) {
+      const inner = scopeCounts(item);
+      return inner ? [`${label} (${inner})`] : [];
+    }
+    return item === null || item === undefined ? [] : [`${label} ${formatValue(item, 2)}`];
+  });
+  return parts.length ? parts.join(", ") : null;
 }

@@ -195,3 +195,42 @@ test("links an evidence record to each ancestor, with no other way back", async 
   await expect(breadcrumbs.getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(assessment.publicId));
   await expect(page.locator("main").getByRole("link", { name: /back/i })).toHaveCount(0);
 });
+
+const SALT_APP = {
+  "package.json": manifest({ name: "salt-orders", dependencies: { "@salt-ds/core": "^1.50.0", "@salt-ds/theme": "^1.33.0", react: "18.3.1" } }),
+  "src/main.tsx": 'import "@salt-ds/theme/index.css";\nimport { Button, SaltProvider } from "@salt-ds/core";\nexport const Root = () => <SaltProvider><Button className="wide">Go</Button><Button>Back</Button><button>Raw</button></SaltProvider>;\n',
+  "src/app.css": ".wide { inline-size: 100%; color: #0a6 }\n",
+  "src/Button.stories.tsx": 'import { Button } from "@salt-ds/core";\nexport const Wide = () => <Button style={{ inlineSize: "100%" }}>Wide</Button>;\n',
+};
+
+test("shows design-system usage in the Interface categories, with each scope's non-zero counts", async ({ page, db }) => {
+  const source = buildSource(db, { name: "salt-orders" });
+  const assessment = await seedAssessment(db, buildInitiative(db, { name: "Salt adherence", sources: [source] }), [source], [SALT_APP]);
+  await page.goto(`/profiles/${profilesOf(db, assessment.id)[0]!.profile.publicId}`);
+
+  await expect(page.getByRole("heading", { level: 2, name: "Interface" })).toBeVisible();
+  const systems = category(page, "design_systems");
+  await expect(systems.getByRole("row").filter({ hasText: "salt" })).toContainText("theme stylesheet: true");
+  const button = category(page, "ui_elements").getByRole("row").filter({ hasText: "component:salt:Button" });
+  await expect(button).toContainText("package: @salt-ds/core · app: sites 2, as is 1, customized 1");
+  await expect(button).toContainText("stories: sites 1, customized 1, mechanisms (style 1)");
+  // Zero counts and empty scopes are left out.
+  await expect(button).not.toContainText("tests:");
+  await expect(button).not.toContainText(" 0,");
+  await expect(category(page, "ui_elements").getByRole("row").filter({ hasText: "intrinsic:button" })).toContainText("equivalent: salt:Button · group: equivalent · app: sites 1, unstyled 1");
+  await expect(category(page, "style_values").getByRole("row").filter({ hasText: "declarations:color" })).toContainText("app: raw 1");
+});
+
+test("shows a version 1 Profile's facts unchanged, with the design-system categories unknown", async ({ page, db }) => {
+  const orders = buildSource(db, { name: "orders" });
+  const assessment = await seedAssessment(db, buildInitiative(db, { name: "Earlier release", sources: [orders] }), [orders], [ORDERS], { profileVersion1: true });
+  const profile = profilesOf(db, assessment.id)[0]!.profile;
+  expect(profile.schemaVersion).toBe(1);
+
+  await page.goto(`/profiles/${profile.publicId}`);
+  await expect(category(page, "languages").getByRole("row").filter({ hasText: "TypeScript" })).toBeVisible();
+  const interfaceCategories = page.getByRole("list", { name: "Interface categories without facts" });
+  for (const label of ["Design systems", "UI elements", "Style values"]) {
+    await expect(interfaceCategories.getByRole("listitem").filter({ hasText: label })).toContainText("Unknown");
+  }
+});

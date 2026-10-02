@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 
 const root = path.dirname(new URL(import.meta.url).pathname);
 
-const REPO_FACTS_PACKAGES = ["@repo-facts/architecture", "@repo-facts/bundle", "@repo-facts/contract", "@repo-facts/core", "@repo-facts/services", "@repo-facts/syntax"];
+const REPO_FACTS_PACKAGES = ["@repo-facts/architecture", "@repo-facts/bundle", "@repo-facts/contract", "@repo-facts/core", "@repo-facts/design-system", "@repo-facts/services", "@repo-facts/syntax"];
 
 const nextConfig: NextConfig = {
   // Browser tests build into their own directory, so they can run beside a

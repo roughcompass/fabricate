@@ -14,9 +14,11 @@ interface StandardFormProps {
   lockVersion?: number;
   submitLabel: string;
   cancelHref: string;
+  /** The starter Standard the draft starts from, when one was chosen. */
+  starter?: string;
 }
 
-export function StandardForm({ action, initial, lockVersion, submitLabel, cancelHref }: StandardFormProps) {
+export function StandardForm({ action, initial, lockVersion, submitLabel, cancelHref, starter }: StandardFormProps) {
   const [state, formAction] = useActionState(action, initial);
   const form = useFocusFirstInvalid(state, "standard-form-alert");
 
@@ -33,6 +35,7 @@ export function StandardForm({ action, initial, lockVersion, submitLabel, cancel
         <div className={formStyles.form}>
           {state.errors.base && <FormAlert id="standard-form-alert">{state.errors.base.join(" ")}</FormAlert>}
           {lockVersion !== undefined && <input type="hidden" name="lockVersion" value={lockVersion} />}
+          {starter !== undefined && <input type="hidden" name="starter" value={starter} />}
           <TextInput id="standard-name" name="name" label="Name" defaultValue={state.values.name} errors={state.errors.name} required maxLength={120} />
           <TextArea
             id="standard-purpose"
