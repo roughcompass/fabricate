@@ -63,7 +63,8 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await page.getByRole("button", { name: "Preview" }).click();
     for (const name of REPOSITORIES) await expect(page.getByRole("checkbox", { name: `Import ${name}` })).toBeChecked();
     await page.getByRole("button", { name: `Add ${REPOSITORIES.length} Repositories` }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Repositories" })).toBeVisible();
+    // Exact, so the import page's own "Import Repositories" heading doesn't satisfy it before the import commits.
+    await expect(page.getByRole("heading", { level: 1, name: "Repositories", exact: true })).toBeVisible();
     const sources = listSources(db);
     expect(sources.map((source) => source.name).sort()).toEqual(REPOSITORIES);
     for (const source of sources) expect(source.cloneUrl).toBe(`file://${FLEET_ROOT}/${source.name}`);
