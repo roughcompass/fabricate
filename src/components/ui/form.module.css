@@ -50,12 +50,15 @@
     transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
 
     &:hover:not(:disabled) { border-color: var(--color-text-secondary); }
-    &:checked, &:indeterminate { border-color: var(--color-primary); background: var(--color-primary); }
+    &:checked { border-color: var(--color-primary); background: var(--color-primary); }
     &:disabled { background: var(--color-bg-muted); cursor: not-allowed; }
     &:checked:disabled { border-color: var(--color-border-strong); background: var(--color-border-strong); }
   }
   .checkbox {
     border-radius: var(--radius-sm);
+
+    /* Only a check box: every radio of a group with none chosen is also :indeterminate. */
+    &:indeterminate { border-color: var(--color-primary); background: var(--color-primary); }
 
     &::before {
       content: "";

@@ -47,6 +47,17 @@ const settingsSchema = z.strictObject({
     source: z.string().trim().min(1).nullable(),
     refreshMinutes: positiveInteger,
   }),
+  // Web onboarding's read-only view of Studio and CDaaS. Each is read only
+  // when its base URL is set, under a token that comes only from
+  // FABRICATE_STUDIO_TOKEN or FABRICATE_CDAAS_TOKEN.
+  onboarding: z.strictObject({
+    studioUrl: z.string().trim().min(1).nullable(),
+    cdaasUrl: z.string().trim().min(1).nullable(),
+    refreshMinutes: positiveInteger,
+    staleAfterMinutes: positiveInteger,
+    timeoutSeconds: positiveInteger,
+    maxResponseBytes: positiveInteger,
+  }),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -75,12 +86,31 @@ export const ENV_KEYS = {
   demoEnabled: "FABRICATE_DEMO",
   deConsoleSource: "FABRICATE_DE_CONSOLE_SOURCE",
   deConsoleRefreshMinutes: "FABRICATE_DE_CONSOLE_REFRESH_MINUTES",
+  studioUrl: "FABRICATE_STUDIO_URL",
+  cdaasUrl: "FABRICATE_CDAAS_URL",
+  onboardingRefreshMinutes: "FABRICATE_ONBOARDING_REFRESH_MINUTES",
+  onboardingStaleAfterMinutes: "FABRICATE_ONBOARDING_STALE_AFTER_MINUTES",
 } as const;
 
 /** The DE Console service identity's token. Read from the environment when a request is made, and never stored in the configuration. */
 export const DE_CONSOLE_TOKEN = "FABRICATE_DE_CONSOLE_TOKEN";
 
+/** The bearer tokens onboarding reads Studio and CDaaS with. Read from the environment when a request is made, never stored. */
+export const ONBOARDING_TOKENS = { studio: "FABRICATE_STUDIO_TOKEN", cdaas: "FABRICATE_CDAAS_TOKEN" } as const;
+
 export type DeConsoleSource = { readonly kind: "file"; readonly path: string } | { readonly kind: "url"; readonly url: string };
+
+export interface OnboardingSettings {
+  /** Studio's base URL, or null when Studio isn't read. */
+  readonly studio: { readonly baseUrl: string } | null;
+  /** CDaaS Admin's base URL, or null when CDaaS isn't read. */
+  readonly cdaas: { readonly baseUrl: string } | null;
+  readonly refreshMinutes: number;
+  /** How long an observation counts as current. */
+  readonly staleAfterMinutes: number;
+  readonly timeoutMs: number;
+  readonly maxResponseBytes: number;
+}
 
 export interface DeConsoleSettings {
   /** Null when no DE Console source is configured. */
@@ -112,6 +142,7 @@ export interface FabricateConfig {
   /** Whether the template demo's pages, running applications, and endpoints exist. */
   readonly demoEnabled: boolean;
   readonly deConsole: DeConsoleSettings;
+  readonly onboarding: OnboardingSettings;
   /** The settings this configuration was built from, before mandatory additions. */
   readonly settings: Settings;
 }
@@ -147,7 +178,7 @@ export function loadConfig(options: LoadOptions = {}): FabricateConfig {
  */
 export function withOverrides(
   config: FabricateConfig,
-  overrides: Partial<Omit<Settings, "analysis" | "deConsole">> & { analysis?: Partial<Settings["analysis"]>; deConsole?: Partial<Settings["deConsole"]> },
+  overrides: Partial<Omit<Settings, "analysis" | "deConsole" | "onboarding">> & { analysis?: Partial<Settings["analysis"]>; deConsole?: Partial<Settings["deConsole"]>; onboarding?: Partial<Settings["onboarding"]> },
 ): FabricateConfig {
   const settings = {
     ...config.settings,
@@ -155,6 +186,7 @@ export function withOverrides(
     analysis: { ...config.settings.analysis, ...overrides.analysis },
     demo: { ...config.settings.demo, ...overrides.demo },
     deConsole: { ...config.settings.deConsole, ...overrides.deConsole },
+    onboarding: { ...config.settings.onboarding, ...overrides.onboarding },
   };
   return buildConfig(settings, { appRoot: config.appRoot, environment: config.environment });
 }
@@ -207,6 +239,14 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
     analysis: { ...settings.analysis },
     demoEnabled: settings.demo.enabled,
     deConsole: { source: deConsoleSource(settings.deConsole.source, resolve, mandatory), refreshMinutes: settings.deConsole.refreshMinutes },
+    onboarding: {
+      studio: readEndpoint("Studio", settings.onboarding.studioUrl, ONBOARDING_TOKENS.studio),
+      cdaas: readEndpoint("CDaaS", settings.onboarding.cdaasUrl, ONBOARDING_TOKENS.cdaas),
+      refreshMinutes: settings.onboarding.refreshMinutes,
+      staleAfterMinutes: settings.onboarding.staleAfterMinutes,
+      timeoutMs: settings.onboarding.timeoutSeconds * 1000,
+      maxResponseBytes: settings.onboarding.maxResponseBytes,
+    },
     settings,
   });
 }
@@ -242,6 +282,24 @@ function deConsoleSource(value: string | null, resolve: (value: string) => strin
   return { kind: "file", path: file };
 }
 
+/**
+ * A base URL onboarding reads from: https, or plain http to this machine for
+ * a local stub, with no credentials, query string, or fragment.
+ */
+function readEndpoint(system: string, value: string | null, tokenKey: string): { baseUrl: string } | null {
+  if (value === null) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new ConfigurationError(`The ${system} URL ${JSON.stringify(value)} is not a valid URL`);
+  }
+  if (url.username || url.password) throw new ConfigurationError(`The ${system} URL can't contain credentials; set ${tokenKey} instead`);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && LOOPBACK.has(url.hostname))) throw new ConfigurationError(`The ${system} URL must be an https:// URL, or http:// to this machine`);
+  if (url.search || url.hash || value.includes("#") || value.includes("?")) throw new ConfigurationError(`The ${system} URL can't contain a query string or fragment`);
+  return { baseUrl: url.toString().replace(/\/+$/, "") };
+}
+
 function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Record<string, string | undefined>>): unknown {
   const result: Record<string, unknown> = { ...settings };
   const analysis: Record<string, unknown> = { ...(settings.analysis as Record<string, unknown>) };
@@ -265,6 +323,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   };
   const demo: Record<string, unknown> = { ...(settings.demo as Record<string, unknown>) };
   const deConsole: Record<string, unknown> = { ...(settings.deConsole as Record<string, unknown>) };
+  const onboarding: Record<string, unknown> = { ...(settings.onboarding as Record<string, unknown>) };
 
   const assignments: [Record<string, unknown>, string, unknown][] = [
     [result, "allowedRoots", list(ENV_KEYS.allowedRoots)],
@@ -281,11 +340,16 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [demo, "enabled", boolean(ENV_KEYS.demoEnabled)],
     [deConsole, "source", text(ENV_KEYS.deConsoleSource)],
     [deConsole, "refreshMinutes", integer(ENV_KEYS.deConsoleRefreshMinutes)],
+    [onboarding, "studioUrl", text(ENV_KEYS.studioUrl)],
+    [onboarding, "cdaasUrl", text(ENV_KEYS.cdaasUrl)],
+    [onboarding, "refreshMinutes", integer(ENV_KEYS.onboardingRefreshMinutes)],
+    [onboarding, "staleAfterMinutes", integer(ENV_KEYS.onboardingStaleAfterMinutes)],
   ];
   for (const [target, key, value] of assignments) if (value !== undefined) target[key] = value;
   result.analysis = analysis;
   if (Object.keys(demo).length > 0) result.demo = demo;
   if (Object.keys(deConsole).length > 0) result.deConsole = deConsole;
+  if (Object.keys(onboarding).length > 0) result.onboarding = onboarding;
   return result;
 }
 

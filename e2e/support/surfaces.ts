@@ -14,6 +14,7 @@ import { buildInitiative, buildSource } from "../../test/support/builders";
 import { manifest } from "../../test/support/profiles";
 import { publishStandard, seedAssessment, selectReleases } from "../../test/support/scenarios";
 import { gitRepo } from "./fixtures";
+import { seedOnboardingSurfaces } from "./onboarding-surfaces";
 import { BASELINE_CONTROLS, ORDERS, SERVICE_CONTROLS, evaluate } from "./results";
 import { paths } from "./paths";
 
@@ -83,6 +84,7 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["08-finding-indeterminate", `/evaluations/${evaluation.publicId}/findings/${indeterminate.publicId}`],
     ["09-design-system", "/design-system"],
     ["09-not-found", "/runs/asm_doesnotexist0000"],
+    ...seedOnboardingSurfaces(db),
   ];
 }
 

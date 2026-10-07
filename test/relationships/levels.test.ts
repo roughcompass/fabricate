@@ -5,6 +5,7 @@ import { type MapView, loadMapView } from "@/lib/relationships/map-view";
 import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { type MapWorld, claimMapWorld, seedMapWorld, seedMapWorldRun } from "../support/map-world";
+import { createApplication, recordAssertion } from "@/lib/ownership/records";
 import { manifest } from "../support/profiles";
 import { seedAssessment } from "../support/scenarios";
 
@@ -92,12 +93,14 @@ describe("map levels", () => {
     expect(access.shared.map((entry) => [entry.label, entry.kind, entry.dependents])).toEqual([["design-tokens", "library", 3]]);
   });
 
-  it("draws a SEAL application with what depends on it above and what it depends on below", () => {
-    const fx = applicationLevel(db, view, "SEAL-200")!;
+  it("draws an application with what depends on it above and what it depends on below", () => {
+    const fx = applicationLevel(db, view, world.applications.fx.publicId)!;
 
+    expect(fx.label).toBe("FX Board (SEAL-200)");
     expect(fx.diagram.rows.map((row) => row.map((box) => box.label))).toEqual([["access-shell"], ["fx-board"], ["design-tokens"]]);
     expect(fx.portals.map((portal) => portal.label)).toEqual(["Access", "Markets"]);
-    expect(applicationLevel(db, view, "SEAL-999")).toBeUndefined();
+    expect(applicationLevel(db, view, "SEAL-200")).toBeUndefined();
+    expect(applicationLevel(db, view, "wap_aaaaaaaaaaaaaaaa")).toBeUndefined();
   });
 
   it("groups unclaimed repositories into runtime systems, each with its own diagram (Unclaimed runtime system)", () => {
@@ -152,12 +155,12 @@ describe("map levels", () => {
     expect(focus.sentence).toMatch(/^@acme\/design-tokens is built in this Run by design-tokens\. 3 repositories declare it in 2 portals\.$/);
   });
 
-  it("finds repositories, SEAL applications, portals, services, and packages, exact matches first", () => {
-    expect(searchMap(db, view, "SEAL-200").map((match) => [match.kind, match.label, match.rank])).toEqual([["application", "SEAL-200", 0]]);
+  it("finds repositories, applications, portals, services, and packages, exact matches first", () => {
+    expect(searchMap(db, view, "SEAL-200").map((match) => [match.kind, match.label, match.detail, match.rank, match.href])).toEqual([["application", "FX Board", "SEAL-200", 0, `${view.base}/applications/${world.applications.fx.publicId}`]]);
     expect(searchMap(db, view, "react").map((match) => [match.kind, match.label])).toEqual([["package", "react"]]);
     expect(searchMap(db, view, "access").map((match) => [match.kind, match.label])).toEqual([
       ["repository", "access-shell"],
-      ["application", "SEAL-100"],
+      ["application", "Access shell"],
       ["portal", "Access"],
     ]);
   });
@@ -209,5 +212,32 @@ describe("indirect dependents", () => {
   it("states when nothing depends on a repository", () => {
     expect(impactSentence("scratch", 0, 0, 0)).toBe("Nothing in this Run depends on scratch.");
     expect(impactSentence("design-tokens", 162, 4, 40)).toBe("Changing design-tokens directly affects 162 repositories in 4 portals; 40 more depend on it through them.");
+  });
+});
+
+describe("applications that share a SEAL ID", () => {
+  it("groups each application's repositories apart, and addresses each by its own ID (Applications share one SEAL ID)", async () => {
+    const db = createTestDb();
+    const sources = ["payments-web", "payments-reports"].map((name) => buildSource(db, { name }));
+    const assessment = await seedAssessment(db, buildInitiative(db, { sources }), sources, [
+      { "package.json": manifest({ name: "payments-web", version: "1.0.0" }) },
+      { "package.json": manifest({ name: "payments-reports", version: "1.0.0" }) },
+    ]);
+    const workspace = createApplication(db, { sealId: "88001", name: "Payments workspace" });
+    const reporting = createApplication(db, { sealId: "88001", name: "Payments reporting" });
+    const claim = { source: "person" as const, providedBy: "ana@example.com" };
+    recordAssertion(db, { attribute: "application", repository: sources[0]!.id, application: workspace.id, ...claim });
+    recordAssertion(db, { attribute: "application", repository: sources[1]!.id, application: reporting.id, ...claim });
+    const view = loadMapView(db, assessment)!;
+
+    expect([...view.applications.keys()].sort()).toEqual([workspace.publicId, reporting.publicId].sort());
+    expect([...applicationLevel(db, view, workspace.publicId)!.members].map((member) => labelOf(view, member))).toEqual(["payments-web"]);
+    expect([...applicationLevel(db, view, reporting.publicId)!.members].map((member) => labelOf(view, member))).toEqual(["payments-reports"]);
+    expect(searchMap(db, view, "88001").map((match) => [match.label, match.href]).sort()).toEqual(
+      [
+        ["Payments reporting", `${view.base}/applications/${reporting.publicId}`],
+        ["Payments workspace", `${view.base}/applications/${workspace.publicId}`],
+      ].sort(),
+    );
   });
 });

@@ -9,6 +9,7 @@ export * from "./results";
 export * from "./ontology";
 export * from "./projection";
 export * from "./ownership";
+export * from "./onboarding";
 export * from "./jobs";
 export * from "./leases";
 export * from "./relations";

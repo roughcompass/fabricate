@@ -1,9 +1,10 @@
-// Fabricate worker: runs acquisition, analysis, evaluation, and DE Console read jobs outside
+// Fabricate worker: runs acquisition, analysis, evaluation, DE Console, and onboarding read jobs outside
 // the web server. Started with `npm run dev:worker` or `npm run worker`.
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { Worker } from "@/lib/jobs/worker";
+import { scheduleOnboardingRefresh } from "@/lib/onboarding/external/refresh";
 import { scheduleDeConsoleReads } from "@/lib/ownership/de-console-schedule";
 import { verifyStartup } from "@/lib/startup";
 
@@ -18,6 +19,8 @@ async function main(): Promise<void> {
   });
   // The DE Console read reschedules itself; this starts it, at most once per slot across workers.
   scheduleDeConsoleReads(getDb(), getConfig());
+  // So do onboarding's reads of Studio and CDaaS, when either is configured.
+  scheduleOnboardingRefresh(getDb(), getConfig());
   worker.start();
   console.log(`[worker] ready as ${worker.workerId}`);
 

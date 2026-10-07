@@ -16,7 +16,7 @@ export function claimOutcome(code: string | undefined, source: RepositorySource)
     case "corrected":
       return { id, tone: "success", title: "Your corrections are saved." };
     case "seal-corrected":
-      return { id, tone: "success", title: "The new SEAL ID is saved.", description: "Answer what isn't known about its application." };
+      return { id, tone: "success", title: "The Repository now belongs to another application.", description: "Answer what isn't known about it." };
     default:
       return undefined;
   }

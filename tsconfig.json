@@ -45,7 +45,9 @@
     ".next-e2e/types/**/*.ts",
     ".next-e2e/dev/types/**/*.ts",
     ".next-check/types/**/*.ts",
-    ".next-check/dev/types/**/*.ts"
+    ".next-check/dev/types/**/*.ts",
+    ".next-webpack-check/types/**/*.ts",
+    ".next-webpack-check/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

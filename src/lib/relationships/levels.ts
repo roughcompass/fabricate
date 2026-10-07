@@ -55,7 +55,7 @@ export const href = {
   run: (view: MapView) => view.base,
   lineOfBusiness: (view: MapView, id: string | null) => `${view.base}/lob/${id ?? "none"}`,
   portal: (view: MapView, id: string) => `${view.base}/portal/${id}`,
-  application: (view: MapView, sealId: string) => `${view.base}/seal/${encodeURIComponent(sealId)}`,
+  application: (view: MapView, id: string) => `${view.base}/applications/${id}`,
   unassigned: (view: MapView) => `${view.base}/unassigned`,
   system: (view: MapView, id: string) => `${view.base}/unassigned/${id}`,
 };
@@ -81,8 +81,8 @@ function groupHref(view: MapView, key: string): string {
       return href.lineOfBusiness(view, id === "none" ? null : id);
     case "portal":
       return href.portal(view, id);
-    case "seal":
-      return href.application(view, view.applications.get(id)?.sealId ?? id);
+    case "application":
+      return href.application(view, id);
     case "system":
       return href.system(view, id);
     default:
@@ -280,7 +280,6 @@ export function portalLevel(db: Executor, view: MapView, id: string): PortalLeve
 
 export interface ApplicationLevel {
   id: string;
-  sealId: string;
   label: string;
   lineOfBusiness: PathStep;
   portals: GroupLink[];
@@ -289,10 +288,10 @@ export interface ApplicationLevel {
   members: Set<string>;
 }
 
-export function applicationLevel(db: Executor, view: MapView, sealId: string): ApplicationLevel | undefined {
-  const application = [...view.applications.values()].find((item) => item.sealId === sealId);
+export function applicationLevel(db: Executor, view: MapView, applicationId: string): ApplicationLevel | undefined {
+  const application = view.applications.get(applicationId);
   if (!application) return undefined;
-  const levelHref = href.application(view, sealId);
+  const levelHref = href.application(view, application.id);
   const members = new Set([...view.repositories.values()].filter((repository) => repository.application === application.id).map((repository) => repository.nodeId));
   const diagram = neighbourhoodDiagram(db, view, levelHref, members);
   const portals = [...new Set([...members].flatMap((node) => view.repositories.get(node)!.portals))]
@@ -300,7 +299,6 @@ export function applicationLevel(db: Executor, view: MapView, sealId: string): A
     .sort((a, b) => compare(a.label, b.label));
   return {
     id: application.id,
-    sealId,
     label: view.labels.application(application.id),
     lineOfBusiness: { label: view.labels.lineOfBusiness(application.lineOfBusiness), href: href.lineOfBusiness(view, application.lineOfBusiness) },
     portals,
@@ -642,7 +640,9 @@ export function searchMap(db: Executor, view: MapView, query: string): SearchMat
   };
 
   for (const repository of view.repositories.values()) add({ kind: "repository", label: repository.label, detail: repository.application ? view.labels.application(repository.application) : "Unassigned", href: withQuery(primaryLevelOf(view, repository), { focus: repository.nodeId }) }, rank(repository.label));
-  for (const application of view.applications.values()) add({ kind: "application", label: application.sealId, detail: application.name, href: href.application(view, application.sealId) }, rank(application.sealId, application.name));
+  for (const application of view.applications.values()) {
+    add({ kind: "application", label: application.name ?? application.sealId ?? "Unnamed application", detail: application.name ? application.sealId : null, href: href.application(view, application.id) }, rank(application.name, application.sealId));
+  }
   const aliases = portalAliases(db, view);
   for (const portal of view.portals.values()) add({ kind: "portal", label: portal.label, detail: portal.owner ? `Owned by ${applicationLabel(portal.owner)}` : null, href: href.portal(view, portal.id) }, rank(portal.label, ...(aliases.get(portal.id) ?? [])));
   for (const service of db.select({ nodeId: graphNodes.nodeId, label: graphNodes.label }).from(graphNodes).where(and(eq(graphNodes.mapId, view.map.id), eq(graphNodes.kind, "external_service"))).all()) {

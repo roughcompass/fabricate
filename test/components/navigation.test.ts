@@ -27,7 +27,7 @@ const EXPECTED: Record<string, [section: string, item: string] | null> = {
   "/runs/[assessmentId]/map": ["assessments", "all-assessments"],
   "/runs/[assessmentId]/map/lob/[lineOfBusiness]": ["assessments", "all-assessments"],
   "/runs/[assessmentId]/map/portal/[portal]": ["assessments", "all-assessments"],
-  "/runs/[assessmentId]/map/seal/[sealId]": ["assessments", "all-assessments"],
+  "/runs/[assessmentId]/map/applications/[applicationId]": ["assessments", "all-assessments"],
   "/runs/[assessmentId]/map/unassigned": ["assessments", "all-assessments"],
   "/runs/[assessmentId]/map/unassigned/[system]": ["assessments", "all-assessments"],
   "/runs/[assessmentId]/evidence/[evidenceId]": ["assessments", "all-assessments"],
@@ -49,6 +49,24 @@ const EXPECTED: Record<string, [section: string, item: string] | null> = {
   "/standards/[standardId]/draft": ["assessments", "all-standards"],
   "/standards/[standardId]/publish": ["assessments", "all-standards"],
   "/standards/[standardId]/releases/[releaseId]": ["assessments", "all-standards"],
+  "/onboarding": ["web-onboarding", "portals"],
+  "/onboarding/portals": ["web-onboarding", "portals"],
+  "/onboarding/portals/new": ["web-onboarding", "portals"],
+  "/onboarding/portals/[portalId]": ["web-onboarding", "portals"],
+  "/onboarding/portals/[portalId]/draft/[step]": ["web-onboarding", "portals"],
+  "/onboarding/portals/[portalId]/revisions/[revision]": ["web-onboarding", "portals"],
+  "/onboarding/applications": ["web-onboarding", "web-applications"],
+  "/onboarding/applications/new": ["web-onboarding", "web-applications"],
+  "/onboarding/applications/[applicationId]": ["web-onboarding", "web-applications"],
+  "/onboarding/applications/[applicationId]/draft/[step]": ["web-onboarding", "web-applications"],
+  "/onboarding/applications/[applicationId]/revisions/[revision]": ["web-onboarding", "web-applications"],
+  "/onboarding/applications/[applicationId]/microfrontends/new": ["web-onboarding", "web-applications"],
+  "/onboarding/microfrontends": ["web-onboarding", "web-applications"],
+  "/onboarding/microfrontends/[microfrontendId]": ["web-onboarding", "web-applications"],
+  "/onboarding/microfrontends/[microfrontendId]/draft/[step]": ["web-onboarding", "web-applications"],
+  "/onboarding/microfrontends/[microfrontendId]/revisions/[revision]": ["web-onboarding", "web-applications"],
+  "/onboarding/reviews": ["web-onboarding", "reviews"],
+  "/onboarding/reviews/[placementId]": ["web-onboarding", "reviews"],
   "/applications": ["applications", "all-applications"],
   "/applications/[applicationId]": ["applications", "all-applications"],
   "/applications/import": ["applications", "import-bitbucket"],
@@ -86,6 +104,7 @@ describe("sidebar navigation", () => {
           ["Standards", ["All Standards", "New Standard"]],
         ],
       ],
+      ["Web Onboarding", [[null, ["Portals", "Web Applications", "Reviews"]]]],
       ["Applications", [[null, ["All Applications", "Import from BitBucket"]]]],
       ["Salt Patterns", [[null, ["All Salt Patterns", "New application"]]]],
     ]);
@@ -95,6 +114,7 @@ describe("sidebar navigation", () => {
   it("opens each section at the list titled with the section's name", () => {
     expect(SECTIONS.map((section) => [section.label, section.items[0]!.href])).toEqual([
       ["Assessments", "/assessments"],
+      ["Web Onboarding", "/onboarding/portals"],
       ["Applications", "/applications"],
       ["Salt Patterns", "/templates"],
     ]);
@@ -109,8 +129,17 @@ describe("sidebar navigation", () => {
     expect(locate("/applications/app_0123456789abcdef", true)?.item.id).toBe("all-applications");
   });
 
-  it("shows only Assessments, and leaves the demo's pages outside every section, while the demo is disabled", () => {
-    expect(visibleSections(false).map((section) => section.label)).toEqual(["Assessments"]);
+  it("marks Web Onboarding current on its deep pages, with the demo enabled or disabled (Web Onboarding section on a deep page)", () => {
+    for (const demo of [true, false]) {
+      expect([locate("/onboarding/microfrontends/mfe_0123456789abcdef", demo)?.section.id, locate("/onboarding/microfrontends/mfe_0123456789abcdef", demo)?.item.id]).toEqual(["web-onboarding", "web-applications"]);
+      expect(locate("/onboarding/applications/wap_0123456789abcdef/draft/launch", demo)?.item.id).toBe("web-applications");
+      expect(locate("/onboarding/reviews/plc_0123456789abcdef", demo)?.item.id).toBe("reviews");
+      expect(locate("/onboarding/portals/new", demo)?.item.id).toBe("portals");
+    }
+  });
+
+  it("shows Assessments and Web Onboarding, and leaves the demo's pages outside every section, while the demo is disabled (Demo disabled)", () => {
+    expect(visibleSections(false).map((section) => section.label)).toEqual(["Assessments", "Web Onboarding"]);
     for (const route of ["/new", "/templates", "/templates/payments-hub/preview", "/applications", "/applications/app-1", "/applications/import/PAY/payee-hub"]) expect(locate(route, false), route).toBeNull();
   });
 });

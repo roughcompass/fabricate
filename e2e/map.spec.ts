@@ -4,7 +4,7 @@ import { claimMapWorld, seedMapWorld, seedMapWorldRun } from "../test/support/ma
 import { manifest } from "../test/support/profiles";
 import { seedAssessment } from "../test/support/scenarios";
 import type { Db } from "../src/lib/db/client";
-import { ensureApplication, ensureLineOfBusiness, recordAssertion } from "../src/lib/ownership/records";
+import { createApplication, ensureLineOfBusiness, recordAssertion } from "../src/lib/ownership/records";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 
@@ -31,11 +31,11 @@ async function seedWide(db: Db) {
   const source = buildSource(db, { name: "wide-app" });
   const dependencies = Object.fromEntries(Array.from({ length: 64 }, (_, index) => [`lib-${String(index).padStart(2, "0")}`, "^1.0.0"]));
   const assessment = await seedAssessment(db, buildInitiative(db, { sources: [source] }), [source], [{ "package.json": manifest({ name: "wide-app", version: "1.0.0", dependencies }) }]);
-  const application = ensureApplication(db, "SEAL-900", "Wide app");
+  const application = createApplication(db, { sealId: "SEAL-900", name: "Wide app" });
   const claim = { source: "person" as const, providedBy: "ana@example.com" };
-  recordAssertion(db, { attribute: "seal_id", repository: source.id, application: application.id, ...claim });
+  recordAssertion(db, { attribute: "application", repository: source.id, application: application.id, ...claim });
   recordAssertion(db, { attribute: "line_of_business", application: application.id, lineOfBusiness: ensureLineOfBusiness(db, "Payments").id, ...claim });
-  return assessment;
+  return { assessment, application };
 }
 
 const table = (page: Page, name: string) => page.getByRole("table", { name, exact: true });
@@ -170,9 +170,9 @@ test("focuses a package by search: a third-party package with its declared range
   await expect(focus(page).locator("[data-focus-sentence]")).toContainText("Changing design-tokens");
 });
 
-test("pages the relationships of a SEAL application, and of a focus (Paged relationships, Long relationship list)", async ({ page, db }) => {
-  const assessment = await seedWide(db);
-  await page.goto(`${paths.runMap(assessment.publicId)}/seal/SEAL-900`);
+test("pages the relationships of an application, and of a focus (Paged relationships, Long relationship list)", async ({ page, db }) => {
+  const { assessment, application } = await seedWide(db);
+  await page.goto(`${paths.runMap(assessment.publicId)}/applications/${application.publicId}`);
   const status = page.getByRole("status").filter({ hasText: "relationships" });
 
   await expect(status).toHaveText(/^1–50 of 6\d relationships$/);
@@ -249,7 +249,7 @@ test("the map stays readable at mobile width, with each diagram's text equivalen
   await expectNoHorizontalOverflow(page);
   await expectNoOverlappingContent(page);
 
-  for (const address of [paths.runMap(world.assessment.publicId), `${paths.runMap(world.assessment.publicId)}?focus=package%3Areact`, `${paths.runMap(world.assessment.publicId)}/seal/SEAL-200`]) {
+  for (const address of [paths.runMap(world.assessment.publicId), `${paths.runMap(world.assessment.publicId)}?focus=package%3Areact`, `${paths.runMap(world.assessment.publicId)}/applications/${world.applications.fx.publicId}`]) {
     await page.goto(address);
     await expectNoHorizontalOverflow(page);
     await expectNoOverlappingContent(page);
@@ -259,15 +259,15 @@ test("the map stays readable at mobile width, with each diagram's text equivalen
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("searches for a SEAL ID and opens its level (Searching without JavaScript)", async ({ page, db }) => {
+  test("searches for a SEAL ID and opens its application's level (Searching without JavaScript)", async ({ page, db }) => {
     const world = await seedMapWorld(db);
     await page.goto(paths.runMap(world.assessment.publicId));
     await page.getByRole("search", { name: "Search the map" }).getByLabel("Search the map").fill("SEAL");
     await page.keyboard.press("Enter");
 
-    const results = page.getByRole("region", { name: "SEAL applications" });
-    await expect(results.getByRole("link")).toHaveText(["SEAL-100", "SEAL-200", "SEAL-300", "SEAL-400", "SEAL-500", "SEAL-600"]);
-    await results.getByRole("link", { name: "SEAL-200" }).click();
+    const results = page.getByRole("region", { name: "Applications" });
+    await expect(results.getByRole("link")).toHaveText(["Access shell", "Design system", "FX Board", "Ledger", "Payee hub", "Rates"]);
+    await results.getByRole("link", { name: "FX Board" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "FX Board (SEAL-200)" })).toBeVisible();
   });
 });

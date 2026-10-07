@@ -33,10 +33,23 @@ export function openDatabase(file: string): Db {
   return drizzle(sqlite, { schema }) as Db;
 }
 
-/** Applies committed SQL migrations from drizzle/. */
+/**
+ * Applies committed SQL migrations from drizzle/. A migration that rebuilds a
+ * table drops it while other rows still reference it, which an enforced
+ * foreign key refuses. SQLite can switch enforcement only outside a
+ * transaction, and Drizzle applies every pending migration in one, so
+ * enforcement is off for the run; a rebuilding migration checks every foreign
+ * key before it ends, so a broken reference rolls the whole run back.
+ */
 export function migrateDatabase(db: Db, migrationsFolder = MIGRATIONS_FOLDER): void {
   if (!hasMigrations(migrationsFolder)) return;
-  migrate(db, { migrationsFolder });
+  const enforced = db.$client.pragma("foreign_keys", { simple: true }) === 1;
+  if (enforced) db.$client.pragma("foreign_keys = OFF");
+  try {
+    migrate(db, { migrationsFolder });
+  } finally {
+    if (enforced) db.$client.pragma("foreign_keys = ON");
+  }
 }
 
 /** Number of committed migrations not yet applied to this database. */

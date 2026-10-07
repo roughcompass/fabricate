@@ -10,10 +10,12 @@ import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
 import { Status } from "@/components/ui/status";
 import { assessmentNumber } from "@/lib/assessments/assessment-records";
-import { assessmentState, claimView, hostClaims } from "@/lib/ownership/claims";
+import { assessmentState, chosenLabel, claimView, hostClaims } from "@/lib/ownership/claims";
 import { deConsoleApplications, deConsoleStatus } from "@/lib/ownership/de-console";
-import { chooseSealId, submitClaim } from "../actions";
-import { QuestionsForm, SealForm } from "../claim-forms";
+import { applicationLabel } from "@/lib/ownership/records";
+import { chooseApplication, submitClaim } from "../actions";
+import { applicationChoices } from "../choices";
+import { ApplicationForm, QuestionsForm, SameSealForm } from "../claim-forms";
 import { claimOutcome } from "../outcomes";
 import { DeConsoleAlert, choicesFor, claimCrumbs, loadClaim, rememberedClaimant } from "./load";
 
@@ -25,20 +27,22 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 /**
- * A claim of one Repository: its SEAL ID first, then only the values still
- * unknown. A Repository whose ownership is known shows it and offers
- * corrections instead of questions.
+ * A claim of one Repository: its application first, then only the values
+ * still unknown. A SEAL ID that several applications carry asks which one.
+ * A Repository whose ownership is known shows it and offers corrections
+ * instead of questions.
  */
 export default async function ClaimRepositoryPage({ params, searchParams }: { params: Params; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ sourceId }, query] = await Promise.all([params, searchParams]);
   const loaded = loadClaim(sourceId);
   if (!loaded) notFound();
   const { db, source } = loaded;
-  const view = claimView(db, source, param(query, "seal"));
+  const choice = { application: param(query, "application"), sealId: param(query, "seal"), newApplication: param(query, "new") === "1", choose: param(query, "choose") === "1" };
+  const view = claimView(db, source, choice);
   const status = deConsoleStatus(db);
   const consoleReadAt = status.lastSuccess?.readAt ?? null;
   const here = `/repositories/claim/${source.publicId}`;
-  const header = (description: string, secondaryActions = [] as { href: string; label: string; icon: "edit" }[]) => (
+  const header = (description: string, secondaryActions = [] as { href: string; label: string; icon: "edit" | "arrowLeft" }[]) => (
     <PageHeader
       breadcrumbs={claimCrumbs}
       title={source.name}
@@ -54,12 +58,21 @@ export default async function ClaimRepositoryPage({ params, searchParams }: { pa
     />
   );
 
-  if (view.asks.sealId) {
-    const listed = deConsoleApplications(db).map((application) => ({ value: application.sealId, label: application.name ? `${application.sealId} · ${application.name}` : application.sealId }));
+  if (view.asks.application && view.sameSeal.length > 0) {
     return (
       <Page width="form">
-        {header("Which SEAL application does this Repository belong to?")}
-        <SealForm action={chooseSealId.bind(null, source.publicId)} listed={listed} cancelHref="/repositories/claim" />
+        {header(`${view.sameSeal.length === 1 ? "One application carries" : `${view.sameSeal.length} applications carry`} SEAL ID ${view.sealId}. Which does this Repository belong to?`)}
+        <SameSealForm action={chooseApplication.bind(null, source.publicId)} sealId={view.sealId!} candidates={applicationChoices(db, view.sameSeal)} cancelHref={here} />
+      </Page>
+    );
+  }
+
+  if (view.asks.application) {
+    const listed = deConsoleApplications(db).map((application) => ({ value: application.publicId, label: applicationLabel(application) }));
+    return (
+      <Page width="form">
+        {header("Which application does this Repository belong to?")}
+        <ApplicationForm action={chooseApplication.bind(null, source.publicId)} listed={listed} cancelHref="/repositories/claim" />
       </Page>
     );
   }
@@ -67,7 +80,7 @@ export default async function ClaimRepositoryPage({ params, searchParams }: { pa
   const values = (
     <OwnershipValues
       link={view.linked ? view.ownership.application : null}
-      chosenSealId={view.linked ? null : view.sealId}
+      chosen={view.linked ? null : chosenLabel(view)}
       application={view.application}
       hosts={hostClaims(db, source.id)}
       consoleReadAt={consoleReadAt}
@@ -79,13 +92,17 @@ export default async function ClaimRepositoryPage({ params, searchParams }: { pa
     const choices = choicesFor(db);
     return (
       <Page width="form">
-        {header(view.linked ? "Some of this Repository's ownership isn't known yet." : `Claim this Repository for ${view.sealId}.`)}
+        {header(
+          view.linked ? "Some of this Repository's ownership isn't known yet." : view.record ? `Claim this Repository for ${applicationLabel(view.record)}.` : `Claim this Repository for a new application with SEAL ID ${view.newSealId}.`,
+          // A SEAL ID only proposed this application; another may carry it too.
+          !view.linked && view.record && choice.sealId && !choice.application ? [{ href: `${here}?seal=${encodeURIComponent(choice.sealId)}&choose=1`, label: "Choose another application", icon: "arrowLeft" }] : [],
+        )}
         <Section title="Known so far" description={view.deWeb ? "This application is listed in the DE Console, which is the record of its team and portals." : undefined}>
           {values}
         </Section>
         <QuestionsForm
           action={submitClaim.bind(null, source.publicId)}
-          sealId={view.sealId!}
+          chosen={view.record ? { application: view.record.publicId, label: applicationLabel(view.record) } : { newSealId: view.newSealId!, label: view.newSealId! }}
           asks={view.asks}
           portals={choices.portals}
           linesOfBusiness={choices.linesOfBusiness}

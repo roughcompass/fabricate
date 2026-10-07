@@ -35,7 +35,7 @@ export default async function CorrectOwnershipPage({ params }: { params: Params 
         action={submitCorrection.bind(null, source.publicId)}
         initial={{
           values: {
-            sealId: view.sealId ?? "",
+            sealId: view.record?.sealId ?? "",
             team: consoleTeam === null ? (application.team.value ?? "") : "",
             lineOfBusiness: listedLine ? lineOfBusiness.label : "",
             lineOfBusinessOther: lineOfBusiness && !listedLine ? lineOfBusiness.label : "",

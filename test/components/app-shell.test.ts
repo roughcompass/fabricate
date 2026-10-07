@@ -24,9 +24,9 @@ const shellOf = (tree: ReactNode) => elements(tree).find((element) => "data-side
 // operator-interface/page-patterns spec: the application shell, and the
 // sidebar that can be resized and hidden.
 describe("application shell", () => {
-  it("shows only Assessments when the demo is disabled", () => {
+  it("shows Assessments and Web Onboarding when the demo is disabled (Demo disabled)", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
-    expect(visibleSections(nav.props.demo as boolean).map((section) => section.label)).toEqual(["Assessments"]);
+    expect(visibleSections(nav.props.demo as boolean).map((section) => section.label)).toEqual(["Assessments", "Web Onboarding"]);
   });
 
   it("adds Applications and Salt Patterns when the demo is enabled, each opening its list", () => {
@@ -34,6 +34,7 @@ describe("application shell", () => {
     const sections = visibleSections(nav.props.demo as boolean);
     expect(sections.map((section) => [section.label, section.items[0]!.href])).toEqual([
       ["Assessments", "/assessments"],
+      ["Web Onboarding", "/onboarding/portals"],
       ["Applications", "/applications"],
       ["Salt Patterns", "/templates"],
     ]);

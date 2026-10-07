@@ -8,7 +8,7 @@ import { deleteInitiative, listInitiatives, updateInitiative } from "@/lib/initi
 import { applicationHistory, assessmentState, claimChoices, claimView, completeClaim, confirmPortalOwner, correctOwnership, locateRepository, repositoryName } from "@/lib/ownership/claims";
 import { recordDeConsoleRead, parseDeConsoleExport } from "@/lib/ownership/de-console";
 import { portalOwnership, repositoryOwnership } from "@/lib/ownership/read";
-import { ensurePortal, recordAssertion } from "@/lib/ownership/records";
+import { createApplication, ensurePortal, recordAssertion } from "@/lib/ownership/records";
 import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { seedAssessment } from "../support/scenarios";
@@ -60,18 +60,18 @@ describe("claims", () => {
   });
 
   describe("asking only for what's unknown", () => {
-    it("asks for the SEAL ID first, then everything about an application no one knows (Unknown application)", () => {
-      expect(claimView(db, orders).asks).toEqual({ sealId: true, team: false, lineOfBusiness: false, portals: false });
-      expect(claimView(db, orders, "88010").asks).toEqual({ sealId: false, team: true, lineOfBusiness: true, portals: true });
+    it("asks for the application first, then everything about an application no one knows (Unknown application)", () => {
+      expect(claimView(db, orders).asks).toEqual({ application: true, team: false, lineOfBusiness: false, portals: false });
+      expect(claimView(db, orders, { sealId: "88010" })).toMatchObject({ record: null, newSealId: "88010", asks: { application: false, team: true, lineOfBusiness: true, portals: true } });
     });
 
     it("asks nothing more for a second repository of a known application (Second repository of a known application)", () => {
       completeClaim(db, orders.publicId, { ...ana, sealId: "88010", team: "Payments Web", lineOfBusiness: "Payments", portals: ["Digital Bank"] });
       const billing = buildSource(db, { name: "billing" });
 
-      const view = claimView(db, billing, "88010");
+      const view = claimView(db, billing, { sealId: "88010" });
 
-      expect(view.asks).toEqual({ sealId: false, team: false, lineOfBusiness: false, portals: false });
+      expect(view.asks).toEqual({ application: false, team: false, lineOfBusiness: false, portals: false });
       expect(view.known).toBe(false);
       completeClaim(db, billing.publicId, { ...ana, sealId: "88010" });
       expect(claimView(db, billing).known).toBe(true);
@@ -81,10 +81,10 @@ describe("claims", () => {
     it("takes a DE Web application's team and portals from the DE Console and asks only for its Line of Business (DE Web application)", () => {
       consoleLists(db, [{ seal_id: "88001", name: "Access Shell", team: "Access Platform", portals: ["Access"] }]);
 
-      const view = claimView(db, orders, "88001");
+      const view = claimView(db, orders, { sealId: "88001" });
 
       expect(view.deWeb).toBe(true);
-      expect(view.asks).toEqual({ sealId: false, team: false, lineOfBusiness: true, portals: false });
+      expect(view.asks).toEqual({ application: false, team: false, lineOfBusiness: true, portals: false });
       completeClaim(db, orders.publicId, { ...ana, sealId: "88001", team: "Ignored", portals: ["Ignored"], lineOfBusiness: "Access" });
       expect(claimed(orders)).toMatchObject({ team: { value: "Access Platform", provenance: { source: "de_console" } }, portals: [{ portal: { label: "Access" }, flagged: false }] });
     });
@@ -168,7 +168,61 @@ describe("claims", () => {
 
       expect(correctOwnership(db, orders.publicId, { ...ben, sealId: "88020", team: "Other" })).toEqual({ recorded: 1, sealChanged: true });
       expect(claimed(orders).application).toMatchObject({ value: { sealId: "88020" }, conflict: false });
-      expect(claimView(db, orders).asks).toEqual({ sealId: false, team: true, lineOfBusiness: true, portals: true });
+      expect(claimView(db, orders).asks).toEqual({ application: false, team: true, lineOfBusiness: true, portals: true });
+    });
+
+    it("moves a repository only to the application chosen among those sharing a SEAL ID", () => {
+      completeClaim(db, orders.publicId, { ...ana, sealId: "88010", team: "Payments Web", lineOfBusiness: "Payments", portals: ["Digital Bank"] });
+      const first = createApplication(db, { sealId: "88030", name: "Ledger" });
+      const second = createApplication(db, { sealId: "88030", name: "Ledger reporting" });
+
+      expect(() => correctOwnership(db, orders.publicId, { ...ben, sealId: "88030" })).toThrow(/2 applications carry SEAL ID 88030/);
+      expect(correctOwnership(db, orders.publicId, { ...ben, sealId: "88030", application: second.publicId })).toEqual({ recorded: 1, sealChanged: true });
+      expect(claimed(orders).application).toMatchObject({ value: { publicId: second.publicId }, conflict: false });
+
+      correctOwnership(db, orders.publicId, { ...ben, sealId: "88030", newApplication: true });
+      const moved = claimed(orders).application.value!;
+      expect([first.publicId, second.publicId]).not.toContain(moved.publicId);
+      expect(moved).toMatchObject({ sealId: "88030", name: null });
+      expect(db.$client.prepare("select count(*) as n from applications where seal_id = '88030'").get()).toEqual({ n: 3 });
+    });
+  });
+
+  describe("applications that share a SEAL ID", () => {
+    it("asks which application a shared SEAL ID means, and merges nothing (Applications share one SEAL ID)", () => {
+      const payments = createApplication(db, { sealId: "88010", name: "Payments workspace" });
+      const reporting = createApplication(db, { sealId: "88010", name: "Payments reporting" });
+      recordAssertion(db, { attribute: "team", application: reporting.id, team: "Payments Insights", source: "person", providedBy: "cy@example.com" });
+
+      const view = claimView(db, orders, { sealId: "88010" });
+      expect(view).toMatchObject({ record: null, newSealId: null, sealId: "88010", asks: { application: true } });
+      expect(view.sameSeal.map((application) => application.publicId)).toEqual([payments.publicId, reporting.publicId]);
+      expect(() => completeClaim(db, orders.publicId, { ...ana, sealId: "88010" })).toThrow(/2 applications carry SEAL ID 88010/);
+
+      completeClaim(db, orders.publicId, { ...ana, application: reporting.publicId, lineOfBusiness: "Payments", portals: ["Digital Bank"] });
+      expect(claimed(orders)).toMatchObject({ application: { value: { publicId: reporting.publicId } }, team: { value: "Payments Insights" } });
+      expect(applicationHistory(db, payments.id, "team")).toEqual([]);
+      expect(db.$client.prepare("select count(*) as n from applications").get()).toEqual({ n: 2 });
+    });
+
+    it("proposes the one application a SEAL ID names, but lets the claimant choose it or a new one", () => {
+      const payments = createApplication(db, { sealId: "88010", name: "Payments workspace" });
+
+      expect(claimView(db, orders, { sealId: "88010" }).record?.publicId).toBe(payments.publicId);
+      expect(claimView(db, orders, { sealId: "88010", choose: true })).toMatchObject({ record: null, asks: { application: true } });
+      expect(claimView(db, orders, { sealId: "88010", choose: true }).sameSeal).toHaveLength(1);
+
+      completeClaim(db, orders.publicId, { ...ana, sealId: "88010", newApplication: true, team: "Orders", lineOfBusiness: "Payments", portals: ["Digital Bank"] });
+      const linked = claimed(orders).application.value!;
+      expect(linked.publicId).not.toBe(payments.publicId);
+      expect(linked).toMatchObject({ sealId: "88010" });
+      expect(linked.publicId).toMatch(/^wap_/);
+    });
+
+    it("never resolves an unknown application ID to another application", () => {
+      createApplication(db, { sealId: "88010", name: "Payments workspace" });
+      expect(claimView(db, orders, { application: "wap_aaaaaaaaaaaaaaaa", sealId: "88010" })).toMatchObject({ record: null, asks: { application: true } });
+      expect(() => completeClaim(db, orders.publicId, { ...ana, application: "wap_aaaaaaaaaaaaaaaa" })).toThrow(/Choose an application/);
     });
   });
 

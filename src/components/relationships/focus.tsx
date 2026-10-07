@@ -16,7 +16,7 @@ const KIND_LABELS: Record<Focus["kind"], string> = { repository: "Repository", s
 /**
  * What a change to a repository, service, or package affects (design
  * decisions 7 and 8). The sentence leads; the lists show direct
- * relationships, grouped by SEAL application and portal, and each row opens
+ * relationships, grouped by application and portal, and each row opens
  * its signals, evidence, and resolver rule.
  */
 export function FocusPanel({ focus, assessmentId, closeHref, pageHref }: { focus: Focus; assessmentId: string; closeHref: string; pageHref: (list: "dependents" | "dependencies", page: number) => string }) {

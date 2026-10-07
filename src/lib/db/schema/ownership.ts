@@ -1,9 +1,10 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { type AnySQLiteColumn, check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { repositorySources } from "./catalog";
-import { createdAt, id, publicId, sqlList, timestamp } from "./columns";
+import { createdAt, id, lockVersion, publicId, sqlList, timestamp } from "./columns";
+import { LIFECYCLE_STATES, applicationRevisions, portalRevisions, sealIdCheck } from "./onboarding";
 
-export const OWNERSHIP_ATTRIBUTES = ["seal_id", "team", "line_of_business", "portal", "owner", "host"] as const;
+export const OWNERSHIP_ATTRIBUTES = ["application", "team", "line_of_business", "portal", "owner", "host"] as const;
 export const OWNERSHIP_OPERATIONS = ["set", "add", "remove"] as const;
 export const OWNERSHIP_SOURCES = ["person", "de_console", "bulk_import"] as const;
 export const VERIFICATION_STATES = ["unverified", "verified", "not_required"] as const;
@@ -14,27 +15,43 @@ export type OwnershipSource = (typeof OWNERSHIP_SOURCES)[number];
 export type VerificationState = (typeof VERIFICATION_STATES)[number];
 
 /*
- * Ownership: which SEAL application a repository belongs to, and that
+ * Ownership: which application a repository belongs to, and that
  * application's team, Line of Business, and portals; and each portal's owner
  * and host. Values are never stored as plain columns. Each one is an
  * assertion that records who said it, where it came from, and how far it can
  * be trusted. Assertions are never changed or deleted.
  */
 
-/** A SEAL application, identified by its SEAL ID. */
-export const sealApplications = sqliteTable(
-  "seal_applications",
+/**
+ * A Web Application with its own identity and a non-unique external SEAL ID.
+ * Ownership claims describe it; onboarding gives it revisions, a lifecycle,
+ * and Portal placements (docs/onboarding.md).
+ */
+export const applications = sqliteTable(
+  "applications",
   {
     id: id(),
     publicId: publicId(),
-    sealId: text("seal_id").notNull().unique(),
+    /** External metadata, never identity: any number of applications may carry one SEAL ID, or none. */
+    sealId: text("seal_id"),
     name: text("name"),
     createdAt: createdAt(),
+    /** The owning team its latest submitted onboarding revision states. Ownership claims keep their own team. */
+    ownerTeam: text("owner_team"),
+    lifecycle: text("lifecycle", { enum: LIFECYCLE_STATES }).notNull().default("draft"),
+    /** Its latest submitted onboarding revision. */
+    activeRevisionId: integer("active_revision_id").references((): AnySQLiteColumn => applicationRevisions.id, { onDelete: "restrict" }),
+    draftRevisionId: integer("draft_revision_id").references((): AnySQLiteColumn => applicationRevisions.id, { onDelete: "restrict" }),
+    lockVersion: lockVersion(),
   },
   (t) => [
-    check("seal_applications_public_id", sql`${t.publicId} GLOB 'sea_*'`),
-    check("seal_applications_seal_id", sql`length(${t.sealId}) BETWEEN 1 AND 64 AND ${t.sealId} = trim(${t.sealId})`),
-    check("seal_applications_name", sql`${t.name} IS NULL OR length(trim(${t.name})) BETWEEN 1 AND 200`),
+    index("applications_seal_id").on(t.sealId),
+    index("applications_name").on(t.name),
+    check("applications_public_id", sql`${t.publicId} GLOB 'sea_*' OR ${t.publicId} GLOB 'wap_*'`),
+    check("applications_seal_id", sealIdCheck(t.sealId)),
+    check("applications_name", sql`${t.name} IS NULL OR length(trim(${t.name})) BETWEEN 1 AND 200`),
+    check("applications_owner_team", sql`${t.ownerTeam} IS NULL OR length(trim(${t.ownerTeam})) BETWEEN 1 AND 200`),
+    check("applications_lifecycle", sql.raw(`lifecycle IN (${sqlList(LIFECYCLE_STATES)})`)),
   ],
 );
 
@@ -62,7 +79,12 @@ export const linesOfBusiness = sqliteTable(
   ],
 );
 
-/** A portal, approved as an ontology concept or pending review. */
+/**
+ * A portal, approved as an ontology concept or pending review. Its label is
+ * its name. Onboarding gives it configuration revisions and a lifecycle; a
+ * portal first named in an ownership claim is a Draft until its team
+ * onboards it (docs/onboarding.md).
+ */
 export const portals = sqliteTable(
   "portals",
   {
@@ -70,17 +92,29 @@ export const portals = sqliteTable(
     publicId: publicId(),
     ...labelColumns(),
     createdAt: createdAt(),
+    /** External metadata, never identity: several portals may carry one SEAL ID. */
+    sealId: text("seal_id"),
+    ownerTeam: text("owner_team"),
+    lifecycle: text("lifecycle", { enum: LIFECYCLE_STATES }).notNull().default("draft"),
+    /** The configuration revision the Portal runs under once activated. */
+    activeRevisionId: integer("active_revision_id").references((): AnySQLiteColumn => portalRevisions.id, { onDelete: "restrict" }),
+    draftRevisionId: integer("draft_revision_id").references((): AnySQLiteColumn => portalRevisions.id, { onDelete: "restrict" }),
+    lockVersion: lockVersion(),
   },
   (t) => [
+    index("portals_seal_id").on(t.sealId),
     check("portals_public_id", sql`${t.publicId} GLOB 'ptl_*'`),
     check("portals_label", sql`length(trim(${t.label})) BETWEEN 1 AND 100`),
     check("portals_concept", sql`${t.conceptKey} IS NULL OR ${t.conceptKey} GLOB 'portal/*'`),
+    check("portals_seal_id", sealIdCheck(t.sealId)),
+    check("portals_owner_team", sql`${t.ownerTeam} IS NULL OR length(trim(${t.ownerTeam})) BETWEEN 1 AND 200`),
+    check("portals_lifecycle", sql.raw(`lifecycle IN (${sqlList(LIFECYCLE_STATES)})`)),
   ],
 );
 
 /**
  * One ownership value. The attribute fixes the subject and value columns:
- * a repository's SEAL ID names an application; an application's team is
+ * a repository's application link names an application; an application's team is
  * text, its Line of Business a Line of Business, and each portal it's added
  * to or removed from a portal; a portal's owner names an application and its
  * host a repository.
@@ -93,9 +127,9 @@ export const ownershipAssertions = sqliteTable(
     attribute: text("attribute", { enum: OWNERSHIP_ATTRIBUTES }).notNull(),
     operation: text("operation", { enum: OWNERSHIP_OPERATIONS }).notNull(),
     subjectRepositorySourceId: integer("subject_repository_source_id").references(() => repositorySources.id, { onDelete: "restrict" }),
-    subjectApplicationId: integer("subject_application_id").references(() => sealApplications.id, { onDelete: "restrict" }),
+    subjectApplicationId: integer("subject_application_id").references(() => applications.id, { onDelete: "restrict" }),
     subjectPortalId: integer("subject_portal_id").references(() => portals.id, { onDelete: "restrict" }),
-    valueApplicationId: integer("value_application_id").references(() => sealApplications.id, { onDelete: "restrict" }),
+    valueApplicationId: integer("value_application_id").references(() => applications.id, { onDelete: "restrict" }),
     valueTeam: text("value_team"),
     valueLineOfBusinessId: integer("value_line_of_business_id").references(() => linesOfBusiness.id, { onDelete: "restrict" }),
     valuePortalId: integer("value_portal_id").references(() => portals.id, { onDelete: "restrict" }),
@@ -123,7 +157,7 @@ export const ownershipAssertions = sqliteTable(
     check(
       "ownership_assertions_shape",
       sql`(CASE ${t.attribute}
-        WHEN 'seal_id' THEN ${t.subjectRepositorySourceId} IS NOT NULL AND ${t.subjectApplicationId} IS NULL AND ${t.subjectPortalId} IS NULL
+        WHEN 'application' THEN ${t.subjectRepositorySourceId} IS NOT NULL AND ${t.subjectApplicationId} IS NULL AND ${t.subjectPortalId} IS NULL
           AND ${t.operation} = 'set' AND ${t.valueApplicationId} IS NOT NULL
           AND ${t.valueTeam} IS NULL AND ${t.valueLineOfBusinessId} IS NULL AND ${t.valuePortalId} IS NULL AND ${t.valueRepositorySourceId} IS NULL
         WHEN 'team' THEN ${t.subjectApplicationId} IS NOT NULL AND ${t.subjectRepositorySourceId} IS NULL AND ${t.subjectPortalId} IS NULL
@@ -189,6 +223,72 @@ export const deConsoleReads = sqliteTable(
         WHEN 'failed' THEN ${t.applications} IS NULL AND ${t.recorded} IS NULL AND length(${t.error}) BETWEEN 1 AND 500
         ELSE 0 END`,
     ),
+  ],
+);
+
+export const DE_CONSOLE_LINK_BASES = ["created", "matched", "resolved", "migrated"] as const;
+export const DE_CONSOLE_CONFLICT_REASONS = ["duplicate_in_export", "several_applications"] as const;
+export type DeConsoleLinkBasis = (typeof DE_CONSOLE_LINK_BASES)[number];
+export type DeConsoleConflictReason = (typeof DE_CONSOLE_CONFLICT_REASONS)[number];
+
+/**
+ * The application a DE Console entry is about. A version 2 entry is keyed by
+ * the DE Console's own application ID ("id:..."); a legacy version 1 entry
+ * only by its SEAL ID ("seal:..."), which names the one application it was
+ * first linked to and never another that carries the same SEAL ID. A link is
+ * made when a read creates or matches the application, when a person
+ * resolves a conflict, or by the onboarding migration. Links never change.
+ */
+export const deConsoleLinks = sqliteTable(
+  "de_console_links",
+  {
+    id: id(),
+    consoleKey: text("console_key").notNull().unique(),
+    applicationId: integer("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "restrict" }),
+    basis: text("basis", { enum: DE_CONSOLE_LINK_BASES }).notNull(),
+    /** The person who resolved a conflict; their identity isn't verified. */
+    linkedBy: text("linked_by"),
+    linkedAt: timestamp("linked_at").notNull(),
+  },
+  (t) => [
+    index("de_console_links_application").on(t.applicationId),
+    // One DE Console application ID per application.
+    uniqueIndex("de_console_links_one_console_id").on(t.applicationId).where(sql`${t.consoleKey} GLOB 'id:*'`),
+    check("de_console_links_key", sql`(${t.consoleKey} GLOB 'id:?*' OR ${t.consoleKey} GLOB 'seal:?*') AND length(${t.consoleKey}) <= 140`),
+    check("de_console_links_basis", sql.raw(`basis IN (${sqlList(DE_CONSOLE_LINK_BASES)})`)),
+    check("de_console_links_linked_by", sql`(${t.basis} = 'resolved') = (${t.linkedBy} IS NOT NULL) AND (${t.linkedBy} IS NULL OR length(trim(${t.linkedBy})) BETWEEN 1 AND 200)`),
+  ],
+);
+
+/**
+ * A DE Console entry a read couldn't link to exactly one application. Its
+ * values aren't recorded: they wait for a person to choose the application,
+ * or, for a SEAL ID a legacy export lists twice, for the DE Console to
+ * export stable application IDs.
+ */
+export const deConsoleConflicts = sqliteTable(
+  "de_console_conflicts",
+  {
+    id: id(),
+    publicId: publicId(),
+    readId: integer("read_id")
+      .notNull()
+      .references(() => deConsoleReads.id, { onDelete: "restrict" }),
+    consoleKey: text("console_key").notNull(),
+    sealId: text("seal_id"),
+    name: text("name"),
+    reason: text("reason", { enum: DE_CONSOLE_CONFLICT_REASONS }).notNull(),
+    /** The public IDs of the applications that carry the SEAL ID, as a JSON array. */
+    candidates: text("candidates").notNull(),
+    recordedAt: timestamp("recorded_at").notNull(),
+  },
+  (t) => [
+    index("de_console_conflicts_key").on(t.consoleKey, t.recordedAt),
+    check("de_console_conflicts_public_id", sql`${t.publicId} GLOB 'dcc_*'`),
+    check("de_console_conflicts_reason", sql.raw(`reason IN (${sqlList(DE_CONSOLE_CONFLICT_REASONS)})`)),
+    check("de_console_conflicts_candidates", sql`json_valid(${t.candidates}) AND json_type(${t.candidates}) = 'array'`),
   ],
 );
 

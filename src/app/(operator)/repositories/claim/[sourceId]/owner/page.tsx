@@ -6,13 +6,14 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { portals } from "@/lib/db/schema";
 import { isPublicId } from "@/lib/db/ids";
 import { portalOwnership, repositoryOwnership } from "@/lib/ownership/read";
+import { applicationLabel } from "@/lib/ownership/records";
 import { confirmOwner } from "../../actions";
 import { OwnerForm } from "../../claim-forms";
 import { claimCrumbs, loadClaim, rememberedClaimant } from "../load";
 
 export const metadata: Metadata = { title: "Confirm the portal's owner" };
 
-/** Proposes the Repository's SEAL application as owner of the unowned portal it hosts, for the claimant to confirm. */
+/** Proposes the Repository's application as owner of the unowned portal it hosts, for the claimant to confirm. */
 export default async function ConfirmOwnerPage({ params, searchParams }: { params: Promise<{ sourceId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ sourceId }, query] = await Promise.all([params, searchParams]);
   const loaded = loadClaim(sourceId);
@@ -32,7 +33,7 @@ export default async function ConfirmOwnerPage({ params, searchParams }: { param
       <PageHeader
         breadcrumbs={[...claimCrumbs, { href: here, label: source.name }]}
         title="Confirm the portal's owner"
-        description={`${portal.label} has no owning SEAL application. Confirm that ${application.sealId}${application.name ? ` (${application.name})` : ""}, which ${source.name} belongs to, owns it.`}
+        description={`${portal.label} has no owning application. Confirm that ${applicationLabel(application)}, which ${source.name} belongs to, owns it.`}
       />
       <OwnerForm action={confirmOwner.bind(null, source.publicId, portal.publicId)} claimant={await rememberedClaimant()} cancelHref={here} />
     </Page>

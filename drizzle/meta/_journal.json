@@ -155,6 +155,48 @@
       "when": 1790968284523,
       "tag": "0021_claim_initiative_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1791075617143,
+      "tag": "0022_onboarding_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1791077607620,
+      "tag": "0023_de_console_application_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1791079240943,
+      "tag": "0024_onboarding_storage",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1791079241298,
+      "tag": "0025_onboarding_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1791155075320,
+      "tag": "0026_onboarding_format_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1791155125736,
+      "tag": "0027_onboarding_format_version_triggers",
+      "breakpoints": true
     }
   ]
 }

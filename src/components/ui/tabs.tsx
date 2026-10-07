@@ -8,7 +8,7 @@ import styles from "./tabs.module.css";
 export function Tabs({ label, aside, children }: { label: string; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className={styles.bar}>
-      <nav className={styles.tabs} aria-label={label}>
+      <nav className={styles.tabs} aria-label={label} data-scroll-x="">
         {children}
       </nav>
       {aside && <div className={styles.aside}>{aside}</div>}

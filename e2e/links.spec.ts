@@ -1,7 +1,8 @@
-import type { Page } from "@playwright/test";
+import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
+import { seedV1Surfaces } from "./support/onboarding-surfaces";
 import { paths } from "./support/paths";
-import { seedDemoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
+import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
 
 /**
  * The link check (operator-interface/page-patterns spec, "Every link opens the
@@ -68,20 +69,20 @@ async function unfilledPrimaries(page: Page): Promise<string[]> {
   );
 }
 
-test("every link opens a page, every page uses the interface vocabulary, and every primary action has the primary fill", async ({ browser, page, context, db, sourcesDir, baseURL }) => {
-  test.setTimeout(900_000);
-  await seedOperatorSurfaces(db, sourcesDir);
-  await seedDemoSurfaces(page, context, db);
-
-  const queue = [...START];
+/**
+ * Opens each page from `start`, follows links up to `depth` hops away, at most
+ * PER_SHAPE pages of each route shape, and records every page that doesn't
+ * open or breaks the vocabulary. Returns the operator pages it read.
+ */
+async function crawl(page: Page, start: string[], depth: number, problems: string[]): Promise<string[]> {
+  const queue = start.map((url) => ({ url, hops: 0 }));
   const seen = new Set<string>();
   const shapes = new Map<string, number>();
   const linkedFrom = new Map<string, string>();
-  const problems: string[] = [];
   const visited: string[] = [];
 
   while (queue.length) {
-    const url = queue.shift()!;
+    const { url, hops } = queue.shift()!;
     if (seen.has(url)) continue;
     seen.add(url);
     const response = await page.goto(url);
@@ -99,6 +100,7 @@ test("every link opens a page, every page uses the interface vocabulary, and eve
       if (match) problems.push(`${url} shows "${match[0]}"`);
     }
     visited.push(url);
+    if (hops >= depth) continue;
     for (const { href, label } of found.links) {
       const target = href.split("#")[0]!;
       if (!followable(href) || !target || seen.has(target)) continue;
@@ -106,27 +108,52 @@ test("every link opens a page, every page uses the interface vocabulary, and eve
       if (count >= PER_SHAPE) continue;
       shapes.set(shape(target), count + 1);
       linkedFrom.set(target, `${url} · "${label}"`);
-      queue.push(target);
+      queue.push({ url: target, hops: hops + 1 });
     }
   }
-  expect(visited.length, "the crawl reaches every section").toBeGreaterThan(40);
+  return visited;
+}
 
-  // Primary actions, in both themes. Against a production build (E2E_PRODUCTION=1,
-  // tasks 9.3) this runs without JavaScript, so it checks the first paint. `next dev`
-  // serves component stylesheets to a page without JavaScript unreliably, so a dev
-  // run checks the hydrated page instead.
+/** Records every primary action on `urls` without the primary fill, in both themes, as a visitor with `context`'s cookies sees it. */
+async function checkPrimaries(browser: Browser, context: BrowserContext, baseURL: string, urls: string[], problems: string[]) {
+  // Against a production build (E2E_PRODUCTION=1, tasks 9.3) this runs without
+  // JavaScript, so it checks the first paint. `next dev` serves component
+  // stylesheets to a page without JavaScript unreliably, so a dev run checks
+  // the hydrated page instead.
   const firstPaint = Boolean(process.env.E2E_PRODUCTION);
   const checker = await browser.newContext({ javaScriptEnabled: !firstPaint, viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
   await checker.addCookies(await context.cookies());
   const checking = await checker.newPage();
   for (const theme of ["light", "dark"] as const) {
-    await checker.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
-    for (const url of visited) {
+    await checker.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL }]);
+    for (const url of urls) {
       await checking.goto(url);
       for (const problem of await unfilledPrimaries(checking)) problems.push(`${url} (${theme}): ${problem}`);
     }
   }
   await checker.close();
+}
 
+test("every link opens a page, every page uses the interface vocabulary, and every primary action has the primary fill", async ({ browser, page, context, db, sourcesDir, baseURL }) => {
+  test.setTimeout(900_000);
+  await seedOperatorSurfaces(db, sourcesDir);
+  await seedDemoSurfaces(page, context, db);
+
+  const problems: string[] = [];
+  const visited = await crawl(page, START, Infinity, problems);
+  expect(visited.length, "the crawl reaches every section").toBeGreaterThan(40);
+  await checkPrimaries(browser, context, baseURL!, visited, problems);
+  expect(problems).toEqual([]);
+});
+
+// v1 history renders on the current routes, from a fixture that loads into an
+// empty database, so it can't be seeded beside the operator surfaces. Its
+// pages, and the pages they link to, get their own pass.
+test("on v1 history and converted Drafts, every link opens a page, every page uses the interface vocabulary, and every primary action has the primary fill", async ({ browser, page, context, db, baseURL }) => {
+  test.skip(Boolean(process.env.E2E_PRODUCTION), "A production run shares one database, and the v1 fixture needs an empty one.");
+  test.setTimeout(300_000);
+  const problems: string[] = [];
+  const visited = await crawl(page, seedV1Surfaces(db).map(([, url]) => surfaceUrl(url)), 1, problems);
+  await checkPrimaries(browser, context, baseURL!, visited, problems);
   expect(problems).toEqual([]);
 });

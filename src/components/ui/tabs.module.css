@@ -43,7 +43,8 @@
   }
 
   @container content (max-width: 767px) {
-    .bar { flex-direction: column-reverse; align-items: stretch; }
+    /* One line, so the tabs take the bar's width and scroll, rather than widening the line to fit them. */
+    .bar { flex-direction: column-reverse; flex-wrap: nowrap; align-items: stretch; }
     .aside { flex-basis: auto; }
   }
 }

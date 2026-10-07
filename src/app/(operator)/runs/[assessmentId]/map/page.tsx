@@ -26,7 +26,7 @@ export default async function MapPage({ params, searchParams }: { params: Promis
       query={query}
       title="Relationship Map"
       ancestors={[]}
-      description="This Run's repositories by Line of Business, then portal and SEAL application, with the relationships between them. Open a group to go down a level, or focus a repository to see what a change to it affects."
+      description="This Run's repositories by Line of Business, then portal and application, with the relationships between them. Open a group to go down a level, or focus a repository to see what a change to it affects."
       levelHref={href.run(view)}
       scope={{ kind: "from", nodes: new Set(view.repositories.keys()) }}
       scopeDescription="Every relationship in this Run, from the repository that declared each one."

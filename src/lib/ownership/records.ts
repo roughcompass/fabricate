@@ -1,26 +1,48 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { generatePublicId } from "@/lib/db/ids";
-import { linesOfBusiness, ownershipAssertions, ownershipSupersessions, portals, sealApplications, type OwnershipSource } from "@/lib/db/schema";
+import { linesOfBusiness, ownershipAssertions, ownershipSupersessions, portals, applications, type OwnershipSource } from "@/lib/db/schema";
 
 /** Persistence for ownership: applications, portals, Lines of Business, and the assertions about them. */
 
-export type SealApplication = typeof sealApplications.$inferSelect;
+export type Application = typeof applications.$inferSelect;
 export type Portal = typeof portals.$inferSelect;
 export type LineOfBusiness = typeof linesOfBusiness.$inferSelect;
 export type OwnershipAssertion = typeof ownershipAssertions.$inferSelect;
+
+/** Letters, digits, dots, dashes, and underscores, starting with a letter or digit. */
+export const SEAL_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 /** A label as one value: trimmed, inner whitespace collapsed, lowercase. */
 export function labelKey(label: string): string {
   return label.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-/** The application with +sealId+, created on first mention. */
-export function ensureApplication(db: Executor, sealId: string, name: string | null = null): SealApplication {
-  const id = sealId.trim();
-  const found = db.select().from(sealApplications).where(eq(sealApplications.sealId, id)).get();
-  if (found) return found;
-  return db.insert(sealApplications).values({ publicId: generatePublicId("sea"), sealId: id, name, createdAt: new Date() }).returning().get();
+/**
+ * A new Web Application. Its SEAL ID is metadata: another application may
+ * carry the same one, and nothing finds or merges applications by it.
+ */
+export function createApplication(db: Executor, input: { sealId: string | null; name?: string | null }): Application {
+  return db
+    .insert(applications)
+    .values({ publicId: generatePublicId("wap"), sealId: input.sealId?.trim() || null, name: input.name?.trim() || null, createdAt: new Date() })
+    .returning()
+    .get();
+}
+
+export function findApplication(db: Executor, publicId: string): Application | undefined {
+  return db.select().from(applications).where(eq(applications.publicId, publicId)).get();
+}
+
+/** Every application carrying +sealId+, oldest first. More than one is normal. */
+export function applicationsWithSealId(db: Executor, sealId: string): Application[] {
+  return db.select().from(applications).where(eq(applications.sealId, sealId.trim())).orderBy(asc(applications.id)).all();
+}
+
+/** How an application reads to a person: its name with its SEAL ID beside it, or the SEAL ID alone. */
+export function applicationLabel(application: { name: string | null; sealId: string | null }): string {
+  if (!application.name) return application.sealId ?? "Unnamed application";
+  return application.sealId ? `${application.name} (${application.sealId})` : application.name;
 }
 
 /** The portal named +label+, created as a pending candidate on first mention. */
@@ -41,7 +63,7 @@ export function ensureLineOfBusiness(db: Executor, label: string): LineOfBusines
 
 /** What an assertion says: its attribute fixes its subject and value. */
 export type AssertionClaim =
-  | { attribute: "seal_id"; repository: number; application: number }
+  | { attribute: "application"; repository: number; application: number }
   | { attribute: "team"; application: number; team: string }
   | { attribute: "line_of_business"; application: number; lineOfBusiness: number }
   | { attribute: "portal"; application: number; portal: number; operation: "add" | "remove" }
@@ -66,7 +88,7 @@ export interface AssertionProvenance {
 export function recordAssertion(db: Executor, input: AssertionClaim & AssertionProvenance): OwnershipAssertion {
   const columns = (() => {
     switch (input.attribute) {
-      case "seal_id":
+      case "application":
         return { operation: "set", subjectRepositorySourceId: input.repository, valueApplicationId: input.application } as const;
       case "team":
         return { operation: "set", subjectApplicationId: input.application, valueTeam: input.team.trim() } as const;

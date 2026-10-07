@@ -21,10 +21,17 @@ export const PUBLIC_ID_PREFIXES = {
   demoComment: "cmt",
   demoProfile: "dpf",
   ontologyRelease: "olr",
-  sealApplication: "sea",
+  /** Applications created before onboarding keep the prefix they were given. */
+  legacyApplication: "sea",
+  application: "wap",
   lineOfBusiness: "lob",
   portal: "ptl",
   ownershipAssertion: "own",
+  deConsoleConflict: "dcc",
+  microfrontend: "mfe",
+  placement: "plc",
+  placementDecision: "pdc",
+  externalReference: "xrf",
 } as const;
 
 export type PublicIdPrefix = (typeof PUBLIC_ID_PREFIXES)[keyof typeof PUBLIC_ID_PREFIXES];

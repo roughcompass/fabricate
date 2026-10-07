@@ -2,13 +2,14 @@ import { DescriptionList, type DescriptionItem } from "@/components/ui/descripti
 import { RelativeTime } from "@/components/ui/relative-time";
 import type { Effective, Provenance } from "@/lib/ownership/effective";
 import type { ApplicationOwnership, ApplicationRef, LabelRef, PortalOwnership, RepositoryRef } from "@/lib/ownership/read";
+import { applicationLabel } from "@/lib/ownership/records";
 import styles from "./ownership-values.module.css";
 
 interface OwnershipValuesProps {
-  /** The repository's link to its SEAL application; null while a claim is choosing one. */
+  /** The repository's link to its application; null while a claim is choosing one. */
   link: Effective<ApplicationRef> | null;
-  /** The SEAL ID a claim chose, shown when the repository isn't linked yet. */
-  chosenSealId?: string | null;
+  /** The application a claim chose, shown when the repository isn't linked yet. */
+  chosen?: string | null;
   application: ApplicationOwnership | null;
   /** The portals this repository is claimed to host, with each one's host and owner. */
   hosts?: readonly PortalOwnership[];
@@ -18,17 +19,16 @@ interface OwnershipValuesProps {
 }
 
 /** Ownership values, each with where it came from, who stated it, how far it's trusted, and any conflict. */
-export function OwnershipValues({ link, chosenSealId, application, hosts = [], consoleReadAt, surface = false }: OwnershipValuesProps) {
+export function OwnershipValues({ link, chosen, application, hosts = [], consoleReadAt, surface = false }: OwnershipValuesProps) {
   const from = (provenance: Provenance | null) => <Source provenance={provenance} consoleReadAt={consoleReadAt} />;
-  const sealApplication = (value: ApplicationRef) => `${value.sealId}${value.name ? ` · ${value.name}` : ""}`;
   const items: DescriptionItem[] = [
     [
-      "SEAL application",
+      "Application",
       link?.value ? (
-        <Value effective={link} label={sealApplication} from={from} />
-      ) : chosenSealId ? (
+        <Value effective={link} label={applicationLabel} from={from} />
+      ) : chosen ? (
         <>
-          {application ? sealApplication(application.application) : chosenSealId}
+          {application ? applicationLabel(application.application) : chosen}
           <span className={styles.source}>Chosen for this claim</span>
         </>
       ) : (
@@ -65,7 +65,7 @@ export function OwnershipValues({ link, chosenSealId, application, hosts = [], c
         {hosts.map((hosted) => (
           <li key={hosted.portal.publicId}>
             {pendingLabel(hosted.portal)}
-            <span className={styles.source}>{hosted.owner.value ? `Owned by ${sealApplication(hosted.owner.value)}` : "No owner yet"}</span>
+            <span className={styles.source}>{hosted.owner.value ? `Owned by ${applicationLabel(hosted.owner.value)}` : "No owner yet"}</span>
             <span className={styles.source}>
               Host: <Value effective={hosted.host} label={(repository: RepositoryRef) => repository.name} from={from} />
             </span>

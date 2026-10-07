@@ -83,7 +83,7 @@ export function rollUp(groups: readonly GroupDefinition[], relationships: readon
 export const groupKey = {
   lineOfBusiness: (id: string | null) => `lob:${id ?? "none"}`,
   portal: (id: string) => `portal:${id}`,
-  application: (id: string) => `seal:${id}`,
+  application: (id: string) => `application:${id}`,
   repository: (nodeId: string) => `repo:${nodeId}`,
   system: (id: string) => `system:${id}`,
   unassigned: "unassigned",

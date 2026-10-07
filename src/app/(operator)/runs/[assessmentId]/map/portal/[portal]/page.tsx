@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return { title: mapTitle(run, run?.view?.portals.get(portal)?.label) };
 }
 
-/** One portal: its diagram, its SEAL applications, and its claims beside what its host loads. */
+/** One portal: its diagram, its applications, and its claims beside what its host loads. */
 export default async function PortalPage({ params, searchParams }: { params: Params; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ assessmentId, portal }, query] = await Promise.all([params, searchParams]);
   const run = loadRun(assessmentId);
@@ -40,12 +40,12 @@ export default async function PortalPage({ params, searchParams }: { params: Par
       scope={{ kind: "from", nodes: level.members }}
       scopeDescription={`Relationships declared by the repositories in ${level.label}.`}
     >
-      <Section title="Diagram" description="Only relationships between SEAL applications are drawn. Third-party packages and each repository's own package are left out.">
+      <Section title="Diagram" description="Only relationships between applications are drawn. Third-party packages and each repository's own package are left out.">
         <Panel>
           <Diagram id="portal-diagram" label={`${level.label} portal`} data={level.diagram} />
         </Panel>
       </Section>
-      <GroupTable title="SEAL applications" description="The applications in this portal, with the relationships between their own repositories." label="SEAL application" groups={level.groups} empty="No applications are claimed in this portal" />
+      <GroupTable title="Applications" description="The applications in this portal, with the relationships between their own repositories." label="Application" groups={level.groups} empty="No applications are claimed in this portal" />
       <MembershipLists membership={level.membership} hostName={level.hostName} />
       <SharedList entries={level.shared} />
     </MapLevel>

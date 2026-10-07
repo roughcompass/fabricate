@@ -9,24 +9,28 @@ import { type RepositorySource, findEnabledSourceByCanonicalUrl, getSource, inse
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, ValidationError, isUniqueViolation } from "@/lib/db/errors";
-import { assessmentTargets, assessments, linesOfBusiness, ownershipAssertions, ownershipSupersessions, portals, repositoryProfiles, repositorySources, sealApplications } from "@/lib/db/schema";
+import { assessmentTargets, assessments, linesOfBusiness, ownershipAssertions, ownershipSupersessions, portals, repositoryProfiles, repositorySources } from "@/lib/db/schema";
 import { claimInitiative } from "@/lib/initiatives/initiative-records";
 import { type Candidate, provenanceOf } from "./effective";
 import { type ApplicationOwnership, type LabelRef, type PortalOwnership, type RepositoryOwnership, applicationOwnership, portalOwnership, repositoryOwnership } from "./read";
-import { type AssertionClaim, type OwnershipAssertion, type Portal, ensureApplication, ensureLineOfBusiness, ensurePortal, labelKey, recordAssertion } from "./records";
+import { type Application, type AssertionClaim, type OwnershipAssertion, type Portal, SEAL_ID, applicationLabel, applicationsWithSealId, createApplication, ensureLineOfBusiness, ensurePortal, findApplication, labelKey, recordAssertion } from "./records";
 
 /*
  * The claim flow (design decision 2): a person enters a git URL, then answers
- * only what isn't known. The SEAL ID comes first, because the application
- * decides what's known: a DE Web application's team and portals come from the
- * DE Console, and an application claimed before already has its values. Each
+ * only what isn't known. The application comes first, because it decides
+ * what's known: a DE Web application's team and portals come from the DE
+ * Console, and an application claimed before already has its values. Each
  * answer is an unverified assertion from the identity the person entered,
  * until Bitbucket verification exists. Completing a claim starts a Run of the
  * repository when it has no complete one.
+ *
+ * An application is chosen by its identity. A SEAL ID only finds candidates:
+ * several applications may carry one, so a SEAL ID that more than one
+ * carries is resolved by the claimant, and a new SEAL ID makes a new
+ * application rather than joining an existing one by name.
  */
 
-/** Letters, digits, dots, dashes, and underscores, starting with a letter or digit. */
-export const SEAL_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+export { SEAL_ID } from "./records";
 const MAX_PORTALS = 20;
 
 export interface Claimant {
@@ -72,18 +76,36 @@ export function repositoryName(canonicalUrl: string): string {
 }
 
 export interface ClaimQuestions {
-  sealId: boolean;
+  /** Which application the repository belongs to. */
+  application: boolean;
   team: boolean;
   lineOfBusiness: boolean;
   portals: boolean;
 }
 
+/** How a claim names its application: an existing one, or a SEAL ID that finds candidates or makes a new one. */
+export interface ApplicationChoice {
+  /** An existing application's public ID. */
+  application?: string | null;
+  sealId?: string | null;
+  /** Make a new application with +sealId+ even though others carry it. */
+  newApplication?: boolean;
+  /** Ask which application carries +sealId+ even when only one does. */
+  choose?: boolean;
+}
+
 export interface ClaimView {
   source: RepositorySource;
   ownership: RepositoryOwnership;
-  /** The repository's SEAL ID, or the one this claim chose. */
+  /** The application the repository is linked to, or the existing one this claim chose. */
+  record: Application | null;
+  /** The SEAL ID of the new application this claim makes, when it makes one. */
+  newSealId: string | null;
+  /** A SEAL ID that names several applications, or one the claimant asked to choose for. */
   sealId: string | null;
-  /** True when the repository is already linked to its SEAL application. */
+  /** The applications carrying +sealId+, for the claimant to choose between. */
+  sameSeal: Application[];
+  /** True when the repository is already linked to its application. */
   linked: boolean;
   /** The application's current ownership, when it's known at all. */
   application: ApplicationOwnership | null;
@@ -94,22 +116,64 @@ export interface ClaimView {
   known: boolean;
 }
 
-/** What a claim of +source+ knows, and what it still has to ask, for an optionally chosen SEAL ID. */
-export function claimView(db: Executor, source: RepositorySource, chosenSealId?: string | null): ClaimView {
+/** An existing application a choice names, the SEAL ID of a new one, and the applications its SEAL ID finds. */
+export interface ResolvedChoice {
+  record: Application | null;
+  newSealId: string | null;
+  sealId: string | null;
+  sameSeal: Application[];
+}
+
+/**
+ * Resolves a choice: a named application; or a SEAL ID that no application
+ * carries, so it makes a new one; or one application carries, so it names
+ * it; or several carry, so the person must choose. Nothing is merged.
+ */
+export function resolveChoice(db: Executor, choice: ApplicationChoice): ResolvedChoice {
+  const sealId = choice.sealId?.trim() || null;
+  if (choice.application) return { record: findApplication(db, choice.application) ?? null, newSealId: null, sealId, sameSeal: [] };
+  if (!sealId) return { record: null, newSealId: null, sealId: null, sameSeal: [] };
+  const sameSeal = applicationsWithSealId(db, sealId);
+  if (choice.newApplication || sameSeal.length === 0) return { record: null, newSealId: sealId, sealId, sameSeal: [] };
+  if (sameSeal.length === 1 && !choice.choose) return { record: sameSeal[0]!, newSealId: null, sealId, sameSeal: [] };
+  return { record: null, newSealId: null, sealId, sameSeal };
+}
+
+/** What a claim of +source+ knows, and what it still has to ask, for an optionally chosen application. */
+export function claimView(db: Executor, source: RepositorySource, choice: ApplicationChoice = {}): ClaimView {
   const ownership = repositoryOwnership(db, [source.id]).get(source.id)!;
-  const linked = ownership.application.value !== null;
-  const sealId = linked ? ownership.application.value!.sealId : chosenSealId?.trim() || null;
-  const record = sealId ? db.select().from(sealApplications).where(eq(sealApplications.sealId, sealId)).get() : undefined;
+  const linkedRef = ownership.application.value;
+  const resolved: ResolvedChoice = linkedRef ? { record: findApplication(db, linkedRef.publicId) ?? null, newSealId: null, sealId: null, sameSeal: [] } : resolveChoice(db, choice);
+  const { record, newSealId } = resolved;
   const application = record ? (applicationOwnership(db, [record.id]).get(record.id) ?? null) : null;
   const deWeb = application?.deWeb ?? false;
+  const chosen = record !== null || newSealId !== null;
   const asks: ClaimQuestions = {
-    sealId: sealId === null,
-    team: sealId !== null && !application?.team.value,
-    lineOfBusiness: sealId !== null && !application?.lineOfBusiness.value,
+    application: !chosen,
+    team: chosen && !application?.team.value,
+    lineOfBusiness: chosen && !application?.lineOfBusiness.value,
     // A DE Web application's portals are the DE Console's, even when it lists none.
-    portals: sealId !== null && !deWeb && !application?.portals.length,
+    portals: chosen && !deWeb && !application?.portals.length,
   };
-  return { source, ownership, sealId, linked, application, deWeb, asks, known: linked && !asks.team && !asks.lineOfBusiness && !asks.portals };
+  return {
+    source,
+    ownership,
+    record,
+    newSealId,
+    sealId: chosen ? null : resolved.sealId,
+    sameSeal: resolved.sameSeal,
+    linked: linkedRef !== null,
+    application,
+    deWeb,
+    asks,
+    known: linkedRef !== null && !asks.team && !asks.lineOfBusiness && !asks.portals,
+  };
+}
+
+/** How the application a claim chose reads: its name and SEAL ID, or the SEAL ID of the new one. */
+export function chosenLabel(view: ClaimView): string | null {
+  if (view.record) return applicationLabel(view.record);
+  return view.newSealId;
 }
 
 export interface ClaimChoices {
@@ -129,9 +193,7 @@ export function claimChoices(db: Executor): ClaimChoices {
   return { portals: approved(portals), linesOfBusiness: approved(linesOfBusiness) };
 }
 
-export interface ClaimInput extends Claimant {
-  /** Required when the repository isn't linked yet. */
-  sealId?: string;
+export interface ClaimInput extends Claimant, ApplicationChoice {
   team?: string;
   lineOfBusiness?: string;
   portals?: readonly string[];
@@ -157,10 +219,9 @@ export function completeClaim(db: Executor, sourcePublicId: string, input: Claim
     const source = getSource(tx, sourcePublicId);
     const issues = new IssueCollector();
     const claimant = validClaimant(input, issues);
-    const sealId = input.sealId?.trim() ?? "";
-    const view = claimView(tx, source, sealId);
-    if (view.asks.sealId) issues.add("sealId", "Choose or enter a SEAL ID");
-    else if (!view.linked && !SEAL_ID.test(sealId)) issues.add("sealId", "Enter a SEAL ID of letters, digits, dots, dashes, or underscores");
+    const view = claimView(tx, source, input);
+    if (view.asks.application) issues.add("application", applicationQuestion(view));
+    else if (view.newSealId !== null && !SEAL_ID.test(view.newSealId)) issues.add("sealId", "Enter a SEAL ID of letters, digits, dots, dashes, or underscores");
     const team = view.asks.team ? required(input.team, 200, "team", "Enter the team that owns this application", issues) : null;
     const lineOfBusiness = view.asks.lineOfBusiness ? required(input.lineOfBusiness, 100, "lineOfBusiness", "Choose or enter a Line of Business", issues) : null;
     const portalLabels = view.asks.portals ? labels(input.portals ?? [], issues) : [];
@@ -168,8 +229,8 @@ export function completeClaim(db: Executor, sourcePublicId: string, input: Claim
     issues.throwIfAny();
 
     const provenance = { ...claimant, source: "person" as const };
-    const application = ensureApplication(tx, view.sealId!);
-    if (!view.linked) recordAssertion(tx, { attribute: "seal_id", repository: source.id, application: application.id, ...provenance });
+    const application = view.record ?? createApplication(tx, { sealId: view.newSealId! });
+    if (!view.linked) recordAssertion(tx, { attribute: "application", repository: source.id, application: application.id, ...provenance });
     if (team) recordAssertion(tx, { attribute: "team", application: application.id, team, ...provenance });
     if (lineOfBusiness) recordAssertion(tx, { attribute: "line_of_business", application: application.id, lineOfBusiness: ensureLineOfBusiness(tx, lineOfBusiness).id, ...provenance });
     for (const label of portalLabels) recordAssertion(tx, { attribute: "portal", operation: "add", application: application.id, portal: ensurePortal(tx, label).id, ...provenance });
@@ -200,13 +261,17 @@ export function confirmPortalOwner(db: Executor, sourcePublicId: string, portalP
     if (!portal || !ownership || !application || !ownership.host.candidates.some((candidate) => candidate.value.id === source.id)) {
       throw new ValidationError([{ field: "base", message: "This Repository isn't claimed as the portal's host, so its application can't be proposed as owner" }]);
     }
-    if (ownership.owner.value) throw new ValidationError([{ field: "base", message: `${portal.label} is already owned by ${ownership.owner.value.sealId}` }]);
+    if (ownership.owner.value) throw new ValidationError([{ field: "base", message: `${portal.label} is already owned by ${applicationLabel(ownership.owner.value)}` }]);
     recordAssertion(tx, { attribute: "owner", portal: portal.id, application: application.id, ...who, source: "person" });
   });
 }
 
 export interface CorrectionInput extends Claimant {
+  /** The application's SEAL ID: a different one moves the repository to an application that carries it, or to a new one. */
   sealId: string;
+  /** The application chosen when several carry +sealId+. */
+  application?: string | null;
+  newApplication?: boolean;
   team?: string;
   lineOfBusiness?: string;
   portals?: readonly string[];
@@ -217,8 +282,9 @@ export interface CorrectionInput extends Claimant {
  * it, so a conflict clears and the history keeps every assertion. A value
  * resubmitted unchanged is recorded only when it's in conflict, to settle
  * it. Values from the DE Console aren't corrected here: the DE Console is
- * their record. A new SEAL ID is recorded alone, because the other values
- * belong to the application it names.
+ * their record. Moving to another application is recorded alone, because
+ * the other values belong to the application it names. When several
+ * applications carry the new SEAL ID, the person chooses one.
  */
 export function correctOwnership(db: Executor, sourcePublicId: string, input: CorrectionInput): { recorded: number; sealChanged: boolean } {
   return immediate(db, (tx) => {
@@ -237,9 +303,21 @@ export function correctOwnership(db: Executor, sourcePublicId: string, input: Co
     };
 
     const link = view.ownership.application;
-    if (!link.value || sealId !== link.value.sealId || link.conflict) {
-      record({ attribute: "seal_id", repository: source.id, application: ensureApplication(tx, sealId).id }, link.candidates);
-      return { recorded, sealChanged: sealId !== link.value?.sealId };
+    const current = link.value;
+    const staying = current !== null && !input.newApplication && (input.application ? input.application === current.publicId : sealId === current.sealId);
+    if (!staying) {
+      const target = resolveChoice(tx, { application: input.application, sealId, newApplication: input.newApplication });
+      if (!target.record && target.newSealId === null) {
+        throw new ValidationError([{ field: "application", message: `${target.sameSeal.length} applications carry SEAL ID ${sealId}. Choose one, or a new application.` }]);
+      }
+      const application = target.record ?? createApplication(tx, { sealId: target.newSealId! });
+      record({ attribute: "application", repository: source.id, application: application.id }, link.candidates);
+      return { recorded, sealChanged: true };
+    }
+    if (link.conflict) {
+      // Resubmitting the winning application settles the conflict.
+      record({ attribute: "application", repository: source.id, application: current.id }, link.candidates);
+      return { recorded, sealChanged: false };
     }
 
     const application = view.application!;
@@ -313,6 +391,13 @@ function startRunIfNeeded(db: Executor, source: RepositorySource, launchToken: s
   if (state.profile || state.active) return null;
   const result = launchAssessment(db, claimInitiative(db, source).publicId, launchToken, config);
   return result.duplicate ? null : result.assessment;
+}
+
+/** What to ask when a claim hasn't settled its application. */
+function applicationQuestion(view: ClaimView): string {
+  if (view.sameSeal.length > 1) return `${view.sameSeal.length} applications carry SEAL ID ${view.sealId}. Choose one, or a new application.`;
+  if (view.sameSeal.length === 1) return `Choose the application that carries SEAL ID ${view.sealId}, or a new one.`;
+  return "Choose an application or enter a SEAL ID";
 }
 
 function validClaimant(input: Claimant, issues: IssueCollector): Required<Claimant> {

@@ -3,6 +3,7 @@ import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, getDb } from "@/lib/db/client";
 import { FINALIZE_EVALUATION, finalizeEvaluation, runEvaluationRelease } from "@/lib/evaluations/jobs";
 import { EVALUATE_RELEASE } from "@/lib/evaluations/start";
+import { REFRESH_ONBOARDING, REFRESH_SUBJECT, runScheduledRefresh, runSubjectRefresh } from "@/lib/onboarding/external/refresh";
 import { READ_DE_CONSOLE, runScheduledDeConsoleRead } from "@/lib/ownership/de-console-schedule";
 import type { HandlerRegistry } from "./worker";
 
@@ -15,5 +16,7 @@ export function jobHandlers(db: Executor = getDb(), config: FabricateConfig = ge
     [EVALUATE_RELEASE]: async (payload) => void (await runEvaluationRelease(db, { evaluation: String(payload.evaluation), position: Number(payload.position) })),
     [FINALIZE_EVALUATION]: (payload) => void finalizeEvaluation(db, String(payload.evaluation)),
     [READ_DE_CONSOLE]: (_payload, context) => runScheduledDeConsoleRead(db, config, { signal: context.signal }),
+    [REFRESH_ONBOARDING]: (_payload, context) => runScheduledRefresh(db, config, { signal: context.signal }),
+    [REFRESH_SUBJECT]: (payload, context) => runSubjectRefresh(db, config, { kind: payload.kind, id: payload.id }, { signal: context.signal }),
   };
 }

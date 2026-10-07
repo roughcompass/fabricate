@@ -171,7 +171,7 @@ Sizes are `sm` (28px) for table rows, filter bars, and toolbars; `md` (36px) eve
 
 ### Form controls
 
-**Form** (`form.tsx`) provides the field anatomy: label, control, then description, which an error replaces. Field errors appear only here, under their field; never repeat them in a summary.
+**Form** (`form.tsx`) provides the field anatomy: label, control, then description, which an error replaces. Field errors appear only here, under their field; never repeat them in a summary. A field with several errors shows them as sentences, one after another.
 
 | Component | Notes |
 | --- | --- |
@@ -185,7 +185,7 @@ Sizes are `sm` (28px) for table rows, filter bars, and toolbars; `md` (36px) eve
 | `FormAlert` | One error not tied to a field, such as a concurrent edit, at the top of the form |
 | `FormNote` | A statement that holds whatever the visitor enters, such as where the result is hosted: an icon, a title, and a sentence, recessed on `--color-bg-subtle` with no border, after any `FormAlert` and before the first field. It has no tone and no live role, so it is never an alert. The deploy form's "Deploys to DE Web Managed Hosting" is the one in use |
 
-Mark optional fields with `optional`; required fields carry no marker. Check boxes and radios are one drawn control: 16px, a strong boundary, the accent when selected.
+Mark optional fields with `optional`; required fields carry no marker. Check boxes and radios are one drawn control: 16px, a strong boundary, the accent when selected. Only a check box shows the indeterminate state: every radio in a group with nothing chosen also matches `:indeterminate`, and stays empty.
 
 **SearchField** (`search-field.tsx`) is the one search input: a leading search icon, the input, and, while it has a value, a Clear search control. It comes in the three control sizes, uses the text input's boundary and focus ring, and submits with its form, so searching works without JavaScript. Give it `clearHref`, the same page without the search, so the clear control is a link. The Repositories list and the Salt Patterns gallery use it.
 
@@ -215,7 +215,7 @@ Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: t
 | `Disclosure` (`disclosure.tsx`) | A native `<details>`: `panel` for grouped results, `plain` for secondary details. On narrow screens the `aside` moves below a label that needs the room |
 | `CodeBlock` (`code-block.tsx`) | Cited lines with numbers and a copy control; long lines wrap |
 | `Table` (`table.tsx`) | A quiet header, a linked primary cell, `RowActions` that keep rows one height, `EmptyRow`, and stacked rows on narrow screens; `scroll` for many numeric columns, which also stacks on narrow screens. Give every cell a `label`, since stacked rows show it |
-| `Tabs` (`tabs.tsx`) | Views of one page, with count badges |
+| `Tabs` (`tabs.tsx`) | Views of one page, with count badges. On narrow screens the tabs keep one line and scroll sideways on their own (`data-scroll-x`), under the aside |
 | `Pagination` (`pagination.tsx`) | Links between the pages of a long list: the position, Previous and Next, the first and last pages, and the current page with its neighbours. The page lives in the address, as `page`, so it works without JavaScript and every page can be shared |
 | `ToggleGroup` (`toggle-group.tsx`, client) | Mutually exclusive choices as a row of buttons, the chosen one pressed (`aria-pressed`), such as preview mode's Mobile, Tablet, and Desktop. The choice lives in the URL: each button submits a GET form, so it works without JavaScript, and navigates in place with it |
 | `Breadcrumbs` (`breadcrumbs.tsx`) | A record's linked ancestors |
@@ -263,12 +263,13 @@ Every page follows one of a few patterns, built from `Page` and `PageHeader` (`p
 `AppShell` (`src/components/shell/app-shell.tsx`) frames every page, in the manner of Vercel's dashboard: a skip link; a full-height sidebar on the canvas; and the content column, which holds the main region. The sidebar holds the product mark, the navigation, and, in its footer, the theme switcher. The sidebar is fixed to the viewport over its reserved grid column, so it never shifts at the end of a long page.
 
 **Navigation drills into sections.** `SidebarNav` (`sidebar-nav.tsx`, client) shows one of two menus, both defined in `navigation.ts`:
-- **The section menu:** Assessments, plus Applications and Salt Patterns while the template demo is enabled, each with an icon and a chevron.
+- **The section menu:** Assessments and Web Onboarding, plus Applications and Salt Patterns while the template demo is enabled, each with an icon and a chevron.
 - **A section's sub-menu:** headed by the section's name, with Show all sections beside the heading. Its items come in groups (`NavGroup`); every group after the first has a caption heading that names its list for assistive technology.
 
 | Section | Sub-menu groups |
 | --- | --- |
 | Assessments | All Assessments, New Assessment · **Repositories:** All Repositories, New Repository, Import Repositories · **Standards:** All Standards, New Standard |
+| Web Onboarding | Portals, Web Applications, MFEs, Reviews |
 | Applications | All Applications, Import from BitBucket |
 | Salt Patterns | All Salt Patterns, New application |
 
@@ -311,8 +312,12 @@ Records are named for people, never by public ID:
 | Profile | The repository name |
 | Finding | The Control title, with the subject in the meta line |
 | Evidence | The file location |
+| Portal | Its configured name, "Access" |
+| Web Application | Its configured name, "Payments workspace" |
+| MFE | Its configured name, "Payee search" |
+| Placement review | The Application, then the Portal, "Payments workspace · Access" |
 
-Public IDs appear only in a page's Details area, with a copy control. Each detail page's browser title names the record and its parent: "Run #3 · Checkout platform migration · DE FabLab". Sequence numbers come from `assessmentNumber` and `evaluationNumber`, which count the model Initiative's records in creation order. They are stable only because Runs and Evaluations are never deleted: **a change that makes either deletable must persist the numbers first.**
+Public IDs appear only in a page's Details area, with a copy control. Each detail page's browser title names the record and its parent: "Run #3 · Checkout platform migration · DE FabLab", or "Access · Portals · DE FabLab" for a Web Onboarding record, whose parent is its catalog. Sequence numbers come from `assessmentNumber` and `evaluationNumber`, which count the model Initiative's records in creation order. They are stable only because Runs and Evaluations are never deleted: **a change that makes either deletable must persist the numbers first.**
 
 ### Lists
 

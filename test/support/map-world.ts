@@ -7,7 +7,7 @@ import type { RepositorySource } from "@/lib/catalog/source-records";
 import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
-import { type AssertionClaim, type SealApplication, ensureApplication, ensureLineOfBusiness, ensurePortal, recordAssertion } from "@/lib/ownership/records";
+import { type Application, type AssertionClaim, createApplication, ensureLineOfBusiness, ensurePortal, recordAssertion } from "@/lib/ownership/records";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { profileProblems } from "@/lib/profiles/schema";
 import { resolveMapDocument } from "@/lib/relationships/finalize";
@@ -97,17 +97,17 @@ const claimant = { source: "person" as const, providedBy: "ana@example.com" };
 export function claimMapWorld(db: Db, sources: Record<string, RepositorySource>, at = new Date()) {
   const linesOfBusiness = { payments: ensureLineOfBusiness(db, "Payments"), markets: ensureLineOfBusiness(db, "Markets") };
   const applications = {
-    shell: ensureApplication(db, "SEAL-100", "Access shell"),
-    fx: ensureApplication(db, "SEAL-200", "FX Board"),
-    rates: ensureApplication(db, "SEAL-300", "Rates"),
-    payee: ensureApplication(db, "SEAL-400", "Payee hub"),
-    design: ensureApplication(db, "SEAL-500", "Design system"),
-    ledger: ensureApplication(db, "SEAL-600", "Ledger"),
+    shell: createApplication(db, { sealId: "SEAL-100", name: "Access shell" }),
+    fx: createApplication(db, { sealId: "SEAL-200", name: "FX Board" }),
+    rates: createApplication(db, { sealId: "SEAL-300", name: "Rates" }),
+    payee: createApplication(db, { sealId: "SEAL-400", name: "Payee hub" }),
+    design: createApplication(db, { sealId: "SEAL-500", name: "Design system" }),
+    ledger: createApplication(db, { sealId: "SEAL-600", name: "Ledger" }),
   };
   const portals = { access: ensurePortal(db, "Access"), markets: ensurePortal(db, "Markets") };
   const assert = (claim: AssertionClaim) => recordAssertion(db, { ...claim, ...claimant, recordedAt: at });
 
-  const repositories: [string, SealApplication][] = [
+  const repositories: [string, Application][] = [
     ["access-shell", applications.shell],
     ["fx-board", applications.fx],
     ["rates", applications.rates],
@@ -115,7 +115,7 @@ export function claimMapWorld(db: Db, sources: Record<string, RepositorySource>,
     ["design-tokens", applications.design],
     ["ledger", applications.ledger],
   ];
-  for (const [name, application] of repositories) assert({ attribute: "seal_id", repository: sources[name]!.id, application: application.id });
+  for (const [name, application] of repositories) assert({ attribute: "application", repository: sources[name]!.id, application: application.id });
   for (const application of [applications.shell, applications.payee, applications.design, applications.ledger]) assert({ attribute: "line_of_business", application: application.id, lineOfBusiness: linesOfBusiness.payments.id });
   for (const application of [applications.fx, applications.rates]) assert({ attribute: "line_of_business", application: application.id, lineOfBusiness: linesOfBusiness.markets.id });
   for (const application of [applications.fx, applications.rates, applications.payee, applications.ledger]) assert({ attribute: "portal", operation: "add", application: application.id, portal: portals.access.id });

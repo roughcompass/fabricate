@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import type { Db } from "../src/lib/db/client";
 import { completeClaim } from "../src/lib/ownership/claims";
 import { refreshDeConsole } from "../src/lib/ownership/de-console";
-import { ensureLineOfBusiness, ensurePortal } from "../src/lib/ownership/records";
+import { createApplication, ensureLineOfBusiness, ensurePortal, recordAssertion } from "../src/lib/ownership/records";
 import { buildSource } from "../test/support/builders";
 import { E2E_DE_CONSOLE } from "./support/env";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
@@ -32,7 +32,8 @@ async function enterUrl(page: Page, url: string) {
 }
 
 async function enterSealId(page: Page, sealId: string) {
-  await page.getByLabel(/^(Another )?SEAL ID/).last().fill(sealId);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.getByLabel(/^(Another application's )?SEAL ID/).fill(sealId);
   await page.getByRole("button", { name: "Continue" }).click();
 }
 
@@ -100,7 +101,7 @@ test("asks only for the SEAL ID for a second repository of a known application (
   await expect(ownership(page)).toContainText("Payments Web");
 });
 
-test("offers the DE Console's SEAL IDs and takes its team and portals (DE Web application)", async ({ page, db }) => {
+test("offers the DE Console's applications and takes its team and portals (DE Web application)", async ({ page, db }) => {
   approve(db);
   fs.writeFileSync(
     E2E_DE_CONSOLE,
@@ -109,9 +110,10 @@ test("offers the DE Console's SEAL IDs and takes its team and portals (DE Web ap
   await refreshDeConsole(db, serverConfig(), "schedule");
 
   await enterUrl(page, "https://git.example.com/access/access-shell.git");
-  await page.getByLabel("SEAL ID", { exact: true }).selectOption({ label: "88001 · Access Shell" });
+  await page.getByLabel("Application", { exact: true }).selectOption({ label: "Access Shell (88001)" });
   await page.getByRole("button", { name: "Continue" }).click();
 
+  await expect(ownership(page)).toContainText("Access Shell (88001)");
   await expect(ownership(page)).toContainText("Access Platform");
   await expect(ownership(page)).toContainText("From the DE Console · last read");
   await expect(page.getByLabel("Team", { exact: true })).toHaveCount(0);
@@ -134,7 +136,7 @@ test("proceeds with the last read when the DE Console can't be read (DE Console 
   fs.rmSync(E2E_DE_CONSOLE);
 
   await enterUrl(page, "https://git.example.com/access/access-shell.git");
-  await page.getByLabel("SEAL ID", { exact: true }).selectOption("88001");
+  await page.getByLabel("Application", { exact: true }).selectOption({ label: "Access Shell (88001)" });
   await page.getByRole("button", { name: "Continue" }).click();
 
   await expect(page.getByText("The DE Console couldn't be read")).toBeVisible();
@@ -183,7 +185,7 @@ test("records a host and confirms its application as owner of an unowned portal 
   await signAndClaim(page);
 
   await expect(page.getByRole("heading", { level: 1, name: "Confirm the portal's owner" })).toBeVisible();
-  await expect(page.getByText("Access has no owning SEAL application. Confirm that 88001, which access-shell belongs to, owns it.")).toBeVisible();
+  await expect(page.getByText("Access has no owning application. Confirm that 88001, which access-shell belongs to, owns it.")).toBeVisible();
   await expect(page.getByLabel("Your name or email")).toHaveValue("ana@example.com");
   await page.getByRole("button", { name: "Confirm owner" }).click();
 
@@ -206,6 +208,89 @@ test("puts a portal's host in conflict when a second Repository claims it, and s
 
   await expect(ownership(page)).toContainText("Host: access-shell-next");
   await expect(ownership(page)).toContainText("In conflict with access-shell, claimed by ana@example.com");
+});
+
+test("asks which application a shared SEAL ID means, links only the one chosen, and starts its Run (Applications share one SEAL ID)", async ({ page, db }) => {
+  approve(db);
+  const workspace = createApplication(db, { sealId: "88010", name: "Payments workspace" });
+  const reporting = createApplication(db, { sealId: "88010", name: "Payments reporting" });
+  const claim = { source: "person" as const, providedBy: "cy@example.com" };
+  recordAssertion(db, { attribute: "team", application: workspace.id, team: "Payments Web", ...claim });
+  recordAssertion(db, { attribute: "team", application: reporting.id, team: "Payments Insights", ...claim });
+
+  await enterUrl(page, "https://git.example.com/pay/payments-reports.git");
+  await enterSealId(page, "88010");
+
+  await expect(page.getByRole("heading", { level: 1, name: "payments-reports" })).toBeVisible();
+  await expect(page.getByText("2 applications carry SEAL ID 88010. Which does this Repository belong to?")).toBeVisible();
+  const choices = page.getByRole("group", { name: "Application" });
+  await expect(choices.getByRole("radio")).toHaveCount(3);
+  await expect(choices).toContainText(`SEAL ID 88010 · Team Payments Insights · ${reporting.publicId}`);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.locator("#claim-application-choice-error")).toContainText("Choose an application");
+  await choices.getByLabel(/Payments reporting/).check();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  await expect(page.getByText("Claim this Repository for Payments reporting (88010).")).toBeVisible();
+  await expect(ownership(page)).toContainText("Payments Insights");
+  await page.getByLabel("Line of Business", { exact: true }).selectOption("Payments");
+  await page.getByRole("group", { name: "Portals" }).getByLabel("Digital Bank").check();
+  await signAndClaim(page);
+
+  await expect(toasts(page).getByText("payments-reports is claimed.")).toBeVisible();
+  await expect(toasts(page).getByText("A Run of its default branch has started.")).toBeVisible();
+  await expect(ownership(page)).toContainText("Payments reporting (88010)");
+  await expect(page.getByRole("region", { name: "Profile" })).toContainText("is assessing payments-reports");
+  expect(db.$client.prepare("select a.public_id as application from ownership_assertions o join applications a on a.id = o.value_application_id where o.attribute = 'application'").all()).toEqual([{ application: reporting.publicId }]);
+  expect(db.$client.prepare("select count(*) as n from applications").get()).toEqual({ n: 2 });
+});
+
+test("proposes the one application a SEAL ID names, and makes a new one when the claimant chooses (New application with a shared SEAL ID)", async ({ page, db }) => {
+  approve(db);
+  const workspace = createApplication(db, { sealId: "88010", name: "Payments workspace" });
+  recordAssertion(db, { attribute: "team", application: workspace.id, team: "Payments Web", source: "person", providedBy: "cy@example.com" });
+
+  await enterUrl(page, "https://git.example.com/pay/payments-batch.git");
+  await enterSealId(page, "88010");
+  await expect(page.getByText("Claim this Repository for Payments workspace (88010).")).toBeVisible();
+  await page.getByRole("link", { name: "Choose another application" }).click();
+
+  await expect(page.getByText("One application carries SEAL ID 88010. Which does this Repository belong to?")).toBeVisible();
+  await page.getByRole("group", { name: "Application" }).getByLabel(/A new application/).check();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  await expect(page.getByText("Claim this Repository for a new application with SEAL ID 88010.")).toBeVisible();
+  await page.getByLabel("Team", { exact: true }).fill("Payments Batch");
+  await page.getByLabel("Line of Business", { exact: true }).selectOption("Payments");
+  await page.getByRole("group", { name: "Portals" }).getByLabel("Digital Bank").check();
+  await signAndClaim(page);
+
+  await expect(toasts(page).getByText("payments-batch is claimed.")).toBeVisible();
+  await expect(ownership(page)).toContainText("Payments Batch");
+  expect(db.$client.prepare("select count(*) as n from applications where seal_id = '88010'").get()).toEqual({ n: 2 });
+  expect(db.$client.prepare("select value_team as team from ownership_assertions where attribute = 'team' and subject_application_id = ?").all(workspace.id)).toEqual([{ team: "Payments Web" }]);
+});
+
+test("moves a Repository to the application chosen among those sharing a SEAL ID (Correcting to a shared SEAL ID)", async ({ page, db }) => {
+  const orders = buildSource(db, { name: "orders" });
+  completeClaim(db, orders.publicId, { providedBy: "ana@example.com", sealId: "88010", team: "Payments Web", lineOfBusiness: "Payments", portals: ["Digital Bank"] });
+  createApplication(db, { sealId: "88030", name: "Ledger" });
+  const reporting = createApplication(db, { sealId: "88030", name: "Ledger reporting" });
+
+  await page.goto(`/repositories/claim/${orders.publicId}/correct`);
+  await page.getByLabel("SEAL ID", { exact: true }).fill("88030");
+  await page.getByLabel("Your name or email").fill("ben@example.com");
+  await page.getByRole("button", { name: "Save changes" }).click();
+
+  const choices = page.getByRole("group", { name: "Application" });
+  await expect(choices).toContainText("2 applications carry SEAL ID 88030. Choose one, or a new application.");
+  await expect(choices.getByRole("radio")).toHaveCount(3);
+  await choices.getByLabel(/Ledger reporting/).check();
+  await page.getByRole("button", { name: "Save changes" }).click();
+
+  await expect(toasts(page).getByText("The Repository now belongs to another application.")).toBeVisible();
+  await expect(page.getByText("Claim this Repository for Ledger reporting (88030).")).toHaveCount(0);
+  expect(db.$client.prepare("select a.public_id as application from ownership_assertions o join applications a on a.id = o.value_application_id where o.attribute = 'application' order by o.id desc limit 1").get()).toEqual({ application: reporting.publicId });
 });
 
 test("lists the Assessments created for claims apart from operators' Assessments", async ({ page, db }) => {

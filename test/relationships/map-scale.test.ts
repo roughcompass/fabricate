@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import ApplicationPage from "@/app/(operator)/runs/[assessmentId]/map/seal/[sealId]/page";
+import ApplicationPage from "@/app/(operator)/runs/[assessmentId]/map/applications/[applicationId]/page";
 import PortalPage from "@/app/(operator)/runs/[assessmentId]/map/portal/[portal]/page";
 import MapPage from "@/app/(operator)/runs/[assessmentId]/map/page";
 import { type Db, setDb } from "@/lib/db/client";
@@ -69,14 +69,14 @@ describe("Relationship Map at 500 repositories (Large Run)", () => {
   const views: [string, () => Promise<React.ReactElement>][] = [
     ["the Run level", () => MapPage({ params: run(), searchParams: Promise.resolve({}) })],
     ["a portal level", () => PortalPage({ params: Promise.resolve({ assessmentId: large.assessment.publicId, portal: large.portals[3]!.publicId }), searchParams: Promise.resolve({}) })],
-    ["a SEAL application level", () => ApplicationPage({ params: Promise.resolve({ assessmentId: large.assessment.publicId, sealId: "SEAL-A0300" }), searchParams: Promise.resolve({}) })],
+    ["an application level", () => ApplicationPage({ params: Promise.resolve({ assessmentId: large.assessment.publicId, applicationId: large.applications.get("SEAL-A0300")!.publicId }), searchParams: Promise.resolve({}) })],
     ["a library's focus", () => MapPage({ params: run(), searchParams: Promise.resolve({ focus: nodeOf("lib-00") }) })],
   ];
 
   it("is seeded at scale, with claims across Lines of Business and portals", () => {
     const count = (sql: string) => (db.$client.prepare(sql).get() as { n: number }).n;
     expect(count("select count(*) as n from graph_nodes where kind = 'repository'")).toBe(500);
-    expect(count("select count(distinct subject_repository_source_id) as n from ownership_assertions where attribute = 'seal_id'")).toBe(440);
+    expect(count("select count(distinct subject_repository_source_id) as n from ownership_assertions where attribute = 'application'")).toBe(440);
     expect(count("select count(*) as n from graph_edges where kind = 'architecture' and state = 'resolved'")).toBeGreaterThan(1000);
   });
 

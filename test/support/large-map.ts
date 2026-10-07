@@ -2,7 +2,7 @@ import type { MemoryFile } from "@repo-facts/contract";
 import type { Assessment } from "@/lib/assessments/assessment-records";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
-import { type AssertionClaim, type Portal, ensureApplication, ensureLineOfBusiness, ensurePortal, recordAssertion } from "@/lib/ownership/records";
+import { type Application, type AssertionClaim, type Portal, createApplication, ensureLineOfBusiness, ensurePortal, recordAssertion } from "@/lib/ownership/records";
 import { buildInitiative, buildSource } from "./builders";
 import { manifest } from "./profiles";
 import { seedAssessment } from "./scenarios";
@@ -48,6 +48,8 @@ export interface LargeMap {
   assessment: Assessment;
   sources: Map<string, RepositorySource>;
   portals: Portal[];
+  /** The claimed applications, by SEAL ID: each SEAL ID here names one application. */
+  applications: Map<string, Application>;
 }
 
 export async function seedLargeMap(db: Db): Promise<LargeMap> {
@@ -70,16 +72,18 @@ export async function seedLargeMap(db: Db): Promise<LargeMap> {
   const sources = new Map(names.map((name) => [name, buildSource(db, { name })]));
   const initiative = buildInitiative(db, { name: "Large map", sources: [...sources.values()] });
   const assessment = await seedAssessment(db, initiative, [...sources.values()], names.map((name) => trees.get(name)!));
-  return { assessment, sources, portals: claimLargeMap(db, sources) };
+  return { assessment, sources, ...claimLargeMap(db, sources) };
 }
 
-function claimLargeMap(db: Db, sources: Map<string, RepositorySource>): Portal[] {
+function claimLargeMap(db: Db, sources: Map<string, RepositorySource>): { portals: Portal[]; applications: Map<string, Application> } {
   const claim = (input: AssertionClaim) => recordAssertion(db, { ...input, source: "person", providedBy: "ana@example.com" });
   const lines = Array.from({ length: LINES }, (_, line) => ensureLineOfBusiness(db, `Line ${line + 1}`));
   const portals = Array.from({ length: LINES * PORTALS_PER_LINE }, (_, portal) => ensurePortal(db, `Portal ${pad(portal)}`));
+  const applications = new Map<string, Application>();
   const link = (repository: string, sealId: string, name: string, line: number) => {
-    const application = ensureApplication(db, sealId, name);
-    claim({ attribute: "seal_id", repository: sources.get(repository)!.id, application: application.id });
+    const application = applications.get(sealId) ?? createApplication(db, { sealId, name });
+    applications.set(sealId, application);
+    claim({ attribute: "application", repository: sources.get(repository)!.id, application: application.id });
     return { application, line };
   };
   const aligned = new Set<number>();
@@ -106,5 +110,5 @@ function claimLargeMap(db: Db, sources: Map<string, RepositorySource>): Portal[]
   }
   for (let library = 0; library < LIBRARIES; library++) align(link(`lib-${pad(library)}`, "SEAL-DS", "Design system", 0));
   for (let index = 0; index < UNPORTALED; index++) align(link(`ops-${String(index).padStart(3, "0")}`, `SEAL-O${pad(Math.floor(index / 4))}`, `Operations ${Math.floor(index / 4)}`, index % LINES));
-  return portals;
+  return { portals, applications };
 }

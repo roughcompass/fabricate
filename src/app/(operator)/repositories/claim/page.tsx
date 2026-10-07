@@ -12,7 +12,7 @@ export default function ClaimPage() {
       <PageHeader
         breadcrumbs={[{ href: "/repositories", label: "Repositories" }]}
         title="Claim a Repository"
-        description="Link a Repository to its SEAL application, team, Line of Business, and portals. You're asked only for what isn't known yet."
+        description="Link a Repository to its application, team, Line of Business, and portals. You're asked only for what isn't known yet."
       />
       <UrlForm action={startClaim} />
     </Page>

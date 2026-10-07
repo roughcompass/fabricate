@@ -19,6 +19,14 @@
     "deConsole": {
       "source": null,
       "refreshMinutes": 60
+    },
+    "onboarding": {
+      "studioUrl": null,
+      "cdaasUrl": null,
+      "refreshMinutes": 60,
+      "staleAfterMinutes": 1440,
+      "timeoutSeconds": 10,
+      "maxResponseBytes": 2097152
     }
   },
   "development": {

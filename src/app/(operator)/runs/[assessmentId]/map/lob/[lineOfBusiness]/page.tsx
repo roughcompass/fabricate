@@ -38,7 +38,7 @@ export default async function LineOfBusinessPage({ params, searchParams }: { par
       scopeDescription={`Relationships declared by ${level.label}'s repositories.`}
     >
       <GroupTable title="Portals" label="Portal" groups={level.portals} empty="No portals" />
-      {level.applications.length > 0 && <GroupTable title="Applications in no portal" label="SEAL application" groups={level.applications} empty="No applications" />}
+      {level.applications.length > 0 && <GroupTable title="Applications in no portal" label="Application" groups={level.applications} empty="No applications" />}
       {level.otherPortals.length > 0 && <GroupTable title="Portals of other Lines of Business" description={`Portals owned by another Line of Business that ${level.label}'s applications appear in.`} label="Portal" groups={level.otherPortals} empty="No portals" />}
       <GroupRelationships relationships={level.relationships} description="Relationships between repositories in different groups here, rolled up." />
       <SharedList entries={level.shared} />

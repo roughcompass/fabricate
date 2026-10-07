@@ -38,6 +38,22 @@ describe("navigation skeletons", () => {
     ["/templates/payments-workspace", "detail"],
     ["/applications", "list"],
     ["/applications/app_abc", "detail"],
+    ["/onboarding", "list"],
+    ["/onboarding/portals", "list"],
+    ["/onboarding/applications", "list"],
+    ["/onboarding/microfrontends", "list"],
+    ["/onboarding/reviews", "list"],
+    ["/onboarding/portals/new", "form"],
+    ["/onboarding/applications/new", "form"],
+    ["/onboarding/applications/wap_abc/microfrontends/new", "form"],
+    ["/onboarding/portals/ptl_abc/draft/menu", "form"],
+    ["/onboarding/applications/wap_abc/draft/launch", "form"],
+    ["/onboarding/microfrontends/mfe_abc/draft/rendering", "form"],
+    ["/onboarding/portals/ptl_abc", "detail"],
+    ["/onboarding/portals/ptl_abc/revisions/2", "detail"],
+    ["/onboarding/applications/wap_abc", "detail"],
+    ["/onboarding/microfrontends/mfe_abc/revisions/1", "detail"],
+    ["/onboarding/reviews/plc_abc", "detail"],
   ])("shows the %s page's skeleton as %s", (pathname, kind) => {
     expect(skeletonFor(pathname)).toBe(kind);
   });
@@ -53,6 +69,9 @@ describe("navigation skeletons", () => {
     expect(fs.existsSync(path.resolve("src/app/not-found.tsx")), "root").toBe(true);
     for (const section of ["assessments", "runs", "evaluations", "profiles", "repositories", "standards", "new", "templates", "applications"]) {
       expect(fs.existsSync(path.resolve("src/app/(operator)", section, "not-found.tsx")), section).toBe(true);
+    }
+    for (const catalog of ["portals", "applications", "microfrontends", "reviews"]) {
+      expect(fs.existsSync(path.resolve("src/app/(operator)/onboarding", catalog, "not-found.tsx")), `onboarding/${catalog}`).toBe(true);
     }
   });
 

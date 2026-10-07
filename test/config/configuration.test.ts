@@ -16,6 +16,7 @@ const shared: Settings = {
   analysis: { maxBlobBytes: 1024, maxFiles: 10, maxTotalBytes: 4096 },
   demo: { enabled: false },
   deConsole: { source: null, refreshMinutes: 60 },
+  onboarding: { studioUrl: null, cdaasUrl: null, refreshMinutes: 60, staleAfterMinutes: 1440, timeoutSeconds: 10, maxResponseBytes: 2_097_152 },
 };
 
 describe("configuration", () => {
@@ -209,4 +210,51 @@ describe("configuration", () => {
       expect(JSON.stringify(config)).not.toContain("service-token");
     });
   });
+
+  describe("Studio and CDaaS reads", () => {
+    const withUrls = (studioUrl: string | null, cdaasUrl: string | null = null) => ({ shared: { ...shared, onboarding: { ...shared.onboarding, studioUrl, cdaasUrl } } });
+
+    it("reads neither unless its URL is configured", () => {
+      expect(load().onboarding).toEqual({ studio: null, cdaas: null, refreshMinutes: 60, staleAfterMinutes: 1440, timeoutMs: 10_000, maxResponseBytes: 2_097_152 });
+      expect(loadConfig({ appRoot: process.cwd(), environment: "production", env: {} }).onboarding.studio).toBeNull();
+    });
+
+    it("takes https base URLs, or http to this machine, from the file or the environment", () => {
+      expect(load(withUrls("https://studio.example.test/studio-api/", "https://cdaas-admin.example.test/cdaas-admin")).onboarding).toMatchObject({
+        studio: { baseUrl: "https://studio.example.test/studio-api" },
+        cdaas: { baseUrl: "https://cdaas-admin.example.test/cdaas-admin" },
+      });
+      const fromEnv = load({ shared }, { FABRICATE_STUDIO_URL: "http://127.0.0.1:4200/studio-api", FABRICATE_CDAAS_URL: "http://localhost:4300", FABRICATE_ONBOARDING_REFRESH_MINUTES: "15", FABRICATE_ONBOARDING_STALE_AFTER_MINUTES: "120" });
+      expect(fromEnv.onboarding).toMatchObject({ studio: { baseUrl: "http://127.0.0.1:4200/studio-api" }, cdaas: { baseUrl: "http://localhost:4300" }, refreshMinutes: 15, staleAfterMinutes: 120 });
+    });
+
+    it("refuses embedded credentials, unsupported schemes, query strings, and fragments", () => {
+      expect(() => load(withUrls("https://fid:secret@studio.example.test"))).toThrow(/can't contain credentials; set FABRICATE_STUDIO_TOKEN/);
+      expect(() => load(withUrls(null, "https://token@cdaas.example.test"))).toThrow(/FABRICATE_CDAAS_TOKEN/);
+      expect(() => load(withUrls("http://studio.example.test"))).toThrow(/https:\/\/ URL, or http:\/\/ to this machine/);
+      expect(() => load(withUrls("ftp://studio.example.test"))).toThrow(ConfigurationError);
+      expect(() => load(withUrls("javascript:alert(1)"))).toThrow(ConfigurationError);
+      expect(() => load(withUrls("https://studio.example.test/api?env=prod"))).toThrow(/query string or fragment/);
+      expect(() => load(withUrls("https://studio.example.test/api#x"))).toThrow(/query string or fragment/);
+      expect(() => load(withUrls("not a url"))).toThrow(/not a valid URL/);
+    });
+
+    it("keeps the tokens out of the configuration", () => {
+      const config = load(withUrls("https://studio.example.test", "https://cdaas.example.test"), { FABRICATE_STUDIO_TOKEN: "studio-token-1", FABRICATE_CDAAS_TOKEN: "cdaas-token-2" });
+      expect(JSON.stringify(config)).not.toMatch(/studio-token-1|cdaas-token-2/);
+    });
+  });
+});
+
+describe("npm run config", () => {
+  it("reports whether each read token is set, never its value", async () => {
+    const { execFileSync } = await import("node:child_process");
+    const output = execFileSync("npx", ["tsx", "src/lib/config/print-cli.ts"], {
+      encoding: "utf8",
+      env: { ...process.env, FABRICATE_ENV: "test", FABRICATE_STUDIO_URL: "https://studio.example.test/studio-api", FABRICATE_STUDIO_TOKEN: "studio-secret-91", FABRICATE_CDAAS_URL: "https://cdaas.example.test", FABRICATE_CDAAS_TOKEN: "" },
+    });
+    expect(output).toContain("Studio:             https://studio.example.test/studio-api, token set");
+    expect(output).toContain("CDaaS:              https://cdaas.example.test, token not set");
+    expect(output).not.toContain("studio-secret-91");
+  }, 30_000);
 });

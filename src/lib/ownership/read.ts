@@ -1,6 +1,6 @@
 import { and, eq, inArray, or } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { assessmentTargets, linesOfBusiness, ownershipAssertions, ownershipSupersessions, portals, repositorySources, sealApplications } from "@/lib/db/schema";
+import { assessmentTargets, linesOfBusiness, ownershipAssertions, ownershipSupersessions, portals, repositorySources, applications } from "@/lib/db/schema";
 import { UNKNOWN, type Effective, type Provenance, asOfLatest, effectivePortals, effectiveValue } from "./effective";
 import type { OwnershipAssertion } from "./records";
 
@@ -14,7 +14,7 @@ import type { OwnershipAssertion } from "./records";
 export interface ApplicationRef {
   id: number;
   publicId: string;
-  sealId: string;
+  sealId: string | null;
   name: string | null;
 }
 
@@ -104,7 +104,7 @@ export function repositoryOwnership(db: Executor, repositorySourceIds: readonly 
   const ids = [...new Set(repositorySourceIds)];
   if (ids.length === 0) return new Map();
   const repositories = refsOf(db, "repository", ids);
-  const links = db.select().from(ownershipAssertions).where(and(inArray(ownershipAssertions.subjectRepositorySourceId, ids), eq(ownershipAssertions.attribute, "seal_id"))).all();
+  const links = db.select().from(ownershipAssertions).where(and(inArray(ownershipAssertions.subjectRepositorySourceId, ids), eq(ownershipAssertions.attribute, "application"))).all();
   const linkSuperseded = supersededAmong(db, links);
   const linkedApplications = refsOf(db, "application", links.map((assertion) => assertion.valueApplicationId!));
   const linked = new Map(ids.map((id) => [id, effectiveValue(links.filter((assertion) => assertion.subjectRepositorySourceId === id), linkSuperseded, (assertion) => linkedApplications.get(assertion.valueApplicationId!)!, (assertion) => String(assertion.valueApplicationId))]));
@@ -207,9 +207,9 @@ function refsOf(db: Executor, kind: "application" | "repository", ids: readonly 
   if (kind === "application") {
     return new Map(
       db
-        .select({ id: sealApplications.id, publicId: sealApplications.publicId, sealId: sealApplications.sealId, name: sealApplications.name })
-        .from(sealApplications)
-        .where(inArray(sealApplications.id, wanted))
+        .select({ id: applications.id, publicId: applications.publicId, sealId: applications.sealId, name: applications.name })
+        .from(applications)
+        .where(inArray(applications.id, wanted))
         .all()
         .map((row) => [row.id, row]),
     );

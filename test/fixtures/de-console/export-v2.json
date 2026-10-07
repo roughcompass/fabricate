@@ -1,0 +1,10 @@
+{
+  "format": "de-console-ownership",
+  "version": 2,
+  "exported_at": "2026-10-03T06:00:00Z",
+  "applications": [
+    { "application_id": "app-1001", "seal_id": "88001", "name": "Access Shell", "team": "Access Platform", "portals": ["Access"] },
+    { "application_id": "app-1002", "seal_id": "88001", "name": "Access Settings", "team": "Access Platform", "portals": ["Access"] },
+    { "application_id": "app-2001", "seal_id": null, "name": "Payee Hub", "team": "Payee Services", "portals": [] }
+  ]
+}

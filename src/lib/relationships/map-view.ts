@@ -4,6 +4,7 @@ import type { Assessment } from "@/lib/assessments/assessment-records";
 import type { Executor } from "@/lib/db/client";
 import { assessmentTargets, evidenceIndex, graphEdgeCandidates, graphEdges, graphNodes, relationshipMaps, repositoryProfiles, type EdgeKind } from "@/lib/db/schema";
 import { type RepositoryOwnership, ownershipForAssessment, portalOwnership } from "@/lib/ownership/read";
+import { applicationLabel as labelOf } from "@/lib/ownership/records";
 import { type MissingTarget, missingTargets } from "@/lib/projection/queries";
 import type { DiagramEdge } from "./diagram";
 import type { RelationshipMap } from "./map-records";
@@ -25,7 +26,7 @@ export interface ViewRepository {
   profile: string | null;
   sourceId: number;
   ownership: RepositoryOwnership | undefined;
-  /** The SEAL application's public ID, or null when the repository has no claim. */
+  /** The application's public ID, or null when the repository has no claim. */
   application: string | null;
   lineOfBusiness: string | null;
   portals: string[];
@@ -33,7 +34,7 @@ export interface ViewRepository {
 
 export interface ViewApplication {
   id: string;
-  sealId: string;
+  sealId: string | null;
   name: string | null;
   lineOfBusiness: string | null;
 }
@@ -150,9 +151,9 @@ export function loadMapView(db: Executor, assessment: Assessment): MapView | und
   return { assessment, map, base: `/runs/${assessment.publicId}/map`, repositories, applications, portals, linesOfBusiness, placements, labels, asOf, missing: missingTargets(db, assessment.id) };
 }
 
+/** The application's name with its SEAL ID beside it, as metadata. */
 export function applicationLabel(application: Pick<ViewApplication, "sealId" | "name"> | undefined): string | undefined {
-  if (!application) return undefined;
-  return application.name ? `${application.name} (${application.sealId})` : application.sealId;
+  return application ? labelOf(application) : undefined;
 }
 
 /** Composition, iframe, and runtime-contract links between repositories, which tie unclaimed ones into runtime systems. */

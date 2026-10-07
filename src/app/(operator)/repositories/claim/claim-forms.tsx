@@ -75,31 +75,35 @@ export function UrlForm({ action }: { action: ClaimAction }) {
   );
 }
 
-export function SealForm({ action, listed, cancelHref }: { action: ClaimAction; listed: readonly Option[]; cancelHref: string }) {
+export function ApplicationForm({ action, listed, cancelHref }: { action: ClaimAction; listed: readonly Option[]; cancelHref: string }) {
   return (
-    <ClaimForm action={action} initial={{ values: {}, errors: {} }} id="claim-seal" cancelHref={cancelHref} submitLabel="Continue">
+    <ClaimForm action={action} initial={{ values: {}, errors: {} }} id="claim-application" cancelHref={cancelHref} submitLabel="Continue">
       {(state) => (
         <>
           {listed.length > 0 && (
             <Select
-              id="claim-seal-id"
-              name="sealId"
-              label="SEAL ID"
-              defaultValue={value(state, "sealId")}
-              errors={state.errors.sealId}
-              description="The DE Console's SEAL applications. Choose one to take its team and portals from the DE Console."
-              options={[{ value: "", label: "Choose a SEAL application" }, ...listed]}
+              id="claim-application-listed"
+              name="application"
+              label="Application"
+              defaultValue={value(state, "application")}
+              errors={state.errors.application}
+              description="The applications the DE Console lists. Choose one to take its team and portals from the DE Console."
+              options={[{ value: "", label: "Choose an application" }, ...listed]}
             />
           )}
           <TextInput
-            id="claim-seal-id-other"
-            name={listed.length > 0 ? "sealIdOther" : "sealId"}
-            label={listed.length > 0 ? "Another SEAL ID" : "SEAL ID"}
+            id="claim-seal-id"
+            name="sealId"
+            label={listed.length > 0 ? "Another application's SEAL ID" : "SEAL ID"}
             optional={listed.length > 0}
             mono
-            defaultValue={value(state, listed.length > 0 ? "sealIdOther" : "sealId")}
-            errors={listed.length > 0 ? state.errors.sealIdOther : state.errors.sealId}
-            description={listed.length > 0 ? "For an application the DE Console doesn't list." : "The SEAL application this Repository belongs to."}
+            defaultValue={value(state, "sealId")}
+            errors={listed.length > 0 ? state.errors.sealId : [...(state.errors.application ?? []), ...(state.errors.sealId ?? [])]}
+            description={
+              listed.length > 0
+                ? "For an application the DE Console doesn't list. Several applications can carry one SEAL ID; if they do, you choose between them."
+                : "The SEAL ID of the application this Repository belongs to. Several applications can carry one; if they do, you choose between them."
+            }
             maxLength={64}
             required={listed.length === 0}
           />
@@ -109,9 +113,39 @@ export function SealForm({ action, listed, cancelHref }: { action: ClaimAction; 
   );
 }
 
+/** The applications that carry one SEAL ID, and a new one, for the person to choose between. */
+export function SameSealForm({ action, sealId, candidates, cancelHref }: { action: ClaimAction; sealId: string; candidates: readonly Choice[]; cancelHref: string }) {
+  return (
+    <ClaimForm action={action} initial={{ values: {}, errors: {} }} id="claim-same-seal" cancelHref={cancelHref} submitLabel="Continue">
+      {(state) => (
+        <>
+          <input type="hidden" name="sameSeal" value={sealId} />
+          <ApplicationChoices state={state} sealId={sealId} candidates={candidates} />
+        </>
+      )}
+    </ClaimForm>
+  );
+}
+
+function ApplicationChoices({ state, sealId, candidates }: { state: ClaimFormState; sealId: string; candidates: readonly Choice[] }) {
+  return (
+    <ChoiceGroup
+      id="claim-application-choice"
+      name="application"
+      legend="Application"
+      type="radio"
+      choices={[...candidates, { value: "new", label: "A new application", description: `It carries SEAL ID ${sealId} too, and starts with no team, Line of Business, or portals.` }]}
+      selected={[value(state, "application")]}
+      errors={state.errors.application}
+      description={`A SEAL ID is shared, not unique. Choose the application this Repository belongs to.`}
+    />
+  );
+}
+
 export interface QuestionsProps {
   action: ClaimAction;
-  sealId: string;
+  /** The existing application the claim is for, or the SEAL ID of the new one it makes. */
+  chosen: { application: string; label: string } | { newSealId: string; label: string };
   asks: { team: boolean; lineOfBusiness: boolean; portals: boolean };
   portals: readonly Choice[];
   linesOfBusiness: readonly Option[];
@@ -121,23 +155,30 @@ export interface QuestionsProps {
 }
 
 /** Asks only what's unknown, then who's answering, and optionally which portal the Repository hosts. */
-export function QuestionsForm({ action, sealId, asks, portals, linesOfBusiness, claimant, launchToken, cancelHref }: QuestionsProps) {
+export function QuestionsForm({ action, chosen, asks, portals, linesOfBusiness, claimant, launchToken, cancelHref }: QuestionsProps) {
   const asking = asks.team || asks.lineOfBusiness || asks.portals;
   return (
     <ClaimForm action={action} initial={{ values: { providedBy: claimant }, errors: {} }} id="claim-questions" cancelHref={cancelHref} submitLabel="Claim Repository">
       {(state) => (
         <>
-          <input type="hidden" name="sealId" value={sealId} />
+          {"application" in chosen ? (
+            <input type="hidden" name="application" value={chosen.application} />
+          ) : (
+            <>
+              <input type="hidden" name="sealId" value={chosen.newSealId} />
+              <input type="hidden" name="newApplication" value="1" />
+            </>
+          )}
           <input type="hidden" name="launchToken" value={launchToken} />
-          {state.errors.sealId && <FormAlert id="claim-questions-seal">{state.errors.sealId.join(" ")}</FormAlert>}
+          {(state.errors.application || state.errors.sealId) && <FormAlert id="claim-questions-application">{[...(state.errors.application ?? []), ...(state.errors.sealId ?? [])].join(" ")}</FormAlert>}
           {asking ? (
-            <FormSection title="SEAL application" description={`What isn't known yet about ${sealId}.`}>
+            <FormSection title="Application" description={`What isn't known yet about ${"application" in chosen ? chosen.label : `the new application with SEAL ID ${chosen.label}`}.`}>
               {asks.team && <TextInput id="claim-team" name="team" label="Team" defaultValue={value(state, "team")} errors={state.errors.team} description="The team that owns this application." maxLength={200} required />}
               {asks.lineOfBusiness && <LineOfBusinessFields state={state} choices={linesOfBusiness} />}
               {asks.portals && <PortalFields state={state} choices={portals} />}
             </FormSection>
           ) : (
-            <FormNote title="Nothing else to ask">Everything else about {sealId} is known. Claiming links this Repository to it.</FormNote>
+            <FormNote title="Nothing else to ask">Everything else about {chosen.label} is known. Claiming links this Repository to it.</FormNote>
           )}
           <FormSection title="Portal host" description="Only if this Repository is the host, or shell, that loads a portal's applications.">
             <ListedOrOther state={state} field="hosts" label="Portal this Repository hosts" otherLabel="Another portal" choices={portals.map((choice) => ({ value: choice.value, label: choice.label }))} empty="None" optional />
@@ -174,8 +215,9 @@ export function CorrectionForm({ action, initial, consoleTeam, consolePortals, p
     <ClaimForm action={action} initial={initial} id="claim-correction" cancelHref={cancelHref} submitLabel="Save changes">
       {(state) => (
         <>
-          <FormSection title="SEAL application" description="A new SEAL ID is saved on its own. You're then asked for anything not known about that application.">
+          <FormSection title="Application" description="Its SEAL ID names the application this Repository belongs to. A different SEAL ID moves the Repository to an application that carries it, and is saved on its own.">
             <TextInput id="correct-seal-id" name="sealId" label="SEAL ID" mono defaultValue={value(state, "sealId")} errors={state.errors.sealId} maxLength={64} required />
+            {state.applications && <ApplicationChoices state={state} sealId={value(state, "sealId")} candidates={state.applications} />}
             {consoleTeam === null ? (
               <TextInput id="correct-team" name="team" label="Team" defaultValue={value(state, "team")} errors={state.errors.team} maxLength={200} required />
             ) : (

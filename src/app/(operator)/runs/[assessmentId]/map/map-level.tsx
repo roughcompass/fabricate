@@ -21,7 +21,7 @@ import styles from "./map.module.css";
 
 type Query = Record<string, string | string[] | undefined>;
 
-const KIND_TITLES: Record<SearchMatch["kind"], string> = { repository: "Repositories", application: "SEAL applications", portal: "Portals", service: "Services", package: "Packages" };
+const KIND_TITLES: Record<SearchMatch["kind"], string> = { repository: "Repositories", application: "Applications", portal: "Portals", service: "Services", package: "Packages" };
 
 /** A positive page number from the address, or 1. */
 export function pageParam(query: Query, name: string): number {
@@ -137,7 +137,7 @@ export function MapLevel({
 
       <div>
         <Form key={search} action={levelHref} scroll={false} className={styles.search} role="search" aria-label="Search the map">
-          <SearchField id="map-search" name="q" label="Search the map" hideLabel placeholder="Search repositories, SEAL IDs, portals, services, and packages" defaultValue={search} clearHref={withQuery(levelHref, keep)} />
+          <SearchField id="map-search" name="q" label="Search the map" hideLabel placeholder="Search repositories, applications, SEAL IDs, portals, services, and packages" defaultValue={search} clearHref={withQuery(levelHref, keep)} />
         </Form>
       </div>
 

@@ -23,7 +23,7 @@ export interface NavGroup {
 }
 
 export interface NavSection {
-  readonly id: "assessments" | "applications" | "salt-patterns";
+  readonly id: "assessments" | "web-onboarding" | "applications" | "salt-patterns";
   readonly label: string;
   readonly icon: IconName;
   /** Shown only while the template demo is enabled. */
@@ -66,6 +66,21 @@ export const SECTIONS: readonly NavSection[] = [
     ],
   }),
   section({
+    id: "web-onboarding",
+    label: "Web Onboarding",
+    icon: "network",
+    groups: [
+      {
+        items: [
+          { id: "portals", label: "Portals", href: "/onboarding/portals", match: [/^\/onboarding\/?$/, /^\/onboarding\/portals(\/.*)?$/] },
+          // MFEs are assets Application teams manage from a Web Application's composition, so their pages are under Web Applications.
+          { id: "web-applications", label: "Web Applications", href: "/onboarding/applications", match: [/^\/onboarding\/applications(\/.*)?$/, /^\/onboarding\/microfrontends(\/.*)?$/] },
+          { id: "reviews", label: "Reviews", href: "/onboarding/reviews", match: [/^\/onboarding\/reviews(\/.*)?$/] },
+        ],
+      },
+    ],
+  }),
+  section({
     id: "applications",
     label: "Applications",
     icon: "layers",
@@ -95,7 +110,7 @@ export const SECTIONS: readonly NavSection[] = [
   }),
 ];
 
-/** The sections to show: Applications and Salt Patterns only while the demo is enabled. */
+/** The sections to show: Assessments and Web Onboarding always, and Applications and Salt Patterns only while the demo is enabled. */
 export function visibleSections(demoEnabled: boolean): readonly NavSection[] {
   return SECTIONS.filter((section) => demoEnabled || !section.demo);
 }

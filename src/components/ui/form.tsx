@@ -31,7 +31,7 @@ function Message({ id, description, errors }: { id: string; description: React.R
   if (errors?.length) {
     return (
       <p id={`${id}-error`} className={styles.error}>
-        {errors.join(" ")}
+        {errors.length === 1 ? errors[0] : errors.map((error) => (/[.!?]$/.test(error) ? error : `${error}.`)).join(" ")}
       </p>
     );
   }

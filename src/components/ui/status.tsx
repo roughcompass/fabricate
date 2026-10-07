@@ -69,6 +69,19 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   // Template demo applications and their simulated builds.
   building: ["Building", "progress"],
   ready: ["Ready", "success"],
+  // Web onboarding: lifecycles, revisions, placements, and reconciliation with Studio and CDaaS.
+  active: ["Active", "success"],
+  retired: ["Retired", "neutral"],
+  submitted: ["Submitted", "success"],
+  approved: ["Approved", "success"],
+  withdrawn: ["Withdrawn", "neutral"],
+  matching: ["Matching", "success"],
+  missing: ["Missing", "error"],
+  stale: ["Stale", "warning"],
+  pass: ["Passes", "success"],
+  fail: ["Fails", "error"],
+  blocking: ["Blocking", "error"],
+  warning: ["Warning", "warning"],
 };
 
 /** A readable label for a value without a mapping: underscores become spaces, first letter capitalized. */
