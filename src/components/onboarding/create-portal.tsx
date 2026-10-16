@@ -42,8 +42,8 @@ interface CreatePortalFormProps {
 
 /**
  * The Create Portal form beside What's included (portal-creation spec): the
- * platform as choice cards with none chosen, the SEAL ID, name, and
- * description, and the slug the name derives, shown with an edit button.
+ * platform as choice cards with none chosen, the SEAL ID, name, owning team,
+ * and description, and the slug the name derives, shown with an edit button.
  * The heading follows the name and a tag names the platform. It doesn't ask
  * who's creating the Portal; the action records the remembered name. Before
  * JavaScript runs, the slug is a plain optional field that the server
@@ -109,7 +109,7 @@ export function CreatePortalForm({ action, included, mode, onCancel, titleId }: 
         Cancel
       </button>
     ) : (
-      <ButtonLink href="/onboarding/portals">Cancel</ButtonLink>
+      <ButtonLink href="/navigation">Cancel</ButtonLink>
     );
 
   const aside = included && items.length > 0 ? <CheckList label={included.title} items={items} link={included.link} /> : undefined;
@@ -122,7 +122,7 @@ export function CreatePortalForm({ action, included, mode, onCancel, titleId }: 
           <h2 id={titleId ?? fallbackTitleId} className={styles.title}>
             {heading}
           </h2>
-          <p className={styles.lede}>A Portal is configuration its team owns: the environments it enables, its menu, and the placements it reviews. It owns no code.</p>
+          <p className={styles.lede}>A Portal is configuration its team owns: its menu, its default route, and whether it&apos;s a Prototype or in Production. It owns no code.</p>
         </div>
         <div className={formStyles.form}>
           {state.errors.base && <FormAlert id={mode === "dialog" ? "create-portal-dialog-alert" : "create-portal-alert"}>{state.errors.base.join(" ")}</FormAlert>}
@@ -149,7 +149,7 @@ export function CreatePortalForm({ action, included, mode, onCancel, titleId }: 
               errors={state.errors.name}
               maxLength={100}
               required
-              description="Such as Access or Markets. It's fixed once the Portal is created."
+              description="Such as Access or Markets. You can change it later."
             />
             {!hydrated ? (
               <TextInput id={id("slug")} name="slug" label="Slug" mono optional defaultValue={text(state, "slug")} errors={state.errors.slug} maxLength={SLUG_MAX} description="Lowercase letters only, a to z. Leave it blank to derive it from the name." />
@@ -184,6 +184,7 @@ export function CreatePortalForm({ action, included, mode, onCancel, titleId }: 
               </div>
             )}
           </div>
+          <TextInput id={id("ownerTeam")} name="ownerTeam" label="Owning team" defaultValue={text(state, "ownerTeam")} errors={state.errors.ownerTeam} maxLength={100} required description="The team that owns the Portal and arranges its menu." />
           <TextArea id={id("description")} name="description" label="Description" defaultValue={text(state, "description")} errors={state.errors.description} maxLength={500} rows={3} required description="What the Portal is for, in a sentence or two." />
           <FormFooter>
             {cancel}
@@ -196,11 +197,11 @@ export function CreatePortalForm({ action, included, mode, onCancel, titleId }: 
 }
 
 /**
- * The Create Portal dialog, mounted once in the shell while Web Onboarding is
+ * The Create Portal dialog, mounted once in the shell while Applications is
  * shown. Openers ask for it through openCreatePortal(). Escape, Cancel, and
  * the close button close it without creating anything, and focus returns to
- * the opener. Creating a Portal navigates to its Draft, which closes it and
- * starts the next one empty.
+ * the opener. Creating a Portal navigates to its Navigation page, which
+ * closes it and starts the next one empty.
  */
 export function CreatePortalDialog({ action, included }: { action: DialogAction; included: WhatsIncluded | null }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -209,7 +210,7 @@ export function CreatePortalDialog({ action, included }: { action: DialogAction;
   const pathname = usePathname();
   const [generation, setGeneration] = useState(0);
   const [shownFor, setShownFor] = useState(pathname);
-  // A navigation, such as to a created Portal's Draft, starts the next form empty...
+  // A navigation, such as to a created Portal's Navigation page, starts the next form empty...
   if (shownFor !== pathname) {
     setShownFor(pathname);
     setGeneration((value) => value + 1);
@@ -256,7 +257,7 @@ export function NewPortalLink({ children = "New Portal", variant = "primary" }: 
   const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
   return (
     <ButtonLink
-      href="/onboarding/portals/new"
+      href="/navigation/new"
       variant={variant}
       icon="plus"
       aria-haspopup={hydrated ? "dialog" : undefined}

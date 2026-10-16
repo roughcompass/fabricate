@@ -13,25 +13,26 @@ import { waitForHydration } from "./support/shell";
 const dialog = (page: Page) => page.getByRole("dialog", { name: /^Create/ });
 const pageHeading = (page: Page, name: string) => page.locator("[data-shell-header]").getByRole("heading", { level: 1, name });
 const platform = (scope: Page | ReturnType<typeof dialog>, name: string) => scope.getByRole("group", { name: /^Platform/ }).getByRole("radio", { name: new RegExp(`^${name}`) });
-const newPortal = (page: Page) => page.locator("[data-page-header]").getByRole("link", { name: "New Portal" });
+const newPortal = (page: Page) => page.locator("[data-page-header]").getByRole("link", { name: "Create Portal" });
 const included = (scope: Page | ReturnType<typeof dialog>) => scope.getByRole("region", { name: "What's included" });
 
-/** Opens the dialog from the Portals page's New Portal action. */
+/** Opens the dialog from the Navigation list's Create Portal action. */
 async function openFromPortals(page: Page) {
-  await page.goto("/onboarding/portals");
+  await page.goto("/navigation?portal=all");
   await waitForHydration(page);
-  // Hydrated, New Portal opens the dialog rather than the page.
+  // Hydrated, Create Portal opens the dialog rather than the page.
   await expect(newPortal(page)).toHaveAttribute("aria-haspopup", "dialog");
   await newPortal(page).click();
   await expect(dialog(page)).toBeVisible();
 }
 
 /** Fills every field of the open form. */
-async function fill(scope: Page | ReturnType<typeof dialog>, values: { platform?: string; sealId?: string; name?: string; description?: string } = {}) {
-  const { platform: chosen = "Web", sealId = "1042", name = "Treasury", description = "Cash and liquidity for the treasury desk" } = values;
+async function fill(scope: Page | ReturnType<typeof dialog>, values: { platform?: string; sealId?: string; name?: string; ownerTeam?: string; description?: string } = {}) {
+  const { platform: chosen = "Web", sealId = "1042", name = "Treasury", ownerTeam = "Treasury Platform", description = "Cash and liquidity for the treasury desk" } = values;
   if (chosen) await platform(scope, chosen).check();
   await scope.getByLabel("SEAL ID").fill(sealId);
   await scope.getByLabel("Name", { exact: true }).fill(name);
+  await scope.getByLabel("Owning team").fill(ownerTeam);
   await scope.getByLabel("Description").fill(description);
 }
 
@@ -40,10 +41,10 @@ const createdBy = (db: Db, label: string) =>
   db.$client.prepare("select e.actor, e.attribution from onboarding_events e join portals p on p.id = e.portal_id where p.label = ? and e.event = 'created'").get(label);
 
 test.describe("the dialog", () => {
-  test("Opening from the Portals page: What's included beside the form, focus on the first platform card, and no card chosen", async ({ page, db: _db }) => {
+  test("Opening from the Navigation list: What's included beside the form, focus on the first platform card, and no card chosen", async ({ page, db: _db }) => {
     await openFromPortals(page);
     await expect(included(dialog(page))).toBeVisible();
-    await expect(included(dialog(page)).getByRole("listitem").first()).toContainText("Environments from the catalog");
+    await expect(included(dialog(page)).getByRole("listitem").first()).toContainText("Menus up to five levels deep");
     await expect(platform(dialog(page), "Web")).toBeFocused();
     for (const name of ["Web", "Mobile", "Desktop"]) await expect(platform(dialog(page), name)).not.toBeChecked();
     await expect(dialog(page).getByRole("heading", { level: 2, name: "Create a Portal" })).toBeVisible();
@@ -75,7 +76,7 @@ test.describe("the dialog", () => {
     await expect(platform(dialog(page), "Mobile")).toBeChecked();
   });
 
-  test("Cancelling: nothing is created, and focus returns to New Portal; Escape and the close button close it too", async ({ page, db }) => {
+  test("Cancelling: nothing is created, and focus returns to Create Portal; Escape and the close button close it too", async ({ page, db }) => {
     await openFromPortals(page);
     await dialog(page).getByLabel("Name", { exact: true }).fill("Abandoned");
     await dialog(page).getByRole("button", { name: "Cancel" }).click();
@@ -120,6 +121,7 @@ test.describe("the dialog", () => {
     await form.getByRole("button", { name: "Create Portal" }).click();
     await expect(form.getByText("Choose the Portal's platform")).toBeVisible();
     await expect(form.getByText("Enter the Portal's SEAL ID")).toBeVisible();
+    await expect(form.getByText("Enter the team that owns the Portal")).toBeVisible();
     await expect(form.getByText("Enter a description of the Portal")).toBeVisible();
     await expect(platform(form, "Web")).toBeFocused();
     await expect(form.getByLabel("Name", { exact: true })).toHaveValue("Treasury");
@@ -130,6 +132,16 @@ test.describe("the dialog", () => {
     await fill(form, { name: "Access" });
     await form.getByRole("button", { name: "Create Portal" }).click();
     await expect(form.getByText("A Portal named Access is already onboarded")).toBeVisible();
+  });
+
+  test("Missing owning team: the Portal isn't created, and focus moves to the owning team", async ({ page, db }) => {
+    await openFromPortals(page);
+    const form = dialog(page);
+    await fill(form, { ownerTeam: "" });
+    await form.getByRole("button", { name: "Create Portal" }).click();
+    await expect(form.getByText("Enter the team that owns the Portal")).toBeVisible();
+    await expect(form.getByLabel("Owning team")).toBeFocused();
+    expect(db.$client.prepare("select count(*) as n from portals").get()).toEqual({ n: 0 });
   });
 
   test("Slug validation: a taken slug and a name without letters open the slug's field with the problem", async ({ page, db }) => {
@@ -149,16 +161,18 @@ test.describe("the dialog", () => {
     await expect(form.getByText("Enter a slug of lowercase letters")).toBeVisible();
   });
 
-  test("After creating: the Draft's Identity step with its toast, and the new Portal current in the switcher, recorded as Not stated without a remembered name", async ({ page, db }) => {
+  test("After creating: the Portal's Navigation page with its toast and Prototype badge, and the new Portal current in the switcher, recorded as Not stated without a remembered name", async ({ page, db }) => {
     await openFromPortals(page);
     await fill(dialog(page), { platform: "Mobile", name: "Treasury" });
     await dialog(page).getByRole("button", { name: "Create Portal" }).click();
-    await expect(pageHeading(page, "Identity")).toBeVisible();
+    await expect(pageHeading(page, "Treasury")).toBeVisible();
     await expect(dialog(page)).toBeHidden();
-    await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Treasury is a Draft Portal.");
-    await expect(page.locator("#sidebar").getByRole("button", { name: "Switch Portal, current: Treasury" })).toBeVisible();
     const created = db.$client.prepare("select public_id as publicId from portals where label = 'Treasury'").get() as { publicId: string };
-    expect(getPortal(db, created.publicId)).toMatchObject({ platform: "mobile", slug: "treasury", sealId: "1042", description: "Cash and liquidity for the treasury desk", ownerTeam: null });
+    await expect(page).toHaveURL(new RegExp(`/navigation/${created.publicId}`));
+    await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Treasury was created as a Prototype.");
+    await expect(page.locator("[data-page-header]")).toContainText("Prototype");
+    await expect(page.locator("#sidebar").getByRole("button", { name: "Switch Portal, current: Treasury, Prototype" })).toBeVisible();
+    expect(getPortal(db, created.publicId)).toMatchObject({ platform: "mobile", slug: "treasury", sealId: "1042", ownerTeam: "Treasury Platform", description: "Cash and liquidity for the treasury desk", lifecycle: "prototype" });
     expect(createdBy(db, "Treasury")).toEqual({ actor: "Not stated", attribution: "unverified" });
   });
 
@@ -172,19 +186,19 @@ test.describe("the dialog", () => {
     await expect(dialog(page).getByLabel("Your name")).toHaveCount(0);
     await fill(dialog(page), { name: "Lending" });
     await dialog(page).getByRole("button", { name: "Create Portal" }).click();
-    await expect(pageHeading(page, "Identity")).toBeVisible();
+    await expect(pageHeading(page, "Lending")).toBeVisible();
     expect(createdBy(db, "Lending")).toEqual({ actor: "Jane Rivera", attribution: "unverified" });
   });
 
   test("Create from the switcher: the switcher closes and the dialog opens with focus on its first field", async ({ page, db: _db }) => {
-    await page.goto("/onboarding/applications");
+    await page.goto("/applications");
     await waitForHydration(page);
     await page.locator("#sidebar").getByRole("button", { name: /^Switch Portal/ }).click();
     await page.locator("#sidebar [popover]").getByRole("link", { name: /^Create Portal/ }).click();
     await expect(page.locator("#sidebar [popover]").getByRole("searchbox")).toBeHidden();
     await expect(dialog(page)).toBeVisible();
     await expect(platform(dialog(page), "Web")).toBeFocused();
-    await expect(page).toHaveURL(/\/onboarding\/applications$/);
+    await expect(page).toHaveURL(/\/applications$/);
   });
 
   test.describe("at 375px", () => {
@@ -206,7 +220,7 @@ test.describe("the dialog", () => {
 
 test.describe("the page", () => {
   test("Opening the address directly: What's included beside the form, as a page", async ({ page, db: _db }) => {
-    await page.goto("/onboarding/portals/new");
+    await page.goto("/navigation/new");
     await expect(pageHeading(page, "New Portal")).toBeVisible();
     await expect(included(page)).toBeVisible();
     await expect(page.getByRole("dialog")).toBeHidden();
@@ -216,14 +230,14 @@ test.describe("the page", () => {
     const committed = fs.readFileSync(E2E_WHATS_INCLUDED, "utf8");
     fs.copyFileSync(path.resolve("test/fixtures/onboarding/whats-included-malformed.yaml"), E2E_WHATS_INCLUDED);
     try {
-      await page.goto("/onboarding/portals/new");
+      await page.goto("/navigation/new");
       await waitForHydration(page);
       await expect(page.getByLabel("SEAL ID")).toBeVisible();
       await expect(included(page)).toHaveCount(0);
       await expect(page.locator("summary", { hasText: "What's included" })).toHaveCount(0);
       await fill(page, { name: "Lending" });
       await page.getByRole("button", { name: "Create Portal" }).click();
-      await expect(pageHeading(page, "Identity")).toBeVisible();
+      await expect(pageHeading(page, "Lending")).toBeVisible();
       expect(db.$client.prepare("select slug from portals where label = 'Lending'").get()).toEqual({ slug: "lending" });
     } finally {
       fs.writeFileSync(E2E_WHATS_INCLUDED, committed);
@@ -233,14 +247,14 @@ test.describe("the page", () => {
   test.describe("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });
 
-    test("Creating without JavaScript: the Portal gets the slug its name derives; New Portal leads to the page", async ({ page, db }) => {
-      await page.goto("/onboarding/portals");
+    test("Creating without JavaScript: the Portal gets the slug its name derives; Create Portal leads to the page", async ({ page, db }) => {
+      await page.goto("/navigation?portal=all");
       await newPortal(page).click();
-      await expect(page).toHaveURL(/\/onboarding\/portals\/new$/);
+      await expect(page).toHaveURL(/\/navigation\/new$/);
       await expect(page.getByLabel("Slug")).toHaveValue("");
       await fill(page, { name: "My New Portal" });
       await page.getByRole("button", { name: "Create Portal" }).click();
-      await expect(pageHeading(page, "Identity")).toBeVisible();
+      await expect(pageHeading(page, "My New Portal")).toBeVisible();
       expect(db.$client.prepare("select slug, platform from portals where label = 'My New Portal'").get()).toEqual({ slug: "mynewportal", platform: "web" });
     });
   });
