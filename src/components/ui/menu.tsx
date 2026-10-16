@@ -103,13 +103,20 @@ export function MenuAction({ action, fields = {}, icon, tone = "default", childr
   );
 }
 
-/** A menu item that runs client code; with `submit`, it submits its form instead, as before JavaScript runs. */
+/**
+ * A menu item that runs client code; with `submit`, it submits its form
+ * instead, as before JavaScript runs. With `formAction`, it submits the form
+ * the menu sits in to that Server Action, with the form's fields, so a menu
+ * inside a form, such as a `ConfirmDialog`'s, can hold other actions on the
+ * same record without nesting forms.
+ */
 export function MenuButton({
   onClick,
   icon,
   disabled,
   tone = "default",
   submit = false,
+  formAction,
   children,
 }: {
   onClick?: () => void;
@@ -117,10 +124,11 @@ export function MenuButton({
   disabled?: boolean;
   tone?: "default" | "danger";
   submit?: boolean;
+  formAction?: (formData: FormData) => void | Promise<void>;
   children: React.ReactNode;
 }) {
   return (
-    <button type={submit ? "submit" : "button"} className={styles.item} data-tone={tone} onClick={onClick} disabled={disabled}>
+    <button type={submit || formAction ? "submit" : "button"} formAction={formAction} className={styles.item} data-tone={tone} onClick={onClick} disabled={disabled}>
       {icon && <Icon name={icon} size={14} />}
       {children}
     </button>

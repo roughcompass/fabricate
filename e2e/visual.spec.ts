@@ -108,7 +108,7 @@ test("captures the Portal switcher and the Create Portal dialog in both themes",
     await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);
-      await page.goto("/onboarding/applications");
+      await page.goto("/applications");
       await waitForHydration(page);
       if (viewport.name === "mobile") await page.getByRole("button", { name: "Open navigation" }).click();
       const trigger = sidebar.getByRole("button", { name: /^Switch Portal/ });
