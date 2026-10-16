@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isConclusionFilter } from "@/lib/evaluations/conclusions";
 import { isOwnershipFilter } from "@/lib/ownership/coverage";
-import { assessmentsHref, isPlacementFilter, onboardingCatalogHref, repositoriesHref } from "@/lib/web/list-filters";
+import { applicationsHref, assessmentsHref, navigationListHref, repositoriesHref } from "@/lib/web/list-filters";
 
 // page-patterns spec: the lists filter what Home counts, through one set of addresses.
 
@@ -25,12 +25,11 @@ describe("list filter addresses", () => {
     expect(assessmentsHref()).toBe("/assessments");
   });
 
-  it("builds a Web Onboarding catalog's lifecycle tab, and the Web Applications placement filter", () => {
-    expect(onboardingCatalogHref("portals", { lifecycle: "active" })).toBe("/onboarding/portals?lifecycle=active");
-    const placed = onboardingCatalogHref("applications", { placement: "placed" });
-    expect(placed).toBe("/onboarding/applications?placement=placed");
-    expect(isPlacementFilter(query(placed).get("placement"))).toBe(true);
-    // Portals have no placement filter.
-    expect(onboardingCatalogHref("portals", { placement: "placed" })).toBe("/onboarding/portals");
+  it("builds the Applications page across all Portals, filtered to a rendering mode, and the Navigation list's tabs", () => {
+    expect(applicationsHref({ portal: "all" })).toBe("/applications?portal=all");
+    expect(applicationsHref({ portal: "all", rendering: "undetermined" })).toBe("/applications?portal=all&rendering=undetermined");
+    expect(applicationsHref({ view: "grid" })).toBe("/applications");
+    expect(navigationListHref({ tab: "production" })).toBe("/navigation?portal=all&tab=production");
+    expect(navigationListHref({ tab: "all" })).toBe("/navigation?portal=all");
   });
 });

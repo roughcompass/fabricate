@@ -1,12 +1,14 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { portals } from "@/lib/db/schema";
+import { applications, portals } from "@/lib/db/schema";
 import { claimedShare, fleetSummary } from "@/lib/home/summary";
 import { claimInitiative } from "@/lib/initiatives/initiative-records";
-import { ensurePortal } from "@/lib/ownership/records";
+import { createApplication, ensurePortal } from "@/lib/ownership/records";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, claim, driveEvaluation, driveRun } from "../support/home";
-import { decide, onboardApplication, onboardPortal, placementsOf } from "../support/onboarding";
+import { registerApplication } from "../support/applications";
+import { onboardPortal } from "../support/onboarding";
 
 describe("fleet summary", () => {
   it("counts enabled, claimed, and unclaimed Repositories, leaving disabled claims out (Ownership coverage)", () => {
@@ -38,27 +40,33 @@ describe("fleet summary", () => {
     expect(assessments).toEqual({ empty: false, total: 4, byConclusion: { gaps: 2, undetermined: 0, conforms: 1, not_applicable: 0, none: 1 } });
   });
 
-  it("shows figures, not an empty state, when records exist but none are active (Records exist but none are active)", () => {
+  it("shows figures, not an empty state, when Portals exist but none is in Production and no Application exists (Records exist but none are active)", () => {
     const db = createTestDb();
-    ensurePortal(db, "Access");
-    ensurePortal(db, "Markets");
-    db.update(portals).set({ lifecycle: "draft" }).run();
+    onboardPortal(db, "Access");
+    onboardPortal(db, "Markets");
 
-    expect(fleetSummary(db).onboarding).toEqual({ empty: false, activePortals: 0, placedApplications: 0 });
+    expect(fleetSummary(db).applications).toEqual({ empty: false, applications: 0, undetermined: 0, productionPortals: 0 });
   });
 
-  it("counts active Portals, and Web Applications a Portal has placed", () => {
+  it("counts registered Applications, those with an Undetermined rendering, and Portals in Production, leaving claims out", () => {
     const db = createTestDb();
     const access = onboardPortal(db, "Access");
-    // Activating a Portal needs approved default routes; the lifecycle alone is what Active Portals counts.
-    db.update(portals).set({ lifecycle: "active" }).run();
-    const request = { placement: null, portal: access.publicId, menuParent: null, route: "/payments", label: "Payments", order: 1, environments: ["prod"], entitlements: { codes: [], operator: "any" as const }, defaultRequested: false };
-    const placed = onboardApplication(db, "Payments workspace", { launch: { kind: "external", mode: "iframe", documentUrl: "https://payments.example.com/app" }, placements: [request] }).application;
-    onboardApplication(db, "Payments reporting", { launch: { kind: "external", mode: "iframe", documentUrl: "https://payments.example.com/reports" }, placements: [{ ...request, route: "/reports", label: "Reports" }] });
-    expect(fleetSummary(db).onboarding).toMatchObject({ activePortals: 1, placedApplications: 0 });
+    const markets = onboardPortal(db, "Markets");
+    ensurePortal(db, "Lending");
+    db.update(portals).set({ lifecycle: "production" }).where(eq(portals.id, access.id)).run();
+    registerApplication(db, { name: "Payee Hub", portal: access });
+    const ledger = registerApplication(db, { name: "Ledger", portal: markets });
+    createApplication(db, { sealId: "88001" });
+    const assessment = buildAssessment(db, { sources: [buildSource(db)] }).assessment;
+    db.update(applications).set({ renderingMode: "undetermined", renderingEvidence: "{}", renderingAssessmentId: assessment.id }).where(eq(applications.id, ledger.id)).run();
 
-    decide(db, placementsOf(db, placed.publicId)[0]!, "approve");
-    expect(fleetSummary(db).onboarding).toEqual({ empty: false, activePortals: 1, placedApplications: 1 });
+    expect(fleetSummary(db).applications).toEqual({ empty: false, applications: 2, undetermined: 1, productionPortals: 1 });
+  });
+
+  it("stays empty while the only Portals are named in claims", () => {
+    const db = createTestDb();
+    ensurePortal(db, "Lending");
+    expect(fleetSummary(db).applications.empty).toBe(true);
   });
 
   it("reports every group empty in a fresh installation (Fresh installation)", () => {
@@ -66,7 +74,7 @@ describe("fleet summary", () => {
     const summary = fleetSummary(db);
     expect(summary.repositories.empty).toBe(true);
     expect(summary.assessments.empty).toBe(true);
-    expect(summary.onboarding.empty).toBe(true);
+    expect(summary.applications.empty).toBe(true);
   });
 
   it("doesn't count only claim-created Assessments as the operator's", () => {

@@ -1,10 +1,12 @@
 import type { Page } from "@playwright/test";
-import { portals } from "../src/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { applications, portals } from "../src/lib/db/schema";
 import { recordFailedDeConsoleRead } from "../src/lib/ownership/de-console";
 import { createApplication, ensurePortal } from "../src/lib/ownership/records";
 import { buildAssessment, buildInitiative, buildSource } from "../test/support/builders";
 import { buildEvaluation, claim, driveEvaluation, driveRun, readDeConsole } from "../test/support/home";
-import { decide, onboardApplication, onboardPortal, placementsOf } from "../test/support/onboarding";
+import { registerApplication } from "../test/support/applications";
+import { onboardPortal } from "../test/support/onboarding";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { seedResults } from "./support/results";
@@ -52,15 +54,15 @@ test("Fresh installation: each group shows its empty state and actions, and noth
   await expect(page.getByRole("link", { name: "New Repository" }).last()).toHaveAttribute("href", "/repositories/new");
   await expect(page.getByText("No Assessments yet")).toBeVisible();
   await expect(page.getByRole("main").getByRole("link", { name: "New Assessment" })).toHaveAttribute("href", "/assessments/new");
-  await expect(page.getByText("Nothing onboarded yet")).toBeVisible();
-  await expect(page.getByRole("link", { name: "New Portal" })).toHaveAttribute("href", "/onboarding/portals/new");
-  await expect(page.getByRole("link", { name: "New Web Application" })).toHaveAttribute("href", "/onboarding/applications/new");
+  await expect(page.getByText("No Applications yet")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Create Portal" })).toHaveAttribute("href", "/navigation/new");
+  await expect(page.getByRole("main").getByRole("link", { name: "Add application" })).toHaveAttribute("href", "/applications/new");
   const needsAttention = page.getByRole("region", { name: "Needs attention" });
   await expect(needsAttention.getByText("Nothing needs attention")).toBeVisible();
   await expect(needsAttention.getByRole("link")).toHaveCount(0);
 });
 
-test("every figure opens a list showing exactly the records it counts (Unclaimed figure opens its list, Conclusion figure opens its tab)", async ({ page, db }) => {
+test("every figure opens a list showing exactly the records it counts (Unclaimed figure opens its list, Conclusion figure opens its tab)", async ({ page, db, baseURL }) => {
   const sources = Array.from({ length: 6 }, (_, index) => buildSource(db, { name: `repo-${index}` }));
   for (const source of sources.slice(0, 4)) claim(db, source);
   claim(db, buildSource(db, { name: "archived", enabled: false }));
@@ -68,17 +70,19 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
   assessment(db, "Payments baseline", "complete", "gaps");
   assessment(db, "Markets baseline", "complete", "conforms");
   assessment(db, "Ledger review", "complete");
-  // Two active Portals, and one of two Web Applications placed in a Portal by an approved placement.
+  // Access in Production and Markets a Prototype, with two Applications, one Undetermined; the switcher names Markets, which Home ignores (Applications figure ignores the switcher).
   const access = onboardPortal(db, "Access");
-  ensurePortal(db, "Markets");
-  db.update(portals).set({ lifecycle: "active" }).run();
-  const request = { placement: null, portal: access.publicId, menuParent: null, route: "/payments", label: "Payments", order: 1, environments: ["prod"], entitlements: { codes: [], operator: "any" as const }, defaultRequested: false };
-  const placed = onboardApplication(db, "Payments workspace", { sealId: "77001", launch: { kind: "external", mode: "iframe", documentUrl: "https://payments.example.com/app" }, placements: [request] }).application;
-  onboardApplication(db, "Payments reporting", { sealId: "77002", launch: { kind: "external", mode: "iframe", documentUrl: "https://payments.example.com/reports" }, placements: [{ ...request, route: "/reports", label: "Reports" }] });
-  decide(db, placementsOf(db, placed.publicId)[0]!, "approve");
+  const markets = onboardPortal(db, "Markets");
+  ensurePortal(db, "Lending");
+  db.update(portals).set({ lifecycle: "production" }).where(eq(portals.id, access.id)).run();
+  registerApplication(db, { name: "Payments workspace", portal: access });
+  const ledger = registerApplication(db, { name: "Ledger", portal: markets });
+  const undetermined = buildAssessment(db, { sources: [buildSource(db, { name: "ledger-run" })] }).assessment;
+  db.update(applications).set({ renderingMode: "undetermined", renderingEvidence: "{}", renderingAssessmentId: undetermined.id }).where(eq(applications.id, ledger.id)).run();
+  await page.context().addCookies([{ name: "fabricate-portal", value: markets.publicId, url: baseURL! }]);
 
   await page.goto(paths.home);
-  const tables: Record<string, string> = { Repositories: "Repositories", Assessments: "Assessments", "Web Onboarding": "" };
+  const tables: Record<string, string> = { Repositories: "Repositories", Assessments: "Assessments", Applications: "" };
   const figures: { group: string; label: string; value: number; href: string }[] = [];
   for (const group of Object.keys(tables)) {
     for (const stat of await page.locator(`dl[aria-label="${group}"] > div`).all()) {
@@ -96,15 +100,21 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
     ["Undetermined", 0],
     ["Conforms", 1],
     ["Not evaluated", 1],
-    ["Active Portals", 2],
-    ["Placed Web Applications", 1],
+    ["Applications", 2],
+    ["Undetermined rendering", 1],
+    ["Production Portals", 1],
   ]);
   await expect(page.locator('dl[aria-label="Repositories"]')).toContainText("40% of enabled");
 
   for (const { label, value, href } of figures) {
     await page.goto(href);
-    const table = label.startsWith("Active Portals") ? "Portals" : label.startsWith("Placed Web") ? "Web Applications" : ["Enabled", "Claimed", "Unclaimed"].includes(label) ? "Repositories" : "Assessments";
-    const rows = page.getByRole("table", { name: table, exact: true }).locator("tbody tr");
+    const group = figures.find((candidate) => candidate.label === label)!.group;
+    const rows =
+      label === "Production Portals"
+        ? page.getByRole("table", { name: "Portals", exact: true }).locator("tbody tr")
+        : group === "Applications"
+          ? page.getByRole("list", { name: "Applications", exact: true }).getByRole("listitem")
+          : page.getByRole("table", { name: ["Enabled", "Claimed", "Unclaimed"].includes(label) ? "Repositories" : "Assessments", exact: true }).locator("tbody tr");
     if (value === 0) await expect(rows, label).toHaveCount(0);
     else await expect(rows, `${label} opens ${href}`).toHaveCount(value);
   }
@@ -129,7 +139,8 @@ test("Demo enabled: Home shows no demo applications or templates", async ({ page
   const main = page.getByRole("main");
   await expect(main).not.toContainText("Salt Patterns");
   await expect(main).not.toContainText("template");
-  await expect(main.locator('a[href^="/applications"], a[href^="/templates"]')).toHaveCount(0);
+  // Add application is part of the Applications group; demo deployments and templates aren't on Home.
+  await expect(main.locator('a[href^="/applications/app_"], a[href^="/templates"]')).toHaveCount(0);
 });
 
 test("Failed Run: the item names the Run and its Assessment and opens the Run", async ({ page, db }) => {

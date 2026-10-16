@@ -1,7 +1,7 @@
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { AppShell } from "@/components/shell/app-shell";
-import { NO_OPTIONAL_AREAS, type NavFlags, visibleSections } from "@/components/shell/navigation";
+import { NO_OPTIONAL_AREAS, type NavFlags, visibleSections, visibleTopLevel } from "@/components/shell/navigation";
 import { SidebarNav } from "@/components/shell/sidebar-nav";
 import { ThemeSwitcher } from "@/components/shell/theme-switcher";
 
@@ -24,18 +24,17 @@ const shellOf = (tree: ReactNode) => elements(tree).find((element) => "data-side
 // operator-interface/page-patterns spec: the application shell, and the
 // sidebar that can be resized and hidden.
 describe("application shell", () => {
-  it("shows Assessments and Web Onboarding when the demo is disabled (Demo disabled)", () => {
+  it("shows Home, Applications, Navigation, and Assessments when the demo is disabled (Demo disabled)", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
-    expect(visibleSections(nav.props.nav as NavFlags).map((section) => section.label)).toEqual(["Assessments", "Web Onboarding"]);
+    const flags = nav.props.nav as NavFlags;
+    expect([...visibleTopLevel(flags), ...visibleSections(flags)].map((entry) => entry.label)).toEqual(["Home", "Applications", "Navigation", "Assessments"]);
   });
 
-  it("adds Applications and Salt Patterns when the demo is enabled, each opening its list", () => {
+  it("adds Salt Patterns when the demo is enabled, opening its list", () => {
     const nav = elements(AppShell({ theme: "system", nav: { ...NO_OPTIONAL_AREAS, demo: true }, children: null })).find((element) => element.type === SidebarNav)!;
     const sections = visibleSections(nav.props.nav as NavFlags);
     expect(sections.map((section) => [section.label, section.items[0]!.href])).toEqual([
       ["Assessments", "/assessments"],
-      ["Web Onboarding", "/onboarding/portals"],
-      ["Applications", "/applications"],
       ["Salt Patterns", "/templates"],
     ]);
   });

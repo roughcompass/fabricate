@@ -18,7 +18,7 @@ import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { ATTENTION_PAGE_SIZE, type AttentionItem, attentionItems } from "@/lib/home/attention";
 import { type FleetSummary, claimedShare, fleetSummary } from "@/lib/home/summary";
-import { assessmentsHref, onboardingCatalogHref, repositoriesHref } from "@/lib/web/list-filters";
+import { applicationsHref, assessmentsHref, navigationListHref, repositoriesHref } from "@/lib/web/list-filters";
 
 // The root layout's title template applies only to child segments, and this page shares the root segment.
 export const metadata: Metadata = { title: { absolute: "Home · DE FabLab" } };
@@ -94,32 +94,33 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         )}
       </Section>
 
-      <Section title="Web Onboarding" description="Active Portals, and the Web Applications a Portal has placed.">
-        {summary.onboarding.empty ? (
+      <Section title="Applications" description="Registered Applications, those DE Web couldn't determine a rendering for, and Portals in Production.">
+        {summary.applications.empty ? (
           <Panel flush>
             <EmptyState
-              title="Nothing onboarded yet"
+              title="No Applications yet"
               icon="network"
               action={
                 <>
-                  <ButtonLink href="/onboarding/portals/new" variant="secondary" icon="plus">
-                    New Portal
+                  <ButtonLink href="/navigation/new" variant="secondary" icon="plus">
+                    Create Portal
                   </ButtonLink>
-                  <ButtonLink href="/onboarding/applications/new" variant="secondary" icon="plus">
-                    New Web Application
+                  <ButtonLink href="/applications/new" variant="secondary" icon="plus">
+                    Add application
                   </ButtonLink>
                 </>
               }
             >
-              Onboard a Portal as configuration, then the Web Applications placed in it.
+              Create a Portal, then add the Applications its menu points at.
             </EmptyState>
           </Panel>
         ) : (
           <StatGroup
-            label="Web Onboarding"
+            label="Applications"
             stats={[
-              { label: "Active Portals", value: figure(summary.onboarding.activePortals), href: onboardingCatalogHref("portals", { lifecycle: "active" }) },
-              { label: "Placed Web Applications", value: figure(summary.onboarding.placedApplications), href: onboardingCatalogHref("applications", { placement: "placed" }) },
+              { label: "Applications", value: figure(summary.applications.applications), href: applicationsHref({ portal: "all" }) },
+              { label: "Undetermined rendering", value: figure(summary.applications.undetermined), href: applicationsHref({ portal: "all", rendering: "undetermined" }) },
+              { label: "Production Portals", value: figure(summary.applications.productionPortals), href: navigationListHref({ tab: "production" }) },
             ]}
           />
         )}

@@ -58,10 +58,10 @@ export const applications = sqliteTable(
     /** Who stated they created it, for an Application from Create Application. */
     createdBy: text("created_by"),
     verification: text("verification", { enum: VERIFICATION_STATES }),
-    /** Bumped on every edit and when an assessment starts or finishes. */
+    /** Bumped on every edit and when an assessment starts or finishes; a row written without one, such as by a claim, takes the time it's written. */
     updatedAt: timestamp("updated_at")
       .notNull()
-      .$defaultFn(() => new Date()),
+      .default(sql`(cast(unixepoch('subsec') * 1000 as integer))`),
     lockVersion: lockVersion(),
   },
   (t) => [

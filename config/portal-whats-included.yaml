@@ -12,16 +12,16 @@
 # shape.
 title: What's included
 items:
-  - title: Environments from the catalog
-    description: Enable the environments Studio lists, or DEV, UAT, TEST, and PROD
   - title: Menus up to five levels deep
-    description: Group routes the way your users navigate
-  - title: A default route per environment
-    description: Every enabled environment opens on an approved Application
-  - title: Placement reviews
-    description: Approve each Application's request for your Portal on its own
-  - title: Revision history
-    description: Every activation and decision is attributed and kept
-  - title: Current-state reconciliation
-    description: Compare your configuration with Studio, read-only
+    description: Group the routes the way your users navigate, and change them at any time
+  - title: A default route
+    description: The Portal opens on the menu item you choose
+  - title: Your Applications in one place
+    description: Every Application registered in the Portal, ready to add to its menu
+  - title: Prototype to Production
+    description: Promote the Portal once its menu is ready, and return it whenever you need to
+  - title: Change history
+    description: Every edit and promotion is kept with who stated they made it
+  - title: Rendering from assessment
+    description: DE Web determines how each Application renders from its repository
     badge: new

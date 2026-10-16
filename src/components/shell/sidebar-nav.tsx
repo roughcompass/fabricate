@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { HOME, type NavFlags, homeLink, locate, visibleSections } from "./navigation";
+import { HOME, type NavFlags, homeLink, locate, visibleSections, visibleTopLevel } from "./navigation";
 import { SIDEBAR_ID } from "./shell-header";
 import styles from "./sidebar-nav.module.css";
 
@@ -17,10 +17,13 @@ export function closeDrawer(): void {
 }
 
 /**
- * The sidebar's navigation (operator-interface/page-patterns spec): within a
- * section it shows that section's sub-menu, headed by the section's name, with
- * the page's item marked current; Show all sections returns to the section
- * menu without leaving the page. Both menus are always rendered and only one
+ * The sidebar's navigation (operator-interface/page-patterns spec): the
+ * section menu leads with the top-level items, Home, Applications, and
+ * Navigation, which have no sub-menu, so their pages keep the section menu
+ * with the item marked current. Within a section it shows that section's
+ * sub-menu, headed by the section's name, with the page's item marked
+ * current; Show all sections returns to the section menu without leaving the
+ * page. Both menus are always rendered and only one
  * is displayed. Without JavaScript, Show all sections links to the section
  * menu, and a :target rule displays it; with JavaScript, it switches in place
  * and moves focus to the current section. Every navigation shows the new
@@ -51,10 +54,12 @@ export function SidebarNav({ nav }: { nav: NavFlags }) {
     return () => wide.removeEventListener("change", onChange);
   }, []);
 
-  const view = !located || allSections ? "sections" : "submenu";
+  const section = located?.kind === "section" ? located : null;
+  const view = !section || allSections ? "sections" : "submenu";
   const sections = visibleSections(nav);
-  // Home leads the section menu while it's available; it has no sub-menu, so no chevron.
+  // The top-level items lead the section menu; they have no sub-menu, so no chevron. Home is among them while it's available.
   const showHome = homeLink(sections).href === HOME.href;
+  const topLevel = visibleTopLevel(nav).filter((item) => item.id !== HOME.id || showHome);
   return (
     <nav
       aria-label="Primary"
@@ -66,28 +71,32 @@ export function SidebarNav({ nav }: { nav: NavFlags }) {
       }}
     >
       <ul id={SECTIONS_ID} className={styles.sections} tabIndex={-1}>
-        {showHome && (
-          <li>
-            <Link href={HOME.href} className={styles.item} aria-current={pathname === HOME.href ? "page" : undefined} data-item={HOME.id}>
-              <Icon name={HOME.icon} className={styles.icon} />
-              <span className={styles.label}>{HOME.label}</span>
-            </Link>
-          </li>
-        )}
-        {sections.map((section) => {
-          const current = located?.section.id === section.id;
+        {topLevel.map((item) => {
+          const current = located?.kind === "item" && located.item.id === item.id;
+          // A top-level item's own address is its page; any page under it is part of it.
           return (
-            <li key={section.id}>
-              <Link href={section.items[0]!.href} ref={current ? currentSection : undefined} className={styles.item} aria-current={current ? "true" : undefined} data-section={section.id}>
-                <Icon name={section.icon} className={styles.icon} />
-                <span className={styles.label}>{section.label}</span>
+            <li key={item.id}>
+              <Link href={item.href} className={styles.item} aria-current={current ? (pathname === item.href ? "page" : "true") : undefined} data-item={item.id}>
+                <Icon name={item.icon} className={styles.icon} />
+                <span className={styles.label}>{item.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+        {sections.map((candidate) => {
+          const current = section?.section.id === candidate.id;
+          return (
+            <li key={candidate.id}>
+              <Link href={candidate.items[0]!.href} ref={current ? currentSection : undefined} className={styles.item} aria-current={current ? "true" : undefined} data-section={candidate.id}>
+                <Icon name={candidate.icon} className={styles.icon} />
+                <span className={styles.label}>{candidate.label}</span>
                 <Icon name="chevronRight" size={14} className={styles.chevron} />
               </Link>
             </li>
           );
         })}
       </ul>
-      {located && (
+      {section && (
         <div className={styles.submenu}>
           <div className={styles.head}>
             <a
@@ -103,14 +112,14 @@ export function SidebarNav({ nav }: { nav: NavFlags }) {
               <Icon name="chevronLeft" />
             </a>
             <p id="sidebar-section-title" className={styles.heading}>
-              {located.section.label}
+              {section.section.label}
             </p>
           </div>
           {/* The first group is named by the section heading; each later group by its own. */}
-          {located.section.groups.map((group, index) => {
-            const headingId = index === 0 ? "sidebar-section-title" : `sidebar-group-${located.section.id}-${index}`;
+          {section.section.groups.map((group, index) => {
+            const headingId = index === 0 ? "sidebar-section-title" : `sidebar-group-${section.section.id}-${index}`;
             return (
-              <div key={group.label ?? located.section.id} className={styles.group}>
+              <div key={group.label ?? section.section.id} className={styles.group}>
                 {index > 0 && (
                   <p id={headingId} className={styles.groupHeading}>
                     {group.label}
@@ -119,7 +128,7 @@ export function SidebarNav({ nav }: { nav: NavFlags }) {
                 <ul className={styles.list} aria-labelledby={headingId}>
                   {group.items.map((item) => (
                     <li key={item.id}>
-                      <Link href={item.href} className={styles.item} aria-current={item.id === located.item.id ? "page" : undefined} data-item={item.id}>
+                      <Link href={item.href} className={styles.item} aria-current={item.id === section.item.id ? "page" : undefined} data-item={item.id}>
                         <span className={styles.label}>{item.label}</span>
                       </Link>
                     </li>

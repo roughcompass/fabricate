@@ -1,5 +1,5 @@
 // Prints the effective safety configuration: `npm run config`.
-import { DE_CONSOLE_TOKEN, GATEWAY_CREDENTIALS, ONBOARDING_TOKENS, describePrototypesDatabase, getConfig } from ".";
+import { DE_CONSOLE_TOKEN, GATEWAY_CREDENTIALS, describePrototypesDatabase, getConfig } from ".";
 
 const config = getConfig();
 const list = (values: readonly string[]) => (values.length ? values.join(", ") : "(none)");
@@ -26,12 +26,7 @@ const deConsole = config.deConsole.source;
 console.log(
   `DE Console:         ${deConsole ? `${deConsole.kind === "file" ? deConsole.path : deConsole.url}, every ${config.deConsole.refreshMinutes} minutes${deConsole.kind === "url" ? `, token ${process.env[DE_CONSOLE_TOKEN] ? "set" : "not set"}` : ""}` : "(none)"}`,
 );
-for (const [system, label] of [["studio", "Studio:            "], ["cdaas", "CDaaS:             "]] as const) {
-  const endpoint = config.onboarding[system];
-  // The token is reported only as set or not set.
-  console.log(`${label} ${endpoint ? `${endpoint.baseUrl}, token ${process.env[ONBOARDING_TOKENS[system]] ? "set" : "not set"}` : "(not read)"}`);
-}
-console.log(`Onboarding reads:   every ${config.onboarding.refreshMinutes} minutes, stale after ${config.onboarding.staleAfterMinutes} minutes`);
+console.log(`Bitbucket hosts:    ${config.applications.bitbucketHosts.join(", ") || "(none)"}`);
 console.log(
   `Analysis budgets:   ${Object.entries(config.analysis)
     .map(([key, value]) => `${key}=${value}`)

@@ -14,7 +14,6 @@ import { buildInitiative, buildSource } from "../../test/support/builders";
 import { manifest } from "../../test/support/profiles";
 import { publishStandard, seedAssessment, selectReleases } from "../../test/support/scenarios";
 import { gitRepo } from "./fixtures";
-import { seedOnboardingSurfaces } from "./onboarding-surfaces";
 import { BASELINE_CONTROLS, ORDERS, SERVICE_CONTROLS, evaluate } from "./results";
 import { paths } from "./paths";
 import { recordFailedDeConsoleRead } from "../../src/lib/ownership/de-console";
@@ -91,7 +90,6 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["08-finding-indeterminate", `/evaluations/${evaluation.publicId}/findings/${indeterminate.publicId}`],
     ["09-design-system", "/design-system"],
     ["09-not-found", "/runs/asm_doesnotexist0000"],
-    ...seedOnboardingSurfaces(db),
   ];
 }
 
@@ -101,7 +99,7 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
  * time its surface is visited, so it is always mid-build.
  */
 export async function seedDemoSurfaces(page: Page, context: BrowserContext, db: Db): Promise<Surface[]> {
-  await page.goto("/new");
+  await page.goto("/templates");
   const key = (await context.cookies()).find((cookie) => cookie.name === WORKSPACE_COOKIE)!.value;
   const workspace = ensureWorkspace(db, key);
   const ready = createApplication(db, workspace.id, templateBySlug("payments-workspace")!, validateDeployInput({ name: "Treasury payments", environment: "dev", project: "PAY", repository: "treasury-payments" }), new Date(Date.now() - 10 * 60_000));
@@ -114,10 +112,6 @@ export async function seedDemoSurfaces(page: Page, context: BrowserContext, db: 
     (["portrait", "landscape"] as const).map((orientation): Surface => [`13-preview-${device}-${orientation}`, `/templates/market-watch/preview?device=${device}&orientation=${orientation}`]),
   );
   return [
-    ["10-create", "/new"],
-    ["10-create-markets", "/new?brand=markets"],
-    ["10-import", "/applications/import"],
-    ["10-import-form", "/applications/import/PAY/payee-hub"],
     ["11-gallery", "/templates"],
     ["11-gallery-filtered", "/templates?brand=payments&brand=markets&provider=de-web"],
     ["12-template", "/templates/payments-workspace"],

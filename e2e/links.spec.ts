@@ -1,8 +1,7 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
-import { seedV1Surfaces } from "./support/onboarding-surfaces";
 import { paths } from "./support/paths";
-import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
+import { seedDemoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 
 /**
  * The link check (operator-interface/page-patterns spec, "Every link opens the
@@ -142,18 +141,6 @@ test("every link opens a page, every page uses the interface vocabulary, and eve
   const problems: string[] = [];
   const visited = await crawl(page, START, Infinity, problems);
   expect(visited.length, "the crawl reaches every section").toBeGreaterThan(40);
-  await checkPrimaries(browser, context, baseURL!, visited, problems);
-  expect(problems).toEqual([]);
-});
-
-// v1 history renders on the current routes, from a fixture that loads into an
-// empty database, so it can't be seeded beside the operator surfaces. Its
-// pages, and the pages they link to, get their own pass.
-test("on v1 history and converted Drafts, every link opens a page, every page uses the interface vocabulary, and every primary action has the primary fill", async ({ browser, page, context, db, baseURL }) => {
-  test.skip(Boolean(process.env.E2E_PRODUCTION), "A production run shares one database, and the v1 fixture needs an empty one.");
-  test.setTimeout(300_000);
-  const problems: string[] = [];
-  const visited = await crawl(page, seedV1Surfaces(db).map(([, url]) => surfaceUrl(url)), 1, problems);
   await checkPrimaries(browser, context, baseURL!, visited, problems);
   expect(problems).toEqual([]);
 });

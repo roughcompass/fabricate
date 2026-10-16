@@ -2,11 +2,11 @@ import type { IconName } from "@/components/ui/icon";
 
 /**
  * The sidebar's navigation (operator-interface/page-patterns spec, sidebar
- * navigation requirement): the top-level sections and each section's
- * sub-menu, in groups. An item is current on every path its patterns match.
- * The patterns never overlap, so a path belongs to at most one item: the
- * general patterns exclude the create and import pages, which have their own
- * items.
+ * navigation requirement): the top-level items, which have no sub-menu, then
+ * the sections and each section's sub-menu, in groups. An item is current on
+ * every path its patterns match. The patterns never overlap, so a path
+ * belongs to at most one item: the general patterns exclude the create and
+ * import pages, which have their own items.
  */
 
 export interface NavItem {
@@ -22,8 +22,18 @@ export interface NavGroup {
   readonly items: readonly NavItem[];
 }
 
+/**
+ * An entry of the section menu with no sub-menu (design decision 1): Home,
+ * Applications, and Navigation. Every page it matches shows the section menu
+ * with it marked current.
+ */
+export interface TopLevelItem extends NavItem {
+  readonly id: "home" | "applications" | "navigation";
+  readonly icon: IconName;
+}
+
 export interface NavSection {
-  readonly id: "assessments" | "web-onboarding" | "applications" | "salt-patterns" | "prototypes";
+  readonly id: "assessments" | "salt-patterns" | "prototypes";
   readonly label: string;
   readonly icon: IconName;
   /** Shown only while the template demo is enabled. */
@@ -68,35 +78,6 @@ export const SECTIONS: readonly NavSection[] = [
     ],
   }),
   section({
-    id: "web-onboarding",
-    label: "Web Onboarding",
-    icon: "network",
-    groups: [
-      {
-        items: [
-          { id: "portals", label: "Portals", href: "/onboarding/portals", match: [/^\/onboarding\/?$/, /^\/onboarding\/portals(\/.*)?$/] },
-          // MFEs are assets Application teams manage from a Web Application's composition, so their pages are under Web Applications.
-          { id: "web-applications", label: "Web Applications", href: "/onboarding/applications", match: [/^\/onboarding\/applications(\/.*)?$/, /^\/onboarding\/microfrontends(\/.*)?$/] },
-          { id: "reviews", label: "Reviews", href: "/onboarding/reviews", match: [/^\/onboarding\/reviews(\/.*)?$/] },
-        ],
-      },
-    ],
-  }),
-  section({
-    id: "applications",
-    label: "Applications",
-    icon: "layers",
-    demo: true,
-    groups: [
-      {
-        items: [
-          { id: "all-applications", label: "All Applications", href: "/applications", match: [/^\/applications\/?$/, /^\/applications\/(?!import(\/|$))[^/]+(\/.*)?$/] },
-          { id: "import-bitbucket", label: "Import from BitBucket", href: "/applications/import", match: [/^\/applications\/import(\/.*)?$/] },
-        ],
-      },
-    ],
-  }),
-  section({
     id: "salt-patterns",
     label: "Salt Patterns",
     icon: "sparkle",
@@ -105,7 +86,6 @@ export const SECTIONS: readonly NavSection[] = [
       {
         items: [
           { id: "all-salt-patterns", label: "All Salt Patterns", href: "/templates", match: [/^\/templates(\/.*)?$/] },
-          { id: "new-application", label: "New application", href: "/new", match: [/^\/new\/?$/] },
         ],
       },
     ],
@@ -137,7 +117,7 @@ export const SECTIONS: readonly NavSection[] = [
 
 /** Which optional areas exist in this configuration. Pages read it from the configuration; client error pages, which can't, use NO_OPTIONAL_AREAS. */
 export interface NavFlags {
-  /** The template demo: Applications and Salt Patterns. */
+  /** The template demo: Salt Patterns, and demo deployments on the Applications page. */
   readonly demo: boolean;
   readonly prototypes: boolean;
   /** The hosted profile shows only Prototypes. */
@@ -147,9 +127,9 @@ export interface NavFlags {
 export const NO_OPTIONAL_AREAS: NavFlags = { demo: false, prototypes: false, hosted: false };
 
 /**
- * The sections to show: Assessments and Web Onboarding always, Applications
- * and Salt Patterns while the demo is enabled, and Prototypes while it is
- * enabled. In the hosted profile, only Prototypes.
+ * The sections to show: Assessments always, Salt Patterns while the demo is
+ * enabled, and Prototypes while it is enabled. In the hosted profile, only
+ * Prototypes.
  */
 export function visibleSections(flags: NavFlags): readonly NavSection[] {
   if (flags.hosted) return SECTIONS.filter((section) => section.prototypes && flags.prototypes);
@@ -157,7 +137,19 @@ export function visibleSections(flags: NavFlags): readonly NavSection[] {
 }
 
 /** Home (home spec): the first entry of the section menu, outside every section, so it has no sub-menu. */
-export const HOME = { id: "home", label: "Home", href: "/", icon: "home" } as const satisfies Pick<NavItem, "id" | "label" | "href"> & { icon: IconName };
+export const HOME = { id: "home", label: "Home", href: "/", icon: "home", match: [/^\/$/] } as const satisfies TopLevelItem;
+
+/** The top-level items, in order. Applications covers its dashboards, demo pages, and the Add application flow; Navigation the list, each Portal's page, and New Portal. */
+export const TOP_LEVEL: readonly TopLevelItem[] = [
+  HOME,
+  { id: "applications", label: "Applications", href: "/applications", icon: "layers", match: [/^\/applications(\/.*)?$/] },
+  { id: "navigation", label: "Navigation", href: "/navigation", icon: "network", match: [/^\/navigation(\/.*)?$/] },
+];
+
+/** The top-level items to show: all three in the full profile, none in the hosted one, which has neither Applications nor Navigation. */
+export function visibleTopLevel(flags: NavFlags): readonly TopLevelItem[] {
+  return flags.hosted ? [] : TOP_LEVEL;
+}
 
 /**
  * Where every link to Home leads (home spec, "Home exists only while
@@ -172,11 +164,15 @@ export function homeLink(sections: readonly NavSection[]): { href: string; label
   return { href: first.items[0]!.href, label: first.label };
 }
 
-/** The section and item a path belongs to, or null for a page outside every section. */
-export function locate(pathname: string, flags: NavFlags): { section: NavSection; item: NavItem } | null {
+export type Location = { kind: "item"; item: TopLevelItem } | { kind: "section"; section: NavSection; item: NavItem };
+
+/** The top-level item, or the section and its item, a path belongs to; null for a page outside every one. */
+export function locate(pathname: string, flags: NavFlags): Location | null {
+  const item = visibleTopLevel(flags).find((candidate) => candidate.match.some((pattern) => pattern.test(pathname)));
+  if (item) return { kind: "item", item };
   for (const section of visibleSections(flags)) {
-    const item = section.items.find((candidate) => candidate.match.some((pattern) => pattern.test(pathname)));
-    if (item) return { section, item };
+    const found = section.items.find((candidate) => candidate.match.some((pattern) => pattern.test(pathname)));
+    if (found) return { kind: "section", section, item: found };
   }
   return null;
 }

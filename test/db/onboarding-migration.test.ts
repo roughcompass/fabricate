@@ -3,10 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type Db, MIGRATIONS_FOLDER, migrateDatabase, openDatabase } from "@/lib/db/client";
-import { createWebApplication, getApplication, placementCandidates } from "@/lib/onboarding/applications";
-import { createPortal, getPortal, savePortalDraft, submitPortal } from "@/lib/onboarding/portals";
-import { applicationsWithSealId } from "@/lib/ownership/records";
-import { ana, portalDraft, portalInput } from "../support/onboarding";
+import { createPortal, getPortal, isOnboarded } from "@/lib/onboarding/portals";
+import { applicationsWithSealId, createApplication, findApplication } from "@/lib/ownership/records";
+import { ana, portalInput } from "../support/onboarding";
 
 const PRE_ONBOARDING_MIGRATION = "0021_claim_initiative_triggers";
 const FIXTURE = path.resolve("test/fixtures/onboarding/ownership-before-onboarding.sql");
@@ -120,11 +119,11 @@ describe("onboarding ownership migration fixture", () => {
     expect(db.$client.pragma("foreign_key_check")).toEqual([]);
     expect(() =>
       db.$client
-        .prepare("insert into applications (id, public_id, seal_id, name, created_at) values (203, 'wap_onboarding_payments_two', '88001', 'Payments reporting', 2000)")
+        .prepare("insert into applications (id, public_id, seal_id, name, created_at, updated_at) values (203, 'wap_onboarding_payments_two', '88001', 'Payments reporting', 2000, 2000)")
         .run(),
     ).not.toThrow();
     expect(() =>
-      db.$client.prepare("insert into applications (public_id, seal_id, name, created_at) values ('app_invalid', '88003', 'Invalid', 2000)").run(),
+      db.$client.prepare("insert into applications (public_id, seal_id, name, created_at, updated_at) values ('app_invalid', '88003', 'Invalid', 2000, 2000)").run(),
     ).toThrow(/applications_public_id/);
     expect(() =>
       db.$client
@@ -136,7 +135,7 @@ describe("onboarding ownership migration fixture", () => {
     expect(() => db.$client.prepare("update ownership_assertions set provided_by = 'changed' where id = 501").run()).toThrow(/assertions are never changed/);
   });
 
-  it("carries the ownership fixture through the complete onboarding migration, keeping portal claims as unapproved Draft candidates", () => {
+  it("carries the ownership fixture through every migration, keeping a claimed Portal a Prototype that isn't onboarded", () => {
     db.$client.exec(fs.readFileSync(FIXTURE, "utf8"));
     const before = snapshot(db);
     migrateDatabase(db, MIGRATIONS_FOLDER);
@@ -146,26 +145,18 @@ describe("onboarding ownership migration fixture", () => {
     expect((migratedSnapshot(db).assertions as { id: number }[]).map((row) => row.id)).toEqual(before.assertionIds);
     expect(migratedSnapshot(db).supersessions).toEqual(before.supersessions);
 
-    // The claimed Portal is a Draft identity, and the claim a candidate, never a placement.
-    const payments = getApplication(db, "sea_onboarding_payments");
-    expect(getPortal(db, "ptl_onboarding_access")).toMatchObject({ lifecycle: "draft", activeRevisionId: null, draftRevisionId: null });
-    expect(payments).toMatchObject({ lifecycle: "draft", activeRevisionId: null });
-    const counts = () => db.$client.prepare("select (select count(*) from application_placements) as placements, (select count(*) from placement_requests) as requests, (select count(*) from placement_decisions) as decisions, (select count(*) from placement_routes) as routes").get();
-    expect(counts()).toEqual({ placements: 0, requests: 0, decisions: 0, routes: 0 });
-    expect(placementCandidates(db, payments)).toEqual([
-      { portal: { publicId: "ptl_onboarding_access", label: "Access", lifecycle: "draft", onboarded: false }, claim: { assertion: "own_onboarding_portal", providedBy: "ana@example.com", source: "person", recordedAt: new Date(1400) } },
-    ]);
+    // The claimed Portal is a Prototype no one has onboarded, and the claimed Application has no Portal, slug, or repository.
+    const claimed = getPortal(db, "ptl_onboarding_access");
+    expect(claimed).toMatchObject({ lifecycle: "prototype" });
+    expect(isOnboarded(db, claimed.id)).toBe(false);
+    expect(findApplication(db, "sea_onboarding_payments")).toMatchObject({ portalId: null, slug: null, repositorySourceId: null });
 
-    // Onboarding the claimed Portal adopts it; the claim stays a candidate until a placement is requested and reviewed.
-    const { portal, draft } = createPortal(db, portalInput("Access", { ownerTeam: "Access Platform", sealId: "88002" }), ana);
-    expect(portal.publicId).toBe("ptl_onboarding_access");
-    const saved = savePortalDraft(db, portal.publicId, { lockVersion: draft.lockVersion, document: portalDraft({ sealId: "88002" }) });
-    expect(submitPortal(db, portal.publicId, { lockVersion: saved.lockVersion, actor: ana }).submitted).toBe(true);
-    expect(placementCandidates(db, payments).map((candidate) => [candidate.portal.label, candidate.portal.onboarded])).toEqual([["Access", true]]);
-    expect(counts()).toEqual({ placements: 0, requests: 0, decisions: 0, routes: 0 });
+    // Onboarding the claimed Portal adopts it.
+    const { portal, adopted } = createPortal(db, portalInput("Access", { sealId: "88002" }), ana);
+    expect([portal.publicId, adopted, isOnboarded(db, portal.id)]).toEqual(["ptl_onboarding_access", true, true]);
 
     // A SEAL ID another Application carries is accepted for a new one.
-    const { application } = createWebApplication(db, { name: "Payments reporting", ownerTeam: "Payments", sealId: "88001" }, ana);
+    const application = createApplication(db, { name: "Payments reporting", sealId: "88001" });
     expect(applicationsWithSealId(db, "88001").map((item) => item.publicId).sort()).toEqual([application.publicId, "sea_onboarding_payments"].sort());
   });
 

@@ -1,4 +1,6 @@
+import type { RenderingMode } from "@/lib/applications/vocabulary";
 import type { ConclusionFilter } from "@/lib/evaluations/conclusions";
+import type { NavigationTab } from "@/lib/onboarding/catalog";
 import type { OwnershipFilter } from "@/lib/ownership/coverage";
 
 /**
@@ -25,14 +27,16 @@ export function assessmentsHref(filters: { conclusion?: ConclusionFilter | null 
   return withQuery("/assessments", { conclusion: filters.conclusion });
 }
 
-export const PLACEMENT_FILTERS = ["placed", "unplaced"] as const;
-export type PlacementFilter = (typeof PLACEMENT_FILTERS)[number];
-
-export function isPlacementFilter(value: unknown): value is PlacementFilter {
-  return typeof value === "string" && (PLACEMENT_FILTERS as readonly string[]).includes(value);
+/**
+ * The Applications page (application-catalog spec), across all Portals with
+ * `portal: "all"` rather than the switcher's Portal, filtered to a rendering
+ * mode, searched, and in grid or list view.
+ */
+export function applicationsHref(filters: { portal?: "all" | null; rendering?: RenderingMode | null; q?: string; view?: "grid" | "list" | null } = {}): string {
+  return withQuery("/applications", { portal: filters.portal, q: filters.q, rendering: filters.rendering, view: filters.view === "list" ? "list" : null });
 }
 
-/** A Web Onboarding catalog on a lifecycle tab, with a search, and for Web Applications a placement filter. */
-export function onboardingCatalogHref(catalog: "portals" | "applications", filters: { lifecycle?: string | null; placement?: PlacementFilter | null; q?: string } = {}): string {
-  return withQuery(`/onboarding/${catalog}`, { lifecycle: filters.lifecycle, placement: catalog === "applications" ? filters.placement : null, q: filters.q });
+/** The Navigation list of every Portal, on a lifecycle tab. */
+export function navigationListHref(filters: { tab?: NavigationTab | null } = {}): string {
+  return withQuery("/navigation", { portal: "all", tab: filters.tab === "all" ? null : filters.tab });
 }

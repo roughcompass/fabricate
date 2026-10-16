@@ -10,27 +10,23 @@ type Event = typeof onboardingEvents.$inferSelect;
 
 const EVENTS: Record<Event["event"], string> = {
   created: "Created",
-  draft_started: "Draft started",
-  submitted: "Submitted",
-  ready: "Became Ready",
-  not_ready: "No longer Ready",
-  activated: "Activated",
-  revision_activated: "Revision activated",
-  retired: "Retired",
-  metadata_changed: "Details changed",
+  details_changed: "Details changed",
+  menu_changed: "Menu changed",
+  default_changed: "Default route changed",
+  promoted: "Promoted to Production",
+  returned_to_prototype: "Returned to Prototype",
 };
 
-/** A record's lifecycle and revision history, newest first, each change with who made it. */
-export function LifecycleHistory({ events }: { events: readonly Event[] }) {
+/** A record's history, newest first, each change with who stated they made it. */
+export function ChangeHistory({ events }: { events: readonly Event[] }) {
   return (
     <Panel flush>
       {events.length > 0 ? (
         <Table
-          label="Lifecycle history"
+          label="History"
           head={
             <>
               <Th>Change</Th>
-              <Th>Revision</Th>
               <Th>By</Th>
               <Th>When</Th>
             </>
@@ -39,10 +35,15 @@ export function LifecycleHistory({ events }: { events: readonly Event[] }) {
           {events.map((event) => (
             <tr key={event.id}>
               <Td label="Change">
-                {event.toLifecycle && event.event !== "created" && event.event !== "draft_started" && event.event !== "submitted" ? <Status state={event.toLifecycle} label={EVENTS[event.event]} /> : EVENTS[event.event]}
-                {event.reason && <Secondary>{event.reason}</Secondary>}
+                {event.toLifecycle && event.event !== "created" ? (
+                  <span>
+                    {EVENTS[event.event]} <Status state={event.toLifecycle} size="sm" />
+                  </span>
+                ) : (
+                  EVENTS[event.event]
+                )}
+                {event.detail && <Secondary>{event.detail}</Secondary>}
               </Td>
-              <Td label="Revision">{event.revision ?? "—"}</Td>
               <Td label="By">
                 <Attributed name={event.actor} attribution={event.attribution} />
               </Td>
@@ -53,7 +54,7 @@ export function LifecycleHistory({ events }: { events: readonly Event[] }) {
           ))}
         </Table>
       ) : (
-        <EmptyState title="No changes yet">Creating, submitting, and each lifecycle change appear here.</EmptyState>
+        <EmptyState title="No changes yet">Each detail, menu, default, and lifecycle change appears here.</EmptyState>
       )}
     </Panel>
   );

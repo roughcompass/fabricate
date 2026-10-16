@@ -19,8 +19,6 @@ afterEach(() => setConfig(original));
 const pages = {
   templates: () => import("@/app/(operator)/templates/not-found"),
   applications: () => import("@/app/(operator)/applications/not-found"),
-  import: () => import("@/app/(operator)/applications/import/not-found"),
-  create: () => import("@/app/(operator)/new/not-found"),
 };
 
 async function render(page: keyof typeof pages): Promise<string> {
@@ -34,7 +32,6 @@ describe("not-found pages", () => {
     expect(await render("templates")).toContain('href="/templates"');
     expect(await render("templates")).toContain("Go to Salt Patterns");
     expect(await render("applications")).toContain("Go to Applications");
-    expect(await render("import")).toContain("Go to Import from BitBucket");
   });
 
   it("links every demo page to Home while the demo is disabled (Demo page while the demo is disabled)", async () => {

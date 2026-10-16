@@ -53,7 +53,7 @@ describe("demo workspace proxy", () => {
     expect(keys.size).toBe(50);
   });
 
-  it.each(["/new", "/applications/import", "/templates", "/templates/market-watch", "/templates/market-watch/deploy", "/applications", "/applications/app_0000000000000001", "/run/ref-market-watch/watch", "/s/abc", "/api/demo/comments"])(
+  it.each(["/applications/new", "/applications/new/templates", "/templates", "/templates/market-watch", "/templates/market-watch/deploy", "/applications", "/applications/app_0000000000000001", "/run/ref-market-watch/watch", "/s/abc", "/api/demo/comments"])(
     "runs on the demo path %s",
     (url) => {
       expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);

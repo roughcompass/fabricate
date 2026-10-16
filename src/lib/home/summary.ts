@@ -13,23 +13,24 @@ export interface FleetSummary {
   repositories: RepositoryCounts & { empty: boolean };
   /** Assessments the operator created; those created for claims are left out. */
   assessments: { empty: boolean; total: number; byConclusion: Record<ConclusionFilter, number> };
-  /** Web Applications never become active themselves; they go live when a Portal approves a placement, which activates its route. */
-  onboarding: { empty: boolean; activePortals: number; placedApplications: number };
+  /** Applications registered through Create Application, and the Portals they belong to. */
+  applications: { empty: boolean; applications: number; undetermined: number; productionPortals: number };
 }
 
 export function fleetSummary(db: Executor): FleetSummary {
   const repositories = repositoryCounts(db);
   const conclusions = latestConclusions(db, { systemOwned: false });
-  const onboarding = db.get<{ portals: number; active_portals: number; applications: number; placed_applications: number }>(sql`
+  // A Portal counts once it's onboarded, so a Portal named only in a claim doesn't hide the empty state.
+  const applications = db.get<{ portals: number; production_portals: number; applications: number; undetermined: number }>(sql`
     select
-      (select count(*) from portals) as portals,
-      (select count(*) from portals where lifecycle = 'active') as active_portals,
-      (select count(*) from applications) as applications,
-      (select count(distinct application_id) from placement_routes where active = 1) as placed_applications`)!;
+      (select count(*) from portals p where exists (select 1 from onboarding_events e where e.portal_id = p.id)) as portals,
+      (select count(*) from portals p where p.lifecycle = 'production' and exists (select 1 from onboarding_events e where e.portal_id = p.id)) as production_portals,
+      (select count(*) from applications where repository_source_id is not null) as applications,
+      (select count(*) from applications where repository_source_id is not null and rendering_mode = 'undetermined') as undetermined`)!;
   return {
     repositories: { ...repositories, empty: repositories.total === 0 },
     assessments: { empty: conclusions.size === 0, total: conclusions.size, byConclusion: conclusionCounts(conclusions) },
-    onboarding: { empty: onboarding.portals + onboarding.applications === 0, activePortals: onboarding.active_portals, placedApplications: onboarding.placed_applications },
+    applications: { empty: applications.portals + applications.applications === 0, applications: applications.applications, undetermined: applications.undetermined, productionPortals: applications.production_portals },
   };
 }
 

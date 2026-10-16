@@ -1,7 +1,9 @@
 import { CATEGORY_STATES, FACT_STATES } from "@repo-facts/contract";
 import { describe, expect, it } from "vitest";
-import { checkKind, dependencyKind, diagnosticReason, hasStatus, severityLabel, severityOptions, statusOf } from "@/components/ui/status";
-import { ASSESSMENT_STATES, DE_CONSOLE_CONFLICT_REASONS, DE_CONSOLE_READ_STATUSES, EVALUATION_RELEASE_STATES, EVALUATION_STATES, OUTCOMES, SEVERITIES, TARGET_STATES } from "@/lib/db/schema";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { Status, badgeEmphasis, checkKind, dependencyKind, diagnosticReason, hasStatus, severityLabel, severityOptions, statusOf } from "@/components/ui/status";
+import { ASSESSMENT_STATES, DE_CONSOLE_CONFLICT_REASONS, DE_CONSOLE_READ_STATUSES, EVALUATION_RELEASE_STATES, EVALUATION_STATES, OUTCOMES, PORTAL_LIFECYCLES, SEVERITIES, TARGET_STATES } from "@/lib/db/schema";
 import { RESOLUTION_STATES } from "@/lib/relationships/schema";
 
 describe("status registry", () => {
@@ -16,6 +18,7 @@ describe("status registry", () => {
     ["category", CATEGORY_STATES],
     ["DE Console read", DE_CONSOLE_READ_STATUSES],
     ["DE Console conflict reason", DE_CONSOLE_CONFLICT_REASONS],
+    ["Portal lifecycle", PORTAL_LIFECYCLES],
     ["Evaluation conclusion", ["gaps", "undetermined", "conforms", "not_applicable", "not_evaluated"]],
   ])("labels every %s state explicitly, never by fallback", (_kind, states) => {
     for (const state of states) {
@@ -24,6 +27,21 @@ describe("status registry", () => {
       expect(label, state).toMatch(/^[A-Z]/);
     }
     expect(states.filter((state) => !hasStatus(state))).toEqual([]);
+  });
+
+  // make-applications-first-class design decision 9: the two lifecycles differ in text and fill, not only in hue.
+  it("shows a Prototype as a neutral badge and Production as a filled one, each with its own text", () => {
+    expect(PORTAL_LIFECYCLES.map((state) => [statusOf(state).label, badgeEmphasis(state)])).toEqual([
+      ["Prototype", "default"],
+      ["Production", "high"],
+    ]);
+    const prototype = renderToStaticMarkup(createElement(Status, { state: "prototype" }));
+    const production = renderToStaticMarkup(createElement(Status, { state: "production" }));
+    expect(prototype).toContain('data-emphasis="default"');
+    expect(prototype).toContain(">Prototype<");
+    expect(production).toContain('data-emphasis="high"');
+    expect(production).toContain(">Production<");
+    expect(badgeEmphasis("complete")).toBeNull();
   });
 
   it("names why a DE Console entry is in conflict in words", () => {

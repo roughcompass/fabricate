@@ -36,14 +36,6 @@ for (const [from, to] of REDIRECTS) {
   });
 }
 
-test("redirects the create page's BitBucket import to the Applications import form", async ({ page, db: _db }) => {
-  const response = await page.request.get("/new/import?project=PAY&repository=payee-hub", { maxRedirects: 0 });
-  expect(response.status()).toBe(308);
-  expect(new URL(response.headers().location!, "http://localhost").pathname).toBe("/applications/import/PAY/payee-hub");
-  await page.goto("/new/import?project=PAY&repository=payee-hub");
-  await expect(page.getByRole("heading", { level: 1, name: "Import PAY/payee-hub" })).toBeVisible();
-});
-
 test("serves the new Assessment addresses without redirecting", async ({ request, db }) => {
   const initiative = buildInitiative(db, { name: "Redirect check", sources: [buildSource(db, { name: "redirect-check" })] });
   for (const path of [paths.assessments, paths.newAssessment, paths.assessment(initiative.publicId), paths.assessmentEdit(initiative.publicId)]) {

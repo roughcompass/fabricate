@@ -1,16 +1,15 @@
 import type { Executor } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
-import { type Attribution, type LifecycleState, type OnboardingEvent, type OnboardingSubject, onboardingEvents } from "@/lib/db/schema";
+import { type Attribution, type OnboardingEvent, type OnboardingSubject, type PortalLifecycle, onboardingEvents } from "@/lib/db/schema";
 
 /*
- * Who acted (design decision 9). Fabricate has no sign-in, so a person types
- * their name, or reuses the one the browser remembers. Every action keeps
- * that name labeled Unverified: it says who someone claimed to be, grants no
- * authority, and authorizes nothing in Studio or CDaaS. It's never copied
- * into a Portal, Application, or MFE, which name their owning team instead,
- * and nothing derives an email from it.
- * DE FabLab's own changes, such as a readiness check after a
- * reconciliation, are attributed to DE FabLab.
+ * Who acted (reviews spec). Fabricate has no sign-in, and no form asks for a
+ * name: each change is recorded as the name the browser remembers, or "Not
+ * stated", labeled Unverified. It says who someone claimed to be, grants no
+ * authority, and authorizes nothing in Studio, CDaaS, Bitbucket, or GitHub.
+ * It's never copied into a Portal or Application, which name their owning
+ * team instead, and nothing derives an email from it. DE FabLab's own
+ * changes are attributed to DE FabLab.
  */
 
 export interface Actor {
@@ -20,10 +19,10 @@ export interface Actor {
 
 export const SYSTEM_ACTOR: Actor = Object.freeze({ name: "DE FabLab", attribution: "system" });
 
-/** The name a person states, trimmed, or a ValidationError on +field+. */
-/** Who an action is recorded as when the person never gave a name, such as creating a Portal before any other onboarding step. */
+/** Who an action is recorded as when the browser remembers no name. */
 export const UNSTATED_ACTOR = "Not stated";
 
+/** The name a person states, trimmed, or a ValidationError on +field+. */
 export function statedActor(name: string | null | undefined, field = "actor"): Actor {
   const value = (name ?? "").trim().replace(/\s+/g, " ");
   if (!value) throw new ValidationError([{ field, message: "Enter your name" }]);
@@ -38,10 +37,10 @@ export function attributionLabel(attribution: Attribution): string {
 
 export interface EventInput {
   event: OnboardingEvent;
-  revision?: number | null;
-  from?: LifecycleState | null;
-  to?: LifecycleState | null;
-  reason?: string | null;
+  from?: PortalLifecycle | null;
+  to?: PortalLifecycle | null;
+  /** What changed, as people read it: "Added Payees at /payees". */
+  detail?: string | null;
   actor: Actor;
   at?: Date;
 }
@@ -53,12 +52,10 @@ export function recordEvent(db: Executor, subject: OnboardingSubject, identityId
       subject,
       portalId: subject === "portal" ? identityId : null,
       applicationId: subject === "application" ? identityId : null,
-      microfrontendId: subject === "microfrontend" ? identityId : null,
-      revision: input.revision ?? null,
       event: input.event,
       fromLifecycle: input.from ?? null,
       toLifecycle: input.to ?? null,
-      reason: input.reason?.trim() || null,
+      detail: input.detail?.trim().slice(0, 500) || null,
       actor: input.actor.name,
       attribution: input.actor.attribution,
       occurredAt: input.at ?? new Date(),

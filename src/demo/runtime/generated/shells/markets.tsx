@@ -170,7 +170,7 @@ export default function Shell({ children }: { children: ReactNode }) {
             </Link>
           )}
 
-          <nav aria-label={`${portal} sections`} data-scroll-x="" style={{ flex: "1 1 0", minWidth: 0, overflowX: "auto" }}>
+          <nav aria-label={`${portal} sections`} data-scroll-x="" style={{ flex: 1, minWidth: 0, overflowX: "auto" }}>
             <FlexLayout
               as="ul"
               gap={1}

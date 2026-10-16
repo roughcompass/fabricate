@@ -6,7 +6,7 @@ import { type Db, MIGRATIONS_FOLDER, migrateDatabase, openDatabase } from "@/lib
 import { createTestDb, rawRun } from "../support/db";
 
 const DEMO_TABLES = ["demo_applications", "demo_comments", "demo_shares", "demo_threads", "demo_workspaces"];
-const DEMO_MIGRATIONS = ["0013_demo", "0014_demo_origin"];
+const DEMO_MIGRATIONS = ["0013_demo", "0014_demo_origin", "0033_demo_imports_removed"];
 const DIGEST = "a".repeat(64);
 
 function tables(db: Db): string[] {

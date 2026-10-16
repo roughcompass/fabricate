@@ -1,5 +1,5 @@
 import { selectPortalAction } from "@/app/portal-actions";
-import { createPortalAction } from "@/app/(operator)/onboarding/portals/actions";
+import { createPortalAction } from "@/app/(operator)/navigation/actions";
 import { CreatePortalDialog } from "@/components/onboarding/create-portal";
 import type { SwitcherPortal } from "@/lib/onboarding/catalog";
 import type { WhatsIncluded } from "@/lib/onboarding/whats-included";

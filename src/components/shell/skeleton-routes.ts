@@ -9,19 +9,16 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/repositories\/import\/?$/, "list"],
   [/^\/repositories\/de-console\/?$/, "detail"],
   [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "detail"],
-  // Web onboarding: its catalogs and the review queue, its create and Draft forms, and its records.
-  [/^\/onboarding\/(portals|applications)\/new\/?$/, "form"],
-  [/^\/onboarding\/applications\/[^/]+\/microfrontends\/new\/?$/, "form"],
-  [/^\/onboarding\/(portals|applications|microfrontends)\/[^/]+\/draft(\/.*)?$/, "form"],
-  [/^\/onboarding(\/(portals|applications|microfrontends|reviews))?\/?$/, "list"],
-  [/^\/onboarding\/(portals|applications|microfrontends|reviews)\/[^/]+(\/.*)?$/, "detail"],
+  // Navigation: the list of Portals, New Portal, and each Portal's page.
+  [/^\/navigation\/?$/, "list"],
+  [/^\/navigation\/new\/?$/, "form"],
+  [/^\/navigation\/[^/]+\/?$/, "detail"],
+  // Add application, its full catalog, and Create Application are focused pages (page-patterns spec), like preview mode.
+  [/^\/applications\/new(\/.*)?$/, "focused"],
   // The template demo's operator pages; running applications have no skeleton.
   [/^\/templates\/[^/]+\/deploy\/?$/, "form"],
   // Preview mode is a focused page: its skeleton hides the sidebar as soon as the navigation starts.
   [/^\/templates\/[^/]+\/preview\/?$/, "focused"],
-  [/^\/applications\/import\/?$/, "list"],
-  [/^\/applications\/import\/[^/]+\/[^/]+\/?$/, "form"],
-  [/^\/new\/?$/, "list"],
   [/^\/(templates|applications)\/?$/, "list"],
   [/^\/(templates|applications)\/[^/]+\/?$/, "detail"],
 ];

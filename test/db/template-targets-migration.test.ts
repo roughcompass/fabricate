@@ -90,8 +90,8 @@ function insertTemplateTarget(db: Db, assessment: { id: number; at: number }, ov
 describe("migration 0028: template targets", () => {
   it("seeds the Salt Patterns initiative on a fresh database and keeps every earlier trigger", () => {
     const before = triggers(databaseAt(BEFORE));
-    const db = openDatabase(":memory:");
-    migrateDatabase(db, MIGRATIONS_FOLDER);
+    // Later migrations rebuild and drop onboarding's tables, so the triggers are compared right after 0028.
+    const db = databaseAt("0028_template_targets");
 
     expect(db.$client.prepare("select public_id, name, selection_mode, system_owned, claim_repository_source_id from initiatives").all()).toEqual([
       { public_id: SALT_PATTERNS_INITIATIVE_ID, name: "Salt Patterns", selection_mode: "explicit", system_owned: 1, claim_repository_source_id: null },

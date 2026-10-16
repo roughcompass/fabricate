@@ -232,6 +232,13 @@
       "when": 1792187070248,
       "tag": "0032_applications_first_class",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1792188424495,
+      "tag": "0033_demo_imports_removed",
+      "breakpoints": true
     }
   ]
 }

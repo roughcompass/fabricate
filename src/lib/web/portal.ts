@@ -1,7 +1,8 @@
-import { and, eq, exists, ne, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
-import { portalRevisions, portals } from "@/lib/db/schema";
+import { portals } from "@/lib/db/schema";
+import { onboardedPortal } from "@/lib/onboarding/catalog";
 import type { Portal } from "@/lib/onboarding/portals";
 
 /*
@@ -15,17 +16,11 @@ export const PORTAL_COOKIE = "fabricate-portal";
 export const PORTAL_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 /**
- * The Portal +value+ names, if it's one the switcher lists: onboarded, so it
- * has a configuration revision, and not Retired. Anything else, including a
- * Portal retired since it was chosen, means All Portals, so null.
+ * The Portal +value+ names, if it's one the switcher lists: an onboarded
+ * Portal, in either lifecycle. Anything else, such as a Portal that no
+ * longer exists, means All Portals, so null.
  */
 export function currentPortal(db: Executor, value: string | undefined): Portal | null {
   if (!isPublicId(value, "ptl")) return null;
-  return (
-    db
-      .select()
-      .from(portals)
-      .where(and(eq(portals.publicId, value), ne(portals.lifecycle, "retired"), exists(db.select({ one: sql`1` }).from(portalRevisions).where(eq(portalRevisions.portalId, portals.id)))))
-      .get() ?? null
-  );
+  return db.select().from(portals).where(and(eq(portals.publicId, value), onboardedPortal(db))).get() ?? null;
 }

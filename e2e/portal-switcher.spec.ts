@@ -1,8 +1,7 @@
 import type { Page } from "@playwright/test";
 import type { Db } from "../src/lib/db/client";
-import { getPortal, retirePortal } from "../src/lib/onboarding/portals";
 import { ensurePortal } from "../src/lib/ownership/records";
-import { ana, onboardPortal } from "../test/support/onboarding";
+import { onboardPortal } from "../test/support/onboarding";
 import { expect, test } from "./support/fixtures";
 import { seedResults } from "./support/results";
 import { waitForHydration } from "./support/shell";
@@ -26,11 +25,11 @@ async function choose(page: Page, name: string) {
   await expect(trigger(page)).toHaveAccessibleName(`Switch Portal, current: ${name}`);
 }
 
-/** An onboarded Portal from before Portals recorded a platform: a row and a revision, written directly. */
+/** A Portal onboarded before Portals recorded a platform: a row and its carried-over creation, written directly. */
 function legacyPortal(db: Db, label: string): void {
   const now = Date.now();
   const { id } = db.$client.prepare("insert into portals (public_id, label, label_key, created_at) values (?, ?, ?, ?) returning id").get(`ptl_legacy${label.toLowerCase().padEnd(10, "x").slice(0, 10)}`, label, label.toLowerCase(), now) as { id: number };
-  db.$client.prepare("insert into portal_revisions (number, document, created_by, created_at, updated_at, portal_id) values (1, '{}', 'Ana', ?, ?, ?)").run(now, now, id);
+  db.$client.prepare("insert into onboarding_events (subject, portal_id, event, to_lifecycle, actor, attribution, occurred_at) values ('portal', ?, 'created', 'prototype', 'Ana', 'unverified', ?)").run(id, now);
 }
 
 test.describe("with JavaScript", () => {
@@ -46,8 +45,6 @@ test.describe("with JavaScript", () => {
     onboardPortal(db, "Treasury");
     onboardPortal(db, "Access");
     onboardPortal(db, "Markets");
-    const payments = onboardPortal(db, "Payments");
-    retirePortal(db, payments.publicId, { lockVersion: getPortal(db, payments.publicId).lockVersion, reason: "Merged into Markets", actor: ana });
     ensurePortal(db, "Lending");
     await page.goto("/onboarding/portals");
     await waitForHydration(page);
@@ -114,16 +111,13 @@ test.describe("with JavaScript", () => {
     await expect(page).toHaveURL(/\/onboarding\/portals$/);
   });
 
-  test("Choice survives a reload, and a retired remembered Portal means All Portals", async ({ page, db }) => {
-    const markets = onboardPortal(db, "Markets");
+  test("Choice survives a reload", async ({ page, db }) => {
+    onboardPortal(db, "Markets");
     await page.goto("/onboarding/applications");
     await waitForHydration(page);
     await choose(page, "Markets");
     await page.reload();
     await expect(trigger(page)).toHaveAccessibleName("Switch Portal, current: Markets");
-    retirePortal(db, markets.publicId, { lockVersion: getPortal(db, markets.publicId).lockVersion, reason: "Merged into Access", actor: ana });
-    await page.reload();
-    await expect(trigger(page)).toHaveAccessibleName("Switch Portal, current: All Portals");
   });
 
   test("Choosing All Portals removes the choice", async ({ page, db }) => {

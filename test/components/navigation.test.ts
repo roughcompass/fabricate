@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { HOME, NO_OPTIONAL_AREAS, type NavFlags, SECTIONS, homeLink, locate, visibleSections } from "@/components/shell/navigation";
+import { HOME, NO_OPTIONAL_AREAS, type NavFlags, SECTIONS, TOP_LEVEL, homeLink, locate, visibleSections, visibleTopLevel } from "@/components/shell/navigation";
 
-// operator-interface/page-patterns spec: sidebar navigation drills into each section.
+// operator-interface/page-patterns spec: sidebar navigation drills into each
+// section; Home, Applications, and Navigation are top-level items with no
+// sub-menu (make-applications-first-class design decision 1).
 
 const OPERATOR = path.resolve("src/app/(operator)");
 
@@ -22,9 +24,9 @@ function routes(directory = OPERATOR): string[] {
   });
 }
 
-/** The section and item each route marks current; null for pages outside every section. */
-const EXPECTED: Record<string, [section: string, item: string] | null> = {
-  "/": null,
+/** The top-level item, or the section and item, each route marks current; null for pages outside every one. Pages not built yet are listed too. */
+const EXPECTED: Record<string, string | [section: string, item: string] | null> = {
+  "/": "home",
   "/assessments": ["assessments", "all-assessments"],
   "/assessments/new": ["assessments", "new-assessment"],
   "/assessments/[initiativeId]": ["assessments", "all-assessments"],
@@ -56,29 +58,14 @@ const EXPECTED: Record<string, [section: string, item: string] | null> = {
   "/standards/[standardId]/draft": ["assessments", "all-standards"],
   "/standards/[standardId]/publish": ["assessments", "all-standards"],
   "/standards/[standardId]/releases/[releaseId]": ["assessments", "all-standards"],
-  "/onboarding": ["web-onboarding", "portals"],
-  "/onboarding/portals": ["web-onboarding", "portals"],
-  "/onboarding/portals/new": ["web-onboarding", "portals"],
-  "/onboarding/portals/[portalId]": ["web-onboarding", "portals"],
-  "/onboarding/portals/[portalId]/draft/[step]": ["web-onboarding", "portals"],
-  "/onboarding/portals/[portalId]/revisions/[revision]": ["web-onboarding", "portals"],
-  "/onboarding/applications": ["web-onboarding", "web-applications"],
-  "/onboarding/applications/new": ["web-onboarding", "web-applications"],
-  "/onboarding/applications/[applicationId]": ["web-onboarding", "web-applications"],
-  "/onboarding/applications/[applicationId]/draft/[step]": ["web-onboarding", "web-applications"],
-  "/onboarding/applications/[applicationId]/revisions/[revision]": ["web-onboarding", "web-applications"],
-  "/onboarding/applications/[applicationId]/microfrontends/new": ["web-onboarding", "web-applications"],
-  "/onboarding/microfrontends": ["web-onboarding", "web-applications"],
-  "/onboarding/microfrontends/[microfrontendId]": ["web-onboarding", "web-applications"],
-  "/onboarding/microfrontends/[microfrontendId]/draft/[step]": ["web-onboarding", "web-applications"],
-  "/onboarding/microfrontends/[microfrontendId]/revisions/[revision]": ["web-onboarding", "web-applications"],
-  "/onboarding/reviews": ["web-onboarding", "reviews"],
-  "/onboarding/reviews/[placementId]": ["web-onboarding", "reviews"],
-  "/applications": ["applications", "all-applications"],
-  "/applications/[applicationId]": ["applications", "all-applications"],
-  "/applications/import": ["applications", "import-bitbucket"],
-  "/applications/import/[project]/[repository]": ["applications", "import-bitbucket"],
-  "/new": ["salt-patterns", "new-application"],
+  "/applications": "applications",
+  "/applications/[applicationId]": "applications",
+  "/applications/new": "applications",
+  "/applications/new/templates": "applications",
+  "/applications/new/create": "applications",
+  "/navigation": "navigation",
+  "/navigation/new": "navigation",
+  "/navigation/[portalId]": "navigation",
   "/templates": ["salt-patterns", "all-salt-patterns"],
   "/templates/[templateSlug]": ["salt-patterns", "all-salt-patterns"],
   "/templates/[templateSlug]/deploy": ["salt-patterns", "all-salt-patterns"],
@@ -104,21 +91,41 @@ const EXPECTED: Record<string, [section: string, item: string] | null> = {
 /** A concrete path for a route template: "[standardId]" becomes "standardid-example". */
 const sample = (route: string) => route.replace(/\[([^\]]+)\]/g, (_, name: string) => `${name.toLowerCase()}-example`);
 
+/** What a path marks current, in EXPECTED's form. */
+function current(pathname: string, flags: NavFlags): string | [string, string] | null {
+  const located = locate(pathname, flags);
+  if (!located) return null;
+  return located.kind === "item" ? located.item.id : [located.section.id, located.item.id];
+}
+
 describe("sidebar navigation", () => {
   it("maps every operator page to the section and item the spec names", () => {
     const found = routes();
     expect(found.length).toBeGreaterThan(20);
     for (const route of found) {
       expect(EXPECTED, `${route} needs an entry in EXPECTED`).toHaveProperty([route]);
-      const located = locate(sample(route), ALL);
-      expect(located && [located.section.id, located.item.id], route).toEqual(EXPECTED[route]);
+      expect(current(sample(route), ALL), route).toEqual(EXPECTED[route]);
     }
   });
 
-  it("marks the item the spec names on every Prototypes page, including pages not built yet", () => {
-    for (const [route, expected] of Object.entries(EXPECTED).filter(([route]) => route.startsWith("/prototypes"))) {
-      const located = locate(sample(route), ALL);
-      expect(located && [located.section.id, located.item.id], route).toEqual(expected);
+  it("marks the item the spec names on every page it lists, including pages not built yet", () => {
+    for (const [route, expected] of Object.entries(EXPECTED)) expect(current(sample(route), ALL), route).toEqual(expected);
+  });
+
+  it("leads the section menu with Home, Applications, and Navigation, which have no sub-menu (Home in the section menu)", () => {
+    expect(TOP_LEVEL.map((item) => [item.id, item.label, item.href, item.icon])).toEqual([
+      ["home", "Home", "/", "home"],
+      ["applications", "Applications", "/applications", "layers"],
+      ["navigation", "Navigation", "/navigation", "network"],
+    ]);
+    expect(TOP_LEVEL[0]).toBe(HOME);
+    for (const flags of [BASE, DEMO, PROTOTYPES, ALL]) expect(visibleTopLevel(flags)).toEqual(TOP_LEVEL);
+  });
+
+  it("marks Applications on a dashboard, demo pages, and the Add application flow, and Navigation on a Portal's page (Applications section on a deep page)", () => {
+    for (const flags of [BASE, ALL]) {
+      for (const path of ["/applications?portal=all", "/applications/wap_0123456789abcdef", "/applications/new", "/applications/new/templates", "/applications/new/create", "/applications/app_0123456789abcdef"]) expect(current(path.split("?")[0]!, flags), path).toBe("applications");
+      for (const path of ["/navigation", "/navigation/new", "/navigation/ptl_0123456789abcdef"]) expect(current(path, flags), path).toBe("navigation");
     }
   });
 
@@ -132,9 +139,7 @@ describe("sidebar navigation", () => {
           ["Standards", ["All Standards", "New Standard"]],
         ],
       ],
-      ["Web Onboarding", [[null, ["Portals", "Web Applications", "Reviews"]]]],
-      ["Applications", [[null, ["All Applications", "Import from BitBucket"]]]],
-      ["Salt Patterns", [[null, ["All Salt Patterns", "New application"]]]],
+      ["Salt Patterns", [[null, ["All Salt Patterns"]]]],
       [
         "Prototypes",
         [
@@ -149,23 +154,21 @@ describe("sidebar navigation", () => {
   it("opens each section at the list titled with the section's name", () => {
     expect(SECTIONS.map((section) => [section.label, section.items[0]!.href])).toEqual([
       ["Assessments", "/assessments"],
-      ["Web Onboarding", "/onboarding/portals"],
-      ["Applications", "/applications"],
       ["Salt Patterns", "/templates"],
       ["Prototypes", "/prototypes"],
     ]);
   });
 
-  it("keeps Home outside every section, so the root address marks no section (Home in the section menu)", () => {
+  it("keeps Home outside every section, so the root address marks Home and no section (Home in the section menu)", () => {
     expect(HOME).toMatchObject({ label: "Home", href: "/", icon: "home" });
-    for (const flags of [BASE, ALL]) expect(locate("/", flags)).toBeNull();
+    for (const flags of [BASE, ALL]) expect(current("/", flags)).toBe("home");
   });
 
   it("leads links to Home while Assessments is shown, and to the first section's first page otherwise (Profile without Assessments)", () => {
     for (const flags of [BASE, DEMO, PROTOTYPES, ALL]) expect(homeLink(visibleSections(flags))).toEqual({ href: "/", label: "Home" });
     expect(homeLink(visibleSections(HOSTED))).toEqual({ href: "/prototypes", label: "Prototypes" });
     const withoutAssessments = SECTIONS.filter((section) => section.id !== "assessments");
-    expect(homeLink(withoutAssessments)).toEqual({ href: "/onboarding/portals", label: "Web Onboarding" });
+    expect(homeLink(withoutAssessments)).toEqual({ href: "/templates", label: "Salt Patterns" });
     expect(homeLink(SECTIONS.filter((section) => section.id === "salt-patterns"))).toEqual({ href: "/templates", label: "Salt Patterns" });
   });
 
@@ -173,29 +176,17 @@ describe("sidebar navigation", () => {
     expect(locate("/assessments/new", ALL)?.item.id).toBe("new-assessment");
     expect(locate("/repositories/new", ALL)?.item.id).toBe("new-repository");
     expect(locate("/repositories/import/", ALL)?.item.id).toBe("import-repositories");
-    expect(locate("/applications/import", ALL)?.item.id).toBe("import-bitbucket");
-    expect(locate("/applications/import/PAY/payee-hub", ALL)?.item.id).toBe("import-bitbucket");
-    expect(locate("/applications/app_0123456789abcdef", ALL)?.item.id).toBe("all-applications");
     expect(locate("/prototypes/new", ALL)?.item.id).toBe("new-prototype");
     expect(locate("/prototypes/new/", ALL)?.item.id).toBe("new-prototype");
   });
 
-  it("marks Web Onboarding current on its deep pages, with the demo enabled or disabled (Web Onboarding section on a deep page)", () => {
-    for (const demo of [DEMO, BASE]) {
-      expect([locate("/onboarding/microfrontends/mfe_0123456789abcdef", demo)?.section.id, locate("/onboarding/microfrontends/mfe_0123456789abcdef", demo)?.item.id]).toEqual(["web-onboarding", "web-applications"]);
-      expect(locate("/onboarding/applications/wap_0123456789abcdef/draft/launch", demo)?.item.id).toBe("web-applications");
-      expect(locate("/onboarding/reviews/plc_0123456789abcdef", demo)?.item.id).toBe("reviews");
-      expect(locate("/onboarding/portals/new", demo)?.item.id).toBe("portals");
-    }
+  it("shows Home, Applications, Navigation, and Assessments, and leaves the demo's pages outside every section, while the demo is disabled (Demo disabled)", () => {
+    expect([...visibleTopLevel(BASE).map((item) => item.label), ...visibleSections(BASE).map((section) => section.label)]).toEqual(["Home", "Applications", "Navigation", "Assessments"]);
+    for (const route of ["/templates", "/templates/payments-hub/preview"]) expect(locate(route, BASE), route).toBeNull();
   });
 
-  it("shows Assessments and Web Onboarding, and leaves the demo's pages outside every section, while the demo is disabled (Demo disabled)", () => {
-    expect(visibleSections(BASE).map((section) => section.label)).toEqual(["Assessments", "Web Onboarding"]);
-    for (const route of ["/new", "/templates", "/templates/payments-hub/preview", "/applications", "/applications/app-1", "/applications/import/PAY/payee-hub"]) expect(locate(route, BASE), route).toBeNull();
-  });
-
-  it("shows Prototypes but neither Applications nor Salt Patterns while only Prototypes is enabled (Independent of the template demo)", () => {
-    expect(visibleSections(PROTOTYPES).map((section) => section.label)).toEqual(["Assessments", "Web Onboarding", "Prototypes"]);
+  it("shows Prototypes but not Salt Patterns while only Prototypes is enabled (Independent of the template demo)", () => {
+    expect(visibleSections(PROTOTYPES).map((section) => section.label)).toEqual(["Assessments", "Prototypes"]);
   });
 
   it("leaves Prototypes' pages outside every section while it is disabled (Production default)", () => {
@@ -203,8 +194,10 @@ describe("sidebar navigation", () => {
     for (const route of ["/prototypes", "/prototypes/new", "/prototypes/pro_0123456789abcdef", "/prototypes/personas/per_0123456789abcdef", "/prototypes/lessons", "/prototypes/shell"]) expect(locate(route, DEMO), route).toBeNull();
   });
 
-  it("shows only Prototypes in the hosted profile, whatever else is enabled (Starting on Vercel)", () => {
+  it("shows only Prototypes in the hosted profile, without Home, Applications, or Navigation, whatever else is enabled (Hosted profile)", () => {
     expect(visibleSections(HOSTED).map((section) => section.label)).toEqual(["Prototypes"]);
+    expect(visibleTopLevel(HOSTED)).toEqual([]);
+    for (const route of ["/", "/applications", "/navigation/ptl_0123456789abcdef"]) expect(locate(route, HOSTED), route).toBeNull();
     expect(visibleSections({ ...HOSTED, prototypes: false })).toEqual([]);
     expect(locate("/assessments", HOSTED)).toBeNull();
   });
@@ -215,6 +208,6 @@ describe("sidebar navigation", () => {
     expect(locate("/prototypes", PROTOTYPES)?.item.id).toBe("all-prototypes");
     const personaForm = locate("/prototypes/personas/per_0123456789abcdef", PROTOTYPES)!;
     expect(personaForm.item.id).toBe("personas");
-    expect(personaForm.section.groups.find((group) => group.items.includes(personaForm.item))?.label).toBe("Library");
+    expect(personaForm.kind === "section" && personaForm.section.groups.find((group) => group.items.includes(personaForm.item))?.label).toBe("Library");
   });
 });

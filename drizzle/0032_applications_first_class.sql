@@ -4,6 +4,8 @@
 -- inference, and MFE tables go, with their triggers. Portals become a
 -- Prototype or in Production, and their menus are flattened into
 -- portal_menu_items. Nothing of the dropped history is kept; this is a POC.
+-- The demo deployments Import from BitBucket made go in 0033, a demo
+-- migration, so the product schema still builds without the demo tables.
 --
 -- Menus are staged here and built by migrateDatabase afterwards
 -- (backfills.ts), which applies the PROD > UAT > TEST > DEV precedence to
@@ -109,7 +111,7 @@ CREATE TABLE `__new_applications` (
 	`rendering_assessment_id` integer,
 	`created_by` text,
 	`verification` text,
-	`updated_at` integer NOT NULL,
+	`updated_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,
 	`lock_version` integer DEFAULT 0 NOT NULL,
 	FOREIGN KEY (`repository_source_id`) REFERENCES `repository_sources`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`portal_id`) REFERENCES `portals`(`id`) ON UPDATE no action ON DELETE restrict,
@@ -242,20 +244,15 @@ DROP TABLE `portal_environments`;--> statement-breakpoint
 DROP TABLE `portal_menu_groups`;--> statement-breakpoint
 DROP TABLE `portal_revisions`;--> statement-breakpoint
 DROP TABLE `rendering_inference_candidates`;--> statement-breakpoint
--- Demo deployments imported from the demo's BitBucket go, with their
--- comment threads and share links: Import from BitBucket is removed.
--- Enforcement is off for the run, so the cascades are spelled out.
-DELETE FROM demo_comments WHERE thread_id IN (SELECT t.id FROM demo_threads t JOIN demo_applications a ON a.id = t.application_id WHERE a.origin = 'import');--> statement-breakpoint
-DELETE FROM demo_threads WHERE application_id IN (SELECT id FROM demo_applications WHERE origin = 'import');--> statement-breakpoint
-DELETE FROM demo_shares WHERE application_id IN (SELECT id FROM demo_applications WHERE origin = 'import');--> statement-breakpoint
-DELETE FROM demo_applications WHERE origin = 'import';--> statement-breakpoint
+-- Studio and CDaaS reconciliation is removed, so its queued reads are too.
+DELETE FROM jobs WHERE kind IN ('onboarding.refresh', 'onboarding.refresh-subject');--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE TRIGGER portals_identity
 BEFORE UPDATE ON portals
 WHEN NEW.public_id IS NOT OLD.public_id OR NEW.created_at IS NOT OLD.created_at
   OR (OLD.concept_key IS NOT NULL AND NEW.concept_key IS NOT OLD.concept_key)
 BEGIN
-  SELECT RAISE(ABORT, 'portals: a portal keeps its public ID, its creation time, and its concept once approved');
+  SELECT RAISE(ABORT, 'portals: a portal keeps its identity, and its concept once approved');
 END;
 --> statement-breakpoint
 CREATE TRIGGER portals_never_deleted

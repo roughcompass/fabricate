@@ -18,7 +18,7 @@ import { WORKSPACE_COOKIE, WORKSPACE_COOKIE_MAX_AGE, isWorkspaceKey, newWorkspac
  */
 
 /** Where a workspace credential is issued. */
-const WORKSPACE_PATHS = /^\/(new|templates|applications|run|s|api\/demo|prototypes|api\/prototypes|p)(\/|$)/;
+const WORKSPACE_PATHS = /^\/(templates|applications|run|s|api\/demo|prototypes|api\/prototypes|p)(\/|$)/;
 
 /** What the hosted profile serves: Prototypes, its APIs and share links, Workflow's endpoints, health, and the self-guarded test routes. */
 const HOSTED_PATHS = /^\/(prototypes|api\/prototypes|p|\.well-known\/workflow|api\/health|api\/test)(\/|$)/;

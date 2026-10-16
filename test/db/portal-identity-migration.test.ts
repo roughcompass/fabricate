@@ -28,12 +28,15 @@ function migrationFolderAt(tag: string): string {
 }
 
 let nextId = 900;
-/** A Portal row as it stood before the migration, with a Draft revision when +onboarded+. */
+/** A Portal row, onboarded when +onboarded+: with a Draft revision before migration 0032, or a history after it. */
 function insertPortal(db: Db, label: string, onboarded = true): number {
   const id = (nextId += 1);
   const now = Date.now();
   rawRun(db, "insert into portals (id, public_id, label, label_key, created_at) values (?, ?, ?, ?, ?)", id, `ptl_${id}`, label, label.toLowerCase(), now);
-  if (onboarded) rawRun(db, "insert into portal_revisions (number, document, created_by, created_at, updated_at, portal_id) values (1, '{}', 'Ana', ?, ?, ?)", now, now, id);
+  if (!onboarded) return id;
+  // Before migration 0032 a Portal was onboarded once it had a revision; since, once it has a history.
+  if (db.$client.prepare("select 1 from sqlite_master where name = 'portal_revisions'").get()) rawRun(db, "insert into portal_revisions (number, document, created_by, created_at, updated_at, portal_id) values (1, '{}', 'Ana', ?, ?, ?)", now, now, id);
+  else rawRun(db, "insert into onboarding_events (subject, portal_id, event, to_lifecycle, actor, attribution, occurred_at) values ('portal', ?, 'created', 'prototype', 'Ana', 'unverified', ?)", id, now);
   return id;
 }
 
