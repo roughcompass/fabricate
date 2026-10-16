@@ -94,3 +94,16 @@ ${extra}`;
     expect(error.mock.calls[0]![0]).toMatch(/^Starters are unavailable: /);
   });
 });
+
+describe("the documented example", () => {
+  it("loads with the starters loader, as docs/applications.md says it does", () => {
+    const doc = fs.readFileSync(path.join("docs", "applications.md"), "utf8");
+    const example = /```yaml\n([\s\S]*?)```/.exec(doc)?.[1];
+    expect(example, "docs/applications.md holds a YAML example").toBeDefined();
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "starters-doc-")), "starters.yaml");
+    fs.writeFileSync(file, example!);
+    const result = readStarters(file);
+    expect(result).toMatchObject({ ok: true, skipped: [] });
+    expect(result.ok && result.starters.map((starter) => starter.slug)).toEqual(["salt-starter"]);
+  });
+});

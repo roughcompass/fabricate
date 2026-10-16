@@ -4,25 +4,20 @@ import { openItem } from "./support/shell";
 import { paths } from "./support/paths";
 
 /**
- * The presenter storyline in one flow (docs/template-demo.md): from the create
- * page to a deployed application, its toolbar, and a reset. Run it three
+ * The presenter storyline in one flow (docs/template-demo.md): from the Salt
+ * Patterns gallery to a deployed application, its toolbar, and a reset. Run it three
  * times in a row (`--repeat-each=3`) to rehearse: every run is identical.
  */
-test("runs the presenter storyline from the create page to a reset", async ({ page, context, browser, baseURL, db }) => {
+test("runs the presenter storyline from the Salt Patterns gallery to a reset", async ({ page, context, browser, baseURL, db }) => {
   test.setTimeout(180_000);
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  // The create page, opened from the Salt Patterns section in the sidebar.
+  // The Salt Patterns gallery, opened from the sidebar, narrowed to the Payments brand.
   await page.goto(paths.assessments);
-  await openItem(page, "Salt Patterns", "New application");
-  await expect(page.getByRole("heading", { level: 1, name: "Let's build something new" })).toBeVisible();
-
-  // Build your solution: Payments is chosen, its hero first; Browse all keeps the brand.
-  const solutions = page.getByRole("list", { name: "Payments templates" }).getByRole("heading");
-  await expect(solutions.first()).toHaveText("Payments workspace");
-  await page.getByRole("link", { name: "Browse all Payments templates" }).click();
+  await openItem(page, "Salt Patterns", "All Salt Patterns");
+  await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Salt Patterns");
+  await page.getByRole("checkbox", { name: /^Payments/ }).check();
   await expect(page).toHaveURL(/\/templates\?brand=payments$/);
-  await expect(page.getByRole("checkbox", { name: /^Payments/ })).toBeChecked();
 
   // The template detail page, then preview mode.
   await page.getByRole("article").filter({ hasText: "Payments workspace" }).getByRole("link", { name: "Payments workspace" }).click();
@@ -101,8 +96,8 @@ test("runs the presenter storyline from the create page to a reset", async ({ pa
   await app.locator('[data-comment-pin="1"]').click();
   await expect(app.getByRole("dialog", { name: "Comment 1" })).toContainText("Agreed, ship it");
 
-  // Reset the demo: the application, its comments, and the share link are gone.
-  await page.goto("/new");
+  // Reset the demo from Add application: the application, its comments, and the share link are gone.
+  await page.goto("/applications/new");
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.getByRole("dialog", { name: "Reset the demo?" }).getByRole("button", { name: "Reset demo" }).click();

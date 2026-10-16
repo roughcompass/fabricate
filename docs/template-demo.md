@@ -7,8 +7,8 @@ Everything in the demo is simulated. See [What is simulated](#what-is-simulated)
 ## Before you present
 
 1. Start DE FabLab with the demo on: `FABRICATE_DEMO=true npm run dev`, or use the hosted demo.
-2. Open **Salt Patterns** in the sidebar, then **New application**. The create page, "Let's build something new", opens. The demo adds two sections: **Applications**, for your applications and the BitBucket import, and **Salt Patterns**, for the templates.
-3. If you rehearsed in this browser, reset the demo first: on the create page, open **More actions** (⋯) and choose **Reset demo**.
+2. Open **Salt Patterns** in the sidebar. The gallery, "Salt Patterns", opens. The demo adds the **Salt Patterns** section for the templates, and shows your demo deployments among the registered Applications on **Applications**.
+3. If you rehearsed in this browser, reset the demo first: select **Add application** in the gallery's header, then, on "Let's build something new", open **More actions** (⋯) and choose **Reset demo**.
 4. Turn guided hints off, so they do not appear during the talk. Open any running application, for example a reference deployment from preview mode's **Open full screen**. Open the toolbar menu, choose **Settings**, and clear **Show guided hints**. The choice applies to your whole workspace.
 5. Create a session profile for someone your audience knows, such as their head of payments. In the running application, press **P** to open **Session**, select **New profile**, and enter their name, the **Approver** persona, and their region. The profile is saved in your workspace and offered in every application, so you can sign it in during beat 10.
 6. Use Chrome or Edge. Interaction timing uses the Event Timing API. Other browsers show approximate times, labeled as such.
@@ -31,8 +31,8 @@ Tool panels open to the left of the pill, and **Back to menu** in a panel's head
 
 Each beat lists what to do, then the point to make.
 
-1. **Create page.** Show the prompt bar, the quick-start chips, and **Build your solution**. Teams start from words, a pasted repository URL, or a template.
-2. **Build your solution.** Keep **Payments** chosen, then select **Browse all**. The gallery, "Salt Patterns", opens with the Payments filter applied. Templates are grouped by the portal brand they render in: Payments, Global Banking, and Other use J.P. Morgan Access; Markets uses J.P. Morgan Markets.
+1. **Salt Patterns.** Show the gallery: every template, with its preview, brand, and provider. Teams start from a template here, or from **Add application**, which registers a repository or a starter.
+2. **Brands.** Choose **Payments** in the Brand filter. Templates are grouped by the portal brand they render in: Payments, Global Banking, and Other use J.P. Morgan Access; Markets uses J.P. Morgan Markets.
 3. **Filter and search.** Add a provider filter, collapse a group, and select **Clear**. Search for "onboarding". Point out the count of selected options in each group heading.
 4. **Template detail.** Open **Payments workspace**. Show its brand, portal, provider, and the microfrontends it is made of.
 5. **Preview mode.** Select **Preview template**. Preview mode hides the sidebar to give the application the page; **Back to Payments workspace**, at the top left, returns to the template. Use the icons at the right of the tab row: the **Mobile**, **Tablet**, and **Desktop** devices, the **Landscape** toggle, and **Open full screen**. Hover over or focus any icon to see its name. The application inside the browser window lays out at the real device size, and the window shows the reference deployment's address. Open the **Code** tab and select `microfrontends.json`: the shell is the default application, and each child microfrontend owns a route or a slot. Copy the `npx` command above the tabs, which is how a developer would start locally.
@@ -44,9 +44,9 @@ Each beat lists what to do, then the point to make.
 11. **Settings.** Press **S**. Switch to the dark theme. In the Markets template, publish `instrument:selected` with `{"symbol": "GLBX"}` and watch the chart follow.
 12. **Comment.** Press **C** and select **Send payment**. A "+" marks the spot. Type in **Start a new thread…**; select a word, choose **Aa**, then **Bold**. Post with the send button or Cmd+Enter. The pin stays on the button when the window is resized. A comment on a payee row, which belongs to a payee list version, is listed as not visible in this view after the payee list changes version, with **Go to comment** to bring that version back.
 13. **Share.** Press **L**. Copy the link and open it in a private window: the recipient sees the same versions, theme, signed-in profile, and comment, and can reply. The profile isn't added to the recipient's own profiles, and their changes never affect your view.
-14. **Reset.** Back on the create page, choose **More actions**, then **Reset demo**. Your applications, comments, share links, and session profiles are removed. The share link now answers not found.
+14. **Reset.** Open **Add application**, choose **More actions**, then **Reset demo**. Your demo deployments, comments, share links, and session profiles are removed; registered Applications stay. The share link now answers not found.
 
-To import instead of deploying (beat 6), open **Applications** and select **Import from BitBucket**, pick the PAY project's **payee-hub** repository, and select **Import application**. You can also paste `https://bitbucket.deweb.example/projects/PAY/repos/payee-hub` into the create page's prompt bar, which opens the same import form.
+To register a repository instead of deploying (beat 6), select **Add application** and paste its Bitbucket or GitHub URL into the prompt bar, which opens Create Application with it filled in ([applications.md](applications.md)).
 
 ### Toolbar shortcuts
 
@@ -69,7 +69,7 @@ Shortcuts never fire while you are typing in a field. The menu's **Keyboard shor
 
 Visitors need no account. Each browser gets an anonymous workspace the first time it opens a demo page; it holds that visitor's applications, comments, share links, and session profiles, and nobody else can see them except through a share link. Comments on a template's reference deployment are private to the visitor's workspace until they share the view.
 
-The first time a visitor opens the create page, and again the first time they open a running application, a short sequence of guided hints appears. In a running application, the hints open the toolbar menu and point to its Accessibility, Microfrontends, and Comment items. A visitor can dismiss the hints, replay them, or turn them off from the toolbar's **Settings**. Their choice is remembered for their workspace.
+The first time a visitor opens the create page, Add application's "Let's build something new", and again the first time they open a running application, a short sequence of guided hints appears. In a running application, the hints open the toolbar menu and point to its Accessibility, Microfrontends, and Comment items. A visitor can dismiss the hints, replay them, or turn them off from the toolbar's **Settings**. Their choice is remembered for their workspace.
 
 A workspace can hold 25 applications and 20 custom session profiles, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted.
 
@@ -81,7 +81,7 @@ Apply database migrations (`npm run db:migrate`) after updating DE FabLab. The d
 
 ## Resetting
 
-A visitor resets only their own workspace, from **More actions** on the create page. A reset removes the workspace's applications, comment threads, share links, and microfrontend overrides, and restores its guided hints. It never affects other visitors or the reference deployments.
+A visitor resets only their own workspace, from **More actions** on Add application. A reset removes the workspace's applications, comment threads, share links, and microfrontend overrides, and restores its guided hints. It never affects other visitors or the reference deployments.
 
 ## What is simulated
 

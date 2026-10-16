@@ -1,0 +1,28 @@
+@layer pages {
+  /* Create Application fills the page's surface; SplitPanes lays out the form and the starter panel. */
+  .form { display: block; min-width: 0; }
+
+  .header { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); text-align: center; }
+  .title { font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); line-height: var(--line-height-heading); overflow-wrap: anywhere; }
+  .lede { max-width: var(--size-dialog); color: var(--color-text-secondary); }
+
+  .nameAndSlug { display: flex; flex-direction: column; gap: var(--space-2); }
+  .slug { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-height: var(--size-control-sm); color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
+  .slugLabel { font-weight: var(--font-weight-medium); }
+  .slugEmpty { font-style: italic; }
+
+  /* The detected provider under Repository URL, once the URL is recognized. */
+  .provider { display: flex; align-items: center; gap: var(--space-1); min-height: var(--space-5); margin-top: var(--space-1); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .errorLink { margin-top: var(--space-1); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .noPortal { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+
+  /* The starter panel: what the starter is, its steps, each command copyable. */
+  .starter { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+  .starterTitle { font-weight: var(--font-weight-semibold); }
+  .muted { color: var(--color-text-secondary); }
+  .steps { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding-left: var(--space-5); }
+  .steps li { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+  .command { display: flex; align-items: flex-start; gap: var(--space-1); min-width: 0; }
+  .commandText { flex: 1 1 auto; min-width: 0; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); background: var(--color-bg-muted); font-family: var(--font-family-mono); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); overflow-wrap: anywhere; }
+  .starterActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+}

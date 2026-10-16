@@ -230,8 +230,8 @@ function MenuHint({ rect, viewport, label, sequence, children }: { rect: Rect; v
 }
 
 export const CREATE_HINTS: readonly Hint[] = [
-  { target: '[data-hint-target="prompt"]', title: "Describe what you need", text: "Type what you want to build to search the templates, or paste a repository URL from the demo's BitBucket to import it.", placement: "below" },
-  { target: '[data-hint-target="solutions"] h2', title: "Start from a template", text: "Choose a portal brand to see its templates, preview them at a device's size, and deploy your own copy.", placement: "below" },
+  { target: '[data-hint-target="prompt"]', title: "Describe what you need", text: "Type what you want to build to search the starters and templates, or paste a Bitbucket or GitHub repository URL to register it.", placement: "below" },
+  { target: '[data-hint-target="solutions"] h2', title: "Start from a starter", text: "Choose a starter to see how to create its repository, or Browse all for every starter and the Salt Patterns templates.", placement: "below" },
 ];
 
 const menuItem = (id: string) => `[data-toolbar-menu] [role="option"][data-toolbar-item="${id}"]`;

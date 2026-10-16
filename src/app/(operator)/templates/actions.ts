@@ -14,5 +14,5 @@ export async function resetDemo(): Promise<void> {
   requireDemo();
   const workspace = await currentWorkspace();
   if (workspace) resetWorkspace(getDb(), workspace.id);
-  redirect("/new?notice=reset");
+  redirect("/applications/new?notice=reset");
 }
