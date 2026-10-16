@@ -26,6 +26,7 @@
     "test:visual": "CAPTURE_SCREENSHOTS=1 playwright test e2e/visual.spec.ts",
     "test:fleet": "playwright test --config playwright.fleet.config.ts",
     "test:hosted": "playwright test --config playwright.hosted.config.ts",
+    "test:demo-off": "playwright test --config playwright.demo-off.config.ts",
     "lint": "eslint --max-warnings=0 .",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint && npm test",
