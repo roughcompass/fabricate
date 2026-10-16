@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { listAssessments } from "../src/lib/assessments/assessment-records";
 import { setSourceEnabled } from "../src/lib/catalog/source-records";
 import { jobs } from "../src/lib/db/schema";
-import { claimInitiative, listInitiatives, saltPatternsInitiative, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
+import { claimInitiative, deWebInitiative, listInitiatives, saltPatternsInitiative, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
 import { createStandard } from "../src/lib/standards/standard-records";
 import { buildAssessment, buildInitiative, buildRelease, buildSource } from "../test/support/builders";
 import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
@@ -164,6 +164,19 @@ test("Initiative pages stay usable at mobile width", async ({ page, db }) => {
 });
 
 // page-patterns spec: the Assessments list filters what Home counts.
+test("DE Web: DE FabLab owns it, outside the main table and its tab counts", async ({ page, db }) => {
+  buildInitiative(db, { name: "Orders review" });
+  buildAssessment(db, { initiative: deWebInitiative(db), sources: [buildSource(db, { name: "payee-hub" })] });
+
+  await page.goto(paths.assessments);
+  const main = page.getByRole("table", { name: "Assessments", exact: true });
+  await expect(main).toContainText("Orders review");
+  await expect(main).not.toContainText("DE Web");
+  await expect(page.getByRole("navigation", { name: "Filter Assessments" }).getByRole("link", { name: /^All/ })).toHaveText(/^All\s*1$/);
+  const owned = page.getByRole("table", { name: "Assessments owned by DE FabLab" });
+  await expect(owned.getByRole("row", { name: /DE Web/ })).toContainText("Each Application's repository");
+});
+
 test("Salt Patterns: DE FabLab owns it, and only its Releases can be selected (Releases selected)", async ({ page, db }) => {
   const exemplary = createStandard(db, { name: "Salt exemplary", purpose: "Exemplary Salt usage" }).standard;
   buildRelease(db, { standard: exemplary });
