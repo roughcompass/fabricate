@@ -56,17 +56,30 @@ async function next(page: Page, step: string) {
 async function create(page: Page, kind: "portals" | "applications", noun: string, name: string, first: string, sealId = "") {
   await page.goto(`/onboarding/${kind}/new`);
   await waitForHydration(page);
-  await page.getByLabel("Name", { exact: true }).fill(name);
-  await page.getByLabel("Owning team").fill("Payments");
-  if (sealId) await page.getByLabel("SEAL ID").fill(sealId);
-  await page.getByLabel("Your name").fill("Ana Ruiz");
+  if (kind === "portals") {
+    // The Create Portal form asks for a platform, SEAL ID, name, and description, and records who created it without asking (portal-creation spec).
+    await page.getByRole("group", { name: /^Platform/ }).getByRole("radio", { name: /^Web/ }).check();
+    await page.getByLabel("SEAL ID").fill(sealId || "88001");
+    await page.getByLabel("Name", { exact: true }).fill(name);
+    await page.getByLabel("Description").fill(`The ${name} Portal`);
+  } else {
+    await page.getByLabel("Name", { exact: true }).fill(name);
+    await page.getByLabel("Owning team").fill("Payments");
+    if (sealId) await page.getByLabel("SEAL ID").fill(sealId);
+    await page.getByLabel("Your name").fill("Ana Ruiz");
+  }
   await page.getByRole("button", { name: `Create ${noun}` }).click();
   await expect(heading(page, first)).toBeVisible();
   await waitForHydration(page);
+  // The Draft's Identity step asks for the owning team, which Create Portal leaves to it; the next step's save keeps it.
+  if (kind === "portals") await page.getByLabel("Owning team").fill("Payments");
 }
 
 async function submit(page: Page, name: string) {
   await expect(page.getByText("No issues")).toBeVisible();
+  // Create Portal records who created it without asking, so the first submission is where a name is given.
+  const actor = page.getByLabel("Your name");
+  if ((await actor.count()) && !(await actor.inputValue())) await actor.fill("Ana Ruiz");
   await page.getByRole("button", { name: "Submit revision 1" }).click();
   await expect(heading(page, name)).toBeVisible();
   await waitForHydration(page);

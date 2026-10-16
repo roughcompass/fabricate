@@ -163,7 +163,8 @@ export default async function PrototypePage({ params, searchParams }: { params: 
       <ShellHeader title={prototype.name} back={{ href: "/prototypes", label: "Back to Prototypes" }} />
       {refining && <ProgressPoller url={`/api/prototypes/${prototype.id}/status`} version={`${prototype.latestNumber}|${prototype.refiningGenerationId}`} />}
       <OutcomeToast outcome={prototypeOutcome(param(query, "notice"), prototype, versions[0]?.provenance)} strip={["notice"]} />
-      {!version.audit && <AuditRunner versionId={version.id} title={version.title || prototype.name} />}
+      {/* Keyed by version, so a refinement that shows a new version runs that version's audit rather than keeping the finished runner. */}
+      {!version.audit && <AuditRunner key={version.id} versionId={version.id} title={version.title || prototype.name} />}
       <div className={styles.layout}>
         <aside className={styles.thread} aria-label="Thread and refinements">
           <div className={styles.threadHead}>

@@ -4,6 +4,8 @@ import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOver
 import { openTool, setView, waitForRegions } from "./support/demo";
 import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
 import { paths } from "./support/paths";
+import { waitForHydration } from "./support/shell";
+import { onboardPortal } from "../test/support/onboarding";
 
 /**
  * Captures every product surface at desktop and mobile width, in the light and
@@ -83,6 +85,47 @@ test("captures the shell's sidebar states in both themes", async ({ page, db: _d
     await capture("drawer-open-mobile", theme);
   }
   expect(fs.readdirSync(output)).toHaveLength(3 * THEMES.length);
+});
+
+/**
+ * Captures the Portal switcher, closed and open, and the Create Portal dialog
+ * at 1440px and 375px in both themes. On a phone the switcher is in the
+ * drawer, so the drawer is opened first.
+ */
+test("captures the Portal switcher and the Create Portal dialog in both themes", async ({ page, db, baseURL }) => {
+  const output = path.join(OUTPUT, "portal-switcher");
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  for (const name of ["Access", "Markets", "Treasury"]) onboardPortal(db, name);
+  const sidebar = page.locator("#sidebar");
+  const capture = async (name: string) => {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: path.join(output, `${name}.jpg`), type: "jpeg", quality: 75 });
+  };
+  const viewports = [{ name: "desktop", width: 1440, height: 900 }, VIEWPORTS[1]!];
+  for (const theme of THEMES) {
+    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await page.goto("/onboarding/applications");
+      await waitForHydration(page);
+      if (viewport.name === "mobile") await page.getByRole("button", { name: "Open navigation" }).click();
+      const trigger = sidebar.getByRole("button", { name: /^Switch Portal/ });
+      await expect(trigger).toBeVisible();
+      await capture(`switcher-closed-${viewport.name}-${theme}`);
+      await trigger.click();
+      await expect(sidebar.locator("[popover]").getByRole("list", { name: "Switch Portal" })).toBeVisible();
+      await capture(`switcher-open-${viewport.name}-${theme}`);
+      await sidebar.locator("[popover]").getByRole("link", { name: /^Create Portal/ }).click();
+      const dialog = page.getByRole("dialog", { name: /^Create/ });
+      await expect(dialog).toBeVisible();
+      // The dialog slides in from the right; capture it where it settles.
+      await dialog.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished)));
+      await capture(`create-portal-${viewport.name}-${theme}`);
+    }
+  }
+  expect(fs.readdirSync(output)).toHaveLength(3 * viewports.length * THEMES.length);
 });
 
 /**
