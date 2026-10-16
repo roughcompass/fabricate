@@ -357,7 +357,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
         <Specimen
           id="status"
           title="Status and severity"
-          description="A colored indicator and a label, never color alone. In-progress states pulse, and the states with no value differ by shape."
+          description="A colored indicator and a label, never color alone. In-progress states pulse, the states with no value differ by shape, and a Portal's lifecycle is a badge that differs in text and fill."
           render={() => (
             <>
               <Row label="Tones">
@@ -385,6 +385,12 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 <Severity value="medium" />
                 <Severity value="low" />
                 <Severity value="info" />
+              </Row>
+              <Row label="Lifecycle">
+                <Status state="prototype" />
+                <Status state="production" />
+                <Status state="prototype" size="sm" />
+                <Status state="production" size="sm" />
               </Row>
             </>
           )}

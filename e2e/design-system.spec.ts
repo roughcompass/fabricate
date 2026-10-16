@@ -154,6 +154,18 @@ test("tells the states with no value apart by their indicators", async ({ page }
   expect(new Set(drawings).size, drawings.join(" | ")).toBe(3);
 });
 
+test("tells a Portal's lifecycles apart by text and fill, not only hue", async ({ page }) => {
+  await page.goto("/design-system");
+  const status = light(page, "Status and severity");
+  const prototype = status.locator('[data-state="prototype"]').first();
+  const production = status.locator('[data-state="production"]').first();
+  await expect(prototype).toHaveText("Prototype");
+  await expect(production).toHaveText("Production");
+  const fill = (locator: Locator) => locator.evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(await fill(prototype)).not.toBe(await fill(production));
+  await expect(production).toHaveAttribute("data-emphasis", "high");
+});
+
 test("draws check boxes, inputs, and selects consistently", async ({ page }) => {
   await page.goto("/design-system");
   const form = light(page, "Form controls");
