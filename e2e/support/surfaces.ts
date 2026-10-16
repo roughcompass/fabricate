@@ -17,6 +17,8 @@ import { gitRepo } from "./fixtures";
 import { seedOnboardingSurfaces } from "./onboarding-surfaces";
 import { BASELINE_CONTROLS, ORDERS, SERVICE_CONTROLS, evaluate } from "./results";
 import { paths } from "./paths";
+import { recordFailedDeConsoleRead } from "../../src/lib/ownership/de-console";
+import { readDeConsole } from "../../test/support/home";
 
 /**
  * Every product surface, seeded with data that exercises it: the operator
@@ -56,8 +58,12 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
   const baselineStandard = standardById(db, baseline.standardId);
   const servicesStandard = standardById(db, services.standardId);
   for (const name of ["payments", "ledger"]) gitRepo(path.join(sourcesDir, name));
+  // A DE Console export that lists one SEAL ID twice records a conflict without creating applications, and a later read fails.
+  readDeConsole(db, [{ seal_id: "99001", name: "Markets Hub" }, { seal_id: "99001", name: "Markets Admin" }], new Date(Date.now() - 5 * 3_600_000));
+  recordFailedDeConsoleRead(db, { trigger: "schedule", error: "The DE Console didn't answer within 30 seconds", readAt: new Date(Date.now() - 3_600_000) });
 
   return [
+    ["00-home", paths.home],
     ["01-assessments", paths.assessments],
     ["02-initiative", paths.assessment(initiative.publicId)],
     ["02-initiative-new", paths.newAssessment],
@@ -66,6 +72,7 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["03-source-new", paths.newRepository],
     ["03-source-edit", paths.repositoryEdit(sources[0]!.publicId)],
     ["03-import", `${paths.importRepositories}?directory=${encodeURIComponent(sourcesDir)}`],
+    ["03-de-console", "/repositories/de-console"],
     ["04-standards", "/standards"],
     ["04-standard", `/standards/${baselineStandard.publicId}`],
     ["04-standard-published", `/standards/${servicesStandard.publicId}`],

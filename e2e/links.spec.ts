@@ -16,7 +16,7 @@ import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/su
 test.use({ javaScriptEnabled: false, viewport: { width: 1440, height: 900 } });
 
 // The component gallery exists only in development and test builds (design-system spec).
-const START = [paths.assessments, "/applications", "/templates", "/new", ...(process.env.E2E_PRODUCTION ? [] : ["/design-system"])];
+const START = [paths.home, paths.assessments, "/applications", "/templates", "/new", ...(process.env.E2E_PRODUCTION ? [] : ["/design-system"])];
 /** Model terms the interface never shows as record names, and the old product name. */
 const VOCABULARY = [/\bInitiatives?\b/, /\bSources?\b/, /\bAssessment #\d/, /\bFabricate\b/];
 /** Pages per route shape; records of the same kind share one shape. */

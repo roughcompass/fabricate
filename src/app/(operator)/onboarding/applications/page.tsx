@@ -7,6 +7,7 @@ import { Menu, MenuItem } from "@/components/ui/menu";
 import { param } from "@/components/ui/outcome-toast";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
+import { Select } from "@/components/ui/form";
 import { SearchField } from "@/components/ui/search-field";
 import { Status } from "@/components/ui/status";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
@@ -17,6 +18,7 @@ import { LIFECYCLE_STATES, type LifecycleState } from "@/lib/db/schema";
 import { applicationName } from "@/lib/onboarding/applications";
 import { applicationCatalog } from "@/lib/onboarding/catalog";
 import { RENDERING_MODE_LABELS } from "@/lib/onboarding/documents";
+import { type PlacementFilter, isPlacementFilter, onboardingCatalogHref } from "@/lib/web/list-filters";
 import { applicationHref, applicationStepHref } from "./load";
 
 export const metadata: Metadata = { title: "Web Applications" };
@@ -24,13 +26,13 @@ export const metadata: Metadata = { title: "Web Applications" };
 export default async function ApplicationsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
   const lifecycle = LIFECYCLE_STATES.find((state) => state === param(query, "lifecycle") && state !== "active") ?? null;
+  const placement = isPlacementFilter(param(query, "placement")) ? (param(query, "placement") as PlacementFilter) : null;
   const search = (param(query, "q") ?? "").trim().slice(0, 200);
-  const all = applicationCatalog(getDb(), search);
+  const searched = applicationCatalog(getDb(), search);
+  // Placed means a Portal has an active route for it; Home's Placed Web Applications counts the same routes. The tabs count what the search and this filter leave.
+  const all = placement ? searched.filter((row) => row.portals > 0 === (placement === "placed")) : searched;
   const rows = lifecycle ? all.filter((row) => row.application.lifecycle === lifecycle) : all;
-  const href = (next: LifecycleState | null, q = search) => {
-    const params = new URLSearchParams({ ...(next && { lifecycle: next }), ...(q && { q }) });
-    return `/onboarding/applications${params.size ? `?${params}` : ""}`;
-  };
+  const href = (next: LifecycleState | null, q = search) => onboardingCatalogHref("applications", { lifecycle: next, placement, q });
   const create = (
     <ButtonLink href="/onboarding/applications/new" variant="primary" icon="plus">
       New Web Application
@@ -47,7 +49,19 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
       <Tabs
         label="Filter Web Applications"
         aside={
-          <FilterBar key={search} action="/onboarding/applications" label="Search Web Applications" filtered={Boolean(search)} clearHref={href(lifecycle, "")} keep={lifecycle ? { lifecycle } : {}}>
+          <FilterBar key={`${search}|${placement}`} action="/onboarding/applications" label="Search and filter Web Applications" filtered={Boolean(search || placement)} clearHref={onboardingCatalogHref("applications", { lifecycle })} keep={lifecycle ? { lifecycle } : {}}>
+            <Select
+              id="application-placement"
+              name="placement"
+              label="Placement"
+              size="sm"
+              defaultValue={placement ?? ""}
+              options={[
+                { value: "", label: "Any placement" },
+                { value: "placed", label: "Placed in a Portal" },
+                { value: "unplaced", label: "Not placed" },
+              ]}
+            />
             <SearchField id="application-search" name="q" label="Search Web Applications" hideLabel size="sm" placeholder="Search by name, team, or SEAL ID" defaultValue={search} clearHref={href(lifecycle, "")} />
           </FilterBar>
         }
@@ -123,6 +137,8 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
           </Table>
         ) : search ? (
           <EmptyState title="No matching Web Applications" icon="search">{`No Web Application name, team, or SEAL ID contains “${search}”.`}</EmptyState>
+        ) : placement ? (
+          <EmptyState title={placement === "placed" ? "No placed Web Applications" : "No unplaced Web Applications"}>{placement === "placed" ? "A Web Application is placed once a Portal approves one of its placements." : "Every Web Application listed here is placed in a Portal."}</EmptyState>
         ) : lifecycle ? (
           <EmptyState title={`No ${lifecycle} Web Applications`}>A Web Application becomes Ready when its launch target is confirmed and at least one Portal approves a placement.</EmptyState>
         ) : (

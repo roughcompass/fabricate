@@ -188,30 +188,30 @@ test.describe("without JavaScript", () => {
   });
 });
 
-test("shows a not-found page inside the shell for an unknown Assessment", async ({ page, db: _db }) => {
+test("Unknown Assessment: a not-found page inside the shell links to its section's list", async ({ page, db: _db }) => {
   await page.goto("/runs/asm_doesnotexist0000");
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
   await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Run not found" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to Assessments" })).toHaveAttribute("href", paths.assessments);
 });
 
-test("shows a not-found page inside the shell for an unknown URL", async ({ page, db: _db }) => {
+test("Unknown address: a not-found page inside the shell links to Home", async ({ page, db: _db }) => {
   const response = await page.goto("/no-such-page");
   expect(response?.status()).toBe(404);
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
   await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Go to Assessments" })).toHaveAttribute("href", paths.assessments);
+  await expect(page.getByRole("link", { name: "Go to Home" })).toHaveAttribute("href", paths.home);
 });
 
 test.describe("an unexpected error", () => {
   test.use({ expectedErrors: [/Demo failure/] });
 
-  test("shows the error page without internal details", async ({ page }) => {
+  test("Unexpected server error: the error page offers Try again and Home, without internal details", async ({ page }) => {
     await page.goto("/design-system/error-demo");
     const main = page.locator("main");
     await expect(main.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Something went wrong" })).toBeVisible();
     await expect(main.getByRole("button", { name: "Try again" })).toBeVisible();
-    await expect(main.getByRole("link", { name: "Go to Assessments" })).toBeVisible();
+    await expect(main.getByRole("link", { name: "Go to Home" })).toHaveAttribute("href", paths.home);
     await expect(main).not.toContainText("internal detail");
   });
 });

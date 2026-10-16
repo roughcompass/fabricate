@@ -45,9 +45,11 @@ describe("application shell", () => {
     expect(assessments!.groups.map((group) => group.label)).toEqual([undefined, "Repositories", "Standards"]);
   });
 
-  it("names the product DE FabLab and links its mark to the Assessments list", () => {
-    const brand = elements(AppShell({ theme: "system", children: null })).find((element) => element.props["aria-label"] === "DE FabLab home")!;
-    expect(brand.props.href).toBe("/assessments");
+  it("names the product DE FabLab and links its mark to Home (Product mark opens Home)", () => {
+    for (const demo of [false, true]) {
+      const brand = elements(AppShell({ theme: "system", demo, children: null })).find((element) => element.props["aria-label"] === "DE FabLab home")!;
+      expect(brand.props.href).toBe("/");
+    }
   });
 
   it("renders a shown, 256px sidebar by default", () => {

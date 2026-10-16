@@ -6,7 +6,8 @@ import { skeletonFor } from "@/components/shell/skeleton-routes";
 // A navigation shows the skeleton of the page being opened (design.md, decision 9).
 describe("navigation skeletons", () => {
   it.each([
-    ["/", "list"],
+    ["/", "home"],
+    ["/assessments", "list"],
     ["/repositories", "list"],
     ["/repositories/import", "list"],
     ["/standards", "list"],
@@ -14,6 +15,7 @@ describe("navigation skeletons", () => {
     ["/assessments/ini_abc/edit", "form"],
     ["/repositories/new", "form"],
     ["/repositories/src_abc/edit", "form"],
+    ["/repositories/de-console", "detail"],
     ["/standards/new", "form"],
     ["/standards/std_abc/edit", "form"],
     ["/assessments/ini_abc", "detail"],

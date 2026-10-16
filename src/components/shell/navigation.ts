@@ -115,6 +115,22 @@ export function visibleSections(demoEnabled: boolean): readonly NavSection[] {
   return SECTIONS.filter((section) => demoEnabled || !section.demo);
 }
 
+/** Home (home spec): the first entry of the section menu, outside every section, so it has no sub-menu. */
+export const HOME = { id: "home", label: "Home", href: "/", icon: "home" } as const satisfies Pick<NavItem, "id" | "label" | "href"> & { icon: IconName };
+
+/**
+ * Where every link to Home leads (home spec, "Home exists only while
+ * Assessments are available"): Home while Assessments is a visible section,
+ * and otherwise the first visible section's first page. The product mark, the
+ * section menu, the root page, and the not-found and error pages all ask here,
+ * so a configuration without Assessments never links to a Home it can't show.
+ */
+export function homeLink(sections: readonly NavSection[]): { href: string; label: string } {
+  const first = sections[0];
+  if (sections.some((section) => section.id === "assessments") || !first) return { href: HOME.href, label: HOME.label };
+  return { href: first.items[0]!.href, label: first.label };
+}
+
 /** The section and item a path belongs to, or null for a page outside every section. */
 export function locate(pathname: string, demoEnabled: boolean): { section: NavSection; item: NavItem } | null {
   for (const section of visibleSections(demoEnabled)) {

@@ -1,7 +1,10 @@
+import { homeLink, visibleSections } from "@/components/shell/navigation";
 import { NotFoundPage } from "@/components/shell/system-page";
+import { getConfig } from "@/lib/config";
 
 // The create page answers not found only while the demo is disabled, so this
-// page links to a list that always exists.
+// page links to Home, which never belongs to the unavailable area.
 export default function NotFound() {
-  return <NotFoundPage noun="Page" listHref="/assessments" listLabel="Assessments" />;
+  const home = homeLink(visibleSections(getConfig().demoEnabled));
+  return <NotFoundPage noun="Page" listHref={home.href} listLabel={home.label} />;
 }

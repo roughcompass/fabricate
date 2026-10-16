@@ -2,15 +2,17 @@
 
 import "./globals.css";
 import Link from "next/link";
+import { homeLink, visibleSections } from "@/components/shell/navigation";
 import { SystemPage } from "@/components/shell/system-page";
 import { buttonProps } from "@/components/ui/button-content";
 
 /**
  * A failure in the root layout itself. It replaces the whole document, so it
  * brings its own html and body and the global styles, and follows the
- * operating system's theme.
+ * operating system's theme. Its way back opens Home, as the error page's does.
  */
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
+  const home = homeLink(visibleSections(false));
   return (
     <html lang="en">
       <body>
@@ -24,8 +26,8 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
                 <button type="button" {...buttonProps("primary")} onClick={() => retry()}>
                   Try again
                 </button>
-                <Link href="/assessments" {...buttonProps("secondary")}>
-                  Go to Assessments
+                <Link href={home.href} {...buttonProps("secondary")}>
+                  {`Go to ${home.label}`}
                 </Link>
               </>
             }

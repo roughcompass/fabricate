@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { createWebApplication } from "../src/lib/onboarding/applications";
 import { createPortal } from "../src/lib/onboarding/portals";
 import { buildSource } from "../test/support/builders";
-import { ana, onboardApplication, onboardPortal, registerMfe } from "../test/support/onboarding";
+import { ana, decide, onboardApplication, onboardPortal, placementsOf, registerMfe } from "../test/support/onboarding";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, test } from "./support/fixtures";
 import { expectCurrentItem, waitForHydration } from "./support/shell";
 
@@ -200,4 +200,26 @@ test.describe("an unexpected error on an onboarding page", () => {
       db.$client.exec("alter table placement_decisions_away rename to placement_decisions");
     }
   });
+});
+
+// page-patterns spec: the Web Applications catalog filters what Home counts.
+test("Placed Web Applications: the Placement filter lists only those a Portal has placed", async ({ page, db }) => {
+  const access = onboardPortal(db, "Access");
+  const request = { placement: null, portal: access.publicId, menuParent: null, route: "/payments", label: "Payments", order: 1, environments: ["prod"], entitlements: { codes: [], operator: "any" as const }, defaultRequested: false };
+  const placed = onboardApplication(db, "Payments workspace", { sealId: "77001", launch: { kind: "external", mode: "iframe", documentUrl: "https://payments.example.com/app" }, placements: [request] }).application;
+  onboardApplication(db, "Payments reporting", { sealId: "77002", launch: { kind: "external", mode: "iframe", documentUrl: "https://payments.example.com/reports" }, placements: [{ ...request, route: "/reports", label: "Reports" }] });
+  decide(db, placementsOf(db, placed.publicId)[0]!, "approve");
+
+  await page.goto("/onboarding/applications");
+  await waitForHydration(page);
+  await page.getByLabel("Placement").selectOption("placed");
+  await expect(page).toHaveURL(/placement=placed/);
+  const rows = page.getByRole("table", { name: "Web Applications", exact: true }).locator("tbody tr");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("Payments workspace");
+  await expect(page.getByRole("navigation", { name: "Filter Web Applications" }).getByRole("link", { name: /^All/ })).toContainText("1");
+
+  await page.goto("/onboarding/applications?placement=unplaced");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("Payments reporting");
 });

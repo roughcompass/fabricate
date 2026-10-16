@@ -6,6 +6,7 @@
  * build URLs here rather than by hand, so an address change lands in one place.
  */
 export const paths = {
+  home: "/",
   assessments: "/assessments",
   newAssessment: "/assessments/new",
   assessment: (initiativeId: string) => `/assessments/${initiativeId}`,

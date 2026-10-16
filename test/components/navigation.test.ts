@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { SECTIONS, locate, visibleSections } from "@/components/shell/navigation";
+import { HOME, SECTIONS, homeLink, locate, visibleSections } from "@/components/shell/navigation";
 
 // operator-interface/page-patterns spec: sidebar navigation drills into each section.
 
@@ -38,6 +38,7 @@ const EXPECTED: Record<string, [section: string, item: string] | null> = {
   "/repositories/new": ["assessments", "new-repository"],
   "/repositories/import": ["assessments", "import-repositories"],
   "/repositories/[sourceId]/edit": ["assessments", "all-repositories"],
+  "/repositories/de-console": ["assessments", "all-repositories"],
   "/repositories/claim": ["assessments", "all-repositories"],
   "/repositories/claim/[sourceId]": ["assessments", "all-repositories"],
   "/repositories/claim/[sourceId]/correct": ["assessments", "all-repositories"],
@@ -118,6 +119,20 @@ describe("sidebar navigation", () => {
       ["Applications", "/applications"],
       ["Salt Patterns", "/templates"],
     ]);
+  });
+
+  it("keeps Home outside every section, so the root address marks no section (Home in the section menu)", () => {
+    expect(HOME).toMatchObject({ label: "Home", href: "/", icon: "home" });
+    expect(locate("/", true)).toBeNull();
+    expect(locate("/", false)).toBeNull();
+  });
+
+  it("leads links to Home while Assessments is shown, and to the first section's first page otherwise (Profile without Assessments)", () => {
+    expect(homeLink(visibleSections(false))).toEqual({ href: "/", label: "Home" });
+    expect(homeLink(visibleSections(true))).toEqual({ href: "/", label: "Home" });
+    const withoutAssessments = SECTIONS.filter((section) => section.id !== "assessments");
+    expect(homeLink(withoutAssessments)).toEqual({ href: "/onboarding/portals", label: "Web Onboarding" });
+    expect(homeLink(SECTIONS.filter((section) => section.id === "salt-patterns"))).toEqual({ href: "/templates", label: "Salt Patterns" });
   });
 
   it("marks a create or import page as its own item rather than the list", () => {

@@ -63,6 +63,7 @@ const PATHS = {
   menu: "M4 7h16M4 12h16M4 17h16",
   sidebar: "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm4 0v16",
   checklist: "M10 6h10M10 12h10M10 18h10M4 6l1.5 1.5L8 5M4 12l1.5 1.5L8 11M4 18l1.5 1.5L8 17",
+  home: "M3 11 12 4l9 7M5 9.5V20h5v-6h4v6h5V9.5",
 } as const;
 
 export type IconName = keyof typeof PATHS;

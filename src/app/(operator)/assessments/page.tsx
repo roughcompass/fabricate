@@ -7,14 +7,17 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
-import { Status } from "@/components/ui/status";
+import { Status, statusLabel } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { TabLink, Tabs } from "@/components/ui/tabs";
 import { TagList } from "@/components/ui/tag";
 import { type Assessment, assessmentNumber, listAssessments } from "@/lib/assessments/assessment-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
+import { CONCLUSION_FILTERS, type ConclusionFilter, type LatestConclusion, conclusionCounts, isConclusionFilter, latestConclusions } from "@/lib/evaluations/conclusions";
 import { listInitiatives, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
 import { releaseLabel } from "@/lib/standards/standard-records";
+import { assessmentsHref } from "@/lib/web/list-filters";
 import { initiativeListOutcome } from "./outcomes";
 
 // The layout's title template applies to child segments only, so the root page sets its full title.
@@ -22,9 +25,13 @@ export const metadata: Metadata = { title: "Assessments" };
 
 export default async function InitiativesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
+  const conclusion = isConclusionFilter(param(query, "conclusion")) ? (param(query, "conclusion") as ConclusionFilter) : null;
   const db = getDb();
   const enabledCount = listSources(db, { enabled: true }).length;
-  const rows = listInitiatives(db).map((initiative) => {
+  // Each Assessment's latest completed Evaluation, in one query; Home counts the same conclusions.
+  const conclusions = latestConclusions(db);
+  const counts = conclusionCounts(conclusions);
+  const all = listInitiatives(db).map((initiative) => {
     const latest = listAssessments(db, initiative.id)[0];
     return {
       initiative,
@@ -33,7 +40,9 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
       latest: latest && { assessment: latest, number: assessmentNumber(db, latest) },
     };
   });
-  const claims = listInitiatives(db, { systemOwned: true }).map((initiative) => {
+  const rows = conclusion ? all.filter(({ initiative }) => conclusions.get(initiative.id)?.conclusion === conclusion) : all;
+  // A conclusion tab filters the operator's Assessments only, so Assessments created for claims stay out of view while one is active.
+  const claims = conclusion ? [] : listInitiatives(db, { systemOwned: true }).map((initiative) => {
     const latest = listAssessments(db, initiative.id)[0];
     return { initiative, repository: selectedSources(db, initiative.id)[0], latest: latest && { assessment: latest, number: assessmentNumber(db, latest) } };
   });
@@ -52,6 +61,17 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
         alerts={<OutcomeToast outcome={initiativeListOutcome(param(query, "notice"))} />}
       />
 
+      <Tabs label="Filter Assessments">
+        <TabLink href={assessmentsHref()} active={conclusion === null} count={all.length}>
+          All
+        </TabLink>
+        {CONCLUSION_FILTERS.filter((filter) => filter !== "not_applicable" || counts.not_applicable > 0 || conclusion === filter).map((filter) => (
+          <TabLink key={filter} href={assessmentsHref({ conclusion: filter })} active={conclusion === filter} count={counts[filter]}>
+            <Status state={conclusionState(filter)} size="sm" />
+          </TabLink>
+        ))}
+      </Tabs>
+
       <Panel flush>
         {rows.length > 0 ? (
           <Table
@@ -62,6 +82,7 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
                 <Th>Scope</Th>
                 <Th>Standard Releases</Th>
                 <Th>Latest Run</Th>
+                <Th>Conclusion</Th>
               </>
             }
           >
@@ -80,9 +101,14 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
                 <Td label="Latest Run">
                   <LatestRun latest={latest} />
                 </Td>
+                <Td label="Conclusion">
+                  <Conclusion latest={conclusions.get(initiative.id)} />
+                </Td>
               </tr>
             ))}
           </Table>
+        ) : conclusion ? (
+          <EmptyState title="No matching Assessments">{conclusion === "none" ? "Every Assessment has a completed Evaluation." : `No Assessment's latest completed Evaluation concluded “${statusLabelOf(conclusion)}”.`}</EmptyState>
         ) : (
           <EmptyState title="No Assessments yet" icon="checklist" action={create}>
             An Assessment covers all enabled Repositories or a chosen subset, and can evaluate them against published Standard Releases.
@@ -131,6 +157,23 @@ function LatestRun({ latest }: { latest: { assessment: Assessment; number: numbe
       <Link href={`/runs/${latest.assessment.publicId}`}>{`Run #${latest.number}`}</Link>
       <Secondary>
         <Status state={latest.assessment.state} size="sm" /> · <RelativeTime value={latest.assessment.createdAt} />
+      </Secondary>
+    </>
+  );
+}
+
+/** The status registry's state for a conclusion filter: "none" reads Not evaluated. */
+const conclusionState = (filter: ConclusionFilter) => (filter === "none" ? "not_evaluated" : filter);
+const statusLabelOf = (filter: ConclusionFilter) => statusLabel(conclusionState(filter));
+
+/** The conclusion of an Assessment's latest completed Evaluation, linked to it, or Not evaluated. */
+function Conclusion({ latest }: { latest: LatestConclusion | undefined }) {
+  if (!latest?.evaluation) return <Secondary>Not evaluated</Secondary>;
+  return (
+    <>
+      <Link href={`/evaluations/${latest.evaluation.publicId}`}>{`Evaluation #${latest.evaluation.number}`}</Link>
+      <Secondary>
+        <Status state={conclusionState(latest.conclusion)} size="sm" />
       </Secondary>
     </>
   );

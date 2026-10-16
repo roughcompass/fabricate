@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buttonProps } from "@/components/ui/button-content";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Page } from "@/components/ui/page";
+import { homeLink, visibleSections } from "./navigation";
 import { ShellHeader } from "./shell-header";
 import styles from "./system-page.module.css";
 
@@ -37,11 +38,14 @@ export function SystemPage({ icon, title, children, actions }: SystemPageProps) 
  * `sentenceNoun` is the noun mid-sentence, for nouns that are not capitalized
  * domain terms. A demo page passes `demo`, the demo setting: while the demo is
  * disabled the whole area is unavailable, so the page names no record and
- * links to the Assessments list, never back to a page that is itself not
- * found (page-patterns spec, not-found states).
+ * links to Home, never back to a page that is itself not found (page-patterns
+ * spec, not-found states).
  */
 export function NotFoundPage({ noun, listHref, listLabel, sentenceNoun, demo = true }: { noun: string; listHref: string; listLabel: string; sentenceNoun?: string; demo?: boolean }) {
-  if (!demo) return <NotFoundPage noun="Page" listHref="/assessments" listLabel="Assessments" />;
+  if (!demo) {
+    const home = homeLink(visibleSections(demo));
+    return <NotFoundPage noun="Page" listHref={home.href} listLabel={home.label} />;
+  }
   return (
     <SystemPage
       icon="help"

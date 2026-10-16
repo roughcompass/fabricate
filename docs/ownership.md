@@ -167,6 +167,19 @@ Every attempt, successful or not, is a row in `de_console_reads`, with its time 
 
 An application the export stops listing keeps its last DE Console values. The format has no way to say that an application left the DE Console, which is a question for the DE Console team.
 
+### The DE Console import page
+
+`/repositories/de-console` shows the import's state:
+
+- whether a source is configured, never its address or token
+- the refresh interval
+- the last successful read and how many applications it listed
+- the latest attempt
+
+A failed latest read raises a page alert with its recorded error. So does a last successful read older than three refresh intervals, which counts as out of date. The Conflicts section lists every open conflict, with its reason, the applications it could describe, and when it was recorded.
+
+The page is read-only. It doesn't read the DE Console, and it can't settle a conflict. Home's Needs attention links to it whenever the import has a problem.
+
 ## Claiming a repository
 
 A claim links a repository to its application at `/repositories/claim`, reached from Claim a Repository on the Repositories page. It asks only for what isn't known yet:

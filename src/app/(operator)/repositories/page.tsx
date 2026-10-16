@@ -10,12 +10,17 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { Status, humanize } from "@/components/ui/status";
 import { SearchField } from "@/components/ui/search-field";
+import { Select } from "@/components/ui/form";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { Tag } from "@/components/ui/tag";
 import { assessmentCounts } from "@/lib/catalog/catalog";
 import { listSources, sourceReferenceLabel } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
+import { isOwnershipFilter, ownershipFilterOf } from "@/lib/ownership/coverage";
+import { type RepositoryOwnership, repositoryOwnership } from "@/lib/ownership/read";
+import { applicationLabel } from "@/lib/ownership/records";
+import { repositoriesHref } from "@/lib/web/list-filters";
 import { setSourceEnabled } from "./actions";
 import { sourceOutcome } from "./outcomes";
 
@@ -26,18 +31,20 @@ const FILTERS = { enabled: true, disabled: false } as const;
 export default async function SourcesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
   const status = typeof query.status === "string" && Object.hasOwn(FILTERS, query.status) ? (query.status as keyof typeof FILTERS) : null;
+  const ownership = isOwnershipFilter(query.ownership) ? query.ownership : null;
   const search = (param(query, "q") ?? "").trim().slice(0, 200);
   const db = getDb();
   const all = listSources(db);
+  // Ownership is read once for every Repository, in a few queries, as Home's figures count it.
+  const owned = repositoryOwnership(db, all.map((source) => source.id));
   const needle = search.toLowerCase();
-  const matching = needle ? all.filter((source) => source.name.toLowerCase().includes(needle) || source.cloneUrl.toLowerCase().includes(needle)) : all;
+  const searched = needle ? all.filter((source) => source.name.toLowerCase().includes(needle) || source.cloneUrl.toLowerCase().includes(needle)) : all;
+  // The tabs count what the search and the ownership filter leave.
+  const matching = ownership ? searched.filter((source) => ownershipFilterOf(owned.get(source.id)) === ownership) : searched;
   const sources = status ? matching.filter((source) => source.enabled === FILTERS[status]) : matching;
   const counts = assessmentCounts(db);
   const enabledCount = matching.filter((source) => source.enabled).length;
-  const href = (next: keyof typeof FILTERS | null, query = search) => {
-    const params = new URLSearchParams({ ...(next && { status: next }), ...(query && { q: query }) });
-    return `/repositories${params.size ? `?${params}` : ""}`;
-  };
+  const href = (next: keyof typeof FILTERS | null, query = search) => repositoriesHref({ status: next, ownership, q: query });
   const create = (
     <ButtonLink href="/repositories/new" variant="primary" icon="plus">
       New Repository
@@ -60,7 +67,19 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
       <Tabs
         label="Filter Repositories"
         aside={
-          <FilterBar key={search} action="/repositories" label="Search Repositories" filtered={Boolean(search)} clearHref={href(status, "")} keep={status ? { status } : {}}>
+          <FilterBar key={`${search}|${ownership}`} action="/repositories" label="Search and filter Repositories" filtered={Boolean(search || ownership)} clearHref={repositoriesHref({ status })} keep={status ? { status } : {}}>
+            <Select
+              id="source-ownership"
+              name="ownership"
+              label="Ownership"
+              size="sm"
+              defaultValue={ownership ?? ""}
+              options={[
+                { value: "", label: "Any ownership" },
+                { value: "claimed", label: "Claimed" },
+                { value: "unclaimed", label: "Unclaimed" },
+              ]}
+            />
             <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={href(status, "")} />
           </FilterBar>
         }
@@ -84,6 +103,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
               <>
                 <Th>Name</Th>
                 <Th>Reference</Th>
+                <Th>SEAL application</Th>
                 <Th>Status</Th>
                 <Th align="numeric">Runs</Th>
                 <Th align="actions" hidden>
@@ -105,6 +125,9 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                   </Secondary>
                 </Td>
                 <Td label="Reference">{source.gitRef ? <Tag>{source.gitRef}</Tag> : <Secondary>{humanize(sourceReferenceLabel(source))}</Secondary>}</Td>
+                <Td label="SEAL application">
+                  <SealApplication ownership={owned.get(source.id)} />
+                </Td>
                 <Td label="Status">
                   <Status state={source.enabled ? "enabled" : "disabled"} />
                 </Td>
@@ -128,6 +151,8 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
           </Table>
         ) : search ? (
           <EmptyState title="No matching Repositories" icon="search">{`No Repository name or clone URL contains “${search}”.`}</EmptyState>
+        ) : ownership ? (
+          <EmptyState title={`No ${ownership} Repositories`}>{ownership === "unclaimed" ? "Every Repository listed here has a SEAL application." : "Claim a Repository to record the SEAL application it belongs to."}</EmptyState>
         ) : status ? (
           <EmptyState title={`No ${status} Repositories`}>{status === "disabled" ? "Every Repository is enabled." : "Enable a Repository to include it in Runs."}</EmptyState>
         ) : (
@@ -148,5 +173,21 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
         )}
       </Panel>
     </Page>
+  );
+}
+
+/** A Repository's effective SEAL application, marked when people's claims disagree, or "Unclaimed". */
+function SealApplication({ ownership }: { ownership: RepositoryOwnership | undefined }) {
+  const application = ownership?.application;
+  if (!application?.value) return <Secondary>Unclaimed</Secondary>;
+  return (
+    <>
+      {applicationLabel(application.value)}
+      {application.conflict && (
+        <Secondary>
+          <Status state="conflicting" label="In conflict" size="sm" />
+        </Secondary>
+      )}
+    </>
   );
 }

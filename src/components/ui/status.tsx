@@ -66,6 +66,7 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   gaps: ["Gaps found", "error"],
   undetermined: ["Undetermined", "warning"],
   conforms: ["Conforms", "success"],
+  not_evaluated: ["Not evaluated", "neutral", "dash"],
   // Template demo applications and their simulated builds.
   building: ["Building", "progress"],
   ready: ["Ready", "success"],
@@ -82,6 +83,10 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   fail: ["Fails", "error"],
   blocking: ["Blocking", "error"],
   warning: ["Warning", "warning"],
+  // DE Console reads, and why an entry is in conflict.
+  succeeded: ["Succeeded", "success"],
+  duplicate_in_export: ["Listed twice in the export", "warning"],
+  several_applications: ["Matches several applications", "warning"],
 };
 
 /** A readable label for a value without a mapping: underscores become spaces, first letter capitalized. */

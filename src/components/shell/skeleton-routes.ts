@@ -1,11 +1,13 @@
 /** Which page skeleton matches the page at a path; null for paths with none. */
-export type SkeletonKind = "list" | "detail" | "form" | "focused";
+export type SkeletonKind = "home" | "list" | "detail" | "form" | "focused";
 
 const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
+  [/^\/$/, "home"],
   [/^\/(assessments|repositories|standards)\/new\/?$/, "form"],
   [/^\/(assessments|repositories|standards)\/[^/]+\/edit\/?$/, "form"],
-  [/^\/(assessments|repositories|standards)?\/?$/, "list"],
+  [/^\/(assessments|repositories|standards)\/?$/, "list"],
   [/^\/repositories\/import\/?$/, "list"],
+  [/^\/repositories\/de-console\/?$/, "detail"],
   [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "detail"],
   // Web onboarding: its catalogs and the review queue, its create and Draft forms, and its records.
   [/^\/onboarding\/(portals|applications)\/new\/?$/, "form"],

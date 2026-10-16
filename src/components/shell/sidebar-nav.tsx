@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { locate, visibleSections } from "./navigation";
+import { HOME, homeLink, locate, visibleSections } from "./navigation";
 import { SIDEBAR_ID } from "./shell-header";
 import styles from "./sidebar-nav.module.css";
 
 const SECTIONS_ID = "sidebar-sections";
 
 /** Closes the sidebar's drawer, if it is open as one. */
-function closeDrawer(): void {
+export function closeDrawer(): void {
   const drawer = document.getElementById(SIDEBAR_ID);
   if (drawer?.matches(":popover-open")) drawer.hidePopover();
 }
@@ -52,6 +52,9 @@ export function SidebarNav({ demo }: { demo: boolean }) {
   }, []);
 
   const view = !located || allSections ? "sections" : "submenu";
+  const sections = visibleSections(demo);
+  // Home leads the section menu while it's available; it has no sub-menu, so no chevron.
+  const showHome = homeLink(sections).href === HOME.href;
   return (
     <nav
       aria-label="Primary"
@@ -63,7 +66,15 @@ export function SidebarNav({ demo }: { demo: boolean }) {
       }}
     >
       <ul id={SECTIONS_ID} className={styles.sections} tabIndex={-1}>
-        {visibleSections(demo).map((section) => {
+        {showHome && (
+          <li>
+            <Link href={HOME.href} className={styles.item} aria-current={pathname === HOME.href ? "page" : undefined} data-item={HOME.id}>
+              <Icon name={HOME.icon} className={styles.icon} />
+              <span className={styles.label}>{HOME.label}</span>
+            </Link>
+          </li>
+        )}
+        {sections.map((section) => {
           const current = located?.section.id === section.id;
           return (
             <li key={section.id}>

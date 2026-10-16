@@ -45,7 +45,7 @@ test.describe("on a wide viewport", () => {
     await page.goto(paths.assessments);
     await expect(page).toHaveTitle("Assessments · DE FabLab");
     await expect(page.getByRole("link", { name: "Skip to content" })).toBeAttached();
-    await expect(page.getByRole("link", { name: "DE FabLab home" })).toHaveAttribute("href", paths.assessments);
+    await expect(page.getByRole("link", { name: "DE FabLab home" })).toHaveAttribute("href", paths.home);
     await expect(page.getByRole("button", { name: "Dark theme" })).toBeVisible();
     await expectSubmenu(page, "Assessments", ASSESSMENTS_ITEMS, "All Assessments");
     // The section menu is not shown while a section's sub-menu is.
@@ -108,10 +108,37 @@ test.describe("on a wide viewport", () => {
   test("Page outside every section: the gallery shows the section menu with nothing current", async ({ page, db: _db }) => {
     await page.goto("/design-system");
     const nav = primary(page);
-    for (const section of ["Assessments", "Applications", "Salt Patterns"]) {
+    for (const section of ["Home", "Assessments", "Applications", "Salt Patterns"]) {
       await expect(nav.getByRole("link", { name: section, exact: true })).toBeVisible();
       await expect(nav.getByRole("link", { name: section, exact: true })).not.toHaveAttribute("aria-current");
     }
+    await expect(nav.getByRole("link", { name: "Show all sections" })).toHaveCount(0);
+  });
+
+  test("Home in the section menu: Home leads the menu, marked current, with no sub-menu indicator", async ({ page, db: _db }) => {
+    await page.goto(paths.home);
+    const nav = primary(page);
+    await expect(nav.locator("#sidebar-sections > li > a")).toHaveText(["Home", "Assessments", "Web Onboarding", "Applications", "Salt Patterns"]);
+    await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(nav.getByRole("link", { name: "Home", exact: true }).locator("svg")).toHaveCount(1);
+    await expect(nav.getByRole("link", { name: "Show all sections" })).toHaveCount(0);
+  });
+
+  test("Product mark opens Home from a Run", async ({ page, db }) => {
+    const { assessment } = await seedResults(db);
+    await page.goto(paths.run(assessment.publicId));
+    await page.getByRole("link", { name: "DE FabLab home" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Home");
+  });
+
+  test("Reaching Home from a section: Show all sections, then Home", async ({ page, db: _db }) => {
+    await page.goto(paths.repositories);
+    const nav = primary(page);
+    await nav.getByRole("link", { name: "Show all sections" }).click();
+    await nav.getByRole("link", { name: "Home", exact: true }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(nav.getByRole("link", { name: "Show all sections" })).toHaveCount(0);
   });
 
@@ -149,6 +176,15 @@ test.describe("on a wide viewport", () => {
 
   test.describe("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });
+
+    test("Reaching Home from a section without JavaScript", async ({ page, db: _db }) => {
+      await page.goto(paths.repositories);
+      const nav = primary(page);
+      await nav.getByRole("link", { name: "Show all sections" }).click();
+      await nav.getByRole("link", { name: "Home", exact: true }).click();
+      await expect(page).toHaveURL(/\/$/);
+      await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
+    });
 
     test("Returning without JavaScript shows the section menu, and a section opens its sub-menu", async ({ page, db }) => {
       const { assessment } = await seedResults(db);

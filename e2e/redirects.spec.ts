@@ -51,8 +51,12 @@ test("serves the new Assessment addresses without redirecting", async ({ request
   }
 });
 
-test("sends the root address to the Assessments list", async ({ request }) => {
+test("Root address: opens Home without redirecting to the Assessments list", async ({ request, page, db: _db }) => {
   const response = await request.get("/", { maxRedirects: 0 });
-  expect(response.status()).toBe(307);
-  expect(target(response.headers().location)).toBe(paths.assessments);
+  expect(response.status()).toBe(200);
+  expect(response.headers().location).toBeUndefined();
+  await page.goto(paths.home);
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveTitle("Home · DE FabLab");
+  await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Home");
 });

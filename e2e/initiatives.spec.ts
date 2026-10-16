@@ -2,9 +2,10 @@ import type { Page } from "@playwright/test";
 import { listAssessments } from "../src/lib/assessments/assessment-records";
 import { setSourceEnabled } from "../src/lib/catalog/source-records";
 import { jobs } from "../src/lib/db/schema";
-import { listInitiatives, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
+import { claimInitiative, listInitiatives, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
 import { createStandard } from "../src/lib/standards/standard-records";
-import { buildInitiative, buildRelease, buildSource } from "../test/support/builders";
+import { buildAssessment, buildInitiative, buildRelease, buildSource } from "../test/support/builders";
+import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 
@@ -160,4 +161,44 @@ test("Initiative pages stay usable at mobile width", async ({ page, db }) => {
   await expect(page.getByRole("link", { name: "Edit" })).toBeHidden();
   await page.getByRole("button", { name: "More actions" }).click();
   await expect(page.locator("[popover]:popover-open").getByRole("link", { name: "Edit" })).toBeVisible();
+});
+
+// page-patterns spec: the Assessments list filters what Home counts.
+test.describe("conclusion tabs", () => {
+  const rows = (page: Page) => page.getByRole("table", { name: "Assessments", exact: true }).locator("tbody tr");
+
+  test("Gaps found tab lists only Assessments whose latest completed Evaluation found Gaps, and hides those created for claims", async ({ page, db }) => {
+    const source = buildSource(db, { name: "orders" });
+    const evaluated = (name: string, conclusion: "gaps" | "conforms") => {
+      const initiative = buildInitiative(db, { name, sources: [source] });
+      return driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildAssessment(db, { initiative }).assessment, "complete")), "complete", conclusion);
+    };
+    const gaps = evaluated("Checkout platform migration", "gaps");
+    evaluated("Payments baseline", "conforms");
+    claimInitiative(db, source);
+
+    await page.goto(paths.assessments);
+    await expect(page.getByText("Created for claims")).toBeVisible();
+    const tabs = page.getByRole("navigation", { name: "Filter Assessments" });
+    await expect(tabs.getByRole("link")).toHaveText([/^All\s*2$/, /^Gaps found\s*1$/, /^Undetermined\s*0$/, /^Conforms\s*1$/, /^Not evaluated\s*0$/]);
+    await tabs.getByRole("link", { name: /Gaps found/ }).click();
+    await expect(page).toHaveURL(/conclusion=gaps/);
+    await expect(rows(page)).toHaveCount(1);
+    await expect(rows(page).first()).toContainText("Checkout platform migration");
+    await expect(rows(page).first().getByRole("link", { name: "Evaluation #1" })).toHaveAttribute("href", `/evaluations/${gaps.publicId}`);
+    await expect(rows(page).first()).toContainText("Gaps found");
+    await expect(page.getByText("Created for claims")).toHaveCount(0);
+  });
+
+  test("Not evaluated tab lists an Assessment with Runs but no completed Evaluation", async ({ page, db }) => {
+    const initiative = buildInitiative(db, { name: "Checkout platform migration", sources: [buildSource(db)] });
+    driveRun(db, buildAssessment(db, { initiative }).assessment, "complete");
+
+    await page.goto(`${paths.assessments}?conclusion=none`);
+    await expect(rows(page)).toHaveCount(1);
+    await expect(rows(page).first().locator("td").last()).toHaveText("Not evaluated");
+
+    await page.goto(`${paths.assessments}?conclusion=gaps`);
+    await expect(page.getByText("No matching Assessments")).toBeVisible();
+  });
 });

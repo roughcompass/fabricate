@@ -60,6 +60,37 @@ export function DetailSkeleton() {
   );
 }
 
+/** The shell header, the page description, three rows of figures, and the Needs attention table: for Home. */
+export function HomeSkeleton() {
+  return (
+    <Page busy>
+      <ShellHeader />
+      <div className={styles.header}>
+        <Skeleton width="long" />
+      </div>
+      {[3, 5, 2].map((figures, group) => (
+        <div key={group} className={styles.stats}>
+          {Array.from({ length: figures }, (_, index) => (
+            <div key={index} className={styles.stat}>
+              <Skeleton width="short" />
+              <Skeleton width="medium" height="title" />
+            </div>
+          ))}
+        </div>
+      ))}
+      <div className={styles.panel}>
+        {Array.from({ length: 3 }, (_, index) => (
+          <div key={index} className={styles.row}>
+            <Skeleton width="long" />
+            <Skeleton width="medium" />
+            <Skeleton width="short" />
+          </div>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
 /** The shell header, breadcrumbs, and a column of fields: for create and edit forms. */
 export function FormSkeleton() {
   return (

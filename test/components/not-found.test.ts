@@ -5,10 +5,11 @@ import { NotFoundPage } from "@/components/shell/system-page";
 import { getConfig, setConfig, withOverrides } from "@/lib/config";
 
 vi.mock("next/navigation", async () => ({ ...(await import("../support/next")).navigationStub, usePathname: () => "/" }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 
 // operator-interface/page-patterns spec: a not-found page never links to a page
 // that is itself not found. While the demo is disabled, the demo's not-found
-// pages name no record and link to the Assessments list.
+// pages name no record and link to Home.
 
 const original = getConfig();
 afterEach(() => setConfig(original));
@@ -34,15 +35,22 @@ describe("not-found pages", () => {
     expect(await render("import")).toContain("Go to Import from BitBucket");
   });
 
-  it("links every demo page to Assessments while the demo is disabled", async () => {
+  it("links every demo page to Home while the demo is disabled (Demo page while the demo is disabled)", async () => {
     setConfig(withOverrides(original, { demo: { enabled: false } }));
     for (const page of Object.keys(pages) as (keyof typeof pages)[]) {
       const html = await render(page);
       expect(html, page).toContain("Page not found");
-      expect(html, page).toContain('href="/assessments"');
-      expect(html, page).toContain("Go to Assessments");
+      expect(html, page).toContain('href="/"');
+      expect(html, page).toContain("Go to Home");
       expect(html, page).not.toMatch(/href="\/(templates|applications|new)/);
     }
+  });
+
+  it("links an unknown address to Home (Unknown address)", async () => {
+    const { default: NotFound } = await import("@/app/not-found");
+    const html = renderToStaticMarkup(await NotFound());
+    expect(html).toContain("Page not found");
+    expect(html).toMatch(/<a [^>]*href="\/"[^>]*>Go to Home<\/a>/);
   });
 
   it("falls back to the generic page for demo=false", () => {
