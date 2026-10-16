@@ -174,8 +174,9 @@ test("shows the visitor's profile in the shell with its persona and region", asy
   // The descriptor carries the visitor's profiles, so the profile shows once the stored view applies, without a fetch.
   await expect(shell(page)).toContainText("Priya Shah");
   await expect(shell(page)).toContainText("Approver · Mumbai");
-  await shell(page).getByRole("button", { name: "Priya Shah Approver · Mumbai" }).click();
-  await expect(shell(page)).toContainText("Change it in the toolbar's Session tool.");
+  await shell(page).getByRole("button", { name: "User menu for Priya Shah" }).click();
+  // Salt's overlay renders its panel outside the shell's session anchor.
+  await expect(page.getByText("Change it in the toolbar's Session tool.")).toBeVisible();
 });
 
 test("leaves Settings with the theme and the event bus only", async ({ page }) => {

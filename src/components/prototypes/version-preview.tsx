@@ -70,7 +70,7 @@ export function VersionPreview({ versionId, title, state, frameBase = `/prototyp
         highlight={highlight}
         onFrameMessage={onMessage}
       />
-      {needsAudit && report && <AuditRunner versionId={versionId} title={title} frameBase={frameBase} />}
+      {needsAudit && report && <AuditRunner key={versionId} versionId={versionId} title={title} frameBase={frameBase} />}
     </>
   );
 }
