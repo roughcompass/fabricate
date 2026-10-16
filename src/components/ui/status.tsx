@@ -70,6 +70,12 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   // Template demo applications and their simulated builds.
   building: ["Building", "progress"],
   ready: ["Ready", "success"],
+  // An Application's DE Web assessment (applications/assessment.ts).
+  not_assessed: ["Not assessed", "neutral"],
+  couldnt_start: ["Couldn't start", "error"],
+  assessing: ["Assessing", "progress"],
+  assessed: ["Assessed", "success"],
+  assessed_with_issues: ["Assessed with issues", "warning"],
   // Portal lifecycles, shown as badges (BADGES).
   prototype: ["Prototype", "neutral"],
   production: ["Production", "neutral"],

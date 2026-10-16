@@ -1,5 +1,6 @@
 import os from "node:os";
 import { acquireTarget } from "@/lib/acquisition/acquire";
+import { recordRenderingDeterminations } from "@/lib/applications/determinations";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ASSESSMENT_MACHINE, TARGET_MACHINE, isTerminal } from "@/lib/db/state-machines";
@@ -159,6 +160,8 @@ export function finalizeAssessment(db: Executor, assessmentPublicId: string): As
     const finished = transitionAssessment(tx, assessment, outcome, outcome === "failed" ? { failureReason: failures.length ? `No repository could be assessed (${failures.join("; ")})` : "No repository could be assessed" } : {});
     // A Salt Patterns Run is evaluated in the transaction it finishes in, so it never finishes unevaluated.
     evaluateTemplateRun(tx, finished);
+    // So a DE Web Run determines its Applications' rendering (make-applications-first-class, design decision 7).
+    recordRenderingDeterminations(tx, finished);
     return finished;
   });
 }

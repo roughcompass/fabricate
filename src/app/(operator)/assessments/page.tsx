@@ -15,7 +15,7 @@ import { type Assessment, assessmentNumber, listAssessments } from "@/lib/assess
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { CONCLUSION_FILTERS, type ConclusionFilter, type LatestConclusion, conclusionCounts, isConclusionFilter, latestConclusions } from "@/lib/evaluations/conclusions";
-import { listInitiatives, saltPatternsInitiative, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
+import { deWebInitiative, listInitiatives, saltPatternsInitiative, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
 import { releaseLabel } from "@/lib/standards/standard-records";
 import { assessmentsHref } from "@/lib/web/list-filters";
 import { initiativeListOutcome } from "./outcomes";
@@ -46,12 +46,16 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
     const latest = listAssessments(db, initiative.id)[0];
     return { initiative, repository: selectedSources(db, initiative.id)[0], latest: latest && { assessment: latest, number: assessmentNumber(db, latest) } };
   });
-  // Salt Patterns: DE FabLab's own Assessment of template versions, kept apart like claims.
-  const owned = conclusion ? null : (() => {
-    const initiative = saltPatternsInitiative(db);
-    const latest = listAssessments(db, initiative.id)[0];
-    return { initiative, releases: selectedReleases(db, initiative.id).map(({ release, standard }) => releaseLabel(standard, release)), latest: latest && { assessment: latest, number: assessmentNumber(db, latest) } };
-  })();
+  // DE FabLab's own Assessments, kept apart like claims: Salt Patterns of template versions, and DE Web of each Application's repository.
+  const owned = conclusion
+    ? []
+    : [
+        { initiative: saltPatternsInitiative(db), scope: "Template versions" },
+        { initiative: deWebInitiative(db), scope: "Each Application's repository" },
+      ].map(({ initiative, scope }) => {
+        const latest = listAssessments(db, initiative.id)[0];
+        return { initiative, scope, releases: selectedReleases(db, initiative.id).map(({ release, standard }) => releaseLabel(standard, release)), latest: latest && { assessment: latest, number: assessmentNumber(db, latest) } };
+      });
   const create = (
     <ButtonLink href="/assessments/new" variant="primary" icon="plus">
       New Assessment
@@ -122,8 +126,8 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
         )}
       </Panel>
 
-      {owned && (
-        <Section title="Owned by DE FabLab" description="Holds template versions to the Releases selected on it when they're accepted or re-checked.">
+      {owned.length > 0 && (
+        <Section title="Owned by DE FabLab" description="Salt Patterns holds template versions to its Releases when they're accepted or re-checked; DE Web assesses each Application's repository when it's created or re-assessed.">
           <Panel flush>
             <Table
               label="Assessments owned by DE FabLab"
@@ -135,18 +139,20 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
                 </>
               }
             >
-              <tr>
-                <Td label="Assessment">
-                  <Primary>
-                    <Link href={`/assessments/${owned.initiative.publicId}`}>{owned.initiative.name}</Link>
-                  </Primary>
-                  <Secondary>Template versions</Secondary>
-                </Td>
-                <Td label="Standard Releases">{owned.releases.length ? <TagList values={owned.releases} /> : <Secondary>None selected</Secondary>}</Td>
-                <Td label="Latest Run">
-                  <LatestRun latest={owned.latest} />
-                </Td>
-              </tr>
+              {owned.map(({ initiative, scope, releases, latest }) => (
+                <tr key={initiative.publicId}>
+                  <Td label="Assessment">
+                    <Primary>
+                      <Link href={`/assessments/${initiative.publicId}`}>{initiative.name}</Link>
+                    </Primary>
+                    <Secondary>{scope}</Secondary>
+                  </Td>
+                  <Td label="Standard Releases">{releases.length ? <TagList values={releases} /> : <Secondary>None selected</Secondary>}</Td>
+                  <Td label="Latest Run">
+                    <LatestRun latest={latest} />
+                  </Td>
+                </tr>
+              ))}
             </Table>
           </Panel>
         </Section>

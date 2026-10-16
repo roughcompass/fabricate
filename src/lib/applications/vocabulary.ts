@@ -12,3 +12,8 @@ export const RENDERING_MODES = ["esm", "module_federation_2", "iframe", "undeter
 export type RenderingMode = (typeof RENDERING_MODES)[number];
 
 export const RENDERING_MODE_LABELS: Record<RenderingMode, string> = { esm: "ESM", module_federation_2: "Module Federation", iframe: "iframe", undetermined: "Undetermined" };
+
+/** What a starter builds (application-creation spec, "Build your solution can be filtered"). */
+export const STARTER_KINDS = ["web", "dashboard", "agent"] as const;
+export type StarterKind = (typeof STARTER_KINDS)[number];
+export const STARTER_KIND_LABELS: Record<StarterKind, string> = { web: "Web application", dashboard: "Dashboard", agent: "Agent" };

@@ -1,0 +1,73 @@
+# The starters Add application offers (docs/applications.md, "Starters").
+#
+# Build your solution shows the first four, in this order; the full catalog
+# lists every one. Each starter needs every field:
+#   slug         lowercase letters, digits, and hyphens; the address names it
+#   kind         web, dashboard, or agent
+#   title        120 characters or fewer
+#   description  one sentence, 200 characters or fewer
+#   preview      an image under public/, from its root, such as /starters/x.svg
+#   sourceUrl    the https URL of the starter's own repository
+#   steps        how to create a repository from it, in order; each has
+#                `text`, and a `command` to copy when there is one
+# A starter with a missing or invalid field is left out and the server log
+# says why. In development a change appears on the next page load; in
+# production, after the next deploy or restart. `npm test` fails if the
+# committed file doesn't load four starters.
+#
+# PLACEHOLDER: the source repositories and scaffold steps below stand in
+# until the DE Web team names the real ones (make-applications-first-class,
+# design Open Questions).
+starters:
+  - slug: de-web-boilerplate
+    kind: web
+    title: DE Web Boilerplate
+    description: A DE Web application with routing, Salt, and the Portal's context wired in.
+    preview: /starters/de-web-boilerplate.svg
+    sourceUrl: https://bitbucket.deweb.example/projects/DEWEB/repos/de-web-boilerplate
+    steps:
+      - text: Create an empty repository for your application in your team's Bitbucket project or GitHub organization.
+      - text: Copy the boilerplate into it.
+        command: git clone https://bitbucket.deweb.example/scm/deweb/de-web-boilerplate.git my-application
+      - text: Point the copy at your new repository and push it.
+        command: git -C my-application remote set-url origin <your repository URL> && git -C my-application push -u origin main
+      - text: Enter your new repository's URL in Repository URL.
+  - slug: salt-dashboard
+    kind: dashboard
+    title: Salt Dashboard
+    description: A dashboard of Salt cards, charts, and a data grid, ready for your data.
+    preview: /starters/salt-dashboard.svg
+    sourceUrl: https://bitbucket.deweb.example/projects/DEWEB/repos/salt-dashboard
+    steps:
+      - text: Create an empty repository for your dashboard.
+      - text: Copy the dashboard starter into it.
+        command: git clone https://bitbucket.deweb.example/scm/deweb/salt-dashboard.git my-dashboard
+      - text: Point the copy at your new repository and push it.
+        command: git -C my-dashboard remote set-url origin <your repository URL> && git -C my-dashboard push -u origin main
+      - text: Enter your new repository's URL in Repository URL.
+  - slug: salt-starter
+    kind: web
+    title: Salt Starter
+    description: The smallest Salt application, a single page with the Salt theme and layout.
+    preview: /starters/salt-starter.svg
+    sourceUrl: https://bitbucket.deweb.example/projects/DEWEB/repos/salt-starter
+    steps:
+      - text: Create an empty repository for your application.
+      - text: Copy the Salt starter into it.
+        command: git clone https://bitbucket.deweb.example/scm/deweb/salt-starter.git my-application
+      - text: Point the copy at your new repository and push it.
+        command: git -C my-application remote set-url origin <your repository URL> && git -C my-application push -u origin main
+      - text: Enter your new repository's URL in Repository URL.
+  - slug: agent-starter
+    kind: agent
+    title: Agent Starter
+    description: A conversational agent with a Salt chat interface and a server for its tools.
+    preview: /starters/agent-starter.svg
+    sourceUrl: https://bitbucket.deweb.example/projects/DEWEB/repos/agent-starter
+    steps:
+      - text: Create an empty repository for your agent.
+      - text: Copy the agent starter into it.
+        command: git clone https://bitbucket.deweb.example/scm/deweb/agent-starter.git my-agent
+      - text: Point the copy at your new repository and push it.
+        command: git -C my-agent remote set-url origin <your repository URL> && git -C my-agent push -u origin main
+      - text: Enter your new repository's URL in Repository URL.

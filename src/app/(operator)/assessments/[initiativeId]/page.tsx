@@ -63,8 +63,10 @@ export default async function InitiativePage({ params, searchParams }: { params:
   }));
   const enabledCount = listSources(db, { enabled: true }).length;
   const scope = initiative.selectionMode === "all_enabled" ? `${scopeLabel(initiative, 0)} (${enabledCount} now)` : scopeLabel(initiative, sources.length);
-  // Salt Patterns assesses template versions, which DE FabLab adds; only its Releases are chosen here.
+  // Salt Patterns assesses template versions, which DE FabLab adds, and DE Web each Application's repository, which each Run names; only their Releases are chosen here.
   const templates = initiative.systemOwned;
+  const owned = templates || initiative.deWeb;
+  const ownedRuns = templates ? "Runs start when a template version is accepted or re-checked" : "Runs start when an Application is created or re-assessed, each assessing that Application's repository";
   const editHref = `/assessments/${initiative.publicId}/edit`;
 
   return (
@@ -78,9 +80,9 @@ export default async function InitiativePage({ params, searchParams }: { params:
           </span>,
         ]}
         description={initiative.objective || undefined}
-        secondaryActions={[templates ? { href: editHref, label: "Select Releases", icon: "edit" } : { href: editHref, label: "Edit", icon: "edit" }]}
+        secondaryActions={[owned ? { href: editHref, label: "Select Releases", icon: "edit" } : { href: editHref, label: "Edit", icon: "edit" }]}
         primaryAction={
-          templates ? undefined : (
+          owned ? undefined : (
             <LaunchForm
               action={startAssessment.bind(null, initiative.publicId)}
               launchToken={crypto.randomUUID()}
@@ -92,9 +94,11 @@ export default async function InitiativePage({ params, searchParams }: { params:
         alerts={
           <>
             <OutcomeToast outcome={initiativeOutcome(param(query, "notice"), initiative)} />
-            {templates && (
+            {owned && (
               <Alert tone="info" title="Owned by DE FabLab">
-                Runs start when a template version is accepted or re-checked, and each is evaluated against the Releases selected here. Its name, objective, and targets can&apos;t change.
+                {templates
+                  ? "Runs start when a template version is accepted or re-checked, and each is evaluated against the Releases selected here. Its name, objective, and targets can't change."
+                  : `${ownedRuns}. Its name, objective, and scope can't change, but you can select the Releases its Runs are evaluated against.`}
               </Alert>
             )}
           </>
@@ -105,8 +109,8 @@ export default async function InitiativePage({ params, searchParams }: { params:
         <DescriptionList surface
           layout="columns"
           items={[
-            templates ? ["Targets", "Template versions, added when one is accepted or re-checked"] : ["Repositories", scope],
-            ...(initiative.selectionMode === "explicit" && !templates
+            templates ? ["Targets", "Template versions, added when one is accepted or re-checked"] : initiative.deWeb ? ["Repositories", "Each Application's repository, named by its Run"] : ["Repositories", scope],
+            ...(initiative.selectionMode === "explicit" && !owned
               ? ([
                   [
                     "Selected Repositories",
@@ -176,7 +180,7 @@ export default async function InitiativePage({ params, searchParams }: { params:
                     <Td label="Status">
                       <Status state={assessment.state} />
                     </Td>
-                    <Td label="Scope">{[templates ? targets.map((target) => target.sourceName).join(", ") : countLabel(targets.length, "Repository", "Repositories"), failed ? `${failed} failed` : null, canceled ? `${canceled} canceled` : null].filter(Boolean).join(" · ")}</Td>
+                    <Td label="Scope">{[owned ? targets.map((target) => target.sourceName).join(", ") : countLabel(targets.length, "Repository", "Repositories"), failed ? `${failed} failed` : null, canceled ? `${canceled} canceled` : null].filter(Boolean).join(" · ")}</Td>
                     <Td label="Finished">
                       <RelativeTime value={assessment.finishedAt} />
                     </Td>
@@ -204,7 +208,7 @@ export default async function InitiativePage({ params, searchParams }: { params:
               })}
             </Table>
           ) : (
-            <EmptyState title="No Runs yet">{templates ? "A Run starts when a template version is accepted or re-checked." : "Start a Run to pin each scoped repository to a commit and profile it without running its code."}</EmptyState>
+            <EmptyState title="No Runs yet">{owned ? `${ownedRuns}.` : "Start a Run to pin each scoped repository to a commit and profile it without running its code."}</EmptyState>
           )}
         </Panel>
       </Section>

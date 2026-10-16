@@ -35,8 +35,9 @@ const nextConfig: NextConfig = {
   // Files the server reads at run time, which tracing can't see: the committed Salt registry and seed, the page shell's source for the
   // Code view and downloads, and the type declarations the typecheck gate reads. The production image copies config/ itself; on
   // Vercel the settings ship with every function too.
-  // The Create Portal dialog's "What's included" content is read at run time on every target (add-portal-switcher design decision 7).
-  outputFileTracingIncludes: { "/**": [...PROTOTYPES_RUNTIME_FILES, "config/portal-whats-included.yaml", ...(process.env.VERCEL ? ["config/fabricate.json"] : [])] },
+  // The Create Portal dialog's "What's included" content and Add application's starters are read at run time on every target
+  // (add-portal-switcher design decision 7; make-applications-first-class design decision 4).
+  outputFileTracingIncludes: { "/**": [...PROTOTYPES_RUNTIME_FILES, "config/portal-whats-included.yaml", "config/application-starters.yaml", ...(process.env.VERCEL ? ["config/fabricate.json"] : [])] },
   // Tracing the proxy and instrumentation takes the whole project directory, which Next's excludes don't reach, so deploys
   // are built from a clean copy without local data (docs/prototypes.md, "Hosting on Vercel").
   // Loaded from node_modules, never bundled: the native SQLite binding, and the

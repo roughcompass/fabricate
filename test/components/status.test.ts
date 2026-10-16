@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Status, badgeEmphasis, checkKind, dependencyKind, diagnosticReason, hasStatus, severityLabel, severityOptions, statusOf } from "@/components/ui/status";
 import { ASSESSMENT_STATES, DE_CONSOLE_CONFLICT_REASONS, DE_CONSOLE_READ_STATUSES, EVALUATION_RELEASE_STATES, EVALUATION_STATES, OUTCOMES, PORTAL_LIFECYCLES, SEVERITIES, TARGET_STATES } from "@/lib/db/schema";
 import { RESOLUTION_STATES } from "@/lib/relationships/schema";
+import { APPLICATION_ASSESSMENT_STATES } from "@/lib/applications/assessment";
 
 describe("status registry", () => {
   it.each([
@@ -19,6 +20,7 @@ describe("status registry", () => {
     ["DE Console read", DE_CONSOLE_READ_STATUSES],
     ["DE Console conflict reason", DE_CONSOLE_CONFLICT_REASONS],
     ["Portal lifecycle", PORTAL_LIFECYCLES],
+    ["Application assessment", APPLICATION_ASSESSMENT_STATES],
     ["Evaluation conclusion", ["gaps", "undetermined", "conforms", "not_applicable", "not_evaluated"]],
   ])("labels every %s state explicitly, never by fallback", (_kind, states) => {
     for (const state of states) {
