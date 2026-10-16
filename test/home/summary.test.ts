@@ -7,7 +7,7 @@ import { createApplication, ensurePortal } from "@/lib/ownership/records";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, claim, driveEvaluation, driveRun } from "../support/home";
-import { registerApplication } from "../support/applications";
+import { determineRendering, registerApplication } from "../support/applications";
 import { onboardPortal } from "../support/onboarding";
 
 describe("fleet summary", () => {
@@ -81,5 +81,13 @@ describe("fleet summary", () => {
     const db = createTestDb();
     claimInitiative(db, buildSource(db));
     expect(fleetSummary(db).assessments).toMatchObject({ empty: true, total: 0 });
+  });
+
+  it("leaves DE Web's Assessments of Application repositories out of the Assessments figures", () => {
+    const db = createTestDb();
+    determineRendering(db, registerApplication(db, { name: "Payee Hub", portal: onboardPortal(db, "Access") }), "esm");
+    expect(fleetSummary(db).assessments).toMatchObject({ empty: true, total: 0 });
+    buildAssessment(db, { initiative: buildInitiative(db, { name: "Orders review" }) });
+    expect(fleetSummary(db).assessments).toMatchObject({ total: 1 });
   });
 });

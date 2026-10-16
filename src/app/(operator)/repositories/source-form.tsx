@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { ButtonLink } from "@/components/ui/button";
 import { FormAlert, FormFooter, TextInput, formStyles } from "@/components/ui/form";
 import { Panel } from "@/components/ui/panel";
@@ -13,9 +14,11 @@ interface SourceFormProps {
   initial: SourceFormState;
   lockVersion?: number;
   submitLabel: string;
+  /** The Application registered from the Repository, which fixes its clone URL. */
+  application?: { publicId: string; name: string };
 }
 
-export function SourceForm({ action, initial, lockVersion, submitLabel }: SourceFormProps) {
+export function SourceForm({ action, initial, lockVersion, submitLabel, application }: SourceFormProps) {
   const [state, formAction] = useActionState(action, initial);
   const form = useFocusFirstInvalid(state, "source-form-alert");
 
@@ -50,7 +53,16 @@ export function SourceForm({ action, initial, lockVersion, submitLabel }: Source
             inputMode="url"
             defaultValue={state.values.cloneUrl}
             errors={state.errors.cloneUrl}
-            description="file://, https://, or ssh:// only. Leave credentials out; the worker's SSH agent or Git credential helper supplies them."
+            readOnly={Boolean(application)}
+            description={
+              application ? (
+                <>
+                  <Link href={`/applications/${application.publicId}`}>{application.name}</Link> is registered from this Repository, so its clone URL can&apos;t change.
+                </>
+              ) : (
+                "file://, https://, or ssh:// only. Leave credentials out; the worker's SSH agent or Git credential helper supplies them."
+              )
+            }
             required
           />
           <TextInput

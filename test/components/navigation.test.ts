@@ -67,6 +67,7 @@ const EXPECTED: Record<string, string | [section: string, item: string] | null> 
   "/navigation": "navigation",
   "/navigation/new": "navigation",
   "/navigation/[portalId]": "navigation",
+  "/navigation/[portalId]/edit": "navigation",
   "/templates": ["salt-patterns", "all-salt-patterns"],
   "/templates/[templateSlug]": ["salt-patterns", "all-salt-patterns"],
   "/templates/[templateSlug]/deploy": ["salt-patterns", "all-salt-patterns"],

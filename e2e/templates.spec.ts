@@ -32,9 +32,12 @@ test("Opening the gallery: titled Salt Patterns, with the search, the filter rai
   await expect(page.getByText("Showing 16 of 16 templates")).toBeVisible();
   await expect(cards(page)).toHaveCount(16);
   expect((await cardTitles(page)).slice(0, 4)).toEqual(["Client onboarding", "Market watch", "Operations console", "Payments workspace"]);
-  // Viewing applications and resetting the demo moved to the create page.
-  await expect(page.getByRole("link", { name: "View applications" })).toHaveCount(0);
+  // Resetting the demo is on Add application, which the header's one action opens.
   await expect(page.getByRole("button", { name: "More actions" })).toHaveCount(0);
+  const header = page.locator("[data-page-header]");
+  await expect(header.locator('[data-variant="primary"]')).toHaveCount(1);
+  await header.getByRole("link", { name: "Add application" }).click();
+  await expect(page).toHaveURL(/\/applications\/new$/);
 });
 
 test("shows how many options each group has selected, including while it is collapsed", async ({ page, db: _db }) => {

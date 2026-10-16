@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
+import { registerApplication } from "../test/support/applications";
 import { buildAssessment, buildSource } from "../test/support/builders";
 import { claim } from "../test/support/home";
+import { onboardPortal } from "../test/support/onboarding";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 
@@ -91,6 +93,32 @@ test("searches Sources by name or clone URL, keeping the search in the address",
   await expect(page.getByText("No matching Repositories")).toBeVisible();
   await page.getByRole("link", { name: "Clear filters" }).click();
   await expect(rows).toHaveCount(3);
+});
+
+test("Application column: a Repository names the Application registered from it, which the search finds, and its clone URL is read-only", async ({ page, db }) => {
+  const payeeHub = registerApplication(db, { name: "Payee Hub", portal: onboardPortal(db, "Access") });
+  buildSource(db, { name: "orders" });
+
+  await page.goto(paths.repositories);
+  const rows = page.getByRole("table", { name: "Repositories" }).locator("tbody tr");
+  await expect(rows.filter({ hasText: "orders" }).locator('td[data-label="Application"]')).toHaveText("None");
+  const owned = rows.filter({ hasText: "payee-hub" });
+  await expect(owned.getByRole("link", { name: "Payee Hub" })).toHaveAttribute("href", `/applications/${payeeHub.publicId}`);
+
+  const search = page.getByRole("searchbox", { name: "Search Repositories" });
+  await search.fill("payee hub");
+  await search.press("Enter");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("Payee Hub");
+
+  await owned.getByRole("link", { name: "payee-hub", exact: true }).click();
+  await expect(page.locator("[data-page-header]").getByRole("link", { name: "Payee Hub" })).toHaveAttribute("href", `/applications/${payeeHub.publicId}`);
+  const cloneUrl = page.getByLabel("Clone URL");
+  await expect(cloneUrl).toHaveAttribute("readonly", "");
+  await expect(page.getByText("is registered from this Repository, so its clone URL can't change.")).toBeVisible();
+  await page.getByLabel("Name", { exact: true }).fill("payee-hub-main");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(toasts(page)).toContainText("payee-hub-main");
 });
 
 // page-patterns spec: the Repositories list filters what Home counts.

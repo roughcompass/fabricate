@@ -1,8 +1,8 @@
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, IssueCollector, NotFoundError, StaleRecordError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { repositorySources } from "@/lib/db/schema";
+import { applications, repositorySources } from "@/lib/db/schema";
 
 /**
  * Persistence for repository sources. Callers supply an already parsed and
@@ -55,9 +55,31 @@ export function updateSource(db: Executor, publicId: string, expectedLockVersion
     if (current.lockVersion !== expectedLockVersion) throw new StaleRecordError(`${current.name} was changed by someone else`);
 
     const next = normalize({ ...current, ...changes });
+    // An Application registered from the Repository fixes its URL (application-creation spec).
+    const owner = owningApplication(tx, current.id);
+    if (owner && (next.cloneUrl !== current.cloneUrl || next.canonicalUrl !== current.canonicalUrl)) {
+      throw new ValidationError([{ field: "cloneUrl", message: `${owner.name} is registered from this Repository, so its clone URL can't change` }]);
+    }
     validate(tx, next, next.enabled ?? current.enabled, current.id);
     return write(tx, current, next);
   });
+}
+
+export interface OwningApplication {
+  publicId: string;
+  name: string;
+}
+
+/** The Application registered from the Repository +sourceId+, if any. */
+export function owningApplication(db: Executor, sourceId: number): OwningApplication | undefined {
+  const row = db.select({ publicId: applications.publicId, name: applications.name }).from(applications).where(eq(applications.repositorySourceId, sourceId)).get();
+  return row?.name ? { publicId: row.publicId, name: row.name } : undefined;
+}
+
+/** Every Repository's Application, by the Repository's id, in one query. */
+export function owningApplications(db: Executor): Map<number, OwningApplication> {
+  const rows = db.select({ sourceId: applications.repositorySourceId, publicId: applications.publicId, name: applications.name }).from(applications).where(isNotNull(applications.repositorySourceId)).all();
+  return new Map(rows.filter((row) => row.name).map((row) => [row.sourceId!, { publicId: row.publicId, name: row.name! }]));
 }
 
 export function setSourceEnabled(db: Executor, publicId: string, enabled: boolean): RepositorySource {

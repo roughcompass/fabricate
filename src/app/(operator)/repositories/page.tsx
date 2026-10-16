@@ -15,7 +15,7 @@ import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/t
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { Tag } from "@/components/ui/tag";
 import { assessmentCounts } from "@/lib/catalog/catalog";
-import { listSources, sourceReferenceLabel } from "@/lib/catalog/source-records";
+import { listSources, owningApplications, sourceReferenceLabel } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { isOwnershipFilter, ownershipFilterOf } from "@/lib/ownership/coverage";
 import { type RepositoryOwnership, repositoryOwnership } from "@/lib/ownership/read";
@@ -37,8 +37,9 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
   const all = listSources(db);
   // Ownership is read once for every Repository, in a few queries, as Home's figures count it.
   const owned = repositoryOwnership(db, all.map((source) => source.id));
+  const registered = owningApplications(db);
   const needle = search.toLowerCase();
-  const searched = needle ? all.filter((source) => source.name.toLowerCase().includes(needle) || source.cloneUrl.toLowerCase().includes(needle)) : all;
+  const searched = needle ? all.filter((source) => source.name.toLowerCase().includes(needle) || source.cloneUrl.toLowerCase().includes(needle) || registered.get(source.id)?.name.toLowerCase().includes(needle)) : all;
   // The tabs count what the search and the ownership filter leave.
   const matching = ownership ? searched.filter((source) => ownershipFilterOf(owned.get(source.id)) === ownership) : searched;
   const sources = status ? matching.filter((source) => source.enabled === FILTERS[status]) : matching;
@@ -80,7 +81,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                 { value: "unclaimed", label: "Unclaimed" },
               ]}
             />
-            <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={href(status, "")} />
+            <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name, clone URL, or Application" defaultValue={search} clearHref={href(status, "")} />
           </FilterBar>
         }
       >
@@ -103,6 +104,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
               <>
                 <Th>Name</Th>
                 <Th>Reference</Th>
+                <Th>Application</Th>
                 <Th>SEAL application</Th>
                 <Th>Status</Th>
                 <Th align="numeric">Runs</Th>
@@ -125,6 +127,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                   </Secondary>
                 </Td>
                 <Td label="Reference">{source.gitRef ? <Tag>{source.gitRef}</Tag> : <Secondary>{humanize(sourceReferenceLabel(source))}</Secondary>}</Td>
+                <Td label="Application">{registered.has(source.id) ? <Link href={`/applications/${registered.get(source.id)!.publicId}`}>{registered.get(source.id)!.name}</Link> : <Secondary>None</Secondary>}</Td>
                 <Td label="SEAL application">
                   <SealApplication ownership={owned.get(source.id)} />
                 </Td>
@@ -150,7 +153,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
             ))}
           </Table>
         ) : search ? (
-          <EmptyState title="No matching Repositories" icon="search">{`No Repository name or clone URL contains “${search}”.`}</EmptyState>
+          <EmptyState title="No matching Repositories" icon="search">{`No Repository name, clone URL, or Application contains “${search}”.`}</EmptyState>
         ) : ownership ? (
           <EmptyState title={`No ${ownership} Repositories`}>{ownership === "unclaimed" ? "Every Repository listed here has a SEAL application." : "Claim a Repository to record the SEAL application it belongs to."}</EmptyState>
         ) : status ? (

@@ -40,7 +40,15 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
 
   return (
     <Page>
-      <PageHeader title="Salt Patterns" description="Jumpstart your app development process with pre-built solutions from DE Web and our community." />
+      <PageHeader
+        title="Salt Patterns"
+        description="Jumpstart your app development process with pre-built solutions from DE Web and our community."
+        primaryAction={
+          <ButtonLink href="/applications/new" variant="primary" icon="plus">
+            Add application
+          </ButtonLink>
+        }
+      />
 
       <Form key={query.search} action="/templates" scroll={false} className={styles.search} role="search" aria-label="Search templates">
         {query.brands.map((brand) => (

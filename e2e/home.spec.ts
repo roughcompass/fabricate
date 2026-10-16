@@ -1,11 +1,11 @@
 import type { Page } from "@playwright/test";
 import { eq } from "drizzle-orm";
-import { applications, portals } from "../src/lib/db/schema";
+import { portals } from "../src/lib/db/schema";
 import { recordFailedDeConsoleRead } from "../src/lib/ownership/de-console";
 import { createApplication, ensurePortal } from "../src/lib/ownership/records";
 import { buildAssessment, buildInitiative, buildSource } from "../test/support/builders";
 import { buildEvaluation, claim, driveEvaluation, driveRun, readDeConsole } from "../test/support/home";
-import { registerApplication } from "../test/support/applications";
+import { determineRendering, registerApplication } from "../test/support/applications";
 import { onboardPortal } from "../test/support/onboarding";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -76,9 +76,8 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
   ensurePortal(db, "Lending");
   db.update(portals).set({ lifecycle: "production" }).where(eq(portals.id, access.id)).run();
   registerApplication(db, { name: "Payments workspace", portal: access });
-  const ledger = registerApplication(db, { name: "Ledger", portal: markets });
-  const undetermined = buildAssessment(db, { sources: [buildSource(db, { name: "ledger-run" })] }).assessment;
-  db.update(applications).set({ renderingMode: "undetermined", renderingEvidence: "{}", renderingAssessmentId: undetermined.id }).where(eq(applications.id, ledger.id)).run();
+  // Ledger's rendering is Undetermined by a DE Web Assessment, which the Assessments figures leave out.
+  determineRendering(db, registerApplication(db, { name: "Ledger", portal: markets }), "undetermined");
   await page.context().addCookies([{ name: "fabricate-portal", value: markets.publicId, url: baseURL! }]);
 
   await page.goto(paths.home);
@@ -91,10 +90,10 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
     }
   }
   expect(figures.map(({ label, value }) => [label, value])).toEqual([
-    // Six Repositories, and one more for each Assessment.
-    ["Enabled", 10],
+    // Six Repositories, one more for each Assessment, and each Application's own.
+    ["Enabled", 12],
     ["Claimed", 4],
-    ["Unclaimed", 6],
+    ["Unclaimed", 8],
     ["Assessments", 4],
     ["Gaps found", 2],
     ["Undetermined", 0],
@@ -104,7 +103,7 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
     ["Undetermined rendering", 1],
     ["Production Portals", 1],
   ]);
-  await expect(page.locator('dl[aria-label="Repositories"]')).toContainText("40% of enabled");
+  await expect(page.locator('dl[aria-label="Repositories"]')).toContainText("33% of enabled");
 
   for (const { label, value, href } of figures) {
     await page.goto(href);
