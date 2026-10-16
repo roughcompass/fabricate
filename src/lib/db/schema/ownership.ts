@@ -1,9 +1,11 @@
 import { sql } from "drizzle-orm";
 import { type AnySQLiteColumn, check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { RENDERING_MODES } from "../../applications/vocabulary";
+import { assessments } from "./assessments";
 import { repositorySources } from "./catalog";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp } from "./columns";
-import { PORTAL_PLATFORMS } from "../../onboarding/vocabulary";
-import { LIFECYCLE_STATES, applicationRevisions, portalRevisions, sealIdCheck } from "./onboarding";
+import { PORTAL_LIFECYCLES, PORTAL_PLATFORMS } from "../../onboarding/vocabulary";
+import { sealIdCheck } from "./onboarding";
 
 export const OWNERSHIP_ATTRIBUTES = ["application", "team", "line_of_business", "portal", "owner", "host"] as const;
 export const OWNERSHIP_OPERATIONS = ["set", "add", "remove"] as const;
@@ -25,8 +27,10 @@ export type VerificationState = (typeof VERIFICATION_STATES)[number];
 
 /**
  * A Web Application with its own identity and a non-unique external SEAL ID.
- * Ownership claims describe it; onboarding gives it revisions, a lifecycle,
- * and Portal placements (docs/onboarding.md).
+ * Ownership claims describe it. Create Application registers it: a slug, a
+ * description, one repository, one Portal, and the starter it began from,
+ * with the rendering mode its latest finished DE Web assessment determined
+ * (docs/applications.md). A claim-created Application has none of these.
  */
 export const applications = sqliteTable(
   "applications",
@@ -37,22 +41,55 @@ export const applications = sqliteTable(
     sealId: text("seal_id"),
     name: text("name"),
     createdAt: createdAt(),
-    /** The owning team its latest submitted onboarding revision states. Ownership claims keep their own team. */
+    /** The owning team an earlier onboarding stated. Ownership claims keep their own team. */
     ownerTeam: text("owner_team"),
-    lifecycle: text("lifecycle", { enum: LIFECYCLE_STATES }).notNull().default("draft"),
-    /** Its latest submitted onboarding revision. */
-    activeRevisionId: integer("active_revision_id").references((): AnySQLiteColumn => applicationRevisions.id, { onDelete: "restrict" }),
-    draftRevisionId: integer("draft_revision_id").references((): AnySQLiteColumn => applicationRevisions.id, { onDelete: "restrict" }),
+    /** Lowercase letters, digits, and single hyphens, starting with a letter; fixed once set and one Application's at most. */
+    slug: text("slug"),
+    description: text("description"),
+    /** The starter or template slug it was created from, if any. */
+    starter: text("starter"),
+    repositorySourceId: integer("repository_source_id").references(() => repositorySources.id, { onDelete: "restrict" }),
+    /** The one Portal whose menu can point at it, fixed once set. */
+    portalId: integer("portal_id").references((): AnySQLiteColumn => portals.id, { onDelete: "restrict" }),
+    renderingMode: text("rendering_mode", { enum: RENDERING_MODES }),
+    /** The rule, deciding facts, and also-observed facts behind the mode, as a JSON object. */
+    renderingEvidence: text("rendering_evidence"),
+    renderingAssessmentId: integer("rendering_assessment_id").references(() => assessments.id, { onDelete: "restrict" }),
+    /** Who stated they created it, for an Application from Create Application. */
+    createdBy: text("created_by"),
+    verification: text("verification", { enum: VERIFICATION_STATES }),
+    /** Bumped on every edit and when an assessment starts or finishes. */
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$defaultFn(() => new Date()),
     lockVersion: lockVersion(),
   },
   (t) => [
     index("applications_seal_id").on(t.sealId),
     index("applications_name").on(t.name),
+    index("applications_portal").on(t.portalId),
+    uniqueIndex("applications_slug").on(t.slug).where(sql`${t.slug} IS NOT NULL`),
+    uniqueIndex("applications_repository").on(t.repositorySourceId).where(sql`${t.repositorySourceId} IS NOT NULL`),
     check("applications_public_id", sql`${t.publicId} GLOB 'sea_*' OR ${t.publicId} GLOB 'wap_*'`),
     check("applications_seal_id", sealIdCheck(t.sealId)),
     check("applications_name", sql`${t.name} IS NULL OR length(trim(${t.name})) BETWEEN 1 AND 200`),
     check("applications_owner_team", sql`${t.ownerTeam} IS NULL OR length(trim(${t.ownerTeam})) BETWEEN 1 AND 200`),
-    check("applications_lifecycle", sql.raw(`lifecycle IN (${sqlList(LIFECYCLE_STATES)})`)),
+    check("applications_slug", sql`${t.slug} IS NULL OR (length(${t.slug}) BETWEEN 1 AND 63 AND ${t.slug} GLOB '[a-z]*' AND ${t.slug} NOT GLOB '*[^a-z0-9-]*' AND ${t.slug} NOT GLOB '*--*' AND ${t.slug} NOT GLOB '*-')`),
+    check("applications_description", sql`${t.description} IS NULL OR length(trim(${t.description})) BETWEEN 1 AND 500`),
+    check("applications_starter", sql`${t.starter} IS NULL OR (length(${t.starter}) BETWEEN 1 AND 100 AND ${t.starter} NOT GLOB '*[^a-z0-9-]*')`),
+    // A registered Application has every value Create Application asks for.
+    check(
+      "applications_registered",
+      sql`${t.repositorySourceId} IS NULL OR (${t.slug} IS NOT NULL AND ${t.portalId} IS NOT NULL AND ${t.name} IS NOT NULL AND ${t.sealId} IS NOT NULL AND ${t.description} IS NOT NULL)`,
+    ),
+    check("applications_rendering_mode", sql.raw(`rendering_mode IS NULL OR rendering_mode IN (${sqlList(RENDERING_MODES)})`)),
+    check(
+      "applications_rendering",
+      sql`(${t.renderingMode} IS NULL) = (${t.renderingEvidence} IS NULL) AND (${t.renderingMode} IS NULL) = (${t.renderingAssessmentId} IS NULL)
+        AND (${t.renderingEvidence} IS NULL OR (json_valid(${t.renderingEvidence}) AND json_type(${t.renderingEvidence}) = 'object' AND length(${t.renderingEvidence}) <= 65536))`,
+    ),
+    check("applications_created_by", sql`(${t.createdBy} IS NULL) = (${t.verification} IS NULL) AND (${t.createdBy} IS NULL OR length(trim(${t.createdBy})) BETWEEN 1 AND 200)`),
+    check("applications_verification", sql.raw(`verification IS NULL OR verification IN (${sqlList(VERIFICATION_STATES)})`)),
   ],
 );
 
@@ -82,9 +119,9 @@ export const linesOfBusiness = sqliteTable(
 
 /**
  * A portal, approved as an ontology concept or pending review. Its label is
- * its name. Onboarding gives it configuration revisions and a lifecycle; a
- * portal first named in an ownership claim is a Draft until its team
- * onboards it (docs/onboarding.md).
+ * its name. Its team arranges its menu and moves it between Prototype and
+ * Production on its Navigation page; a portal first named in an ownership
+ * claim is a Prototype like any other (docs/navigation.md).
  */
 export const portals = sqliteTable(
   "portals",
@@ -101,10 +138,8 @@ export const portals = sqliteTable(
     /** Lowercase letters only, fixed at creation, and one Portal's at most. */
     slug: text("slug"),
     description: text("description"),
-    lifecycle: text("lifecycle", { enum: LIFECYCLE_STATES }).notNull().default("draft"),
-    /** The configuration revision the Portal runs under once activated. */
-    activeRevisionId: integer("active_revision_id").references((): AnySQLiteColumn => portalRevisions.id, { onDelete: "restrict" }),
-    draftRevisionId: integer("draft_revision_id").references((): AnySQLiteColumn => portalRevisions.id, { onDelete: "restrict" }),
+    lifecycle: text("lifecycle", { enum: PORTAL_LIFECYCLES }).notNull().default("prototype"),
+    /** Bumped by every detail, menu, default, and lifecycle change, so a stale edit is refused. */
     lockVersion: lockVersion(),
   },
   (t) => [
@@ -118,7 +153,7 @@ export const portals = sqliteTable(
     check("portals_platform", sql.raw(`platform IS NULL OR platform IN (${sqlList(PORTAL_PLATFORMS)})`)),
     check("portals_slug", sql`${t.slug} IS NULL OR (length(${t.slug}) BETWEEN 1 AND 63 AND ${t.slug} NOT GLOB '*[^a-z]*')`),
     check("portals_description", sql`${t.description} IS NULL OR length(trim(${t.description})) BETWEEN 1 AND 500`),
-    check("portals_lifecycle", sql.raw(`lifecycle IN (${sqlList(LIFECYCLE_STATES)})`)),
+    check("portals_lifecycle", sql.raw(`lifecycle IN (${sqlList(PORTAL_LIFECYCLES)})`)),
   ],
 );
 

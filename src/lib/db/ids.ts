@@ -26,6 +26,7 @@ export const PUBLIC_ID_PREFIXES = {
   application: "wap",
   lineOfBusiness: "lob",
   portal: "ptl",
+  menuItem: "mnu",
   ownershipAssertion: "own",
   deConsoleConflict: "dcc",
   microfrontend: "mfe",

@@ -7,7 +7,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { getConfig } from "@/lib/config";
-import { backfillPortalSlugs } from "./backfills";
+import { backfillPortalSlugs, carryMenus } from "./backfills";
 import * as schema from "./schema";
 
 export type Schema = typeof schema;
@@ -53,6 +53,7 @@ export function migrateDatabase(db: Db, migrationsFolder = MIGRATIONS_FOLDER): v
     if (enforced) db.$client.pragma("foreign_keys = ON");
   }
   backfillPortalSlugs(db.$client);
+  carryMenus(db.$client);
 }
 
 /** Number of committed migrations not yet applied to this database. */
