@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { Icon, type IconName } from "./icon";
+import { Status } from "./status";
 import { Tag } from "./tag";
 import styles from "./menu.module.css";
 
@@ -17,6 +18,10 @@ export interface SwitcherOption {
   icon?: IconName;
   /** More text the filter matches, such as a slug or SEAL ID. */
   terms?: readonly (string | null)[];
+  /** A status badge after the tag, such as a Portal's lifecycle; the trigger's accessible name includes its label. */
+  badge?: { state: string; label: string } | null;
+  /** Makes the entry a link to this address instead of a form that submits its value. */
+  href?: string;
 }
 
 interface SwitcherProps {
@@ -27,9 +32,11 @@ interface SwitcherProps {
   options: readonly SwitcherOption[];
   /** The current option's value; the pinned option's when nothing else is chosen. */
   current: string;
-  /** Chooses an option: each one submits its value as +field+, so choosing works without JavaScript. */
-  action: (formData: FormData) => void | Promise<void>;
-  field: string;
+  /** Chooses an option: each one submits its value as +field+, so choosing works without JavaScript. Options with an href are links instead. */
+  action?: (formData: FormData) => void | Promise<void>;
+  field?: string;
+  /** More hidden fields each option's form submits, such as the page it was chosen on. */
+  fields?: Readonly<Record<string, string>>;
   searchLabel: string;
   /** Shown in place of the options when there are none. */
   empty: string;
@@ -57,7 +64,7 @@ function Avatar({ option }: { option: SwitcherOption }) {
  * form, so choosing works without JavaScript too; the filter and arrow-key
  * movement need it. Escape and an outside click close it.
  */
-export function Switcher({ label, pinned, options, current, action, field, searchLabel, empty, noMatch, footer, onChosen, preview = false }: SwitcherProps) {
+export function Switcher({ label, pinned, options, current, action, field = "value", fields = {}, searchLabel, empty, noMatch, footer, onChosen, preview = false }: SwitcherProps) {
   const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
   const id = useId().replace(/[^A-Za-z0-9_-]/g, "");
   const popover = useRef<HTMLDivElement>(null);
@@ -101,17 +108,41 @@ export function Switcher({ label, pinned, options, current, action, field, searc
 
   const entry = (option: SwitcherOption) => {
     const chosen = option.value === selected.value;
+    const content = (
+      <>
+        <Avatar option={option} />
+        <span className={styles.entryLabel}>{option.label}</span>
+        {option.tag && <Tag sans>{option.tag}</Tag>}
+        {option.badge && <Status state={option.badge.state} label={option.badge.label} size="sm" />}
+        {chosen && <Icon name="check" className={styles.entryCheck} label="Current" />}
+      </>
+    );
     return (
       <li key={option.value || "pinned"}>
-        <form action={action} className={styles.form} onSubmit={() => queueMicrotask(() => (close(), onChosen?.()))}>
-          <input type="hidden" name={field} value={option.value} />
-          <button type="submit" className={`${styles.item} ${styles.entry}`} aria-current={chosen ? "true" : undefined} data-switcher-entry="">
-            <Avatar option={option} />
-            <span className={styles.entryLabel}>{option.label}</span>
-            {option.tag && <Tag sans>{option.tag}</Tag>}
-            {chosen && <Icon name="check" className={styles.entryCheck} label="Current" />}
-          </button>
-        </form>
+        {option.href ? (
+          <Link
+            href={option.href}
+            className={`${styles.item} ${styles.entry}`}
+            aria-current={chosen ? "page" : undefined}
+            data-switcher-entry=""
+            onClick={() => {
+              close();
+              onChosen?.();
+            }}
+          >
+            {content}
+          </Link>
+        ) : (
+          <form action={action} className={styles.form} onSubmit={() => queueMicrotask(() => (close(), onChosen?.()))}>
+            <input type="hidden" name={field} value={option.value} />
+            {Object.entries(fields).map(([name, value]) => (
+              <input key={name} type="hidden" name={name} value={value} />
+            ))}
+            <button type="submit" className={`${styles.item} ${styles.entry}`} aria-current={chosen ? "true" : undefined} data-switcher-entry="">
+              {content}
+            </button>
+          </form>
+        )}
       </li>
     );
   };
@@ -189,13 +220,14 @@ export function Switcher({ label, pinned, options, current, action, field, searc
         type="button"
         popoverTarget={`switcher-${id}`}
         className={styles.switcherTrigger}
-        aria-label={`${label}, current: ${selected.label}`}
+        aria-label={`${label}, current: ${selected.label}${selected.badge ? `, ${selected.badge.label}` : ""}`}
         title={selected.label}
         style={{ anchorName: `--switcher-${id}` } as React.CSSProperties}
       >
         <Avatar option={selected} />
         <span className={styles.entryLabel}>{selected.label}</span>
         {selected.tag && <Tag sans>{selected.tag}</Tag>}
+        {selected.badge && <Status state={selected.badge.state} label={selected.badge.label} size="sm" />}
         <Icon name="chevronsUpDown" className={styles.switcherChevrons} />
       </button>
       <div ref={popover} id={`switcher-${id}`} popover="auto" className={`${styles.menu} ${styles.switcher}`} style={{ positionAnchor: `--switcher-${id}` } as React.CSSProperties}>
