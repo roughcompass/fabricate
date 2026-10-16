@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NotFoundPage } from "@/components/shell/system-page";
 import { getConfig, setConfig, withOverrides } from "@/lib/config";
+import { setDb } from "@/lib/db/client";
+import { createTestDb } from "../support/db";
 
 vi.mock("next/navigation", async () => ({ ...(await import("../support/next")).navigationStub, usePathname: () => "/" }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
@@ -47,10 +49,17 @@ describe("not-found pages", () => {
   });
 
   it("links an unknown address to Home (Unknown address)", async () => {
-    const { default: NotFound } = await import("@/app/not-found");
-    const html = renderToStaticMarkup(await NotFound());
-    expect(html).toContain("Page not found");
-    expect(html).toMatch(/<a [^>]*href="\/"[^>]*>Go to Home<\/a>/);
+    // The shell's Portal switcher lists the onboarded Portals, so the page reads a migrated database.
+    setDb(createTestDb());
+    try {
+      const { default: NotFound } = await import("@/app/not-found");
+      const html = renderToStaticMarkup(await NotFound());
+      expect(html).toContain("Page not found");
+      expect(html).toMatch(/<a [^>]*href="\/"[^>]*>Go to Home<\/a>/);
+      expect(html).toContain("Switch Portal, current: All Portals");
+    } finally {
+      setDb(undefined);
+    }
   });
 
   it("falls back to the generic page for demo=false", () => {

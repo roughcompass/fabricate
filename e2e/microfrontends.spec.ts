@@ -106,7 +106,7 @@ test.describe("select mode", () => {
     await expect(panel(page)).toBeVisible();
     await expect(member(page, "payee-list")).toHaveAttribute("aria-pressed", "true");
     await expect(panel(page).getByRole("radio", { name: /^1\.4\.2/ })).toBeChecked();
-    await expect(region(page, "transfer-form").getByLabel("Payee")).toHaveValue("northwind");
+    await expect(region(page, "transfer-form").getByRole("combobox", { name: "Payee" })).toHaveText("Northwind Supplies");
   });
 
   test("selects with the keyboard and leaves with Escape", async ({ page }) => {

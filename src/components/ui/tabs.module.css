@@ -43,8 +43,9 @@
   }
 
   @container content (max-width: 767px) {
-    /* One line, so the tabs take the bar's width and scroll, rather than widening the line to fit them. */
+    /* The tabs take the bar's width and wrap onto a second row rather than scroll, so no tab hides past the edge. */
     .bar { flex-direction: column-reverse; flex-wrap: nowrap; align-items: stretch; }
+    .tabs { flex-wrap: wrap; overflow-x: visible; }
     .aside { flex-basis: auto; }
   }
 }

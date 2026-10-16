@@ -1,0 +1,27 @@
+# What a Portal gives its team, shown beside the Create Portal form
+# (docs/onboarding.md, "What's included").
+#
+# Items appear in this order. Each has a title and a description, both
+# 120 characters or fewer. `badge: new` adds a "New" tag. `platforms` limits
+# an item to those platforms (web, mobile, desktop); leave it out to show the
+# item for every platform. An optional `link` with a `label` and an https
+# `href` ends the list and opens in a new tab.
+#
+# In development a change appears on the next page load; in production, after
+# the next deploy or restart. `npm test` fails if the file doesn't match this
+# shape.
+title: What's included
+items:
+  - title: Environments from the catalog
+    description: Enable the environments Studio lists, or DEV, UAT, TEST, and PROD
+  - title: Menus up to five levels deep
+    description: Group routes the way your users navigate
+  - title: A default route per environment
+    description: Every enabled environment opens on an approved Application
+  - title: Placement reviews
+    description: Approve each Application's request for your Portal on its own
+  - title: Revision history
+    description: Every activation and decision is attributed and kept
+  - title: Current-state reconciliation
+    description: Compare your configuration with Studio, read-only
+    badge: new

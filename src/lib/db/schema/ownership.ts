@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { type AnySQLiteColumn, check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { repositorySources } from "./catalog";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp } from "./columns";
+import { PORTAL_PLATFORMS } from "../../onboarding/vocabulary";
 import { LIFECYCLE_STATES, applicationRevisions, portalRevisions, sealIdCheck } from "./onboarding";
 
 export const OWNERSHIP_ATTRIBUTES = ["application", "team", "line_of_business", "portal", "owner", "host"] as const;
@@ -95,6 +96,11 @@ export const portals = sqliteTable(
     /** External metadata, never identity: several portals may carry one SEAL ID. */
     sealId: text("seal_id"),
     ownerTeam: text("owner_team"),
+    /** The platform it targets, a classification fixed at creation; null for a Portal from a claim or from before platforms. */
+    platform: text("platform", { enum: PORTAL_PLATFORMS }),
+    /** Lowercase letters only, fixed at creation, and one Portal's at most. */
+    slug: text("slug"),
+    description: text("description"),
     lifecycle: text("lifecycle", { enum: LIFECYCLE_STATES }).notNull().default("draft"),
     /** The configuration revision the Portal runs under once activated. */
     activeRevisionId: integer("active_revision_id").references((): AnySQLiteColumn => portalRevisions.id, { onDelete: "restrict" }),
@@ -108,6 +114,10 @@ export const portals = sqliteTable(
     check("portals_concept", sql`${t.conceptKey} IS NULL OR ${t.conceptKey} GLOB 'portal/*'`),
     check("portals_seal_id", sealIdCheck(t.sealId)),
     check("portals_owner_team", sql`${t.ownerTeam} IS NULL OR length(trim(${t.ownerTeam})) BETWEEN 1 AND 200`),
+    uniqueIndex("portals_slug").on(t.slug).where(sql`${t.slug} IS NOT NULL`),
+    check("portals_platform", sql.raw(`platform IS NULL OR platform IN (${sqlList(PORTAL_PLATFORMS)})`)),
+    check("portals_slug", sql`${t.slug} IS NULL OR (length(${t.slug}) BETWEEN 1 AND 63 AND ${t.slug} NOT GLOB '*[^a-z]*')`),
+    check("portals_description", sql`${t.description} IS NULL OR length(trim(${t.description})) BETWEEN 1 AND 500`),
     check("portals_lifecycle", sql.raw(`lifecycle IN (${sqlList(LIFECYCLE_STATES)})`)),
   ],
 );

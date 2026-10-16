@@ -14,6 +14,8 @@ const PATHS = {
   eye: "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
   sparkle: "M12 3v4m0 10v4M3 12h4m10 0h4M6.3 6.3l2.1 2.1m7.2 7.2 2.1 2.1m0-11.4-2.1 2.1m-7.2 7.2-2.1 2.1",
   layers: "m12 3 9 5-9 5-9-5 9-5zM3 13l9 5 9-5",
+  flask: "M9 3h6m-5 0v6l-5.5 9.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3M7.2 15h9.6",
+  columns: "M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM12 4v16",
   plus: "M12 5v14M5 12h14",
   arrowLeft: "M19 12H5m6 6-6-6 6-6",
   arrowRight: "M5 12h14m-6-6 6 6-6 6",
@@ -38,12 +40,15 @@ const PATHS = {
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm9 2-4-4",
   undo: "M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3",
   message: "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z",
+  download: "M12 4v11M8 11l4 4 4-4M5 20h14",
   link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
   settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm7.4-3a7.5 7.5 0 0 0-.1-1.3l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-2.2-1.3L14.4 3h-4l-.4 2.4a7.4 7.4 0 0 0-2.2 1.3l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2.6l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 2.2 1.3l.4 2.4h4l.4-2.4a7.4 7.4 0 0 0 2.2-1.3l2.4 1 2-3.4-2-1.6c.1-.4.1-.9.1-1.3z",
   keyboard: "M3 7h18v10H3zm4 3h.01M11 10h.01M15 10h.01M7 14h10",
   accessibility: "M12 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM5 8l7 1.5L19 8M12 9.5V14m0 0-3 7m3-7 3 7",
   target: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-5a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-3.5h.01",
   chevronUp: "m6 15 6-6 6 6",
+  chevronsUpDown: "m7 15 5 5 5-5M7 9l5-5 5 5",
+  globe: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z",
   refresh: "M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5",
   // A device on its side, with an arrow turning it: the preview's Landscape toggle.
   rotate: "M4 10h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2zM8 4a8 8 0 0 1 11 2.5M19 2v4.5h-4.5",
@@ -67,6 +72,9 @@ const PATHS = {
 } as const;
 
 export type IconName = keyof typeof PATHS;
+
+/** Every icon, in definition order, for the design-system gallery. */
+export const ICON_NAMES = Object.keys(PATHS) as IconName[];
 
 interface IconProps {
   name: IconName;

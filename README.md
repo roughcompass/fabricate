@@ -36,6 +36,7 @@ npm test            # unit and integration tests (Vitest)
 npm run test:e2e    # browser tests (Playwright), against a dev server on port 3100
 npm run test:visual # screenshots of every product surface, for design review
 npm run test:fleet  # the synthetic fleet, assessed and evaluated through the product
+npm run test:hosted # Prototypes in the hosted profile, with no Git on PATH and no SQLite
 npm run typecheck
 npm run lint
 npm run build       # Next.js standalone server, dist/worker.cjs, dist/migrate.cjs, and dist/projection-rebuild.cjs
@@ -44,6 +45,8 @@ npm run build       # Next.js standalone server, dist/worker.cjs, dist/migrate.c
 `npm run test:visual` seeds a representative Assessment, checks each product surface for horizontal overflow and overlapping content at 1280 and 375 pixels wide, and writes full-page screenshots to `verification/screenshots/`. The committed screenshots are the output of the last design review.
 
 `npm run test:fleet` needs the harness `fleet/` repositories next to this directory, or `FLEET_ROOT` set to their location. It starts its own server on port 3200 with `fleet/` as the only allowed root and a throwaway database and repository store in `tmp/fleet-run/`. It then imports the fleet, runs a baseline Assessment, authors two Standards in the editor, and runs an Evaluation. It never reads `fleet-kit/`.
+
+`npm run test:hosted` starts its own server on port 3300 in the hosted profile, as DE FabLab runs on Vercel: only Prototypes, a PATH holding only Node's directory and `/bin`, and a SQLite path that doesn't exist. It checks that Prototypes serves and every other section answers not found.
 
 The lint rules forbid `eval`, the `Function` constructor, the `vm` module, computed `import()`, `require()`, and regular expressions built from data. Only `src/lib/git/runner.ts` may import `child_process`. A test in `test/lint/` keeps these rules in force.
 
@@ -69,8 +72,20 @@ Environment variables override the file:
 | `demo.enabled` | `FABRICATE_DEMO` | `false`; `true` in development and test |
 | `deConsole.source` | `FABRICATE_DE_CONSOLE_SOURCE` | none; an export file or `https://` endpoint, see [docs/ownership.md](docs/ownership.md#the-de-console-import) |
 | `deConsole.refreshMinutes` | `FABRICATE_DE_CONSOLE_REFRESH_MINUTES` | 60 |
+| `profile` | `FABRICATE_PROFILE` | `full`; `hosted` shows only Prototypes, see [docs/prototypes.md](docs/prototypes.md) |
+| `prototypes.enabled` | `FABRICATE_PROTOTYPES` | `false`; `true` in development and test |
+| `prototypes.database` | `FABRICATE_PROTOTYPES_DATABASE`, then `DATABASE_URL` | `storage/prototypes-pglite`; a PGlite directory or a `postgres://` URL |
+| `prototypes.models.generate` | `FABRICATE_PROTOTYPES_MODEL_GENERATE` | `anthropic/claude-opus-5.5` |
+| `prototypes.models.plan` | `FABRICATE_PROTOTYPES_MODEL_PLAN` | `anthropic/claude-sonnet-5.5` |
+| `prototypes.models.review` | `FABRICATE_PROTOTYPES_MODEL_REVIEW` | `google/gemini-3.1-pro-preview` |
+| `prototypes.models.learn` | `FABRICATE_PROTOTYPES_MODEL_LEARN` | `anthropic/claude-sonnet-5.5` |
+| `prototypes.dailyVariantLimit` | `FABRICATE_PROTOTYPES_DAILY_LIMIT` | 500 |
+| `prototypes.repairAttempts` | none | 3 |
+| `prototypes.zeroDataRetention` | `FABRICATE_PROTOTYPES_ZDR` | `true` |
+| `prototypes.runner` | `FABRICATE_PROTOTYPES_RUNNER` | `workflow`; `inline` runs the same steps in the web server |
+| `prototypes.examples` | `FABRICATE_PROTOTYPES_EXAMPLES` | `true`; `false` in test, so a new workspace starts without the seeded example prototypes |
 
-The DE Console endpoint's read-only token comes only from `FABRICATE_DE_CONSOLE_TOKEN`, never from the file. List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_DEMO` accepts `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+The DE Console endpoint's read-only token comes only from `FABRICATE_DE_CONSOLE_TOKEN`, never from the file. Prototypes reaches AI Gateway with `AI_GATEWAY_API_KEY`, or with the `VERCEL_OIDC_TOKEN` that Vercel gives a deployment and `vercel env pull` writes to `.env.local`; neither is ever read from the file. Each `prototypes.models` setting also accepts `mock`, the scripted model the tests use. List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_DEMO` and `FABRICATE_PROTOTYPES` accept `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
 
 ### Template demo
 
@@ -125,7 +140,7 @@ The image runs the web server by default. The worker and the migration command u
 
 DE FabLab uses Git only to fetch and read committed objects. Each Git command comes from a fixed list and runs without a shell. Repository hooks are disabled, submodules are not cloned, and only the `file`, `https`, and `ssh` transports are allowed.
 
-Detectors come from one pinned release of `@repo-facts/bundle`, currently 0.2.0, which reports design-system usage; `package.json` names its exact version. Each Run records that version as its detector release, along with the digest of the bundle's configuration under DE FabLab's analysis limits. A Repository Profile embeds, unchanged, the fact document the bundle produced. Identical commits analyzed with the same release and configuration produce identical Profiles. Upgrading detectors means pinning a newer exact release. Earlier Profiles keep the release that produced them: Runs from 0.1.0 keep Repository Profile version 1, and Runs from 0.2.0 record version 2. A Run still queued from an earlier release fails with a release mismatch; launch it again. See [Standards](docs/standards.md#repository-profile-versions-1-and-2) for which Releases read which Profile versions.
+Detectors come from one pinned release of `@repo-facts/bundle`, currently 0.3.0, which reports design-system usage; `package.json` names its exact version. Each Run records that version as its detector release, along with the digest of the bundle's configuration under DE FabLab's analysis limits. A Repository Profile embeds, unchanged, the fact document the bundle produced. Identical commits analyzed with the same release and configuration produce identical Profiles. Upgrading detectors means pinning a newer exact release. Earlier Profiles keep the release that produced them: Runs from 0.1.0 keep Repository Profile version 1, and Runs from 0.2.0 or later record version 2. 0.3.0 leaves neutral values such as `margin: 0` out of the Salt token share, and counts an element a Salt component renders through its `render` prop as that component, so the same commit can score higher than under 0.2.0. A Run still queued from an earlier release fails with a release mismatch; launch it again. See [Standards](docs/standards.md#repository-profile-versions-1-and-2) for which Releases read which Profile versions.
 
 Analysis reads the exact commit recorded for each repository. It never checks out a working tree, so uncommitted edits in a local repository never appear in results. DE FabLab never runs anything a repository defines: hooks, Git filters, package lifecycle scripts, CI commands, builds, or tests. JavaScript and TypeScript files are parsed into syntax trees and never executed. Symbolic links are recorded without being followed. A file that exceeds an analysis budget is listed as skipped, and the facts it could affect are reported as unknown.
 

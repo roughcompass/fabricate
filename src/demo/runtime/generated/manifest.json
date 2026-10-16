@@ -1,0 +1,1630 @@
+{
+  "schema": "fabricate.hero_manifest",
+  "schema_version": 1,
+  "kitVersion": "2026-10-16.3",
+  "saltRelease": "1.73.0",
+  "heroes": [
+    {
+      "slug": "payments-workspace",
+      "data": {
+        "file": "payments-workspace/data.ts",
+        "description": "The records the payments-workspace hero shows: PAYEES, ACTIVITY."
+      },
+      "versions": [
+        {
+          "member": "payee-list",
+          "version": "2.0.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "payments-workspace/payee-list/2.0.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.057375000003958
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 72.62520799999766
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 3.275333000012324
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.952000000004773
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_4ut9pqfbya7yodif",
+            "refinedFrom": null,
+            "message": null
+          }
+        },
+        {
+          "member": "payee-list",
+          "version": "1.4.2",
+          "prerelease": false,
+          "planted": [
+            "label",
+            "color-contrast",
+            "button-name"
+          ],
+          "file": "payments-workspace/payee-list/1.4.2.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "exempted": [
+                {
+                  "rule": "color-contrast",
+                  "issue": {
+                    "code": "salt-only/literal-color",
+                    "line": 68,
+                    "column": 38,
+                    "symbol": "style.color",
+                    "message": "Line 68 sets color to #b0b0b0; use a Salt color token such as var(--salt-content-primary-foreground)."
+                  }
+                }
+              ],
+              "warnings": [],
+              "durationMs": 1.22575000001234
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 58.48508299997775
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [
+                {
+                  "fix": "Replace hard-coded color literals with semantic Salt color tokens.",
+                  "code": "tokens.hardcoded-color",
+                  "message": "Hard-coded color value detected: Hard-coded color values were detected. Prefer Salt semantic color tokens."
+                }
+              ],
+              "durationMs": 2.59437499998603
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.6298330000136048
+            }
+          ],
+          "exemptions": [
+            {
+              "rule": "label",
+              "codes": [],
+              "exempted": []
+            },
+            {
+              "rule": "color-contrast",
+              "codes": [
+                "salt-only/literal-color",
+                "salt-only/style-value"
+              ],
+              "exempted": [
+                "salt-only/literal-color"
+              ]
+            },
+            {
+              "rule": "button-name",
+              "codes": [],
+              "exempted": []
+            }
+          ],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_6s65pch80enlfj0f",
+            "refinedFrom": "2.0.0",
+            "message": "Make Payee list 1.4.2: Compact table with inline search and icon actions. Planted defect (label), on purpose and nowhere else: Leave the search field without a visible or accessible label: no FormField label, no aria-label. Planted defect (color-contrast), on purpose and nowhere else: Show the secondary text in one literal light gray, #b0b0b0, through a style prop, so it fails WCAG contrast on the light background. Use no other literal color. Planted defect (button-name), on purpose and nowhere else: Make the row actions icon-only buttons with no accessible name: no text, no aria-label.",
+            "edits": [
+              "Hand edit, 2026-10-16: removed the pay buttons' aria-label, which the generator added, so the planted button-name defect is present as the catalog's planted rules require."
+            ]
+          }
+        },
+        {
+          "member": "payee-list",
+          "version": "2.1.0-beta.1",
+          "prerelease": true,
+          "planted": [],
+          "file": "payments-workspace/payee-list/2.1.0-beta.1.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 0.8432920000050217
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 46.59533299997565
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.3470830000005662
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.327332999993814
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_wgr8itabnm50718t",
+            "refinedFrom": "2.0.0",
+            "message": "Make Payee list 2.1.0-beta.1: Card layout with favorite payees pinned first. It's a prerelease: keep the stable version's behavior and change only what this summary says."
+          }
+        },
+        {
+          "member": "transfer-form",
+          "version": "3.1.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "payments-workspace/transfer-form/3.1.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.8751669999910519
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 69.76779199999874
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 3.330958999984432
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 3.0596669999940787
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_qtvaiqz0ugayt2cg",
+            "refinedFrom": null,
+            "message": null
+          }
+        },
+        {
+          "member": "transfer-form",
+          "version": "3.0.1",
+          "prerelease": false,
+          "planted": [],
+          "file": "payments-workspace/transfer-form/3.0.1.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 0.9479170000413433
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 58.72112499998184
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.2118330000084825
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.6799580000224523
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_v9z02oaiwbekb8fb",
+            "refinedFrom": "3.1.0",
+            "message": "Make Transfer form 3.0.1: Single-step transfer."
+          }
+        },
+        {
+          "member": "payment-activity",
+          "version": "2.3.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "payments-workspace/payment-activity/2.3.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.6778749999939464
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 79.42170800000895
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 3.891332999977749
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 3.522832999995444
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_by0j9iyj4958lk47",
+            "refinedFrom": null,
+            "message": null,
+            "edits": [
+              "Hand edit, 2026-10-16: the metric cards wrap at a minimum width instead of taking three columns from Salt's sm breakpoint, because the amount overflowed its card at 200 percent zoom."
+            ]
+          }
+        }
+      ],
+      "page": {
+        "route": "payees",
+        "regions": [
+          {
+            "member": "payee-list",
+            "version": "2.0.0",
+            "area": "main"
+          },
+          {
+            "member": "transfer-form",
+            "version": "3.1.0",
+            "area": "side"
+          },
+          {
+            "member": "payment-activity",
+            "version": "2.3.0",
+            "area": "wide"
+          }
+        ],
+        "file": "payments-workspace/page.tsx",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 57.308750000000146
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 5041.189166
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 5471.875708
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 377.32820900000297
+          }
+        ]
+      }
+    },
+    {
+      "slug": "client-onboarding",
+      "data": {
+        "file": "client-onboarding/data.ts",
+        "description": "The records the client-onboarding hero shows: CLIENTS, CHECKS, DOCUMENTS."
+      },
+      "versions": [
+        {
+          "member": "client-search",
+          "version": "4.2.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "client-onboarding/client-search/4.2.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 8.298541000003752
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 101.07091700000456
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [
+                {
+                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
+                  "code": "tokens.hardcoded-size",
+                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
+                }
+              ],
+              "durationMs": 4.214207999997598
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 3.9463749999995343
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_of590n9w55jatyfn",
+            "refinedFrom": null,
+            "message": null,
+            "edits": [
+              "Hand edit, 2026-10-16: the segment and country line inherits the toggle button's color, because secondary text failed contrast on the selected button."
+            ]
+          }
+        },
+        {
+          "member": "client-search",
+          "version": "4.1.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "client-onboarding/client-search/4.1.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.138250000003609
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 85.65062500000931
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [
+                {
+                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
+                  "code": "tokens.hardcoded-size",
+                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
+                }
+              ],
+              "durationMs": 3.7059580000059213
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 3.074124999999185
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_rhrvfchd2utsvw7s",
+            "refinedFrom": "4.2.0",
+            "message": "Make Client search 4.1.0: Search with recently viewed clients.",
+            "edits": [
+              "Hand edit, 2026-10-16: the segment and country line inherits the toggle button's color, because secondary text failed contrast on the selected button."
+            ]
+          }
+        },
+        {
+          "member": "kyc-checklist",
+          "version": "3.3.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "client-onboarding/kyc-checklist/3.3.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.6900409999943804
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 88.55837499999325
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [
+                {
+                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
+                  "code": "tokens.hardcoded-size",
+                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
+                }
+              ],
+              "durationMs": 3.9407919999939622
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 5.154499999989639
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_hfd25lo05diyemes",
+            "refinedFrom": null,
+            "message": null
+          }
+        },
+        {
+          "member": "kyc-checklist",
+          "version": "3.2.0",
+          "prerelease": false,
+          "planted": [
+            "label",
+            "color-contrast",
+            "button-name"
+          ],
+          "file": "client-onboarding/kyc-checklist/3.2.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "exempted": [
+                {
+                  "rule": "color-contrast",
+                  "issue": {
+                    "code": "salt-only/literal-color",
+                    "line": 53,
+                    "column": 32,
+                    "symbol": "style.color",
+                    "message": "Line 53 sets color to #b0b0b0; use a Salt color token such as var(--salt-content-primary-foreground)."
+                  }
+                }
+              ],
+              "warnings": [],
+              "durationMs": 2.81683300001896
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 114.1967500000028
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [
+                {
+                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
+                  "code": "tokens.hardcoded-size",
+                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
+                },
+                {
+                  "fix": "Replace hard-coded color literals with semantic Salt color tokens.",
+                  "code": "tokens.hardcoded-color",
+                  "message": "Hard-coded color value detected: Hard-coded color values were detected. Prefer Salt semantic color tokens."
+                }
+              ],
+              "durationMs": 4.5926670000189915
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 5.144333000003826
+            }
+          ],
+          "exemptions": [
+            {
+              "rule": "label",
+              "codes": [],
+              "exempted": []
+            },
+            {
+              "rule": "color-contrast",
+              "codes": [
+                "salt-only/literal-color",
+                "salt-only/style-value"
+              ],
+              "exempted": [
+                "salt-only/literal-color"
+              ]
+            },
+            {
+              "rule": "button-name",
+              "codes": [],
+              "exempted": []
+            }
+          ],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_5bdq8zdnqetafujy",
+            "refinedFrom": "3.3.0",
+            "message": "Make KYC checklist 3.2.0: Dense checklist with icon-only actions. Planted defect (label), on purpose and nowhere else: Leave the search field without a visible or accessible label: no FormField label, no aria-label. Planted defect (color-contrast), on purpose and nowhere else: Show the secondary text in one literal light gray, #b0b0b0, through a style prop, so it fails WCAG contrast on the light background. Use no other literal color. Planted defect (button-name), on purpose and nowhere else: Make the row actions icon-only buttons with no accessible name: no text, no aria-label.",
+            "edits": [
+              "Hand edit, 2026-10-16: removed the icon button's aria-label, which the generator added, so the planted button-name defect is present as the catalog's planted rules require."
+            ]
+          }
+        },
+        {
+          "member": "kyc-checklist",
+          "version": "4.0.0-rc.1",
+          "prerelease": true,
+          "planted": [],
+          "file": "client-onboarding/kyc-checklist/4.0.0-rc.1.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.296415999997407
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 79.96974999998929
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [
+                {
+                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
+                  "code": "tokens.hardcoded-size",
+                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
+                }
+              ],
+              "durationMs": 3.235625000001164
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 3.1133330000157002
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_7d2rzlubk9v48dbm",
+            "refinedFrom": "3.3.0",
+            "message": "Make KYC checklist 4.0.0-rc.1: Grouped steps with a progress summary. It's a prerelease: keep the stable version's behavior and change only what this summary says."
+          }
+        },
+        {
+          "member": "document-review",
+          "version": "1.6.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "client-onboarding/document-review/1.6.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 0.8389999999781139
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 48.9749170000141
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.1116669999901205
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.5828749999927823
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_4jnr9m6nfhcwujud",
+            "refinedFrom": null,
+            "message": null
+          }
+        }
+      ],
+      "page": {
+        "route": "clients",
+        "regions": [
+          {
+            "member": "client-search",
+            "version": "4.2.0",
+            "area": "main"
+          },
+          {
+            "member": "kyc-checklist",
+            "version": "3.3.0",
+            "area": "side"
+          },
+          {
+            "member": "document-review",
+            "version": "1.6.0",
+            "area": "wide"
+          }
+        ],
+        "file": "client-onboarding/page.tsx",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 12.621124999997846
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1025.5248750000028
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [
+              {
+                "code": "tokens.hardcoded-size",
+                "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing.",
+                "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base)."
+              }
+            ],
+            "durationMs": 4536.661875000002
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 73.60762500000055
+          }
+        ]
+      }
+    },
+    {
+      "slug": "market-watch",
+      "data": {
+        "file": "market-watch/data.ts",
+        "description": "The records the market-watch hero shows: INSTRUMENTS, TRADES."
+      },
+      "versions": [
+        {
+          "member": "watchlist",
+          "version": "1.9.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "market-watch/watchlist/1.9.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.818000000086613
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 109.21779100003187
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.656709000002593
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 4.4605829999782145
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_3dqpnq99vs9djkgt",
+            "refinedFrom": null,
+            "message": null
+          }
+        },
+        {
+          "member": "watchlist",
+          "version": "1.8.0",
+          "prerelease": false,
+          "planted": [
+            "label",
+            "color-contrast",
+            "button-name"
+          ],
+          "file": "market-watch/watchlist/1.8.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "exempted": [
+                {
+                  "rule": "color-contrast",
+                  "issue": {
+                    "code": "salt-only/literal-color",
+                    "line": 74,
+                    "column": 40,
+                    "symbol": "style.color",
+                    "message": "Line 74 sets color to #b0b0b0; use a Salt color token such as var(--salt-content-primary-foreground)."
+                  }
+                }
+              ],
+              "warnings": [],
+              "durationMs": 1.8303750000195578
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 73.2749579999363
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.694916999898851
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.15991699998267
+            }
+          ],
+          "exemptions": [
+            {
+              "rule": "label",
+              "codes": [],
+              "exempted": []
+            },
+            {
+              "rule": "color-contrast",
+              "codes": [
+                "salt-only/literal-color",
+                "salt-only/style-value"
+              ],
+              "exempted": [
+                "salt-only/literal-color"
+              ]
+            },
+            {
+              "rule": "button-name",
+              "codes": [],
+              "exempted": []
+            }
+          ],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_x8ohv1edxouwvith",
+            "refinedFrom": "1.9.0",
+            "message": "Make Watchlist 1.8.0: Dense price grid with icon actions. Planted defect (label), on purpose and nowhere else: Leave the search field without a visible or accessible label: no FormField label, no aria-label. Planted defect (color-contrast), on purpose and nowhere else: Show the secondary text in one literal light gray, #b0b0b0, through a style prop, so it fails WCAG contrast on the light background. Use no other literal color. Planted defect (button-name), on purpose and nowhere else: Make the row actions icon-only buttons with no accessible name: no text, no aria-label."
+          }
+        },
+        {
+          "member": "watchlist",
+          "version": "2.0.0-beta.2",
+          "prerelease": true,
+          "planted": [],
+          "file": "market-watch/watchlist/2.0.0-beta.2.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.1200829999288544
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 70.57275000005029
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.5874159999657422
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.9467090000398457
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_ij6nitgyemfk38qh",
+            "refinedFrom": "1.9.0",
+            "message": "Make Watchlist 2.0.0-beta.2: Price tiles with daily change bars. It's a prerelease: keep the stable version's behavior and change only what this summary says."
+          }
+        },
+        {
+          "member": "order-ticket",
+          "version": "2.2.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "market-watch/order-ticket/2.2.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 0.8518750000512227
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 51.8492499999702
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.9381670000730082
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.163042000029236
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_6d3spveojw5vl0mc",
+            "refinedFrom": null,
+            "message": null
+          }
+        },
+        {
+          "member": "price-chart",
+          "version": "5.1.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "market-watch/price-chart/5.1.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.4976659999229014
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 65.5842920000432
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.374749999959022
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 5.075166999944486
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_izn2qwugq7gt776s",
+            "refinedFrom": null,
+            "message": null,
+            "edits": [
+              "Hand edit, 2026-10-16: --salt-sentiment-positive-foreground and --salt-sentiment-negative-foreground, which Salt's theme doesn't define, became the -foreground-informative tokens it does."
+            ]
+          }
+        },
+        {
+          "member": "price-chart",
+          "version": "5.0.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "market-watch/price-chart/5.0.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.865749999997206
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 66.6655829999363
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 3.0459579998860136
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.8004580000415444
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_zm3oxvbo266wr2uu",
+            "refinedFrom": "5.1.0",
+            "message": "Make Price chart 5.0.0: Line chart with a range selector.",
+            "edits": [
+              "Hand edit, 2026-10-16: --salt-sentiment-positive-foreground and --salt-sentiment-negative-foreground, which Salt's theme doesn't define, became the -foreground-informative tokens it does."
+            ]
+          }
+        },
+        {
+          "member": "trade-blotter",
+          "version": "3.5.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "market-watch/trade-blotter/3.5.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.053167000063695
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 66.24029200000223
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.0462919999845326
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.3872909999918193
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_6onl06t2axswd8pv",
+            "refinedFrom": null,
+            "message": null
+          }
+        }
+      ],
+      "page": {
+        "route": "watch",
+        "regions": [
+          {
+            "member": "watchlist",
+            "version": "1.9.0",
+            "area": "main"
+          },
+          {
+            "member": "order-ticket",
+            "version": "2.2.0",
+            "area": "side"
+          },
+          {
+            "member": "price-chart",
+            "version": "5.1.0",
+            "area": "wide"
+          },
+          {
+            "member": "trade-blotter",
+            "version": "3.5.0",
+            "area": "wide"
+          }
+        ],
+        "file": "market-watch/page.tsx",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 59.75966700000208
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 2755.2598749999997
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1597.6811659999985
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 164.94679099999848
+          }
+        ]
+      }
+    },
+    {
+      "slug": "operations-console",
+      "data": {
+        "file": "operations-console/data.ts",
+        "description": "The records the operations-console hero shows: INCIDENTS, REGIONS, SERVICES, CHANGES."
+      },
+      "versions": [
+        {
+          "member": "incident-feed",
+          "version": "6.1.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "operations-console/incident-feed/6.1.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 0.7807089999550954
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 69.40354199998546
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.7910409999312833
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.2095830000471324
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_hcjv78gntmsycifm",
+            "refinedFrom": null,
+            "message": null
+          }
+        },
+        {
+          "member": "incident-feed",
+          "version": "6.0.0",
+          "prerelease": false,
+          "planted": [
+            "label",
+            "color-contrast",
+            "button-name"
+          ],
+          "file": "operations-console/incident-feed/6.0.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "exempted": [
+                {
+                  "rule": "color-contrast",
+                  "issue": {
+                    "code": "salt-only/literal-color",
+                    "line": 93,
+                    "column": 38,
+                    "symbol": "style.color",
+                    "message": "Line 93 sets color to #b0b0b0; use a Salt color token such as var(--salt-content-primary-foreground)."
+                  }
+                }
+              ],
+              "warnings": [],
+              "durationMs": 2.206000000005588
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 71.71416700002737
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [
+                {
+                  "fix": "Replace hard-coded color literals with semantic Salt color tokens.",
+                  "code": "tokens.hardcoded-color",
+                  "message": "Hard-coded color value detected: Hard-coded color values were detected. Prefer Salt semantic color tokens."
+                }
+              ],
+              "durationMs": 1.8133330000564456
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.06354200001806
+            }
+          ],
+          "exemptions": [
+            {
+              "rule": "label",
+              "codes": [],
+              "exempted": []
+            },
+            {
+              "rule": "color-contrast",
+              "codes": [
+                "salt-only/literal-color",
+                "salt-only/style-value"
+              ],
+              "exempted": [
+                "salt-only/literal-color"
+              ]
+            },
+            {
+              "rule": "button-name",
+              "codes": [],
+              "exempted": []
+            }
+          ],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_ev4q1zpcj82qvlgb",
+            "refinedFrom": "6.1.0",
+            "message": "Make Incident feed 6.0.0: Incident list with icon actions. Planted defect (label), on purpose and nowhere else: Leave the search field without a visible or accessible label: no FormField label, no aria-label. Planted defect (color-contrast), on purpose and nowhere else: Show the secondary text in one literal light gray, #b0b0b0, through a style prop, so it fails WCAG contrast on the light background. Use no other literal color. Planted defect (button-name), on purpose and nowhere else: Make the row actions icon-only buttons with no accessible name: no text, no aria-label.",
+            "edits": [
+              "Hand edit, 2026-10-16: removed the icon button's aria-label, which the generator added, so the planted button-name defect is present as the catalog's planted rules require."
+            ]
+          }
+        },
+        {
+          "member": "incident-feed",
+          "version": "7.0.0-alpha.3",
+          "prerelease": true,
+          "planted": [],
+          "file": "operations-console/incident-feed/7.0.0-alpha.3.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.480667000054382
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 80.16745800001081
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.8162080000620335
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.2008749999804422
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_2vdoc1let8rr9aha",
+            "refinedFrom": "6.1.0",
+            "message": "Make Incident feed 7.0.0-alpha.3: Timeline view grouped by severity. It's a prerelease: keep the stable version's behavior and change only what this summary says."
+          }
+        },
+        {
+          "member": "service-health",
+          "version": "2.4.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "operations-console/service-health/2.4.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 0.6876659999834374
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 47.89950000005774
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.487083000014536
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.901708000106737
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_fbmzg2yq2n7qqr89",
+            "refinedFrom": null,
+            "message": null
+          }
+        },
+        {
+          "member": "change-calendar",
+          "version": "1.2.0",
+          "prerelease": false,
+          "planted": [],
+          "file": "operations-console/change-calendar/1.2.0.tsx",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.2183330000843853
+            },
+            {
+              "gate": "typecheck",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 59.33716699993238
+            },
+            {
+              "gate": "salt-usage",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 1.5950829999055713
+            },
+            {
+              "gate": "build",
+              "issues": [],
+              "status": "passed",
+              "warnings": [],
+              "durationMs": 2.16820800001733
+            }
+          ],
+          "exemptions": [],
+          "provenance": {
+            "model": "anthropic/claude-opus-5.5",
+            "generationId": "gen_oa5d70j3nii2k88y",
+            "refinedFrom": null,
+            "message": null
+          }
+        }
+      ],
+      "page": {
+        "route": "incidents",
+        "regions": [
+          {
+            "member": "incident-feed",
+            "version": "6.1.0",
+            "area": "main"
+          },
+          {
+            "member": "service-health",
+            "version": "2.4.0",
+            "area": "side"
+          },
+          {
+            "member": "change-calendar",
+            "version": "1.2.0",
+            "area": "wide"
+          }
+        ],
+        "file": "operations-console/page.tsx",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 7.453792000000249
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 656.1672089999993
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 941.9883749999972
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 336.87933300000077
+          }
+        ]
+      }
+    }
+  ],
+  "shells": [
+    {
+      "kind": "access",
+      "file": "shells/access.tsx",
+      "gates": [
+        {
+          "gate": "salt-only",
+          "issues": [],
+          "status": "passed",
+          "warnings": [],
+          "durationMs": 1.8127919998951256
+        },
+        {
+          "gate": "typecheck",
+          "issues": [],
+          "status": "passed",
+          "warnings": [],
+          "durationMs": 97.90341700008139
+        },
+        {
+          "gate": "salt-usage",
+          "issues": [],
+          "status": "passed",
+          "warnings": [
+            {
+              "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
+              "code": "tokens.hardcoded-size",
+              "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
+            }
+          ],
+          "durationMs": 4.843417000025511
+        },
+        {
+          "gate": "build",
+          "issues": [],
+          "status": "passed",
+          "warnings": [],
+          "durationMs": 3.517750000115484
+        }
+      ],
+      "provenance": {
+        "model": "anthropic/claude-opus-5.5",
+        "generationId": "gen_573pj7esz0c7l9dg",
+        "edits": [
+          "Hand edit, 2026-10-16: on narrow screens the user menu button shows only the avatar, because the name and persona pushed the header 39 pixels past a 375-pixel viewport."
+        ]
+      }
+    },
+    {
+      "kind": "markets",
+      "file": "shells/markets.tsx",
+      "gates": [
+        {
+          "gate": "salt-only",
+          "issues": [],
+          "status": "passed",
+          "warnings": [],
+          "durationMs": 3.373041999991983
+        },
+        {
+          "gate": "typecheck",
+          "issues": [],
+          "status": "passed",
+          "warnings": [],
+          "durationMs": 100.17258400004357
+        },
+        {
+          "gate": "salt-usage",
+          "issues": [],
+          "status": "passed",
+          "warnings": [
+            {
+              "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
+              "code": "tokens.hardcoded-size",
+              "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
+            }
+          ],
+          "durationMs": 9.509834000142291
+        },
+        {
+          "gate": "build",
+          "issues": [],
+          "status": "passed",
+          "warnings": [],
+          "durationMs": 3.5668750000186265
+        }
+      ],
+      "provenance": {
+        "model": "anthropic/claude-opus-5.5",
+        "generationId": "gen_c6ajben1t2i8cmf2",
+        "edits": [
+          "Hand edit, 2026-10-16: the top bar's sections navigation may shrink and scrolls inside itself, and both navigation rows are marked as sideways scrollers, because at 375 pixels it widened the page."
+        ]
+      }
+    }
+  ]
+}

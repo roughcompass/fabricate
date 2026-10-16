@@ -30,7 +30,7 @@ Portal-to-Application and Application-to-MFE are both many-to-many. Nothing is a
 
 ## Identities
 
-Each record has a stable public ID and its own name, owning team, lifecycle state, and optional SEAL ID. A record names its owner by team; no record has an email field.
+Each record has a stable public ID and its own name, owning team, lifecycle state, and SEAL ID, which is optional except when a Portal is created. A Portal also has a platform, a slug, and a description ([Creating a Portal](#creating-a-portal)). A record names its owner by team; no record has an email field.
 
 | Record | Table | Public ID |
 | --- | --- | --- |
@@ -191,6 +191,26 @@ The fallback is always labeled the fallback, never Studio's. Each submitted vers
 
 A Portal team onboards a Portal at `/onboarding/portals`. Its name is fixed when it's created. A Portal first named in an ownership claim keeps its identity and its claims when its team onboards it, and a name another onboarded Portal holds is refused.
 
+### Creating a Portal
+
+Create Portal opens a two-pane dialog from the sidebar's switcher or the Portals page's New Portal: [What's included](#whats-included) on the left, and the form on the right. `/onboarding/portals/new` shows the same panes as a page, which is where the openers lead before JavaScript runs. The form asks for:
+
+- the **platform**: Web, Mobile, or Desktop, as choice cards with none chosen
+- the **SEAL ID**, required at creation, and still metadata that other records may share
+- the **name**
+- a **description** of 500 characters or fewer
+- the **slug**, derived from the name as it's typed: accents folded, lowercased, and everything but a to z removed, so "My New Portal" is `mynewportal`. An edit button opens it for editing, which refuses anything but lowercase letters; once edited, it no longer follows the name. A slug belongs to one Portal
+
+The heading reads "Create a Portal" until a name is typed, then "Create" and the name, under a tag naming the chosen platform. The owning team isn't asked here; it's the first thing the Draft's Identity step asks. Creating the Portal records who created it, opens that step with "<name> is a Draft Portal.", and makes the new Portal the switcher's current one.
+
+The platform only classifies what the Portal targets: nothing validates, places, or reviews against it. The platform and the slug are fixed once the Portal is created. They, and the description, live on the `portals` row rather than in revisions. A Portal named only in an ownership claim has none until it's onboarded; a Portal onboarded before they existed was given the slug its name derives where that was unique, and has no platform or description.
+
+### The current Portal
+
+The sidebar's top row holds the product mark and the Portal switcher: the current Portal's initial, name, and platform, or All Portals. It lists every onboarded Portal that isn't Retired, filters by name, slug, or SEAL ID, and ends with Create Portal. The choice is kept in the `fabricate-portal` cookie, so it lasts across pages and reloads; a remembered Portal that's since been retired means All Portals.
+
+While a Portal is chosen, Web Applications lists only the Applications with a placement in it, in any review state, and Reviews lists only its placement reviews and drops its Portal filter. A `portal` in the Reviews address still wins, so a link opens what it names. Nothing else is scoped: not the Portals list, any record's page, Home, or Assessments. The switcher appears only while Web Onboarding is shown, so the hosted profile has none.
+
 The Portal flow is Identity, Environments, Menu, and Review. A Portal revision records:
 
 - the **owning team** and an optional **SEAL ID**
@@ -198,6 +218,38 @@ The Portal flow is Identity, Environments, Menu, and Review. A Portal revision r
 - a hierarchy of **menu groups**
 
 Placements, reviewed by the Portal team, decide where each Application appears and what a visitor needs to see it.
+
+### What's included
+
+The Create Portal dialog lists what a Portal gives its team beside the form. The list is content, not code: it lives in `config/portal-whats-included.yaml`, and adding an item takes only a YAML edit.
+
+| Field | Required | What it holds |
+| --- | --- | --- |
+| `title` | Yes | The pane's heading, 120 characters or fewer |
+| `items` | Yes | One or more items, shown in file order |
+| `items[].title` | Yes | The item's name, 120 characters or fewer |
+| `items[].description` | Yes | One line under the name, 120 characters or fewer |
+| `items[].badge` | No | `new` adds a "New" tag beside the title |
+| `items[].platforms` | No | Any of `web`, `mobile`, and `desktop`. The item shows only while one of them is chosen. Leave it out to show the item for every platform. Before a platform is chosen, only items without `platforms` show |
+| `link` | No | A `label` and an `https:` `href`. The link ends the pane and opens in a new tab |
+
+To add an item, append it where it should appear:
+
+```yaml
+title: What's included
+items:
+  - title: Environments from the catalog
+    description: Enable the environments Studio lists, or DEV, UAT, TEST, and PROD
+  - title: Push notifications
+    description: Reach your users on their phones
+    badge: new
+    platforms: [mobile]
+link:
+  label: Learn more about Portal onboarding
+  href: https://docs.example.com/portals
+```
+
+In development, an edit appears on the next page load. In production, the file is read once per process, so an edit appears after the next deploy or restart. `npm test` loads the committed file and fails if it doesn't match this shape. If a broken file ships anyway, the dialog shows the form without the pane, and the server logs which field is wrong.
 
 ### Environments
 

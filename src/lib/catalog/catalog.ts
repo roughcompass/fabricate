@@ -59,7 +59,8 @@ export function assessmentCounts(db: Executor): Map<number, number> {
     .from(assessmentTargets)
     .groupBy(assessmentTargets.repositorySourceId)
     .all();
-  return new Map(rows.map((row) => [row.sourceId, row.count]));
+  // Template targets have no source.
+  return new Map(rows.flatMap((row) => (row.sourceId === null ? [] : [[row.sourceId, row.count] as const])));
 }
 
 /** Resolves the URL, or throws every URL and field problem together. */

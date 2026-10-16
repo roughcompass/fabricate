@@ -11,13 +11,15 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { ShortValue, Tag } from "@/components/ui/tag";
-import { assessmentNumber, findAssessment, snapshotOf } from "@/lib/assessments/assessment-records";
+import { type AssessmentTarget, type SourceSnapshot, assessmentNumber, commitSnapshot, findAssessment, snapshotOf, storedFilesOf } from "@/lib/assessments/assessment-records";
+import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { evidenceSection } from "@/lib/profiles/links";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import type { FactDocument } from "@/lib/profiles/states";
 import { openSnapshot } from "@/lib/snapshot/open";
+import { openStoredFiles } from "@/lib/snapshot/stored-files";
 
 const REFUSALS: Record<string, string> = {
   commit_mismatch: "The stored snapshot is at a different commit than the evidence names.",
@@ -51,10 +53,14 @@ export async function generateMetadata({ params }: { params: Promise<{ assessmen
   return { title: found ? `${evidenceLocation(found.owner.record as JsonObject)} · ${found.owner.target.sourceName}` : "Evidence not found" };
 }
 
-/** Re-reads the cited content from the pinned snapshot and verifies it; never throws. */
-async function resolve(target: Parameters<typeof openSnapshot>[0], snapshot: Parameters<typeof openSnapshot>[1], record: Evidence): Promise<ResolvedEvidence | null> {
+/** Re-reads the cited content from the pinned snapshot, or a template target's stored files, and verifies it; never throws. */
+async function resolve(target: AssessmentTarget, snapshot: SourceSnapshot, record: Evidence): Promise<ResolvedEvidence | null> {
   try {
-    return await resolveEvidence(await openSnapshot(target, snapshot), record);
+    const reader =
+      target.kind === "template"
+        ? openStoredFiles(storedFilesOf(getDb(), target), getConfig().analysis).reader
+        : await openSnapshot(target, commitSnapshot(snapshot));
+    return await resolveEvidence(reader, record);
   } catch {
     return null;
   }

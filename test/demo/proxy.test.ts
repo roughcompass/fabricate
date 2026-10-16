@@ -61,9 +61,15 @@ describe("demo workspace proxy", () => {
   );
 
   it.each(["/", "/repositories", "/standards", "/assessments/new", "/runs/asm_0000000000000001", "/design-system", "/api/health", "/api/test/reset", "/templatesx", "/running", "/newsroom"])(
-    "never runs on the operator path %s",
+    "issues no credential on the operator path %s",
     (url) => {
-      expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false);
+      const response = proxy(request(url));
+      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(response.headers.get("x-middleware-next")).toBe("1");
     },
   );
+
+  it.each(["/_next/static/chunks/app.js", "/_next/image?url=x", "/demo/previews/market-watch.jpg", "/icon.svg"])("never runs on the asset %s", (url) => {
+    expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false);
+  });
 });

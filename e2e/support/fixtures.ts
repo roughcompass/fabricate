@@ -114,7 +114,8 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
         // Text wider than its own box is clipped by an ancestor, not wrapped.
         return element.children.length === 0 && element.scrollWidth > element.clientWidth + 1 && getComputedStyle(element).overflowX === "visible";
       })
-      .filter((element) => !element.closest("[data-scroll-x]"))
+      // A container meant to scroll sideways: the runtime's own, marked data-scroll-x, and Salt's table container.
+      .filter((element) => !element.closest("[data-scroll-x], .saltTableContainer"))
       // Visually hidden content (a clipped 1px box) cannot overflow visibly.
       .filter((element) => {
         for (let node: Element | null = element; node; node = node.parentElement) {

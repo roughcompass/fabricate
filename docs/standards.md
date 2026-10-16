@@ -70,7 +70,7 @@ Each repository selector also names the Profile fact category it reads, such as 
 
 ### Repository Profile, versions 1 and 2
 
-Profile version 2 embeds the fact document of repo-facts 0.2.0, which adds the design-system categories. Runs from detector release 0.2.0 record version 2, and Runs from 0.1.0 keep version 1.
+Profile version 2 embeds the fact document version 2 that repo-facts 0.2.0 introduced, with the design-system categories. Runs from detector release 0.2.0 or later record version 2, and Runs from 0.1.0 keep version 1.
 
 Version 2 *extends* version 1: every version 1 field below reads the same from a version 2 Profile. So a Release that declares version 1 also evaluates version 2 Runs, without being republished. The design-system fields exist only in version 2, so a Control that reads one must declare `repository_profile: [2]`. A Release that declares only version 2 refuses a version 1 Run as incompatible. New drafts declare version 2, the current version.
 

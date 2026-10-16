@@ -1,0 +1,158 @@
+{
+  "generated_at": "1.73.0",
+  "version": "1.73.0",
+  "guides": [
+    {
+      "id": "guide.developing-with-salt",
+      "name": "Developing with Salt",
+      "aliases": [
+        "getting started",
+        "setup",
+        "bootstrap",
+        "developing"
+      ],
+      "kind": "getting-started",
+      "summary": "Learn how to use Salt’s UI components in your React web applications.",
+      "packages": [
+        "@salt-ds/core",
+        "@salt-ds/theme",
+        "@salt-ds/icons"
+      ],
+      "steps": [
+        {
+          "title": "Install core packages",
+          "statements": [
+            "@salt-ds/core contains production-ready UI components.",
+            "@salt-ds/theme contains CSS files that apply Salt's default theme.",
+            "@salt-ds/icons contains SVG-based icons."
+          ],
+          "snippets": [
+            {
+              "title": "Install Salt packages",
+              "language": "shell",
+              "code": "npm install @salt-ds/core @salt-ds/theme @salt-ds/icons"
+            }
+          ]
+        },
+        {
+          "title": "Add required web fonts",
+          "statements": [
+            "Salt’s default theme requires the Open Sans and PT Mono web fonts.",
+            "You can load them from Google Fonts or self-host them with Fontsource."
+          ],
+          "snippets": [
+            {
+              "title": "Google Fonts",
+              "language": "shell",
+              "code": "npm install @fontsource/open-sans @fontsource/pt-mono"
+            },
+            {
+              "title": "Install Fontsource packages",
+              "language": "tsx",
+              "code": "import \"@fontsource/open-sans/300.css\";\nimport \"@fontsource/open-sans/300-italic.css\";\nimport \"@fontsource/open-sans/400.css\";\nimport \"@fontsource/open-sans/400-italic.css\";\nimport \"@fontsource/open-sans/500.css\";\nimport \"@fontsource/open-sans/500-italic.css\";\nimport \"@fontsource/open-sans/600.css\";\nimport \"@fontsource/open-sans/600-italic.css\";\nimport \"@fontsource/open-sans/700.css\";\nimport \"@fontsource/open-sans/700-italic.css\";\nimport \"@fontsource/open-sans/800.css\";\nimport \"@fontsource/open-sans/800-italic.css\";\nimport \"@fontsource/pt-mono\";"
+            },
+            {
+              "title": "Import Fontsource styles",
+              "language": "html",
+              "code": "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n<link\n  href=\"https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&family=PT+Mono&display=swap\"\n  rel=\"stylesheet\"\n/>"
+            }
+          ]
+        },
+        {
+          "title": "Bootstrap Salt in your app",
+          "statements": [
+            "Import the Salt theme CSS and wrap your application in SaltProvider."
+          ],
+          "snippets": []
+        },
+        {
+          "title": "Import components",
+          "statements": [
+            "To use a Salt UI component, import it from the @salt-ds/core package and reference it in your JSX.",
+            "Browse the available components for their full APIs."
+          ],
+          "snippets": [
+            {
+              "title": "Import and render a Button",
+              "language": "tsx",
+              "code": "import { Button } from \"@salt-ds/core\";\nimport { AddIcon } from \"@salt-ds/icons\";\n\nfunction App() {\n  return (\n    <Button>\n      <AddIcon aria-hidden /> Click me\n    </Button>\n  );\n}\n\nexport default App;"
+            }
+          ]
+        },
+        {
+          "title": "Adopt lab components intentionally",
+          "statements": [
+            "The @salt-ds/lab package contains new components that are in the early stages of development. Once they’re stable, they’re promoted to the core package.",
+            "Because the package is unstable and may introduce major breaking changes, lab components aren’t recommended for production. Early adopters are welcome to experiment with them.",
+            "or comment on an existing one](../support-and-contributions)."
+          ],
+          "snippets": []
+        }
+      ],
+      "related_docs": {
+        "overview": "/salt/getting-started/developing",
+        "related_components": [
+          "SaltProvider",
+          "Button"
+        ],
+        "related_packages": [
+          "@salt-ds/core",
+          "@salt-ds/theme",
+          "@salt-ds/icons"
+        ]
+      },
+      "last_verified_at": "1.73.0"
+    },
+    {
+      "id": "guide.themes",
+      "name": "Themes",
+      "aliases": [
+        "theme",
+        "theming",
+        "jpm brand",
+        "legacy",
+        "uitk"
+      ],
+      "kind": "theming",
+      "summary": "A pre-release of the new J.P. Morgan theme is available. More information is available for J.P. Morgan employees.",
+      "packages": [
+        "@salt-ds/core",
+        "@salt-ds/theme"
+      ],
+      "steps": [
+        {
+          "title": "Choose a Salt theme",
+          "statements": [
+            "Salt offers the default JPM Brand theme for new work and a Legacy theme for UITK migration paths.",
+            "Salt recommends the JPM Brand theme for accessibility and long-term brand alignment."
+          ],
+          "snippets": []
+        },
+        {
+          "title": "Apply the JPM Brand theme",
+          "statements": [],
+          "snippets": []
+        },
+        {
+          "title": "Apply the Legacy theme",
+          "statements": [
+            "For a gradual move from the UITK system, Salt’s Legacy (UITK) theme can be used with UITK components to support different migration timelines and needs. J.P. Morgan employees can find more details on migration options and system comparisons."
+          ],
+          "snippets": []
+        }
+      ],
+      "related_docs": {
+        "overview": "/salt/themes",
+        "related_components": [
+          "SaltProvider",
+          "SaltProviderNext"
+        ],
+        "related_packages": [
+          "@salt-ds/core",
+          "@salt-ds/theme"
+        ]
+      },
+      "last_verified_at": "1.73.0"
+    }
+  ]
+}

@@ -27,6 +27,7 @@ import { activationIssues, governingRevision, portalHistory, portalRevisionView,
 import { environmentCatalog, environmentLabel } from "@/lib/onboarding/environments";
 import { reviewQueue } from "@/lib/onboarding/reviews";
 import { revisionsOf } from "@/lib/onboarding/revisions";
+import { PORTAL_PLATFORM_LABELS } from "@/lib/onboarding/vocabulary";
 import { rememberedActor } from "../../actor";
 import { activatePortalAction, addPortalReferenceAction, assignDefaultAction, refreshPortalAction, removePortalReferenceAction, retirePortalAction, startPortalDraftAction } from "../actions";
 import { loadPortal, portalCrumbs, portalHref, stepHref } from "../load";
@@ -203,6 +204,9 @@ export default async function PortalPage({ params, searchParams }: { params: Par
           ["Active revision", active ? <Link href={`${here}/revisions/${active.number}`}>{`Revision ${active.number}`}</Link> : "None yet"],
           ["Draft", draft ? <Link href={stepHref(portal.publicId, "identity")}>{`Revision ${draft.number}`}</Link> : "None"],
           ["Owning team", portal.ownerTeam ?? "None yet"],
+          ["Platform", portal.platform ? PORTAL_PLATFORM_LABELS[portal.platform] : "None"],
+          ["Slug", portal.slug ? <Tag key="slug">{portal.slug}</Tag> : "None"],
+          ["Description", portal.description ?? "None"],
           ["Environments", environments.length ? environments.map((environment) => `${environmentLabel(catalog, environment.environment)}${environment.enabled ? "" : " (disabled)"}`).join(", ") : "None yet"],
         ]}
       />

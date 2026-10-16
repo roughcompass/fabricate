@@ -1,0 +1,1 @@
+ALTER TABLE "prototypes"."template_versions" ADD COLUMN "standards" jsonb;

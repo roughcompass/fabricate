@@ -9,7 +9,7 @@ import { isPublicId } from "@/lib/db/ids";
 import { SELECTION_MODES, type SelectionMode } from "@/lib/db/schema";
 import * as records from "@/lib/initiatives/initiative-records";
 import { errorsFrom, integer, text, texts } from "@/lib/web/form-data";
-import type { InitiativeFormState, InitiativeFormValues, LaunchState } from "./form-state";
+import type { InitiativeFormState, InitiativeFormValues, LaunchState, ReleaseSelectionState } from "./form-state";
 
 function readForm(formData: FormData): InitiativeFormValues {
   const mode = text(formData, "selectionMode", 20);
@@ -49,6 +49,24 @@ export async function updateInitiative(publicId: string, previous: InitiativeFor
     if (error instanceof ValidationError) return { ...previous, values, errors: errorsFrom(error) };
     if (error instanceof StaleRecordError) {
       return { ...previous, values, errors: { base: ["This initiative was changed by someone else. Reload the page to review the current values, then try again."] } };
+    }
+    throw error;
+  }
+  redirect(`/assessments/${publicId}?notice=updated`);
+}
+
+/** Saves only the Releases an Assessment selects: how the Salt Patterns initiative is edited. */
+export async function updateReleaseSelections(publicId: string, previous: ReleaseSelectionState, formData: FormData): Promise<ReleaseSelectionState> {
+  assertInitiativeId(publicId);
+  const values = { standardReleasePublicIds: texts(formData, "standardReleasePublicIds", 40) };
+  const lockVersion = integer(formData, "lockVersion");
+  try {
+    if (lockVersion === null) throw new StaleRecordError("Missing lock version");
+    records.updateReleaseSelections(getDb(), publicId, lockVersion, values.standardReleasePublicIds);
+  } catch (error) {
+    if (error instanceof ValidationError) return { ...previous, values, errors: errorsFrom(error) };
+    if (error instanceof StaleRecordError) {
+      return { ...previous, values, errors: { base: ["This Assessment was changed by someone else. Reload the page to review the current Releases, then try again."] } };
     }
     throw error;
   }

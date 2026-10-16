@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { navFlags } from "@/components/shell/nav-flags";
 import { HOME, homeLink, visibleSections } from "@/components/shell/navigation";
 import { ButtonLink } from "@/components/ui/button";
 import { countLabel } from "@/components/ui/count";
@@ -32,7 +33,7 @@ const DE_CONSOLE = "/repositories/de-console";
  */
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const config = getConfig();
-  const home = homeLink(visibleSections(config.demoEnabled));
+  const home = homeLink(visibleSections(navFlags(config)));
   if (home.href !== HOME.href) redirect(home.href);
 
   const query = await searchParams;

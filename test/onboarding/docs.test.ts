@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { LIFECYCLE_STATES, REVISION_STATES } from "@/lib/db/schema";
@@ -6,6 +7,7 @@ import { compositionOutline } from "@/lib/onboarding/applications";
 import { ALLOWED_OPERATIONS } from "@/lib/onboarding/external/contracts";
 import { canonicalDocument } from "@/lib/onboarding/formats";
 import { normalizeRoute } from "@/lib/onboarding/routes";
+import { WHATS_INCLUDED_FILE, readWhatsIncluded } from "@/lib/onboarding/whats-included";
 import { createTestDb } from "../support/db";
 import { buildSource } from "../support/builders";
 import { CHILD_RENDERING, onboardApplication, registerMfe } from "../support/onboarding";
@@ -147,6 +149,21 @@ describe("onboarding documentation", () => {
     for (const row of rows) {
       const pattern = new RegExp(`\\["GET", "[^"]*${ticked(row[2]!)[0]!.replace(/\{\w+\}/g, "[^/\"]+").replace(/\//g, "\\/")}"`);
       expect(tests, row[2]).toMatch(pattern);
+    }
+  });
+
+  it("shows a What's included example that the loader accepts, with the file's committed path", () => {
+    const text = section("### What's included");
+    expect(text).toContain(`\`${WHATS_INCLUDED_FILE}\``);
+    const example = /```yaml\n([\s\S]*?)\n```/.exec(text)?.[1];
+    expect(example).toBeDefined();
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "whats-included-doc-"));
+    try {
+      const file = path.join(directory, "example.yaml");
+      fs.writeFileSync(file, example!);
+      expect(readWhatsIncluded(file)).toMatchObject({ ok: true, content: { items: [{ title: "Environments from the catalog" }, { title: "Push notifications", badge: "new", platforms: ["mobile"] }] } });
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
     }
   });
 });

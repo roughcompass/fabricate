@@ -11,6 +11,8 @@ export interface InitiativeFormValues {
 
 export type InitiativeFormState = FormState<InitiativeFormValues>;
 
+export type ReleaseSelectionState = FormState<{ standardReleasePublicIds: string[] }>;
+
 export interface LaunchState {
   problems: string[];
 }

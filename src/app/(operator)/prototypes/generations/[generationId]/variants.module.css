@@ -1,0 +1,19 @@
+@layer pages {
+  .head { display: flex; flex-direction: column; gap: var(--space-2); }
+  .intent { margin: 0; font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); line-height: var(--line-height-heading); overflow-wrap: anywhere; }
+  .meta { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--size-dialog)), 1fr)); gap: var(--space-6); align-items: start; }
+  /* A column, not a card: the device frame is each variant's only bordered container. */
+  .variant { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+  .variant[data-decision="discarded"] [data-prototype-frame] { opacity: 0.6; }
+  .titleRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .title { margin: 0; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .sentence { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .placeholder { display: grid; place-items: center; min-height: calc(var(--size-control-lg) * 6); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-lg); color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
+  .summary { margin: 0; font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .decide { display: flex; flex-direction: column; gap: var(--space-2); }
+  .buttons { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .failure { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; }
+  .issues { margin: 0; padding-left: var(--space-5); color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+  .headActions { display: flex; justify-content: flex-start; }
+}

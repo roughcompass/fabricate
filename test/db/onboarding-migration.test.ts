@@ -6,7 +6,7 @@ import { type Db, MIGRATIONS_FOLDER, migrateDatabase, openDatabase } from "@/lib
 import { createWebApplication, getApplication, placementCandidates } from "@/lib/onboarding/applications";
 import { createPortal, getPortal, savePortalDraft, submitPortal } from "@/lib/onboarding/portals";
 import { applicationsWithSealId } from "@/lib/ownership/records";
-import { ana, portalDraft } from "../support/onboarding";
+import { ana, portalDraft, portalInput } from "../support/onboarding";
 
 const PRE_ONBOARDING_MIGRATION = "0021_claim_initiative_triggers";
 const FIXTURE = path.resolve("test/fixtures/onboarding/ownership-before-onboarding.sql");
@@ -157,7 +157,7 @@ describe("onboarding ownership migration fixture", () => {
     ]);
 
     // Onboarding the claimed Portal adopts it; the claim stays a candidate until a placement is requested and reviewed.
-    const { portal, draft } = createPortal(db, { name: "Access", ownerTeam: "Access Platform", sealId: "88002" }, ana);
+    const { portal, draft } = createPortal(db, portalInput("Access", { ownerTeam: "Access Platform", sealId: "88002" }), ana);
     expect(portal.publicId).toBe("ptl_onboarding_access");
     const saved = savePortalDraft(db, portal.publicId, { lockVersion: draft.lockVersion, document: portalDraft({ sealId: "88002" }) });
     expect(submitPortal(db, portal.publicId, { lockVersion: saved.lockVersion, actor: ana }).submitted).toBe(true);

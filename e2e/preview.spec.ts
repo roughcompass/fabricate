@@ -197,8 +197,9 @@ test("reads the template's files, with microfrontends.json listing the group", a
   // Line numbers, and a copy control for the file.
   await expect(source.getByRole("button", { name: "Copy lines" })).toBeVisible();
 
-  await files.getByRole("link", { name: "apps/payee-list/src/index.tsx" }).click();
-  await expect(page.getByRole("figure", { name: "apps/payee-list/src/index.tsx" })).toContainText("Payee list 1.4.2");
+  // A hero's source is its reference deployment's real Salt, at each microfrontend's default version.
+  await files.getByRole("link", { name: "src/payee-list.tsx" }).click();
+  await expect(page.getByRole("figure", { name: "src/payee-list.tsx" })).toContainText('from "@salt-ds/core"');
 });
 
 test("copies the exact scaffold command", async ({ page, context, db: _db }) => {

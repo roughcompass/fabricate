@@ -36,17 +36,23 @@ export async function setView(page: Page, view: { theme?: "light" | "dark"; prof
   await waitForRegions(page);
 }
 
-/** Runs the automated accessibility audit on the running application, as the toolbar does. */
-export async function audit(page: Page): Promise<AuditViolation[]> {
+/**
+ * Runs the automated accessibility audit on the running application, as the
+ * toolbar does, and on +also+: selectors for open overlays Salt renders
+ * outside the application root. An open Salt menu adds Floating UI's focus
+ * guards beside its trigger, hidden spans that pass focus on and are never
+ * content, so they are left out.
+ */
+export async function audit(page: Page, also: string[] = []): Promise<AuditViolation[]> {
   if (!(await page.evaluate(() => "axe" in window))) await page.addScriptTag({ path: AXE });
-  return page.evaluate(async (tags) => {
+  return page.evaluate(async ([tags, extra]) => {
     const axe = (window as unknown as { axe: { run: (context: unknown, options: unknown) => Promise<{ violations: { id: string; nodes: { target: string[] }[] }[] }> } }).axe;
-    const result = await axe.run({ include: [["[data-demo-app-root]"]], exclude: [["[data-demo-toolbar]"]] }, { runOnly: { type: "tag", values: tags }, resultTypes: ["violations"] });
+    const result = await axe.run({ include: [["[data-demo-app-root]"], ...extra.map((selector) => [selector])], exclude: [["[data-demo-toolbar]"], ["[data-floating-ui-focus-guard]"]] }, { runOnly: { type: "tag", values: tags }, resultTypes: ["violations"] });
     return result.violations.map((violation) => ({
       id: violation.id,
       members: [...new Set(violation.nodes.map((node) => document.querySelector(node.target[0]!)?.closest("[data-demo-mfe]")?.getAttribute("data-demo-mfe") ?? "shell"))].sort(),
     }));
-  }, AUDIT_TAGS);
+  }, [AUDIT_TAGS, also] as const);
 }
 
 /**

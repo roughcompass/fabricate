@@ -24,7 +24,9 @@ export interface NewProfile {
 export function insertProfile(db: Executor, input: NewProfile): RepositoryProfile {
   const prepared = prepareDocument("repositoryProfile", input.document);
   const issues = new IssueCollector();
-  if (prepared.value.commit !== input.snapshot.commitSha) issues.add("document", "The Profile must describe the pinned commit");
+  if (input.snapshot.refKind === "stored_files") {
+    if (prepared.value.content_digest !== input.snapshot.treeSha) issues.add("document", "The Profile must describe the stored files' content digest");
+  } else if (prepared.value.commit !== input.snapshot.commitSha) issues.add("document", "The Profile must describe the pinned commit");
   if (prepared.value.detector_release !== input.assessment.detectorRelease) issues.add("document", "The Profile must record the Assessment's detector release");
   if (prepared.value.detector_configuration_digest !== input.assessment.configurationDigest) issues.add("document", "The Profile must record the Assessment's detector configuration digest");
   for (const problem of input.validate?.(prepared.value) ?? []) issues.add("document", problem);

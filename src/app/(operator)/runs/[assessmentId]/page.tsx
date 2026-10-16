@@ -160,14 +160,14 @@ export default async function AssessmentPage({ params, searchParams }: { params:
                   <Td label="Repository">
                     <Primary>{target.sourceName}</Primary>
                     <Secondary>
-                      <Tag>{target.cloneUrl}</Tag>
+                      <Tag>{target.cloneUrl ?? `Template version ${target.templateVersionNumber}`}</Tag>
                     </Secondary>
                   </Td>
                   <Td label="Reference">
                     {target.gitRef ? <Tag>{target.gitRef}</Tag> : humanize(targetReferenceLabel(target))}
                     {snapshot && (
                       <Secondary>
-                        <ShortValue value={snapshot.commitSha} label="commit" />
+                        {snapshot.commitSha ? <ShortValue value={snapshot.commitSha} label="commit" /> : <ShortValue value={snapshot.treeSha} label="content digest" />}
                       </Secondary>
                     )}
                   </Td>

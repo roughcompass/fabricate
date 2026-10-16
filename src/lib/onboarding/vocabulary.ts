@@ -6,6 +6,19 @@
  * browser too.
  */
 
+/**
+ * The platform a Portal targets (portals spec): a classification, not a
+ * runtime definition, so nothing validates or places against it.
+ */
+export const PORTAL_PLATFORMS = ["web", "mobile", "desktop"] as const;
+export type PortalPlatform = (typeof PORTAL_PLATFORMS)[number];
+export const PORTAL_PLATFORM_LABELS: Record<PortalPlatform, string> = { web: "Web", mobile: "Mobile", desktop: "Desktop" };
+export const PORTAL_PLATFORM_DESCRIPTIONS: Record<PortalPlatform, string> = {
+  web: "Opens in a browser",
+  mobile: "Runs on phones and tablets",
+  desktop: "Runs as an installed application",
+};
+
 /** How a Portal renders a launch target. */
 export const RENDERING_MODES = ["iframe", "esm", "module_federation_2"] as const;
 export type RenderingMode = (typeof RENDERING_MODES)[number];

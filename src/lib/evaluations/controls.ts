@@ -25,7 +25,8 @@ export interface TargetInput {
   source: { public_id: string; name: string };
   state: string;
   failure: string | null;
-  profile: { public_id: string; digest: string; commit: string; factDocument: JsonObject } | null;
+  /** The commit is null for a template version, whose Profile describes stored files. */
+  profile: { public_id: string; digest: string; commit: string | null; factDocument: JsonObject } | null;
 }
 
 export interface EvaluationInputs {

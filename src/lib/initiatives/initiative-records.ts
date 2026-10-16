@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, not, sql } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
@@ -88,13 +88,28 @@ export function claimInitiative(db: Executor, source: RepositorySource): Initiat
   });
 }
 
-export function isSystemOwned(initiative: Pick<Initiative, "claimRepositorySourceId">): boolean {
-  return initiative.claimRepositorySourceId !== null;
+/** Whether the system created +initiative+: for a claim, or the Salt Patterns initiative. */
+export function isSystemOwned(initiative: Pick<Initiative, "claimRepositorySourceId" | "systemOwned">): boolean {
+  return initiative.claimRepositorySourceId !== null || initiative.systemOwned;
 }
 
-/** A system-owned initiative keeps its one repository; its name and Releases can change. */
+export const SALT_PATTERNS_FIXED = "DE FabLab owns Salt Patterns: its name, objective, and template targets can't change, but you can choose its Releases";
+
+/**
+ * The Salt Patterns initiative, which the migration seeds: DE FabLab owns it,
+ * and its targets are the template versions it assesses
+ * (converge-templates-and-prototypes, design decision 2).
+ */
+export const SALT_PATTERNS_INITIATIVE_ID = "ini_saltpatterns0000";
+
+export function saltPatternsInitiative(db: Executor): Initiative {
+  return getInitiative(db, SALT_PATTERNS_INITIATIVE_ID);
+}
+
+/** A claim's initiative keeps its one repository, though its name and Releases can change; Salt Patterns changes only its Releases. */
 function refuseScopeChange(db: Executor, initiative: Initiative, input: Required<InitiativeInput>): void {
-  if (!isSystemOwned(initiative)) return;
+  if (initiative.systemOwned) throw new ValidationError([{ field: "base", message: SALT_PATTERNS_FIXED }]);
+  if (initiative.claimRepositorySourceId === null) return;
   const own = selectedSources(db, initiative.id).map((source) => source.publicId);
   if (input.selectionMode !== "explicit" || input.sourcePublicIds.length !== 1 || input.sourcePublicIds[0] !== own[0]) {
     throw new ValidationError([{ field: "sources", message: "This Assessment was created for a claimed Repository, and its scope can't change" }]);
@@ -126,10 +141,34 @@ export function updateInitiative(db: Executor, publicId: string, expectedLockVer
   });
 }
 
+/**
+ * Replaces only the Releases an initiative selects. The Salt Patterns
+ * initiative is changed this way alone: it has no sources to select, and its
+ * name, objective, and scope are fixed (initiative-scoping spec).
+ */
+export function updateReleaseSelections(db: Executor, publicId: string, expectedLockVersion: number, standardReleasePublicIds: readonly string[]): Initiative {
+  return immediate(db, (tx) => {
+    const current = getInitiative(tx, publicId);
+    if (current.lockVersion !== expectedLockVersion) throw new StaleRecordError(`${current.name} was changed by someone else`);
+    // Validated as a scope that selects no sources, so only the Releases are checked.
+    const { releases } = validate(tx, normalize({ name: current.name, objective: current.objective, selectionMode: "all_enabled", standardReleasePublicIds }), new Set());
+    const updated = tx
+      .update(initiatives)
+      .set({ lockVersion: current.lockVersion + 1, updatedAt: new Date() })
+      .where(and(eq(initiatives.id, current.id), eq(initiatives.lockVersion, current.lockVersion)))
+      .returning()
+      .get();
+    if (!updated) throw new StaleRecordError(`${current.name} was changed by someone else`);
+    replaceReleaseSelections(tx, updated, releases);
+    return updated;
+  });
+}
+
 /** Deletes an initiative that has never been assessed. */
 export function deleteInitiative(db: Executor, publicId: string): void {
   immediate(db, (tx) => {
     const initiative = getInitiative(tx, publicId);
+    if (initiative.systemOwned) throw new ValidationError([{ field: "base", message: `${initiative.name} is owned by DE FabLab and is retained` }]);
     if (isSystemOwned(initiative)) throw new ValidationError([{ field: "base", message: `${initiative.name} was created for a claimed Repository and is retained` }]);
     const assessed = tx.select({ id: assessments.id }).from(assessments).where(eq(assessments.initiativeId, initiative.id)).limit(1).get();
     if (assessed) {
@@ -155,9 +194,12 @@ export function initiativeById(db: Executor, id: number): Initiative {
   return initiative;
 }
 
-/** Initiatives operators created, or with +systemOwned+, those the system created for claims. */
+/**
+ * Initiatives operators created, or with +systemOwned+, those the system
+ * created for claims. Neither includes the Salt Patterns initiative.
+ */
 export function listInitiatives(db: Executor, options: { systemOwned?: boolean } = {}): Initiative[] {
-  const owner = options.systemOwned ? isNotNull(initiatives.claimRepositorySourceId) : isNull(initiatives.claimRepositorySourceId);
+  const owner = and(options.systemOwned ? isNotNull(initiatives.claimRepositorySourceId) : isNull(initiatives.claimRepositorySourceId), not(initiatives.systemOwned));
   return db.select().from(initiatives).where(owner).orderBy(sql`lower(${initiatives.name})`, asc(initiatives.publicId)).all();
 }
 

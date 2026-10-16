@@ -22,12 +22,18 @@ async function save(page: Page, control: Locator, key?: string) {
   await waitForHydration(page);
 }
 
-async function createPortal(page: Page, name: string, sealId = "") {
+/** Fills the New Portal page's form: a Web Portal with a SEAL ID and a description. */
+async function fillNewPortal(page: Page, name: string, sealId = "88001") {
+  await page.getByRole("radio", { name: /^Web/ }).check();
+  await page.getByLabel("SEAL ID").fill(sealId);
+  await page.getByLabel("Name", { exact: true }).fill(name);
+  await page.getByLabel("Description").fill(`The ${name} Portal`);
+}
+
+async function createPortal(page: Page, name: string, sealId = "88001") {
   await page.goto("/onboarding/portals/new");
   await waitForHydration(page);
-  await page.getByLabel("Name", { exact: true }).fill(name);
-  if (sealId) await page.getByLabel("SEAL ID").fill(sealId);
-  await page.getByLabel("Your name").fill("Ana Ruiz");
+  await fillNewPortal(page, name, sealId);
   await page.getByRole("button", { name: "Create Portal" }).click();
   await expect(heading(page, "Identity")).toBeVisible();
   await waitForHydration(page);
@@ -60,6 +66,16 @@ test("selects predefined environments from the fallback set, with no runtime or 
   await expect(enabled(page).getByLabel("UAT")).toBeChecked();
   await expect(enabled(page).getByLabel("PROD")).toBeChecked();
   await expect(enabled(page).getByLabel("DEV")).not.toBeChecked();
+});
+
+test("shows a Portal's platform, slug, and description in its overview (Portal page shows identity)", async ({ page, db }) => {
+  // The builder creates a Web Portal described as "The Treasury Portal", with the slug its name derives.
+  const treasury = onboardPortal(db, "Treasury");
+  await page.goto(`/onboarding/portals/${treasury.publicId}`);
+  const overview = page.locator("dl").first();
+  await expect(overview.getByText("Platform", { exact: true }).locator("xpath=following-sibling::dd[1]")).toHaveText("Web");
+  await expect(overview.getByText("Slug", { exact: true }).locator("xpath=following-sibling::dd[1]")).toHaveText("treasury");
+  await expect(overview.getByText("Description", { exact: true }).locator("xpath=following-sibling::dd[1]")).toHaveText("The Treasury Portal");
 });
 
 test("offers Studio's environment list with when it was read, and refuses one the catalog doesn't list (Studio environment catalog is unavailable)", async ({ page, db }) => {
@@ -264,8 +280,7 @@ test.describe("without JavaScript", () => {
 
   test("onboards, submits, and activates a Portal with forms and links alone", async ({ page, db }) => {
     await page.goto("/onboarding/portals/new");
-    await page.getByLabel("Name", { exact: true }).fill("Access");
-    await page.getByLabel("Your name").fill("Ana Ruiz");
+    await fillNewPortal(page, "Access");
     await page.getByRole("button", { name: "Create Portal" }).click();
     await expect(heading(page, "Identity")).toBeVisible();
     await page.getByLabel("Owning team").fill("Access Platform");
@@ -281,6 +296,8 @@ test.describe("without JavaScript", () => {
     await page.getByLabel("Key", { exact: true }).fill("payments");
     await page.getByRole("button", { name: "Save and continue" }).click();
     await expect(heading(page, "Review and submit")).toBeVisible();
+    // Creating the Portal asked for no name, so submitting is the first step that does.
+    await page.getByLabel("Your name").fill("Ana Ruiz");
     await page.getByRole("button", { name: "Submit revision 1" }).click();
     await expect(heading(page, "Access")).toBeVisible();
     await expect(page.getByRole("main").locator("dt", { hasText: "Lifecycle" }).locator("+ dd")).toHaveText("Ready");

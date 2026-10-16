@@ -123,6 +123,8 @@
     &:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
     & input:focus-visible { outline: none; }
   }
+  .choiceIcon { flex: none; margin-top: 1px; color: var(--color-text-secondary); }
+  .choice:has(input:checked) .choiceIcon { color: var(--color-text); }
   .choiceText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .choiceLabel { font-weight: var(--font-weight-medium); }
   .choice .description { overflow-wrap: anywhere; }

@@ -7,7 +7,7 @@ import type { DialogState } from "@/components/onboarding/form-dialog";
 import { getDb } from "@/lib/db/client";
 import { NotFoundError, StaleRecordError, TransitionError, ValidationError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
-import { statedActor } from "@/lib/onboarding/attribution";
+import { UNSTATED_ACTOR, statedActor } from "@/lib/onboarding/attribution";
 import { declareReference, referencesOf, retireReference } from "@/lib/onboarding/external/references";
 import { requestRefresh } from "@/lib/onboarding/external/refresh";
 import { BlockedError } from "@/lib/onboarding/issues";
@@ -15,7 +15,8 @@ import { type PortalDraft, activatePortal, createPortal, getPortal, readPortalDr
 import { assignDefault } from "@/lib/onboarding/reviews";
 import { StaleDraftError, draftOf } from "@/lib/onboarding/revisions";
 import { errorsFrom, integer, text, texts } from "@/lib/web/form-data";
-import { rememberActor } from "../actor";
+import { rememberPortal } from "@/lib/web/portal-cookie";
+import { rememberActor, rememberedActor } from "../actor";
 import { intentOf, rowIndices, submittedValues } from "../form-values";
 import { PORTAL_STEPS, type PortalStep, portalHref, stepHref } from "./load";
 
@@ -34,13 +35,23 @@ function refused(values: DialogState["values"], error: unknown): DialogState {
   throw error;
 }
 
+/**
+ * Creates a Portal from the Create Portal form (portal-creation spec). The form
+ * doesn't ask who's creating it: it's recorded, unverified, as the name the
+ * operator last gave in Web Onboarding, or as "Not stated".
+ */
 export async function createPortalAction(_previous: DialogState, formData: FormData): Promise<DialogState> {
   const values = submittedValues(formData);
   let location: string;
   try {
-    const actor = statedActor(text(formData, "actor", 300));
-    const { portal, adopted } = createPortal(getDb(), { name: text(formData, "name", 300), ownerTeam: text(formData, "ownerTeam", 300), sealId: text(formData, "sealId", 100) }, actor);
-    await rememberActor(actor.name);
+    const actor = statedActor((await rememberedActor()) || UNSTATED_ACTOR);
+    const { portal, adopted } = createPortal(
+      getDb(),
+      { platform: text(formData, "platform", 20), sealId: text(formData, "sealId", 100), name: text(formData, "name", 300), description: text(formData, "description", 1000), slug: text(formData, "slug", 100) },
+      actor,
+    );
+    // A created Portal becomes the switcher's current one (portal-creation spec).
+    await rememberPortal(portal.publicId);
     location = `${stepHref(portal.publicId, "identity")}?notice=${adopted ? "adopted" : "created"}`;
   } catch (error) {
     return refused(values, error);

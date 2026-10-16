@@ -11,6 +11,10 @@ export type BrandId = (typeof BRAND_IDS)[number];
 export const PROVIDER_IDS = ["de-web", "community"] as const;
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
+/** How a template was made, apart from who provides it (template-gallery spec, "The filter rail filters by brand and provider"). */
+export const ORIGIN_IDS = ["built-in", "prototypes"] as const;
+export type OriginId = (typeof ORIGIN_IDS)[number];
+
 export const ENVIRONMENTS = ["production", "sandbox", "dev"] as const;
 export type EnvironmentId = (typeof ENVIRONMENTS)[number];
 
@@ -93,6 +97,8 @@ export interface Template {
   readonly description: string;
   readonly brand: BrandId;
   readonly provider: ProviderId;
+  /** Every catalog template is built in; templates accepted from prototypes are From Prototypes. */
+  readonly origin: "built-in";
   /** Shown for community templates. */
   readonly author?: string;
   readonly tags: readonly string[];

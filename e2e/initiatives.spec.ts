@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { listAssessments } from "../src/lib/assessments/assessment-records";
 import { setSourceEnabled } from "../src/lib/catalog/source-records";
 import { jobs } from "../src/lib/db/schema";
-import { claimInitiative, listInitiatives, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
+import { claimInitiative, listInitiatives, saltPatternsInitiative, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
 import { createStandard } from "../src/lib/standards/standard-records";
 import { buildAssessment, buildInitiative, buildRelease, buildSource } from "../test/support/builders";
 import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
@@ -164,6 +164,43 @@ test("Initiative pages stay usable at mobile width", async ({ page, db }) => {
 });
 
 // page-patterns spec: the Assessments list filters what Home counts.
+test("Salt Patterns: DE FabLab owns it, and only its Releases can be selected (Releases selected)", async ({ page, db }) => {
+  const exemplary = createStandard(db, { name: "Salt exemplary", purpose: "Exemplary Salt usage" }).standard;
+  buildRelease(db, { standard: exemplary });
+  buildSource(db, { name: "orders" });
+
+  await page.goto(paths.assessments);
+  const owned = page.getByRole("region", { name: "Owned by DE FabLab" });
+  await expect(owned).toContainText("None selected");
+  await owned.getByRole("link", { name: "Salt Patterns" }).click();
+
+  await expect(page).toHaveTitle("Salt Patterns · DE FabLab");
+  await expect(page.getByText("Owned by DE FabLab")).toBeVisible();
+  await expect(overview(page)).toContainText("Template versions, added when one is accepted or re-checked");
+  await expect(page.getByRole("button", { name: "Start Run" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Edit", exact: true })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Select Releases" }).click();
+  await expect(page.getByRole("heading", { name: "Select Releases" })).toBeVisible();
+  // No name, objective, or target to edit, and nothing to delete.
+  await expect(page.getByLabel("Name")).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Repository scope" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Selected Repositories" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Delete Assessment" })).toHaveCount(0);
+  await page.getByLabel("Salt exemplary v1").check();
+  await page.getByRole("button", { name: "Save Releases" }).click();
+
+  await expect(toast(page, "Salt Patterns was updated.")).toBeVisible();
+  await expect(overview(page)).toContainText("Salt exemplary v1");
+  const salt = saltPatternsInitiative(db);
+  expect(selectedReleases(db, salt.id).map(({ standard }) => standard.name)).toEqual(["Salt exemplary"]);
+  expect(selectedSources(db, salt.id)).toEqual([]);
+  expect(salt).toMatchObject({ name: "Salt Patterns", selectionMode: "explicit" });
+
+  await page.goto(paths.assessments);
+  await expect(page.getByRole("region", { name: "Owned by DE FabLab" })).toContainText("Salt exemplary v1");
+});
+
 test.describe("conclusion tabs", () => {
   const rows = (page: Page) => page.getByRole("table", { name: "Assessments", exact: true }).locator("tbody tr");
 

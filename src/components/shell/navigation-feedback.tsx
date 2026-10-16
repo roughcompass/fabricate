@@ -37,6 +37,8 @@ export function NavigationFeedback({ children }: { children: React.ReactNode }) 
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const anchor = (event.target as Element | null)?.closest?.("a[href]");
       if (!(anchor instanceof HTMLAnchorElement) || (anchor.target && anchor.target !== "_self") || anchor.hasAttribute("download")) return;
+      // A link that opens a dialog in place, such as New Portal once hydrated, doesn't navigate.
+      if (anchor.getAttribute("aria-haspopup") === "dialog") return;
       const url = new URL(anchor.href, window.location.href);
       if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return;
       const kind = skeletonFor(url.pathname);

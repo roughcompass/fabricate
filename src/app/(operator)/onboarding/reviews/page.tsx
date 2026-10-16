@@ -17,6 +17,7 @@ import { getDb } from "@/lib/db/client";
 import type { PlacementState } from "@/lib/db/schema";
 import { portalCatalog } from "@/lib/onboarding/catalog";
 import { REVIEW_STATES, reviewQueue } from "@/lib/onboarding/reviews";
+import { rememberedPortal } from "@/lib/web/portal-cookie";
 import { reviewHref } from "./load";
 
 export const metadata: Metadata = { title: "Reviews" };
@@ -29,24 +30,34 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   const db = getDb();
   const state = REVIEW_STATES.find((candidate) => candidate === param(query, "state")) ?? null;
   const portals = portalCatalog(db).map((row) => row.portal);
-  const portal = portals.find((candidate) => candidate.publicId === param(query, "portal"))?.publicId ?? null;
+  const addressed = portals.find((candidate) => candidate.publicId === param(query, "portal"))?.publicId ?? null;
+  // A Portal the address names wins, so a link opens the reviews it names; otherwise the sidebar's current Portal scopes the list (portal-switcher spec).
+  const current = addressed ? null : await rememberedPortal(db);
+  const portal = addressed ?? current?.publicId ?? null;
   const search = (param(query, "q") ?? "").trim().slice(0, 200);
   const scoped = reviewQueue(db, { portal, search });
   const rows = state ? scoped.filter((row) => row.state === state) : scoped;
   const href = (next: { state?: PlacementState | null; portal?: string | null; q?: string }) => {
-    const values = { state, portal, q: search, ...next };
+    const values = { state, portal: addressed, q: search, ...next };
     const params = new URLSearchParams({ ...(values.state && { state: values.state }), ...(values.portal && { portal: values.portal }), ...(values.q && { q: values.q }) });
     return `/onboarding/reviews${params.size ? `?${params}` : ""}`;
   };
 
   return (
     <Page>
-      <PageHeader title="Reviews" description="Each placement an Application asks of a Portal, reviewed by that Portal on its own. Decisions are recorded here, unverified, and change nothing in Studio or CDaaS." />
+      <PageHeader
+        title="Reviews"
+        description={
+          current
+            ? `Scoped to ${current.label}: each placement an Application asks of it, reviewed on its own. Decisions are recorded here, unverified, and change nothing in Studio or CDaaS. Choose All Portals in the sidebar to see every Portal's reviews.`
+            : "Each placement an Application asks of a Portal, reviewed by that Portal on its own. Decisions are recorded here, unverified, and change nothing in Studio or CDaaS."
+        }
+      />
       <Tabs
         label="Filter reviews by state"
         aside={
-          <FilterBar key={`${portal}-${search}`} action="/onboarding/reviews" label="Filter reviews" filtered={Boolean(portal || search)} clearHref={href({ portal: null, q: "" })} keep={state ? { state } : {}}>
-            <Select id="review-portal" name="portal" label="Portal" hideLabel size="sm" defaultValue={portal ?? ""} options={[{ value: "", label: "All Portals" }, ...portals.map((item) => ({ value: item.publicId, label: item.label }))]} />
+          <FilterBar key={`${addressed}-${search}`} action="/onboarding/reviews" label="Filter reviews" filtered={Boolean(addressed || search)} clearHref={href({ portal: null, q: "" })} keep={state ? { state } : {}}>
+            {!current && <Select id="review-portal" name="portal" label="Portal" hideLabel size="sm" defaultValue={addressed ?? ""} options={[{ value: "", label: "All Portals" }, ...portals.map((item) => ({ value: item.publicId, label: item.label }))]} />}
             <SearchField id="review-search" name="q" label="Search reviews" hideLabel size="sm" placeholder="Search by Application, Portal, route, or submitter" defaultValue={search} clearHref={href({ q: "" })} />
           </FilterBar>
         }
@@ -99,10 +110,12 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
               </tr>
             ))}
           </Table>
-        ) : search || portal || state ? (
+        ) : search || addressed || state ? (
           <EmptyState title="No matching reviews" icon="search">
             No placement review matches these filters.
           </EmptyState>
+        ) : current ? (
+          <EmptyState title={`No placements to review in ${current.label}`} icon="inbox">{`Each placement a Web Application requests in ${current.label} appears here for its team to review.`}</EmptyState>
         ) : (
           <EmptyState title="No placements to review yet" icon="inbox">
             Each placement a Web Application requests appears here for its Portal to review.

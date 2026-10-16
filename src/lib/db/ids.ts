@@ -32,6 +32,23 @@ export const PUBLIC_ID_PREFIXES = {
   placement: "plc",
   placementDecision: "pdc",
   externalReference: "xrf",
+  // Prototypes keeps its records in its own Postgres store, keyed by these ids.
+  prototypesWorkspace: "pws",
+  persona: "per",
+  generation: "gen",
+  variant: "var",
+  prototype: "pro",
+  prototypeVersion: "ver",
+  feedback: "fbk",
+  lesson: "lsn",
+  lessonCheck: "lck",
+  pairwiseReview: "pwr",
+  benchmarkIntent: "bmi",
+  share: "shr",
+  prototypeTemplate: "ptp",
+  prototypeTemplateVersion: "ptv",
+  templateRecheck: "rck",
+  sandboxRun: "sbx",
 } as const;
 
 export type PublicIdPrefix = (typeof PUBLIC_ID_PREFIXES)[keyof typeof PUBLIC_ID_PREFIXES];

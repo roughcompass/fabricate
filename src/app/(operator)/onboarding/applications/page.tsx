@@ -19,6 +19,7 @@ import { applicationName } from "@/lib/onboarding/applications";
 import { applicationCatalog } from "@/lib/onboarding/catalog";
 import { RENDERING_MODE_LABELS } from "@/lib/onboarding/documents";
 import { type PlacementFilter, isPlacementFilter, onboardingCatalogHref } from "@/lib/web/list-filters";
+import { rememberedPortal } from "@/lib/web/portal-cookie";
 import { applicationHref, applicationStepHref } from "./load";
 
 export const metadata: Metadata = { title: "Web Applications" };
@@ -28,7 +29,10 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
   const lifecycle = LIFECYCLE_STATES.find((state) => state === param(query, "lifecycle") && state !== "active") ?? null;
   const placement = isPlacementFilter(param(query, "placement")) ? (param(query, "placement") as PlacementFilter) : null;
   const search = (param(query, "q") ?? "").trim().slice(0, 200);
-  const searched = applicationCatalog(getDb(), search);
+  const db = getDb();
+  // The sidebar's current Portal scopes the list to Applications with a placement in it (portal-switcher spec).
+  const scope = await rememberedPortal(db);
+  const searched = applicationCatalog(db, search, { portalId: scope?.id });
   // Placed means a Portal has an active route for it; Home's Placed Web Applications counts the same routes. The tabs count what the search and this filter leave.
   const all = placement ? searched.filter((row) => row.portals > 0 === (placement === "placed")) : searched;
   const rows = lifecycle ? all.filter((row) => row.application.lifecycle === lifecycle) : all;
@@ -42,7 +46,11 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
     <Page>
       <PageHeader
         title="Web Applications"
-        description="Route-level experiences: each launched from a shared MFE or an external endpoint, composed from shared MFEs, and placed in any number of Portals."
+        description={
+          scope
+            ? `Scoped to ${scope.label}: the Web Applications with a placement in it, in any review state. Choose All Portals in the sidebar to see every one.`
+            : "Route-level experiences: each launched from a shared MFE or an external endpoint, composed from shared MFEs, and placed in any number of Portals."
+        }
         primaryAction={create}
         extraActions={<ButtonLink href="/onboarding/microfrontends" icon="layers">Shared MFEs</ButtonLink>}
       />
@@ -141,6 +149,8 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
           <EmptyState title={placement === "placed" ? "No placed Web Applications" : "No unplaced Web Applications"}>{placement === "placed" ? "A Web Application is placed once a Portal approves one of its placements." : "Every Web Application listed here is placed in a Portal."}</EmptyState>
         ) : lifecycle ? (
           <EmptyState title={`No ${lifecycle} Web Applications`}>A Web Application becomes Ready when its launch target is confirmed and at least one Portal approves a placement.</EmptyState>
+        ) : scope ? (
+          <EmptyState title={`No Web Applications in ${scope.label}`} icon="layers">{`No Web Application has asked for a placement in ${scope.label} yet.`}</EmptyState>
         ) : (
           <EmptyState title="No Web Applications yet" icon="layers" action={create}>
             Onboard a route-level experience: how it launches, the MFEs it composes, and the Portals it asks to be placed in.

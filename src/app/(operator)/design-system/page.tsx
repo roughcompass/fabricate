@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ButtonLink, Button } from "@/components/ui/button";
 import { buttonProps } from "@/components/ui/button-content";
 import { CodeBlock } from "@/components/ui/code-block";
+import { CodeDiff } from "@/components/ui/code-diff";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CopyButton } from "@/components/ui/copy-button";
 import { DescriptionList } from "@/components/ui/description-list";
@@ -13,7 +14,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { FilterRail } from "@/components/ui/filter-rail";
 import { ToggleGroup } from "@/components/ui/toggle-group";
-import { Checkbox, ChoiceGroup, FormFooter, FormNote, FormSection, Select, TextArea, TextInput } from "@/components/ui/form";
+import { CheckList } from "@/components/ui/check-list";
+import { Checkbox, ChoiceGroup, FormFooter, FormNote, FormSection, Select, TextArea, TextInput, formStyles } from "@/components/ui/form";
+import { ICON_NAMES, Icon } from "@/components/ui/icon";
 import { MediaCard } from "@/components/ui/media-card";
 import { Menu, MenuAction, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { type Outcome, OutcomeToast, param } from "@/components/ui/outcome-toast";
@@ -25,17 +28,27 @@ import { RelativeTime } from "@/components/ui/relative-time";
 import { SearchField } from "@/components/ui/search-field";
 import { Section } from "@/components/ui/section";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switcher } from "@/components/ui/switcher";
+import { SplitPanes } from "@/components/ui/split-dialog";
 import { StatGroup } from "@/components/ui/stat-group";
 import { Severity, Status } from "@/components/ui/status";
 import { EmptyRow, Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { ShortValue, Tag, TagList } from "@/components/ui/tag";
 import { Tooltip } from "@/components/ui/tooltip";
+import { ChecksPanel } from "@/components/ui/checks-panel";
+import { Composer } from "@/components/ui/composer";
+import { PrototypeFrame } from "@/components/ui/prototype-frame";
+import { ThreadView } from "@/components/ui/thread-view";
+import { PreviewControls } from "@/components/prototypes/preview-controls";
+import { DEFAULT_PREVIEW } from "@/lib/prototypes/preview-state";
+import { SAMPLE_EVIDENCE } from "./prototype-samples";
 import { Diagram } from "@/components/relationships/diagram";
 import { type DiagramEdge, diagramModel } from "@/lib/relationships/diagram";
 import type { DiagramData } from "@/lib/relationships/levels";
-import { confirmDemo, noopDemo, validateDemo } from "./actions";
-import { AlertDemo, FocusDemo, IndeterminateCheckbox, InjectedError, ToastDemo } from "./demos";
+import { composerDemo, confirmDemo, noopDemo, validateDemo } from "./actions";
+import { AlertDemo, FocusDemo, IndeterminateCheckbox, InjectedError, SplitDialogDemo, ToastDemo } from "./demos";
+import { diffFile } from "@/lib/prototypes/diff";
 import { Row, Specimen } from "./specimen";
 import styles from "./design-system.module.css";
 
@@ -64,6 +77,26 @@ const COLOR_ROLES: [token: string, role: string][] = [
   ["--color-accent-subtle", "Selection highlight and targeted outlines"],
   ["--color-progress", "In-progress status"],
 ];
+
+/** The sample content the split dialog specimens show. */
+const SPLIT_SAMPLE = {
+  title: "What's included",
+  items: [
+    { title: "Environments from the catalog", description: "Enable the environments Studio lists" },
+    { title: "Placement reviews", description: "Approve each request on its own", badge: "new" as const },
+    { title: "Revision history", description: "Every decision is attributed and kept" },
+  ],
+};
+
+/** The Switcher specimen's choices. */
+const SWITCHER_SAMPLE = {
+  pinned: { value: "", label: "All Portals", icon: "layers" as const },
+  options: [
+    { value: "access", label: "Access", tag: "Web", terms: ["access", "88001"] },
+    { value: "markets", label: "Markets", tag: "Web", terms: ["markets", "1042"] },
+    { value: "treasury", label: "Treasury with a name long enough to truncate", tag: "Mobile", terms: ["treasury"] },
+  ],
+};
 
 /** A portal diagram for the Diagram specimen: a host above the applications it loads, and the library they share. */
 function sampleDiagram(): DiagramData {
@@ -101,6 +134,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
 
   const sections: [id: string, title: string][] = [
     ["color", "Color"],
+    ["icons", "Icons"],
     ["buttons", "Buttons"],
     ["form-controls", "Form controls"],
     ["search-field", "Search field"],
@@ -118,6 +152,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
     ["pagination", "Pagination"],
     ["diagram", "Diagram"],
     ["menu", "Menu"],
+    ["switcher", "Switcher"],
     ["tooltip", "Tooltip and relative time"],
     ["progress", "Progress and skeleton"],
     ["filter-bar", "Filter bar"],
@@ -125,6 +160,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
     ["feedback", "Toast"],
     ["alert", "Alert"],
     ["dialog", "Confirmation dialog"],
+    ["split-dialog", "Split dialog"],
     ["form-feedback", "Form feedback"],
     ["page-header", "Page header"],
   ];
@@ -157,6 +193,22 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                   <span className={styles.swatch} style={{ "--_swatch": `var(${token})` } as React.CSSProperties} aria-hidden="true" />
                   <code>{token}</code>
                   <span className={styles.swatchRole}>{role}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        />
+
+        <Specimen
+          id="icons"
+          title="Icons"
+          description="Every icon on the 24px grid, drawn in the current text color. An icon beside text is decorative; an icon alone needs an accessible name."
+          render={() => (
+            <ul className={styles.icons}>
+              {ICON_NAMES.map((name) => (
+                <li key={name} className={styles.iconItem} data-icon={name}>
+                  <Icon name={name} size={20} />
+                  <code>{name}</code>
                 </li>
               ))}
             </ul>
@@ -250,6 +302,20 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 choices={[
                   { value: "all_enabled", label: "All enabled Repositories", description: "Every Repository enabled when a Run starts." },
                   { value: "explicit", label: "Selected Repositories", description: "Exactly the Repositories chosen below." },
+                ]}
+              />
+              <ChoiceGroup
+                id={`${theme}-platform`}
+                name={`${theme}-platform`}
+                legend="Platform, with icons"
+                type="radio"
+                columns
+                selected={theme === "light" ? ["web"] : []}
+                errors={theme === "light" ? undefined : ["Choose the Portal's platform"]}
+                choices={[
+                  { value: "web", label: "Web", description: "Opens in a browser", icon: "globe" },
+                  { value: "mobile", label: "Mobile", description: "Runs on phones and tablets", icon: "smartphone" },
+                  { value: "desktop", label: "Desktop", description: "Runs as an installed application", icon: "monitor", disabled: theme === "dark" },
                 ]}
               />
               <ChoiceGroup
@@ -491,6 +557,23 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
         />
 
         <Specimen
+          id="code-diff"
+          title="Code diff"
+          description="The line differences between two versions of a file, each changed region with three lines of context and both versions' line numbers."
+          render={() => (
+            <CodeDiff
+              before="v2"
+              after="v4"
+              diff={diffFile(
+                "Prototype.tsx",
+                '<StackLayout gap={2}>\n  <H1>Exception-first queue</H1>\n  <Text color="secondary">{cutOffNote}</Text>\n  <Text>Group by cut-off time</Text>\n  <Table zebra>\n',
+                '<StackLayout gap={2}>\n  <H1>Exception-first queue</H1>\n  <Text color="secondary">{cutOffNote}</Text>\n  <Text>Show the total per group</Text>\n  <Text>Totals: USD 4,210,000.00</Text>\n  <Table zebra>\n',
+              )}
+            />
+          )}
+        />
+
+        <Specimen
           id="table"
           title="Table"
           description="A quiet header, a linked primary cell, row actions in a menu that keeps rows one height, and stacked rows on narrow screens."
@@ -656,6 +739,45 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
 
 
         <Specimen
+          id="prototype-preview"
+          title="Prototype preview"
+          description="A prototype version in a frame sandboxed to scripts only, at a device's width and scaled to fit, with the preview's Mode, Density, and Device controls and Open in new tab. This is a fixed sample page."
+          single
+          render={() => (
+            <>
+              <PreviewControls action="/design-system" state={DEFAULT_PREVIEW} frameBase="/prototypes/render/sample" />
+              <PrototypeFrame src="/prototypes/render/sample" width={1280} height={800} title="Sample prototype" label="Desktop · 1280 × 800" />
+            </>
+          )}
+        />
+
+        <Specimen
+          id="checks-panel"
+          title="Checks panel"
+          description="A version's evidence: each gate, the repairs and first-pass result, warnings, the automated accessibility audit, and the advisory persona-fit review."
+          render={() => <ChecksPanel {...SAMPLE_EVIDENCE} />}
+        />
+
+        <Specimen
+          id="thread"
+          title="Thread and composer"
+          description="A prototype's messages, each with its stage, summary, and the version it produced, then the composer, which says why sending is unavailable while a refinement runs."
+          render={(theme) => (
+            <>
+              <ThreadView
+                current={2}
+                items={[
+                  { id: `${theme}-1`, kind: "generated", text: "Review and release today's urgent payments before cut-off", stage: null, summary: "Exception-first queue: payments that need action lead.", failure: null, version: { number: 1, href: "#thread" } },
+                  { id: `${theme}-2`, kind: "refined", text: "Group by cut-off time and show the total per group", stage: null, summary: "Grouped the payments by cut-off with a total for each.", failure: null, version: { number: 2, href: "#thread" } },
+                  { id: `${theme}-3`, kind: "refined", text: "Add a confirm step for amounts over USD 1m", stage: "writing", summary: null, failure: null, version: null },
+                ]}
+              />
+              <Composer action={composerDemo} label="Ask for a change" unavailable={theme === "dark" ? "A refinement is running. Send the next message when it finishes." : null} maxLength={2000} />
+            </>
+          )}
+        />
+
+        <Specimen
           id="pagination"
           title="Pagination"
           description="Links between the pages of a long list, with the page in the address."
@@ -685,6 +807,27 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 <MenuItem href="#menu">Edit name and purpose</MenuItem>
               </Menu>
             </Row>
+          )}
+        />
+
+        <Specimen
+          id="switcher"
+          title="Switcher"
+          description="Chooses the context the app works in, such as the current Portal: the trigger shows the choice, and the list filters, checks the current entry, and ends with an action. Without JavaScript it still opens and chooses."
+          render={(theme) => (
+            <div className={styles.stack}>
+              <Row label="Trigger">
+                <div className={styles.switcherTrigger}>
+                  <Switcher label="Switch Portal" {...SWITCHER_SAMPLE} current="markets" action={noopDemo} field="portal" searchLabel="Find Portal…" empty="Portals you create appear here for quick switching." noMatch="No Portal matches" footer={{ label: "Create Portal", description: "Onboard a Portal its team configures", icon: "plus", href: "#switcher" }} />
+                </div>
+              </Row>
+              <Row label="Open">
+                <Switcher preview label={`Portals, ${theme}`} {...SWITCHER_SAMPLE} current="markets" action={noopDemo} field="portal" searchLabel="Find Portal…" empty="Portals you create appear here for quick switching." noMatch="No Portal matches" footer={{ label: "Create Portal", description: "Onboard a Portal its team configures", icon: "plus", href: "#switcher" }} />
+              </Row>
+              <Row label="Empty">
+                <Switcher preview label={`No Portals, ${theme}`} pinned={SWITCHER_SAMPLE.pinned} options={[]} current="" action={noopDemo} field="portal" searchLabel="Find Portal…" empty="Portals you create appear here for quick switching." noMatch="No Portal matches" footer={{ label: "Create Portal", description: "Onboard a Portal its team configures", icon: "plus", href: "#switcher" }} />
+              </Row>
+            </div>
           )}
         />
 
@@ -832,6 +975,31 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 <p>Release v2 will be published from draft version 7. A published Release can never be edited or deleted.</p>
               </ConfirmDialog>
             </Row>
+          )}
+        />
+
+        <Specimen
+          id="split-dialog"
+          title="Split dialog"
+          description="A create flow that explains before it asks: supporting content in a check list beside the form. Below 720px the form comes first and the content collapses under a disclosure. The same panes stand on a page without the dialog."
+          stacked
+          render={(theme) => (
+            <div className={styles.stack}>
+              {theme === "light" && (
+                <Row label="Dialog">
+                  <SplitDialogDemo title={SPLIT_SAMPLE.title} items={SPLIT_SAMPLE.items} />
+                </Row>
+              )}
+              <SplitPanes asideTitle={SPLIT_SAMPLE.title} aside={<CheckList label={SPLIT_SAMPLE.title} items={SPLIT_SAMPLE.items} link={{ label: "Learn more about Portal onboarding", href: "https://docs.example.com/portals" }} />} surface>
+                <div className={formStyles.form}>
+                  <TextInput id={`${theme}-split-name`} label="Name" defaultValue="Treasury" />
+                  <FormFooter>
+                    <Button>Cancel</Button>
+                    <Button variant="primary">Create Portal</Button>
+                  </FormFooter>
+                </div>
+              </SplitPanes>
+            </div>
           )}
         />
 

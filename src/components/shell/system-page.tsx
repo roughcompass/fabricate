@@ -2,7 +2,7 @@ import Link from "next/link";
 import { buttonProps } from "@/components/ui/button-content";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Page } from "@/components/ui/page";
-import { homeLink, visibleSections } from "./navigation";
+import { NO_OPTIONAL_AREAS, homeLink, visibleSections } from "./navigation";
 import { ShellHeader } from "./shell-header";
 import styles from "./system-page.module.css";
 
@@ -43,7 +43,7 @@ export function SystemPage({ icon, title, children, actions }: SystemPageProps) 
  */
 export function NotFoundPage({ noun, listHref, listLabel, sentenceNoun, demo = true }: { noun: string; listHref: string; listLabel: string; sentenceNoun?: string; demo?: boolean }) {
   if (!demo) {
-    const home = homeLink(visibleSections(demo));
+    const home = homeLink(visibleSections(NO_OPTIONAL_AREAS));
     return <NotFoundPage noun="Page" listHref={home.href} listLabel={home.label} />;
   }
   return (

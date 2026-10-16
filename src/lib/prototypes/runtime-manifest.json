@@ -1,0 +1,43 @@
+{
+  "hash": "2908db5162ec",
+  "base": "/prototype-runtime/2908db5162ec/",
+  "importMap": {
+    "imports": {
+      "react": "/prototype-runtime/2908db5162ec/react.js",
+      "react/jsx-runtime": "/prototype-runtime/2908db5162ec/react-jsx-runtime.js",
+      "@salt-ds/core": "/prototype-runtime/2908db5162ec/salt-core.js",
+      "@salt-ds/lab": "/prototype-runtime/2908db5162ec/salt-lab.js",
+      "@salt-ds/icons": "/prototype-runtime/2908db5162ec/salt-icons.js",
+      "@salt-ds/countries": "/prototype-runtime/2908db5162ec/salt-countries.js",
+      "@salt-ds/date-components": "/prototype-runtime/2908db5162ec/salt-date-components.js",
+      "ag-grid-react": "/prototype-runtime/2908db5162ec/ag-grid-react.js",
+      "ag-grid-community": "/prototype-runtime/2908db5162ec/ag-grid-community.js",
+      "@deweb/portal": "/prototype-runtime/2908db5162ec/deweb-portal.js"
+    }
+  },
+  "host": "/prototype-runtime/2908db5162ec/host.js",
+  "styles": [
+    "/prototype-runtime/2908db5162ec/runtime.css",
+    "/prototype-runtime/2908db5162ec/host.css"
+  ],
+  "packages": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "@salt-ds/core": "1.73.0",
+    "@salt-ds/lab": "1.0.0-alpha.106",
+    "@salt-ds/icons": "1.18.4",
+    "@salt-ds/countries": "1.5.4",
+    "@salt-ds/date-components": "1.1.2",
+    "@salt-ds/date-adapters": "1.0.2",
+    "@salt-ds/styles": "0.4.2",
+    "@salt-ds/theme": "1.48.0",
+    "@salt-ds/ag-grid-theme": "2.10.2",
+    "ag-grid-react": "36.2.0",
+    "ag-grid-community": "36.2.0",
+    "date-fns": "4.4.0",
+    "axe-core": "4.13.0",
+    "html-to-image": "1.11.13",
+    "@fontsource/open-sans": "5.3.0",
+    "@fontsource/pt-mono": "5.3.0"
+  }
+}

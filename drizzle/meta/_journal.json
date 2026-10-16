@@ -197,6 +197,34 @@
       "when": 1791155125736,
       "tag": "0027_onboarding_format_version_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1792157171075,
+      "tag": "0028_template_targets",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1792168086264,
+      "tag": "0029_stored_file_sets",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1792172392328,
+      "tag": "0030_evaluation_releases",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1792176621474,
+      "tag": "0031_portal_identity",
+      "breakpoints": true
     }
   ]
 }

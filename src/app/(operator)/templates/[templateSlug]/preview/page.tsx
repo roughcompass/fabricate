@@ -12,10 +12,13 @@ import { ToggleGroup } from "@/components/ui/toggle-group";
 import { referenceId, startRoute, templateBySlug } from "@/lib/demo/catalog";
 import { referenceUrl } from "@/lib/demo/deployments";
 import { requireDemo } from "@/lib/demo/guard";
+import { acceptedTemplate } from "@/lib/demo/gallery-templates";
+import { parseFramePreview } from "@/lib/prototypes/preview-state";
+import { PrototypeTemplatePreview } from "./prototype-template-preview";
 import { DEVICES, DEVICE_IDS, ORIENTATION_LABELS, type PreviewState, frameSize, parsePreviewState, previewHref, scaffoldCommand, sizeLabel } from "@/lib/demo/preview";
-import { type TemplateFile, templateFiles } from "@/lib/demo/template-files";
+import { type TemplateFile, isIllustrative, templateFiles } from "@/lib/demo/template-files";
 import { DeviceFrame, FullScreenLink } from "./device-frame";
-import { LandscapeToggle } from "./landscape-toggle";
+import { LandscapeToggle } from "@/components/ui/landscape-toggle";
 import styles from "./preview.module.css";
 
 type Params = Record<string, string | string[] | undefined>;
@@ -23,8 +26,9 @@ type Params = Record<string, string | string[] | undefined>;
 const DEVICE_ICONS = { mobile: "smartphone", tablet: "tablet", desktop: "monitor" } as const;
 
 export async function generateMetadata({ params }: { params: Promise<{ templateSlug: string }> }): Promise<Metadata> {
-  const template = templateBySlug((await params).templateSlug);
-  return { title: template ? `Preview ${template.title}` : "Template not found" };
+  const { templateSlug } = await params;
+  const title = templateBySlug(templateSlug)?.title ?? (await acceptedTemplate(templateSlug))?.latest.title;
+  return { title: title ? `Preview ${title}` : "Template not found" };
 }
 
 /** The query a choice keeps from the rest of the state. */
@@ -102,8 +106,13 @@ function FileTree({ files, selected, hrefFor }: { files: readonly TemplateFile[]
  */
 export default async function PreviewPage({ params, searchParams }: { params: Promise<{ templateSlug: string }>; searchParams: Promise<Params> }) {
   requireDemo();
-  const template = templateBySlug((await params).templateSlug);
-  if (!template) notFound();
+  const { templateSlug } = await params;
+  const template = templateBySlug(templateSlug);
+  if (!template) {
+    const accepted = await acceptedTemplate(templateSlug);
+    if (!accepted) notFound();
+    return <PrototypeTemplatePreview template={accepted} state={parseFramePreview(await searchParams)} />;
+  }
   const state = parsePreviewState(await searchParams);
   const files = templateFiles(template);
   const file = files.find((entry) => entry.path === state.file) ?? files[0]!;
@@ -138,7 +147,15 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
         </Tabs>
         {state.view === "preview" && (
           <div className={styles.previewControls}>
-            <ToggleGroup action={action} label="Device" name="device" selected={state.device} keep={keepFrom(state, "device")} iconOnly options={DEVICE_IDS.map((id) => ({ value: id, label: DEVICES[id].label, icon: DEVICE_ICONS[id] }))} />
+            <ToggleGroup
+              action={action}
+              label="Device"
+              name="device"
+              selected={state.device}
+              keep={keepFrom(state, "device")}
+              iconOnly
+              options={DEVICE_IDS.map((id) => ({ value: id, label: DEVICES[id].label, icon: DEVICE_ICONS[id] }))}
+            />
             <LandscapeToggle action={action} orientation={state.orientation} keep={keepFrom(state, "orientation")} />
             <FullScreenLink href={`${reference}/${route.path}`} prefix={reference} />
           </div>
@@ -156,12 +173,19 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
           address={referenceUrl(template.slug)}
         />
       ) : (
-        <div className={styles.code}>
-          <FileTree files={files} selected={file.path} hrefFor={(path) => previewHref(template.slug, { ...state, view: "code", file: path })} />
-          <div className={styles.source}>
-            <CodeBlock code={file.content.replace(/\n$/, "")} firstLine={1} label={file.path} />
+        <>
+          {isIllustrative(template) && (
+            <p className={styles.illustrative} data-illustrative="">
+              These files are illustrative: generated from the catalog to show the template&apos;s shape, not real Salt.
+            </p>
+          )}
+          <div className={styles.code}>
+            <FileTree files={files} selected={file.path} hrefFor={(path) => previewHref(template.slug, { ...state, view: "code", file: path })} />
+            <div className={styles.source}>
+              <CodeBlock code={file.content.replace(/\n$/, "")} firstLine={1} label={file.path} />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </Page>
   );

@@ -6,10 +6,12 @@ import { ensureWorkspace } from "../src/lib/demo/workspaces";
 import { findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { profilesOf } from "../src/lib/profiles/profile-records";
 import { buildSource } from "../test/support/builders";
+import { onboardPortal } from "../test/support/onboarding";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate, seedResults } from "./support/results";
 import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
 import { paths } from "./support/paths";
+import { waitForHydration } from "./support/shell";
 
 // operator-interface/page-patterns spec: the application shell and the
 // sidebar navigation that drills into each section. The narrow-viewport
@@ -46,6 +48,10 @@ test.describe("on a wide viewport", () => {
     await expect(page).toHaveTitle("Assessments · DE FabLab");
     await expect(page.getByRole("link", { name: "Skip to content" })).toBeAttached();
     await expect(page.getByRole("link", { name: "DE FabLab home" })).toHaveAttribute("href", paths.home);
+    // Shell on a wide viewport: the product mark and, in place of the product name, the Portal switcher.
+    const brandRow = page.locator("#sidebar").getByRole("link", { name: "DE FabLab home" }).locator("xpath=..");
+    await expect(brandRow.getByRole("button", { name: "Switch Portal, current: All Portals" })).toBeVisible();
+    await expect(brandRow).not.toContainText("DE FabLab");
     await expect(page.getByRole("button", { name: "Dark theme" })).toBeVisible();
     await expectSubmenu(page, "Assessments", ASSESSMENTS_ITEMS, "All Assessments");
     // The section menu is not shown while a section's sub-menu is.
@@ -118,7 +124,7 @@ test.describe("on a wide viewport", () => {
   test("Home in the section menu: Home leads the menu, marked current, with no sub-menu indicator", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
-    await expect(nav.locator("#sidebar-sections > li > a")).toHaveText(["Home", "Assessments", "Web Onboarding", "Applications", "Salt Patterns"]);
+    await expect(nav.locator("#sidebar-sections > li > a")).toHaveText(["Home", "Assessments", "Web Onboarding", "Applications", "Salt Patterns", "Prototypes"]);
     await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(nav.getByRole("link", { name: "Home", exact: true }).locator("svg")).toHaveCount(1);
     await expect(nav.getByRole("link", { name: "Show all sections" })).toHaveCount(0);
@@ -484,6 +490,21 @@ test.describe("on a narrow viewport", () => {
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
     await expect(openNavigation(page)).toBeFocused();
+  });
+
+  test("Switcher in the drawer: the top row holds the product mark and the Portal switcher, and choosing a Portal closes the drawer", async ({ page, db }) => {
+    onboardPortal(db, "Markets");
+    await page.goto("/onboarding/portals");
+    await waitForHydration(page);
+    await openNavigation(page).click();
+    const drawer = page.locator("#sidebar");
+    await expect(drawer.getByRole("link", { name: "DE FabLab home" })).toBeVisible();
+    await drawer.getByRole("button", { name: "Switch Portal, current: All Portals" }).click();
+    await drawer.locator("[popover]").getByRole("button", { name: /^Markets/ }).click();
+    await expect(drawer).toBeHidden();
+    await openNavigation(page).click();
+    await expect(drawer.getByRole("button", { name: "Switch Portal, current: Markets" })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
   });
 
   test("choosing an item closes the drawer and opens the page", async ({ page, db: _db }) => {

@@ -13,6 +13,8 @@ import { retireReferencesOf } from "./external/references";
 import { type PortalDraft, canonicalDocument, draftOfDocument, emptyPortalDraft, portalDraftSchema } from "./formats";
 import { BlockedError, IssueList, type ValidationIssue } from "./issues";
 import { activeRoutes, currentDefault } from "./placements";
+import { SLUG, SLUG_MAX, deriveSlug } from "./slug";
+import { PORTAL_PLATFORMS } from "./vocabulary";
 import { type Revision, type SubmitResult, draftOf, latestSubmitted, revisionById, saveDraft, startDraft, submitDraft } from "./revisions";
 
 /*
@@ -54,35 +56,58 @@ export function getPortal(db: Executor, publicId: string): Portal {
 
 export interface PortalInput {
   name: string;
+  sealId: string;
+  /** One of PORTAL_PLATFORMS; anything else is refused. */
+  platform: string;
+  description: string;
+  /** Derived from the name when blank. */
+  slug?: string | null;
   ownerTeam?: string | null;
-  sealId?: string | null;
 }
 
+export const MAX_PORTAL_DESCRIPTION = 500;
+
 /**
- * Starts onboarding a Portal: a new one, or a Portal first named in an
- * ownership claim that no one has onboarded, which keeps its identity and
- * its claims. A Portal name is one Portal; another onboarded Portal can't
- * take it.
+ * Starts onboarding a Portal (portal-creation spec): a new one, or a Portal
+ * first named in an ownership claim that no one has onboarded, which keeps
+ * its identity and its claims and takes the submitted platform, slug, and
+ * description. A Portal name is one Portal, and so is a slug; another
+ * Portal can't take either. A SEAL ID, platform, and description are
+ * required; a blank slug is derived from the name.
  */
 export function createPortal(db: Executor, input: PortalInput, actor: Actor): { portal: Portal; draft: Revision; adopted: boolean } {
   return immediate(db, (tx) => {
     const issues: { field: string; message: string }[] = [];
+    const platform = PORTAL_PLATFORMS.find((candidate) => candidate === input.platform?.trim());
+    if (!platform) issues.push({ field: "platform", message: "Choose the Portal's platform" });
+    const sealId = input.sealId?.trim() || null;
+    if (!sealId) issues.push({ field: "sealId", message: "Enter the Portal's SEAL ID" });
+    else if (!SEAL_ID.test(sealId)) issues.push({ field: "sealId", message: "Enter a SEAL ID of letters, digits, dots, dashes, or underscores" });
     const name = input.name.trim().replace(/\s+/g, " ");
     if (!name) issues.push({ field: "name", message: "Enter the Portal's name" });
     else if (name.length > 100) issues.push({ field: "name", message: "Use 100 characters or fewer" });
-    const sealId = input.sealId?.trim() || null;
-    if (sealId && !SEAL_ID.test(sealId)) issues.push({ field: "sealId", message: "Enter a SEAL ID of letters, digits, dots, dashes, or underscores" });
+    const description = input.description?.trim() || null;
+    if (!description) issues.push({ field: "description", message: "Enter a description of the Portal" });
+    else if (description.length > MAX_PORTAL_DESCRIPTION) issues.push({ field: "description", message: `Use ${MAX_PORTAL_DESCRIPTION} characters or fewer` });
     const ownerTeam = input.ownerTeam?.trim().replace(/\s+/g, " ") || null;
     if (ownerTeam && ownerTeam.length > 200) issues.push({ field: "ownerTeam", message: "Use 200 characters or fewer" });
     const existing = name ? tx.select().from(portals).where(eq(portals.labelKey, labelKey(name))).get() : undefined;
     if (existing && (existing.activeRevisionId !== null || existing.draftRevisionId !== null || tx.select().from(portalRevisions).where(eq(portalRevisions.portalId, existing.id)).get())) {
       issues.push({ field: "name", message: `A Portal named ${existing.label} is already onboarded` });
     }
+    const slug = input.slug?.trim() || deriveSlug(name);
+    if (slug.length > SLUG_MAX && /^[a-z]+$/.test(slug)) issues.push({ field: "slug", message: `Use ${SLUG_MAX} letters or fewer` });
+    else if (!SLUG.test(slug)) issues.push({ field: "slug", message: "Enter a slug of lowercase letters" });
+    else {
+      const holder = tx.select({ id: portals.id, label: portals.label }).from(portals).where(eq(portals.slug, slug)).get();
+      if (holder && holder.id !== existing?.id) issues.push({ field: "slug", message: `The slug ${slug} belongs to ${holder.label}` });
+    }
     if (issues.length) throw new ValidationError(issues);
 
+    const identity = { sealId, ownerTeam, platform: platform!, slug, description };
     const portal = existing
-      ? tx.update(portals).set({ sealId, ownerTeam }).where(eq(portals.id, existing.id)).returning().get()
-      : tx.insert(portals).values({ publicId: generatePublicId("ptl"), label: name, labelKey: labelKey(name), sealId, ownerTeam, createdAt: new Date() }).returning().get();
+      ? tx.update(portals).set(identity).where(eq(portals.id, existing.id)).returning().get()
+      : tx.insert(portals).values({ publicId: generatePublicId("ptl"), label: name, labelKey: labelKey(name), ...identity, createdAt: new Date() }).returning().get();
     recordEvent(tx, "portal", portal.id, { event: "created", actor, to: portal.lifecycle, reason: existing ? "Onboarding a Portal first named in an ownership claim" : null });
     const draft = startDraft(tx, "portal", portal.id, actor, emptyPortalDraft({ ownerTeam, sealId }) as unknown as JsonObject);
     return { portal: findPortal(tx, portal.publicId)!, draft, adopted: existing !== undefined };

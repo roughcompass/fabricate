@@ -5,7 +5,7 @@ const root = path.dirname(new URL(import.meta.url).pathname);
 
 export default defineConfig({
   resolve: {
-    alias: { "@": path.join(root, "src") },
+    alias: { "@deweb/portal": path.join(root, "src/demo/runtime/portal"), "@": path.join(root, "src") },
   },
   test: {
     environment: "node",

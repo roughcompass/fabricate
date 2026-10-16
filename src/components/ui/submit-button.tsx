@@ -15,6 +15,8 @@ interface SubmitButtonProps {
   "aria-label"?: string;
   /** Announced while the form is pending. */
   pendingLabel?: string;
+  /** The id of the text that says why the button is unavailable. */
+  describedBy?: string;
   disabled?: boolean;
   name?: string;
   value?: string;
@@ -26,7 +28,7 @@ interface SubmitButtonProps {
  * its form is pending. The label stays in place, transparent, so the button
  * keeps its width.
  */
-export function SubmitButton({ children, variant = "primary", size = "md", icon, label, "aria-label": ariaLabel, pendingLabel, disabled, name, value, autoFocus }: SubmitButtonProps) {
+export function SubmitButton({ children, variant = "primary", size = "md", icon, label, "aria-label": ariaLabel, pendingLabel, disabled, describedBy, name, value, autoFocus }: SubmitButtonProps) {
   const { pending } = useFormStatus();
   const iconOnly = !children;
   return (
@@ -36,6 +38,7 @@ export function SubmitButton({ children, variant = "primary", size = "md", icon,
       value={value}
       {...buttonProps(variant, size, iconOnly)}
       disabled={pending || disabled}
+      aria-describedby={describedBy}
       aria-busy={pending || undefined}
       data-pending={pending || undefined}
       aria-label={ariaLabel ?? (iconOnly ? label : undefined)}

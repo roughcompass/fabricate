@@ -15,7 +15,7 @@ import { type Assessment, assessmentNumber, listAssessments } from "@/lib/assess
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { CONCLUSION_FILTERS, type ConclusionFilter, type LatestConclusion, conclusionCounts, isConclusionFilter, latestConclusions } from "@/lib/evaluations/conclusions";
-import { listInitiatives, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
+import { listInitiatives, saltPatternsInitiative, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
 import { releaseLabel } from "@/lib/standards/standard-records";
 import { assessmentsHref } from "@/lib/web/list-filters";
 import { initiativeListOutcome } from "./outcomes";
@@ -46,6 +46,12 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
     const latest = listAssessments(db, initiative.id)[0];
     return { initiative, repository: selectedSources(db, initiative.id)[0], latest: latest && { assessment: latest, number: assessmentNumber(db, latest) } };
   });
+  // Salt Patterns: DE FabLab's own Assessment of template versions, kept apart like claims.
+  const owned = conclusion ? null : (() => {
+    const initiative = saltPatternsInitiative(db);
+    const latest = listAssessments(db, initiative.id)[0];
+    return { initiative, releases: selectedReleases(db, initiative.id).map(({ release, standard }) => releaseLabel(standard, release)), latest: latest && { assessment: latest, number: assessmentNumber(db, latest) } };
+  })();
   const create = (
     <ButtonLink href="/assessments/new" variant="primary" icon="plus">
       New Assessment
@@ -115,6 +121,36 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
           </EmptyState>
         )}
       </Panel>
+
+      {owned && (
+        <Section title="Owned by DE FabLab" description="Holds template versions to the Releases selected on it when they're accepted or re-checked.">
+          <Panel flush>
+            <Table
+              label="Assessments owned by DE FabLab"
+              head={
+                <>
+                  <Th>Assessment</Th>
+                  <Th>Standard Releases</Th>
+                  <Th>Latest Run</Th>
+                </>
+              }
+            >
+              <tr>
+                <Td label="Assessment">
+                  <Primary>
+                    <Link href={`/assessments/${owned.initiative.publicId}`}>{owned.initiative.name}</Link>
+                  </Primary>
+                  <Secondary>Template versions</Secondary>
+                </Td>
+                <Td label="Standard Releases">{owned.releases.length ? <TagList values={owned.releases} /> : <Secondary>None selected</Secondary>}</Td>
+                <Td label="Latest Run">
+                  <LatestRun latest={owned.latest} />
+                </Td>
+              </tr>
+            </Table>
+          </Panel>
+        </Section>
+      )}
 
       {claims.length > 0 && (
         <Section title="Created for claims" description="Claiming a Repository creates an Assessment of it alone, reused for later claims.">

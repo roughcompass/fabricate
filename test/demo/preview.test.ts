@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { TEMPLATES, templateBySlug } from "@/lib/demo/catalog";
 import { DEVICES, frameSize, parsePreviewState, previewHref, scaffoldCommand, sizeLabel } from "@/lib/demo/preview";
-import { templateFiles } from "@/lib/demo/template-files";
+import { isIllustrative, templateFiles } from "@/lib/demo/template-files";
+import { GENERATED_SOURCES } from "@/demo/runtime/generated/sources";
 
 describe("preview mode state", () => {
   it("starts on the Preview tab with the Desktop device in landscape", () => {
@@ -45,16 +46,23 @@ describe("preview mode state", () => {
 });
 
 describe("template files", () => {
-  it("lists package.json first, then microfrontends.json, the README, and one source file per child microfrontend", () => {
+  it("lists an illustrative template's package.json first, then microfrontends.json, the README, and one source file per child microfrontend", () => {
+    const template = templateBySlug("payment-status-tracker")!;
+    expect(isIllustrative(template)).toBe(true);
+    expect(templateFiles(template).map((file) => file.path)).toEqual(["package.json", "microfrontends.json", "README.md", ...template.app.members.filter((member) => member.role === "child").map((member) => `apps/${member.id}/src/index.tsx`)]);
+  });
+
+  it("shows a hero's real Salt source: its data and each microfrontend at its default version, with the Salt packages it imports (Real source for a hero)", () => {
     const template = templateBySlug("payments-workspace")!;
-    expect(templateFiles(template).map((file) => file.path)).toEqual([
-      "package.json",
-      "microfrontends.json",
-      "README.md",
-      "apps/payee-list/src/index.tsx",
-      "apps/transfer-form/src/index.tsx",
-      "apps/payment-activity/src/index.tsx",
-    ]);
+    const files = templateFiles(template);
+    expect(isIllustrative(template)).toBe(false);
+    expect(files.map((file) => file.path)).toEqual(["package.json", "microfrontends.json", "README.md", "src/data.ts", "src/payee-list.tsx", "src/transfer-form.tsx", "src/payment-activity.tsx"]);
+    const payeeList = files.find((file) => file.path === "src/payee-list.tsx")!.content;
+    expect(payeeList).toBe(GENERATED_SOURCES["payments-workspace"]!.members["payee-list"]!["1.4.2"]);
+    expect(payeeList).toContain('from "@salt-ds/core"');
+    const dependencies = JSON.parse(files[0]!.content).dependencies as Record<string, string>;
+    expect(dependencies["@salt-ds/core"]).toBe("1.73.0");
+    expect(dependencies["@deweb/portal"]).toBeDefined();
   });
 
   it("is the same on every visit", () => {

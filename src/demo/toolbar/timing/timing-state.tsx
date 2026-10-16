@@ -40,7 +40,7 @@ function truncate(text: string, length: number): string {
 export function describeTarget(target: Element): string {
   const control = target.closest("button, a, input, select, textarea, [role='button'], [role='link'], [data-demo-anchor]") ?? target;
   const tag = control.tagName.toLowerCase();
-  const name = (control.getAttribute("aria-label") || (control as HTMLElement).innerText || control.getAttribute("placeholder") || "").replace(/\s+/g, " ").trim();
+  const name = (control.getAttribute("aria-label") || control.textContent || control.getAttribute("placeholder") || "").replace(/\s+/g, " ").trim();
   return name ? `${tag} "${truncate(name, 40)}"` : tag;
 }
 

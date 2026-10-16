@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { homeLink, visibleSections } from "@/components/shell/navigation";
+import { NO_OPTIONAL_AREAS, homeLink, visibleSections } from "@/components/shell/navigation";
 import { SystemPage } from "@/components/shell/system-page";
 import { buttonProps } from "@/components/ui/button-content";
 
@@ -13,7 +13,7 @@ import { buttonProps } from "@/components/ui/button-content";
  * is all that decides where Home's links lead.
  */
 export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
-  const home = homeLink(visibleSections(false));
+  const home = homeLink(visibleSections(NO_OPTIONAL_AREAS));
   return (
     <SystemPage
       icon="alert"

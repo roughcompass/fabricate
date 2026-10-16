@@ -1,0 +1,17 @@
+@layer components {
+  /* The Create Portal form fills its dialog or page surface; SplitPanes lays out the panes. */
+  .form { display: block; min-width: 0; }
+
+  .header { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); text-align: center; }
+  .platform { min-height: var(--size-icon-lg); }
+  .title { font-size: var(--font-size-heading); line-height: var(--line-height-heading); overflow-wrap: anywhere; }
+  .lede { max-width: var(--size-dialog); color: var(--color-text-secondary); }
+
+  .nameAndSlug { display: flex; flex-direction: column; gap: var(--space-2); }
+  .slug { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-height: var(--size-control-sm); color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
+  .slugLabel { font-weight: var(--font-weight-medium); }
+  .slugEmpty { font-style: italic; }
+
+  /* The dialog's close control sits in its top corner, above both panes. */
+  .close { position: absolute; top: var(--space-3); right: var(--space-3); z-index: var(--z-raised); }
+}

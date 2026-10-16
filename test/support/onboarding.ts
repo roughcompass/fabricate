@@ -8,7 +8,7 @@ import { type ReadResult, recordRead } from "@/lib/onboarding/external/evidence"
 import { type ReferenceSubject, declareReference, referenceOf } from "@/lib/onboarding/external/references";
 import { BlockedError } from "@/lib/onboarding/issues";
 import { type Microfrontend, createMicrofrontend, getMicrofrontend, microfrontendDraftSchema, refreshMicrofrontendReadiness, saveMicrofrontendDraft, submitMicrofrontend } from "@/lib/onboarding/microfrontends";
-import { type Portal, type PortalDraft, activatePortal, createPortal, getPortal, portalDraftSchema, savePortalDraft, submitPortal } from "@/lib/onboarding/portals";
+import { type Portal, type PortalDraft, type PortalInput, activatePortal, createPortal, getPortal, portalDraftSchema, savePortalDraft, submitPortal } from "@/lib/onboarding/portals";
 import { type AcceptedValues, decidePlacement, placementReview } from "@/lib/onboarding/reviews";
 import type { SubmitResult } from "@/lib/onboarding/revisions";
 import type { PlacementDecisionKind } from "@/lib/db/schema";
@@ -35,6 +35,11 @@ function submitted(result: SubmitResult, what: string): SubmitResult & { submitt
   return result;
 }
 
+/** What creating the Portal +name+ submits: a Web Portal with SEAL ID 88001, a description, and the slug its name derives. */
+export function portalInput(name: string, overrides: Partial<PortalInput> = {}): PortalInput {
+  return { name, sealId: "88001", platform: "web", description: `The ${name} Portal`, ...overrides };
+}
+
 /** A Portal Draft enabling UAT and PROD from the fallback catalog, with one menu group. */
 export function portalDraft(overrides: Partial<PortalDraft> = {}): PortalDraft {
   return portalDraftSchema.parse({
@@ -48,7 +53,7 @@ export function portalDraft(overrides: Partial<PortalDraft> = {}): PortalDraft {
 
 /** A Portal onboarded and submitted, so it's Ready. */
 export function onboardPortal(db: Db, name: string, overrides: Partial<PortalDraft> = {}, actor = ana): Portal {
-  const { portal, draft } = createPortal(db, { name, ownerTeam: overrides.ownerTeam ?? "Access Platform", sealId: overrides.sealId ?? "88001" }, actor);
+  const { portal, draft } = createPortal(db, portalInput(name, { ownerTeam: overrides.ownerTeam ?? "Access Platform", sealId: overrides.sealId ?? "88001" }), actor);
   const saved = savePortalDraft(db, portal.publicId, { lockVersion: draft.lockVersion, document: portalDraft(overrides) });
   submitted(submitPortal(db, portal.publicId, { lockVersion: saved.lockVersion, actor }), `Portal ${name}`);
   return getPortal(db, portal.publicId);

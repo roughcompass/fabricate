@@ -7,7 +7,7 @@ import { CURRENT_VERSION } from "@/lib/documents/schemas";
 import { getInitiative } from "@/lib/initiatives/initiative-records";
 import { enqueue } from "@/lib/jobs/queue";
 import { type Assessment, type AssessmentTarget, LAUNCH_TOKEN, createAssessment, findAssessmentByLaunchToken } from "./assessment-records";
-import { resolveScope } from "./scope-resolver";
+import { ScopeResolutionError, resolveScope } from "./scope-resolver";
 
 /**
  * Starts an Assessment for an Initiative.
@@ -37,6 +37,8 @@ export function launchAssessment(db: Executor, initiativePublicId: string, launc
       const initiative = getInitiative(tx, initiativePublicId);
       const previous = findAssessmentByLaunchToken(tx, initiative.id, token);
       if (previous) return { assessment: previous, targets: [], duplicate: true };
+      // Its targets are template versions, which DE FabLab adds when one is accepted or re-checked.
+      if (initiative.systemOwned) throw new ScopeResolutionError([{ sourcePublicId: null, sourceName: null, message: "Salt Patterns Runs start when a template version is accepted or re-checked." }]);
 
       // A system-owned initiative assesses its claimed repository's default branch, whatever reference the catalog sets.
       const resolved = resolveScope(tx, initiative);

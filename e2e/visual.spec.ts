@@ -151,6 +151,78 @@ test("captures every template demo surface at desktop and mobile width, in both 
 });
 
 /**
+ * Captures every Prototypes surface, on a workspace seeded with the
+ * committed examples: the list, the composer, personas, lessons, the page
+ * shell, a prototype's tabs, the variants it was kept from, compare, accept,
+ * and a share link. Frames are captured once they report ready.
+ */
+test("captures every Prototypes surface at desktop and mobile width, in both themes", async ({ page, context, db: _db, baseURL }) => {
+  const output = path.join(OUTPUT, "prototypes");
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  await page.request.post("/api/test/prototypes/settings", { data: { examples: true } });
+  await page.goto("/prototypes");
+  const href = async (row: import("@playwright/test").Locator) => (await row.getByRole("link").first().getAttribute("href"))!;
+  const rows = page.locator("[data-prototype]");
+  const page3 = await href(rows.filter({ hasText: "v3" }).filter({ hasNotText: "(fork)" }).first());
+  const component = await href(rows.filter({ hasText: "Component" }).first());
+  await page.goto(page3);
+  const variants = (await page.getByRole("link", { name: "See the variants it was kept from" }).getAttribute("href"))!;
+  await page.goto(variants);
+  const single = (await page.getByRole("link", { name: "View on its own" }).first().getAttribute("href"))!;
+  await page.goto(page3);
+  await page.getByText("Share or download").click();
+  await page.getByRole("button", { name: /^Share v\d+$/ }).click();
+  const shared = new URL((await page.locator("[data-share-link] code").textContent())!).pathname;
+  await page.goto("/prototypes/personas");
+  const persona = (await page.locator("tbody tr").first().getByRole("link").first().getAttribute("href"))!;
+
+  const surfaces: [string, string][] = [
+    ["20-prototypes", "/prototypes"],
+    ["21-new-prototype", "/prototypes/new"],
+    ["22-personas", "/prototypes/personas"],
+    ["22-persona", persona],
+    ["23-lessons", "/prototypes/lessons"],
+    ["23-lessons-progress", "/prototypes/lessons?view=progress"],
+    ["23-lessons-check", "/prototypes/lessons?view=check"],
+    ["24-page-shell", "/prototypes/shell"],
+    ["25-prototype-preview", page3],
+    ["25-prototype-checks", `${page3}?tab=checks`],
+    ["25-prototype-code", `${page3}?tab=code`],
+    ["25-prototype-feedback", `${page3}?tab=feedback`],
+    ["25-prototype-provenance", `${page3}?tab=provenance`],
+    ["25-component", component],
+    ["26-variants", variants],
+    ["26-variant", single],
+    ["26-variant-landscape", `${single}?device=mobile&orientation=landscape`],
+    ["26-variant-code", `${single}?tab=code`],
+    ["27-compare", `${page3}/compare?a=1&b=3`],
+    ["28-accept", `${page3}/accept`],
+    ["29-share", shared],
+  ];
+  for (const theme of THEMES) {
+    await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      for (const [name, url] of surfaces) {
+        await page.goto(url);
+        await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+        const frames = page.locator("iframe[data-prototype-frame]:not([aria-hidden])");
+        for (let index = 0; index < (await frames.count()); index++) await expect(frames.nth(index)).toHaveAttribute("data-ready", "", { timeout: 30_000 });
+        await page.waitForLoadState("networkidle");
+        await expectNoHorizontalOverflow(page);
+        await expectNoOverlappingContent(page);
+        await expectNoNestedBorders(page);
+        await page.screenshot({ path: path.join(output, `${name}-${viewport.name}-${theme}.jpg`), fullPage: true, type: "jpeg", quality: 75 });
+      }
+    }
+  }
+  expect(fs.readdirSync(output)).toHaveLength(surfaces.length * VIEWPORTS.length * THEMES.length);
+});
+
+/**
  * Captures each hero application with each toolbar tool open, in both
  * application themes, with the toolbar in the matching operator theme.
  */

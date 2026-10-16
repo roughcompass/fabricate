@@ -8,9 +8,14 @@ import { FilterRail } from "@/components/ui/filter-rail";
 import { MediaCard } from "@/components/ui/media-card";
 import { Page, PageHeader } from "@/components/ui/page";
 import { SearchField } from "@/components/ui/search-field";
-import { BRANDS, BRAND_IDS, PROVIDERS, PROVIDER_IDS, TEMPLATES } from "@/lib/demo/catalog";
-import { EMPTY_QUERY, filterTemplates, galleryHref, isFiltered, optionCounts, parseGalleryQuery } from "@/lib/demo/gallery";
+import { BRANDS, BRAND_IDS, ORIGIN_IDS, PROVIDERS, PROVIDER_IDS } from "@/lib/demo/catalog";
+import { EMPTY_QUERY, ORIGINS, filterTemplates, galleryHref, isFiltered, optionCounts, parseGalleryQuery } from "@/lib/demo/gallery";
+import { galleryTemplates } from "@/lib/demo/gallery-templates";
 import { requireDemo } from "@/lib/demo/guard";
+import { INTENT_LENGTH } from "@/lib/prototypes/limits";
+import { prototypesEnabled } from "@/lib/prototypes/guard";
+import { RUNTIME } from "@/lib/prototypes/render";
+import { upgradeReportFor } from "@/lib/prototypes/upgrade-report";
 import { TemplateBadges } from "./template-badges";
 import styles from "./templates.module.css";
 
@@ -20,10 +25,18 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
   requireDemo();
   const params = await searchParams;
   const query = parseGalleryQuery(params);
-  const templates = filterTemplates(query);
-  const counts = optionCounts(query);
+  const all = await galleryTemplates();
+  const templates = filterTemplates(query, all);
+  const counts = optionCounts(query, all);
+  // The Origin group appears only while a template accepted from a prototype is in the gallery.
+  const withOrigin = all.some((template) => template.origin === "prototypes");
   const filtered = isFiltered(query);
   const clearHref = galleryHref(EMPTY_QUERY);
+  // One way in (converge-templates-and-prototypes, design decision 9): a searched description can become an intent for New prototype.
+  // After a Salt upgrade, once every re-check for the current runtime build is done, its report can be downloaded.
+  const report = withOrigin && prototypesEnabled() ? await upgradeReportFor(RUNTIME.hash) : null;
+  const reportHref = report && !("pending" in report) ? `/api/prototypes/templates/upgrade-report?${new URLSearchParams({ runtime: RUNTIME.hash })}` : null;
+  const generateHref = query.search && prototypesEnabled() ? `/prototypes/new?${new URLSearchParams({ intent: query.search.slice(0, INTENT_LENGTH.max) })}` : null;
 
   return (
     <Page>
@@ -35,6 +48,9 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
         ))}
         {query.providers.map((provider) => (
           <input key={provider} type="hidden" name="provider" value={provider} />
+        ))}
+        {query.origins.map((origin) => (
+          <input key={origin} type="hidden" name="origin" value={origin} />
         ))}
         <SearchField
           id="template-search"
@@ -56,10 +72,11 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
           groups={[
             { name: "brand", legend: "Brand", options: BRAND_IDS.map((id) => ({ value: id, label: BRANDS[id].label, count: counts.brand[id] })) },
             { name: "provider", legend: "Provider", options: PROVIDER_IDS.map((id) => ({ value: id, label: PROVIDERS[id].label, count: counts.provider[id] })) },
+            ...(withOrigin ? [{ name: "origin", legend: "Origin", options: ORIGIN_IDS.map((id) => ({ value: id, label: ORIGINS[id].label, count: counts.origin[id] })) }] : []),
           ]}
-          selected={{ brand: query.brands, provider: query.providers }}
+          selected={{ brand: query.brands, provider: query.providers, origin: query.origins }}
           keep={query.search ? { q: query.search } : {}}
-          activeCount={query.brands.length + query.providers.length}
+          activeCount={query.brands.length + query.providers.length + query.origins.length}
           filtered={filtered}
           clearHref={clearHref}
         />
@@ -68,7 +85,21 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
           <h2 id="templates-results" className="visually-hidden">
             Salt Patterns
           </h2>
-          <p className={styles.count} role="status">{`Showing ${templates.length} of ${countLabel(TEMPLATES.length, "template")}`}</p>
+          <p className={styles.count} role="status">{`Showing ${templates.length} of ${countLabel(all.length, "template")}`}</p>
+          {reportHref && report && !("pending" in report) && (
+            <p className={styles.count} data-upgrade-report="">
+              {`Upgrade report for Salt ${report.saltRelease}: `}
+              <a href={`${reportHref}&format=md`}>Markdown</a> · <a href={reportHref}>JSON</a>
+            </p>
+          )}
+          {generateHref && templates.length > 0 && (
+            <div className={styles.generate} data-generate-prototypes="">
+              <p className={styles.count}>{`None of these? Generate Salt prototypes for “${query.search}”.`}</p>
+              <ButtonLink href={generateHref} icon="sparkle" size="sm">
+                Generate prototypes
+              </ButtonLink>
+            </div>
+          )}
 
           {templates.length > 0 ? (
             <ul className={styles.grid}>
@@ -90,9 +121,16 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
                 title="No templates match"
                 icon="search"
                 action={
-                  <ButtonLink href={clearHref} variant="primary">
-                    Clear filters
-                  </ButtonLink>
+                  <>
+                    <ButtonLink href={clearHref} variant={generateHref ? "secondary" : "primary"}>
+                      Clear filters
+                    </ButtonLink>
+                    {generateHref && (
+                      <ButtonLink href={generateHref} variant="primary" icon="sparkle">
+                        Generate prototypes
+                      </ButtonLink>
+                    )}
+                  </>
                 }
               >
                 {query.search ? `No template matches “${query.search}” with the chosen filters.` : "No template matches the chosen filters."}

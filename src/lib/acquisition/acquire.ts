@@ -1,5 +1,5 @@
 import os from "node:os";
-import { type AssessmentTarget, type SourceSnapshot, getTarget, internalRefFor, recordSnapshot } from "@/lib/assessments/assessment-records";
+import { type AssessmentTarget, type CommitSnapshot, type SourceTarget, getTarget, internalRefFor, recordSnapshot, sourceTarget } from "@/lib/assessments/assessment-records";
 import { transitionTarget } from "@/lib/assessments/transitions";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
 import { BoundaryViolation, SourceBoundary } from "@/lib/catalog/source-boundary";
@@ -32,7 +32,9 @@ export interface AcquireOptions {
   holder?: string;
 }
 
-export async function acquireSnapshot(db: Executor, target: AssessmentTarget, options: AcquireOptions = {}): Promise<SourceSnapshot> {
+export async function acquireSnapshot(db: Executor, copied: AssessmentTarget, options: AcquireOptions = {}): Promise<CommitSnapshot> {
+  // Only catalog sources are acquired; a template target is already its stored files.
+  const target = sourceTarget(copied);
   const config = options.config ?? getConfig();
   const runner = options.runner ?? new GitRunner({ config });
   const { signal } = options;
@@ -87,7 +89,7 @@ export async function acquireSnapshot(db: Executor, target: AssessmentTarget, op
   }
 }
 
-export type AcquisitionOutcome = { ok: true; snapshot: SourceSnapshot } | { ok: false; error: AcquisitionError; target: AssessmentTarget };
+export type AcquisitionOutcome = { ok: true; snapshot: CommitSnapshot } | { ok: false; error: AcquisitionError; target: AssessmentTarget };
 
 /**
  * Acquires a target and records the outcome on it. A failure moves only this
@@ -109,7 +111,7 @@ export async function acquireTarget(db: Executor, target: AssessmentTarget, opti
 }
 
 /** The URL and transport Git uses for a target, resolving local paths through the boundary. */
-function gitSource(target: AssessmentTarget, boundary: SourceBoundary): { url: string; protocol: Protocol } {
+function gitSource(target: SourceTarget, boundary: SourceBoundary): { url: string; protocol: Protocol } {
   const url = CloneUrl.parse(target.cloneUrl);
   if (!url.isFile) return { url: url.toString(), protocol: url.protocol };
   const location = boundary.check(url.localPath!);

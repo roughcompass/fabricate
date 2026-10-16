@@ -1,8 +1,8 @@
-import crypto from "node:crypto";
 import { and, count, eq, lt } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { demoApplications, demoProfiles, demoShares, demoThreads, demoWorkspaces } from "@/lib/db/schema";
+import { keyDigest } from "./workspace-digest";
 import { isWorkspaceKey } from "./workspace-key";
 import { type HintState, parseHints } from "./hints";
 
@@ -33,9 +33,7 @@ export class DemoLimitError extends Error {
   override name = "DemoLimitError";
 }
 
-export function keyDigest(key: string): string {
-  return crypto.createHash("sha256").update(key).digest("hex");
-}
+export { keyDigest } from "./workspace-digest";
 
 /** The visitor's workspace, or null when it has not been written to yet. */
 export function findWorkspace(db: Executor, key: string | undefined): Workspace | null {

@@ -25,6 +25,7 @@ import { getDb } from "@/lib/db/client";
 import { assessmentTargets } from "@/lib/db/schema";
 import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { findProfile, latestProfileOfSource, profileDiagnostics, profileDocument } from "@/lib/profiles/profile-records";
+import { profileCommit } from "@/lib/profiles/schema";
 import { type FactDocument, categoryDefinitions } from "@/lib/profiles/states";
 import { type DependencyFilters as Filters, type SharedBlock, filterDependencies, profileView } from "@/lib/profiles/view";
 import { repositoryFocusHref } from "@/lib/relationships/map-view";
@@ -59,7 +60,11 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
   const view = profileView(facts, diagnostics);
   const latest = latestProfileOfSource(db, target.sourcePublicId);
   const newer = latest && latest.profile.id !== profile.id ? latest : null;
-  const commit = String(document.commit);
+  // A template version's Profile describes its exported files, identified by their content digest, not a commit.
+  const commit = profileCommit(document);
+  const pinned = commit ?? String(document.content_digest);
+  const pinnedLabel = commit ? "commit" : "content digest";
+  const template = target.kind === "template" ? (document.template as { version_number: number | null }) : null;
   const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, assessmentId: assessment.publicId, labels: new Map(categoryDefinitions(facts).map((definition) => [definition.id, definition.label])) };
   const filters: Filters = { kind: queryValue(query.kind), manifest: queryValue(query.manifest), package: queryValue(query.package) };
   const base = `/profiles/${profile.publicId}`;
@@ -82,12 +87,13 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
         title={target.sourceName}
         secondaryActions={mapHref ? [{ href: mapHref, label: "Relationship Map", icon: "network" }] : undefined}
         meta={[
-          <ShortValue key="commit" value={commit} label="commit" />,
+          <ShortValue key="commit" value={pinned} label={pinnedLabel} />,
+          ...(template ? [<span key="template">{template.version_number ? `Template version ${template.version_number}` : "Before acceptance"}</span>] : []),
           <span key="created">
             Profiled <RelativeTime value={profile.createdAt} />
           </span>,
         ]}
-        description="Every fact comes from committed files at this commit, read as data. Nothing in the repository was run."
+        description={commit ? "Every fact comes from committed files at this commit, read as data. Nothing in the repository was run." : "Every fact comes from the template version's exported files, read as data. Nothing in them was run."}
         alerts={
           newer && (
             <Alert
@@ -158,7 +164,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
             <DescriptionList
               surface
               items={[
-                ["Commit", <Tag key="commit" copy label="commit">{commit}</Tag>],
+                [commit ? "Commit" : "Content digest", <Tag key="commit" copy label={pinnedLabel}>{pinned}</Tag>],
                 ["Detector release", <Tag key="release">{String(document.detector_release)}</Tag>],
                 ["Profile digest", <ShortValue key="digest" value={profile.digest} label="digest" />],
                 ["Created", <RelativeTime key="created" value={profile.createdAt} />],

@@ -1,0 +1,79 @@
+/*
+ * The render host's own styles: the component surface and the overlays the
+ * host draws for comment mode, pins, and highlighted violations. Like every
+ * stylesheet in the prototype runtime, it uses only Salt's design tokens.
+ */
+
+html,
+body {
+  margin: 0;
+}
+
+.prototypeHost-surface {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: var(--salt-spacing-300);
+  background: var(--salt-container-primary-background);
+}
+
+.prototypeHost-error {
+  margin: var(--salt-spacing-300);
+  padding: var(--salt-spacing-200);
+  border: var(--salt-size-fixed-100) var(--salt-borderStyle-solid) var(--salt-status-error-borderColor);
+  background: var(--salt-status-error-background);
+}
+
+[data-comment-mode],
+[data-comment-mode] * {
+  cursor: crosshair;
+}
+
+.prototypeHost-hover,
+.prototypeHost-highlight,
+.prototypeHost-pin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--salt-zIndex-notification);
+  pointer-events: none;
+}
+
+.prototypeHost-hover {
+  box-sizing: border-box;
+  outline: var(--salt-size-fixed-200) var(--salt-borderStyle-solid) var(--salt-focused-outlineColor);
+}
+
+.prototypeHost-hoverLabel {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  padding: 0 var(--salt-spacing-50);
+  background: var(--salt-focused-outlineColor);
+  color: var(--salt-accent-foreground);
+  font-family: var(--salt-text-label-fontFamily);
+  font-size: var(--salt-text-label-fontSize);
+  line-height: var(--salt-text-label-lineHeight);
+  white-space: nowrap;
+}
+
+.prototypeHost-highlight {
+  box-sizing: border-box;
+  outline: var(--salt-size-fixed-200) var(--salt-borderStyle-dashed) var(--salt-status-error-borderColor);
+}
+
+.prototypeHost-pin {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: var(--salt-size-base);
+  height: var(--salt-size-base);
+  padding: 0 var(--salt-spacing-50);
+  margin-left: calc(var(--salt-size-base) / -2);
+  margin-top: calc(var(--salt-size-base) / -2);
+  border-radius: var(--salt-palette-corner-strong);
+  background: var(--salt-accent-background);
+  color: var(--salt-accent-foreground);
+  font-family: var(--salt-text-label-fontFamily);
+  font-size: var(--salt-text-label-fontSize);
+  font-weight: var(--salt-text-fontWeight-strong);
+}

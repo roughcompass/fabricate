@@ -169,6 +169,8 @@ export interface Choice {
   value: string;
   label: string;
   description?: React.ReactNode;
+  /** Shown before the label, such as a platform's icon. */
+  icon?: IconName;
   disabled?: boolean;
 }
 
@@ -210,6 +212,7 @@ export function ChoiceGroup({ id, name, legend, type, choices, selected, descrip
                 disabled={choice.disabled}
                 onChange={onChange}
               />
+              {choice.icon && <Icon name={choice.icon} size={20} className={styles.choiceIcon} />}
               <span className={styles.choiceText}>
                 <span className={styles.choiceLabel}>{choice.label}</span>
                 {choice.description && <span className={styles.description}>{choice.description}</span>}

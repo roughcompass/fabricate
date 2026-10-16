@@ -2,16 +2,17 @@ import styles from "./design-system.module.css";
 
 /**
  * One component's specimens, rendered in the light and dark themes side by
- * side. `render` receives a per-theme prefix for ids, so both copies stay valid.
+ * side, or one above the other with `stacked` for a component that needs the
+ * full width. `render` receives a per-theme prefix for ids, so both copies stay valid.
  */
-export function Specimen({ id, title, description, render, single = false }: { id: string; title: string; description?: string; render: (theme: "light" | "dark") => React.ReactNode; single?: boolean }) {
+export function Specimen({ id, title, description, render, single = false, stacked = false }: { id: string; title: string; description?: string; render: (theme: "light" | "dark") => React.ReactNode; single?: boolean; stacked?: boolean }) {
   return (
     <section id={id} className={styles.specimen} aria-labelledby={`${id}-title`}>
       <div className={styles.specimenHeader}>
         <h2 id={`${id}-title`}>{title}</h2>
         {description && <p className={styles.specimenDescription}>{description}</p>}
       </div>
-      <div className={single ? styles.single : styles.pair}>
+      <div className={single || stacked ? styles.single : styles.pair}>
         {(single ? (["light"] as const) : (["light", "dark"] as const)).map((theme) => (
           <div key={theme} data-theme={theme} className={styles.frame} role="region" aria-label={`${title}, ${theme}`}>
             {render(theme)}

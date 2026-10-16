@@ -155,7 +155,9 @@ export function portalOwnership(db: Executor, portalIds?: readonly number[]): Ma
 
 /** Current ownership of every repository an Assessment covers, by target, however long ago it ran. */
 export function ownershipForAssessment(db: Executor, assessmentId: number): { byTarget: Map<number, RepositoryOwnership>; asOf: Date | null } {
-  const targets = db.select({ id: assessmentTargets.id, repositorySourceId: assessmentTargets.repositorySourceId }).from(assessmentTargets).where(eq(assessmentTargets.assessmentId, assessmentId)).all();
+  const rows = db.select({ id: assessmentTargets.id, repositorySourceId: assessmentTargets.repositorySourceId }).from(assessmentTargets).where(eq(assessmentTargets.assessmentId, assessmentId)).all();
+  // A template target has no repository, so no owner.
+  const targets = rows.flatMap(({ id, repositorySourceId }) => (repositorySourceId === null ? [] : [{ id, repositorySourceId }]));
   const owned = repositoryOwnership(db, targets.map((target) => target.repositorySourceId));
   const byTarget = new Map<number, RepositoryOwnership>();
   for (const target of targets) {

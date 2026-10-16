@@ -14,7 +14,7 @@ import { manifest, memoryProfile } from "../support/profiles";
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
 vi.mock("next/cache", async () => (await import("../support/next")).cacheStub);
 
-// standard-library: a Salt adherence starter Standard is available.
+// standard-library: the Salt adherence and Salt exemplary starter Standards.
 
 const salt = findStarter("salt-adherence")!;
 
@@ -52,6 +52,46 @@ describe("starter Standards", () => {
     const release: ReleaseInput = { public_id: "rel_salt", digest: "1".repeat(64), version: 1, standard: salt.name, document: salt.document };
     const findings = evaluateReleaseControls(release, { targets: [target], map: null });
     expect(findings).toHaveLength(10);
+    expect(new Set(findings.map((finding) => finding.outcome))).toEqual(new Set(["not_applicable"]));
+  });
+});
+
+describe("the Salt exemplary starter", () => {
+  const exemplary = findStarter("salt-exemplary")!;
+  const SALT_APP = {
+    "package.json": manifest({ name: "queue", dependencies: { react: "19.3.0", "@salt-ds/core": "1.73.0", "@salt-ds/theme": "1.48.0" } }),
+    "src/main.tsx": 'import "@salt-ds/theme/index.css";\nimport { SaltProvider } from "@salt-ds/core";\nimport { createRoot } from "react-dom/client";\nimport { App } from "./App";\ncreateRoot(document.getElementById("root")!).render(<SaltProvider><App /></SaltProvider>);\n',
+  };
+  const evaluate = async (app: string) => {
+    const { document } = await memoryProfile({ ...SALT_APP, "src/App.tsx": app }, { public_id: "src_queue", name: "queue" });
+    const target: TargetInput = { public_id: "tgt_queue", source: { public_id: "src_queue", name: "queue" }, state: "complete", failure: null, profile: { public_id: "prf_queue", digest: "0".repeat(64), commit: String(document.commit), factDocument: document.fact_document as JsonObject } };
+    const release: ReleaseInput = { public_id: "rel_exemplary", digest: "2".repeat(64), version: 1, standard: exemplary.name, document: exemplary.document };
+    return evaluateReleaseControls(release, { targets: [target], map: null });
+  };
+  const outcomes = (findings: Awaited<ReturnType<typeof evaluate>>) => Object.fromEntries(findings.map((finding) => [(finding.control as { key: string }).key, finding.outcome]));
+
+  it("declares Profile version 2, applies only to Salt, and sets no customized-share limit", () => {
+    expect(exemplary.document.input_schemas).toEqual({ repository_profile: [2], relationship_map: [1] });
+    const controls = exemplary.document.controls as JsonObject[];
+    for (const control of controls) expect(control.applicability, String(control.key)).toEqual({ op: "contains", selector: "repository.design_systems", mode: "any", values: ["salt"] });
+    expect(JSON.stringify(controls)).not.toContain("customized_share");
+  });
+
+  it("finds every Control Meets for token-only inline styles (Token-only inline style)", async () => {
+    const findings = await evaluate('import { Button, StackLayout, Text } from "@salt-ds/core";\nexport const App = () => (\n  <StackLayout style={{ padding: "var(--salt-spacing-300)" }}>\n    <Text>Payments</Text>\n    <Button>Approve</Button>\n  </StackLayout>\n);\n');
+    expect(outcomes(findings)).toEqual(Object.fromEntries((exemplary.document.controls as JsonObject[]).map((control) => [control.key, "meets"])));
+  });
+
+  it("finds Gaps for adoption and raw elements for one raw button, citing it (One raw button)", async () => {
+    const findings = await evaluate('import { StackLayout, Text } from "@salt-ds/core";\nexport const App = () => (\n  <StackLayout>\n    <Text>Payments</Text>\n    <button>Approve</button>\n  </StackLayout>\n);\n');
+    const gaps = findings.filter((finding) => finding.outcome === "gap").map((finding) => (finding.control as { key: string }).key).sort();
+    expect(gaps).toEqual(["salt-exemplary-adoption", "salt-exemplary-raw-equivalents"]);
+  });
+
+  it("finds every Control Not applicable for a repository that doesn't use Salt (Starter Controls outside Salt)", async () => {
+    const { document } = await memoryProfile({ "package.json": manifest({ name: "plain", dependencies: { react: "18.3.1" } }), "src/App.tsx": "export const App = () => <button>Go</button>;\n" }, { public_id: "src_plain", name: "plain" });
+    const target: TargetInput = { public_id: "tgt_plain", source: { public_id: "src_plain", name: "plain" }, state: "complete", failure: null, profile: { public_id: "prf_plain", digest: "0".repeat(64), commit: String(document.commit), factDocument: document.fact_document as JsonObject } };
+    const findings = evaluateReleaseControls({ public_id: "rel_exemplary", digest: "2".repeat(64), version: 1, standard: exemplary.name, document: exemplary.document }, { targets: [target], map: null });
     expect(new Set(findings.map((finding) => finding.outcome))).toEqual(new Set(["not_applicable"]));
   });
 });

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ButtonLink } from "@/components/ui/button";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
@@ -14,6 +13,7 @@ import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/t
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { getDb } from "@/lib/db/client";
 import { LIFECYCLE_STATES, type LifecycleState } from "@/lib/db/schema";
+import { NewPortalLink } from "@/components/onboarding/create-portal";
 import { portalCatalog } from "@/lib/onboarding/catalog";
 import { portalHref, stepHref } from "./load";
 
@@ -29,11 +29,7 @@ export default async function PortalsPage({ searchParams }: { searchParams: Prom
     const params = new URLSearchParams({ ...(next && { lifecycle: next }), ...(q && { q }) });
     return `/onboarding/portals${params.size ? `?${params}` : ""}`;
   };
-  const create = (
-    <ButtonLink href="/onboarding/portals/new" variant="primary" icon="plus">
-      New Portal
-    </ButtonLink>
-  );
+  const create = <NewPortalLink />;
 
   return (
     <Page>

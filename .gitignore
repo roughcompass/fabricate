@@ -1,7 +1,7 @@
 # Dependencies and build output
 /node_modules
 /.next
-/.next-e2e
+/.next-*
 /dist
 /next-env.d.ts
 *.tsbuildinfo
@@ -13,6 +13,7 @@
 
 # Test output
 /test-results
+/test-results-*
 /playwright-report
 /blob-report
 
@@ -20,3 +21,11 @@
 /.env*
 !/.env.example
 .DS_Store
+/.vercel
+
+# Built by scripts/build-prototype-runtime.mjs before dev and build
+/public/prototype-runtime
+
+# Vercel Workflow's local world
+/.workflow-data
+/.swc

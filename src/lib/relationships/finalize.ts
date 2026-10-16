@@ -40,7 +40,9 @@ export function resolveMapDocument(db: Executor, current: Assessment): JsonObjec
   if (pending.length) throw new MapNotReadyError(`Assessment ${current.publicId} has ${pending.length} target(s) still in progress`);
 
   const profiles = new Map(profilesOf(db, current.id).map(({ profile, target }) => [target.id, profile]));
-  const inputs: ResolverTarget[] = targets.map((target) => {
+  // A template version is not a repository of the fleet: it has no node, and a Run of templates alone maps nothing.
+  const repositories = targets.filter((target) => target.kind === "source");
+  const inputs: ResolverTarget[] = repositories.map((target) => {
     const profile = profiles.get(target.id);
     return {
       public_id: target.publicId,
@@ -50,8 +52,8 @@ export function resolveMapDocument(db: Executor, current: Assessment): JsonObjec
       profile: profile ? { digest: profile.digest, document: profileDocument(profile) } : null,
     };
   });
-  const scope = new Set(targets.map((target) => target.repositorySourceId));
-  const outOfScope = listSources(db)
+  const scope = new Set(repositories.map((target) => target.repositorySourceId));
+  const outOfScope = (repositories.length ? listSources(db) : [])
     .filter((source) => !scope.has(source.id))
     .map((source) => ({ public_id: source.publicId, name: source.name, canonical_url: source.canonicalUrl }));
 

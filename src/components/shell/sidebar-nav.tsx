@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { HOME, homeLink, locate, visibleSections } from "./navigation";
+import { HOME, type NavFlags, homeLink, locate, visibleSections } from "./navigation";
 import { SIDEBAR_ID } from "./shell-header";
 import styles from "./sidebar-nav.module.css";
 
@@ -26,9 +26,9 @@ export function closeDrawer(): void {
  * and moves focus to the current section. Every navigation shows the new
  * page's sub-menu again.
  */
-export function SidebarNav({ demo }: { demo: boolean }) {
+export function SidebarNav({ nav }: { nav: NavFlags }) {
   const pathname = usePathname();
-  const located = locate(pathname, demo);
+  const located = locate(pathname, nav);
   const [shownFor, setShownFor] = useState(pathname);
   const [allSections, setAllSections] = useState(false);
   if (shownFor !== pathname) {
@@ -52,7 +52,7 @@ export function SidebarNav({ demo }: { demo: boolean }) {
   }, []);
 
   const view = !located || allSections ? "sections" : "submenu";
-  const sections = visibleSections(demo);
+  const sections = visibleSections(nav);
   // Home leads the section menu while it's available; it has no sub-menu, so no chevron.
   const showHome = homeLink(sections).href === HOME.href;
   return (

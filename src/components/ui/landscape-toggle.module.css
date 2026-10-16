@@ -1,0 +1,3 @@
+@layer components {
+  .toggle[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-bg-selected); color: var(--color-text); }
+}

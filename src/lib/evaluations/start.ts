@@ -8,10 +8,11 @@ import { readableBy } from "@/lib/documents/schemas";
 import { getInitiative, selectedReleases } from "@/lib/initiatives/initiative-records";
 import { enqueue } from "@/lib/jobs/queue";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
+import { profileCommit } from "@/lib/profiles/schema";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
 import type { MapDocument } from "@/lib/relationships/schema";
 import { LIMITS } from "@/lib/standards/document";
-import { releaseDocument, releaseLabel } from "@/lib/standards/standard-records";
+import { type Standard, type StandardRelease, findRelease, releaseDocument, releaseLabel, standardById } from "@/lib/standards/standard-records";
 import { EVALUATOR_VERSION, type EvaluationInputs } from "./controls";
 import { type Evaluation, type EvaluationRelease, createEvaluation, findEvaluationByLaunchToken } from "./evaluation-records";
 
@@ -42,7 +43,12 @@ export interface StartResult {
   duplicate: boolean;
 }
 
-export function startEvaluation(db: Executor, initiativePublicId: string, assessmentPublicId: string, launchToken: string): StartResult {
+/**
+ * With +releaseIds+, the Evaluation pins those published Releases, by public
+ * id, instead of the initiative's current selection: a template re-check
+ * evaluates against the Releases its acceptance used.
+ */
+export function startEvaluation(db: Executor, initiativePublicId: string, assessmentPublicId: string, launchToken: string, options: { releaseIds?: readonly string[] } = {}): StartResult {
   const token = LAUNCH_TOKEN.test(launchToken) ? launchToken : crypto.randomUUID();
   try {
     return immediate(db, (tx) => {
@@ -57,8 +63,8 @@ export function startEvaluation(db: Executor, initiativePublicId: string, assess
       if (profilesOf(tx, assessment.id).length === 0) problems.push("The Run has no Repository Profile, so there is no current-state evidence to evaluate.");
       if (!mapOf(tx, assessment.id)) problems.push("The Run has no Relationship Map.");
 
-      const selected = selectedReleases(tx, initiative.id);
-      if (selected.length === 0) problems.push("Select at least one published Standard Release for the Assessment.");
+      const selected = options.releaseIds ? pinnedReleases(tx, options.releaseIds, problems) : selectedReleases(tx, initiative.id);
+      if (selected.length === 0 && !options.releaseIds) problems.push("Select at least one published Standard Release for the Assessment.");
       for (const { release, standard } of selected) {
         const label = releaseLabel(standard, release);
         let document: JsonObject;
@@ -103,6 +109,19 @@ export function startEvaluation(db: Executor, initiativePublicId: string, assess
   }
 }
 
+/** The published Releases with these public ids, each with its Standard; a missing one is a problem. */
+function pinnedReleases(db: Executor, releaseIds: readonly string[], problems: string[]): { release: StandardRelease; standard: Standard }[] {
+  if (releaseIds.length === 0) problems.push("The Run names no Release to evaluate against.");
+  return releaseIds.flatMap((publicId) => {
+    const release = findRelease(db, publicId);
+    if (!release) {
+      problems.push(`${publicId} is not a published Standard Release.`);
+      return [];
+    }
+    return [{ release, standard: standardById(db, release.standardId) }];
+  });
+}
+
 /** Targets without a Profile limit what an Evaluation can conclude. */
 function coverageGaps(db: Executor, assessment: Assessment): JsonValue[] {
   return targetsOf(db, assessment.id)
@@ -123,7 +142,7 @@ export function evaluationInputs(db: Executor, assessmentId: number): Evaluation
         source: { public_id: target.sourcePublicId, name: target.sourceName },
         state: target.state,
         failure: target.failureCode,
-        profile: profile && document ? { public_id: profile.publicId, digest: profile.digest, commit: String(document.commit), factDocument: document.fact_document as JsonObject } : null,
+        profile: profile && document ? { public_id: profile.publicId, digest: profile.digest, commit: profileCommit(document), factDocument: document.fact_document as JsonObject } : null,
       };
     }),
     map: map ? { public_id: map.publicId, digest: map.digest, document: mapDocument(map) as unknown as MapDocument } : null,

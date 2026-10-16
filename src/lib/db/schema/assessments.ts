@@ -9,7 +9,9 @@ export type AssessmentState = (typeof ASSESSMENT_STATES)[number];
 export const TARGET_STATES = ["pending", "acquiring", "analyzing", "complete", "failed", "canceled"] as const;
 export type TargetState = (typeof TARGET_STATES)[number];
 
-export const REF_KINDS = ["default_branch", "branch", "tag", "commit"] as const;
+export const REF_KINDS = ["default_branch", "branch", "tag", "commit", "stored_files"] as const;
+/** What a target assesses: a catalog repository at a commit, or a template version's stored files (converge-templates-and-prototypes, design decision 2). */
+export const TARGET_KINDS = ["source", "template"] as const;
 export type RefKind = (typeof REF_KINDS)[number];
 
 /**
@@ -36,6 +38,13 @@ export const assessments = sqliteTable(
     startedAt: timestamp("started_at"),
     finishedAt: timestamp("finished_at"),
     failureReason: text("failure_reason"),
+    /**
+     * The published Releases, by public id as a JSON array, a Salt Patterns
+     * Run is evaluated against when it finishes: a template re-check pins
+     * those its acceptance used. Null evaluates it against its initiative's
+     * selection at that time.
+     */
+    evaluationReleases: text("evaluation_releases"),
     lockVersion: lockVersion(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -62,15 +71,22 @@ export const assessmentTargets = sqliteTable(
     assessmentId: integer("assessment_id")
       .notNull()
       .references(() => assessments.id, { onDelete: "restrict" }),
-    repositorySourceId: integer("repository_source_id")
-      .notNull()
-      .references(() => repositorySources.id, { onDelete: "restrict" }),
+    kind: text("kind", { enum: TARGET_KINDS }).notNull().default("source"),
+    /** The catalog source, for a source target; null for a template target. */
+    repositorySourceId: integer("repository_source_id").references(() => repositorySources.id, { onDelete: "restrict" }),
     position: integer("position").notNull(),
+    /** The source's public id, or the template version's for a template target. */
     sourcePublicId: text("source_public_id").notNull(),
     sourceName: text("source_name").notNull(),
-    cloneUrl: text("clone_url").notNull(),
-    canonicalUrl: text("canonical_url").notNull(),
+    cloneUrl: text("clone_url"),
+    canonicalUrl: text("canonical_url"),
     gitRef: text("git_ref"),
+    /** A template target: the template, its version and number, the prototype version it came from, and the Git tree id of its exported files. */
+    templatePublicId: text("template_public_id"),
+    templateVersionPublicId: text("template_version_public_id"),
+    templateVersionNumber: integer("template_version_number"),
+    prototypeVersionPublicId: text("prototype_version_public_id"),
+    contentDigest: text("content_digest"),
     state: text("state", { enum: TARGET_STATES }).notNull().default("pending"),
     failureCode: text("failure_code"),
     failureMessage: text("failure_message"),
@@ -89,6 +105,20 @@ export const assessmentTargets = sqliteTable(
     check("assessment_targets_state", sql.raw(`state IN (${sqlList(TARGET_STATES)})`)),
     // A failure code is recorded exactly when the target failed.
     check("assessment_targets_failure_code", sql`(${t.failureCode} IS NOT NULL) = (${t.state} = 'failed')`),
+    check("assessment_targets_kind", sql.raw(`kind IN (${sqlList(TARGET_KINDS)})`)),
+    // A source target names its catalog source and clone URLs. A template target names the prototype version and the
+    // Git tree id of its exported files, and its template version once one exists: the first acceptance assesses it before.
+    check(
+      "assessment_targets_kind_columns",
+      sql`(${t.kind} = 'source' AND ${t.repositorySourceId} IS NOT NULL AND ${t.cloneUrl} IS NOT NULL AND ${t.canonicalUrl} IS NOT NULL
+          AND ${t.templatePublicId} IS NULL AND ${t.templateVersionPublicId} IS NULL AND ${t.templateVersionNumber} IS NULL AND ${t.prototypeVersionPublicId} IS NULL AND ${t.contentDigest} IS NULL)
+        OR (${t.kind} = 'template' AND ${t.repositorySourceId} IS NULL AND ${t.cloneUrl} IS NULL AND ${t.canonicalUrl} IS NULL AND ${t.gitRef} IS NULL
+          AND ${t.prototypeVersionPublicId} IS NOT NULL AND ${t.prototypeVersionPublicId} GLOB 'ver_*'
+          AND ${t.contentDigest} IS NOT NULL AND length(${t.contentDigest}) = 40 AND ${t.contentDigest} NOT GLOB '*[^0-9a-f]*'
+          AND ((${t.templatePublicId} IS NULL AND ${t.templateVersionPublicId} IS NULL AND ${t.templateVersionNumber} IS NULL)
+            OR (${t.templatePublicId} IS NOT NULL AND ${t.templateVersionPublicId} IS NOT NULL AND ${t.templateVersionNumber} IS NOT NULL
+              AND ${t.templatePublicId} GLOB 'ptp_*' AND ${t.templateVersionPublicId} GLOB 'ptv_*' AND ${t.templateVersionNumber} >= 1)))`,
+    ),
   ],
 );
 
@@ -105,10 +135,11 @@ export const sourceSnapshots = sqliteTable(
       .notNull()
       .unique()
       .references(() => assessmentTargets.id, { onDelete: "restrict" }),
-    repositorySourceId: integer("repository_source_id")
-      .notNull()
-      .references(() => repositorySources.id, { onDelete: "restrict" }),
-    commitSha: text("commit_sha").notNull(),
+    /** Null for a template target's stored files. */
+    repositorySourceId: integer("repository_source_id").references(() => repositorySources.id, { onDelete: "restrict" }),
+    /** The pinned commit; null for stored files, which have only a tree. */
+    commitSha: text("commit_sha"),
+    /** The commit's tree, or the stored files' content digest. */
     treeSha: text("tree_sha").notNull(),
     refKind: text("ref_kind", { enum: REF_KINDS }).notNull(),
     resolvedRef: text("resolved_ref").notNull(),
@@ -123,9 +154,37 @@ export const sourceSnapshots = sqliteTable(
     check("source_snapshots_public_id", sql`${t.publicId} GLOB 'snp_*'`),
     check(
       "source_snapshots_object_ids",
-      sql`length(${t.commitSha}) = 40 AND ${t.commitSha} NOT GLOB '*[^0-9a-f]*' AND length(${t.treeSha}) = 40 AND ${t.treeSha} NOT GLOB '*[^0-9a-f]*'`,
+      sql`(${t.commitSha} IS NULL OR (length(${t.commitSha}) = 40 AND ${t.commitSha} NOT GLOB '*[^0-9a-f]*')) AND length(${t.treeSha}) = 40 AND ${t.treeSha} NOT GLOB '*[^0-9a-f]*'`,
     ),
+    // Stored files have no commit and no catalog source; everything else has both.
+    check("source_snapshots_stored_files", sql`(${t.refKind} = 'stored_files') = (${t.commitSha} IS NULL) AND (${t.commitSha} IS NULL) = (${t.repositorySourceId} IS NULL)`),
     check("source_snapshots_ref_kind", sql.raw(`ref_kind IN (${sqlList(REF_KINDS)})`)),
     check("source_snapshots_internal_ref", sql`${t.internalRef} = 'refs/fabricate/snapshots/' || ${t.publicId}`),
+  ],
+);
+
+/**
+ * A template target's exported files, written with the target when the Run
+ * starts (converge-templates-and-prototypes, design decision 2). The web
+ * process builds them from the Prototypes database; the worker analyzes them
+ * from here, so it never opens that database, and their evidence stays
+ * resolvable after the prototype is gone. `files` is canonical JSON of path
+ * to UTF-8 content; `digest` is their Git tree id, the target's content digest.
+ */
+export const storedFileSets = sqliteTable(
+  "stored_file_sets",
+  {
+    id: id(),
+    assessmentTargetId: integer("assessment_target_id")
+      .notNull()
+      .unique()
+      .references(() => assessmentTargets.id, { onDelete: "restrict" }),
+    digest: text("digest").notNull(),
+    files: text("files").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check("stored_file_sets_digest", sql`length(${t.digest}) = 40 AND ${t.digest} NOT GLOB '*[^0-9a-f]*'`),
+    check("stored_file_sets_files", sql`json_valid(${t.files}) AND json_type(${t.files}) = 'object'`),
   ],
 );

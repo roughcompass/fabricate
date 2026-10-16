@@ -21,6 +21,9 @@ export interface Actor {
 export const SYSTEM_ACTOR: Actor = Object.freeze({ name: "DE FabLab", attribution: "system" });
 
 /** The name a person states, trimmed, or a ValidationError on +field+. */
+/** Who an action is recorded as when the person never gave a name, such as creating a Portal before any other onboarding step. */
+export const UNSTATED_ACTOR = "Not stated";
+
 export function statedActor(name: string | null | undefined, field = "actor"): Actor {
   const value = (name ?? "").trim().replace(/\s+/g, " ");
   if (!value) throw new ValidationError([{ field, message: "Enter your name" }]);

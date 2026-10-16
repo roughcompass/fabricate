@@ -32,3 +32,11 @@ export async function validateDemo(_previous: DemoFormState, formData: FormData)
   if (name === "stale") return { values: { name }, errors: { base: ["This record was changed by someone else. Reload the page to see the current values."] } };
   redirect("/design-system?notice=demo#feedback");
 }
+
+/** Stands in for sending a refinement: an empty message is a field error, and anything else reports that the gallery sends nothing. */
+export async function composerDemo(_previous: { values: { message: string }; errors: Partial<Record<"message" | "base", string[]>> }, formData: FormData): Promise<{ values: { message: string }; errors: Partial<Record<"message" | "base", string[]>> }> {
+  developmentOnly();
+  const message = text(formData, "message", 2_000);
+  if (!message.trim()) return { values: { message }, errors: { message: ["Say what to change."] } };
+  return { values: { message }, errors: { base: ["The gallery doesn't send messages."] } };
+}

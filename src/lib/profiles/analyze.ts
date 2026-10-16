@@ -1,12 +1,13 @@
 import { DETECTOR_RELEASE, analyze, detectorConfiguration } from "@repo-facts/bundle";
 import type { Stage } from "@repo-facts/contract";
-import type { Assessment, AssessmentTarget, SourceSnapshot } from "@/lib/assessments/assessment-records";
+import { type Assessment, type AssessmentTarget, type SourceSnapshot, commitSnapshot, sourceTarget } from "@/lib/assessments/assessment-records";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import type { GitRunner } from "@/lib/git/runner";
 import { openSnapshot } from "@/lib/snapshot/open";
+import { type StoredFiles, openStoredFiles } from "@/lib/snapshot/stored-files";
 import { type RepositoryProfile, insertProfile, profileOfTarget } from "./profile-records";
-import { buildProfile, profileProblems } from "./schema";
+import { buildProfile, buildTemplateProfile, profileProblems } from "./schema";
 
 /**
  * Analyzes one pinned snapshot with the pinned repo-facts bundle and stores
@@ -39,22 +40,67 @@ export async function analyzeSnapshot(db: Executor, input: AnalyzeSnapshotInput)
   if (existing) return existing;
 
   const config = input.config ?? getConfig();
-  const { digest } = detectorConfiguration(config.analysis);
-  if (input.assessment.detectorRelease !== DETECTOR_RELEASE) {
-    throw new AnalysisMismatchError(`Assessment ${input.assessment.publicId} recorded detector release ${input.assessment.detectorRelease}, but this worker runs ${DETECTOR_RELEASE}`);
-  }
-  if (input.assessment.configurationDigest !== digest) {
-    throw new AnalysisMismatchError(`Assessment ${input.assessment.publicId} recorded a different detector configuration than this worker's analysis limits produce`);
-  }
+  const digest = verifiedConfigurationDigest(input.assessment, config);
 
-  const reader = await openSnapshot(input.target, input.snapshot, { config, ...(input.runner && { runner: input.runner }) });
+  const target = sourceTarget(input.target);
+  const snapshot = commitSnapshot(input.snapshot);
+  const reader = await openSnapshot(target, snapshot, { config, ...(input.runner && { runner: input.runner }) });
   const factDocument = await analyze(reader, { ...(input.signal && { signal: input.signal }), ...(input.checkpoint && { checkpoint: input.checkpoint }) });
   const document = buildProfile({
-    source: { public_id: input.target.sourcePublicId, name: input.target.sourceName, clone_url: input.target.cloneUrl, git_ref: input.target.gitRef },
-    commit: input.snapshot.commitSha,
+    source: { public_id: target.sourcePublicId, name: target.sourceName, clone_url: target.cloneUrl, git_ref: target.gitRef },
+    commit: snapshot.commitSha,
     detectorRelease: DETECTOR_RELEASE,
     configurationDigest: digest,
     factDocument,
   });
   return insertProfile(db, { assessment: input.assessment, target: input.target, snapshot: input.snapshot, document, validate: profileProblems });
+}
+
+/** The detector configuration digest the Assessment recorded, if this worker produces the same one with the same release. */
+function verifiedConfigurationDigest(assessment: Assessment, config: FabricateConfig): string {
+  const { digest } = detectorConfiguration(config.analysis);
+  if (assessment.detectorRelease !== DETECTOR_RELEASE) {
+    throw new AnalysisMismatchError(`Assessment ${assessment.publicId} recorded detector release ${assessment.detectorRelease}, but this worker runs ${DETECTOR_RELEASE}`);
+  }
+  if (assessment.configurationDigest !== digest) {
+    throw new AnalysisMismatchError(`Assessment ${assessment.publicId} recorded a different detector configuration than this worker's analysis limits produce`);
+  }
+  return digest;
+}
+
+export interface AnalyzeStoredFilesInput extends Omit<AnalyzeSnapshotInput, "runner"> {
+  /** The template version's exported files, whose tree is the snapshot's. */
+  files: StoredFiles;
+}
+
+/**
+ * Analyzes a template target's stored files with the same bundle, through an
+ * in-memory reader under the same read policy and budgets, and stores a
+ * template Profile: no Git command runs (converge-templates-and-prototypes,
+ * design decisions 1 and 2).
+ */
+export async function analyzeStoredFiles(db: Executor, input: AnalyzeStoredFilesInput): Promise<RepositoryProfile> {
+  const existing = profileOfTarget(db, input.target.id);
+  if (existing) return existing;
+
+  const config = input.config ?? getConfig();
+  const digest = verifiedConfigurationDigest(input.assessment, config);
+  const { target, snapshot } = input;
+  const stored = openStoredFiles(input.files, config.analysis);
+  if (stored.digest !== snapshot.treeSha || stored.digest !== target.contentDigest) throw new Error(`The stored files of ${target.sourceName} no longer match the content digest the Run recorded`);
+  const factDocument = await analyze(stored.reader, { ...(input.signal && { signal: input.signal }), ...(input.checkpoint && { checkpoint: input.checkpoint }) });
+  const document = buildTemplateProfile({
+    template: {
+      public_id: target.templatePublicId,
+      name: target.sourceName,
+      version_public_id: target.templateVersionPublicId,
+      version_number: target.templateVersionNumber,
+      prototype_version_public_id: target.prototypeVersionPublicId!,
+    },
+    contentDigest: stored.digest,
+    detectorRelease: DETECTOR_RELEASE,
+    configurationDigest: digest,
+    factDocument,
+  });
+  return insertProfile(db, { assessment: input.assessment, target, snapshot, document, validate: profileProblems });
 }

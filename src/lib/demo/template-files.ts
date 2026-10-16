@@ -1,3 +1,5 @@
+import { GENERATED_SOURCES } from "@/demo/runtime/generated/sources";
+import { RUNTIME } from "@/lib/prototypes/render";
 import { BRANDS, type GroupMember, type Template, shellOf } from "./catalog";
 import { scaffoldCommand } from "./preview";
 
@@ -5,9 +7,12 @@ import { scaffoldCommand } from "./preview";
  * The files preview mode's Code tab shows (template-preview spec, design.md
  * decision 19). They are generated from the catalog, so they are the same on
  * every visit: a package.json, a microfrontends.json describing the group in
- * the shape of Vercel's microfrontends configuration, one illustrative source
- * file per child microfrontend at its default version, and a README. Nothing
- * here is ever built or run.
+ * the shape of Vercel's microfrontends configuration, one source file per
+ * child microfrontend at its default version, and a README. A hero's source
+ * files are the real Salt its reference deployment renders, with its shared
+ * data, once the hero script's output is committed; every other template's
+ * are illustrative, generated from the catalog. Nothing here is ever built
+ * or run.
  */
 
 export interface TemplateFile {
@@ -106,8 +111,51 @@ function readme(template: Template): string {
   ].join("\n");
 }
 
+/** A hero's generated sources, when its reference deployment renders them. */
+function heroSources(template: Template) {
+  return template.hero ? (GENERATED_SOURCES[template.slug] ?? null) : null;
+}
+
+/** Whether a template's code is illustrative: every built-in template but a hero whose Salt source is committed (template-gallery spec, "Illustrative templates"). */
+export function isIllustrative(template: Template): boolean {
+  return heroSources(template) === null;
+}
+
+/** A hero's package.json: its microfrontends, React, the portal runtime interface, and the Salt packages its source imports, at the versions DE FabLab renders with. */
+function heroPackageJson(template: Template, sources: readonly string[]): string {
+  const children = template.app.members.filter((member) => member.role === "child");
+  const packages = RUNTIME.packages as Record<string, string>;
+  const salt = [...new Set(sources.flatMap((source) => [...source.matchAll(/from\s+["'](@salt-ds\/[a-z-]+)["']/g)].map((match) => match[1]!)))].sort();
+  return json({
+    name: template.slug,
+    version: template.version,
+    private: true,
+    scripts: { dev: "deweb dev", build: "deweb build", test: "deweb test" },
+    dependencies: {
+      ...Object.fromEntries([shellOf(template.app), ...children].map((member) => [`@deweb/${member.id}`, member.defaultVersion])),
+      "@deweb/portal": "1.0.0",
+      react: packages.react,
+      "react-dom": packages["react-dom"],
+      ...Object.fromEntries(salt.map((name) => [name, packages[name] ?? "latest"])),
+    },
+    devDependencies: { "@deweb/cli": "4.2.0", "@deweb/microfrontends": "2.8.1" },
+  });
+}
+
 /** The template's files, in the order the Code tab lists them; the first is selected by default. */
 export function templateFiles(template: Template): TemplateFile[] {
+  const hero = heroSources(template);
+  const children = template.app.members.filter((member) => member.role === "child");
+  if (hero) {
+    const sources = children.map((member) => hero.members[member.id]?.[member.defaultVersion] ?? "");
+    return [
+      { path: "package.json", language: "json", content: heroPackageJson(template, sources) },
+      { path: "microfrontends.json", language: "json", content: microfrontendsJson(template) },
+      { path: "README.md", language: "markdown", content: readme(template) },
+      { path: "src/data.ts", language: "tsx", content: hero.data },
+      ...children.map((member, index): TemplateFile => ({ path: `src/${member.id}.tsx`, language: "tsx", content: sources[index]! })),
+    ];
+  }
   return [
     { path: "package.json", language: "json", content: packageJson(template) },
     { path: "microfrontends.json", language: "json", content: microfrontendsJson(template) },

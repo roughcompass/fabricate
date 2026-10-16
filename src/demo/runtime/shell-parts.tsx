@@ -1,5 +1,6 @@
 "use client";
 
+import { SaltProviderNext } from "@salt-ds/core";
 import { useEffect, useId, useRef, useState } from "react";
 import { BRANDS } from "@/lib/demo/catalog";
 import { Icon, type IconName } from "./members/icons";
@@ -8,7 +9,11 @@ import styles from "./shell-parts.module.css";
 
 /** Pieces both portal shells share: the portal root, header menus, and the user menu. */
 
-export const ENVIRONMENT_LABELS = { production: "Production", sandbox: "Sandbox", dev: "Dev" } as const;
+export const ENVIRONMENT_LABELS = {
+  production: "Production",
+  sandbox: "Sandbox",
+  dev: "Dev",
+} as const;
 
 export function initials(name: string): string {
   return name
@@ -21,24 +26,29 @@ export function initials(name: string): string {
 /**
  * The portal's root element. It identifies the application to the toolbar
  * (the audit root, the view key, the theme) and carries the shell's palette.
+ * Salt's theme applies to it and everything inside, in the view's mode, so
+ * generated Salt members render as Salt, and nothing outside the portal
+ * changes (converge-templates-and-prototypes, design decision 11).
  */
 export function PortalRoot({ className, children }: { className?: string; children: React.ReactNode }) {
   const { descriptor, template } = useRuntime();
   const { theme } = useViewState();
   const embedded = useEmbedded();
   return (
-    <div
-      className={className}
-      data-demo-portal=""
-      data-brand={template.brand}
-      data-shell={BRANDS[template.brand].shell}
-      data-theme={theme}
-      data-demo-app-root=""
-      data-demo-view-key={descriptor.viewKey}
-      data-demo-embedded={embedded || undefined}
-    >
-      {children}
-    </div>
+    <SaltProviderNext applyClassesTo="child" mode={theme} density="medium" accent="teal" corner="rounded">
+      <div
+        className={className}
+        data-demo-portal=""
+        data-brand={template.brand}
+        data-shell={BRANDS[template.brand].shell}
+        data-theme={theme}
+        data-demo-app-root=""
+        data-demo-view-key={descriptor.viewKey}
+        data-demo-embedded={embedded || undefined}
+      >
+        {children}
+      </div>
+    </SaltProviderNext>
   );
 }
 
@@ -46,7 +56,21 @@ export function PortalRoot({ className, children }: { className?: string; childr
  * A header control that opens a small menu below it. Escape or a click
  * elsewhere closes it, and focus returns to the control.
  */
-export function HeaderMenu({ label, icon, trigger, align = "end", tone = "header", children }: { label: string; icon?: IconName; trigger?: React.ReactNode; align?: "start" | "end"; tone?: "header" | "dark"; children: React.ReactNode }) {
+export function HeaderMenu({
+  label,
+  icon,
+  trigger,
+  align = "end",
+  tone = "header",
+  children,
+}: {
+  label: string;
+  icon?: IconName;
+  trigger?: React.ReactNode;
+  align?: "start" | "end";
+  tone?: "header" | "dark";
+  children: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -148,19 +172,39 @@ export function HeaderActions({ tone = "header", portal }: { tone?: "header" | "
   return (
     <>
       <HeaderMenu label="Search" icon="search" tone={tone}>
-        <MenuList title={`Search ${portal}`} items={[{ primary: "Search is not part of the demo", secondary: "Use the application's own filters instead." }]} />
+        <MenuList
+          title={`Search ${portal}`}
+          items={[
+            {
+              primary: "Search is not part of the demo",
+              secondary: "Use the application's own filters instead.",
+            },
+          ]}
+        />
       </HeaderMenu>
       <HeaderMenu label="Notifications" icon="bell" tone={tone}>
         <MenuList
           title="Notifications"
           items={[
             { primary: "Two payments need approval", secondary: "Today, 9:40" },
-            { primary: "September statements are ready", secondary: "Yesterday" },
+            {
+              primary: "September statements are ready",
+              secondary: "Yesterday",
+            },
           ]}
         />
       </HeaderMenu>
       <HeaderMenu label="Help" icon="help" tone={tone}>
-        <MenuList title="Help" items={[{ primary: "Support Hub", secondary: "Guides and contacts" }, { primary: "Keyboard shortcuts", secondary: "Press ? with the toolbar open" }]} />
+        <MenuList
+          title="Help"
+          items={[
+            { primary: "Support Hub", secondary: "Guides and contacts" },
+            {
+              primary: "Keyboard shortcuts",
+              secondary: "Press ? with the toolbar open",
+            },
+          ]}
+        />
       </HeaderMenu>
     </>
   );

@@ -40,6 +40,32 @@ test("lists one row per placement, filtered by state, Portal, and search in the 
   await expect(page.getByRole("searchbox", { name: "Search reviews" })).toHaveValue("workspace");
 });
 
+// web-onboarding/portal-switcher spec: the chosen Portal scopes Reviews.
+test("Scoped reviews: with a Portal chosen, only its reviews are listed and no Portal filter is offered; an address naming another Portal wins", async ({ page, db, baseURL }) => {
+  const access = onboardPortal(db, "Access").publicId;
+  const markets = onboardPortal(db, "Markets").publicId;
+  onboardApplication(db, "Payments workspace", { launch: iframe("/app"), placements: [request(access, "/payments"), request(markets, "/payments")] });
+  onboardApplication(db, "Payments reporting", { launch: iframe("/reports"), placements: [request(access, "/reports")] });
+  await page.context().addCookies([{ name: "fabricate-portal", value: access, url: baseURL! }]);
+
+  await page.goto("/onboarding/reviews");
+  const rows = page.getByRole("table", { name: "Placement reviews" }).getByRole("row");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.filter({ hasText: "· Markets" })).toHaveCount(0);
+  await expect(page.getByLabel("Portal", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/^Scoped to Access:/)).toBeVisible();
+  // The state tabs keep the scope without putting it in the address.
+  await page.getByRole("navigation", { name: "Filter reviews by state" }).getByRole("link", { name: /Pending/ }).click();
+  await expect(page).toHaveURL(/\/onboarding\/reviews\?state=pending$/);
+  await expect(rows).toHaveCount(3);
+
+  // Address names another Portal.
+  await page.goto(`/onboarding/reviews?portal=${markets}`);
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText("Payments workspace · Markets");
+  await expect(page.getByLabel("Portal", { exact: true })).toHaveValue(markets);
+});
+
 test("approves with the values the Portal accepts, once, unverified, and without reaching any other system", async ({ page, db, baseURL }) => {
   const access = onboardPortal(db, "Access").publicId;
   const application = onboardApplication(db, "Payments workspace", { launch: iframe("/app"), placements: [request(access, "/payments", { defaultRequested: true })] }).application;

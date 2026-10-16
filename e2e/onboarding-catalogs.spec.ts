@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { createWebApplication } from "../src/lib/onboarding/applications";
 import { createPortal } from "../src/lib/onboarding/portals";
 import { buildSource } from "../test/support/builders";
-import { ana, decide, onboardApplication, onboardPortal, placementsOf, registerMfe } from "../test/support/onboarding";
+import { ana, decide, onboardApplication, onboardPortal, placementsOf, portalInput, registerMfe } from "../test/support/onboarding";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, test } from "./support/fixtures";
 import { expectCurrentItem, waitForHydration } from "./support/shell";
 
@@ -34,7 +34,7 @@ test("marks Web Onboarding and the record's catalog current on deep pages, with 
 
 test("keeps each list's search and lifecycle filter in the URL, rendered by the server", async ({ page, db }) => {
   onboardPortal(db, "Access");
-  createPortal(db, { name: "Payments hub", ownerTeam: "Payments", sealId: null }, ana);
+  createPortal(db, portalInput("Payments hub", { ownerTeam: "Payments" }), ana);
   const repository = buildSource(db, { name: "payee" });
   registerMfe(db, "Payee hub", { repository });
   registerMfe(db, "Payee search", { repository: buildSource(db, { name: "payee-search" }), confirmed: false });
@@ -91,10 +91,13 @@ test("refuses a missing name, a Portal name already onboarded, and a stale Draft
 
   await page.goto("/onboarding/portals/new");
   await waitForHydration(page);
+  await page.getByRole("radio", { name: /^Web/ }).check();
+  await page.getByLabel("SEAL ID").fill("88001");
   await page.getByLabel("Name", { exact: true }).fill("Access");
-  await page.getByLabel("Your name").fill("Ana Ruiz");
+  await page.getByLabel("Description").fill("Markets for the desk");
   await page.getByRole("button", { name: "Create Portal" }).click();
   await expect(page.getByLabel("Name", { exact: true })).toHaveAccessibleDescription(/A Portal named Access is already onboarded/);
+  await expect(page.getByLabel("Description")).toHaveValue("Markets for the desk");
   await page.getByLabel("Name", { exact: true }).fill("Markets");
   await page.getByRole("button", { name: "Create Portal" }).click();
   await expect(heading(page, "Identity")).toBeVisible();
@@ -222,4 +225,34 @@ test("Placed Web Applications: the Placement filter lists only those a Portal ha
   await page.goto("/onboarding/applications?placement=unplaced");
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText("Payments reporting");
+});
+
+// web-onboarding/portal-switcher spec: the chosen Portal scopes Web Applications.
+test("Scoped Applications: with a Portal chosen, Web Applications lists those with a placement in it and says so; All Portals lists every one", async ({ page, db, baseURL }) => {
+  const markets = onboardPortal(db, "Markets");
+  const access = onboardPortal(db, "Access");
+  const request = (portal: string, route: string) => ({ placement: null, portal, menuParent: null, route, label: route.slice(1), order: 1, environments: ["prod"], entitlements: { codes: [], operator: "any" as const }, defaultRequested: false });
+  const iframe = { kind: "external" as const, mode: "iframe" as const, documentUrl: "https://payments.example.com/app" };
+  onboardApplication(db, "Ledger", { launch: iframe, placements: [request(markets.publicId, "/ledger")] });
+  onboardApplication(db, "Payroll", { launch: iframe, placements: [request(access.publicId, "/payroll")] });
+  createWebApplication(db, { name: "Onboard Me", ownerTeam: "Payments" }, ana);
+
+  await page.context().addCookies([{ name: "fabricate-portal", value: markets.publicId, url: baseURL! }]);
+  await page.goto("/onboarding/applications");
+  const rows = page.getByRole("table", { name: "Web Applications", exact: true }).locator("tbody tr");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("Ledger");
+  await expect(page.getByText(/^Scoped to Markets: the Web Applications with a placement in it/)).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Filter Web Applications" }).getByRole("link", { name: /^All/ })).toContainText("1");
+
+  // A Portal no Application asked for: an empty state that names it.
+  const treasury = onboardPortal(db, "Treasury");
+  await page.context().addCookies([{ name: "fabricate-portal", value: treasury.publicId, url: baseURL! }]);
+  await page.reload();
+  await expect(page.getByText("No Web Applications in Treasury")).toBeVisible();
+
+  await page.context().clearCookies({ name: "fabricate-portal" });
+  await page.reload();
+  await expect(rows).toHaveCount(3);
+  await expect(page.getByText(/^Scoped to/)).toHaveCount(0);
 });

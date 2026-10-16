@@ -3,7 +3,8 @@ import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId, isPublicId } from "@/lib/db/ids";
-import { REF_KINDS, type RefKind, assessmentTargets, assessments, sourceSnapshots } from "@/lib/db/schema";
+import { REF_KINDS, type RefKind, assessmentTargets, assessments, sourceSnapshots, storedFileSets } from "@/lib/db/schema";
+import { treeObjectId } from "@/lib/snapshot/stored-files";
 import { type JsonObject, digestOf, parseCanonical, sha256 } from "@repo-facts/contract";
 import type { Initiative } from "@/lib/initiatives/initiative-records";
 
@@ -17,6 +18,25 @@ export type Assessment = typeof assessments.$inferSelect;
 export type AssessmentTarget = typeof assessmentTargets.$inferSelect;
 export type SourceSnapshot = typeof sourceSnapshots.$inferSelect;
 
+/** A target copied from a catalog source, which Git acquires. Template targets have no source. */
+export type SourceTarget = AssessmentTarget & { kind: "source"; repositorySourceId: number; cloneUrl: string; canonicalUrl: string };
+/** A source target's snapshot, pinned to a Git commit. A template target's snapshot is its stored files. */
+export type CommitSnapshot = SourceSnapshot & { repositorySourceId: number; commitSha: string };
+
+/** +target+ as a catalog source's copy, or an error for a template version. */
+export function sourceTarget(target: AssessmentTarget): SourceTarget {
+  if (target.kind !== "source" || target.repositorySourceId === null || target.cloneUrl === null || target.canonicalUrl === null) {
+    throw new Error(`Assessment target ${target.publicId} is a template version, not a catalog source`);
+  }
+  return target as SourceTarget;
+}
+
+/** +snapshot+ as a pinned commit, or an error for stored files. */
+export function commitSnapshot(snapshot: SourceSnapshot): CommitSnapshot {
+  if (snapshot.commitSha === null || snapshot.repositorySourceId === null) throw new Error(`Snapshot ${snapshot.publicId} is stored files, not a Git commit`);
+  return snapshot as CommitSnapshot;
+}
+
 export const LAUNCH_TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const OBJECT_ID = /^[0-9a-f]{40}$/;
 
@@ -29,6 +49,23 @@ export interface NewAssessment {
   relationshipSchemaVersion: number;
   /** The resolved scope, in the order targets are processed and displayed. */
   sources: readonly RepositorySource[];
+  /** Template versions to assess instead, under the Salt Patterns initiative. */
+  templates?: readonly TemplateTargetInput[];
+  /** Published Releases, by public id, to evaluate the Run against when it finishes, instead of its initiative's selection then. */
+  evaluationReleases?: readonly string[];
+}
+
+/** A template version as a target: what it is, and its exported files, whose Git tree id becomes its content digest. */
+export interface TemplateTargetInput {
+  /** The target's stable key across Runs: the template's id, or the prototype's before its first acceptance. */
+  key: string;
+  name: string;
+  templatePublicId: string | null;
+  templateVersionPublicId: string | null;
+  templateVersionNumber: number | null;
+  prototypeVersionPublicId: string;
+  /** The exported project, path to UTF-8 content: the same files the version's download contains. */
+  files: Readonly<Record<string, string>>;
 }
 
 /**
@@ -39,8 +76,12 @@ export function createAssessment(db: Executor, input: NewAssessment): { assessme
   const issues = new IssueCollector();
   if (!LAUNCH_TOKEN.test(input.launchToken)) issues.add("launchToken", "Launch token must be a lowercase UUID");
   if (!input.detectorRelease.trim()) issues.add("detectorRelease", "Detector release is required");
-  if (input.sources.length === 0) issues.add("sources", "An assessment needs at least one target");
+  const templates = input.templates ?? [];
+  if (input.sources.length + templates.length === 0) issues.add("sources", "An assessment needs at least one target");
+  if (input.sources.length && templates.length) issues.add("sources", "An assessment assesses catalog sources or template versions, not both");
+  for (const template of templates) if (Object.keys(template.files).length === 0) issues.add("templates", `${template.name} has no files to assess`);
   issues.throwIfAny();
+  const digests = templates.map((template) => treeObjectId(template.files));
 
   const configuration = digestOf(input.configuration);
   return immediate(db, (tx) => {
@@ -56,6 +97,7 @@ export function createAssessment(db: Executor, input: NewAssessment): { assessme
         configurationDigest: configuration.digest,
         profileSchemaVersion: input.profileSchemaVersion,
         relationshipSchemaVersion: input.relationshipSchemaVersion,
+        evaluationReleases: input.evaluationReleases ? JSON.stringify(input.evaluationReleases) : null,
         createdAt: now,
         updatedAt: now,
       })
@@ -64,8 +106,8 @@ export function createAssessment(db: Executor, input: NewAssessment): { assessme
 
     const targets = tx
       .insert(assessmentTargets)
-      .values(
-        input.sources.map((source, position) => ({
+      .values([
+        ...input.sources.map((source, position) => ({
           publicId: generatePublicId("tgt"),
           assessmentId: assessment.id,
           repositorySourceId: source.id,
@@ -78,12 +120,37 @@ export function createAssessment(db: Executor, input: NewAssessment): { assessme
           createdAt: now,
           updatedAt: now,
         })),
-      )
+        ...templates.map((template, position) => ({
+          publicId: generatePublicId("tgt"),
+          assessmentId: assessment.id,
+          kind: "template" as const,
+          position,
+          sourcePublicId: template.key,
+          sourceName: template.name,
+          templatePublicId: template.templatePublicId,
+          templateVersionPublicId: template.templateVersionPublicId,
+          templateVersionNumber: template.templateVersionNumber,
+          prototypeVersionPublicId: template.prototypeVersionPublicId,
+          contentDigest: digests[position]!,
+          createdAt: now,
+          updatedAt: now,
+        })),
+      ])
       .returning()
       .all()
       .sort((a, b) => a.position - b.position);
+    // Each template target's files are kept with it, so the worker reads them here and never opens the Prototypes database.
+    templates.forEach((template, position) => {
+      const target = targets.find((candidate) => candidate.kind === "template" && candidate.position === position)!;
+      tx.insert(storedFileSets).values({ assessmentTargetId: target.id, digest: digests[position]!, files: digestOf(sortedFiles(template.files)).text, createdAt: now }).run();
+    });
     return { assessment, targets };
   });
+}
+
+/** The Releases, by public id, a Run is to be evaluated against when it finishes, or null for its initiative's selection then. */
+export function evaluationReleasesOf(assessment: Pick<Assessment, "evaluationReleases">): string[] | null {
+  return assessment.evaluationReleases === null ? null : (JSON.parse(assessment.evaluationReleases) as string[]);
 }
 
 export function findAssessment(db: Executor, publicId: string): Assessment | undefined {
@@ -157,7 +224,8 @@ export function internalRefFor(snapshotPublicId: string): string {
 }
 
 /** Records the commit an acquiring target was pinned to. */
-export function recordSnapshot(db: Executor, target: AssessmentTarget, input: SnapshotInput): SourceSnapshot {
+export function recordSnapshot(db: Executor, copied: AssessmentTarget, input: SnapshotInput): CommitSnapshot {
+  const target = sourceTarget(copied);
   const issues = new IssueCollector();
   if (!OBJECT_ID.test(input.commitSha)) issues.add("commitSha", "Commit must be a 40-character lowercase object id");
   if (!OBJECT_ID.test(input.treeSha)) issues.add("treeSha", "Tree must be a 40-character lowercase object id");
@@ -185,7 +253,51 @@ export function recordSnapshot(db: Executor, target: AssessmentTarget, input: Sn
       createdAt: now,
     })
     .returning()
+    .get() as CommitSnapshot;
+}
+
+export interface StoredFilesSnapshotInput {
+  /** The Git tree id of the files, which must be the target's content digest. */
+  treeSha: string;
+  /** The version the files were exported from: the template version, or the prototype version before its first acceptance. */
+  resolvedRef: string;
+  acquisitionMetadata: JsonObject;
+}
+
+/** Records the stored files an acquiring template target was read from, in place of a pinned commit. */
+export function recordStoredFilesSnapshot(db: Executor, target: AssessmentTarget, input: StoredFilesSnapshotInput): SourceSnapshot {
+  if (target.kind !== "template") throw new Error(`Assessment target ${target.publicId} is a catalog source, not a template version`);
+  if (input.treeSha !== target.contentDigest) throw new Error(`The stored files of ${target.sourceName} no longer match the content digest the Run recorded`);
+  const publicId = generatePublicId("snp");
+  const now = new Date();
+  return db
+    .insert(sourceSnapshots)
+    .values({
+      publicId,
+      assessmentTargetId: target.id,
+      repositorySourceId: null,
+      commitSha: null,
+      treeSha: input.treeSha,
+      refKind: "stored_files",
+      resolvedRef: input.resolvedRef,
+      internalRef: internalRefFor(publicId),
+      acquisitionMetadata: digestOf(input.acquisitionMetadata).text,
+      acquiredAt: now,
+      createdAt: now,
+    })
+    .returning()
     .get();
+}
+
+const sortedFiles = (files: Readonly<Record<string, string>>): JsonObject => Object.fromEntries(Object.keys(files).sort().map((path) => [path, files[path]!]));
+
+/** A template target's stored files, verified against the digest they were stored under. */
+export function storedFilesOf(db: Executor, target: Pick<AssessmentTarget, "id" | "publicId" | "contentDigest">): Record<string, string> {
+  const row = db.select().from(storedFileSets).where(eq(storedFileSets.assessmentTargetId, target.id)).get();
+  if (!row) throw new NotFoundError(`Assessment target ${target.publicId} has no stored files`);
+  const files = parseCanonical(row.files) as Record<string, string>;
+  if (row.digest !== target.contentDigest || treeObjectId(files) !== row.digest) throw new Error(`The stored files of ${target.publicId} don't match their content digest`);
+  return files;
 }
 
 export function snapshotOf(db: Executor, targetId: number): SourceSnapshot | undefined {

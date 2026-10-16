@@ -3,6 +3,7 @@
   .layout { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-8); align-items: start; }
   .results { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
   .search { display: block; }
+  .generate { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
   .count { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--size-card)), 1fr)); gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
@@ -20,4 +21,10 @@
     .layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
     .detail { grid-template-columns: minmax(0, 1fr); grid-template-areas: "overview" "preview"; gap: var(--space-6); }
   }
+
+  /* What a template's latest re-check changed, under its overview. */
+  .standardsReason { margin: 0; color: var(--color-text-secondary); }
+  .recheck { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
+  .recheckTitle { margin: 0; font-weight: var(--font-weight-medium); }
+  .recheckList { margin: 0; padding-left: var(--space-5); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); overflow-wrap: anywhere; }
 }

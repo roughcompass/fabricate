@@ -1,0 +1,10 @@
+@layer components {
+  .stage { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+  /* The audit frame lays out and renders like a visible one, so axe sees real layout, but off screen and out of reach. */
+  .offscreen { position: fixed; top: 0; inset-inline-start: -200vw; pointer-events: none; }
+  .size { display: flex; justify-content: center; gap: var(--space-3); color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+  .scale { font-family: var(--font-family-sans); }
+  .viewport { display: flex; justify-content: center; width: 100%; min-width: 0; overflow: hidden; }
+  .device { position: relative; flex: none; overflow: hidden; border: 1px solid var(--color-border-strong); border-radius: var(--radius-lg); background: var(--color-bg); box-shadow: var(--shadow-menu); }
+  .frame { position: absolute; top: 0; left: 0; border: 0; transform-origin: top left; }
+}

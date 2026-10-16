@@ -33,6 +33,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@deweb/portal": [
+        "./src/demo/runtime/portal"
       ]
     }
   },
@@ -47,7 +50,19 @@
     ".next-check/types/**/*.ts",
     ".next-check/dev/types/**/*.ts",
     ".next-webpack-check/types/**/*.ts",
-    ".next-webpack-check/dev/types/**/*.ts"
+    ".next-webpack-check/dev/types/**/*.ts",
+    ".next-proto/types/**/*.ts",
+    ".next-proto/dev/types/**/*.ts",
+    ".next-hosted/types/**/*.ts",
+    ".next-hosted/dev/types/**/*.ts",
+    ".next-dryrun/types/**/*.ts",
+    ".next-dryrun/dev/types/**/*.ts",
+    ".next-aps-build/types/**/*.ts",
+    ".next-aps-build/dev/types/**/*.ts",
+    ".next-e2e-b/types/**/*.ts",
+    ".next-e2e-b/dev/types/**/*.ts",
+    ".next-e2e-aps/types/**/*.ts",
+    ".next-e2e-aps/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

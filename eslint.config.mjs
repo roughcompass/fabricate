@@ -51,7 +51,8 @@ const restrictedSyntax = [
 
 const config = [
   {
-    ignores: [".next/**", ".next-e2e/**", "dist/**", "node_modules/**", "storage/**", "tmp/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
+    // src/demo/runtime/generated/ is the hero script's committed output, checked by DE FabLab's gates and test/lint/generated-heroes.test.ts.
+    ignores: ["src/demo/runtime/generated/**", ".next/**", ".next-*/**", "dist/**", "public/prototype-runtime/**", ".workflow-data/**", ".swc/**", ".vercel/**", "src/app/.well-known/workflow/**", "node_modules/**", "storage/**", "tmp/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
   },
   ...nextVitals,
   ...nextTypeScript,

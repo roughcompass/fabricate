@@ -1,7 +1,8 @@
 import { compareCodeUnits } from "@repo-facts/contract";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, exists, isNotNull, ne, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { applicationComponents, applications, microfrontendRevisions, microfrontends, placementRoutes, portalEnvironments, portalRevisions, portals, repositorySources } from "@/lib/db/schema";
+import { applicationComponents, applicationPlacements, applications, microfrontendRevisions, microfrontends, placementRoutes, portalEnvironments, portalRevisions, portals, repositorySources } from "@/lib/db/schema";
+import type { PortalPlatform } from "./vocabulary";
 
 /*
  * The Web Onboarding catalogs: each Portal, Web Application, and MFE with
@@ -49,7 +50,12 @@ export function portalCatalog(db: Executor, search = "") {
     .sort((a, b) => compareCodeUnits(a.portal.label.toLowerCase(), b.portal.label.toLowerCase()));
 }
 
-export function applicationCatalog(db: Executor, search = "") {
+/** Narrows the Application catalog to Applications with at least one placement, in any review state, in the Portal with this id (portal-switcher spec). */
+export interface ApplicationScope {
+  portalId?: number | null;
+}
+
+export function applicationCatalog(db: Executor, search = "", scope: ApplicationScope = {}) {
   const needle = search.trim().toLowerCase();
   const launch = new Map(
     db
@@ -68,10 +74,12 @@ export function applicationCatalog(db: Executor, search = "") {
       .all()
       .map((row) => [row.applicationId, row.portals.split(",").length]),
   );
+  const placedIn = scope.portalId == null ? null : new Set(db.selectDistinct({ applicationId: applicationPlacements.applicationId }).from(applicationPlacements).where(eq(applicationPlacements.portalId, scope.portalId)).all().map((row) => row.applicationId));
   return db
     .select()
     .from(applications)
     .all()
+    .filter((application) => !placedIn || placedIn.has(application.id))
     .filter((application) => matches(needle, application.name, application.ownerTeam, application.sealId, application.publicId))
     .map((application) => ({ application, launch: launch.get(application.id) ?? null, portals: placements.get(application.id) ?? 0, draft: application.draftRevisionId !== null }))
     .sort((a, b) => compareCodeUnits((a.application.name ?? a.application.sealId ?? "").toLowerCase(), (b.application.name ?? b.application.sealId ?? "").toLowerCase()) || compareCodeUnits(a.application.publicId, b.application.publicId));
@@ -104,4 +112,28 @@ export function microfrontendCatalog(db: Executor, search = "") {
     .filter((mfe) => matches(needle, mfe.name, mfe.ownerTeam, mfe.sealId, mfe.cdaasAppId, mfe.cdaasViewId))
     .map((mfe) => ({ microfrontend: mfe, source: mfe.activeRevisionId ? (sources.get(mfe.activeRevisionId) ?? null) : null, uses: uses.get(mfe.id) ?? 0, draft: mfe.draftRevisionId !== null }))
     .sort((a, b) => compareCodeUnits(a.microfrontend.name.toLowerCase(), b.microfrontend.name.toLowerCase()));
+}
+
+/** A Portal as the sidebar's switcher lists it. */
+export interface SwitcherPortal {
+  publicId: string;
+  label: string;
+  slug: string | null;
+  sealId: string | null;
+  platform: PortalPlatform | null;
+}
+
+/**
+ * The Portals the sidebar's switcher offers (portal-switcher spec): every
+ * onboarded Portal, one with a configuration revision, that isn't Retired,
+ * sorted by name. A Portal named only in an ownership claim isn't onboarded.
+ * One narrow query, since the shell runs it on every page.
+ */
+export function portalSwitcherList(db: Executor): SwitcherPortal[] {
+  return db
+    .select({ publicId: portals.publicId, label: portals.label, slug: portals.slug, sealId: portals.sealId, platform: portals.platform })
+    .from(portals)
+    .where(and(ne(portals.lifecycle, "retired"), exists(db.select({ one: sql`1` }).from(portalRevisions).where(eq(portalRevisions.portalId, portals.id)))))
+    .orderBy(asc(portals.labelKey), asc(portals.publicId))
+    .all();
 }

@@ -50,6 +50,12 @@ export const initiatives = sqliteTable(
      * the repository is claimed. Null on initiatives operators create.
      */
     claimRepositorySourceId: integer("claim_repository_source_id").references((): AnySQLiteColumn => repositorySources.id, { onDelete: "restrict" }),
+    /**
+     * Set on the Salt Patterns initiative, which DE FabLab owns and whose
+     * targets are template versions (converge-templates-and-prototypes,
+     * design decision 2). Operators choose its Releases, nothing else.
+     */
+    systemOwned: integer("system_owned", { mode: "boolean" }).notNull().default(false),
     lockVersion: lockVersion(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -60,6 +66,7 @@ export const initiatives = sqliteTable(
     check("initiatives_name", sql`length(trim(${t.name})) BETWEEN 1 AND 120`),
     check("initiatives_objective", sql`length(${t.objective}) <= 2000`),
     check("initiatives_selection_mode", sql.raw(`selection_mode IN (${sqlList(SELECTION_MODES)})`)),
+    check("initiatives_system_owned", sql`${t.systemOwned} IN (0, 1)`),
   ],
 );
 

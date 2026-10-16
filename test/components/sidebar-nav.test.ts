@@ -16,7 +16,7 @@ afterEach(() => {
 /** The section menu's entries, in order: each one's label, whether it's current, and whether it has a chevron. */
 function sectionMenu(pathname: string, demo: boolean) {
   route.pathname = pathname;
-  const html = renderToStaticMarkup(createElement(SidebarNav, { demo }));
+  const html = renderToStaticMarkup(createElement(SidebarNav, { nav: { demo, prototypes: false, hosted: false } }));
   const menu = html.slice(html.indexOf('id="sidebar-sections"'), html.indexOf("</ul>"));
   return [...menu.matchAll(/<a ([^>]*)>(.*?)<\/a>/g)].map(([, attributes, content]) => ({
     label: /<span[^>]*>([^<]*)<\/span>/.exec(content!)![1],
@@ -46,7 +46,7 @@ describe("sidebar section menu", () => {
 
   it("links Home to the root address with its icon", () => {
     route.pathname = "/";
-    const html = renderToStaticMarkup(createElement(SidebarNav, { demo: false }));
+    const html = renderToStaticMarkup(createElement(SidebarNav, { nav: { demo: false, prototypes: false, hosted: false } }));
     const home = /<a [^>]*data-item="home"[^>]*>.*?<\/a>/.exec(html)![0];
     expect(home).toContain('href="/"');
     expect(home).toContain('<path d="M3 11 12 4l9 7');

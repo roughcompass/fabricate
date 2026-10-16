@@ -1,4 +1,6 @@
 @layer pages {
+  /* A template accepted from a prototype: its controls above its frame. */
+  .prototypePreview { display: flex; flex-direction: column; gap: var(--space-4); }
   /* The command row, at the end, on both tabs: the scaffold command with its copy control, then Deploy template. */
   .commandRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; }
   /* The control row: the tabs, then, on the Preview tab, the icon controls pushed to the end. */
@@ -25,6 +27,7 @@
   .frame { position: absolute; top: 0; left: 0; border: 0; transform-origin: top left; }
 
   /* The Code tab: the file tree beside the selected file. */
+  .illustrative { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
   .code { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
   .tree { padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
   .treeList { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }

@@ -25,7 +25,7 @@ import { draftOf, latestSubmitted, revisionByNumber, revisionsOf } from "@/lib/o
 import { ensurePortal } from "@/lib/ownership/records";
 import { buildSource } from "../../support/builders";
 import { createTestDb } from "../../support/db";
-import { activate, ana, cy, decide, onboardApplication, onboardPortal, placementsOf, portalDraft, registerMfe } from "../../support/onboarding";
+import { activate, ana, cy, decide, onboardApplication, onboardPortal, placementsOf, portalDraft, portalInput, registerMfe } from "../../support/onboarding";
 import { migratedV1Database } from "../../support/onboarding-v1";
 
 const FALLBACK = { source: "fallback" as const, environments: FALLBACK_ENVIRONMENTS, digest: catalogDigest(FALLBACK_ENVIRONMENTS) };
@@ -77,7 +77,7 @@ describe("Portal onboarding", () => {
     });
 
     it("identifies its owner by team, with no email field (Portal needs no email)", () => {
-      const { portal } = createPortal(db, { name: "Access", ownerTeam: "Access Platform" }, ana);
+      const { portal } = createPortal(db, portalInput("Access", { ownerTeam: "Access Platform" }), ana);
       expect(portal).toMatchObject({ ownerTeam: "Access Platform" });
       for (const table of ["portals", "portal_revisions"]) {
         const columns = (db.$client.prepare(`pragma table_info(${table})`).all() as { name: string }[]).map((column) => column.name);
@@ -88,11 +88,62 @@ describe("Portal onboarding", () => {
 
     it("onboards a Portal first named in an ownership claim, keeping its identity, and refuses an onboarded name", () => {
       const claimed = ensurePortal(db, "Digital Bank");
-      const { portal, adopted } = createPortal(db, { name: "digital  bank", ownerTeam: "Digital" }, ana);
+      const { portal, adopted } = createPortal(db, portalInput("digital  bank", { ownerTeam: "Digital" }), ana);
       expect(adopted).toBe(true);
       expect(portal.publicId).toBe(claimed.publicId);
-      expect(() => createPortal(db, { name: "Digital Bank" }, ana)).toThrow(/already onboarded/);
-      expect(() => createPortal(db, { name: " ", sealId: "8 8" }, ana)).toThrow(ValidationError);
+      expect(() => createPortal(db, portalInput("Digital Bank", { slug: "digitalbanktwo" }), ana)).toThrow(/already onboarded/);
+      expect(() => createPortal(db, portalInput(" ", { sealId: "8 8" }), ana)).toThrow(ValidationError);
+    });
+  });
+
+  describe("creating (portal-creation spec)", () => {
+    const refusal = (input: Parameters<typeof portalInput>[1], name = "Treasury") => {
+      try {
+        createPortal(db, portalInput(name, input), ana);
+      } catch (error) {
+        if (error instanceof ValidationError) return error;
+        throw error;
+      }
+      throw new Error("createPortal accepted the input");
+    };
+
+    it("records the platform, SEAL ID, description, and the slug its name derives (Portal page shows identity)", () => {
+      const { portal } = createPortal(db, portalInput("My New Portal", { platform: "mobile", sealId: "1042", description: "  Treasury for mobile  " }), ana);
+      expect(portal).toMatchObject({ label: "My New Portal", platform: "mobile", sealId: "1042", slug: "mynewportal", description: "Treasury for mobile", ownerTeam: null });
+    });
+
+    it("keeps an edited slug", () => {
+      expect(createPortal(db, portalInput("My New Portal", { slug: "mnp" }), ana).portal.slug).toBe("mnp");
+    });
+
+    it.each([
+      [{ platform: "" }, "platform", "Choose the Portal's platform"],
+      [{ platform: "kiosk" }, "platform", "Choose the Portal's platform"],
+      [{ sealId: " " }, "sealId", "Enter the Portal's SEAL ID"],
+      [{ sealId: "8 8" }, "sealId", "Enter a SEAL ID of letters, digits, dots, dashes, or underscores"],
+      [{ description: "" }, "description", "Enter a description of the Portal"],
+      [{ description: "x".repeat(501) }, "description", "Use 500 characters or fewer"],
+      [{ slug: "my-portal" }, "slug", "Enter a slug of lowercase letters"],
+      [{ slug: "x".repeat(64) }, "slug", "Use 63 letters or fewer"],
+    ])("refuses %j at %s", (input, field, message) => {
+      expect(refusal(input).messagesFor(field)).toEqual([message]);
+      expect(db.$client.prepare("select count(*) as n from portals where label = 'Treasury'").get()).toEqual({ n: 0 });
+    });
+
+    it("derives no slug from a name without letters (Name without letters)", () => {
+      expect(refusal({}, "2026").messagesFor("slug")).toEqual(["Enter a slug of lowercase letters"]);
+    });
+
+    it("refuses a slug another Portal has (Two Portals can't share a slug, Slug taken)", () => {
+      onboardPortal(db, "Markets");
+      expect(refusal({ slug: "markets" }).messagesFor("slug")).toEqual(["The slug markets belongs to Markets"]);
+    });
+
+    it("gives an adopted claim-named Portal the submitted platform, slug, and description", () => {
+      const claimed = ensurePortal(db, "Lending");
+      const { portal, adopted } = createPortal(db, portalInput("Lending", { platform: "desktop", description: "Loans desk" }), ana);
+      expect(adopted).toBe(true);
+      expect(portal).toMatchObject({ publicId: claimed.publicId, platform: "desktop", slug: "lending", description: "Loans desk" });
     });
   });
 
@@ -124,7 +175,7 @@ describe("Portal onboarding", () => {
     });
 
     it("refuses runtimes, contracts, and Portal entitlements in a Draft, outside legacy (Portal has no entitlement configuration)", () => {
-      const { portal, draft } = createPortal(db, { name: "Access", ownerTeam: "Access Platform" }, ana);
+      const { portal, draft } = createPortal(db, portalInput("Access", { ownerTeam: "Access Platform" }), ana);
       for (const document of [{ ...portalDraft(), runtimes: ["studio-shell"] }, { ...portalDraft(), contract: {} }, { ...portalDraft(), environments: [{ key: "prod", runtime: null, enabled: true, entitlements: { codes: ["ACCESS"], operator: "any" }, inheritFrom: null }] }]) {
         expect(() => savePortalDraft(db, portal.publicId, { lockVersion: draft.lockVersion, document })).toThrow(ValidationError);
       }
@@ -227,7 +278,7 @@ describe("Portal onboarding", () => {
 
   describe("lifecycle", () => {
     it("becomes Ready on a complete revision, and refuses activation until every enabled environment has a default (Portal cannot activate without a default)", () => {
-      const { portal, draft } = createPortal(db, { name: "Access", ownerTeam: "Access Platform" }, ana);
+      const { portal, draft } = createPortal(db, portalInput("Access", { ownerTeam: "Access Platform" }), ana);
       expect(submitPortal(db, portal.publicId, { lockVersion: draft.lockVersion, actor: ana })).toMatchObject({ submitted: false });
       expect(getPortal(db, portal.publicId).lifecycle).toBe("draft");
       expect(() => activate(db, portal)).toThrow(/isn't ready/);

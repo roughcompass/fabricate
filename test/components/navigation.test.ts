@@ -1,11 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { HOME, SECTIONS, homeLink, locate, visibleSections } from "@/components/shell/navigation";
+import { HOME, NO_OPTIONAL_AREAS, type NavFlags, SECTIONS, homeLink, locate, visibleSections } from "@/components/shell/navigation";
 
 // operator-interface/page-patterns spec: sidebar navigation drills into each section.
 
 const OPERATOR = path.resolve("src/app/(operator)");
+
+const BASE = NO_OPTIONAL_AREAS;
+const DEMO: NavFlags = { demo: true, prototypes: false, hosted: false };
+const PROTOTYPES: NavFlags = { demo: false, prototypes: true, hosted: false };
+const ALL: NavFlags = { demo: true, prototypes: true, hosted: false };
+const HOSTED: NavFlags = { demo: true, prototypes: true, hosted: true };
 
 /** Every operator page, as its route template ("/standards/[standardId]/draft"). */
 function routes(directory = OPERATOR): string[] {
@@ -77,6 +83,20 @@ const EXPECTED: Record<string, [section: string, item: string] | null> = {
   "/templates/[templateSlug]": ["salt-patterns", "all-salt-patterns"],
   "/templates/[templateSlug]/deploy": ["salt-patterns", "all-salt-patterns"],
   "/templates/[templateSlug]/preview": ["salt-patterns", "all-salt-patterns"],
+  "/prototypes": ["prototypes", "all-prototypes"],
+  "/prototypes/new": ["prototypes", "new-prototype"],
+  "/prototypes/[prototypeId]": ["prototypes", "all-prototypes"],
+  "/prototypes/[prototypeId]/accept": ["prototypes", "all-prototypes"],
+  "/prototypes/[prototypeId]/compare": ["prototypes", "all-prototypes"],
+  "/prototypes/generations/[generationId]": ["prototypes", "all-prototypes"],
+  "/prototypes/generations/[generationId]/variants/[variantId]": ["prototypes", "all-prototypes"],
+  "/prototypes/personas": ["prototypes", "personas"],
+  "/prototypes/personas/new": ["prototypes", "personas"],
+  "/prototypes/personas/[personaId]": ["prototypes", "personas"],
+  "/prototypes/lessons": ["prototypes", "lessons"],
+  "/prototypes/shell": ["prototypes", "page-shell"],
+  "/prototypes/templates/[templateSlug]/preview": ["prototypes", "all-prototypes"],
+  "/p/[token]": null,
   "/design-system": null,
   "/design-system/error-demo": null,
 };
@@ -90,8 +110,15 @@ describe("sidebar navigation", () => {
     expect(found.length).toBeGreaterThan(20);
     for (const route of found) {
       expect(EXPECTED, `${route} needs an entry in EXPECTED`).toHaveProperty([route]);
-      const located = locate(sample(route), true);
+      const located = locate(sample(route), ALL);
       expect(located && [located.section.id, located.item.id], route).toEqual(EXPECTED[route]);
+    }
+  });
+
+  it("marks the item the spec names on every Prototypes page, including pages not built yet", () => {
+    for (const [route, expected] of Object.entries(EXPECTED).filter(([route]) => route.startsWith("/prototypes"))) {
+      const located = locate(sample(route), ALL);
+      expect(located && [located.section.id, located.item.id], route).toEqual(expected);
     }
   });
 
@@ -108,6 +135,13 @@ describe("sidebar navigation", () => {
       ["Web Onboarding", [[null, ["Portals", "Web Applications", "Reviews"]]]],
       ["Applications", [[null, ["All Applications", "Import from BitBucket"]]]],
       ["Salt Patterns", [[null, ["All Salt Patterns", "New application"]]]],
+      [
+        "Prototypes",
+        [
+          [null, ["All Prototypes", "New prototype"]],
+          ["Library", ["Personas", "Lessons", "Page shell"]],
+        ],
+      ],
     ]);
     for (const section of SECTIONS) expect(section.items).toEqual(section.groups.flatMap((group) => group.items));
   });
@@ -118,34 +152,36 @@ describe("sidebar navigation", () => {
       ["Web Onboarding", "/onboarding/portals"],
       ["Applications", "/applications"],
       ["Salt Patterns", "/templates"],
+      ["Prototypes", "/prototypes"],
     ]);
   });
 
   it("keeps Home outside every section, so the root address marks no section (Home in the section menu)", () => {
     expect(HOME).toMatchObject({ label: "Home", href: "/", icon: "home" });
-    expect(locate("/", true)).toBeNull();
-    expect(locate("/", false)).toBeNull();
+    for (const flags of [BASE, ALL]) expect(locate("/", flags)).toBeNull();
   });
 
   it("leads links to Home while Assessments is shown, and to the first section's first page otherwise (Profile without Assessments)", () => {
-    expect(homeLink(visibleSections(false))).toEqual({ href: "/", label: "Home" });
-    expect(homeLink(visibleSections(true))).toEqual({ href: "/", label: "Home" });
+    for (const flags of [BASE, DEMO, PROTOTYPES, ALL]) expect(homeLink(visibleSections(flags))).toEqual({ href: "/", label: "Home" });
+    expect(homeLink(visibleSections(HOSTED))).toEqual({ href: "/prototypes", label: "Prototypes" });
     const withoutAssessments = SECTIONS.filter((section) => section.id !== "assessments");
     expect(homeLink(withoutAssessments)).toEqual({ href: "/onboarding/portals", label: "Web Onboarding" });
     expect(homeLink(SECTIONS.filter((section) => section.id === "salt-patterns"))).toEqual({ href: "/templates", label: "Salt Patterns" });
   });
 
   it("marks a create or import page as its own item rather than the list", () => {
-    expect(locate("/assessments/new", true)?.item.id).toBe("new-assessment");
-    expect(locate("/repositories/new", true)?.item.id).toBe("new-repository");
-    expect(locate("/repositories/import/", true)?.item.id).toBe("import-repositories");
-    expect(locate("/applications/import", true)?.item.id).toBe("import-bitbucket");
-    expect(locate("/applications/import/PAY/payee-hub", true)?.item.id).toBe("import-bitbucket");
-    expect(locate("/applications/app_0123456789abcdef", true)?.item.id).toBe("all-applications");
+    expect(locate("/assessments/new", ALL)?.item.id).toBe("new-assessment");
+    expect(locate("/repositories/new", ALL)?.item.id).toBe("new-repository");
+    expect(locate("/repositories/import/", ALL)?.item.id).toBe("import-repositories");
+    expect(locate("/applications/import", ALL)?.item.id).toBe("import-bitbucket");
+    expect(locate("/applications/import/PAY/payee-hub", ALL)?.item.id).toBe("import-bitbucket");
+    expect(locate("/applications/app_0123456789abcdef", ALL)?.item.id).toBe("all-applications");
+    expect(locate("/prototypes/new", ALL)?.item.id).toBe("new-prototype");
+    expect(locate("/prototypes/new/", ALL)?.item.id).toBe("new-prototype");
   });
 
   it("marks Web Onboarding current on its deep pages, with the demo enabled or disabled (Web Onboarding section on a deep page)", () => {
-    for (const demo of [true, false]) {
+    for (const demo of [DEMO, BASE]) {
       expect([locate("/onboarding/microfrontends/mfe_0123456789abcdef", demo)?.section.id, locate("/onboarding/microfrontends/mfe_0123456789abcdef", demo)?.item.id]).toEqual(["web-onboarding", "web-applications"]);
       expect(locate("/onboarding/applications/wap_0123456789abcdef/draft/launch", demo)?.item.id).toBe("web-applications");
       expect(locate("/onboarding/reviews/plc_0123456789abcdef", demo)?.item.id).toBe("reviews");
@@ -154,7 +190,31 @@ describe("sidebar navigation", () => {
   });
 
   it("shows Assessments and Web Onboarding, and leaves the demo's pages outside every section, while the demo is disabled (Demo disabled)", () => {
-    expect(visibleSections(false).map((section) => section.label)).toEqual(["Assessments", "Web Onboarding"]);
-    for (const route of ["/new", "/templates", "/templates/payments-hub/preview", "/applications", "/applications/app-1", "/applications/import/PAY/payee-hub"]) expect(locate(route, false), route).toBeNull();
+    expect(visibleSections(BASE).map((section) => section.label)).toEqual(["Assessments", "Web Onboarding"]);
+    for (const route of ["/new", "/templates", "/templates/payments-hub/preview", "/applications", "/applications/app-1", "/applications/import/PAY/payee-hub"]) expect(locate(route, BASE), route).toBeNull();
+  });
+
+  it("shows Prototypes but neither Applications nor Salt Patterns while only Prototypes is enabled (Independent of the template demo)", () => {
+    expect(visibleSections(PROTOTYPES).map((section) => section.label)).toEqual(["Assessments", "Web Onboarding", "Prototypes"]);
+  });
+
+  it("leaves Prototypes' pages outside every section while it is disabled (Production default)", () => {
+    expect(visibleSections(DEMO).map((section) => section.label)).not.toContain("Prototypes");
+    for (const route of ["/prototypes", "/prototypes/new", "/prototypes/pro_0123456789abcdef", "/prototypes/personas/per_0123456789abcdef", "/prototypes/lessons", "/prototypes/shell"]) expect(locate(route, DEMO), route).toBeNull();
+  });
+
+  it("shows only Prototypes in the hosted profile, whatever else is enabled (Starting on Vercel)", () => {
+    expect(visibleSections(HOSTED).map((section) => section.label)).toEqual(["Prototypes"]);
+    expect(visibleSections({ ...HOSTED, prototypes: false })).toEqual([]);
+    expect(locate("/assessments", HOSTED)).toBeNull();
+  });
+
+  it("opens Prototypes at its list, with the Library group after it (Choosing Prototypes, Persona form)", () => {
+    const prototypes = visibleSections(PROTOTYPES).find((section) => section.id === "prototypes")!;
+    expect(prototypes.items[0]).toMatchObject({ label: "All Prototypes", href: "/prototypes" });
+    expect(locate("/prototypes", PROTOTYPES)?.item.id).toBe("all-prototypes");
+    const personaForm = locate("/prototypes/personas/per_0123456789abcdef", PROTOTYPES)!;
+    expect(personaForm.item.id).toBe("personas");
+    expect(personaForm.section.groups.find((group) => group.items.includes(personaForm.item))?.label).toBe("Library");
   });
 });

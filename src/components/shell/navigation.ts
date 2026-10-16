@@ -23,11 +23,13 @@ export interface NavGroup {
 }
 
 export interface NavSection {
-  readonly id: "assessments" | "web-onboarding" | "applications" | "salt-patterns";
+  readonly id: "assessments" | "web-onboarding" | "applications" | "salt-patterns" | "prototypes";
   readonly label: string;
   readonly icon: IconName;
   /** Shown only while the template demo is enabled. */
   readonly demo?: boolean;
+  /** Shown only while Prototypes is enabled, and the only section in the hosted profile. */
+  readonly prototypes?: boolean;
   /** The sub-menu; choosing the section opens the first item. */
   readonly groups: readonly NavGroup[];
   /** Every item of the sub-menu, in order. */
@@ -108,11 +110,50 @@ export const SECTIONS: readonly NavSection[] = [
       },
     ],
   }),
+  section({
+    id: "prototypes",
+    label: "Prototypes",
+    icon: "flask",
+    prototypes: true,
+    groups: [
+      {
+        items: [
+          // Prototype, variants, and compare pages all belong to All Prototypes; the composer and the library have their own items.
+          { id: "all-prototypes", label: "All Prototypes", href: "/prototypes", match: [/^\/prototypes\/?$/, /^\/prototypes\/(?!(new|personas|lessons|shell)(\/|$))[^/]+(\/.*)?$/] },
+          { id: "new-prototype", label: "New prototype", href: "/prototypes/new", match: [/^\/prototypes\/new\/?$/] },
+        ],
+      },
+      {
+        label: "Library",
+        items: [
+          { id: "personas", label: "Personas", href: "/prototypes/personas", match: [/^\/prototypes\/personas(\/.*)?$/] },
+          { id: "lessons", label: "Lessons", href: "/prototypes/lessons", match: [/^\/prototypes\/lessons\/?$/] },
+          { id: "page-shell", label: "Page shell", href: "/prototypes/shell", match: [/^\/prototypes\/shell\/?$/] },
+        ],
+      },
+    ],
+  }),
 ];
 
-/** The sections to show: Assessments and Web Onboarding always, and Applications and Salt Patterns only while the demo is enabled. */
-export function visibleSections(demoEnabled: boolean): readonly NavSection[] {
-  return SECTIONS.filter((section) => demoEnabled || !section.demo);
+/** Which optional areas exist in this configuration. Pages read it from the configuration; client error pages, which can't, use NO_OPTIONAL_AREAS. */
+export interface NavFlags {
+  /** The template demo: Applications and Salt Patterns. */
+  readonly demo: boolean;
+  readonly prototypes: boolean;
+  /** The hosted profile shows only Prototypes. */
+  readonly hosted: boolean;
+}
+
+export const NO_OPTIONAL_AREAS: NavFlags = { demo: false, prototypes: false, hosted: false };
+
+/**
+ * The sections to show: Assessments and Web Onboarding always, Applications
+ * and Salt Patterns while the demo is enabled, and Prototypes while it is
+ * enabled. In the hosted profile, only Prototypes.
+ */
+export function visibleSections(flags: NavFlags): readonly NavSection[] {
+  if (flags.hosted) return SECTIONS.filter((section) => section.prototypes && flags.prototypes);
+  return SECTIONS.filter((section) => (section.demo ? flags.demo : section.prototypes ? flags.prototypes : true));
 }
 
 /** Home (home spec): the first entry of the section menu, outside every section, so it has no sub-menu. */
@@ -132,8 +173,8 @@ export function homeLink(sections: readonly NavSection[]): { href: string; label
 }
 
 /** The section and item a path belongs to, or null for a page outside every section. */
-export function locate(pathname: string, demoEnabled: boolean): { section: NavSection; item: NavItem } | null {
-  for (const section of visibleSections(demoEnabled)) {
+export function locate(pathname: string, flags: NavFlags): { section: NavSection; item: NavItem } | null {
+  for (const section of visibleSections(flags)) {
     const item = section.items.find((candidate) => candidate.match.some((pattern) => pattern.test(pathname)));
     if (item) return { section, item };
   }

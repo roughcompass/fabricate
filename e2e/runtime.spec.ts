@@ -23,6 +23,13 @@ async function fullyVisible(page: Page, locator: ReturnType<Page["locator"]>): P
 }
 
 const region = (page: Page, member: string) => page.locator(`[data-demo-mfe="${member}"]`);
+/**
+ * An open header menu: a Salt overlay panel in the Access shell and a Salt menu
+ * in the Markets shell, rendered outside the portal root. Found by its label,
+ * since Salt names a menu after its trigger.
+ */
+const panelSelector = (shell: "access" | "markets", name: string) => `[role="${shell === "access" ? "dialog" : "menu"}"][aria-label="${name}"]`;
+const headerPanel = (page: Page, shell: "access" | "markets", name: string) => page.locator(panelSelector(shell, name));
 const ruleIds = (violations: AuditViolation[]) => violations.map((violation) => violation.id).sort();
 
 test.describe("portal shells", () => {
@@ -45,9 +52,9 @@ test.describe("portal shells", () => {
       const user = page.getByRole("button", { name: /Jordan Lee/ });
       await expect(user).toContainText("Analyst · London");
       await user.click();
-      await expect(page.getByRole("region", { name: "User menu for Jordan Lee" })).toContainText("Analyst · London");
+      await expect(headerPanel(page, hero.shell, "User menu for Jordan Lee")).toContainText("Analyst · London");
       await page.keyboard.press("Escape");
-      await expect(page.getByRole("region", { name: "User menu for Jordan Lee" })).toHaveCount(0);
+      await expect(headerPanel(page, hero.shell, "User menu for Jordan Lee")).toHaveCount(0);
       await expect(user).toBeFocused();
       await expect(page.getByRole("contentinfo")).toContainText(`An illustrative ${hero.portal} shell for the template demo.`);
       await expect(page.getByRole("contentinfo")).toContainText("Environment: Production");
@@ -62,19 +69,18 @@ test.describe("portal shells", () => {
     await expect(navigation.getByRole("button", { name: "Payments workspace" })).toHaveAttribute("aria-expanded", "true");
     const activity = navigation.getByRole("link", { name: "Activity" });
     await expect(activity).toHaveAttribute("aria-current", "page");
-    // The current route is tinted and bordered.
-    const [tint, border] = await activity.evaluate((element) => [getComputedStyle(element).backgroundColor, getComputedStyle(element).borderLeftColor]);
-    expect(tint).not.toBe("rgba(0, 0, 0, 0)");
-    expect(border).not.toBe("rgba(0, 0, 0, 0)");
+    // Marked as current the way Salt's navigation marks it.
+    await expect(activity).toHaveClass(/saltNavigationItem-active/);
+    await expect(navigation.getByRole("link", { name: "Payees" })).not.toHaveClass(/saltNavigationItem-active/);
     await expect(navigation.getByRole("link", { name: "Home" })).toBeVisible();
     for (const group of ["Reports and Insights", "Support Hub"]) await expect(navigation.getByRole("button", { name: group })).toHaveAttribute("aria-expanded", "false");
     await navigation.getByRole("button", { name: "Reports and Insights" }).click();
     await expect(navigation.getByText("Statements")).toBeVisible();
 
     const crumbs = page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("listitem");
-    await expect(crumbs).toHaveText(["Payments", "Payments workspace", "Activity"]);
+    await expect(crumbs).toHaveText([ACCESS, "Payments workspace", "Activity"]);
     await expect(crumbs.last()).toHaveAttribute("aria-current", "page");
-    // The brand has no page of its own in the demo, so its crumb is text, not a link.
+    // The portal has no page of its own in the demo, so its crumb is text, not a link.
     await expect(crumbs.first().getByRole("link")).toHaveCount(0);
     await expect(page.getByRole("heading", { level: 1, name: "Activity" })).toBeVisible();
   });
@@ -115,7 +121,7 @@ test.describe("portal shells", () => {
     await expect(navigation).toBeHidden();
   });
 
-  test("navigates the Markets shell's route tabs, underlining the current one under a serif title band", async ({ page, db: _db }) => {
+  test("navigates the Markets shell's route tabs, marking the current one, under a title band in Salt's display typography", async ({ page, db: _db }) => {
     await page.goto("/run/ref-market-watch");
     await waitForRegions(page);
     await expect(page.getByRole("navigation", { name: `${MARKETS} sections` }).getByRole("link", { name: "Market watch" })).toHaveAttribute("aria-current", "page");
@@ -125,12 +131,14 @@ test.describe("portal shells", () => {
     await expect(page).toHaveURL(/\/run\/ref-market-watch\/blotter$/);
     const blotter = tabs.getByRole("link", { name: "Blotter" });
     await expect(blotter).toHaveAttribute("aria-current", "page");
-    // Polled: under reduced motion the underline still takes one near-zero transition frame.
-    await expect.poll(() => blotter.evaluate((element) => getComputedStyle(element).borderBottomColor)).not.toBe("rgba(0, 0, 0, 0)");
-    await expect.poll(() => tabs.getByRole("link", { name: "Watch" }).evaluate((element) => getComputedStyle(element).borderBottomColor)).toBe("rgba(0, 0, 0, 0)");
+    await expect(blotter).toHaveClass(/saltNavigationItem-active/);
+    await expect(tabs.getByRole("link", { name: "Watch" })).not.toHaveClass(/saltNavigationItem-active/);
     const title = page.getByRole("heading", { level: 1, name: "Blotter" });
     await expect(title).toBeVisible();
-    expect(await title.evaluate((element) => getComputedStyle(element).fontFamily)).toMatch(/serif/);
+    await expect(title).toHaveClass(/saltText-display/);
+    // The band contrasts with the content area around it.
+    const [band, surface] = await title.evaluate((element) => [getComputedStyle(element.parentElement!.parentElement!).backgroundColor, getComputedStyle(document.querySelector('[data-demo-anchor="portal-header"]')!).backgroundColor]);
+    expect(band).not.toBe(surface);
     const footer = page.getByRole("contentinfo");
     await expect(footer).toContainText("J.P.Morgan");
     // Placeholder portal links: the legal entries are plain text, not links.
@@ -138,17 +146,21 @@ test.describe("portal shells", () => {
     await expect(footer.getByRole("link")).toHaveCount(0);
   });
 
-  test("uses near-black bars and a deep blue title band in the dark Markets theme", async ({ page, db: _db }) => {
-    await page.goto("/run/ref-market-watch");
-    await waitForRegions(page);
-    await setView(page, { theme: "dark" });
-    const rgb = (value: string) => value.match(/\d+/g)!.slice(0, 3).map(Number);
-    const bar = rgb(await page.locator('[data-demo-anchor="portal-header"]').evaluate((element) => getComputedStyle(element).backgroundColor));
-    expect(Math.max(...bar)).toBeLessThan(24);
-    const band = rgb(await page.getByRole("heading", { level: 1 }).evaluate((element) => getComputedStyle(element.parentElement!.parentElement!).backgroundColor));
-    expect(band[2]).toBeGreaterThan(band[0]! + 40);
-    expect(Math.max(...band)).toBeLessThan(128);
-  });
+  for (const hero of [HEROES[0], HEROES[2]]) {
+    test(`switches the ${hero.portal} shell to Salt's dark mode, where every shell text and control meets contrast`, async ({ page, db: _db }) => {
+      await page.goto(`/run/ref-${hero.slug}`);
+      await waitForRegions(page);
+      const rgb = (value: string) => value.match(/\d+/g)!.slice(0, 3).map(Number);
+      const surfaces = () => page.locator('[data-demo-anchor="portal-header"]').evaluate((element) => [getComputedStyle(element).backgroundColor, getComputedStyle(element).color]);
+      const [lightBar] = await surfaces();
+      await setView(page, { theme: "dark", overrides: { [hero.planted]: { version: hero.fixed, environment: "production" } } });
+      await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-mode", "dark");
+      const [darkBar] = await surfaces();
+      expect(darkBar).not.toBe(lightBar);
+      expect(Math.max(...rgb(darkBar!))).toBeLessThan(64);
+      expect(await audit(page)).toEqual([]);
+    });
+  }
 
   for (const hero of [HEROES[0], HEROES[2]]) {
     test(`keeps the ${hero.portal} header menus free of violations while they are open`, async ({ page, db: _db }) => {
@@ -159,9 +171,9 @@ test.describe("portal shells", () => {
       for (const name of [...menus, "User menu for Jordan Lee"]) {
         const control = name.startsWith("User menu") ? page.getByRole("button", { name: /Jordan Lee/ }) : page.getByRole("button", { name, exact: true });
         await control.click();
-        const menu = page.locator("[data-demo-portal]").getByRole("region", { name });
+        const menu = headerPanel(page, hero.shell, name);
         await expect(menu).toBeVisible();
-        expect(await audit(page), name).toEqual([]);
+        expect(await audit(page, [panelSelector(hero.shell, name)]), name).toEqual([]);
         await page.keyboard.press("Escape");
         await expect(menu).toHaveCount(0);
       }
@@ -224,7 +236,7 @@ test.describe("event bus", () => {
     await page.goto("/run/ref-payments-workspace");
     await waitForRegions(page);
     await page.locator('[data-demo-anchor="pay-lumen"]').click();
-    await expect(region(page, "transfer-form").getByLabel("Payee")).toHaveValue("lumen");
+    await expect(region(page, "transfer-form").getByRole("combobox", { name: "Payee" })).toHaveText("Lumen Energy");
   });
 
   test("updates KYC for a chosen client and service health for a chosen incident", async ({ page, db: _db }) => {
@@ -331,8 +343,12 @@ test.describe("self-contained runtime", () => {
         await page.goto(`/run/ref-${hero.slug}/${route.path}`);
         await waitForRegions(page);
         const buttons = page.locator("[data-demo-mfe] button:visible");
-        for (let index = 0; index < Math.min(await buttons.count(), 12); index++) await buttons.nth(index).click({ trial: false }).catch(() => {});
-        for (const input of await page.locator("[data-demo-mfe] input:visible").all()) await input.fill("12");
+        // A Salt Dropdown or menu opens a popup over the page, so each click is closed with Escape and given a short wait.
+        for (let index = 0; index < Math.min(await buttons.count(), 12); index++) {
+          await buttons.nth(index).click({ timeout: 2_000 }).catch(() => {});
+          await page.keyboard.press("Escape");
+        }
+        for (const input of await page.locator("[data-demo-mfe] input:visible").all()) await input.fill("12", { timeout: 2_000 }).catch(() => {});
       }
     }
     expect(outside).toEqual([]);

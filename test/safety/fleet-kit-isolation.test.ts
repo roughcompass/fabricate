@@ -20,7 +20,8 @@ const INTO_PROTECTED = new RegExp(`${PROTECTED_DIRECTORY}[\\\\/][A-Za-z0-9_]`);
 const tracked = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], { cwd: ROOT, encoding: "utf8" })
   .split("\0")
   .filter(Boolean)
-  .filter((file) => fs.existsSync(path.join(ROOT, file)) && !BINARY.test(file));
+  // Only files: agent skill installs add symlinks to directories.
+  .filter((file) => fs.existsSync(path.join(ROOT, file)) && fs.statSync(path.join(ROOT, file)).isFile() && !BINARY.test(file));
 
 describe("fleet-kit isolation", () => {
   it("names no path inside fleet-kit/ in source, scripts, or configuration", () => {
