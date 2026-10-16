@@ -43,6 +43,8 @@ describe("navigation skeletons", () => {
     ["/applications/new/create", "focused"],
     ["/navigation", "list"],
     ["/navigation/new", "form"],
+    ["/navigation/ptl_abc/edit", "form"],
+    ["/applications/wap_abc/edit", "form"],
     ["/navigation/ptl_abc", "detail"],
   ])("shows the %s page's skeleton as %s", (pathname, kind) => {
     expect(skeletonFor(pathname)).toBe(kind);

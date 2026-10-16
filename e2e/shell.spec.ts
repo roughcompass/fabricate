@@ -1,10 +1,7 @@
 import type { Page } from "@playwright/test";
-import { templateBySlug } from "../src/lib/demo/catalog";
-import { createApplication, validateDeployInput } from "../src/lib/demo/deployments";
-import { WORKSPACE_COOKIE } from "../src/lib/demo/workspace-key";
-import { ensureWorkspace } from "../src/lib/demo/workspaces";
 import { findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { profilesOf } from "../src/lib/profiles/profile-records";
+import { registerApplication } from "../test/support/applications";
 import { buildSource } from "../test/support/builders";
 import { onboardPortal } from "../test/support/onboarding";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
@@ -31,14 +28,6 @@ async function expectSubmenu(page: Page, section: string, items: string[], curre
 
 /** The Assessments sub-menu: its own items, then the Repositories and Standards groups. */
 const ASSESSMENTS_ITEMS = ["All Assessments", "New Assessment", "All Repositories", "New Repository", "Import Repositories", "All Standards", "New Standard"];
-
-/** Creates a sandbox application in the browser's demo workspace. */
-async function seedApplication(page: Page, db: Parameters<typeof ensureWorkspace>[0]) {
-  await page.goto("/new");
-  const key = (await page.context().cookies()).find((cookie) => cookie.name === WORKSPACE_COOKIE)!.value;
-  const workspace = ensureWorkspace(db, key);
-  return createApplication(db, workspace.id, templateBySlug("market-watch")!, validateDeployInput({ name: "Desk", environment: "sandbox", project: "", repository: "" }));
-}
 
 test.describe("on a wide viewport", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
@@ -106,25 +95,28 @@ test.describe("on a wide viewport", () => {
     await expect(page).toHaveURL(new RegExp(`${paths.run(assessment.publicId)}$`));
     await expect(nav.getByRole("link", { name: "All Assessments" })).toBeHidden();
 
-    // Opening another page shows that page's sub-menu again.
+    // Applications has no sub-menu: opening it keeps the section menu, with Applications current.
     await nav.getByRole("link", { name: "Applications", exact: true }).click();
-    await expectSubmenu(page, "Applications", ["All Applications", "Import from BitBucket"], "All Applications");
+    await expect(page).toHaveURL(/\/applications$/);
+    await expect(nav.getByRole("link", { name: "Applications", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(nav.getByRole("link", { name: "Show all sections" })).toHaveCount(0);
   });
 
   test("Page outside every section: the gallery shows the section menu with nothing current", async ({ page, db: _db }) => {
     await page.goto("/design-system");
     const nav = primary(page);
-    for (const section of ["Home", "Assessments", "Applications", "Salt Patterns"]) {
+    for (const section of ["Home", "Applications", "Navigation", "Assessments", "Salt Patterns"]) {
       await expect(nav.getByRole("link", { name: section, exact: true })).toBeVisible();
       await expect(nav.getByRole("link", { name: section, exact: true })).not.toHaveAttribute("aria-current");
     }
     await expect(nav.getByRole("link", { name: "Show all sections" })).toHaveCount(0);
   });
 
-  test("Home in the section menu: Home leads the menu, marked current, with no sub-menu indicator", async ({ page, db: _db }) => {
+  test("Home in the section menu: Home, Applications, and Navigation lead the menu, then the sections; Home is current, with no sub-menu indicator", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
-    await expect(nav.locator("#sidebar-sections > li > a")).toHaveText(["Home", "Assessments", "Web Onboarding", "Applications", "Salt Patterns", "Prototypes"]);
+    await expect(nav.locator("#sidebar-sections > li > a")).toHaveText(["Home", "Applications", "Navigation", "Assessments", "Salt Patterns", "Prototypes"]);
+    for (const item of ["Applications", "Navigation"]) await expect(nav.getByRole("link", { name: item, exact: true }).locator("svg")).toHaveCount(1);
     await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(nav.getByRole("link", { name: "Home", exact: true }).locator("svg")).toHaveCount(1);
     await expect(nav.getByRole("link", { name: "Show all sections" })).toHaveCount(0);
@@ -152,12 +144,23 @@ test.describe("on a wide viewport", () => {
   // demo-disabled navigation is covered by test/components/app-shell.test.ts
   // and test/components/navigation.test.ts.
   test("Sections open their pages: each section opens the page titled with its name", async ({ page, db: _db }) => {
-    for (const [section, url] of [["Assessments", /\/assessments$/], ["Applications", /\/applications$/], ["Salt Patterns", /\/templates$/]] as const) {
+    for (const [section, url] of [["Assessments", /\/assessments$/], ["Salt Patterns", /\/templates$/]] as const) {
       await page.goto("/design-system");
       await primary(page).getByRole("link", { name: section, exact: true }).click();
       await expect(page).toHaveURL(url);
       await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText(section);
       await expect(primary(page).locator("#sidebar-section-title")).toHaveText(section);
+    }
+  });
+
+  test("Top-level items open their pages: Applications and Navigation keep the section menu, marked current", async ({ page, db: _db }) => {
+    for (const [item, url] of [["Applications", /\/applications$/], ["Navigation", /\/navigation$/]] as const) {
+      await page.goto("/design-system");
+      await primary(page).getByRole("link", { name: item, exact: true }).click();
+      await expect(page).toHaveURL(url);
+      await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText(item);
+      await expect(primary(page).getByRole("link", { name: item, exact: true })).toHaveAttribute("aria-current", "page");
+      await expect(primary(page).getByRole("link", { name: "Show all sections" })).toHaveCount(0);
     }
   });
 
@@ -169,15 +172,16 @@ test.describe("on a wide viewport", () => {
     }
   });
 
-  test("Applications section on a deep page: an application page marks All Applications", async ({ page, db }) => {
-    const application = await seedApplication(page, db);
+  test("Applications on a deep page: an application dashboard marks Applications in the section menu", async ({ page, db }) => {
+    const application = registerApplication(db, { name: "Payee Hub", portal: onboardPortal(db, "Access") });
     await page.goto(`/applications/${application.publicId}`);
-    await expectSubmenu(page, "Applications", ["All Applications", "Import from BitBucket"], "All Applications");
+    await expect(primary(page).getByRole("link", { name: "Applications", exact: true })).toHaveAttribute("aria-current", "true");
+    await expect(primary(page).getByRole("link", { name: "Show all sections" })).toHaveCount(0);
   });
 
   test("Templates section on a deep page: a template detail page marks All Salt Patterns", async ({ page, db: _db }) => {
     await page.goto("/templates/market-watch");
-    await expectSubmenu(page, "Salt Patterns", ["All Salt Patterns", "New application"], "All Salt Patterns");
+    await expectSubmenu(page, "Salt Patterns", ["All Salt Patterns"], "All Salt Patterns");
   });
 
   test.describe("without JavaScript", () => {
@@ -192,7 +196,7 @@ test.describe("on a wide viewport", () => {
       await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
     });
 
-    test("Returning without JavaScript shows the section menu, and a section opens its sub-menu", async ({ page, db }) => {
+    test("Returning without JavaScript shows the section menu, and Applications opens with it current", async ({ page, db }) => {
       const { assessment } = await seedResults(db);
       await page.goto(paths.run(assessment.publicId));
       const nav = primary(page);
@@ -201,7 +205,7 @@ test.describe("on a wide viewport", () => {
       await expect(nav.getByRole("link", { name: "Assessments", exact: true })).toHaveAttribute("aria-current", "true");
       await nav.getByRole("link", { name: "Applications", exact: true }).click();
       await expect(page).toHaveURL(/\/applications$/);
-      await expectSubmenu(page, "Applications", ["All Applications", "Import from BitBucket"], "All Applications");
+      await expect(nav.getByRole("link", { name: "Applications", exact: true })).toHaveAttribute("aria-current", "page");
     });
   });
 });
@@ -243,8 +247,8 @@ test.describe("the shell header", () => {
   for (const theme of ["light", "dark"] as const) {
     test(`Solid header: in the ${theme} theme, the header behind the create page's title is a solid surface, distinct from the canvas`, async ({ page, db: _db, baseURL }) => {
       await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
-      await page.goto("/new");
-      await expect(header(page).getByRole("heading", { level: 1 })).toHaveText("Let's build something new");
+      await page.goto(paths.newRepository);
+      await expect(header(page).getByRole("heading", { level: 1 })).toHaveText("New Repository");
       const [fill, canvas, surface] = await page.evaluate(() => {
         const header = document.querySelector("[data-shell-header]")!;
         const probe = (variable: string) => {

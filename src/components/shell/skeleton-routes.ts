@@ -12,6 +12,8 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   // Navigation: the list of Portals, New Portal, and each Portal's page.
   [/^\/navigation\/?$/, "list"],
   [/^\/navigation\/new\/?$/, "form"],
+  // A Portal's and an Application's Edit details.
+  [/^\/(navigation|applications)\/[^/]+\/edit\/?$/, "form"],
   [/^\/navigation\/[^/]+\/?$/, "detail"],
   // Add application, its full catalog, and Create Application are focused pages (page-patterns spec), like preview mode.
   [/^\/applications\/new(\/.*)?$/, "focused"],

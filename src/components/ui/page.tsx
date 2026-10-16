@@ -48,6 +48,8 @@ interface PageHeaderProps {
    * 3 for the gallery's specimens: the title stays in the header, inline.
    */
   headingLevel?: 1 | 3;
+  /** A control for the shell header's left, such as the application switcher. */
+  headerStart?: React.ReactNode;
 }
 
 /**
@@ -55,7 +57,7 @@ interface PageHeaderProps {
  * shell header, then breadcrumbs, the status and meta line, the description,
  * and the actions. The title is never repeated in the page.
  */
-export function PageHeader({ breadcrumbs, title, status, meta, description, primaryAction, secondaryActions = [], extraActions, alerts, headingLevel = 1 }: PageHeaderProps) {
+export function PageHeader({ breadcrumbs, title, status, meta, description, primaryAction, secondaryActions = [], extraActions, alerts, headingLevel = 1, headerStart }: PageHeaderProps) {
   const inline = headingLevel === 3;
   const collapse = Boolean(primaryAction) && secondaryActions.length > 0;
   const hasActions = Boolean(primaryAction || extraActions || secondaryActions.length);
@@ -70,7 +72,7 @@ export function PageHeader({ breadcrumbs, title, status, meta, description, prim
 
   return (
     <>
-      {!inline && <ShellHeader title={title} />}
+      {!inline && <ShellHeader title={title} start={headerStart} />}
       {(hasCrumbs || hasHeading || hasActions) && (
         <header className={styles.header} data-page-header="">
           {hasCrumbs && <Breadcrumbs items={breadcrumbs!} />}

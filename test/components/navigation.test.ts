@@ -60,6 +60,7 @@ const EXPECTED: Record<string, string | [section: string, item: string] | null> 
   "/standards/[standardId]/releases/[releaseId]": ["assessments", "all-standards"],
   "/applications": "applications",
   "/applications/[applicationId]": "applications",
+  "/applications/[applicationId]/edit": "applications",
   "/applications/new": "applications",
   "/applications/new/templates": "applications",
   "/applications/new/create": "applications",

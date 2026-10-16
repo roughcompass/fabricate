@@ -17,7 +17,9 @@
     /* A solid surface fill, distinct from the canvas, so the title reads as a bar above the page. */
     background: var(--color-bg);
   }
-  .start { display: flex; align-items: center; gap: var(--space-1); justify-self: start; }
+  .start { display: flex; align-items: center; gap: var(--space-1); justify-self: start; min-width: 0; }
+  /* A page's own control at the header's left, such as the application switcher; it shrinks before the title does. */
+  .slot { display: flex; align-items: center; min-width: 0; }
   .end { display: flex; align-items: center; gap: var(--space-1); justify-self: end; }
 
   .title {
