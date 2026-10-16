@@ -53,4 +53,18 @@
     &:hover { color: var(--color-text); }
     &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
   }
+
+  /* The key that focuses the field, shown at its end while the field has nothing to clear. */
+  .shortcut {
+    flex: none;
+    margin-right: var(--_inset);
+    padding: 0 var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-subtle);
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-caption);
+  }
 }

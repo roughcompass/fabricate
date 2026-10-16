@@ -69,6 +69,10 @@ const PATHS = {
   sidebar: "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm4 0v16",
   checklist: "M10 6h10M10 12h10M10 18h10M4 6l1.5 1.5L8 5M4 12l1.5 1.5L8 11M4 18l1.5 1.5L8 17",
   home: "M3 11 12 4l9 7M5 9.5V20h5v-6h4v6h5V9.5",
+  filter: "M3 5h18l-7 8.5V19l-4 2v-7.5z",
+  // Provider marks, drawn as strokes in the same weight as the other icons.
+  github: "M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4M9 18c-4.51 2-5-2-7-2",
+  bitbucket: "M3 4h18l-2.6 15.4a1 1 0 0 1-1 .8H6.6a1 1 0 0 1-1-.8zM9.4 9h5.2l-.9 5.5h-3.4z",
 } as const;
 
 export type IconName = keyof typeof PATHS;

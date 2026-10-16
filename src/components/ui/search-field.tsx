@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FocusShortcut } from "./focus-shortcut";
 import { Field } from "./form";
 import { Icon } from "./icon";
 import styles from "./search-field.module.css";
@@ -18,13 +19,15 @@ interface SearchFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
    * field has a value; it is a link, so it works without JavaScript.
    */
   clearHref?: string;
+  /** A key that focuses the field from anywhere outside a text field, shown inside it, such as "/". */
+  shortcut?: string;
 }
 
 /**
  * A search input with a leading search icon and a clear control. It submits
  * with its form, so searching works without client-side JavaScript.
  */
-export function SearchField({ id, label, description, hideLabel = false, size = "md", clearHref, defaultValue, ...input }: SearchFieldProps) {
+export function SearchField({ id, label, description, hideLabel = false, size = "md", clearHref, shortcut, defaultValue, ...input }: SearchFieldProps) {
   const hasValue = typeof defaultValue === "string" ? defaultValue !== "" : defaultValue !== undefined;
   return (
     <Field id={id} label={label} description={description} hideLabel={hideLabel}>
@@ -37,14 +40,21 @@ export function SearchField({ id, label, description, hideLabel = false, size = 
           defaultValue={defaultValue}
           autoComplete="off"
           aria-describedby={description ? `${id}-description` : undefined}
+          aria-keyshortcuts={shortcut}
           {...input}
         />
+        {shortcut && !(clearHref && hasValue) && (
+          <kbd className={styles.shortcut} aria-hidden="true">
+            {shortcut}
+          </kbd>
+        )}
         {clearHref && hasValue && (
           <Link href={clearHref} className={styles.clear} scroll={false} aria-label="Clear search">
             <Icon name="x" size={ICON_SIZES[size]} />
           </Link>
         )}
       </div>
+      {shortcut && <FocusShortcut targetId={id} shortcut={shortcut} />}
     </Field>
   );
 }

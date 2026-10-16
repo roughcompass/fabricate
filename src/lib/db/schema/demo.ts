@@ -10,8 +10,12 @@ import { createdAt, id, publicId, sqlList, timestamp, updatedAt } from "./column
 export const DEMO_ENVIRONMENTS = ["sandbox", "dev"] as const;
 export type DemoEnvironment = (typeof DEMO_ENVIRONMENTS)[number];
 
-/** Where an application came from: a template's deploy form, or a repository import. */
-export const DEMO_ORIGINS = ["template", "import"] as const;
+/**
+ * Where an application came from: a template's deploy form. Import from
+ * BitBucket is gone, and migration 0033 deleted what it made; the column's
+ * CHECK still names it.
+ */
+export const DEMO_ORIGINS = ["template"] as const;
 export type DemoOrigin = (typeof DEMO_ORIGINS)[number];
 
 export const THREAD_STATUSES = ["open", "resolved"] as const;
@@ -44,7 +48,7 @@ export const demoWorkspaces = sqliteTable(
   ],
 );
 
-/** An application a visitor created from a template or imported from the demo's BitBucket. Its deployment is simulated. */
+/** An application a visitor created from a template. Its deployment is simulated. */
 export const demoApplications = sqliteTable(
   "demo_applications",
   {

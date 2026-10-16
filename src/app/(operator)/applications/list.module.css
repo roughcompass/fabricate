@@ -1,0 +1,11 @@
+@layer pages {
+  /* Search fills the row; Filter and the view toggle sit at its end, and wrap below it on a narrow screen. */
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+  .search { flex: 1 1 var(--size-card); min-width: 0; }
+  .controls { display: flex; flex: none; align-items: center; gap: var(--space-2); }
+
+  .count { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+
+  /* Cards fill the width, as many per row as fit at the card size; one per row on a phone. */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--size-card)), 1fr)); gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+}

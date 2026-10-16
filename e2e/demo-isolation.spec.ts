@@ -33,7 +33,7 @@ async function pins(page: Page, path: string): Promise<number> {
 }
 
 async function applicationNames(page: Page): Promise<string[]> {
-  await page.goto("/applications");
+  await page.goto("/applications?view=list");
   if (await page.getByText("No applications yet").count()) return [];
   return page.getByRole("table", { name: "Applications" }).locator("tbody tr td:first-child a").allTextContents();
 }
@@ -70,7 +70,7 @@ test("keeps two visitors' applications, comments, and resets apart", async ({ pa
   expect(threads.status()).toBe(404);
 
   // One visitor's reset leaves the other's work alone.
-  await page.goto("/new");
+  await page.goto("/applications/new");
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.getByRole("dialog", { name: "Reset the demo?" }).getByRole("button", { name: "Reset demo" }).click();

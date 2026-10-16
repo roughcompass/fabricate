@@ -4,7 +4,6 @@ import { createApplication, validateDeployInput } from "../src/lib/demo/deployme
 import { WORKSPACE_COOKIE } from "../src/lib/demo/workspace-key";
 import { APPLICATION_LIMIT, ensureWorkspace } from "../src/lib/demo/workspaces";
 import { expect, test } from "./support/fixtures";
-import { expectCurrentItem } from "./support/shell";
 
 /** Deploying a template and watching its simulated build (template-demo/deployments spec). */
 
@@ -44,7 +43,7 @@ test("creates a sandbox application with the defaults and watches its build fini
   await expect(page.getByText("Available when the build finishes")).toBeVisible();
   await expect(log(page)).toContainText("Queued");
   await expect(log(page)).toContainText("Cloning template");
-  await expectCurrentItem(page, "Applications", "All Applications");
+  await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Applications", exact: true })).toHaveAttribute("aria-current", "true");
 
   await expect(page.getByText("Ready", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
   const visit = page.getByRole("link", { name: /Visit application/ });

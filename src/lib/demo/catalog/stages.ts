@@ -7,8 +7,6 @@ export interface StageContext {
   readonly project?: string | null;
   readonly repository?: string | null;
   readonly repositoryUrl?: string | null;
-  /** An imported repository's default branch. */
-  readonly branch?: string | null;
 }
 
 /** The scripted stages of a simulated sandbox build, about 10 seconds end to end. */
@@ -38,27 +36,7 @@ function devStages(context: StageContext): StageScript[] {
   ];
 }
 
-/**
- * The scripted stages of an imported repository's build, about 14 seconds end
- * to end: it connects to and clones the existing repository instead of
- * creating one.
- */
-function importStages(context: StageContext): StageScript[] {
-  const repository = `${context.project}/${context.repository}`;
-  return [
-    { name: "Queued", durationMs: 500, lines: ["Build queued on a dev runner"] },
-    { name: `Connecting BitBucket repository ${repository}`, durationMs: 1500, lines: [`Connected ${context.repositoryUrl}`, "Added a deploy hook to the default branch"] },
-    { name: `Cloning ${repository}`, durationMs: 1500, lines: [`Cloned ${repository} at the head of ${context.branch ?? "main"}`, `Detected ${context.templateSlug}@${context.templateVersion}`] },
-    { name: "Running pipeline #1", durationMs: 2000, lines: ["Pipeline #1 started on the default branch", "Lint, type, and unit checks passed"] },
-    { name: "Installing dependencies", durationMs: 2500, lines: ["Installing packages from the lockfile", "Added 1,214 packages in 2.4s"] },
-    { name: "Building", durationMs: 3000, lines: ["Building microfrontends", "Built the repository's microfrontends; the portal shell falls back to production"] },
-    { name: "Deploying to dev", durationMs: 2200, lines: ["Uploading build output", "Promoting the dev deployment"] },
-    { name: "Assigning URL", durationMs: 800, lines: [`Assigned ${context.url}`] },
-  ];
-}
-
-export function stagesFor(environment: "sandbox" | "dev", context: StageContext, origin: "template" | "import" = "template"): StageScript[] {
-  if (origin === "import") return importStages(context);
+export function stagesFor(environment: "sandbox" | "dev", context: StageContext): StageScript[] {
   return environment === "sandbox" ? sandboxStages(context) : devStages(context);
 }
 

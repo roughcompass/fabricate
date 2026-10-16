@@ -1,0 +1,61 @@
+@layer components {
+  /* An Application card, built like MediaCard without its preview: the name's link covers the card. */
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+    height: 100%;
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg);
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+
+    &:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-menu); }
+    &:has(.link:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  }
+
+  .cardHead { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
+  .cardTitle { display: flex; flex: 1 1 auto; flex-direction: column; gap: var(--space-1); min-width: 0; }
+  /* The overflow menu sits above the card's covering link. */
+  .cardActions { position: relative; z-index: calc(var(--z-raised) + 1); flex: none; margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1) 0 0; }
+
+  /* Initials are monochrome, as in the switchers. */
+  .avatar {
+    display: inline-grid;
+    flex: none;
+    place-content: center;
+    width: var(--size-control-md);
+    height: var(--size-control-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: var(--color-bg-subtle);
+    color: var(--color-text);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .name { overflow: hidden; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); text-overflow: ellipsis; white-space: nowrap; }
+  .link {
+    color: inherit;
+    text-decoration-line: none;
+
+    &:focus-visible { outline: none; }
+    &::after { content: ""; position: absolute; inset: 0; z-index: var(--z-raised); }
+  }
+
+  .repository { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .repositoryName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .portal { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+  .rendering { font-weight: var(--font-weight-medium); }
+  .muted { color: var(--color-text-secondary); }
+
+  /* Label and value side by side, one fact per row. */
+  .facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-1) var(--space-3); margin: 0; font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .facts > div { display: contents; }
+  .facts dt { color: var(--color-text-secondary); }
+  .facts dd { min-width: 0; margin: 0; }
+
+  .changed { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: auto; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+}

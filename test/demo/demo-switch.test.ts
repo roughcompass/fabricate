@@ -38,7 +38,7 @@ describe("demo switch off", () => {
     setConfig(withOverrides(getConfig(), { demo: { enabled: true } }));
   });
 
-  it("renders the not-found page for the gallery, a template, its deploy form, and the Applications list", async () => {
+  it("renders the not-found page for the gallery, a template, and its deploy form, but not the Applications list", async () => {
     const { default: Gallery } = await import("@/app/(operator)/templates/page");
     const { default: Template } = await import("@/app/(operator)/templates/[templateSlug]/page");
     const { default: Deploy } = await import("@/app/(operator)/templates/[templateSlug]/deploy/page");
@@ -46,12 +46,13 @@ describe("demo switch off", () => {
     expect(await redirectOf(Gallery({ searchParams: Promise.resolve({}) }))).toBe("not-found");
     expect(await redirectOf(Template({ params: Promise.resolve({ templateSlug: "market-watch" }) }))).toBe("not-found");
     expect(await redirectOf(Deploy({ params: Promise.resolve({ templateSlug: "market-watch" }) }))).toBe("not-found");
-    expect(await redirectOf(Applications({ searchParams: Promise.resolve({}) }))).toBe("not-found");
+    // Applications lists registered Applications whether or not the demo is on (make-applications-first-class task 10.4).
+    await expect(Applications({ searchParams: Promise.resolve({}) })).resolves.toBeTruthy();
   });
 
   it("renders the not-found page for an application page, even for its owner", async () => {
     const { default: ApplicationPage } = await import("@/app/(operator)/applications/[applicationId]/page");
-    expect(await redirectOf(ApplicationPage({ params: Promise.resolve({ applicationId }) }))).toBe("not-found");
+    expect(await redirectOf(ApplicationPage({ params: Promise.resolve({ applicationId }), searchParams: Promise.resolve({}) }))).toBe("not-found");
   });
 
   it("renders the not-found page for a running application and a reference deployment", async () => {

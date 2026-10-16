@@ -3,11 +3,10 @@ import { and, eq } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { type DemoEnvironment, type DemoOrigin, demoApplications } from "@/lib/db/schema";
+import { type DemoEnvironment, demoApplications } from "@/lib/db/schema";
 import type { DemoApplication } from "./applications";
 import { BITBUCKET_HOST, DEMO_DOMAIN, defaultRepositoryName, isProjectKey, isRepositoryName } from "./bitbucket";
-import { type StageScript, type Template, stagesFor, templateBySlug } from "./catalog";
-import { type BitbucketRepository, findRepository } from "./catalog/repositories";
+import { type StageScript, type Template, stagesFor } from "./catalog";
 import { assertApplicationCapacity } from "./workspaces";
 
 export { BITBUCKET_HOST, DEMO_DOMAIN, defaultRepositoryName, isProjectKey, isRepositoryName } from "./bitbucket";
@@ -96,14 +95,12 @@ export function buildScriptFor(application: DemoApplication, template: Template)
       project,
       repository,
       repositoryUrl: project && repository ? repositoryUrl(project, repository) : null,
-      branch: project && repository ? (findRepository(project, repository)?.defaultBranch ?? null) : null,
     },
-    application.origin,
   );
 }
 
 /** Creates an application from a template in the visitor's workspace; its build starts now. */
-export function createApplication(db: Executor, workspaceId: number, template: Template, values: DeployValues, now = new Date(), origin: DemoOrigin = "template"): DemoApplication {
+export function createApplication(db: Executor, workspaceId: number, template: Template, values: DeployValues, now = new Date()): DemoApplication {
   return immediate(db, (tx) => {
     assertApplicationCapacity(tx, workspaceId);
     if (values.environment === "dev") rejectExistingRepository(tx, workspaceId, values.project!, values.repository!);
@@ -118,7 +115,6 @@ export function createApplication(db: Executor, workspaceId: number, template: T
           environment: values.environment,
           bitbucketProject: values.project,
           bitbucketRepository: values.repository,
-          origin,
           createdAt: now,
         })
         .returning()
@@ -137,22 +133,6 @@ function rejectExistingRepository(db: Executor, workspaceId: number, project: st
     .where(and(eq(demoApplications.workspaceId, workspaceId), eq(demoApplications.bitbucketProject, project), eq(demoApplications.bitbucketRepository, repository)))
     .get();
   if (existing) throw new ValidationError([{ field: "repository", message: `${repository} already exists in ${project}` }]);
-}
-
-/** Validates the import form's application name, returning the cleaned name. */
-export function validateImportName(input: string): string {
-  return validateDeployInput({ name: input, environment: "dev", project: "IMPORT", repository: "import" }).name;
-}
-
-/**
- * Imports a repository from the demo's BitBucket as a dev environment
- * application built from the repository's template. A repository already
- * imported or deployed to in this workspace is refused.
- */
-export function importRepository(db: Executor, workspaceId: number, repository: BitbucketRepository, name: string, now = new Date()): DemoApplication {
-  const template = templateBySlug(repository.templateSlug);
-  if (!template) throw new Error(`Repository ${repository.project}/${repository.name} names an unknown template`);
-  return createApplication(db, workspaceId, template, { name: validateImportName(name), environment: "dev", project: repository.project, repository: repository.name }, now, "import");
 }
 
 /** Completes the remaining simulated build at once. */
