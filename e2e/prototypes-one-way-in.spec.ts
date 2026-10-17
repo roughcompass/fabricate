@@ -1,14 +1,15 @@
 import { expect, test } from "./support/fixtures";
 import { acceptTemplate, keepOne } from "./support/prototypes";
 
-// converge-templates-and-prototypes, design decision 9: the create page's prompt bar and New prototype share one flow.
+// converge-templates-and-prototypes, design decision 9: the create page's prompt bar and New prototype share one flow; the create page is now Add application.
 
 test.describe("Generate prototypes from the searched gallery", () => {
   test("offers Generate prototypes beside matching templates, carrying the description into New prototype as its intent", async ({ page, db: _db }) => {
-    await page.goto("/new");
-    await page.getByLabel(/Describe what you want to build/).fill("payments approval queue");
-    await page.getByRole("button", { name: "Start building" }).click();
-    await page.waitForURL(/\/templates\?q=payments\+approval\+queue/);
+    // Add application's prompt bar opens the full catalog searched for a description.
+    await page.goto("/applications/new");
+    await page.getByLabel(/describe what you want to build/).fill("payments approval queue");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.waitForURL(/\/applications\/new\/templates\?q=payments\+approval\+queue/);
 
     const offer = page.locator("[data-generate-prototypes]");
     await expect(offer).toContainText("None of these? Generate Salt prototypes for “payments approval queue”.");
