@@ -5,7 +5,10 @@ import { openTool, setView, waitForRegions } from "./support/demo";
 import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
 import { paths } from "./support/paths";
 import { waitForHydration } from "./support/shell";
-import { onboardPortal } from "../test/support/onboarding";
+import { addItem, setDefault } from "../src/lib/onboarding/navigation";
+import { getPortal, promotePortal } from "../src/lib/onboarding/portals";
+import { determineRendering, registerApplication } from "../test/support/applications";
+import { ana, onboardPortal } from "../test/support/onboarding";
 
 /**
  * Captures every product surface at desktop and mobile width, in the light and
@@ -126,6 +129,63 @@ test("captures the Portal switcher and the Create Portal dialog in both themes",
     }
   }
   expect(fs.readdirSync(output)).toHaveLength(3 * viewports.length * THEMES.length);
+});
+
+/**
+ * Captures the Applications pages (make-applications-first-class task 11.3)
+ * at 1440px and 375px in both themes: the Applications grid and list, the
+ * application switcher open, Add application, the full catalog, Create
+ * Application, a dashboard, and a Navigation page with Access in Production.
+ */
+test("captures the Applications pages and a Navigation page in both themes", async ({ page, db, baseURL }) => {
+  const output = path.join(OUTPUT, "applications");
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  const access = onboardPortal(db, "Access");
+  const markets = onboardPortal(db, "Markets");
+  const payeeHub = determineRendering(db, registerApplication(db, { name: "Payee Hub", portal: access }), "esm");
+  determineRendering(db, registerApplication(db, { name: "Ledger", portal: markets }), "module_federation_2");
+  registerApplication(db, { name: "Treasury Desk", portal: markets });
+  const version = () => getPortal(db, access.publicId).lockVersion;
+  addItem(db, access.publicId, { lockVersion: version(), label: "Payments", route: "/payments", application: payeeHub.publicId, parent: null }, ana);
+  const payees = addItem(db, access.publicId, { lockVersion: version(), label: "Payees", route: "/payees", application: payeeHub.publicId, parent: null }, ana);
+  setDefault(db, access.publicId, { lockVersion: version(), entry: payees.publicId }, ana);
+  promotePortal(db, access.publicId, { lockVersion: version() }, ana);
+
+  const pages: [name: string, url: string, ready?: () => Promise<void>][] = [
+    ["applications-grid", "/applications?portal=all"],
+    ["applications-list", "/applications?portal=all&view=list"],
+    [
+      "switcher-open",
+      "/applications?portal=all",
+      async () => {
+        await waitForHydration(page);
+        await page.locator("[data-shell-header]").getByRole("button", { name: /^Switch Application/ }).click();
+        await expect(page.locator("[data-shell-header] [popover]").getByRole("list", { name: "Switch Application" })).toBeVisible();
+      },
+    ],
+    ["add-application", "/applications/new"],
+    ["catalog", "/applications/new/templates"],
+    ["create-application", "/applications/new/create?starter=salt-starter&from=new"],
+    ["dashboard", `/applications/${payeeHub.publicId}`],
+    ["navigation", `/navigation/${access.publicId}`],
+  ];
+  const viewports = [{ name: "desktop", width: 1440, height: 900 }, VIEWPORTS[1]!];
+  for (const theme of THEMES) {
+    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      for (const [name, url, ready] of pages) {
+        await page.goto(url);
+        await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+        if (ready) await ready();
+        await expectNoHorizontalOverflow(page);
+        await page.screenshot({ path: path.join(output, `${name}-${viewport.name}-${theme}.jpg`), fullPage: !ready, type: "jpeg", quality: 75 });
+      }
+    }
+  }
+  expect(fs.readdirSync(output)).toHaveLength(pages.length * viewports.length * THEMES.length);
 });
 
 /**

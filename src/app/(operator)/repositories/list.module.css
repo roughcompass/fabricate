@@ -1,0 +1,8 @@
+@layer pages {
+  /*
+   * A clone URL can break anywhere: unlike a short identifier, it would
+   * otherwise hold the Name column at the URL's full width, and the list
+   * would scroll sideways beside a wide sidebar.
+   */
+  .cloneUrl :where(span) { overflow-wrap: anywhere; }
+}

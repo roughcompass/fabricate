@@ -22,6 +22,7 @@ import { type RepositoryOwnership, repositoryOwnership } from "@/lib/ownership/r
 import { applicationLabel } from "@/lib/ownership/records";
 import { repositoriesHref } from "@/lib/web/list-filters";
 import { setSourceEnabled } from "./actions";
+import styles from "./list.module.css";
 import { sourceOutcome } from "./outcomes";
 
 export const metadata: Metadata = { title: "Repositories" };
@@ -121,9 +122,11 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                     <Link href={`/repositories/${source.publicId}/edit`}>{source.name}</Link>
                   </Primary>
                   <Secondary>
-                    <Tag copy label="clone URL">
-                      {source.cloneUrl}
-                    </Tag>
+                    <span className={styles.cloneUrl}>
+                      <Tag copy label="clone URL">
+                        {source.cloneUrl}
+                      </Tag>
+                    </span>
                   </Secondary>
                 </Td>
                 <Td label="Reference">{source.gitRef ? <Tag>{source.gitRef}</Tag> : <Secondary>{humanize(sourceReferenceLabel(source))}</Secondary>}</Td>

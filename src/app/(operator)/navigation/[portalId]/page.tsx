@@ -242,14 +242,16 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
           <li key={entry.publicId} className={styles.node}>
             <div className={styles.entry} data-kind={entry.kind}>
               <Icon name={entry.kind === "group" ? "folder" : "link"} size={14} className={styles.entryIcon} />
-              <span className={styles.entryLabel}>{entry.label}</span>
-              {entry.kind === "item" && (
-                <span className={styles.entryTarget}>
-                  <Tag>{entry.route}</Tag>
-                  {entry.application && <Link href={applicationHref(entry.application.publicId)}>{entry.application.name}</Link>}
-                </span>
-              )}
-              {entry.isDefault && <Tag sans>Default</Tag>}
+              <span className={styles.entryMain}>
+                <span className={styles.entryLabel}>{entry.label}</span>
+                {entry.kind === "item" && (
+                  <span className={styles.entryTarget}>
+                    <Tag>{entry.route}</Tag>
+                    {entry.application && <Link href={applicationHref(entry.application.publicId)}>{entry.application.name}</Link>}
+                  </span>
+                )}
+                {entry.isDefault && <Tag sans>Default</Tag>}
+              </span>
               <span className={styles.entryActions}>{entryActions(entry, menu.filter((candidate) => candidate.parentPublicId === entry.publicId).length)}</span>
             </div>
             {entry.kind === "group" && tree(entry.publicId)}

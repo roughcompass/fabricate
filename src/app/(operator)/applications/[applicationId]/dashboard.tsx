@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { PortalLabel, RepositoryLabel } from "@/components/applications/application-card";
 import { ApplicationSwitcher } from "@/components/applications/application-switcher";
 import { ProgressPoller } from "@/components/progress-poller";
-import { ActionButton } from "@/components/ui/button";
+import { ActionButton, ButtonLink } from "@/components/ui/button";
 import { buttonProps } from "@/components/ui/button-content";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -192,7 +192,6 @@ export async function ApplicationDashboard({ applicationId, query }: { applicati
             Updated <RelativeTime value={application.updatedAt} />
           </span>,
         ]}
-        secondaryActions={viewCode ? [{ href: viewCode, label: "View code", icon: "code" }] : []}
         primaryAction={
           rerunBlocked ? (
             <span className={styles.pendingAction}>
@@ -210,15 +209,23 @@ export async function ApplicationDashboard({ applicationId, query }: { applicati
             </ActionButton>
           )
         }
+        // View code is a control, not a secondary link, so it stays beside the menu on a phone instead of collapsing into a second one.
         extraActions={
-          <Menu label={`More actions for ${application.name}`}>
-            <MenuItem href={`/applications/${application.publicId}/edit`} icon="edit">
-              Edit details
-            </MenuItem>
-            <MenuItem href={`/repositories/${source.publicId}/edit`} icon="git">
-              Open in Repositories
-            </MenuItem>
-          </Menu>
+          <>
+            {viewCode && (
+              <ButtonLink href={viewCode} icon="code" target="_blank" rel="noreferrer">
+                View code<span className="visually-hidden"> (opens in a new tab)</span>
+              </ButtonLink>
+            )}
+            <Menu label={`More actions for ${application.name}`}>
+              <MenuItem href={`/applications/${application.publicId}/edit`} icon="edit">
+                Edit details
+              </MenuItem>
+              <MenuItem href={`/repositories/${source.publicId}/edit`} icon="git">
+                Open in Repositories
+              </MenuItem>
+            </Menu>
+          </>
         }
         alerts={<OutcomeToast outcome={dashboardOutcome(param(query, "notice"), application.name)} strip={["notice"]} />}
       />
