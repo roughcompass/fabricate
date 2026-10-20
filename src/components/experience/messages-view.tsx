@@ -99,24 +99,26 @@ export function MessagesView() {
                   const state = messageState(message);
                   return (
                     <tr key={message.id} data-message={message.id} data-editing={message.id === editing ? "" : undefined}>
-                      <td>
+                      <td data-label="On">
                         <Checkbox id={`${message.id}-on`} label={`${message.title} is on`} hideLabel checked={message.enabled} onChange={(event) => update(message.id, (draft) => void (draft.enabled = event.target.checked))} />
                       </td>
-                      <td>
+                      <td data-label="Severity">
                         <span className={styles.severity}>
                           <Icon name={SEVERITY_ICONS[message.severity]} size={14} />
                           {SEVERITY_LABELS[message.severity]}
                         </span>
                       </td>
-                      <td>
-                        <span className={styles.messageTitle}>{message.title}</span>
-                        <span className={styles.messageDescription}>{message.description}</span>
+                      <td data-label="Message">
+                        <div>
+                          <span className={styles.messageTitle}>{message.title}</span>
+                          <span className={styles.messageDescription}>{message.description}</span>
+                        </div>
                       </td>
-                      <td className={styles.schedule}>{scheduleOf(message)}</td>
-                      <td>
+                      <td data-label="Schedule" className={styles.schedule}>{scheduleOf(message)}</td>
+                      <td data-label="State">
                         <Tag sans>{MESSAGE_STATE_LABELS[state]}</Tag>
                       </td>
-                      <td>
+                      <td data-label="Actions">
                         <span className={styles.actions}>
                           <button type="button" {...buttonProps("tertiary", "sm", true)} aria-label={`Move ${message.title} up`} disabled={position === 0} onClick={() => move(position, -1)}>
                             <Icon name="arrowUp" size={14} />

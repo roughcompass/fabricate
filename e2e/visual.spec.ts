@@ -4,6 +4,7 @@ import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOver
 import { openTool, setView, waitForRegions } from "./support/demo";
 import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
 import { paths } from "./support/paths";
+import { saveDirectly } from "./support/experience";
 import { waitForHydration } from "./support/shell";
 import { addItem, setDefault } from "../src/lib/onboarding/navigation";
 import { getPortal, promotePortal } from "../src/lib/onboarding/portals";
@@ -186,6 +187,92 @@ test("captures the Applications pages and a Navigation page in both themes", asy
     }
   }
   expect(fs.readdirSync(output)).toHaveLength(pages.length * viewports.length * THEMES.length);
+});
+
+/**
+ * Captures the experience editor (add-portal-experience-editor task 7.2) at
+ * 1440px and 375px in both themes: its four views, Change history with a
+ * pending change, the System messages editor, the menu editor, and the
+ * Install dialog. Then an Access and a Markets running portal with a saved
+ * experience, in both runtime themes.
+ */
+test("captures the experience editor and running portals with a saved experience, in both themes", async ({ page, db, baseURL }) => {
+  const output = path.join(OUTPUT, "experience");
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  const access = onboardPortal(db, "Access");
+  const desk = onboardPortal(db, "Markets Desk");
+  const payeeHub = registerApplication(db, { name: "Payee Hub", portal: access });
+  saveDirectly(db, access, (draft) => {
+    draft.brand.portalName = "Digital Platform";
+    draft.toolkits.installed.push("global-search", "notifications");
+    draft.messages.push({ id: "msg_maint", title: "Scheduled maintenance", description: "Saturday 02:00 to 04:00 UTC.", severity: "warning", dismissible: true, enabled: true, startsAt: null, endsAt: null });
+    draft.menu = [
+      { id: "tmp_group", parentId: null, kind: "group", label: "Cash Management", route: null, application: null, isDefault: false },
+      { id: "tmp_payees", parentId: "tmp_group", kind: "item", label: "Payees", route: "/payees", application: payeeHub.publicId, isDefault: true },
+    ];
+  });
+  saveDirectly(db, desk, (draft) => {
+    draft.theme.id = "markets";
+    draft.frame.sidebar.menuType = "flyout";
+  });
+  const editor = `/navigation/${access.publicId}/editor`;
+  const capture = async (name: string, fullPage = false) => {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: path.join(output, `${name}.jpg`), fullPage, type: "jpeg", quality: 75 });
+  };
+  const viewports = [{ name: "desktop", width: 1440, height: 900 }, VIEWPORTS[1]!];
+  const views = ["frame-zones", "frame-overlays", "capabilities", "configuration/brand", "messages", "menu"];
+  for (const theme of THEMES) {
+    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      const suffix = `${viewport.name}-${theme}`;
+      for (const view of views) {
+        await page.goto(`${editor}/${view}`);
+        await waitForHydration(page);
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+        await capture(`${view.replace("/", "-")}-${suffix}`);
+      }
+      await page.goto(`${editor}/configuration/copyright`);
+      await waitForHydration(page);
+      await page.getByLabel("Copyright information").fill("© 2026 JPMorgan Chase & Co. Digital Platform.");
+      await page.locator("[data-pending-count]").click();
+      await expect(page.getByRole("table", { name: "Pending changes" })).toBeVisible();
+      await capture(`change-history-${suffix}`);
+      // The Install dialog, for a Portal that hasn't installed Global Search.
+      await page.goto(`/navigation/${desk.publicId}/editor/capabilities`);
+      await waitForHydration(page);
+      await page.getByRole("list", { name: "Toolkits" }).getByRole("button", { name: /^Global Search/ }).click();
+      await page.getByRole("region", { name: "Options", exact: true }).getByRole("button", { name: "Install" }).click();
+      await expect(page.getByRole("dialog", { name: "Install Global Search" })).toBeVisible();
+      await capture(`install-dialog-${suffix}`);
+      await page.keyboard.press("Escape");
+      // Clear the pending change, so the next viewport starts from the saved version.
+      await page.evaluate(() => window.sessionStorage.clear());
+    }
+  }
+
+  // The running portals, in the runtime's own themes.
+  const portals: [name: string, url: string][] = [
+    ["running-access", `/run/ref-payments-workspace?portal=${access.publicId}`],
+    ["running-markets", `/run/ref-market-watch?portal=${desk.publicId}`],
+  ];
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    for (const [name, url] of portals) {
+      await page.goto(url);
+      await waitForRegions(page);
+      for (const theme of THEMES) {
+        await setView(page, { theme });
+        await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-theme", theme);
+        await expectNoOverlappingContent(page);
+        await capture(`${name}-${viewport.name}-${theme}`);
+      }
+    }
+  }
+  expect(fs.readdirSync(output)).toHaveLength((views.length + 2) * viewports.length * THEMES.length + portals.length * viewports.length * THEMES.length);
 });
 
 /**

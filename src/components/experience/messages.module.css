@@ -16,6 +16,18 @@
   .schedule { color: var(--color-text-secondary); }
   .actions { display: inline-flex; gap: var(--space-1); }
 
+  /* Rows become labelled blocks on narrow screens, as the shared Table's do, so nothing scrolls sideways. */
+  @container content (max-width: 767px) {
+    .table {
+      position: relative;
+      & thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      & tr { display: block; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); }
+      & tbody tr:last-child { border-bottom: 0; }
+      & td { display: grid; grid-template-columns: minmax(min-content, 2fr) minmax(0, 5fr); gap: var(--space-3); padding: var(--space-1) 0; border: 0; }
+      & td::before { content: attr(data-label); color: var(--color-text-secondary); font-size: var(--font-size-caption); }
+    }
+  }
+
   .panel { display: flex; flex-direction: column; gap: var(--space-3); width: var(--size-toast); padding: var(--space-6) var(--space-4); border-left: 1px solid var(--color-border); background: var(--color-bg); overflow: auto; }
   .panelHeader { display: flex; align-items: center; gap: var(--space-2); }
   .panelTitle { margin: 0 auto 0 0; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); }
@@ -23,7 +35,7 @@
   .legend { padding: 0 var(--space-1); font-weight: var(--font-weight-medium); }
   .note { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
 
-  .dialog { width: min(100% - 2 * var(--space-4), var(--size-dialog)); padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-elevated); color: var(--color-text); box-shadow: var(--shadow-dialog); }
+  .dialog { width: min(100% - 2 * var(--space-4), var(--size-dialog)); margin: auto; padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-elevated); color: var(--color-text); box-shadow: var(--shadow-dialog); }
   .dialog::backdrop { background: var(--color-overlay); }
   .dialogTitle { margin: 0 0 var(--space-2); font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); }
   .dialogActions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-6); }

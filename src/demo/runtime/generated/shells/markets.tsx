@@ -439,8 +439,8 @@ export default function Shell({ children }: { children: ReactNode }) {
           >
             {leading.map(headerSlot)}
 
-            <nav aria-label={`${portalTitle} sections`} data-scroll-x="" style={{ flex: 1, minWidth: 0, overflowX: "auto" }}>
-              <FlexLayout as="ul" gap={1} align="center" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            <nav aria-label={`${portalTitle} sections`} data-scroll-x="" style={{ flexGrow: 1, flexShrink: 1, flexBasis: "calc(var(--salt-size-base) * 6)", minWidth: 0, overflowX: "auto" }}>
+              <FlexLayout as="ul" gap={1} align="center" style={{ listStyle: "none", margin: 0, padding: 0, whiteSpace: "nowrap" }}>
                 {SECTIONS.map((section) => (
                   <li key={section}>
                     <div
