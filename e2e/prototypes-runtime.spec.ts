@@ -78,6 +78,9 @@ test("renders a page in the common shell, with its landmarks, current item, and 
   const frame = previewFrame(page);
   await expect(frame.getByRole("heading", { name: "Urgent payments" })).toBeVisible();
   await expect(frame.getByRole("banner")).toContainText("Meridian Corporate Banking");
+  // The header carries the J.P. Morgan logo, not the name as plain text (page-shell spec).
+  await expect(frame.getByRole("banner").getByRole("img", { name: "J.P. Morgan" })).toBeVisible();
+  await expect(frame.getByRole("banner")).not.toContainText("J.P. Morgan");
   await expect(frame.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
   await expect(frame.getByRole("main")).toContainText("Northwind Logistics");
   await expect(frame.getByRole("contentinfo")).toContainText("fictional service");

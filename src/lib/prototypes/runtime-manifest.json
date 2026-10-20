@@ -1,24 +1,24 @@
 {
-  "hash": "2908db5162ec",
-  "base": "/prototype-runtime/2908db5162ec/",
+  "hash": "2ddb08e54f59",
+  "base": "/prototype-runtime/2ddb08e54f59/",
   "importMap": {
     "imports": {
-      "react": "/prototype-runtime/2908db5162ec/react.js",
-      "react/jsx-runtime": "/prototype-runtime/2908db5162ec/react-jsx-runtime.js",
-      "@salt-ds/core": "/prototype-runtime/2908db5162ec/salt-core.js",
-      "@salt-ds/lab": "/prototype-runtime/2908db5162ec/salt-lab.js",
-      "@salt-ds/icons": "/prototype-runtime/2908db5162ec/salt-icons.js",
-      "@salt-ds/countries": "/prototype-runtime/2908db5162ec/salt-countries.js",
-      "@salt-ds/date-components": "/prototype-runtime/2908db5162ec/salt-date-components.js",
-      "ag-grid-react": "/prototype-runtime/2908db5162ec/ag-grid-react.js",
-      "ag-grid-community": "/prototype-runtime/2908db5162ec/ag-grid-community.js",
-      "@deweb/portal": "/prototype-runtime/2908db5162ec/deweb-portal.js"
+      "react": "/prototype-runtime/2ddb08e54f59/react.js",
+      "react/jsx-runtime": "/prototype-runtime/2ddb08e54f59/react-jsx-runtime.js",
+      "@salt-ds/core": "/prototype-runtime/2ddb08e54f59/salt-core.js",
+      "@salt-ds/lab": "/prototype-runtime/2ddb08e54f59/salt-lab.js",
+      "@salt-ds/icons": "/prototype-runtime/2ddb08e54f59/salt-icons.js",
+      "@salt-ds/countries": "/prototype-runtime/2ddb08e54f59/salt-countries.js",
+      "@salt-ds/date-components": "/prototype-runtime/2ddb08e54f59/salt-date-components.js",
+      "ag-grid-react": "/prototype-runtime/2ddb08e54f59/ag-grid-react.js",
+      "ag-grid-community": "/prototype-runtime/2ddb08e54f59/ag-grid-community.js",
+      "@deweb/portal": "/prototype-runtime/2ddb08e54f59/deweb-portal.js"
     }
   },
-  "host": "/prototype-runtime/2908db5162ec/host.js",
+  "host": "/prototype-runtime/2ddb08e54f59/host.js",
   "styles": [
-    "/prototype-runtime/2908db5162ec/runtime.css",
-    "/prototype-runtime/2908db5162ec/host.css"
+    "/prototype-runtime/2ddb08e54f59/runtime.css",
+    "/prototype-runtime/2ddb08e54f59/host.css"
   ],
   "packages": {
     "react": "19.3.0",

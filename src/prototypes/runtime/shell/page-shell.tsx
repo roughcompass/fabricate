@@ -137,6 +137,10 @@ export function PageShell({ config, current, user, children }: PageShellProps) {
             </Button>
           )}
           <Link href="#" onClick={stay} className="pageShell-appName" color="primary" underline="never">
+            {/* The J.P. Morgan logo, from DE FabLab's own origin, in the variant that reads against the header's mode. */}
+            <img src="/brand/jpmorgan-logo.svg" alt="J.P. Morgan" className="pageShell-logo pageShell-logo-light" />
+            <img src="/brand/jpmorgan-logo-dark.svg" alt="J.P. Morgan" className="pageShell-logo pageShell-logo-dark" />
+            <span className="pageShell-divider" aria-hidden="true" />
             <Text as="span" styleAs="h4">
               {config.appName}
             </Text>

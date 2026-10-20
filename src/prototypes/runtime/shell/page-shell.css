@@ -31,7 +31,36 @@
 }
 
 .pageShell-appName {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--salt-spacing-150);
   text-decoration: none;
+}
+
+.pageShell-logo {
+  display: block;
+  height: var(--salt-size-icon);
+  width: auto;
+  transform: scale(1.4);
+  transform-origin: left center;
+  margin-inline-end: var(--salt-spacing-200);
+}
+
+/* One logo shows: the one that reads against the header in the current mode. */
+.pageShell-logo-dark,
+.salt-theme[data-mode="dark"] .pageShell-logo-light {
+  display: none;
+}
+
+.salt-theme[data-mode="dark"] .pageShell-logo-dark {
+  display: block;
+}
+
+.pageShell-divider {
+  align-self: stretch;
+  width: var(--salt-size-fixed-100);
+  margin-block: var(--salt-spacing-100);
+  background: var(--salt-separable-primary-borderColor);
 }
 
 .pageShell-user {
