@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { HOME, type NavFlags, homeLink, locate, visibleSections, visibleTopLevel } from "./navigation";
+import type { SwitcherPortal } from "@/lib/onboarding/catalog";
+import { HOME, type MenuGroup, type NavFlags, RUNTIME_CONFIGURATION, homeLink, locate, visibleGroups } from "./navigation";
+import { runtimeMenu } from "./runtime-menu";
 import { SIDEBAR_ID } from "./shell-header";
 import styles from "./sidebar-nav.module.css";
 
-const SECTIONS_ID = "sidebar-sections";
+const MENU_ID = "sidebar-sections";
 
 /** Closes the sidebar's drawer, if it is open as one. */
 export function closeDrawer(): void {
@@ -16,20 +18,27 @@ export function closeDrawer(): void {
   if (drawer?.matches(":popover-open")) drawer.hidePopover();
 }
 
+/** The groups shown, without Home where links to Home lead elsewhere. */
+function shownGroups(nav: NavFlags): readonly MenuGroup[] {
+  const groups = visibleGroups(nav);
+  const showHome = homeLink(groups).href === HOME.href;
+  return groups.map((group) => ({ ...group, items: group.items.filter((item) => item.id !== HOME.id || showHome) }));
+}
+
 /**
- * The sidebar's navigation (operator-interface/page-patterns spec): the
- * section menu leads with the top-level items, Home, Applications, and
- * Navigation, which have no sub-menu, so their pages keep the section menu
- * with the item marked current. Within a section it shows that section's
- * sub-menu, headed by the section's name, with the page's item marked
- * current; Show all sections returns to the section menu without leaving the
- * page. Both menus are always rendered and only one
- * is displayed. Without JavaScript, Show all sections links to the section
+ * The sidebar's navigation (operator-interface/page-patterns spec). The
+ * primary menu lists Home, Applications, and Runtime Configuration, then the
+ * Assessments and Salt Patterns & Prototypes groups, each under a heading and
+ * set apart by a divider, with every page listed inline. Runtime
+ * Configuration alone drills in: on its pages the sidebar shows its sub-menu
+ * (runtime-configuration spec), and Show all sections returns to the primary
+ * menu without leaving the page. Both menus are always rendered and only one
+ * is displayed. Without JavaScript, Show all sections links to the primary
  * menu, and a :target rule displays it; with JavaScript, it switches in place
- * and moves focus to the current section. Every navigation shows the new
- * page's sub-menu again.
+ * and moves focus to Runtime Configuration. Every navigation shows the new
+ * page's menu again.
  */
-export function SidebarNav({ nav }: { nav: NavFlags }) {
+export function SidebarNav({ nav, portals = [] }: { nav: NavFlags; portals?: readonly SwitcherPortal[] }) {
   const pathname = usePathname();
   const located = locate(pathname, nav);
   const [shownFor, setShownFor] = useState(pathname);
@@ -38,9 +47,9 @@ export function SidebarNav({ nav }: { nav: NavFlags }) {
     setShownFor(pathname);
     setAllSections(false);
   }
-  const currentSection = useRef<HTMLAnchorElement>(null);
+  const runtimeItem = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
-    if (allSections) currentSection.current?.focus();
+    if (allSections) runtimeItem.current?.focus();
   }, [allSections]);
 
   // Below 1024px the sidebar is a drawer: it closes when a page opens, and when the viewport widens to show it inline.
@@ -54,12 +63,9 @@ export function SidebarNav({ nav }: { nav: NavFlags }) {
     return () => wide.removeEventListener("change", onChange);
   }, []);
 
-  const section = located?.kind === "section" ? located : null;
-  const view = !section || allSections ? "sections" : "submenu";
-  const sections = visibleSections(nav);
-  // The top-level items lead the section menu; they have no sub-menu, so no chevron. Home is among them while it's available.
-  const showHome = homeLink(sections).href === HOME.href;
-  const topLevel = visibleTopLevel(nav).filter((item) => item.id !== HOME.id || showHome);
+  const inRuntime = located?.item.id === RUNTIME_CONFIGURATION.id;
+  const submenu = inRuntime ? runtimeMenu(pathname, (id) => portals.find((portal) => portal.publicId === id)?.label ?? null) : null;
+  const view = !submenu || allSections ? "menu" : "submenu";
   return (
     <nav
       aria-label="Primary"
@@ -70,37 +76,48 @@ export function SidebarNav({ nav }: { nav: NavFlags }) {
         if ((event.target as HTMLElement).closest("a[href]:not([href^='#'])")) closeDrawer();
       }}
     >
-      <ul id={SECTIONS_ID} className={styles.sections} tabIndex={-1}>
-        {topLevel.map((item) => {
-          const current = located?.kind === "item" && located.item.id === item.id;
-          // A top-level item's own address is its page; any page under it is part of it.
+      <div id={MENU_ID} className={styles.menu} tabIndex={-1}>
+        {shownGroups(nav).map((group, index) => {
+          const headingId = `sidebar-group-${group.id}`;
           return (
-            <li key={item.id}>
-              <Link href={item.href} className={styles.item} aria-current={current ? (pathname === item.href ? "page" : "true") : undefined} data-item={item.id}>
-                <Icon name={item.icon} className={styles.icon} />
-                <span className={styles.label}>{item.label}</span>
-              </Link>
-            </li>
+            <Fragment key={group.id}>
+              {index > 0 && <hr className={styles.divider} />}
+              {group.heading && (
+                <p id={headingId} className={styles.groupHeading}>
+                  {group.heading}
+                </p>
+              )}
+              <ul className={styles.list} aria-labelledby={group.heading ? headingId : undefined} data-group={group.id}>
+                {group.items.map((item) => {
+                  const current = located?.item.id === item.id;
+                  const drills = item.id === RUNTIME_CONFIGURATION.id;
+                  return (
+                    <li key={item.id}>
+                      <Link
+                        href={item.href}
+                        ref={drills ? runtimeItem : undefined}
+                        className={styles.item}
+                        // An item's own address is its page; any page under it is part of it.
+                        aria-current={current ? (pathname === item.href ? "page" : "true") : undefined}
+                        data-item={item.id}
+                      >
+                        <Icon name={item.icon} className={styles.icon} />
+                        <span className={styles.label}>{item.label}</span>
+                        {drills && <Icon name="chevronRight" size={14} className={styles.chevron} />}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Fragment>
           );
         })}
-        {sections.map((candidate) => {
-          const current = section?.section.id === candidate.id;
-          return (
-            <li key={candidate.id}>
-              <Link href={candidate.items[0]!.href} ref={current ? currentSection : undefined} className={styles.item} aria-current={current ? "true" : undefined} data-section={candidate.id}>
-                <Icon name={candidate.icon} className={styles.icon} />
-                <span className={styles.label}>{candidate.label}</span>
-                <Icon name="chevronRight" size={14} className={styles.chevron} />
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-      {section && (
+      </div>
+      {submenu && (
         <div className={styles.submenu}>
           <div className={styles.head}>
             <a
-              href={`#${SECTIONS_ID}`}
+              href={`#${MENU_ID}`}
               className={styles.back}
               aria-label="Show all sections"
               title="Show all sections"
@@ -111,24 +128,24 @@ export function SidebarNav({ nav }: { nav: NavFlags }) {
             >
               <Icon name="chevronLeft" />
             </a>
-            <p id="sidebar-section-title" className={styles.heading}>
-              {section.section.label}
+            <p id="sidebar-submenu-title" className={styles.heading}>
+              {RUNTIME_CONFIGURATION.label}
             </p>
           </div>
-          {/* The first group is named by the section heading; each later group by its own. */}
-          {section.section.groups.map((group, index) => {
-            const headingId = index === 0 ? "sidebar-section-title" : `sidebar-group-${section.section.id}-${index}`;
+          {submenu.groups.map((group, index) => {
+            // The first group is named by the sub-menu's heading; each later group by its own.
+            const headingId = index === 0 ? "sidebar-submenu-title" : `sidebar-submenu-${group.id}`;
             return (
-              <div key={group.label ?? section.section.id} className={styles.group}>
-                {index > 0 && (
-                  <p id={headingId} className={styles.groupHeading}>
-                    {group.label}
+              <div key={group.id} className={styles.group} data-group={group.id}>
+                {index > 0 && group.heading && (
+                  <p id={headingId} className={styles.groupHeading} title={group.heading}>
+                    {group.heading}
                   </p>
                 )}
                 <ul className={styles.list} aria-labelledby={headingId}>
                   {group.items.map((item) => (
                     <li key={item.id}>
-                      <Link href={item.href} className={styles.item} aria-current={item.id === section.item.id ? "page" : undefined} data-item={item.id}>
+                      <Link href={item.href} className={styles.item} aria-current={item.id === submenu.current ? "page" : undefined} data-item={item.id}>
                         <span className={styles.label}>{item.label}</span>
                       </Link>
                     </li>

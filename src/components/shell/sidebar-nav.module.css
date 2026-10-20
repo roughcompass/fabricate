@@ -2,16 +2,21 @@
   .nav { flex: 1 1 auto; min-height: 0; padding: var(--space-2); overflow-y: auto; }
 
   /*
-   * One menu at a time: the sub-menu within a section, the section menu
-   * outside every section or after Show all sections. Without JavaScript,
-   * Show all sections targets the section menu, which then takes over.
+   * One menu at a time: Runtime Configuration's sub-menu on its pages, the
+   * primary menu everywhere else or after Show all sections. Without
+   * JavaScript, Show all sections targets the primary menu, which then takes
+   * over.
    */
-  .sections, .list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
-  .sections:focus { outline: none; }
-  .nav[data-view="submenu"] .sections { display: none; }
-  .nav[data-view="sections"] .submenu { display: none; }
-  .nav:has(.sections:target) .sections { display: flex; }
-  .nav:has(.sections:target) .submenu { display: none; }
+  .menu { display: flex; flex-direction: column; }
+  .list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  .menu:focus { outline: none; }
+  .nav[data-view="submenu"] .menu { display: none; }
+  .nav[data-view="menu"] .submenu { display: none; }
+  .nav:has(.menu:target) .menu { display: flex; }
+  .nav:has(.menu:target) .submenu { display: none; }
+
+  /* Sets each group of the primary menu apart from the one before it. */
+  .divider { width: 100%; height: 1px; margin: var(--space-3) 0; border: 0; background: var(--color-border-subtle); }
 
   .item {
     display: flex;
@@ -48,11 +53,14 @@
   }
   .heading { overflow: hidden; font-weight: var(--font-weight-medium); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* A sub-menu group after the first, such as Repositories under Assessments, starts with a caption heading. */
+  /* A group's caption: Assessments in the primary menu, or a Portal or Identity in the sub-menu. */
   .group + .group { margin-top: var(--space-4); }
   .groupHeading {
+    overflow: hidden;
     margin: 0 0 var(--space-1);
     padding: 0 var(--space-3);
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: var(--color-text-secondary);
     font-size: var(--font-size-caption);
     font-weight: var(--font-weight-medium);

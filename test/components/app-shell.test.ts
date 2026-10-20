@@ -2,7 +2,7 @@ import { createElement, isValidElement, type ReactElement, type ReactNode } from
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AppShell } from "@/components/shell/app-shell";
-import { NO_OPTIONAL_AREAS, type NavFlags, visibleSections, visibleTopLevel } from "@/components/shell/navigation";
+import { NO_OPTIONAL_AREAS, type NavFlags, menuItems, visibleGroups } from "@/components/shell/navigation";
 import { ShellHeader } from "@/components/shell/shell-header";
 import { SidebarNav } from "@/components/shell/sidebar-nav";
 import { ThemeSwitcher } from "@/components/shell/theme-switcher";
@@ -26,24 +26,20 @@ const shellOf = (tree: ReactNode) => elements(tree).find((element) => "data-side
 // operator-interface/page-patterns spec: the application shell, and the
 // sidebar that can be resized and hidden.
 describe("application shell", () => {
-  it("shows Home, Applications, Navigation, and Assessments when the demo is disabled (Demo disabled)", () => {
+  it("shows Home, Applications, Runtime Configuration, and the Assessments group when the demo is disabled (Demo disabled)", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
     const flags = nav.props.nav as NavFlags;
-    expect([...visibleTopLevel(flags), ...visibleSections(flags)].map((entry) => entry.label)).toEqual(["Home", "Applications", "Navigation", "Assessments"]);
+    expect(menuItems(visibleGroups(flags)).map((entry) => entry.label)).toEqual(["Home", "Applications", "Runtime Configuration", "All Assessments", "Repositories", "Standards"]);
   });
 
-  it("adds Salt Patterns when the demo is enabled, opening its list", () => {
+  it("adds Salt Patterns in its own group when the demo is enabled, opening its list", () => {
     const nav = elements(AppShell({ theme: "system", nav: { ...NO_OPTIONAL_AREAS, demo: true }, children: null })).find((element) => element.type === SidebarNav)!;
-    const sections = visibleSections(nav.props.nav as NavFlags);
-    expect(sections.map((section) => [section.label, section.items[0]!.href])).toEqual([
+    const groups = visibleGroups(nav.props.nav as NavFlags);
+    expect(groups.map((group) => [group.heading ?? null, group.items[0]!.href])).toEqual([
+      [null, "/"],
       ["Assessments", "/assessments"],
-      ["Salt Patterns", "/templates"],
+      ["Salt Patterns & Prototypes", "/templates"],
     ]);
-  });
-
-  it("groups Repositories and Standards under Assessments, each group after the first with a heading", () => {
-    const [assessments] = visibleSections(NO_OPTIONAL_AREAS);
-    expect(assessments!.groups.map((group) => group.label)).toEqual([undefined, "Repositories", "Standards"]);
   });
 
   it("names the product DE FabLab and links its mark to Home (Product mark opens Home)", () => {

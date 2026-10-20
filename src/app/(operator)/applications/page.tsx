@@ -33,6 +33,7 @@ import { rememberedPortal } from "@/lib/web/portal-cookie";
 import { demoOutcome } from "../templates/outcomes";
 import { deleteApplicationAction } from "./actions";
 import { ENVIRONMENT_LABELS } from "./labels";
+import { CardGrid } from "@/components/ui/card-grid";
 import styles from "./list.module.css";
 
 export const metadata: Metadata = { title: "Applications" };
@@ -216,11 +217,11 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
             {countLabel(entries.length, "application")}
           </p>
           {view === "grid" ? (
-            <ul className={styles.grid} aria-label="Applications">
+            <CardGrid label="Applications">
               {entries.map((entry) => (
                 <li key={entry.row.publicId}>{entry.kind === "application" ? <ApplicationCard application={entry.row} /> : <DemoDeploymentCard deployment={entry.row} actions={demoActions(entry.row)} />}</li>
               ))}
-            </ul>
+            </CardGrid>
           ) : (
             <Panel flush>
               <Table

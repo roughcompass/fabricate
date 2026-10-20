@@ -40,6 +40,24 @@
   /* A focused page's skeleton: where the back button will be. */
   .backPlaceholder { display: block; width: var(--size-control-md); height: var(--size-control-md); border-radius: var(--radius-md); background: var(--color-bg-muted); }
 
+  /*
+   * A header with controls at both ends, such as Runtime Configuration's,
+   * takes two rows on a narrow content column: the title and the end
+   * controls, then the sidebar control and the page's start controls.
+   */
+  @container content (max-width: 639px) {
+    .header:has(.end > *) {
+      grid-template-areas: "title end" "start start";
+      grid-template-columns: minmax(0, 1fr) auto;
+      row-gap: var(--space-1);
+      height: auto;
+      padding-block: var(--space-2);
+    }
+    .header:has(.end > *) .title { grid-area: title; text-align: left; }
+    .header:has(.end > *) .start { grid-area: start; }
+    .header:has(.end > *) .end { grid-area: end; }
+  }
+
   /* Open navigation exists only where the sidebar is a drawer; Show sidebar only where it is inline and hidden. */
   .openNavigation, .showSidebar { display: none; }
   @media (max-width: 1023px) {

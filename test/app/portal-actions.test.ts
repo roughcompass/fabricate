@@ -67,13 +67,14 @@ describe("selectPortalAction", () => {
     expect(refreshed).toHaveBeenCalledTimes(2);
   });
 
-  it("opens the chosen Portal's Navigation page when chosen on another Portal's, and the list for All Portals (Switching on a Navigation page)", async () => {
+  it("opens the same Runtime Configuration page for the chosen Portal, and the Portals page for All Portals (Switching on a Runtime Configuration page)", async () => {
     const access = onboardPortal(db, "Access");
     const markets = onboardPortal(db, "Markets");
-    expect(await redirectOf(selectPortalAction(form(markets.publicId, `/navigation/${access.publicId}`)))).toBe(`/navigation/${markets.publicId}`);
+    expect(await redirectOf(selectPortalAction(form(markets.publicId, `/portals/${access.publicId}`)))).toBe(`/portals/${markets.publicId}`);
     expect(jar.get("fabricate-portal")?.value).toBe(markets.publicId);
-    expect(await redirectOf(selectPortalAction(form("", `/navigation/${markets.publicId}`)))).toBe("/navigation");
-    // Anywhere else, the page re-renders in place.
-    for (const from of ["/applications", "/navigation", "/navigation/new", "https://elsewhere.example/navigation/ptl_x"]) expect(await redirectOf(selectPortalAction(form(markets.publicId, from)))).toBeNull();
+    expect(await redirectOf(selectPortalAction(form(markets.publicId, `/portals/${access.publicId}/configuration/favicon`)))).toBe(`/portals/${markets.publicId}/configuration/favicon`);
+    expect(await redirectOf(selectPortalAction(form(markets.publicId, `/portals/${access.publicId}/editor/frame-overlays`)))).toBe(`/portals/${markets.publicId}/editor/frame-overlays`);
+    expect(await redirectOf(selectPortalAction(form("", `/portals/${markets.publicId}`)))).toBe("/portals");
+    for (const from of ["/applications", "/portals", "/portals/new", "https://elsewhere.example/portals/ptl_x"]) expect(await redirectOf(selectPortalAction(form(markets.publicId, from)))).toBeNull();
   });
 });

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRef, useState } from "react";
 import { buttonProps } from "@/components/ui/button-content";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -20,7 +19,8 @@ import {
   landingUrl,
 } from "@/lib/experience/document";
 import { CONFIGURATION_SECTIONS } from "@/lib/experience/sections";
-import { EditorPanes } from "./editor-panes";
+import { EditorPane } from "./editor-panes";
+import { usePreviewPane } from "./parts";
 import { useEditor } from "./store";
 import styles from "./configuration.module.css";
 
@@ -28,71 +28,56 @@ import styles from "./configuration.module.css";
 
 const left = (max: number, value: string) => `${Math.max(0, max - value.length)} characters left`;
 
-/** Portal Configuration (portal-configuration spec): the section list, and the chosen section. */
+/** The sections whose fields change what the frame shows, with the overlays their preview opens. */
+const PREVIEWED: Partial<Record<string, "none" | "all">> = { brand: "none", theme: "none", copyright: "none", "session-language": "all" };
+
+/**
+ * A configuration section's page (portal-configuration spec, "Configuration
+ * sections are listed in groups"): titled in the header with the section's
+ * name, its one-line description, its fields, and Reset to default; beside
+ * them, the live preview when the section changes what the frame shows. The
+ * Runtime Configuration sub-menu lists the sections.
+ */
 export function ConfigurationView({ section }: { section: string }) {
   const editor = useEditor();
   const current = CONFIGURATION_SECTIONS.find((candidate) => candidate.id === section) ?? CONFIGURATION_SECTIONS[0]!;
-  const base = `/navigation/${editor.portal.publicId}/editor/configuration`;
+  const overlays = PREVIEWED[current.id];
+  const preview = usePreviewPane(overlays ?? "none", "Changes show here before they're saved");
   return (
-    <EditorPanes
-      list={{
-        title: "Portal Configuration",
-        flush: true,
-        children: (
-          <nav aria-label="Configuration sections">
-            <ul className={styles.sections}>
-              {CONFIGURATION_SECTIONS.map((entry, index) => {
-                const caption = index === 0 || CONFIGURATION_SECTIONS[index - 1]!.group !== entry.group ? entry.group : null;
-                return (
-                  <li key={entry.id}>
-                    {caption && <p className={styles.caption}>{caption}</p>}
-                    <Link href={`${base}/${entry.id}`} className={styles.sectionLink} aria-current={entry.id === current.id ? "page" : undefined}>
-                      <span className={styles.sectionName}>{entry.name}</span>
-                      <span className={styles.sectionDescription}>{entry.description}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        ),
-      }}
-      main={{
-        title: "Portal Configuration",
-        note: `Editing ${current.name}`,
-        children: (
-          <article className={styles.article}>
-            <SectionBody id={current.id} />
-            <button
-              type="button"
-              {...buttonProps("tertiary", "sm")}
-              className={`${buttonProps("tertiary", "sm").className} ${styles.reset}`}
-              onClick={() =>
-                editor.edit((draft) => {
-                  for (const key of current.reset) (draft as Record<string, unknown>)[key] = structuredClone(editor.defaults[key]);
-                  // The default experience has no menu or toolkits of its own: keep the Portal's.
-                })
-              }
-            >
-              {current.id === "session-language" ? "Reset to default session language" : "Reset to default"}
-            </button>
-          </article>
-        ),
-      }}
-    />
+    <div className={styles.page} data-previewed={overlays ? "" : undefined}>
+      <article className={styles.article} data-configuration-section={current.id}>
+        <p className={styles.summary}>{current.description}</p>
+        <SectionBody id={current.id} />
+        <button
+          type="button"
+          {...buttonProps("tertiary", "sm")}
+          className={`${buttonProps("tertiary", "sm").className} ${styles.reset}`}
+          onClick={() =>
+            editor.edit((draft) => {
+              for (const key of current.reset) (draft as Record<string, unknown>)[key] = structuredClone(editor.defaults[key]);
+              // The default experience has no menu or toolkits of its own: keep the Portal's.
+            })
+          }
+        >
+          {current.id === "session-language" ? "Reset to default session language" : "Reset to default"}
+        </button>
+      </article>
+      {overlays && <EditorPane {...preview} label="Preview" />}
+    </div>
   );
 }
 
+/** A section's heading: its name for assistive technology (the page header shows it), what it controls, and any control beside it. */
 function Heading({ title, children, aside }: { title: string; children: React.ReactNode; aside?: React.ReactNode }) {
   return (
     <header className={styles.heading}>
+      <h2 id="section-title" className="visually-hidden">
+        {title}
+      </h2>
       <div className={styles.headingRow}>
-        <h3 id="section-title" className={styles.title}>
-          {title}
-        </h3>
+        <p className={styles.lede}>{children}</p>
         {aside}
       </div>
-      <p className={styles.lede}>{children}</p>
     </header>
   );
 }

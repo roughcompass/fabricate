@@ -38,8 +38,8 @@ export function portalSwitcherList(db: Executor): SwitcherPortal[] {
     .all();
 }
 
-export const NAVIGATION_TABS = ["all", "prototype", "production"] as const;
-export type NavigationTab = (typeof NAVIGATION_TABS)[number];
+export const PORTAL_TABS = ["all", "prototype", "production"] as const;
+export type PortalTab = (typeof PORTAL_TABS)[number];
 
 export interface PortalListRow {
   portal: typeof portals.$inferSelect;
@@ -49,11 +49,19 @@ export interface PortalListRow {
 
 /**
  * Every onboarded Portal with how many menu items and Applications it has
- * (navigation spec), sorted by name, and how many each tab holds. Three
- * queries, whatever the number of Portals.
+ * (runtime-configuration spec, "The Portals page can be searched and
+ * filtered"), sorted by name and narrowed to +q+, which matches the name,
+ * slug, owning team, or SEAL ID, ignoring case; and how many each tab holds
+ * among the matches. Three queries, whatever the number of Portals.
  */
-export function portalCatalog(db: Executor, tab: NavigationTab = "all"): { rows: PortalListRow[]; counts: Record<NavigationTab, number> } {
-  const all = db.select().from(portals).where(onboardedPortal(db)).all();
+export function portalCatalog(db: Executor, tab: PortalTab = "all", q = ""): { rows: PortalListRow[]; counts: Record<PortalTab, number> } {
+  const needle = q.trim().toLowerCase();
+  const all = db
+    .select()
+    .from(portals)
+    .where(onboardedPortal(db))
+    .all()
+    .filter((portal) => !needle || [portal.label, portal.slug, portal.ownerTeam, portal.sealId].some((value) => value?.toLowerCase().includes(needle)));
   const items = new Map(
     db
       .select({ portalId: portalMenuItems.portalId, count: sql<number>`count(*)` })

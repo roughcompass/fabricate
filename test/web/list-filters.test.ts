@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isConclusionFilter } from "@/lib/evaluations/conclusions";
 import { isOwnershipFilter } from "@/lib/ownership/coverage";
-import { applicationsHref, assessmentsHref, navigationListHref, repositoriesHref } from "@/lib/web/list-filters";
+import { applicationsHref, assessmentsHref, portalsHref, repositoriesHref } from "@/lib/web/list-filters";
 
 // page-patterns spec: the lists filter what Home counts, through one set of addresses.
 
@@ -29,7 +29,8 @@ describe("list filter addresses", () => {
     expect(applicationsHref({ portal: "all" })).toBe("/applications?portal=all");
     expect(applicationsHref({ portal: "all", rendering: "undetermined" })).toBe("/applications?portal=all&rendering=undetermined");
     expect(applicationsHref({ view: "grid" })).toBe("/applications");
-    expect(navigationListHref({ tab: "production" })).toBe("/navigation?portal=all&tab=production");
-    expect(navigationListHref({ tab: "all" })).toBe("/navigation?portal=all");
+    expect(portalsHref({ tab: "production" })).toBe("/portals?tab=production");
+    expect(portalsHref({ q: "mark" })).toBe("/portals?q=mark");
+    expect(portalsHref({ tab: "all" })).toBe("/portals");
   });
 });

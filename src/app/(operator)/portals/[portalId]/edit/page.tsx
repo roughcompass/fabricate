@@ -6,7 +6,7 @@ import { isPublicId } from "@/lib/db/ids";
 import { findPortal, isOnboarded } from "@/lib/onboarding/portals";
 import { PORTAL_PLATFORM_LABELS } from "@/lib/onboarding/vocabulary";
 import { editPortalAction } from "../../actions";
-import { navigationCrumbs, navigationHref } from "../../paths";
+import { portalsCrumbs, portalHref } from "../../paths";
 import { PortalEditForm } from "./edit-form";
 
 function onboardedPortal(portalId: string) {
@@ -25,10 +25,10 @@ export async function generateMetadata({ params }: { params: Promise<{ portalId:
 export default async function EditPortalPage({ params }: { params: Promise<{ portalId: string }> }) {
   const portal = onboardedPortal((await params).portalId);
   if (!portal) notFound();
-  const back = navigationHref(portal.publicId);
+  const back = portalHref(portal.publicId);
   return (
     <Page width="form">
-      <PageHeader breadcrumbs={[...navigationCrumbs, { href: back, label: portal.label }]} title="Edit details" />
+      <PageHeader breadcrumbs={[...portalsCrumbs, { href: back, label: portal.label }]} title="Edit details" />
       <PortalEditForm
         action={editPortalAction.bind(null, portal.publicId)}
         initial={{ values: { sealId: portal.sealId ?? "", name: portal.label, ownerTeam: portal.ownerTeam ?? "", description: portal.description ?? "" }, errors: {} }}

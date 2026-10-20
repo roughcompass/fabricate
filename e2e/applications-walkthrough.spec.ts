@@ -27,7 +27,7 @@ test("Access and Payee Hub, from an empty database to Production", async ({ page
   const notice = page.getByRole("region", { name: "Notifications" });
 
   // 1. Create the Portal Access.
-  await page.goto("/navigation?portal=all");
+  await page.goto("/portals");
   await waitForHydration(page);
   await header.getByRole("link", { name: "Create Portal" }).click();
   const dialog = page.getByRole("dialog", { name: /^Create/ });

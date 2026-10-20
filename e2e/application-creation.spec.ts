@@ -207,7 +207,7 @@ test.describe("Create Application", () => {
 
   test("With no Portals, the form offers Create Portal", async ({ page, db: _db }) => {
     await page.goto("/applications/new/create");
-    await expect(page.getByRole("link", { name: "Create Portal" })).toHaveAttribute("href", "/navigation/new");
+    await expect(page.getByRole("link", { name: "Create Portal" })).toHaveAttribute("href", "/portals/new");
   });
 
   test("Creating: the dashboard opens with its toast and the assessment in progress", async ({ page, db }) => {

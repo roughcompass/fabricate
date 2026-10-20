@@ -4,7 +4,7 @@ import { AiNotice } from "@/components/prototypes/ai-notice";
 import { PreviewControls } from "@/components/prototypes/preview-controls";
 import { VersionPreview } from "@/components/prototypes/version-preview";
 import { navFlags } from "@/components/shell/nav-flags";
-import { homeLink, visibleSections } from "@/components/shell/navigation";
+import { homeLink, visibleGroups } from "@/components/shell/navigation";
 import { ShellHeader } from "@/components/shell/shell-header";
 import { ChecksPanel } from "@/components/ui/checks-panel";
 import { Page } from "@/components/ui/page";
@@ -42,7 +42,7 @@ export default async function SharedPrototypePage({ params, searchParams }: { pa
   const state = parseFramePreview(await searchParams);
   const frameBase = `/p/${token}/render`;
   const title = `${prototypeName} v${version.number}`;
-  const home = homeLink(visibleSections(navFlags()));
+  const home = homeLink(visibleGroups(navFlags()));
   return (
     <Page>
       <ShellHeader title={title} back={{ href: home.href, label: `Back to ${home.label}` }} />

@@ -13,6 +13,7 @@ import { type Experience, LIMITS, type MenuNode, menuDepth, validateExperience }
 import { useEditor } from "./store";
 import styles from "./messages.module.css";
 import menu from "./menu.module.css";
+import { editorBase } from "@/lib/portals/paths";
 
 type Draft = { kind: "item" | "group"; label: string; route: string; application: string; parentId: string };
 
@@ -44,7 +45,7 @@ export function MenuView() {
   const [draftErrors, setDraftErrors] = useState<Record<string, string[]>>({});
   const [editing, setEditing] = useState<string | null>(null);
   const nodes = editor.present.menu;
-  const base = `/navigation/${editor.portal.publicId}/editor`;
+  const base = editorBase(editor.portal.publicId);
   const groups = nodes.filter((node) => node.kind === "group");
   const label = (node: MenuNode) => {
     const names = [node.label];

@@ -3,7 +3,7 @@ import { CreatePortalForm } from "@/components/onboarding/create-portal";
 import { Page, PageHeader } from "@/components/ui/page";
 import { whatsIncluded } from "@/lib/onboarding/whats-included";
 import { createPortalAction } from "../actions";
-import { navigationCrumbs } from "../paths";
+import { portalsCrumbs } from "../paths";
 
 export const metadata: Metadata = { title: "New Portal" };
 
@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "New Portal" };
 export default function NewPortalPage() {
   return (
     <Page>
-      <PageHeader breadcrumbs={navigationCrumbs} title="New Portal" />
+      <PageHeader breadcrumbs={portalsCrumbs} title="New Portal" />
       <CreatePortalForm action={createPortalAction} included={whatsIncluded()} mode="page" />
     </Page>
   );

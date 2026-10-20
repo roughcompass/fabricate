@@ -1,0 +1,22 @@
+@layer components {
+  /* A stacked bar chart drawn on the server (bar-chart.tsx): bars, their labels, and a legend; a table carries the same figures for assistive technology. */
+  .chart { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; }
+  .svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis { stroke: var(--color-border); stroke-width: 1; }
+  .label { fill: var(--color-text-secondary); font-size: var(--font-size-caption); }
+  .value { fill: var(--color-text); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); }
+  .segment { stroke: var(--color-bg); stroke-width: 1; }
+
+  /* Each series has its own color and its own pattern, so a bar reads without color too. */
+  .tone-error { fill: var(--color-error); color: var(--color-error); }
+  .tone-warning { fill: var(--color-warning); color: var(--color-warning); }
+  .tone-success { fill: var(--color-success); color: var(--color-success); }
+  .tone-neutral { fill: var(--color-neutral); color: var(--color-neutral); }
+  .patternInk { fill: none; stroke: var(--color-bg); stroke-width: 2; }
+  .patternDot { fill: var(--color-bg); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; padding: 0; list-style: none; color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+  .legend li { display: inline-flex; align-items: center; gap: var(--space-1); }
+  .swatch { display: block; width: var(--space-3); height: var(--space-3); border-radius: var(--radius-sm); }
+  .empty { margin: 0; color: var(--color-text-secondary); }
+}

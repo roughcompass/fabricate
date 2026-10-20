@@ -43,7 +43,7 @@ export interface ChecklistInput {
 export function productionChecklist(input: ChecklistInput): { items: ChecklistItem[]; completed: number; available: number } {
   const { application, repository, portal, menuItems, assessment } = input;
   const dashboard = `/applications/${application.publicId}`;
-  const navigation = portal ? `/navigation/${portal.publicId}` : null;
+  const navigation = portal ? `/portals/${portal.publicId}` : null;
   const state = (done: boolean): ChecklistItem["state"] => (done ? "done" : "open");
   const entries: [ChecklistItemId, ChecklistItem["state"], string | null][] = [
     ["repository", state(repository !== null), repository ? `/repositories/${repository.publicId}/edit` : null],

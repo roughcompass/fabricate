@@ -15,6 +15,7 @@
 
     &:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-menu); }
     &:has(.link:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    &:has(.linkButton:hover) { border-color: var(--color-border-strong); box-shadow: var(--shadow-menu); }
   }
 
   .cardHead { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
@@ -44,6 +45,8 @@
     &:focus-visible { outline: none; }
     &::after { content: ""; position: absolute; inset: 0; z-index: var(--z-raised); }
   }
+  /* A card whose name submits a form, such as a Portal's: a button that reads as the name. */
+  .linkButton { display: block; max-width: 100%; padding: 0; overflow: hidden; border: 0; background: none; font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 
   .repository { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
   .repositoryName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

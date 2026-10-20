@@ -14,6 +14,7 @@ import { NothingSelected, OptionsSection, usePreviewPane } from "./parts";
 import { useEditor } from "./store";
 import styles from "./views.module.css";
 import capability from "./capabilities.module.css";
+import { configurationHref, editorBase } from "@/lib/portals/paths";
 
 const SERVES_LABELS: Record<string, string> = {
   "header.global-search": "Header Zone → Global Search Slot",
@@ -85,7 +86,7 @@ function ToolkitOptions({ toolkit }: { toolkit: Toolkit }) {
   const installed = isInstalled(editor.present, toolkit.id);
   const prerequisites = toolkit.prerequisites.map((prerequisite) => ({ ...prerequisite, met: prerequisiteMet(editor.present, prerequisite.check) }));
   const blocked = prerequisites.some((prerequisite) => prerequisite.required && prerequisite.met === false);
-  const base = `/navigation/${editor.portal.publicId}/editor`;
+  const base = editorBase(editor.portal.publicId);
   return (
     <div className={styles.options} data-toolkit-options={toolkit.id}>
       <div className={styles.optionsHeading}>
@@ -230,14 +231,14 @@ function ToolkitConfiguration({ toolkit, base }: { toolkit: Toolkit; base: strin
       ? { href: `${base}/messages`, label: "Manage messages" }
       : toolkit.id === "menu-management"
         ? { href: `${base}/menu`, label: "Open menu editor" }
-        : { href: `${base}/configuration/session-language`, label: "Edit session language" };
+        : { href: configurationHref(editor.portal.publicId, "session-language"), label: "Edit session language" };
   return (
     <OptionsSection title="Configuration">
       <ButtonLink href={link.href} size="sm" icon="external">
         {link.label}
       </ButtonLink>
       {toolkit.id === "session-management" && (
-        <ButtonLink href={`${base}/configuration/session`} size="sm" variant="tertiary">
+        <ButtonLink href={configurationHref(editor.portal.publicId, "session")} size="sm" variant="tertiary">
           Edit session policy
         </ButtonLink>
       )}

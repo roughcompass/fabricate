@@ -55,7 +55,7 @@ test("Fresh installation: each group shows its empty state and actions, and noth
   await expect(page.getByText("No Assessments yet")).toBeVisible();
   await expect(page.getByRole("main").getByRole("link", { name: "New Assessment" })).toHaveAttribute("href", "/assessments/new");
   await expect(page.getByText("No Applications yet")).toBeVisible();
-  await expect(page.getByRole("main").getByRole("link", { name: "Create Portal" })).toHaveAttribute("href", "/navigation/new");
+  await expect(page.getByRole("main").getByRole("link", { name: "Create Portal" })).toHaveAttribute("href", "/portals/new");
   await expect(page.getByRole("main").getByRole("link", { name: "Add application" })).toHaveAttribute("href", "/applications/new");
   const needsAttention = page.getByRole("region", { name: "Needs attention" });
   await expect(needsAttention.getByText("Nothing needs attention")).toBeVisible();

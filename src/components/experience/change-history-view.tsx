@@ -10,6 +10,7 @@ import { Secondary, Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
 import { useEditor } from "./store";
 import styles from "./editor.module.css";
+import { editorBase } from "@/lib/portals/paths";
 
 /**
  * Change history (experience-editor spec, "Change history lists and reverts
@@ -19,7 +20,7 @@ import styles from "./editor.module.css";
  */
 export function ChangeHistoryView() {
   const editor = useEditor();
-  const base = `/navigation/${editor.portal.publicId}/editor`;
+  const base = editorBase(editor.portal.publicId);
   return (
     <div className={styles.fullPage}>
       <ButtonLink href={`${base}/frame-zones`} variant="tertiary" size="sm" icon="arrowLeft">

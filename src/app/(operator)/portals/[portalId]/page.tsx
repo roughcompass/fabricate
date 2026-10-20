@@ -22,8 +22,8 @@ import { type Portal, portalHistory } from "@/lib/onboarding/portals";
 import { PORTAL_PLATFORM_LABELS } from "@/lib/onboarding/vocabulary";
 import { promotePortalAction, returnToPrototypeAction } from "../actions";
 import { onboardedPortal } from "../load";
-import { editorHref, navigationCrumbs, navigationHref } from "../paths";
-import styles from "./navigation.module.css";
+import { editorHref, portalsCrumbs, portalHref } from "../paths";
+import styles from "./portal.module.css";
 
 export async function generateMetadata({ params }: { params: Promise<{ portalId: string }> }): Promise<Metadata> {
   const portal = onboardedPortal((await params).portalId);
@@ -68,7 +68,7 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
   const portal = onboardedPortal(portalId);
   if (!portal) notFound();
   const db = getDb();
-  const here = navigationHref(portal.publicId);
+  const here = portalHref(portal.publicId);
   const menu = menuOf(db, portal.id);
   const applications = portalApplications(db, portal.id);
   const unplaced = unplacedApplications(db, portal.id);
@@ -124,7 +124,7 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
   return (
     <Page>
       <PageHeader
-        breadcrumbs={navigationCrumbs}
+        breadcrumbs={portalsCrumbs}
         title={portal.label}
         status={<Status state={portal.lifecycle} />}
         meta={portal.ownerTeam ? [`Owned by ${portal.ownerTeam}`] : undefined}

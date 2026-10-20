@@ -75,7 +75,7 @@ test("Global Search's configuration: the placeholder shows in the preview, a tak
   await expect(preview(page).locator("[data-slot='global-search']")).toContainText("Search payments");
   await options(page).getByLabel("Keyboard shortcut").fill("s");
   await expect(options(page).getByText("s is taken by another shortcut. Choose another")).toBeVisible();
-  await page.locator("[data-experience-editor]").getByRole("button", { name: "Save", exact: true }).click();
+  await page.locator("[data-runtime-actions]").getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "weren't saved" })).toBeVisible();
   await options(page).getByLabel("Keyboard shortcut").fill("ctrl+k");
   const sources = options(page).getByRole("list", { name: "Data sources" }).locator("li");

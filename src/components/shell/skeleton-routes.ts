@@ -9,14 +9,12 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/repositories\/import\/?$/, "list"],
   [/^\/repositories\/de-console\/?$/, "detail"],
   [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "detail"],
-  // Navigation: the list of Portals, New Portal, and each Portal's page.
-  [/^\/navigation\/?$/, "list"],
-  [/^\/navigation\/new\/?$/, "form"],
-  // A Portal's experience editor is a focused workspace.
-  [/^\/navigation\/[^/]+\/editor(\/.*)?$/, "focused"],
+  // Runtime Configuration: the Portals page, New Portal, each Portal's page, and its editor and configuration pages, all inside the shell.
+  [/^\/portals\/?$/, "list"],
+  [/^\/portals\/new\/?$/, "form"],
   // A Portal's and an Application's Edit details.
-  [/^\/(navigation|applications)\/[^/]+\/edit\/?$/, "form"],
-  [/^\/navigation\/[^/]+\/?$/, "detail"],
+  [/^\/(portals|applications)\/[^/]+\/edit\/?$/, "form"],
+  [/^\/portals\/[^/]+(\/.*)?$/, "detail"],
   // Add application, its full catalog, and Create Application are focused pages (page-patterns spec), like preview mode.
   [/^\/applications\/new(\/.*)?$/, "focused"],
   // The template demo's operator pages; running applications have no skeleton.

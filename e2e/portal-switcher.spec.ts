@@ -152,10 +152,10 @@ test.describe("with JavaScript", () => {
   test("Switching on a Navigation page: choosing Markets opens Markets' Navigation page", async ({ page, db }) => {
     const access = onboardPortal(db, "Access");
     const markets = onboardPortal(db, "Markets");
-    await page.goto(`/navigation/${access.publicId}`);
+    await page.goto(`/portals/${access.publicId}`);
     await waitForHydration(page);
     await choose(page, "Markets");
-    await expect(page).toHaveURL(new RegExp(`/navigation/${markets.publicId}$`));
+    await expect(page).toHaveURL(new RegExp(`/portals/${markets.publicId}$`));
     await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Markets");
   });
 
@@ -169,7 +169,7 @@ test.describe("with JavaScript", () => {
   });
 });
 
-test("Other pages aren't scoped: with Access chosen, another Portal's dashboard opens in full, the Navigation list shows every Portal, and Assessments shows the same Assessments", async ({ page, db, baseURL }) => {
+test("Other pages aren't scoped: with Access chosen, another Portal's dashboard opens in full, the Portals page shows every Portal, and Assessments shows the same Assessments", async ({ page, db, baseURL }) => {
   const access = onboardPortal(db, "Access");
   const markets = onboardPortal(db, "Markets");
   const ledger = registerApplication(db, { name: "Ledger", portal: markets });
@@ -184,8 +184,8 @@ test("Other pages aren't scoped: with Access chosen, another Portal's dashboard 
   await expect(trigger(page)).toHaveAccessibleName("Switch Portal, current: Access, Prototype");
   await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Ledger");
   await expect(page.getByRole("region", { name: "Overview" })).toContainText("Markets");
-  await page.goto("/navigation?portal=all");
-  const portals = page.getByRole("table", { name: "Portals" }).locator("tbody tr");
+  await page.goto("/portals");
+  const portals = page.getByRole("list", { name: "Portals" }).getByRole("listitem");
   await expect(portals).toHaveCount(2);
   await expect(portals.filter({ hasText: "Markets" })).toHaveCount(1);
   await page.goto("/assessments");
@@ -202,14 +202,14 @@ test.describe("without JavaScript", () => {
     await choose(page, "Markets");
     await open(page);
     await expect(filter(page)).toHaveCount(0);
-    await expect(sidebar(page).locator("[popover]").getByRole("link", { name: /^Create Portal/ })).toHaveAttribute("href", "/navigation/new");
+    await expect(sidebar(page).locator("[popover]").getByRole("link", { name: /^Create Portal/ })).toHaveAttribute("href", "/portals/new");
   });
 
   test("Without JavaScript on a Navigation page: choosing Markets opens Markets' page", async ({ page, db }) => {
     const access = onboardPortal(db, "Access");
     const markets = onboardPortal(db, "Markets");
-    await page.goto(`/navigation/${access.publicId}`);
+    await page.goto(`/portals/${access.publicId}`);
     await choose(page, "Markets");
-    await expect(page).toHaveURL(new RegExp(`/navigation/${markets.publicId}$`));
+    await expect(page).toHaveURL(new RegExp(`/portals/${markets.publicId}$`));
   });
 });

@@ -1,12 +1,12 @@
 import { selectPortalAction } from "@/app/portal-actions";
-import { createPortalAction } from "@/app/(operator)/navigation/actions";
+import { createPortalAction } from "@/app/(operator)/portals/actions";
 import { CreatePortalDialog } from "@/components/onboarding/create-portal";
 import type { SwitcherPortal } from "@/lib/onboarding/catalog";
 import type { WhatsIncluded } from "@/lib/onboarding/whats-included";
 import type { Theme } from "@/lib/web/theme";
 import { SIDEBAR_WIDTH } from "@/lib/web/sidebar";
 import { BrandLink } from "./brand-link";
-import { NO_OPTIONAL_AREAS, type NavFlags, homeLink, visibleSections } from "./navigation";
+import { NO_OPTIONAL_AREAS, type NavFlags, homeLink, visibleGroups } from "./navigation";
 import { NavigationFeedback } from "./navigation-feedback";
 import { PortalSwitcher } from "./portal-switcher";
 import { SIDEBAR_ID } from "./shell-header";
@@ -58,7 +58,7 @@ export function AppShell({ theme, nav = NO_OPTIONAL_AREAS, sidebar = DEFAULT_SID
         {/* Inline from 1024px; below that, a native popover drawer that the header's Open navigation opens. */}
         <div id={SIDEBAR_ID} className={styles.sidebar} popover="auto">
           <div className={styles.brandRow}>
-            <BrandLink href={homeLink(visibleSections(nav)).href} className={styles.brand} aria-label="DE FabLab home" title={portals ? "DE FabLab home" : undefined}>
+            <BrandLink href={homeLink(visibleGroups(nav)).href} className={styles.brand} aria-label="DE FabLab home" title={portals ? "DE FabLab home" : undefined}>
               <svg className={styles.mark} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M12 2 22 20H2L12 2z" fill="currentColor" />
               </svg>
@@ -73,7 +73,7 @@ export function AppShell({ theme, nav = NO_OPTIONAL_AREAS, sidebar = DEFAULT_SID
               <SidebarToggle to="hidden" />
             </span>
           </div>
-          <SidebarNav nav={nav} />
+          <SidebarNav nav={nav} portals={portals?.list} />
           <div className={styles.footer}>
             <span className={styles.footerLabel} aria-hidden="true">
               Theme

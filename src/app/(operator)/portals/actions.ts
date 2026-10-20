@@ -11,7 +11,8 @@ import { createPortal, editPortalDetails, promotePortal, returnToPrototype } fro
 import { rememberedActor } from "@/lib/web/actor-cookie";
 import { errorsFrom, integer, submittedValues, text } from "@/lib/web/form-data";
 import { rememberPortal } from "@/lib/web/portal-cookie";
-import { navigationHref } from "./paths";
+import { currentPortal } from "@/lib/web/portal";
+import { PORTALS_HREF, editorHref, portalHref } from "./paths";
 
 /** Who a change is recorded as: the remembered name, or "Not stated", unverified (reviews spec). */
 async function actor() {
@@ -28,7 +29,7 @@ function refused(values: DialogState["values"], error: unknown): DialogState {
 
 /**
  * Creates a Portal from the Create Portal form (portal-creation spec), as a
- * Prototype, and opens its Navigation page. The form doesn't ask who's
+ * Prototype, and opens its Portal page. The form doesn't ask who's
  * creating it: it's recorded, unverified, as the remembered name or as "Not
  * stated".
  */
@@ -43,7 +44,7 @@ export async function createPortalAction(_previous: DialogState, formData: FormD
     );
     // A created Portal becomes the switcher's current one (portal-creation spec).
     await rememberPortal(portal.publicId);
-    location = `${navigationHref(portal.publicId)}?notice=${adopted ? "adopted" : "created"}`;
+    location = `${portalHref(portal.publicId)}?notice=${adopted ? "adopted" : "created"}`;
   } catch (error) {
     return refused(values, error);
   }
@@ -66,7 +67,7 @@ const SHOWN_IN_SWITCHER = new Set(["promoted", "returned", "edited"]);
  */
 function backTo(publicId: string, notice: string, anchor = ""): never {
   if (SHOWN_IN_SWITCHER.has(notice)) revalidatePath("/", "layout");
-  redirect(`${navigationHref(publicId)}?notice=${notice}${anchor}`);
+  redirect(`${portalHref(publicId)}?notice=${notice}${anchor}`);
 }
 
 /**
@@ -106,4 +107,18 @@ export async function editPortalAction(publicId: string, _previous: DialogState,
     return refused(values, error);
   }
   backTo(publicId, "edited");
+}
+
+/**
+ * Chooses a Portal from its card on the Portals page (runtime-configuration
+ * spec, "The Portals page lists every Portal as a card"): it becomes the
+ * switcher's current Portal, and its Experience Editor opens. A form post, so
+ * it works without JavaScript.
+ */
+export async function openPortalAction(formData: FormData): Promise<void> {
+  const portal = currentPortal(getDb(), text(formData, "portal", 40));
+  if (!portal) redirect(PORTALS_HREF);
+  await rememberPortal(portal.publicId);
+  revalidatePath("/", "layout");
+  redirect(editorHref(portal.publicId));
 }

@@ -34,6 +34,8 @@ import { StatGroup } from "@/components/ui/stat-group";
 import { Severity, Status } from "@/components/ui/status";
 import { EmptyRow, Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TabLink, Tabs } from "@/components/ui/tabs";
+import { BarChart } from "@/components/ui/bar-chart";
+import { CardGrid } from "@/components/ui/card-grid";
 import { ShortValue, Tag, TagList } from "@/components/ui/tag";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ChecksPanel } from "@/components/ui/checks-panel";
@@ -143,6 +145,8 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
     ["sections", "Section and panel"],
     ["description-list", "Description list"],
     ["stat-group", "Stat group"],
+    ["bar-chart", "Bar chart"],
+    ["card-grid", "Card grid"],
     ["media-card", "Media card"],
     ["empty-state", "Empty state"],
     ["disclosure", "Disclosure"],
@@ -689,6 +693,46 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 </Table>
               </Panel>
             </>
+          )}
+        />
+
+        <Specimen
+          id="bar-chart"
+          title="Bar chart"
+          description="A stacked bar per group, each series with its own tone and pattern, a legend, and a hidden table with the same figures."
+          render={(theme) => (
+            <BarChart
+              id={`${theme}-trend`}
+              label="Evaluations completed each week, by conclusion"
+              groupLabel="Week"
+              series={[
+                { id: "gaps", label: "Gaps found", tone: "error", pattern: "stripes" },
+                { id: "undetermined", label: "Undetermined", tone: "warning", pattern: "dots" },
+                { id: "conforms", label: "Conforms", tone: "success", pattern: "solid" },
+              ]}
+              groups={[
+                { label: "Sep 28", values: { gaps: 1, conforms: 2 } },
+                { label: "Oct 5", values: { gaps: 2, undetermined: 1, conforms: 1 } },
+                { label: "Oct 12", values: {} },
+                { label: "Oct 19", values: { gaps: 2, conforms: 1 } },
+              ]}
+            />
+          )}
+        />
+
+        <Specimen
+          id="card-grid"
+          title="Card grid"
+          description="At most three cards per row, two on a medium column, one on a phone; cards in a row share the tallest one's height."
+          single
+          render={() => (
+            <CardGrid label="Sample cards">
+              {["Access", "Markets", "Treasury", "Lending"].map((name, index) => (
+                <li key={name}>
+                  <Panel title={name}>{index === 1 ? "A longer description that wraps onto a second line, so the row's other cards stretch to match it." : "A short description."}</Panel>
+                </li>
+              ))}
+            </CardGrid>
           )}
         />
 

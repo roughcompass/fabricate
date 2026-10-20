@@ -11,6 +11,7 @@ import { Tag } from "@/components/ui/tag";
 import { LIMITS, MESSAGE_STATE_LABELS, SEVERITIES, SEVERITY_LABELS, type Severity, type SystemMessage, activeMessage, messageState } from "@/lib/experience/document";
 import { useEditor } from "./store";
 import styles from "./messages.module.css";
+import { editorBase } from "@/lib/portals/paths";
 
 const SEVERITY_ICONS: Record<Severity, IconName> = { info: "info", warning: "alert", error: "xCircle" };
 const when = (value: string) => new Date(value).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
@@ -38,7 +39,7 @@ export function MessagesView() {
   const confirm = useRef<HTMLDialogElement>(null);
   const { messages } = editor.present;
   const live = activeMessage(editor.present);
-  const base = `/navigation/${editor.portal.publicId}/editor`;
+  const base = editorBase(editor.portal.publicId);
   const index = messages.findIndex((message) => message.id === editing);
   const current = index >= 0 ? messages[index]! : null;
 

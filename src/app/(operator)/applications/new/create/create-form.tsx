@@ -183,7 +183,7 @@ export function CreateApplicationForm({ action, initial, portals, bitbucketHosts
           ) : (
             <div className={styles.noPortal}>
               <Select id="application-portal" name="portal" label="Portal" defaultValue="" errors={state.errors.portal} required description="Create a Portal first: an Application belongs to one." options={[{ value: "", label: "No Portals yet" }]} />
-              <ButtonLink href="/navigation/new" variant="secondary" icon="plus" size="sm">
+              <ButtonLink href="/portals/new" variant="secondary" icon="plus" size="sm">
                 Create Portal
               </ButtonLink>
             </div>

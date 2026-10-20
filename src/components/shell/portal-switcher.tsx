@@ -36,7 +36,7 @@ export function PortalSwitcher({ portals, current, action }: { portals: readonly
       searchLabel="Find Portal…"
       empty="Portals you create appear here for quick switching."
       noMatch="No Portal matches"
-      footer={{ label: "Create Portal", description: "Onboard a Portal its team configures", icon: "plus", href: "/navigation/new", onChoose: openCreatePortal }}
+      footer={{ label: "Create Portal", description: "Onboard a Portal its team configures", icon: "plus", href: "/portals/new", onChoose: openCreatePortal }}
       onChosen={closeDrawer}
     />
   );

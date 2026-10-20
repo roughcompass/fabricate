@@ -3,7 +3,7 @@ import { portalSwitcherList } from "@/lib/onboarding/catalog";
 import { whatsIncluded } from "@/lib/onboarding/whats-included";
 import { currentPortal } from "@/lib/web/portal";
 import type { ShellPortals } from "./app-shell";
-import { type NavFlags, visibleTopLevel } from "./navigation";
+import { type NavFlags, menuItems, visibleGroups } from "./navigation";
 
 /**
  * What the sidebar's Portal switcher and the Create Portal dialog need
@@ -13,7 +13,7 @@ import { type NavFlags, visibleTopLevel } from "./navigation";
  * neither, and nothing is read.
  */
 export function shellPortals(nav: NavFlags, remembered: string | undefined): ShellPortals | null {
-  if (!visibleTopLevel(nav).some((item) => item.id === "applications")) return null;
+  if (!menuItems(visibleGroups(nav)).some((item) => item.id === "applications")) return null;
   const db = getDb();
   return { list: portalSwitcherList(db), current: currentPortal(db, remembered)?.publicId ?? null, included: whatsIncluded() };
 }

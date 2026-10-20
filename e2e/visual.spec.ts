@@ -169,7 +169,7 @@ test("captures the Applications pages and a Navigation page in both themes", asy
     ["catalog", "/applications/new/templates"],
     ["create-application", "/applications/new/create?starter=salt-starter&from=new"],
     ["dashboard", `/applications/${payeeHub.publicId}`],
-    ["navigation", `/navigation/${access.publicId}`],
+    ["navigation", `/portals/${access.publicId}`],
   ];
   const viewports = [{ name: "desktop", width: 1440, height: 900 }, VIEWPORTS[1]!];
   for (const theme of THEMES) {
@@ -216,7 +216,7 @@ test("captures the experience editor and running portals with a saved experience
     draft.theme.id = "markets";
     draft.frame.sidebar.menuType = "flyout";
   });
-  const editor = `/navigation/${access.publicId}/editor`;
+  const editor = `/portals/${access.publicId}/editor`;
   const capture = async (name: string, fullPage = false) => {
     await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
     await expectNoHorizontalOverflow(page);
@@ -242,7 +242,7 @@ test("captures the experience editor and running portals with a saved experience
       await expect(page.getByRole("table", { name: "Pending changes" })).toBeVisible();
       await capture(`change-history-${suffix}`);
       // The Install dialog, for a Portal that hasn't installed Global Search.
-      await page.goto(`/navigation/${desk.publicId}/editor/capabilities`);
+      await page.goto(`/portals/${desk.publicId}/editor/capabilities`);
       await waitForHydration(page);
       await page.getByRole("list", { name: "Toolkits" }).getByRole("button", { name: /^Global Search/ }).click();
       await page.getByRole("region", { name: "Options", exact: true }).getByRole("button", { name: "Install" }).click();

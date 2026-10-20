@@ -11,10 +11,10 @@ import { waitForHydration } from "./support/shell";
 // web-onboarding/portal-configuration spec: the Portal Configuration
 // sections of the experience editor.
 
-const sectionOf = (portal: { publicId: string }, section: string) => `/navigation/${portal.publicId}/editor/configuration/${section}`;
+const sectionOf = (portal: { publicId: string }, section: string) => `/portals/${portal.publicId}/configuration/${section}`;
 const pending = (page: Page) => page.locator("[data-pending-count]");
 const preview = (page: Page) => page.locator("[data-frame-preview]");
-const save = (page: Page) => page.locator("[data-experience-editor]").getByRole("button", { name: "Save", exact: true });
+const save = (page: Page) => page.locator("[data-runtime-actions]").getByRole("button", { name: "Save", exact: true });
 
 async function open(page: Page, portal: { publicId: string }, section: string) {
   await page.goto(sectionOf(portal, section));
@@ -29,30 +29,30 @@ function saved(db: Db, portal: { publicId: string }, change: (draft: Experience)
   saveExperience(db, portal.publicId, { baseNumber: current.number, lockVersion: getPortal(db, portal.publicId).lockVersion, document }, ana, catalogs());
 }
 
-test("Sections in order, each at its own address, marked current, with Editing <section>", async ({ page, db }) => {
+test("Sections in order, each its own Runtime Configuration page, marked current, titled with its name (Sections in order, Opening a section)", async ({ page, db }) => {
   const access = onboardPortal(db, "Access");
   await open(page, access, "brand");
-  const nav = page.getByRole("navigation", { name: "Configuration sections" });
-  await expect(nav.getByRole("link")).toHaveText([/^Brand & identity/, /^Favicon/, /^Design Theme/, /^Copyright Information/, /^Routing configuration/, /^Default Session Language/, /^Session Policy/, /^Runtime modules/, /^Crash Error/]);
-  await expect(nav).toContainText("Policies");
-  await expect(nav).toContainText("Routing & sessions");
-  await expect(nav).toContainText("Runtime");
-  await nav.getByRole("link", { name: /^Copyright Information/ }).click();
+  const nav = page.getByRole("navigation", { name: "Primary" });
+  const items = ["Brand & identity", "Favicon", "Design Theme", "Copyright Information", "Routing configuration", "Default Session Language", "Session Policy", "Runtime modules", "Crash Error"];
+  for (const [heading, names] of [["Identity", items.slice(0, 3)], ["Policies", items.slice(3, 4)], ["Routing & sessions", items.slice(4, 7)], ["Runtime", items.slice(7)]] as const) await expect(nav.getByRole("list", { name: heading, exact: true }).getByRole("link")).toHaveText([...names]);
+  await nav.getByRole("link", { name: "Copyright Information" }).click();
   await expect(page).toHaveURL(new RegExp(`${sectionOf(access, "copyright")}$`));
-  await expect(nav.getByRole("link", { name: /^Copyright Information/ })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByText("Editing Copyright Information")).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Copyright Information" })).toHaveAttribute("aria-current", "page");
+  await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Copyright Information");
+  await expect(page.locator("[data-configuration-section='copyright']")).toContainText("Legal footer copy rendered by the Experience Frame's Footer Zone, Primary Slot.");
 });
 
-test("Brand & identity: the portal name shows beside the logo, and Reset to default restores it", async ({ page, db }) => {
+test("Brand & identity: the portal name shows beside the logo and in the preview, reaches the Experience Editor unsaved, and Reset to default restores it", async ({ page, db }) => {
   const access = onboardPortal(db, "Access");
   await open(page, access, "brand");
   await page.getByLabel("Portal name").fill("Digital Platform");
   await expect(page.locator("[data-brand-preview]")).toContainText("Digital Platform");
   await expect(page.locator("[data-brand-preview] img")).toHaveAttribute("alt", "J.P. Morgan");
-  await page.getByRole("link", { name: "Frame Zones" }).click();
   await expect(preview(page)).toContainText("Digital Platform");
-  await page.goto(sectionOf(access, "brand"));
-  await waitForHydration(page);
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Experience Editor" }).click();
+  await expect(preview(page)).toContainText("Digital Platform");
+  await expect(pending(page)).toHaveText("1 unsaved change");
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Brand & identity" }).click();
   await page.getByRole("button", { name: "Reset to default" }).click();
   await expect(page.getByLabel("Portal name")).toHaveValue("Access");
 });
@@ -82,11 +82,10 @@ test("Design Theme: making Markets active and pinning a version", async ({ page,
   await expect(page.getByRole("button", { name: "Configure Payments" })).toBeDisabled();
 });
 
-test("Copyright: the footer shows the new text in the preview", async ({ page, db }) => {
+test("Copyright: the footer shows the new text in the preview beside it", async ({ page, db }) => {
   const access = onboardPortal(db, "Access");
   await open(page, access, "copyright");
   await page.getByLabel("Copyright information").fill("© 2026 JPMorgan Chase & Co. Member FDIC.");
-  await page.getByRole("link", { name: "Frame Zones" }).click();
   await expect(preview(page).locator("[data-slot='primary']")).toHaveText("© 2026 JPMorgan Chase & Co. Member FDIC.");
 });
 
@@ -111,13 +110,12 @@ test("Session language and policy: custom copy reaches the dialog preview, the r
   await open(page, access, "session-language");
   await page.getByLabel("Change session inactivity alert language").check();
   await page.getByLabel("Dialog title").fill("Still there?");
-  await page.getByRole("link", { name: "Frame Overlays" }).click();
   await expect(preview(page)).toContainText("Still there?");
 
   await page.goto(sectionOf(access, "routing"));
   await waitForHydration(page);
   await page.getByLabel("Remember last visited route on return").check();
-  await page.getByRole("link", { name: /^Session Policy/ }).click();
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Session Policy" }).click();
   await expect(page.getByLabel("Remember last visited route on return")).toBeChecked();
   await page.getByLabel("Configure logout redirect URL").check();
   await save(page).click();

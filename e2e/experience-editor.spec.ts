@@ -9,11 +9,12 @@ import { waitForHydration } from "./support/shell";
 // pending changes, undo and redo, Change history, Save, and the preview.
 
 const rail = (page: Page) => page.getByRole("navigation", { name: "Editor views" });
-const topbar = (page: Page) => page.locator("[data-experience-editor]");
+const topbar = (page: Page) => page.locator("[data-runtime-actions]");
 const save = (page: Page) => topbar(page).getByRole("button", { name: "Save", exact: true });
 const pending = (page: Page) => topbar(page).locator("[data-pending-count]");
 const preview = (page: Page) => page.locator("[data-frame-preview]");
-const editorOf = (portal: { publicId: string }, view = "frame-zones") => `/navigation/${portal.publicId}/editor/${view}`;
+const editorOf = (portal: { publicId: string }, view = "frame-zones") => (view.startsWith("configuration/") ? `/portals/${portal.publicId}/${view}` : `/portals/${portal.publicId}/editor/${view}`);
+const submenu = (page: Page) => page.getByRole("navigation", { name: "Primary" });
 
 async function openEditor(page: Page, portal: { publicId: string }, view = "frame-zones") {
   await page.goto(editorOf(portal, view));
@@ -21,34 +22,44 @@ async function openEditor(page: Page, portal: { publicId: string }, view = "fram
 }
 
 test.describe("opening the editor", () => {
-  test("Opening from the Navigation page: a focused page with no sidebar, and Back returns", async ({ page, db }) => {
+  test("Opening the editor: Experience Editor in the Runtime Configuration sub-menu opens it inside the shell (Opening the editor)", async ({ page, db, baseURL }) => {
     const access = onboardPortal(db, "Access");
-    await page.goto(`/navigation/${access.publicId}`);
+    await page.context().addCookies([{ name: "fabricate-portal", value: access.publicId, url: baseURL! }]);
+    await page.goto("/");
+    await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Runtime Configuration" }).click();
+    await expect(page).toHaveURL(new RegExp(`${editorOf(access)}$`));
+    await expect(page).toHaveTitle("Access · Runtime Configuration · DE FabLab");
+    await expect(page.locator("#sidebar")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Access" })).toBeVisible();
+    await expect(submenu(page).getByRole("link", { name: "Experience Editor" })).toHaveAttribute("aria-current", "page");
+    await expect(rail(page).getByRole("link", { name: "Frame Zones" })).toHaveAttribute("aria-current", "page");
+    // The Portal page offers it too.
+    await page.goto(`/portals/${access.publicId}`);
     await page.locator("[data-page-header]").getByRole("link", { name: "Open experience editor" }).click();
     await expect(page).toHaveURL(new RegExp(`${editorOf(access)}$`));
-    await expect(page).toHaveTitle("Access · Experience editor · DE FabLab");
-    await expect(page.locator("#sidebar")).toBeHidden();
-    await expect(rail(page).getByRole("link", { name: "Frame Zones" })).toHaveAttribute("aria-current", "page");
-    await page.getByRole("link", { name: "Back to Access" }).click();
-    await expect(page).toHaveURL(new RegExp(`/navigation/${access.publicId}$`));
   });
 
-  test("The rail switches views, kept across a reload, and the editor root opens Frame Zones", async ({ page, db }) => {
+  test("Header tabs switch between three views, kept across a reload, and the editor root opens Frame Zones (Switching views)", async ({ page, db }) => {
     const access = onboardPortal(db, "Access");
-    await page.goto(`/navigation/${access.publicId}/editor`);
+    await page.goto(`/portals/${access.publicId}/editor`);
     await expect(page).toHaveURL(new RegExp(`${editorOf(access)}$`));
     await waitForHydration(page);
-    for (const [name, view] of [["Frame Overlays", "frame-overlays"], ["Capability Toolkit", "capabilities"], ["Portal Configuration", "configuration/brand"]] as const) {
+    await expect(rail(page).getByRole("link")).toHaveText(["", "", ""]);
+    await expect(rail(page).getByRole("link").first()).toHaveAttribute("title", "Frame Zones");
+    for (const [name, view] of [["Frame Overlays", "frame-overlays"], ["Capability Toolkit", "capabilities"]] as const) {
       await rail(page).getByRole("link", { name }).click();
       await expect(page).toHaveURL(new RegExp(`${editorOf(access, view)}$`));
       await expect(rail(page).getByRole("link", { name })).toHaveAttribute("aria-current", "page");
     }
     await page.reload();
-    await expect(rail(page).getByRole("link", { name: "Portal Configuration" })).toHaveAttribute("aria-current", "page");
+    await expect(rail(page).getByRole("link", { name: "Capability Toolkit" })).toHaveAttribute("aria-current", "page");
+    await expect(rail(page).getByRole("link", { name: "Portal Configuration" })).toHaveCount(0);
+    // The view tabs sit in the app header, at its start.
+    await expect(page.locator("[data-shell-header]").getByRole("navigation", { name: "Editor views" })).toBeVisible();
   });
 
   test("An unknown or claim-only Portal has no editor", async ({ page, db: _db }) => {
-    const response = await page.goto("/navigation/ptl_aaaaaaaaaaaaaaaa/editor/frame-zones");
+    const response = await page.goto("/portals/ptl_aaaaaaaaaaaaaaaa/editor/frame-zones");
     expect(response?.status()).toBe(404);
   });
 });
@@ -126,27 +137,30 @@ test.describe("pending changes and saving", () => {
     await openEditor(page, access, "configuration/favicon");
     await page.getByLabel("Favicon data URL").fill("https://example.com/icon.png");
     await expect(page.getByText("Only data URLs of an SVG, PNG, or ICO image are accepted")).toBeVisible();
-    await rail(page).getByRole("link", { name: "Frame Zones" }).click();
+    await submenu(page).getByRole("link", { name: "Experience Editor" }).click();
     await save(page).click();
     const alert = page.getByRole("alert").filter({ hasText: "weren't saved" });
     await expect(alert).toBeVisible();
-    await alert.getByRole("link", { name: /Portal Configuration · favicon/ }).click();
+    await alert.getByRole("link", { name: "Favicon" }).click();
     await expect(page).toHaveURL(new RegExp(`${editorOf(access, "configuration/favicon")}$`));
     expect(experienceVersions(db, access.id)).toHaveLength(0);
   });
 
-  test("Leaving with changes pending asks first", async ({ page, db }) => {
+  test("Leaving with changes pending asks first, and moving between Runtime Configuration pages doesn't (Leaving with changes)", async ({ page, db }) => {
     const access = onboardPortal(db, "Access");
     await openEditor(page, access, "configuration/copyright");
     await page.getByLabel("Copyright information").fill("© Pending");
-    await page.getByRole("link", { name: "Back to Access" }).click();
+    await submenu(page).getByRole("link", { name: "Favicon" }).click();
+    await expect(page).toHaveURL(new RegExp(`${editorOf(access, "configuration/favicon")}$`));
+    await submenu(page).getByRole("link", { name: "Portal", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Leave with 1 unsaved change?" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Stay" }).click();
-    await expect(page).toHaveURL(new RegExp(`${editorOf(access, "configuration/copyright")}$`));
-    await page.getByRole("link", { name: "Back to Access" }).click();
+    await expect(page).toHaveURL(new RegExp(`${editorOf(access, "configuration/favicon")}$`));
+    await expect(pending(page)).toHaveText("1 unsaved change");
+    await submenu(page).getByRole("link", { name: "Portal", exact: true }).click();
     await dialog.getByRole("button", { name: "Leave" }).click();
-    await expect(page).toHaveURL(new RegExp(`/navigation/${access.publicId}$`));
+    await expect(page).toHaveURL(new RegExp(`/portals/${access.publicId}$`));
   });
 });
 

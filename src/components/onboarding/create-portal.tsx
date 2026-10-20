@@ -109,7 +109,7 @@ export function CreatePortalForm({ action, included, mode, onCancel, titleId }: 
         Cancel
       </button>
     ) : (
-      <ButtonLink href="/navigation">Cancel</ButtonLink>
+      <ButtonLink href="/portals">Cancel</ButtonLink>
     );
 
   const aside = included && items.length > 0 ? <CheckList label={included.title} items={items} link={included.link} /> : undefined;
@@ -257,7 +257,7 @@ export function NewPortalLink({ children = "New Portal", variant = "primary" }: 
   const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
   return (
     <ButtonLink
-      href="/navigation/new"
+      href="/portals/new"
       variant={variant}
       icon="plus"
       aria-haspopup={hydrated ? "dialog" : undefined}

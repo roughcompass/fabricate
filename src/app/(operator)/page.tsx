@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { navFlags } from "@/components/shell/nav-flags";
-import { HOME, homeLink, visibleSections } from "@/components/shell/navigation";
+import { HOME, homeLink, visibleGroups } from "@/components/shell/navigation";
 import { ButtonLink } from "@/components/ui/button";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,7 +18,7 @@ import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { ATTENTION_PAGE_SIZE, type AttentionItem, attentionItems } from "@/lib/home/attention";
 import { type FleetSummary, claimedShare, fleetSummary } from "@/lib/home/summary";
-import { applicationsHref, assessmentsHref, navigationListHref, repositoriesHref } from "@/lib/web/list-filters";
+import { applicationsHref, assessmentsHref, portalsHref, repositoriesHref } from "@/lib/web/list-filters";
 
 // The root layout's title template applies only to child segments, and this page shares the root segment.
 export const metadata: Metadata = { title: { absolute: "Home · DE FabLab" } };
@@ -33,7 +33,7 @@ const DE_CONSOLE = "/repositories/de-console";
  */
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const config = getConfig();
-  const home = homeLink(visibleSections(navFlags(config)));
+  const home = homeLink(visibleGroups(navFlags(config)));
   if (home.href !== HOME.href) redirect(home.href);
 
   const query = await searchParams;
@@ -102,7 +102,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               icon="network"
               action={
                 <>
-                  <ButtonLink href="/navigation/new" variant="secondary" icon="plus">
+                  <ButtonLink href="/portals/new" variant="secondary" icon="plus">
                     Create Portal
                   </ButtonLink>
                   <ButtonLink href="/applications/new" variant="secondary" icon="plus">
@@ -120,7 +120,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             stats={[
               { label: "Applications", value: figure(summary.applications.applications), href: applicationsHref({ portal: "all" }) },
               { label: "Undetermined rendering", value: figure(summary.applications.undetermined), href: applicationsHref({ portal: "all", rendering: "undetermined" }) },
-              { label: "Production Portals", value: figure(summary.applications.productionPortals), href: navigationListHref({ tab: "production" }) },
+              { label: "Production Portals", value: figure(summary.applications.productionPortals), href: portalsHref({ tab: "production" }) },
             ]}
           />
         )}

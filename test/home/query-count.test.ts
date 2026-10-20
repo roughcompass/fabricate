@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { attentionItems } from "@/lib/home/attention";
+import { WEEK_MS, assessmentTrend, figuresAt, portalsOverview, recentActivity } from "@/lib/home/dashboard";
 import { fleetSummary } from "@/lib/home/summary";
 import { createApplication } from "@/lib/ownership/records";
 import { registerApplication } from "../support/applications";
@@ -41,6 +42,10 @@ function statementsOf(db: Db): string[] {
   }) as typeof db.$client.prepare;
   try {
     fleetSummary(db);
+    figuresAt(db, new Date(Date.now() - WEEK_MS));
+    portalsOverview(db);
+    assessmentTrend(db);
+    recentActivity(db);
     attentionItems(db, withOverrides(getConfig(), { deConsole: { source: "/tmp/de-console-export.json", refreshMinutes: 60 } }));
   } finally {
     db.$client.prepare = prepare;
@@ -55,7 +60,7 @@ describe("Home's reads", () => {
 
     expect(small.length).toBeGreaterThan(5);
     expect(large.length).toBe(small.length);
-    expect(large.length).toBeLessThan(15);
+    expect(large.length).toBeLessThan(20);
     for (const statement of large) expect(statement).not.toMatch(/repository_profiles|relationship_maps/);
   }, 120_000);
 });

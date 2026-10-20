@@ -18,7 +18,7 @@ const included = (scope: Page | ReturnType<typeof dialog>) => scope.getByRole("r
 
 /** Opens the dialog from the Navigation list's Create Portal action. */
 async function openFromPortals(page: Page) {
-  await page.goto("/navigation?portal=all");
+  await page.goto("/portals");
   await waitForHydration(page);
   // Hydrated, Create Portal opens the dialog rather than the page.
   await expect(newPortal(page)).toHaveAttribute("aria-haspopup", "dialog");
@@ -168,7 +168,7 @@ test.describe("the dialog", () => {
     await expect(pageHeading(page, "Treasury")).toBeVisible();
     await expect(dialog(page)).toBeHidden();
     const created = db.$client.prepare("select public_id as publicId from portals where label = 'Treasury'").get() as { publicId: string };
-    await expect(page).toHaveURL(new RegExp(`/navigation/${created.publicId}`));
+    await expect(page).toHaveURL(new RegExp(`/portals/${created.publicId}`));
     await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Treasury was created as a Prototype.");
     await expect(page.locator("[data-page-header]")).toContainText("Prototype");
     await expect(page.locator("#sidebar").getByRole("button", { name: "Switch Portal, current: Treasury, Prototype" })).toBeVisible();
@@ -220,7 +220,7 @@ test.describe("the dialog", () => {
 
 test.describe("the page", () => {
   test("Opening the address directly: What's included beside the form, as a page", async ({ page, db: _db }) => {
-    await page.goto("/navigation/new");
+    await page.goto("/portals/new");
     await expect(pageHeading(page, "New Portal")).toBeVisible();
     await expect(included(page)).toBeVisible();
     await expect(page.getByRole("dialog")).toBeHidden();
@@ -230,7 +230,7 @@ test.describe("the page", () => {
     const committed = fs.readFileSync(E2E_WHATS_INCLUDED, "utf8");
     fs.copyFileSync(path.resolve("test/fixtures/onboarding/whats-included-malformed.yaml"), E2E_WHATS_INCLUDED);
     try {
-      await page.goto("/navigation/new");
+      await page.goto("/portals/new");
       await waitForHydration(page);
       await expect(page.getByLabel("SEAL ID")).toBeVisible();
       await expect(included(page)).toHaveCount(0);
@@ -248,9 +248,9 @@ test.describe("the page", () => {
     test.use({ javaScriptEnabled: false });
 
     test("Creating without JavaScript: the Portal gets the slug its name derives; Create Portal leads to the page", async ({ page, db }) => {
-      await page.goto("/navigation?portal=all");
+      await page.goto("/portals");
       await newPortal(page).click();
-      await expect(page).toHaveURL(/\/navigation\/new$/);
+      await expect(page).toHaveURL(/\/portals\/new$/);
       await expect(page.getByLabel("Slug")).toHaveValue("");
       await fill(page, { name: "My New Portal" });
       await page.getByRole("button", { name: "Create Portal" }).click();
@@ -265,10 +265,10 @@ test("Opening the dialog keeps the page behind it, not a loading skeleton", asyn
   await openFromPortals(page);
   await page.waitForTimeout(400);
   await dialog(page).getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByRole("table", { name: "Portals" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Portals" })).toBeVisible();
   await page.locator("#sidebar").getByRole("button", { name: /^Switch Portal/ }).click();
   await page.locator("#sidebar [popover]").getByRole("link", { name: /^Create Portal/ }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("table", { name: "Portals" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Portals" })).toBeVisible();
 });

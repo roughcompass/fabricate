@@ -8,8 +8,11 @@ import { ana } from "../../test/support/onboarding";
 import { expect } from "./fixtures";
 import { waitForHydration } from "./shell";
 
-/** The experience editor's address for +portal+ at +view+. */
-export const editorOf = (portal: { publicId: string }, view = "frame-zones") => `/navigation/${portal.publicId}/editor/${view}`;
+/** The address of +portal+'s Experience Editor at +view+, or of a configuration section given as "configuration/<section>". */
+export const editorOf = (portal: { publicId: string }, view = "frame-zones") => (view.startsWith("configuration/") ? `/portals/${portal.publicId}/${view}` : `/portals/${portal.publicId}/editor/${view}`);
+
+/** Runtime Configuration's actions in the app header: Undo, Redo, Change history, the unsaved count, Open running portal, and Save. */
+export const headerActions = (page: Page) => page.locator("[data-runtime-actions]");
 
 export async function openEditor(page: Page, portal: { publicId: string }, view = "frame-zones") {
   await page.goto(editorOf(portal, view));
@@ -29,6 +32,6 @@ export const pendingCount = (page: Page) => page.locator("[data-pending-count]")
 export const options = (page: Page) => page.getByRole("region", { name: "Options", exact: true });
 
 export async function saveEditor(page: Page) {
-  await page.locator("[data-experience-editor]").getByRole("button", { name: "Save", exact: true }).click();
+  await page.locator("[data-runtime-actions]").getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText(/Version \d+ is saved\./);
 }

@@ -1,7 +1,7 @@
 import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
 import { prepareDestination } from "next/dist/shared/lib/router/utils/prepare-destination";
 import { describe, expect, it } from "vitest";
-import { LEGACY_REDIRECTS, ONBOARDING_REDIRECTS } from "@/lib/web/redirects";
+import { LEGACY_REDIRECTS, NAVIGATION_REDIRECTS, ONBOARDING_REDIRECTS } from "@/lib/web/redirects";
 
 /*
  * The permanent redirect table (make-applications-first-class task 1.3),
@@ -26,13 +26,13 @@ function redirectOf(address: string): string | null {
 describe("redirects from Web Onboarding's addresses", () => {
   it.each([
     ["/onboarding", "/applications"],
-    ["/onboarding/portals", "/navigation"],
-    ["/onboarding/portals/new", "/navigation/new"],
-    ["/onboarding/portals/ptl_0123456789abcdef", "/navigation/ptl_0123456789abcdef"],
-    ["/onboarding/portals/ptl_0123456789abcdef/draft/identity", "/navigation/ptl_0123456789abcdef"],
-    ["/onboarding/portals/ptl_0123456789abcdef/revisions/2", "/navigation/ptl_0123456789abcdef"],
-    ["/onboarding/reviews", "/navigation"],
-    ["/onboarding/reviews/plc_0123456789abcdef", "/navigation"],
+    ["/onboarding/portals", "/portals"],
+    ["/onboarding/portals/new", "/portals/new"],
+    ["/onboarding/portals/ptl_0123456789abcdef", "/portals/ptl_0123456789abcdef"],
+    ["/onboarding/portals/ptl_0123456789abcdef/draft/identity", "/portals/ptl_0123456789abcdef"],
+    ["/onboarding/portals/ptl_0123456789abcdef/revisions/2", "/portals/ptl_0123456789abcdef"],
+    ["/onboarding/reviews", "/portals"],
+    ["/onboarding/reviews/plc_0123456789abcdef", "/portals"],
     ["/onboarding/applications", "/applications?portal=all"],
     ["/onboarding/applications?q=payee", "/applications?q=payee&portal=all"],
     ["/onboarding/applications/wap_0123456789abcdef", "/applications/wap_0123456789abcdef"],
@@ -48,12 +48,35 @@ describe("redirects from Web Onboarding's addresses", () => {
     expect(redirectOf(from)).toBe(to);
   });
 
-  it.each(["/applications", "/applications/new", "/applications/new/create", "/applications/wap_0123456789abcdef", "/navigation", "/navigation/ptl_0123456789abcdef", "/newsroom", "/onboardings"])("leaves %s alone", (address) => {
+  it.each(["/applications", "/applications/new", "/applications/new/create", "/applications/wap_0123456789abcdef", "/portals", "/portals/ptl_0123456789abcdef", "/newsroom", "/onboardings"])("leaves %s alone", (address) => {
     expect(redirectOf(address)).toBeNull();
   });
 
   it("makes every redirect permanent", () => {
     expect(ONBOARDING_REDIRECTS.every((redirect) => redirect.permanent)).toBe(true);
+  });
+});
+
+describe("redirects from the Navigation section's addresses (Old Navigation addresses redirect)", () => {
+  const id = "ptl_0123456789abcdef";
+  it.each([
+    ["/navigation", "/portals"],
+    ["/navigation?portal=all&tab=production", "/portals?portal=all&tab=production"],
+    ["/navigation/new", "/portals/new"],
+    [`/navigation/${id}`, `/portals/${id}`],
+    [`/navigation/${id}?notice=created`, `/portals/${id}?notice=created`],
+    [`/navigation/${id}/edit`, `/portals/${id}/edit`],
+    [`/navigation/${id}/editor`, `/portals/${id}/editor`],
+    [`/navigation/${id}/editor/frame-zones`, `/portals/${id}/editor/frame-zones`],
+    [`/navigation/${id}/editor/menu?add=wap_0123456789abcdef`, `/portals/${id}/editor/menu?add=wap_0123456789abcdef`],
+    [`/navigation/${id}/editor/configuration`, `/portals/${id}/configuration/brand`],
+    [`/navigation/${id}/editor/configuration/favicon`, `/portals/${id}/configuration/favicon`],
+  ])("sends %s to %s", (from, to) => {
+    expect(redirectOf(from)).toBe(to);
+  });
+
+  it("makes every redirect permanent", () => {
+    expect(NAVIGATION_REDIRECTS.every((redirect) => redirect.permanent)).toBe(true);
   });
 });
 

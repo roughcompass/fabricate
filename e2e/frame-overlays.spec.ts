@@ -17,7 +17,7 @@ test("The Session Timeout Dialog previews over the frame with its copy and actio
   await options(page).getByLabel("Custom language").check();
   await options(page).getByLabel("Dialog title").fill("Still there?");
   await expect(dialog).toContainText("Still there?");
-  await page.goto(`/navigation/${access.publicId}/editor/configuration/session-language`);
+  await page.goto(`/portals/${access.publicId}/configuration/session-language`);
   await expect(page.getByLabel("Dialog title")).toHaveValue("Still there?");
 });
 

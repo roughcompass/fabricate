@@ -1,6 +1,6 @@
 import type { RenderingMode } from "@/lib/applications/vocabulary";
 import type { ConclusionFilter } from "@/lib/evaluations/conclusions";
-import type { NavigationTab } from "@/lib/onboarding/catalog";
+import type { PortalTab } from "@/lib/onboarding/catalog";
 import type { OwnershipFilter } from "@/lib/ownership/coverage";
 
 /**
@@ -36,7 +36,7 @@ export function applicationsHref(filters: { portal?: "all" | null; rendering?: R
   return withQuery("/applications", { portal: filters.portal, q: filters.q, rendering: filters.rendering, view: filters.view === "list" ? "list" : null });
 }
 
-/** The Navigation list of every Portal, on a lifecycle tab. */
-export function navigationListHref(filters: { tab?: NavigationTab | null } = {}): string {
-  return withQuery("/navigation", { portal: "all", tab: filters.tab === "all" ? null : filters.tab });
+/** The Portals page (runtime-configuration spec), on a lifecycle tab and searched. */
+export function portalsHref(filters: { tab?: PortalTab | null; q?: string | null } = {}): string {
+  return withQuery("/portals", { q: filters.q || null, tab: filters.tab === "all" ? null : filters.tab });
 }

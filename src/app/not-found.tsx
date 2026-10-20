@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/shell/app-shell";
-import { homeLink, visibleSections } from "@/components/shell/navigation";
+import { homeLink, visibleGroups } from "@/components/shell/navigation";
 import { shellPreferences } from "@/components/shell/shell-preferences";
 import { NotFoundPage } from "@/components/shell/system-page";
 import { navFlags } from "@/components/shell/nav-flags";
@@ -10,7 +10,7 @@ import { shellPortals } from "@/components/shell/shell-portals";
 export default async function NotFound() {
   const { theme, sidebar, portal } = await shellPreferences();
   const nav = navFlags();
-  const home = homeLink(visibleSections(nav));
+  const home = homeLink(visibleGroups(nav));
   return (
     <AppShell theme={theme} sidebar={sidebar} nav={nav} portals={shellPortals(nav, portal)}>
       <NotFoundPage noun="Page" listHref={home.href} listLabel={home.label} />

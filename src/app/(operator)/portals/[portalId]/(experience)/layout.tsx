@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { EditorFrame } from "@/components/experience/editor-frame";
+import { ExperienceFrame, RuntimeHeader } from "@/components/experience/editor-frame";
 import { ExperienceEditorProvider } from "@/components/experience/store";
-import { ShellHeader } from "@/components/shell/shell-header";
 import { Page } from "@/components/ui/page";
 import { getDb } from "@/lib/db/client";
 import { demoEnabled } from "@/lib/demo/guard";
@@ -11,19 +10,21 @@ import { defaultExperience } from "@/lib/experience/document";
 import { currentExperience, experienceVersions } from "@/lib/experience/versions";
 import { portalApplications } from "@/lib/onboarding/navigation";
 import { onboardedPortal } from "../../load";
-import { navigationHref } from "../../paths";
 import { saveExperienceAction } from "./actions";
 
 export async function generateMetadata({ params }: { params: Promise<{ portalId: string }> }): Promise<Metadata> {
   const portal = onboardedPortal((await params).portalId);
-  return { title: portal ? `${portal.label} · Experience editor` : "Portal not found" };
+  return { title: portal ? `${portal.label} · Runtime Configuration` : "Portal not found" };
 }
 
 /**
- * A Portal's experience editor (experience-editor spec): a focused page that
- * loads the Portal's current experience, its Applications, its saved
- * versions, and the catalogs, and holds the editor's client state across
- * its views. It needs JavaScript; without it, it says so.
+ * A Portal's Runtime Configuration pages (runtime-configuration spec): the
+ * Experience Editor and the configuration sections, inside the shell. The
+ * layout loads the Portal's current experience, its Applications, its saved
+ * versions, and the catalogs, and holds one working experience across every
+ * page beneath it, so pending changes, Undo, and Redo span them all and one
+ * Save makes one version (design decision 3). The header carries the
+ * actions. It needs JavaScript; without it, it says so.
  */
 export default async function ExperienceEditorLayout({ params, children }: { params: Promise<{ portalId: string }>; children: React.ReactNode }) {
   const portal = onboardedPortal((await params).portalId);
@@ -41,7 +42,6 @@ export default async function ExperienceEditorLayout({ params, children }: { par
   }));
   return (
     <Page width="full">
-      <ShellHeader back={{ href: navigationHref(portal.publicId), label: `Back to ${portal.label}` }} title={portal.label} />
       <ExperienceEditorProvider
         key={`${portal.publicId}:${number}`}
         data={{
@@ -57,7 +57,8 @@ export default async function ExperienceEditorLayout({ params, children }: { par
           save: saveExperienceAction,
         }}
       >
-        <EditorFrame>{children}</EditorFrame>
+        <RuntimeHeader />
+        <ExperienceFrame>{children}</ExperienceFrame>
       </ExperienceEditorProvider>
     </Page>
   );

@@ -73,7 +73,12 @@
     &:hover { background: var(--color-bg-muted); }
     &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
   }
-  .switcherTrigger > .entryLabel { margin-inline: var(--space-1); }
+  .triggerText { display: flex; flex: 1 1 auto; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; margin-inline: var(--space-1); }
+  .triggerText > .entryLabel { max-width: 100%; }
+  .triggerMeta { display: flex; align-items: center; gap: var(--space-1); white-space: nowrap; font-weight: var(--font-weight-regular); }
+  .triggerTag { color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+  /* Beside the name, so the line beneath it has the whole width. */
+  .switcherTrigger:has(.triggerMeta) .switcherChevrons { align-self: flex-start; margin-top: var(--space-1); }
   .switcherChevrons { flex: none; width: var(--size-icon-sm); height: var(--size-icon-sm); margin-left: auto; color: var(--color-text-secondary); }
 
   .avatar {
@@ -114,6 +119,8 @@
   .entry { min-height: var(--size-control-md); }
   .entry[aria-current="true"] { background: var(--color-bg-selected); }
   .entryLabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Only the name gives way: an entry and the trigger stay one line high, and the tag and badge keep their width (portal-switcher spec). */
+  :is(.entry, .switcherTrigger) > :not(.entryLabel, .triggerText) { flex: none; white-space: nowrap; }
   .entryCheck { flex: none; margin-left: auto; }
   .item.entry svg.entryCheck { color: var(--color-text); }
 

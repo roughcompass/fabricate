@@ -81,7 +81,7 @@ function OverlayOptions() {
         <div className={styles.optionsHeading}>
           <p className={styles.kicker}>Session Overlay → Slot</p>
           <p className={styles.optionsTitle}>{OVERLAY_LABELS[overlay]}</p>
-          <p className={styles.optionsNote}>The same copy as Portal Configuration → Default Session Language.</p>
+          <p className={styles.optionsNote}>The same copy as Runtime Configuration → Default Session Language.</p>
         </div>
         <OptionsSection title="Slot options">
           <Checkbox id={`${overlay}-enabled`} label="Enabled" checked={editor.present.overlays[overlay].visible} onChange={(event) => editor.edit((draft) => void (draft.overlays[overlay].visible = event.target.checked))} />

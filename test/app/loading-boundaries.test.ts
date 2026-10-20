@@ -41,13 +41,13 @@ describe("navigation skeletons", () => {
     ["/applications/new", "focused"],
     ["/applications/new/templates", "focused"],
     ["/applications/new/create", "focused"],
-    ["/navigation", "list"],
-    ["/navigation/new", "form"],
-    ["/navigation/ptl_abc/edit", "form"],
-    ["/navigation/ptl_abc/editor/frame-zones", "focused"],
-    ["/navigation/ptl_abc/editor/configuration/favicon", "focused"],
+    ["/portals", "list"],
+    ["/portals/new", "form"],
+    ["/portals/ptl_abc/edit", "form"],
+    ["/portals/ptl_abc/editor/frame-zones", "detail"],
+    ["/portals/ptl_abc/configuration/favicon", "detail"],
     ["/applications/wap_abc/edit", "form"],
-    ["/navigation/ptl_abc", "detail"],
+    ["/portals/ptl_abc", "detail"],
   ])("shows the %s page's skeleton as %s", (pathname, kind) => {
     expect(skeletonFor(pathname)).toBe(kind);
   });

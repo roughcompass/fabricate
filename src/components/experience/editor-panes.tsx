@@ -10,7 +10,7 @@ interface Pane {
   children: React.ReactNode;
 }
 
-function EditorPane({ title, note, aside, flush, children, label }: Pane & { label: string }) {
+export function EditorPane({ title, note, aside, flush, children, label }: Pane & { label: string }) {
   return (
     <section className={styles.pane} aria-label={label}>
       <div className={styles.paneHeader}>

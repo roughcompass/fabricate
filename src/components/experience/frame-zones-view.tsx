@@ -10,6 +10,7 @@ import { EditorPanes } from "./editor-panes";
 import { ExternalModule, NothingSelected, OptionsSection, VisibilityToggle, usePreviewPane } from "./parts";
 import { useEditor } from "./store";
 import styles from "./views.module.css";
+import { editorBase } from "@/lib/portals/paths";
 
 export const ZONE_DESCRIPTIONS: Record<ZoneId, string> = {
   banner: "Full-width notification strip above the header, for system-wide maintenance alerts, environment badges, and announcements.",
@@ -30,7 +31,7 @@ export function FrameZonesView() {
   const preview = usePreviewPane();
   const [collapsed, setCollapsed] = useState<Set<ZoneId>>(new Set());
   const { present } = editor;
-  const base = `/navigation/${editor.portal.publicId}/editor`;
+  const base = editorBase(editor.portal.publicId);
 
   const moveSlot = (zone: ZoneId, index: number, by: -1 | 1) =>
     editor.edit((draft) => {

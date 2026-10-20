@@ -111,7 +111,9 @@ export function Switcher({ label, pinned, options, current, action, field = "val
     const content = (
       <>
         <Avatar option={option} />
-        <span className={styles.entryLabel}>{option.label}</span>
+        <span className={styles.entryLabel} title={option.label}>
+          {option.label}
+        </span>
         {option.tag && <Tag sans>{option.tag}</Tag>}
         {option.badge && <Status state={option.badge.state} label={option.badge.label} size="sm" />}
         {chosen && <Icon name="check" className={styles.entryCheck} label="Current" />}
@@ -225,9 +227,16 @@ export function Switcher({ label, pinned, options, current, action, field = "val
         style={{ anchorName: `--switcher-${id}` } as React.CSSProperties}
       >
         <Avatar option={selected} />
-        <span className={styles.entryLabel}>{selected.label}</span>
-        {selected.tag && <Tag sans>{selected.tag}</Tag>}
-        {selected.badge && <Status state={selected.badge.state} label={selected.badge.label} size="sm" />}
+        {/* The name keeps one line and truncates; the tag and badge sit beneath it, so neither squeezes the other. */}
+        <span className={styles.triggerText}>
+          <span className={styles.entryLabel}>{selected.label}</span>
+          {(selected.tag || selected.badge) && (
+            <span className={styles.triggerMeta}>
+              {selected.tag && <span className={styles.triggerTag}>{selected.tag}</span>}
+              {selected.badge && <Status state={selected.badge.state} label={selected.badge.label} size="sm" />}
+            </span>
+          )}
+        </span>
         <Icon name="chevronsUpDown" className={styles.switcherChevrons} />
       </button>
       <div ref={popover} id={`switcher-${id}`} popover="auto" className={`${styles.menu} ${styles.switcher}`} style={{ positionAnchor: `--switcher-${id}` } as React.CSSProperties}>
