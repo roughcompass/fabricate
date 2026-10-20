@@ -119,8 +119,8 @@ export function FramePreview({ experience, modules, size, onResize, selection = 
     else if (slot === "brand")
       content = (
         <span className={styles.brand}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG from DE FabLab's own origin */}
-          <img src="/brand/jpmorgan-logo.svg" alt="J.P. Morgan" className={styles.logo} />
+          {/* The logo file as a mask in the text color, so it reads in the light and the dark theme alike. */}
+          <span role="img" aria-label="J.P. Morgan" className={styles.logo} />
           <span className={styles.brandDivider} aria-hidden="true" />
           <span className={styles.portalName}>{experience.brand.portalName}</span>
         </span>

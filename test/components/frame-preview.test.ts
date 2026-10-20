@@ -19,7 +19,7 @@ const slotOrder = (html: string) => [...html.matchAll(/data-slot="([a-z-]+)"/g)]
 describe("FramePreview", () => {
   it("draws the logo, the portal name, the menu column, and the footer copyright", () => {
     const html = render(fresh());
-    expect(html).toContain('alt="J.P. Morgan"');
+    expect(html).toContain('<span role="img" aria-label="J.P. Morgan"');
     expect(html).toContain("Access");
     expect(html).toContain('data-zone="sidebar"');
     expect(html).toContain("© 2026 JPMorgan Chase &amp; Co. All rights reserved.");

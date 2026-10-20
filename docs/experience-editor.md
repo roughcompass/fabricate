@@ -117,4 +117,4 @@ The generated shells read the experience through `useExperience()` from `@deweb/
 
 ## The logo
 
-The portal shells, the editor's preview, and the Prototypes page shell show the J.P. Morgan logo from `public/brand/jpmorgan-logo.svg`, and `public/brand/jpmorgan-logo-dark.svg` in dark mode, as an image named "J.P. Morgan". The files are a typeset placeholder, not the official artwork; replace both with the brand team's files when they're supplied, keeping their names and the `J.P. Morgan` title. DE FabLab's own header keeps its mark.
+The portal shells and the Prototypes page shell show the J.P. Morgan logo from `public/brand/jpmorgan-logo.svg`, and `public/brand/jpmorgan-logo-dark.svg` in dark mode, as an image named "J.P. Morgan". The editor's preview and Brand & identity draw `jpmorgan-logo.svg` as a CSS mask in the text color, named "J.P. Morgan", so it reads in either operator theme, including the System one, which CSS alone can't tell apart. The files are a typeset placeholder, not the official artwork; replace both with the brand team's files when they're supplied, keeping their names and the `J.P. Morgan` title. DE FabLab's own header keeps its mark.

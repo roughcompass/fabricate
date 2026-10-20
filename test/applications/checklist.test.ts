@@ -23,7 +23,7 @@ describe("productionChecklist", () => {
       ["SEAL ID recorded", "done"],
       ["DE Web assessment passed", "open"],
       ["Rendering mode determined", "open"],
-      ["Added to Navigation", "open"],
+      ["Added to the Portal's menu", "open"],
       ["Portal in Production", "open"],
       ["Analytics enabled", "not_available"],
       ["Observability enabled", "not_available"],

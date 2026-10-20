@@ -4,6 +4,7 @@ import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOver
 import { openTool, setView, waitForRegions } from "./support/demo";
 import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
 import { paths } from "./support/paths";
+import { evaluate, seedResults } from "./support/results";
 import { saveDirectly } from "./support/experience";
 import { waitForHydration } from "./support/shell";
 import { addItem, setDefault } from "../src/lib/onboarding/navigation";
@@ -58,7 +59,8 @@ test("captures every product surface at desktop and mobile width, in both themes
  * section menu shown after Show all sections on a desktop, and the drawer
  * open on a phone.
  */
-test("captures the shell's sidebar states in both themes", async ({ page, db: _db, baseURL }) => {
+test("captures the shell's sidebar states in both themes", async ({ page, db, baseURL }) => {
+  const access = onboardPortal(db, "Access");
   const output = path.join(OUTPUT, "shell");
   fs.rmSync(output, { recursive: true, force: true });
   fs.mkdirSync(output, { recursive: true });
@@ -77,7 +79,10 @@ test("captures the shell's sidebar states in both themes", async ({ page, db: _d
     await capture("sidebar-hidden-desktop", theme);
     await page.context().clearCookies({ name: "fabricate-sidebar" });
 
-    await page.goto(paths.assessments);
+    // The Runtime Configuration sub-menu, then Show all sections back to the primary menu.
+    await page.goto(`/portals/${access.publicId}`);
+    await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Experience Editor" })).toBeVisible();
+    await capture("runtime-submenu-desktop", theme);
     await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Show all sections" }).click();
     await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Salt Patterns", exact: true })).toBeVisible();
     await capture("section-menu-desktop", theme);
@@ -88,7 +93,7 @@ test("captures the shell's sidebar states in both themes", async ({ page, db: _d
     await expect(page.locator("#sidebar")).toBeVisible();
     await capture("drawer-open-mobile", theme);
   }
-  expect(fs.readdirSync(output)).toHaveLength(3 * THEMES.length);
+  expect(fs.readdirSync(output)).toHaveLength(4 * THEMES.length);
 });
 
 /**
@@ -230,15 +235,15 @@ test("captures the experience editor and running portals with a saved experience
       await page.setViewportSize(viewport);
       const suffix = `${viewport.name}-${theme}`;
       for (const view of views) {
-        await page.goto(`${editor}/${view}`);
+        await page.goto(view.startsWith("configuration/") ? `/portals/${access.publicId}/${view}` : `${editor}/${view}`);
         await waitForHydration(page);
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         await capture(`${view.replace("/", "-")}-${suffix}`);
       }
-      await page.goto(`${editor}/configuration/copyright`);
+      await page.goto(`/portals/${access.publicId}/configuration/copyright`);
       await waitForHydration(page);
       await page.getByLabel("Copyright information").fill("© 2026 JPMorgan Chase & Co. Digital Platform.");
-      await page.locator("[data-pending-count]").click();
+      await page.locator("[data-runtime-actions]").getByRole("link", { name: /^Change history/ }).click();
       await expect(page.getByRole("table", { name: "Pending changes" })).toBeVisible();
       await capture(`change-history-${suffix}`);
       // The Install dialog, for a Portal that hasn't installed Global Search.
@@ -273,6 +278,70 @@ test("captures the experience editor and running portals with a saved experience
     }
   }
   expect(fs.readdirSync(output)).toHaveLength((views.length + 2) * viewports.length * THEMES.length + portals.length * viewports.length * THEMES.length);
+});
+
+/**
+ * Captures the portal management journey (update-portal-management-journey
+ * task 7.2) in both themes: Home and its primary menu, the Portals page, the
+ * Experience Editor with its header controls at 1440, 1280, and 375 pixels, a
+ * configuration page, the device toolbar rotated, Add application, an
+ * application dashboard, and the switcher with a long Portal name.
+ */
+test("captures the portal management journey in both themes", async ({ page, db, baseURL }) => {
+  const output = path.join(OUTPUT, "journey");
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  const access = onboardPortal(db, "Access");
+  onboardPortal(db, "Markets");
+  const long = onboardPortal(db, "Global Corporate Treasury Operations Portal");
+  const payeeHub = registerApplication(db, { name: "Payee Hub", portal: access });
+  registerApplication(db, { name: "Ledger", portal: access });
+  const { initiative, assessment } = await seedResults(db);
+  await evaluate(db, initiative.publicId, assessment.publicId);
+  const capture = async (name: string, fullPage = false) => {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: path.join(output, `${name}.jpg`), fullPage, type: "jpeg", quality: 75 });
+  };
+  let count = 0;
+  for (const theme of THEMES) {
+    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    await page.context().clearCookies({ name: "fabricate-portal" });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const [name, url] of [["home", "/"], ["portals", "/portals"], ["add-application", "/applications/new"], ["dashboard", `/applications/${payeeHub.publicId}`]] as const) {
+      await page.goto(url);
+      await waitForHydration(page);
+      await capture(`${name}-${theme}`, name !== "add-application");
+      count++;
+    }
+    for (const width of [1440, 1280, 375]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/portals/${access.publicId}/editor/frame-zones`);
+      await waitForHydration(page);
+      await page.locator("[data-slot-row='feedback']").getByRole("button", { name: "Show Feedback Slot" }).click();
+      await capture(`editor-${width}-${theme}`);
+      count++;
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/portals/${access.publicId}/configuration/brand`);
+    await waitForHydration(page);
+    await capture(`configuration-brand-${theme}`);
+    await page.goto(`/portals/${access.publicId}/editor/frame-zones`);
+    await waitForHydration(page);
+    await page.getByLabel("Device", { exact: true }).selectOption("iphone-14");
+    await page.getByRole("button", { name: /^Rotate/ }).click();
+    await expect(page.locator("[data-frame-preview]")).toHaveAttribute("data-width", "844");
+    await capture(`device-rotated-${theme}`);
+    await page.evaluate(() => window.sessionStorage.clear());
+    await page.context().addCookies([{ name: "fabricate-portal", value: long.publicId, url: baseURL! }]);
+    await page.goto("/applications");
+    await waitForHydration(page);
+    await capture(`switcher-long-name-${theme}`);
+    await page.locator("#sidebar").getByRole("button", { name: /^Switch Portal/ }).click();
+    await capture(`switcher-long-name-open-${theme}`);
+    count += 4;
+  }
+  expect(fs.readdirSync(output)).toHaveLength(count);
 });
 
 /**

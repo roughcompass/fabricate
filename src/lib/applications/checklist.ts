@@ -16,7 +16,7 @@ export const CHECKLIST_LABELS: Record<ChecklistItemId, string> = {
   seal_id: "SEAL ID recorded",
   assessment: "DE Web assessment passed",
   rendering: "Rendering mode determined",
-  navigation: "Added to Navigation",
+  navigation: "Added to the Portal's menu",
   production: "Portal in Production",
   analytics: "Analytics enabled",
   observability: "Observability enabled",

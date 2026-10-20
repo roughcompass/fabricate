@@ -112,8 +112,8 @@ function BrandSection() {
     <>
       <Heading title="Brand & identity">The header shows the J.P. Morgan logo, then the portal name. The logo is the same in every portal.</Heading>
       <div className={styles.brandPreview} data-brand-preview="">
-        {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG from DE FabLab's own origin */}
-        <img src="/brand/jpmorgan-logo.svg" alt="J.P. Morgan" className={styles.logo} />
+        {/* The logo file as a mask in the text color, so it reads in the light and the dark theme alike. */}
+        <span role="img" aria-label="J.P. Morgan" className={styles.logo} />
         <span className={styles.divider} aria-hidden="true" />
         <span>{brand.portalName || "Portal name"}</span>
       </div>

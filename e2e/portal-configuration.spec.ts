@@ -47,7 +47,7 @@ test("Brand & identity: the portal name shows beside the logo and in the preview
   await open(page, access, "brand");
   await page.getByLabel("Portal name").fill("Digital Platform");
   await expect(page.locator("[data-brand-preview]")).toContainText("Digital Platform");
-  await expect(page.locator("[data-brand-preview] img")).toHaveAttribute("alt", "J.P. Morgan");
+  await expect(page.locator("[data-brand-preview]").getByRole("img", { name: "J.P. Morgan" })).toBeVisible();
   await expect(preview(page)).toContainText("Digital Platform");
   await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Experience Editor" }).click();
   await expect(preview(page)).toContainText("Digital Platform");
