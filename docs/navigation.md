@@ -2,7 +2,7 @@
 
 A Portal's Navigation page is where its team keeps the Portal's details and menu, chooses its default route, and moves it between Prototype and Production. Choosing Navigation in the sidebar opens `/navigation`: the current Portal's page at `/navigation/<portal id>`, or, with All Portals current or `portal=all` in the address, a list of every onboarded Portal under All, Prototype, and Production tabs. The list shows each Portal's platform, lifecycle badge, and how many menu items and Applications it has, and offers Create Portal ([onboarding.md](onboarding.md#creating-a-portal)).
 
-Every change on the page is saved when it's made and takes effect at once. There's no Draft, submission, or review.
+Details edits and lifecycle changes on the page are saved when they're made and take effect at once. The page shows the menu read-only: Edit menu opens the menu in the Portal's experience editor ([experience-editor.md](experience-editor.md)), where menu changes are pending until Save, alongside the rest of the Portal's experience. There's no Draft, submission, or review. Open experience editor, in the page header, opens the editor at Frame Zones.
 
 ## Details
 
@@ -22,20 +22,20 @@ A menu is a tree of **groups** and **items**, stored as one flat, ordered table,
 | `application_id` | The Application an item opens; a group has none |
 | `is_default` | Whether the item is the Portal's default route |
 
-The editor shows the tree with each entry's actions: rename, move up, move down, move into another group or to the top level, and remove. Each action is its own form post, so the editor works without JavaScript. A group can't move into itself or a group it holds, and a group must be empty to be removed.
+The menu editor, at `/navigation/<portal id>/editor/menu`, shows the tree with each entry's actions: add a group or an item, edit its label, route, and Application, move it up, down, or into another group or to the top level, make an item the default, and remove it. Each action is a pending change of the experience, with Undo and Redo, and nothing reaches `portal_menu_items` until Save. A save rewrites the table from the document in the same transaction as the new experience version, keeping each existing entry's `mnu_` id, so promotion, the Applications pages, and the Production checklist keep reading one menu. A group can't move into itself or a group it holds.
 
-The rules, enforced by `src/lib/onboarding/navigation.ts` and, for the last two, by the database too:
+The rules, checked as entries are edited and again on Save by `validateExperience` in `src/lib/experience/document.ts`, and, for the last two, by the database too:
 
 - **Depth.** Menus nest at most five levels; a top-level entry is level 1.
 - **Routes.** A route starts with `/` and holds only lowercase letters, digits, hyphens, and slashes, with no empty segment and no trailing slash: `/payees` and `/payees/search` are routes, `/Payees`, `/payees/`, and `payees` aren't.
 - **Unique routes.** A route belongs to one item in the Portal. Giving a new item `/payees` while Payees has it is refused at the route field with "/payees is already used by Payees", and the menu is unchanged.
 - **Applications of the Portal.** An item points at an Application registered in the same Portal. Markets' page offers only Markets' Applications, and a trigger refuses an item for another Portal's Application. One Application can back any number of items.
 
-The page also lists the Portal's Applications that no item points at, each with Add to menu, which starts a new item for it. Ledger, registered in Markets with no item, is listed there until an item points at it.
+The page also lists the Portal's Applications that no item points at, each with Add to menu, which opens the menu editor with a new item for it (`?add=<application id>`). Ledger, registered in Markets with no item, is listed there until a saved item points at it.
 
 ## The default route
 
-One item at most is the Portal's default route. Making Activity the default while Payees is clears Payees. A Portal with no items has no default, and removing the default item leaves the Portal without one until another is chosen; the page says so.
+One item at most is the Portal's default route. In the menu editor, making Activity the default while Payees is clears Payees. A Portal with no items has no default, and removing the default item leaves the Portal without one until another is chosen and saved; the page says so.
 
 ## Prototype and Production
 
@@ -47,8 +47,8 @@ Promotion changes only Fabricate's record. It creates or updates nothing in Stud
 
 ## History and attribution
 
-Every detail edit, menu change, default change, and lifecycle change is appended to `onboarding_events` with what changed, such as "Added Payees at /payees in Payments", and who stated they made it: the name the browser remembers in the `fabricate-actor` cookie, or "Not stated", labeled Unverified. No form asks for a name, and nothing derives an email from one. The page shows the history newest first, so adding Payees and then promoting Access lists the promotion first.
+Every detail edit and lifecycle change, and every saved experience, is appended to `onboarding_events` with what changed, such as "Saved version 3 with 2 changes: added Payees", and who stated they made it: the name the browser remembers in the `fabricate-actor` cookie, or "Not stated", labeled Unverified. No form asks for a name, and nothing derives an email from one. The page shows the history newest first, so adding Payees and then promoting Access lists the promotion first.
 
 ## Stale edits
 
-Every form on the page carries the Portal's `lock_version`, and every change bumps it. A change based on an older version is refused: the page shows the current menu with a message that the Portal changed, and nobody's edit is overwritten. If two operators open Access's page and one removes Payees, the other's rename of Payees is refused, and their page shows Payees removed.
+Every form on the page, and every save in the experience editor, carries the Portal's `lock_version`, and every change bumps it. A change based on an older version is refused, and nobody's edit is overwritten. If two operators open Access's menu editor and one saves Payees removed, the other's save of a rename of Payees is refused with a message that the Portal changed; their pending changes stay on screen, and reloading opens the latest saved version, where they make them again.
