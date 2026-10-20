@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { DeviceProvider } from "@/components/experience/device";
 import { ExperienceFrame, RuntimeHeader } from "@/components/experience/editor-frame";
 import { ExperienceEditorProvider } from "@/components/experience/store";
 import { Page } from "@/components/ui/page";
@@ -57,8 +58,10 @@ export default async function ExperienceEditorLayout({ params, children }: { par
           save: saveExperienceAction,
         }}
       >
-        <RuntimeHeader />
-        <ExperienceFrame>{children}</ExperienceFrame>
+        <DeviceProvider>
+          <RuntimeHeader />
+          <ExperienceFrame>{children}</ExperienceFrame>
+        </DeviceProvider>
       </ExperienceEditorProvider>
     </Page>
   );

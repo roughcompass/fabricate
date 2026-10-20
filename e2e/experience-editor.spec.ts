@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { experienceVersions } from "../src/lib/experience/versions";
 import { registerApplication } from "../test/support/applications";
 import { onboardPortal } from "../test/support/onboarding";
-import { expect, test } from "./support/fixtures";
+import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { waitForHydration } from "./support/shell";
 
 // web-onboarding/experience-editor spec: the per-Portal editor's shell, its
@@ -180,14 +180,94 @@ test.describe("the preview", () => {
     await expect(preview(page)).toContainText("Access");
   });
 
-  test("Hiding a slot removes it from the preview before saving, and the device toggle scales it", async ({ page, db }) => {
+  test("Hiding a slot removes it from the preview before saving (Preview follows an edit)", async ({ page, db }) => {
     const access = onboardPortal(db, "Access");
     await openEditor(page, access);
     await expect(preview(page).locator("[data-slot='feedback']")).toBeVisible();
     await page.locator("[data-slot-row='feedback']").getByRole("button", { name: "Show Feedback Slot" }).click();
     await expect(preview(page).locator("[data-slot='feedback']")).toHaveCount(0);
-    await expect(page.locator("[data-preview-scale]")).toContainText(/^1440px @ \d+%$/);
-    await page.getByRole("button", { name: "Phone, 375 pixels" }).click();
-    await expect(page.locator("[data-preview-scale]")).toContainText(/^375px @ \d+%$/);
+  });
+});
+
+test.describe("the device toolbar", () => {
+  const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Device toolbar" });
+  const device = (page: Page) => toolbar(page).getByLabel("Device", { exact: true });
+  const width = (page: Page) => toolbar(page).getByLabel("Width");
+  const height = (page: Page) => toolbar(page).getByLabel("Height");
+
+  test("Starts Responsive at 1440 × 900, and choosing iPhone 14 renders the frame 390 pixels wide in its phone layout (Choosing a phone)", async ({ page, db }) => {
+    const access = onboardPortal(db, "Access");
+    await openEditor(page, access);
+    await expect(device(page)).toHaveValue("responsive");
+    await expect(width(page)).toHaveValue("1440");
+    await expect(height(page)).toHaveValue("900");
+    await expect(device(page).locator("option")).toHaveText(["Responsive", "Desktop (1440 × 900)", "Laptop (1280 × 800)", "Tablet (768 × 1024)", "iPad Pro (1024 × 1366)", "iPhone 14 (390 × 844)", "Pixel 7 (412 × 915)"]);
+    await device(page).selectOption("iphone-14");
+    await expect(width(page)).toHaveValue("390");
+    await expect(height(page)).toHaveValue("844");
+    await expect(preview(page)).toHaveAttribute("data-width", "390");
+    await expect(preview(page)).toHaveAttribute("data-device", "phone");
+  });
+
+  test("Rotate swaps the size for landscape, says so, and adds no pending change (Landscape phone, Not a change)", async ({ page, db }) => {
+    const access = onboardPortal(db, "Access");
+    await openEditor(page, access);
+    await device(page).selectOption("iphone-14");
+    await toolbar(page).getByRole("button", { name: /^Rotate/ }).click();
+    await expect(width(page)).toHaveValue("844");
+    await expect(height(page)).toHaveValue("390");
+    await expect(toolbar(page).getByRole("button", { name: "Rotate, now Landscape" })).toBeVisible();
+    await expect(toolbar(page).getByRole("status")).toHaveText("Landscape");
+    await expect(preview(page)).toHaveAttribute("data-height", "390");
+    await expect(pending(page)).toHaveCount(0);
+    await expect(save(page)).toBeDisabled();
+  });
+
+  test("Dragging the right edge resizes the frame in Responsive, and an out-of-range width is clamped (Dragging the edge, Out of range)", async ({ page, db }) => {
+    const access = onboardPortal(db, "Access");
+    await openEditor(page, access);
+    // iPhone 14 at Fit draws at full size, so the pointer moves the edge pixel for pixel.
+    await device(page).selectOption("iphone-14");
+    await expect(preview(page)).toHaveAttribute("data-width", "390");
+    // The scale settles after the frame redraws, and can move the frame; measure the handle once it has.
+    await expect(toolbar(page).locator("[data-preview-scale]")).toHaveText("100%");
+    const handle = preview(page).locator("[data-resize-handle='right']");
+    await handle.hover();
+    const box = (await handle.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 510, box.y + box.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await expect(device(page)).toHaveValue("responsive");
+    await expect(width(page)).toHaveValue("900");
+    await expect(preview(page)).toHaveAttribute("data-width", "900");
+    await width(page).fill("100");
+    await width(page).blur();
+    await expect(width(page)).toHaveValue("320");
+  });
+
+  test("At 100% a frame wider than the pane scrolls within it, and the page doesn't (Actual size)", async ({ page, db }) => {
+    const access = onboardPortal(db, "Access");
+    await openEditor(page, access);
+    await device(page).selectOption("desktop");
+    await toolbar(page).getByLabel("Zoom").selectOption("100");
+    await expect(toolbar(page).locator("[data-preview-scale]")).toHaveText("100%");
+    await expect(preview(page)).toHaveAttribute("data-width", "1440");
+    await expect.poll(() => preview(page).evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    await expectNoHorizontalOverflow(page);
+    await toolbar(page).getByLabel("Zoom").selectOption("fit");
+    await expect(toolbar(page).locator("[data-preview-scale]")).not.toHaveText("100%");
+  });
+
+  test("The toolbar is kept for the tab across Runtime Configuration pages and a reload", async ({ page, db }) => {
+    const access = onboardPortal(db, "Access");
+    await openEditor(page, access);
+    await device(page).selectOption("pixel-7");
+    await submenu(page).getByRole("link", { name: "Copyright Information" }).click();
+    await expect(device(page)).toHaveValue("pixel-7");
+    await page.reload();
+    await waitForHydration(page);
+    await expect(device(page)).toHaveValue("pixel-7");
+    await expect(width(page)).toHaveValue("412");
   });
 });

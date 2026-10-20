@@ -77,8 +77,6 @@ interface EditorContextValue extends Omit<EditorData, "saved" | "save"> {
   select: (selection: Selection | null) => void;
   hovered: Selection | null;
   hover: (selection: Selection | null) => void;
-  device: "desktop" | "phone";
-  setDevice: (device: "desktop" | "phone") => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -111,7 +109,6 @@ export function ExperienceEditorProvider({ data, children }: { data: EditorData;
   const [outcome, setOutcome] = useState<SaveOutcome | null>(null);
   const [selection, select] = useState<Selection | null>(null);
   const [hovered, hover] = useState<Selection | null>(null);
-  const [device, setDevice] = useState<"desktop" | "phone">("desktop");
   const restored = useRef(false);
 
   // A reload in the same tab picks up the pending changes where they were.
@@ -219,8 +216,6 @@ export function ExperienceEditorProvider({ data, children }: { data: EditorData;
     select,
     hovered,
     hover,
-    device,
-    setDevice,
   };
   return <EditorContext value={value}>{children}</EditorContext>;
 }

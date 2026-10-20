@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Checkbox, Select, TextInput } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { resolveRange } from "@/lib/experience/semver";
-import { FramePreview, PREVIEW_WIDTHS, selectionLabel } from "./frame-preview";
+import { resize } from "@/lib/experience/device";
+import { DeviceToolbar, useDevice } from "./device";
+import { FramePreview, selectionLabel } from "./frame-preview";
 import { useEditor } from "./store";
 import styles from "./parts.module.css";
 
@@ -17,36 +19,29 @@ import styles from "./parts.module.css";
 /** The middle pane's contents for a view with a live preview of the working experience. */
 export function usePreviewPane(overlays: "none" | "all" = "none", hint = "Hover or click a zone or slot to select") {
   const editor = useEditor();
+  const { device, setDevice } = useDevice();
   const [scale, setScale] = useState(1);
-  const width = PREVIEW_WIDTHS[editor.device];
   const editing = selectionLabel(editor.selection);
   return {
     title: "Preview",
     note: editing ? `Editing ${editing}` : hint,
-    aside: (
-      <>
-        <span data-preview-scale="">{`${width}px @ ${Math.round(scale * 100)}%`}</span>
-        <button type="button" className={styles.deviceButton} aria-pressed={editor.device === "desktop"} aria-label="Desktop, 1440 pixels" title="Desktop, 1440 pixels" onClick={() => editor.setDevice("desktop")}>
-          <Icon name="monitor" size={14} />
-        </button>
-        <button type="button" className={styles.deviceButton} aria-pressed={editor.device === "phone"} aria-label="Phone, 375 pixels" title="Phone, 375 pixels" onClick={() => editor.setDevice("phone")}>
-          <Icon name="smartphone" size={14} />
-        </button>
-      </>
-    ),
     children: (
-      <FramePreview
-        experience={editor.present}
-        modules={editor.catalogs.modules}
-        device={editor.device}
-        selection={editor.selection}
-        hovered={editor.hovered}
-        onSelect={editor.select}
-        onHover={editor.hover}
-        overlays={overlays}
-        onScale={setScale}
-        label={`Preview of ${editor.portal.label}'s portal frame`}
-      />
+      <>
+        <DeviceToolbar scale={scale} />
+        <FramePreview
+          experience={editor.present}
+          modules={editor.catalogs.modules}
+          size={device}
+          onResize={(size) => setDevice((state) => resize(state, size))}
+          selection={editor.selection}
+          hovered={editor.hovered}
+          onSelect={editor.select}
+          onHover={editor.hover}
+          overlays={overlays}
+          onScale={setScale}
+          label={`Preview of ${editor.portal.label}'s portal frame`}
+        />
+      </>
     ),
   };
 }

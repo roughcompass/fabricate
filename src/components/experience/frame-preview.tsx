@@ -3,17 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { type Experience, type MenuNode, OVERLAY_LABELS, type OverlayId, SEVERITY_LABELS, SLOT_LABELS, ZONE_LABELS, type ZoneId, activeMessage, bannerPresentation, dialogCopyOf, slotShown } from "@/lib/experience/document";
+import { type Zoom, isPhone, scaleOf } from "@/lib/experience/device";
 import { resolveRange } from "@/lib/experience/semver";
 import type { Selection } from "./store";
 import styles from "./frame-preview.module.css";
-
-export const PREVIEW_WIDTHS = { desktop: 1440, phone: 375 } as const;
 
 interface FramePreviewProps {
   experience: Experience;
   /** The module registry, to label external modules with the version they resolve to. */
   modules: readonly { name: string; versions: string[] }[];
-  device: "desktop" | "phone";
+  /** The size the frame is drawn at, and the zoom: Fit, or a fixed percentage. */
+  size: { width: number; height: number; zoom: Zoom };
+  /** Called as the operator drags an edge or a corner, with the new size before clamping. */
+  onResize?: (size: { width?: number; height?: number }) => void;
   selection?: Selection | null;
   hovered?: Selection | null;
   onSelect?: (selection: Selection) => void;
@@ -47,27 +49,42 @@ const FOOTER_LINKS = ["Sitemap", "Security", "Privacy", "Contact Us", "Cobrowse"
  * a pointer, hovering outlines a zone, slot, or overlay and clicking selects
  * it, as the list beside it does.
  */
-export function FramePreview({ experience, modules, device, selection = null, hovered = null, onSelect, onHover, overlays = "none", onScale, label }: FramePreviewProps) {
+export function FramePreview({ experience, modules, size, onResize, selection = null, hovered = null, onSelect, onHover, overlays = "none", onScale, label }: FramePreviewProps) {
   const outer = useRef<HTMLDivElement>(null);
-  const canvas = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [height, setHeight] = useState(0);
-  const width = PREVIEW_WIDTHS[device];
+  const [available, setAvailable] = useState(0);
+  const { width, height, zoom } = size;
+  const scale = scaleOf({ width, zoom }, available);
 
   useEffect(() => {
-    const measure = () => {
-      const available = outer.current?.clientWidth ?? width;
-      const next = Math.min(1, available / width);
-      setScale(next);
-      onScale?.(next);
-      setHeight(canvas.current?.offsetHeight ?? 0);
-    };
+    const measure = () => setAvailable(outer.current?.clientWidth ?? 0);
     measure();
     const observer = new ResizeObserver(measure);
     if (outer.current) observer.observe(outer.current);
-    if (canvas.current) observer.observe(canvas.current);
     return () => observer.disconnect();
-  }, [width, onScale]);
+  }, []);
+  useEffect(() => onScale?.(scale), [scale, onScale]);
+
+  /** Drags an edge or the corner: the size follows the pointer at the preview's scale. */
+  const drag = (edges: { width?: boolean; height?: boolean }) => (event: React.PointerEvent<HTMLElement>) => {
+    if (!onResize) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const start = { x: event.clientX, y: event.clientY, width, height };
+    const move = (moved: PointerEvent) =>
+      onResize({
+        width: edges.width ? start.width + (moved.clientX - start.x) / scale : undefined,
+        height: edges.height ? start.height + (moved.clientY - start.y) / scale : undefined,
+      });
+    // The window follows the pointer, so a fast drag that leaves the handle keeps resizing.
+    const end = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+  };
 
   const state = (target: Selection) => ({
     "data-select": key(target),
@@ -90,7 +107,7 @@ export function FramePreview({ experience, modules, device, selection = null, ho
 
   const { frame } = experience;
   const message = activeMessage(experience);
-  const phone = device === "phone";
+  const phone = isPhone(width);
 
   const headerSlot = (slot: string) => {
     const target: Selection = { kind: "slot", zone: "header", slot };
@@ -241,11 +258,15 @@ export function FramePreview({ experience, modules, device, selection = null, ho
     <div
       ref={outer}
       className={styles.outer}
-      style={{ height: height ? height * scale : undefined }}
+      data-zoom={zoom}
+      // At a fixed zoom the frame can be wider than the pane, which then scrolls sideways on its own.
+      data-scroll-x=""
       role="img"
       aria-label={label}
       data-frame-preview=""
-      data-device={device}
+      data-device={phone ? "phone" : "desktop"}
+      data-width={width}
+      data-height={height}
       onClick={(event) => {
         const target = (event.target as HTMLElement).closest("[data-select]")?.getAttribute("data-select");
         const parsed = target ? parseKey(target) : null;
@@ -257,7 +278,9 @@ export function FramePreview({ experience, modules, device, selection = null, ho
       }}
       onMouseLeave={() => onHover?.(null)}
     >
-      <div ref={canvas} className={styles.canvas} style={{ width, transform: `scale(${scale})` }}>
+      {/* The scaled frame's own footprint, so the pane scrolls around a frame drawn larger than it. */}
+      <div className={styles.sizer} style={{ width: width * scale, height: height * scale }}>
+      <div className={styles.canvas} style={{ width, height, transform: `scale(${scale})` }}>
         {frame.banner.visible && (frame.banner.external || (message && slotShown(experience, "banner", "message"))) && (
           <div className={styles.banner} data-zone="banner" data-severity={message ? bannerPresentation(experience, message).severity : undefined} {...state({ kind: "zone", zone: "banner" })}>
             {frame.banner.external ? (
@@ -324,6 +347,14 @@ export function FramePreview({ experience, modules, device, selection = null, ho
             <div className={styles.toasts}>{(["successToast", "errorToast"] as const).filter(overlay).map(toast)}</div>
           </>
         )}
+      </div>
+      {onResize && (
+        <>
+          <span className={styles.handleRight} data-resize-handle="right" aria-hidden="true" onPointerDown={drag({ width: true })} />
+          <span className={styles.handleBottom} data-resize-handle="bottom" aria-hidden="true" onPointerDown={drag({ height: true })} />
+          <span className={styles.handleCorner} data-resize-handle="corner" aria-hidden="true" onPointerDown={drag({ width: true, height: true })} />
+        </>
+      )}
       </div>
     </div>
   );

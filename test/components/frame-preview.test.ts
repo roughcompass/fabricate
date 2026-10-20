@@ -13,7 +13,7 @@ import { type Experience, defaultExperience } from "@/lib/experience/document";
  */
 
 const fresh = (): Experience => defaultExperience({ label: "Access" }, [], catalogs().toolkits, catalogs().themes, 2026);
-const render = (experience: Experience, overlays: "none" | "all" = "none") => renderToStaticMarkup(createElement(FramePreview, { experience, modules: catalogs().modules, device: "desktop", label: "Preview", overlays }));
+const render = (experience: Experience, overlays: "none" | "all" = "none") => renderToStaticMarkup(createElement(FramePreview, { experience, modules: catalogs().modules, size: { width: 1440, height: 900, zoom: "fit" }, label: "Preview", overlays }));
 const slotOrder = (html: string) => [...html.matchAll(/data-slot="([a-z-]+)"/g)].map((match) => match[1]);
 
 describe("FramePreview", () => {
