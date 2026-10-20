@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { buttonProps } from "@/components/ui/button-content";
 import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Checkbox, FormNote, Select, TextArea, TextInput } from "@/components/ui/form";
+import { Checkbox, FormNote, Select, Switch, TextArea, TextInput } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { Tag } from "@/components/ui/tag";
 import {
@@ -139,7 +139,7 @@ function BrandSection() {
         </div>
       </ElementPreview>
       <TextInput id="brand-name" label="Portal name" value={brand.portalName} maxLength={LIMITS.portalName} errors={editor.errorsAt("brand.portalName")} description={left(LIMITS.portalName, brand.portalName)} onChange={(event) => editor.edit((draft) => void (draft.brand.portalName = event.target.value), "brand.portalName")} onBlur={editor.seal} />
-      <Checkbox id="brand-home" label="The logo links to the default landing path" checked={brand.logoLinksHome} onChange={(event) => editor.edit((draft) => void (draft.brand.logoLinksHome = event.target.checked))} />
+      <Switch id="brand-home" label="The logo links to the default landing path" checked={brand.logoLinksHome} onChange={(event) => editor.edit((draft) => void (draft.brand.logoLinksHome = event.target.checked))} />
     </>
   );
 }
@@ -150,7 +150,7 @@ function FaviconSection() {
   const errors = editor.errorsAt("favicon.dataUrl");
   return (
     <>
-      <Heading title="Favicon" aside={<Checkbox id="favicon-enabled" label="Enabled" checked={favicon.enabled} onChange={(event) => editor.edit((draft) => void (draft.favicon.enabled = event.target.checked))} />}>
+      <Heading title="Favicon" aside={<Switch id="favicon-enabled" label="Enabled" checked={favicon.enabled} onChange={(event) => editor.edit((draft) => void (draft.favicon.enabled = event.target.checked))} />}>
         Used by browser tabs, bookmarks, and the OS task chooser. When disabled, the host runtime leaves the favicon link out entirely and browsers fall back to their default tab icon.
       </Heading>
       <FormNote title="Guidelines">
@@ -318,7 +318,7 @@ function RoutingSection() {
           ))}
         </div>
       </fieldset>
-      <Checkbox id="routing-remember" label="Remember last visited route on return" description="Returning users resume on their last route. The default landing path is the fallback when no last route is recorded. The same setting is in Session Policy." checked={session.rememberLastRoute} onChange={(event) => editor.edit((draft) => void (draft.session.rememberLastRoute = event.target.checked))} />
+      <Switch id="routing-remember" label="Remember last visited route on return" description="Returning users resume on their last route. The default landing path is the fallback when no last route is recorded. The same setting is in Session Policy." checked={session.rememberLastRoute} onChange={(event) => editor.edit((draft) => void (draft.session.rememberLastRoute = event.target.checked))} />
       <div className={styles.livePreview}>
         <p className={styles.caption}>Live preview</p>
         <p className={styles.url}>
@@ -372,7 +372,7 @@ function SessionLanguageSection() {
         return (
           <section key={dialog} className={`${styles.group} ${styles.dialogGroup}`}>
             <div className={styles.dialogSettings}>
-            <Checkbox id={`${dialog}-custom`} label={text.toggle} description={text.description} checked={copy.custom} onChange={(event) => editor.edit((draft) => void (draft.sessionLanguage[dialog].custom = event.target.checked))} />
+            <Switch id={`${dialog}-custom`} label={text.toggle} description={text.description} checked={copy.custom} onChange={(event) => editor.edit((draft) => void (draft.sessionLanguage[dialog].custom = event.target.checked))} />
             {copy.custom && (
               <div className={styles.groupFields}>
                 <TextInput id={`${dialog}-title`} label="Dialog title" value={copy.title} maxLength={LIMITS.dialogTitle} errors={editor.errorsAt(`${path}.title`)} onChange={(event) => set("title", event.target.value)} onBlur={editor.seal} />
@@ -399,10 +399,10 @@ function SessionPolicySection() {
         Controls how the portal remembers user state across visits. The same remember-last-route setting also appears under <strong>Routing configuration</strong>, next to the default landing path.
       </Heading>
       <section className={styles.group}>
-        <Checkbox id="session-remember" label="Remember last visited route on return" description="Returning users resume on their last route. The default landing path is the fallback when no last route is recorded." checked={session.rememberLastRoute} onChange={(event) => editor.edit((draft) => void (draft.session.rememberLastRoute = event.target.checked))} />
+        <Switch id="session-remember" label="Remember last visited route on return" description="Returning users resume on their last route. The default landing path is the fallback when no last route is recorded." checked={session.rememberLastRoute} onChange={(event) => editor.edit((draft) => void (draft.session.rememberLastRoute = event.target.checked))} />
       </section>
       <section className={styles.group}>
-        <Checkbox id="session-logout" label="Configure logout redirect URL" description="Sends the user to a custom URL after logout. Leave it off to inherit the platform's default post-logout flow." checked={session.logoutRedirect.enabled} onChange={(event) => editor.edit((draft) => void (draft.session.logoutRedirect.enabled = event.target.checked))} />
+        <Switch id="session-logout" label="Configure logout redirect URL" description="Sends the user to a custom URL after logout. Leave it off to inherit the platform's default post-logout flow." checked={session.logoutRedirect.enabled} onChange={(event) => editor.edit((draft) => void (draft.session.logoutRedirect.enabled = event.target.checked))} />
         {session.logoutRedirect.enabled && (
           <div className={styles.groupFields}>
             <TextInput id="session-logout-url" label="Logout redirect URL" mono placeholder="/login or https://sso.example.com" value={session.logoutRedirect.url} errors={editor.errorsAt("session.logoutRedirect.url")} onChange={(event) => editor.edit((draft) => void (draft.session.logoutRedirect.url = event.target.value), "session.logoutRedirect.url")} onBlur={editor.seal} />

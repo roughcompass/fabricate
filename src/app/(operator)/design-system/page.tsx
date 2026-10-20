@@ -15,7 +15,7 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { FilterRail } from "@/components/ui/filter-rail";
 import { ToggleGroup } from "@/components/ui/toggle-group";
 import { CheckList } from "@/components/ui/check-list";
-import { Checkbox, ChoiceGroup, FormFooter, FormNote, FormSection, Select, TextArea, TextInput, formStyles } from "@/components/ui/form";
+import { Checkbox, ChoiceGroup, FormFooter, FormNote, FormSection, Select, Switch, TextArea, TextInput, formStyles } from "@/components/ui/form";
 import { ICON_NAMES, Icon } from "@/components/ui/icon";
 import { MediaCard } from "@/components/ui/media-card";
 import { Menu, MenuAction, MenuItem, MenuSeparator } from "@/components/ui/menu";
@@ -295,6 +295,11 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 <Checkbox id={`${theme}-uncheck`} label="Unchecked" />
                 <IndeterminateCheckbox id={`${theme}-indeterminate`} />
                 <Checkbox id={`${theme}-check-disabled`} label="Disabled" disabled defaultChecked />
+              </Row>
+              <Row label="Switches">
+                <Switch id={`${theme}-switch-on`} label="On" defaultChecked />
+                <Switch id={`${theme}-switch-off`} label="Off" />
+                <Switch id={`${theme}-switch-disabled`} label="Disabled" disabled defaultChecked />
               </Row>
               <ChoiceGroup
                 id={`${theme}-scope`}

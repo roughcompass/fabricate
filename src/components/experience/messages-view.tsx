@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { ButtonLink } from "@/components/ui/button";
 import { buttonProps } from "@/components/ui/button-content";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Checkbox, Select, TextArea, TextInput } from "@/components/ui/form";
+import { Select, Switch, TextArea, TextInput } from "@/components/ui/form";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Panel } from "@/components/ui/panel";
 import { Tag } from "@/components/ui/tag";
@@ -101,7 +101,7 @@ export function MessagesView() {
                   return (
                     <tr key={message.id} data-message={message.id} data-editing={message.id === editing ? "" : undefined}>
                       <td data-label="On">
-                        <Checkbox id={`${message.id}-on`} label={`${message.title} is on`} hideLabel checked={message.enabled} onChange={(event) => update(message.id, (draft) => void (draft.enabled = event.target.checked))} />
+                        <Switch id={`${message.id}-on`} label={`${message.title} is on`} hideLabel checked={message.enabled} onChange={(event) => update(message.id, (draft) => void (draft.enabled = event.target.checked))} />
                       </td>
                       <td data-label="Severity">
                         <span className={styles.severity}>
@@ -163,8 +163,8 @@ export function MessagesView() {
           <TextInput id="message-title" label="Title" value={current.title} maxLength={LIMITS.messageTitle} errors={editor.errorsAt(`messages.${index}.title`)} onChange={(event) => update(current.id, (draft) => void (draft.title = event.target.value), `messages.${current.id}.title`)} onBlur={editor.seal} />
           <TextArea id="message-description" label="Description" rows={3} value={current.description} maxLength={LIMITS.messageDescription} errors={editor.errorsAt(`messages.${index}.description`)} onChange={(event) => update(current.id, (draft) => void (draft.description = event.target.value), `messages.${current.id}.description`)} onBlur={editor.seal} />
           <Select id="message-severity" label="Severity" value={current.severity} options={SEVERITIES.map((value) => ({ value, label: SEVERITY_LABELS[value] }))} onChange={(event) => update(current.id, (draft) => void (draft.severity = event.target.value as Severity))} />
-          <Checkbox id="message-dismissible" label="Dismissible" checked={current.dismissible} onChange={(event) => update(current.id, (draft) => void (draft.dismissible = event.target.checked))} />
-          <Checkbox id="message-enabled" label="Enabled" checked={current.enabled} onChange={(event) => update(current.id, (draft) => void (draft.enabled = event.target.checked))} />
+          <Switch id="message-dismissible" label="Dismissible" checked={current.dismissible} onChange={(event) => update(current.id, (draft) => void (draft.dismissible = event.target.checked))} />
+          <Switch id="message-enabled" label="Enabled" checked={current.enabled} onChange={(event) => update(current.id, (draft) => void (draft.enabled = event.target.checked))} />
           <fieldset className={styles.schedule}>
             <legend className={styles.legend}>Schedule</legend>
             <p className={styles.note}>Leave both empty for an always-on message. Use just the start to begin at a time, or just the end to expire one automatically.</p>

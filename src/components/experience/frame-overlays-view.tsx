@@ -1,6 +1,6 @@
 "use client";
 
-import { Checkbox, TextArea, TextInput } from "@/components/ui/form";
+import { Switch, TextArea, TextInput } from "@/components/ui/form";
 import { LIMITS, OVERLAY_LABELS, type OverlayId, type SessionDialog } from "@/lib/experience/document";
 import { EditorPanes } from "./editor-panes";
 import { NothingSelected, OptionsSection, VisibilityToggle, usePreviewPane } from "./parts";
@@ -84,8 +84,8 @@ function OverlayOptions() {
           <p className={styles.optionsNote}>The same copy as Runtime Configuration → Default Session Language.</p>
         </div>
         <OptionsSection title="Slot options">
-          <Checkbox id={`${overlay}-enabled`} label="Enabled" checked={editor.present.overlays[overlay].visible} onChange={(event) => editor.edit((draft) => void (draft.overlays[overlay].visible = event.target.checked))} />
-          <Checkbox id={`${overlay}-custom`} label="Custom language" description="Off uses the default copy." checked={copy.custom} onChange={(event) => editor.edit((draft) => void (draft.sessionLanguage[dialog].custom = event.target.checked))} />
+          <Switch id={`${overlay}-enabled`} label="Enabled" checked={editor.present.overlays[overlay].visible} onChange={(event) => editor.edit((draft) => void (draft.overlays[overlay].visible = event.target.checked))} />
+          <Switch id={`${overlay}-custom`} label="Custom language" description="Off uses the default copy." checked={copy.custom} onChange={(event) => editor.edit((draft) => void (draft.sessionLanguage[dialog].custom = event.target.checked))} />
           {copy.custom && (
             <>
               <TextInput id={`${overlay}-title`} label="Dialog title" value={copy.title} maxLength={LIMITS.dialogTitle} errors={editor.errorsAt(`${path}.title`)} onChange={(event) => set("title", event.target.value)} onBlur={editor.seal} />
@@ -108,10 +108,10 @@ function OverlayOptions() {
         <p className={styles.optionsTitle}>{OVERLAY_LABELS[overlay]}</p>
       </div>
       <OptionsSection title="Slot options">
-        <Checkbox id={`${toastId}-enabled`} label="Enabled" checked={toast.visible} onChange={(event) => editor.edit((draft) => void (draft.overlays[toastId].visible = event.target.checked))} />
+        <Switch id={`${toastId}-enabled`} label="Enabled" checked={toast.visible} onChange={(event) => editor.edit((draft) => void (draft.overlays[toastId].visible = event.target.checked))} />
         <TextInput id={`${toastId}-title`} label="Title" value={toast.title} maxLength={LIMITS.dialogTitle} errors={editor.errorsAt(`${path}.title`)} onChange={(event) => editor.edit((draft) => void (draft.overlays[toastId].title = event.target.value), `${path}.title`)} onBlur={editor.seal} />
         <TextArea id={`${toastId}-message`} label="Message" rows={2} value={toast.message} maxLength={LIMITS.dialogMessage} errors={editor.errorsAt(`${path}.message`)} onChange={(event) => editor.edit((draft) => void (draft.overlays[toastId].message = event.target.value), `${path}.message`)} onBlur={editor.seal} />
-        <Checkbox id={`${toastId}-auto`} label="Dismisses itself" checked={toast.autoDismiss} onChange={(event) => editor.edit((draft) => void (draft.overlays[toastId].autoDismiss = event.target.checked))} />
+        <Switch id={`${toastId}-auto`} label="Dismisses itself" checked={toast.autoDismiss} onChange={(event) => editor.edit((draft) => void (draft.overlays[toastId].autoDismiss = event.target.checked))} />
         {toast.autoDismiss && (
           <TextInput id={`${toastId}-seconds`} label="Dismiss after (seconds)" type="number" inputMode="numeric" value={String(toast.seconds)} errors={editor.errorsAt(`${path}.seconds`)} description={`From ${LIMITS.toastSecondsMin} to ${LIMITS.toastSecondsMax} seconds.`} onChange={(event) => editor.edit((draft) => void (draft.overlays[toastId].seconds = Number.parseInt(event.target.value, 10) || 0), `${path}.seconds`)} onBlur={editor.seal} />
         )}

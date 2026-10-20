@@ -96,6 +96,46 @@
   .checkboxOnly .checkbox { margin: 0; }
 
   /*
+   * A switch: a track twice a check box wide with a round thumb half its inner
+   * width, so turning it on slides the thumb by its own width. Off, the track
+   * keeps the input boundary; on, it takes the primary fill.
+   */
+  .switch {
+    flex: none;
+    appearance: none;
+    display: inline-grid;
+    align-items: center;
+    width: calc(var(--size-checkbox) * 2);
+    height: calc(var(--size-checkbox) + 2px);
+    margin: 1px 0 0;
+    padding: 1px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-full);
+    background: var(--color-bg);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+
+    &::before {
+      content: "";
+      width: 50%;
+      aspect-ratio: 1;
+      border-radius: var(--radius-full);
+      background: var(--color-text-secondary);
+      transition: transform var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard);
+    }
+    &:hover:not(:disabled) { border-color: var(--color-text-secondary); }
+    &:checked { border-color: var(--color-primary); background: var(--color-primary); }
+    &:checked::before { background: var(--color-on-primary); transform: translateX(100%); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    &:disabled { background: var(--color-bg-muted); cursor: not-allowed; }
+    &:disabled::before { background: var(--color-border-strong); }
+    &:checked:disabled { border-color: var(--color-border-strong); background: var(--color-border-strong); }
+    &:checked:disabled::before { background: var(--color-bg-muted); }
+  }
+  .switchRow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); cursor: pointer; }
+  .checkboxOnly .switch { margin: 0; }
+
+  /*
    * Choice cards: a radio or check box with its label and description. A group
    * a link opens at, such as an Assessment's Standard Releases, clears the
    * sticky header.

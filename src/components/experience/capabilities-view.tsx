@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { ButtonLink } from "@/components/ui/button";
 import { buttonProps } from "@/components/ui/button-content";
-import { Checkbox, TextInput } from "@/components/ui/form";
+import { Checkbox, Switch, TextInput } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { SearchField } from "@/components/ui/search-field";
 import { Tag } from "@/components/ui/tag";
@@ -222,7 +222,7 @@ function ToolkitConfiguration({ toolkit, base }: { toolkit: Toolkit; base: strin
     return (
       <OptionsSection title="Configuration">
         <TextInput id="notifications-title" label="Panel title" value={notifications.title} maxLength={40} errors={editor.errorsAt("toolkits.notifications.title")} onChange={(event) => editor.edit((draft) => void (draft.toolkits.notifications.title = event.target.value), "notifications.title")} onBlur={editor.seal} />
-        <Checkbox id="notifications-unread" label="Show the unread count" checked={notifications.showUnread} onChange={(event) => editor.edit((draft) => void (draft.toolkits.notifications.showUnread = event.target.checked))} />
+        <Switch id="notifications-unread" label="Show the unread count" checked={notifications.showUnread} onChange={(event) => editor.edit((draft) => void (draft.toolkits.notifications.showUnread = event.target.checked))} />
       </OptionsSection>
     );
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Checkbox, Select, TextInput } from "@/components/ui/form";
+import { Select, Switch, TextInput } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { resolveRange } from "@/lib/experience/semver";
 import { resize } from "@/lib/experience/device";
@@ -81,7 +81,7 @@ export function ExternalModule({ id, path, value, onChange, what }: { id: string
   return (
     <OptionsSection title="External module">
       <p className={styles.note}>{`Replace this ${what}'s native content with a CDaaS-deployed module. Pick a registered module (@organization/name) and enter a semver range; the registry resolves it to the highest matching version.`}</p>
-      <Checkbox id={`${id}-external`} label="Replace with external module" checked={value !== null} onChange={(event) => onChange(event.target.checked ? { module: modules[0]?.name ?? "", range: "^1.0.0" } : null)} />
+      <Switch id={`${id}-external`} label="Replace with external module" checked={value !== null} onChange={(event) => onChange(event.target.checked ? { module: modules[0]?.name ?? "", range: "^1.0.0" } : null)} />
       {value && (
         <>
           <Select id={`${id}-module`} label="Module" value={value.module} errors={editor.errorsAt(`${path}.module`)} options={modules.map((module) => ({ value: module.name, label: module.name }))} onChange={(event) => onChange({ ...value, module: event.target.value })} />

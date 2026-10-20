@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ButtonLink } from "@/components/ui/button";
-import { Checkbox, Select } from "@/components/ui/form";
+import { Select, Switch } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { type Experience, MESSAGE_STATE_LABELS, SLOT_LABELS, SLOT_TOOLKIT, ZONES, ZONE_LABELS, type ZoneId, isInstalled, messageState } from "@/lib/experience/document";
 import { EditorPanes } from "./editor-panes";
@@ -116,7 +116,7 @@ function ZoneOptions({ base }: { base: string }) {
         </div>
         <ExternalModule id={`zone-${zone}`} path={`frame.${zone}.external`} what="zone" value={frameZone.external} onChange={(value, coalesce) => editor.edit((draft) => void (draft.frame[zone].external = value), coalesce)} />
         <OptionsSection title="Zone options">
-          <Checkbox id={`zone-${zone}-enabled`} label="Enabled" description={`Show or hide the ${ZONE_LABELS[zone].toLowerCase()} for this portal.`} checked={frameZone.visible} onChange={(event) => editor.edit((draft) => void (draft.frame[zone].visible = event.target.checked))} />
+          <Switch id={`zone-${zone}-enabled`} label="Enabled" description={`Show or hide the ${ZONE_LABELS[zone].toLowerCase()} for this portal.`} checked={frameZone.visible} onChange={(event) => editor.edit((draft) => void (draft.frame[zone].visible = event.target.checked))} />
           {zone === "banner" && (
             <>
               <Select
@@ -175,7 +175,7 @@ function ZoneOptions({ base }: { base: string }) {
       ) : (
         <>
           <OptionsSection title="Slot options">
-            <Checkbox id={`slot-${zone}-${slot}-enabled`} label="Enabled" checked={entry.visible} onChange={(event) => editor.edit((draft) => void (draft.frame[zone].slots[index]!.visible = event.target.checked))} />
+            <Switch id={`slot-${zone}-${slot}-enabled`} label="Enabled" checked={entry.visible} onChange={(event) => editor.edit((draft) => void (draft.frame[zone].slots[index]!.visible = event.target.checked))} />
             {zone === "sidebar" && slot === "main" && (
               <>
                 <Select

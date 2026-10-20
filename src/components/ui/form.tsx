@@ -165,6 +165,40 @@ export function Checkbox({ id, label, description, hideLabel = false, ...input }
   );
 }
 
+/**
+ * An on/off setting that takes effect as it's turned, such as a dialog's
+ * custom copy: the label and description, then a switch at the row's end. It
+ * is a check box with the switch role, so it posts with a form, works without
+ * JavaScript, and is read as "on" or "off". Choosing items from a set stays a
+ * Checkbox.
+ */
+export function Switch({ id, label, description, hideLabel = false, ...input }: CheckboxProps) {
+  const control = <input id={id} type="checkbox" role="switch" className={styles.switch} aria-describedby={description && !hideLabel ? `${id}-description` : undefined} {...input} />;
+  if (hideLabel) {
+    return (
+      <span className={styles.checkboxOnly}>
+        {control}
+        <label htmlFor={id} className="visually-hidden">
+          {label}
+        </label>
+      </span>
+    );
+  }
+  return (
+    <label className={styles.switchRow} htmlFor={id}>
+      <span className={styles.choiceText}>
+        <span>{label}</span>
+        {description && (
+          <span id={`${id}-description`} className={styles.description}>
+            {description}
+          </span>
+        )}
+      </span>
+      {control}
+    </label>
+  );
+}
+
 export interface Choice {
   value: string;
   label: string;

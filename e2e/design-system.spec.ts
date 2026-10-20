@@ -166,12 +166,12 @@ test("tells a Portal's lifecycles apart by text and fill, not only hue", async (
   await expect(production).toHaveAttribute("data-emphasis", "high");
 });
 
-test("draws check boxes, inputs, and selects consistently", async ({ page }) => {
+test("draws check boxes, switches, inputs, and selects consistently", async ({ page }) => {
   await page.goto("/design-system");
   const form = light(page, "Form controls");
-  const boxes = form.locator('input[type="checkbox"]');
-  const sizes = await boxes.evaluateAll((inputs) => inputs.map((input) => `${input.getBoundingClientRect().width}x${input.getBoundingClientRect().height}`));
-  expect(new Set(sizes)).toEqual(new Set(["16x16"]));
+  const sizesOf = (locator: Locator) => locator.evaluateAll((inputs) => inputs.map((input) => `${input.getBoundingClientRect().width}x${input.getBoundingClientRect().height}`));
+  expect(new Set(await sizesOf(form.locator('input[type="checkbox"]:not([role="switch"])')))).toEqual(new Set(["16x16"]));
+  expect(new Set(await sizesOf(form.getByRole("switch")))).toEqual(new Set(["32x18"]));
   const input = form.getByLabel("Name", { exact: true });
   const select = form.getByLabel("Severity");
   expect(await height(input)).toBe(await height(select));

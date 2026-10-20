@@ -181,6 +181,7 @@ Sizes are `sm` (28px) for table rows, filter bars, and toolbars; `md` (36px) eve
 | `TextArea` | Height follows `rows` |
 | `Select` | Custom chevron; `size="sm"` in filter bars |
 | `Checkbox` | A single check box with its label; `hideLabel` in table selection columns |
+| `Switch` | An on/off setting that takes effect as it's turned, such as Enabled on a frame zone or a session dialog's custom copy: the label and description, then the switch at the row's end. A check box with the switch role, so it works without JavaScript; `hideLabel` in a list row. Choosing items from a set, such as a filter or a script's `async` and `defer`, stays a `Checkbox` |
 | `ChoiceGroup` | Radio or check box cards with descriptions; `columns` for two or three short options. A choice's `icon` goes before its label, as on the Create Portal form's Web, Mobile, and Desktop cards. A selected card takes the accent border, and a selected radio card also takes the selection ring |
 | `FormSection` | A titled group of fields |
 | `FormFooter` | Cancel, then the primary action, right-aligned; stacked and full width on narrow screens, including inside a `Panel` footer |
