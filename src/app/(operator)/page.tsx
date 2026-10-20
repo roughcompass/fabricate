@@ -11,23 +11,35 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { Section } from "@/components/ui/section";
-import { type StatItem, StatGroup } from "@/components/ui/stat-group";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
+import { NewPortalLink } from "@/components/onboarding/create-portal";
+import { BarChart, type BarSeries } from "@/components/ui/bar-chart";
+import { Status } from "@/components/ui/status";
 import { ATTENTION_PAGE_SIZE, type AttentionItem, attentionItems } from "@/lib/home/attention";
+import { type ActivityKind, WEEK_MS, assessmentTrend, figureChanges, figuresAt, portalsOverview, recentActivity } from "@/lib/home/dashboard";
+import { PORTAL_LIFECYCLE_LABELS } from "@/lib/onboarding/vocabulary";
+import { PORTALS_HREF, portalHref } from "@/lib/portals/paths";
 import { type FleetSummary, claimedShare, fleetSummary } from "@/lib/home/summary";
 import { applicationsHref, assessmentsHref, portalsHref, repositoriesHref } from "@/lib/web/list-filters";
+import styles from "./home.module.css";
 
 // The root layout's title template applies only to child segments, and this page shares the root segment.
 export const metadata: Metadata = { title: { absolute: "Home · DE FabLab" } };
 
 const DE_CONSOLE = "/repositories/de-console";
 
+/** The time this request renders, which each figure's change over the week is measured from. */
+function requestTime(): number {
+  return Date.now();
+}
+
 /**
- * Home (home spec): the fleet's figures, each opening a list filtered to
- * exactly what it counts, then the problems that need someone. Every visitor
+ * Home (home spec), laid out as a dashboard: the fleet's figures, each
+ * opening a list filtered to exactly what it counts, with its change over the
+ * last seven days; the Portals beside the Assessment trend; the recent
+ * activity beside the problems that need someone; and quick actions. Every visitor
  * sees the same page. Where Assessments aren't available, the root address
  * opens wherever links to Home lead instead.
  */
@@ -45,13 +57,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const page = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), pages) : 1;
   const shown = items.slice((page - 1) * ATTENTION_PAGE_SIZE, page * ATTENTION_PAGE_SIZE);
 
+  const then = figuresAt(db, new Date(requestTime() - WEEK_MS));
+  const changes = figureChanges(summary, then, claimedShare);
+  const overview = portalsOverview(db);
+  const trend = assessmentTrend(db);
+  const activity = recentActivity(db);
+
   return (
     <Page>
-      <PageHeader title="Home" description="How much of the fleet is claimed, where its Assessments stand, and what needs someone's attention." />
+      <PageHeader title="Home" description="Where the fleet's Portals, Applications, Repositories, and Assessments stand, what changed, and what needs someone's attention." />
 
-      <Section title="Repositories" description="Enabled Repositories, and whether each has a SEAL application.">
-        {summary.repositories.empty ? (
-          <Panel flush>
+      <div className={styles.row} data-columns="3">
+        <Panel title="Repositories" description="Enabled Repositories, and whether each has a SEAL application.">
+          {summary.repositories.empty ? (
             <EmptyState
               title="No Repositories yet"
               icon="git"
@@ -68,15 +86,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             >
               Register Git repositories to claim and assess them.
             </EmptyState>
-          </Panel>
-        ) : (
-          <StatGroup label="Repositories" stats={repositoryStats(summary.repositories)} />
-        )}
-      </Section>
+          ) : (
+            <Figures label="Repositories" figures={repositoryStats(summary.repositories, changes)} />
+          )}
+        </Panel>
 
-      <Section title="Assessments" description="By the conclusion of each Assessment's latest completed Evaluation.">
-        {summary.assessments.empty ? (
-          <Panel flush>
+        <Panel title="Assessments" description="By the conclusion of each Assessment's latest completed Evaluation.">
+          {summary.assessments.empty ? (
             <EmptyState
               title="No Assessments yet"
               icon="checklist"
@@ -88,15 +104,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             >
               An Assessment scopes Repositories for Runs and evaluates them against Standard Releases.
             </EmptyState>
-          </Panel>
-        ) : (
-          <StatGroup label="Assessments" stats={assessmentStats(summary.assessments)} />
-        )}
-      </Section>
+          ) : (
+            <Figures label="Assessments" figures={assessmentStats(summary.assessments, changes)} />
+          )}
+        </Panel>
 
-      <Section title="Applications" description="Registered Applications, those DE Web couldn't determine a rendering for, and Portals in Production.">
-        {summary.applications.empty ? (
-          <Panel flush>
+        <Panel title="Applications" description="Registered Applications, those DE Web couldn't determine a rendering for, and Portals in Production.">
+          {summary.applications.empty ? (
             <EmptyState
               title="No Applications yet"
               icon="network"
@@ -113,66 +127,206 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             >
               Create a Portal, then add the Applications its menu points at.
             </EmptyState>
-          </Panel>
-        ) : (
-          <StatGroup
-            label="Applications"
-            stats={[
-              { label: "Applications", value: figure(summary.applications.applications), href: applicationsHref({ portal: "all" }) },
-              { label: "Undetermined rendering", value: figure(summary.applications.undetermined), href: applicationsHref({ portal: "all", rendering: "undetermined" }) },
-              { label: "Production Portals", value: figure(summary.applications.productionPortals), href: portalsHref({ tab: "production" }) },
-            ]}
-          />
-        )}
-      </Section>
-
-      <Section id="needs-attention" title="Needs attention" description={items.length > 0 ? countLabel(items.length, "problem") : undefined}>
-        <Panel flush>
-          {shown.length > 0 ? (
-            <Table
-              label="Needs attention"
-              head={
-                <>
-                  <Th>Problem</Th>
-                  <Th>Record</Th>
-                  <Th>Since</Th>
-                </>
-              }
-            >
-              {shown.map((item) => (
-                <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : "evaluation" in item ? item.evaluation.publicId : item.kind}`} item={item} refreshMinutes={config.deConsole.refreshMinutes} />
-              ))}
-            </Table>
           ) : (
-            <EmptyState title="Nothing needs attention">{"Home checks each Assessment's latest Run and Evaluation, and the DE Console import."}</EmptyState>
+            <Figures
+              label="Applications"
+              figures={[
+                { label: "Applications", value: figure(summary.applications.applications), change: changes.applications!, href: applicationsHref({ portal: "all" }) },
+                { label: "Undetermined rendering", value: figure(summary.applications.undetermined), change: changes.undeterminedRendering!, href: applicationsHref({ portal: "all", rendering: "undetermined" }) },
+                { label: "Production Portals", value: figure(summary.applications.productionPortals), change: changes.productionPortals!, href: portalsHref({ tab: "production" }) },
+              ]}
+            />
           )}
         </Panel>
-        <Pagination label="Needs attention pages" page={page} pages={pages} href={(number) => (number === 1 ? "/#needs-attention" : `/?page=${number}#needs-attention`)} />
-      </Section>
+      </div>
+
+      <div className={styles.row} data-columns="2">
+        <Panel
+          title="Portals"
+          description="In Production first, with their Applications and when their experience was last saved."
+          actions={
+            overview.total > overview.portals.length ? (
+              <ButtonLink href={PORTALS_HREF} size="sm" variant="tertiary">
+                {`View all ${overview.total} Portals`}
+              </ButtonLink>
+            ) : undefined
+          }
+          flush={overview.portals.length > 0}
+        >
+          {overview.portals.length > 0 ? (
+            <ul className={styles.portals} aria-label="Portals">
+              {overview.portals.map((portal) => (
+                <li key={portal.publicId} data-portal-row={portal.publicId}>
+                  <span className={styles.portalName}>
+                    <Link href={portalHref(portal.publicId)}>{portal.label}</Link>
+                    <Status state={portal.lifecycle} label={PORTAL_LIFECYCLE_LABELS[portal.lifecycle]} size="sm" />
+                  </span>
+                  <span className={styles.muted}>{countLabel(portal.applications, "Application")}</span>
+                  <span className={styles.muted}>
+                    {portal.savedAt ? (
+                      <>
+                        Saved <RelativeTime value={portal.savedAt} />
+                      </>
+                    ) : (
+                      "Not saved yet"
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState title="No Portals yet" icon="network" action={<NewPortalLink variant="secondary">Create Portal</NewPortalLink>}>
+              A Portal is the configuration its team owns: its experience, its menu, and its lifecycle.
+            </EmptyState>
+          )}
+        </Panel>
+
+        <Panel title="Assessment trend" description="Evaluations completed each week, by conclusion, over the last eight weeks.">
+          <BarChart
+            id="assessment-trend"
+            label="Evaluations completed each week, by conclusion"
+            groupLabel="Week of"
+            series={TREND_SERIES}
+            groups={trend.map((week) => ({ label: weekLabel(week.start), values: week.counts }))}
+            empty="No Evaluation completed in the last eight weeks."
+          />
+        </Panel>
+      </div>
+
+      <div className={styles.row} data-columns="2">
+        <Panel title="Recent activity" description="The latest changes to Portals, Applications, and Runs." flush={activity.length > 0}>
+          {activity.length > 0 ? (
+            <ol className={styles.activity} aria-label="Recent activity">
+              {activity.map((item) => (
+                <li key={`${item.kind}-${item.record.href}-${item.at.getTime()}`} data-activity={item.kind}>
+                  <span className={styles.activityWhat}>
+                    {ACTIVITY_LABELS[item.kind]} <Link href={item.record.href}>{item.record.name}</Link>
+                  </span>
+                  <span className={styles.muted}>
+                    {item.actor ? `by ${item.actor} · ` : ""}
+                    <RelativeTime value={item.at} />
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <EmptyState title="Nothing has happened yet">Created Portals and Applications, saved experiences, and finished Runs appear here.</EmptyState>
+          )}
+        </Panel>
+
+        <div id="needs-attention" className={styles.attention}>
+          <Panel title="Needs attention" description={items.length > 0 ? countLabel(items.length, "problem") : undefined} flush>
+            {shown.length > 0 ? (
+              <Table
+                label="Needs attention"
+                head={
+                  <>
+                    <Th>Problem</Th>
+                    <Th>Record</Th>
+                    <Th>Since</Th>
+                  </>
+                }
+              >
+                {shown.map((item) => (
+                  <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : "evaluation" in item ? item.evaluation.publicId : item.kind}`} item={item} refreshMinutes={config.deConsole.refreshMinutes} />
+                ))}
+              </Table>
+            ) : (
+              <EmptyState title="Nothing needs attention">{"Home checks each Assessment's latest Run and Evaluation, and the DE Console import."}</EmptyState>
+            )}
+          </Panel>
+          <Pagination label="Needs attention pages" page={page} pages={pages} href={(number) => (number === 1 ? "/#needs-attention" : `/?page=${number}#needs-attention`)} />
+        </div>
+      </div>
+
+      <Panel title="Quick actions">
+        <div className={styles.actions} role="group" aria-label="Quick actions">
+          <ButtonLink href="/applications/new" variant="secondary" icon="plus">
+            Add application
+          </ButtonLink>
+          <NewPortalLink variant="secondary">Create Portal</NewPortalLink>
+          <ButtonLink href="/assessments/new" variant="secondary" icon="checklist">
+            New Assessment
+          </ButtonLink>
+          <ButtonLink href="/repositories/import" variant="secondary" icon="folder">
+            Import Repositories
+          </ButtonLink>
+        </div>
+      </Panel>
     </Page>
+  );
+}
+
+const TREND_SERIES: BarSeries[] = [
+  { id: "gaps", label: "Gaps found", tone: "error", pattern: "stripes" },
+  { id: "undetermined", label: "Undetermined", tone: "warning", pattern: "dots" },
+  { id: "conforms", label: "Conforms", tone: "success", pattern: "solid" },
+  { id: "not_applicable", label: "Not applicable", tone: "neutral", pattern: "lines" },
+];
+
+const ACTIVITY_LABELS: Record<ActivityKind, string> = {
+  portal_created: "Portal created:",
+  portal_promoted: "Promoted to Production:",
+  portal_returned: "Returned to Prototype:",
+  experience_saved: "Experience saved:",
+  application_created: "Application added:",
+  run_completed: "Run finished:",
+  run_failed: "Run failed:",
+};
+
+/** A week's first day, as the chart labels it: "Oct 12". */
+const weekLabel = (start: Date) => start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+interface Figure {
+  label: string;
+  value: string;
+  /** Its change over the last seven days, in words. */
+  change: string;
+  /** A short line under the value, such as a share. */
+  hint?: string;
+  href: string;
+}
+
+/** A group's figures, two per row, each linking to the list it counts, with its share and its change this week. */
+function Figures({ label, figures }: { label: string; figures: readonly Figure[] }) {
+  return (
+    <dl className={styles.figures} aria-label={label}>
+      {figures.map((entry) => (
+        <div key={entry.label} className={styles.figure} data-figure={entry.label}>
+          <dt className={styles.figureLabel}>{entry.label}</dt>
+          <dd className={styles.figureValue}>
+            <Link href={entry.href}>{entry.value}</Link>
+          </dd>
+          {entry.hint && <dd className={styles.muted}>{entry.hint}</dd>}
+          <dd className={styles.change} data-change={entry.change.startsWith("+") ? "up" : entry.change.startsWith("−") ? "down" : "none"}>
+            {entry.change}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
 const figure = (value: number) => value.toLocaleString("en-US");
 
-function repositoryStats(repositories: FleetSummary["repositories"]): StatItem[] {
+function repositoryStats(repositories: FleetSummary["repositories"], changes: Record<string, string>): Figure[] {
   const share = claimedShare(repositories);
   return [
-    { label: "Enabled", value: figure(repositories.enabled), href: repositoriesHref({ status: "enabled" }) },
-    { label: "Claimed", value: figure(repositories.claimed), hint: share === null ? undefined : `${share}% of enabled`, href: repositoriesHref({ status: "enabled", ownership: "claimed" }) },
-    { label: "Unclaimed", value: figure(repositories.unclaimed), href: repositoriesHref({ status: "enabled", ownership: "unclaimed" }) },
+    { label: "Enabled", value: figure(repositories.enabled), change: changes.enabled!, href: repositoriesHref({ status: "enabled" }) },
+    { label: "Claimed", value: figure(repositories.claimed), hint: share === null ? undefined : `${share}% of enabled`, change: changes.claimed!, href: repositoriesHref({ status: "enabled", ownership: "claimed" }) },
+    { label: "Unclaimed", value: figure(repositories.unclaimed), change: changes.unclaimed!, href: repositoriesHref({ status: "enabled", ownership: "unclaimed" }) },
   ];
 }
 
-function assessmentStats(assessments: FleetSummary["assessments"]): StatItem[] {
+function assessmentStats(assessments: FleetSummary["assessments"], changes: Record<string, string>): Figure[] {
   const { byConclusion } = assessments;
   return [
-    { label: "Assessments", value: figure(assessments.total), href: assessmentsHref() },
-    { label: "Gaps found", value: figure(byConclusion.gaps), href: assessmentsHref({ conclusion: "gaps" }) },
-    { label: "Undetermined", value: figure(byConclusion.undetermined), href: assessmentsHref({ conclusion: "undetermined" }) },
-    { label: "Conforms", value: figure(byConclusion.conforms), href: assessmentsHref({ conclusion: "conforms" }) },
-    ...(byConclusion.not_applicable > 0 ? [{ label: "Not applicable", value: figure(byConclusion.not_applicable), href: assessmentsHref({ conclusion: "not_applicable" }) }] : []),
-    { label: "Not evaluated", value: figure(byConclusion.none), href: assessmentsHref({ conclusion: "none" }) },
+    { label: "Assessments", value: figure(assessments.total), change: changes.assessments!, href: assessmentsHref() },
+    { label: "Gaps found", value: figure(byConclusion.gaps), change: changes.gaps!, href: assessmentsHref({ conclusion: "gaps" }) },
+    { label: "Undetermined", value: figure(byConclusion.undetermined), change: changes.undetermined!, href: assessmentsHref({ conclusion: "undetermined" }) },
+    { label: "Conforms", value: figure(byConclusion.conforms), change: changes.conforms!, href: assessmentsHref({ conclusion: "conforms" }) },
+    ...(byConclusion.not_applicable > 0 ? [{ label: "Not applicable", value: figure(byConclusion.not_applicable), change: changes.not_applicable!, href: assessmentsHref({ conclusion: "not_applicable" }) }] : []),
+    { label: "Not evaluated", value: figure(byConclusion.none), change: changes.none!, href: assessmentsHref({ conclusion: "none" }) },
   ];
 }
 

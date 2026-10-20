@@ -77,7 +77,7 @@ export function weekChange(now: number, then: number, unit = ""): string {
   return `${change > 0 ? "+" : "−"}${Math.abs(change)}${unit} this week`;
 }
 
-/** The figures' changes over the last seven days, keyed as Home shows them. */
+/** The figures' changes over the last seven days, keyed as Home shows them: Assessments' by conclusion, and Applications' rendering as undeterminedRendering. */
 export function figureChanges(summary: FleetSummary, then: FiguresThen, share: (counts: { enabled: number; claimed: number }) => number | null): Record<string, string> {
   const shareNow = share(summary.repositories);
   const shareThen = share(then.repositories);
@@ -89,7 +89,7 @@ export function figureChanges(summary: FleetSummary, then: FiguresThen, share: (
     assessments: weekChange(summary.assessments.total, then.assessments.total),
     ...Object.fromEntries(CONCLUSION_FILTERS.map((filter) => [filter, weekChange(summary.assessments.byConclusion[filter], then.assessments.byConclusion[filter])])),
     applications: weekChange(summary.applications.applications, then.applications.applications),
-    undetermined: weekChange(summary.applications.undetermined, then.applications.undetermined),
+    undeterminedRendering: weekChange(summary.applications.undetermined, then.applications.undetermined),
     productionPortals: weekChange(summary.applications.productionPortals, then.applications.productionPortals),
   };
 }
