@@ -1,21 +1,70 @@
-# The experience editor
+# The Experience Editor
 
-A Portal's experience is everything about the portal around its Applications: its brand and favicon, its design theme, its copyright, routing, session behavior and language, runtime modules, crash error page, the frame's zones and slots, its overlays, its system messages, its capability toolkits, and its menu. The experience editor, at `/navigation/<portal id>/editor`, edits all of it as one document. Open experience editor on the Portal's Navigation page ([navigation.md](navigation.md)) opens it at Frame Zones.
+A Portal's experience is everything about the portal around its Applications. It covers:
+
+- its brand and favicon, its design theme, and its copyright
+- routing, and session behavior and language
+- runtime modules and the crash error page
+- the frame's zones and slots, its overlays, and its system messages
+- its capability toolkits and its menu
+
+The Experience Editor and the configuration pages under Runtime Configuration edit all of it as one document ([portals.md](portals.md#runtime-configuration)). Experience Editor in the Runtime Configuration sub-menu opens `/portals/<portal id>/editor` at Frame Zones, as does Open experience editor on the Portal's page. The editor renders inside the shell, with the sidebar as the operator left it.
 
 ## Layout
 
-An icon rail on the left switches between four views:
+Three view tabs at the start of the app header switch the editor's views:
 
 | View | Address | What it edits |
 | --- | --- | --- |
 | Frame Zones | `editor/frame-zones` | The Banner, Header, Sidebar, and Footer zones and their slots: shown or hidden, in order, and each optionally replaced by an external module |
 | Frame Overlays | `editor/frame-overlays` | The Session Overlay's dialogs (session timeout, duplicate session, system error) and the Toast Overlay's success and error toasts |
 | Capability Toolkit | `editor/capabilities` | Installing, configuring, and removing toolkits such as Global Search and Notifications |
-| Portal Configuration | `editor/configuration/<section>` | Brand and identity, favicon, design theme, copyright, routing, default session language, session, runtime modules, and crash error |
 
-Each view has a list on the left, a live preview of the frame in the middle, and Options for the selection on the right. The preview is a schematic of the document, not the running portal, so pending changes show at once. Three full-window pages open from the views: Change history (`editor/change-history`), the System messages editor (`editor/messages`), from the Banner zone, and the menu editor (`editor/menu`), from the Sidebar zone and from the Navigation page.
+Each view has a list on the left, a live preview of the frame in the middle, and Options for the selection on the right. Beside the sidebar, below a 1280px content column, Options drops beneath the preview. The preview is a schematic of the document, not the running portal, so pending changes show at once.
 
-The top bar carries Change history, Undo, Redo, the count of unsaved changes, Open running portal, and Save.
+Three full-window pages open from the views:
+
+- **Change history** (`editor/change-history`).
+- **The System messages editor** (`editor/messages`), from the Banner zone.
+- **The menu editor** (`editor/menu`), from the Sidebar zone and from the Portal page.
+
+The configuration sections aren't a view. Each is its own page under Runtime Configuration (`/portals/<portal id>/configuration/<section>`):
+
+- Brand & identity
+- Favicon
+- Design Theme
+- Copyright Information
+- Routing configuration
+- Default Session Language
+- Session Policy
+- Runtime modules
+- Crash Error
+
+Each page is titled with the section's name and its one-line description, and offers Reset to default. Brand & identity, Design Theme, Copyright Information, and Default Session Language show the live preview beside their fields.
+
+## The header
+
+On every Experience Editor and configuration page, the end of the app header holds:
+
+- Undo and Redo
+- Change history
+- the unsaved count, which links to Change history
+- Open running portal
+- Save
+
+Each has an accessible name and a tooltip. As the content column narrows, Open running portal drops its label below 1200px. Below 900px, the unsaved count becomes a badge on Change history. Below 640px, the header takes two rows: the title and the actions, then the sidebar control and the view tabs.
+
+## The device toolbar
+
+Above the preview, a toolbar styled after Chrome's device toolbar sets how the frame is drawn:
+
+- **Device menu:** Responsive first, at 1440 × 900, then Desktop, Laptop, Tablet, iPad Pro, iPhone 14, and Pixel 7, each with its size.
+- **Width and height fields:** they accept 320 to 2560 pixels and clamp a value when the field is left.
+- **Drag handles:** on the frame's right edge, bottom edge, and corner. Editing the size by hand or with a handle switches the menu to Responsive.
+- **Rotate:** swaps the width and height for landscape. It says which way the frame is turned, and the next device keeps the orientation.
+- **Zoom menu:** Fit, 50%, 75%, or 100%, with the current scale beside it. At a fixed zoom, a frame wider than the pane scrolls inside the pane, never the page.
+
+The frame takes its phone layout below 768 pixels. The toolbar's state is kept per browser tab in `sessionStorage` (`fabricate-device`, read by `parseDeviceState` in `src/lib/experience/device.ts`). It is never part of the experience or its pending changes.
 
 ## The document
 
@@ -26,13 +75,15 @@ The experience is one JSON document, validated by `experienceSchema` in `src/lib
 - `messages`: the banner's system messages, in order, each with severity, schedule, and dismissibility
 - `overlays`, `toolkits` (installed ids and each toolkit's settings), and `menu` (the menu's groups and items, flat, in order)
 
-A new Portal starts from `defaultExperience`: its own name, the default favicon, the catalog's default theme, the toolkits the catalog marks installed, the frame with every slot shown, and its saved menu. `validateExperience` holds every rule, such as the portal name's 40 characters, a favicon of 32 KB or less, a base path that starts with `/`, a keyboard shortcut the portal doesn't reserve, external modules that resolve in the module catalog, and the menu's rules ([navigation.md](navigation.md#the-menu)). Each problem names its path, so the editor shows it at the field.
+A new Portal starts from `defaultExperience`: its own name, the default favicon, the catalog's default theme, the toolkits the catalog marks installed, the frame with every slot shown, and its saved menu. `validateExperience` holds every rule, such as the portal name's 40 characters, a favicon of 32 KB or less, a base path that starts with `/`, a keyboard shortcut the portal doesn't reserve, external modules that resolve in the module catalog, and the menu's rules ([portals.md](portals.md#the-menu)). Each problem names its path, so the editor shows it at the field.
 
 ## Pending changes, undo, and redo
 
+The Experience Editor and the configuration pages share one working experience. The provider that holds it is mounted by the layout of the `(experience)` route group, which spans both. An edit on any of these pages stays pending across all of them until Save, and one Save makes one version.
+
 Every edit is a pending change in the browser until Save. Typing in one field within 800 milliseconds is one change, so Undo takes back a word, not a letter. Undo and Redo, with Ctrl+Z and Shift+Ctrl+Z (Cmd on a Mac), move through every view's changes in the order they were made. Change history lists each pending change with its section, field, original and new values, and Revert, which takes back that one change.
 
-Pending changes survive a reload in the same tab (`sessionStorage`, keyed by the Portal and the saved version they're based on). Leaving the editor with changes pending asks first.
+Pending changes survive moving between Runtime Configuration's editing pages and a reload in the same tab (`sessionStorage`, keyed by the Portal and the saved version they're based on). Leaving those pages with changes pending, including for the Portal page, asks first.
 
 ## Saving and versions
 

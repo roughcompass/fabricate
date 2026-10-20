@@ -200,7 +200,7 @@ export function CreatePortalForm({ action, included, mode, onCancel, titleId }: 
  * The Create Portal dialog, mounted once in the shell while Applications is
  * shown. Openers ask for it through openCreatePortal(). Escape, Cancel, and
  * the close button close it without creating anything, and focus returns to
- * the opener. Creating a Portal navigates to its Navigation page, which
+ * the opener. Creating a Portal navigates to its Portal page, which
  * closes it and starts the next one empty.
  */
 export function CreatePortalDialog({ action, included }: { action: DialogAction; included: WhatsIncluded | null }) {
@@ -210,7 +210,7 @@ export function CreatePortalDialog({ action, included }: { action: DialogAction;
   const pathname = usePathname();
   const [generation, setGeneration] = useState(0);
   const [shownFor, setShownFor] = useState(pathname);
-  // A navigation, such as to a created Portal's Navigation page, starts the next form empty...
+  // A navigation, such as to a created Portal's page, starts the next form empty...
   if (shownFor !== pathname) {
     setShownFor(pathname);
     setGeneration((value) => value + 1);

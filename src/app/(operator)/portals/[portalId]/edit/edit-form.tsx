@@ -14,7 +14,7 @@ const value = (state: DialogState, name: string) => {
 };
 
 /**
- * Edit details (navigation spec, "A Portal's Navigation page shows its
+ * Edit details (navigation spec, "A Portal's page shows its
  * details and lifecycle"): the SEAL ID, name, owning team, and description,
  * with the same rules as creation. The platform and slug are shown and
  * fixed. A save based on an older version is refused, keeping what was

@@ -275,19 +275,28 @@ Every page follows one of a few patterns, built from `Page` and `PageHeader` (`p
 
 `AppShell` (`src/components/shell/app-shell.tsx`) frames every page, in the manner of Vercel's dashboard: a skip link; a full-height sidebar on the canvas; and the content column, which holds the main region. The sidebar holds the product mark, the navigation, and, in its footer, the theme switcher. The sidebar is fixed to the viewport over its reserved grid column, so it never shifts at the end of a long page.
 
-**Navigation drills into sections.** `SidebarNav` (`sidebar-nav.tsx`, client) shows one of two menus, both defined in `navigation.ts`:
-- **The section menu:** the top-level items Home, Applications, and Navigation, then the sections Assessments, Salt Patterns while the template demo is enabled, and Prototypes while Prototypes is enabled. In the hosted profile it lists Prototypes alone, and links to Home lead to the Prototypes list. `visibleTopLevel()`, `visibleSections()`, and `locate()` take a `NavFlags` with both switches and the profile; pages build it with `navFlags()`. Each has an icon, and each section also has a chevron. The top-level items have none, because they have no sub-menu: each is marked current on its own pages, with the section menu shown, as Applications is on an application's dashboard.
-- **A section's sub-menu:** headed by the section's name, with Show all sections beside the heading. Its items come in groups (`NavGroup`); every group after the first has a caption heading that names its list for assistive technology.
+**The primary menu groups areas, and Runtime Configuration drills in.** `SidebarNav` (`sidebar-nav.tsx`, client) shows one of two menus, both built from `navigation.ts` and `runtime-menu.ts`:
 
-| Section | Sub-menu groups |
-| --- | --- |
-| Assessments | All Assessments, New Assessment · **Repositories:** All Repositories, New Repository, Import Repositories · **Standards:** All Standards, New Standard |
-| Salt Patterns | All Salt Patterns |
-| Prototypes | All Prototypes, New prototype · **Library:** Personas, Lessons, Page shell |
+- **The primary menu.** `visibleGroups()` returns its groups. Each later group is set apart by a divider (`<hr>`) and has a caption heading that names its list for assistive technology.
+  - First, Home, Applications, and Runtime Configuration.
+  - **Assessments:** All Assessments, Repositories, and Standards.
+  - **Salt Patterns & Prototypes:** Salt Patterns while the template demo is enabled, then Prototypes, Personas, Lessons, and Page shell while Prototypes is enabled.
+  - In the hosted profile it lists Prototypes' pages alone, and links to Home lead to the Prototypes list.
+  - Every item has an icon. Runtime Configuration alone has a chevron, because it alone has a sub-menu.
+  - `locate()` takes a `NavFlags` with both switches and the profile; pages build it with `navFlags()`.
+- **The Runtime Configuration sub-menu.** `runtimeMenu()` builds it from the address. It is headed "Runtime Configuration", with Show all sections beside the heading. It lists All Portals, then, under the current Portal's name, Experience Editor and Portal, then the configuration sections under Identity, Policies, Routing & sessions, and Runtime.
 
-Choosing a section opens its first item, the list titled with the section's name. Every page shows its section's sub-menu with one item current: a record's pages mark the list item for their records (a Run marks All Assessments, a Repository's edit page marks All Repositories, a template preview marks All Salt Patterns, a prototype's variants and compare pages mark All Prototypes, and a persona form marks Personas), and the create and import pages mark their own items. An item named "All" and a record type opens the list with that title; every other item opens the page that creates or imports what it names. `locate()` resolves a path to its section and item; its patterns never overlap, and a unit test checks every operator route against it. A page outside every section shows the section menu: Home with Home marked current, and any other page, such as this gallery, with nothing marked current. The product mark in the sidebar opens Home.
+Every page marks one item current, and a record's pages mark the item for their list:
 
-Show all sections shows the section menu without leaving the page and moves focus to the current section. Without JavaScript it is a link to `#sidebar-sections`, and a `:target` rule shows the section menu. Every navigation shows the new page's sub-menu again. The current item takes `--color-bg-selected` and the medium weight, and is exposed as `aria-current`.
+- A Run, an Evaluation, or a Profile marks All Assessments.
+- A Repository's edit page, New Repository, and the imports mark Repositories.
+- A template preview marks Salt Patterns.
+- A prototype's variants and compare pages mark Prototypes.
+- A persona form marks Personas.
+
+The create and import pages aren't in the menu; their list pages offer them. `locate()` resolves a path to its group and item. Its patterns never overlap, and a unit test checks every operator route against it. A page outside every item, such as this gallery, shows the primary menu with nothing current. The product mark in the sidebar opens Home.
+
+Show all sections shows the primary menu without leaving the page and moves focus to Runtime Configuration. Without JavaScript it is a link to `#sidebar-sections`, and a `:target` rule shows the primary menu. Every navigation shows the new page's menu again. The current item takes `--color-bg-selected` and the medium weight, and is exposed as `aria-current`.
 
 **The shell header names the page.** `ShellHeader` (`shell-header.tsx`) is a sticky bar across the content column, `--size-header` tall, with a solid `--color-bg` fill that sets it apart from the canvas and hides anything scrolled beneath it. It holds the page's title, centered, as its only `h1` at the heading size. A long title truncates with an ellipsis, with the full text in the `h1` and its tooltip. The title is page data the layout cannot see, so pages render the header themselves: through `PageHeader`, and directly in `SystemPage` and the page skeletons. A page can add a control at the header's start (`start`), such as the application switcher or the Experience Editor's view tabs, and controls at its end (`end`), such as Runtime Configuration's Undo, Redo, Change history, the unsaved count, Open running portal, and Save, which drop their labels as the content column narrows: Open running portal below 1200px, and the unsaved count, which becomes a badge on Change history, below 900px. On a content column under 640px, a header with end controls takes two rows: the title and the end controls, then the sidebar control and the start controls. Because the header spans the column, `Page` sets the measure (`--size-content`, `--size-form` for forms, or the whole column with `width="full"` for a workspace such as the experience editor) and the `--space-gutter` edges for every other part of the page.
 
@@ -329,7 +338,7 @@ Records are named for people, never by public ID:
 | MFE | Its configured name, "Payee search" |
 | Placement review | The Application, then the Portal, "Payments workspace · Access" |
 
-Public IDs appear only in a page's Details area, with a copy control. Each detail page's browser title names the record and its parent: "Run #3 · Checkout platform migration · DE FabLab", or "Access · Navigation · DE FabLab" for a Portal and "Payee Hub · Applications · DE FabLab" for an Application, whose parent is the page that lists them. Sequence numbers come from `assessmentNumber` and `evaluationNumber`, which count the model Initiative's records in creation order. They are stable only because Runs and Evaluations are never deleted: **a change that makes either deletable must persist the numbers first.**
+Public IDs appear only in a page's Details area, with a copy control. Each detail page's browser title names the record and its parent: "Run #3 · Checkout platform migration · DE FabLab", or "Access · Portals · DE FabLab" for a Portal and "Payee Hub · Applications · DE FabLab" for an Application, whose parent is the page that lists them. Sequence numbers come from `assessmentNumber` and `evaluationNumber`, which count the model Initiative's records in creation order. They are stable only because Runs and Evaluations are never deleted: **a change that makes either deletable must persist the numbers first.**
 
 ### Lists
 
@@ -341,7 +350,14 @@ A detail page leads with an overview under its header, as a `StatGroup` or a `De
 
 ### Home
 
-Home, at `/`, is the one page outside every section: the section menu shows with Home current, and the page header has a description but no breadcrumbs and no primary action. Three `Section`s follow, Repositories, Assessments, and Applications, each holding a `StatGroup` whose figures link through `src/lib/web/list-filters.ts` to a list filtered to exactly what they count. A group with no records at all shows an `EmptyState` in a flush `Panel` with the actions that create them, all secondary, so the page keeps no primary action. Needs attention is a `Section` with a `Panel` holding a `Table` of Problem, Record, and Since, newest first, twenty to a `Pagination` page; with nothing to show, its `EmptyState` names what Home checks and has no action. The figures and items come from `src/lib/home/` in a fixed number of queries, whatever the size of the fleet. Its navigation skeleton (`HomeSkeleton`) has the same three rows of figures and the table.
+Home, at `/`, is a dashboard. The primary menu shows with Home current, and the page header has a description but no breadcrumbs and no primary action. Its rows, from `home.module.css`, sit side by side at equal heights and stack on a narrow column:
+
+- **Three figure panels:** Repositories, Assessments, and Applications. Each figure links through `src/lib/web/list-filters.ts` to a list filtered to exactly what it counts, and states its change over the last seven days in words.
+- **The Portals overview beside the Assessment trend.** The trend is a `BarChart` of eight weeks of completed Evaluations by conclusion.
+- **Recent activity beside Needs attention.** Needs attention is a `Panel` holding a `Table` of Problem, Record, and Since, newest first, twenty to a `Pagination` page.
+- **Quick actions:** Add application, Create Portal, New Assessment, and Import Repositories, all secondary.
+
+A group with no records shows an `EmptyState` in its panel with the actions that create them. With nothing to show, Needs attention's `EmptyState` names what Home checks and has no action. Everything comes from `src/lib/home/` in a fixed number of queries, whatever the size of the fleet.
 
 ### Forms
 

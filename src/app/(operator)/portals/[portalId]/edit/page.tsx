@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ portalId:
   return { title: portal ? `Edit details · ${portal.label}` : "Portal not found" };
 }
 
-/** A Portal's Edit details form, opened from its Navigation page (navigation spec). */
+/** A Portal's Edit details form, opened from its Portal page (navigation spec). */
 export default async function EditPortalPage({ params }: { params: Promise<{ portalId: string }> }) {
   const portal = onboardedPortal((await params).portalId);
   if (!portal) notFound();

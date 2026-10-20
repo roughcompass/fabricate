@@ -2,7 +2,7 @@
 
 An Application is a repository registered in one Portal. Add application (`/applications/new`) starts from a **starter**, a Salt Patterns template while the demo is enabled, or a repository URL. Create Application registers the repository, assesses it with the DE Web initiative, and determines whether DE Web will render it as an ES module, with Module Federation, or in an iframe. Fabricate never creates or writes to a repository: a team creates its repository from a starter itself, then enters the repository's URL.
 
-This page covers what an operator configures: the starters file, the repository URLs Create Application accepts, and which hosts are Bitbucket. A Portal's menu, which points at Applications, is in [navigation.md](navigation.md).
+This page covers what an operator configures: the starters file, the repository URLs Create Application accepts, and which hosts are Bitbucket. A Portal's menu, which points at Applications, is in [portals.md](portals.md).
 
 ## Starters
 

@@ -61,7 +61,7 @@ const lockVersionOf = (formData: FormData) => integer(formData, "lockVersion") ?
 const SHOWN_IN_SWITCHER = new Set(["promoted", "returned", "edited"]);
 
 /**
- * Back to the Portal's Navigation page with a notice code; the page builds
+ * Back to the Portal's page with a notice code; the page builds
  * the message from the record. A change the switcher shows re-renders the
  * layout too, which otherwise keeps what it showed.
  */

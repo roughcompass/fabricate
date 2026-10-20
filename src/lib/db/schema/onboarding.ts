@@ -6,7 +6,7 @@ import { PORTAL_LIFECYCLES } from "../../onboarding/vocabulary";
 import { applications, portals } from "./ownership";
 
 /*
- * Web onboarding (docs/navigation.md, docs/applications.md). Portals and
+ * Web onboarding (docs/portals.md, docs/applications.md). Portals and
  * Applications are edited in place: a Portal's menu is a flat, ordered table
  * of groups and items, each edit takes effect at once, and every change is
  * appended to a history with who stated they made it. An Application links

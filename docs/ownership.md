@@ -21,7 +21,7 @@ Ownership isn't bound to a Run. Every view uses current ownership and states whe
 - A portal takes its Line of Business from its owning application. A repository can therefore appear in a portal from another Line of Business.
 - Portals and Lines of Business are matched on their label, ignoring case and extra spaces, so "JPM  Access" and "jpm access" are one portal. A new label is a pending candidate until an ontology release approves it as a concept.
 
-An application's portals here are claimed membership: evidence of where people say the application appears. They don't put it in a Portal's menu. Registering an Application in a Portal and pointing a menu item at it are described in [onboarding.md](onboarding.md) and [navigation.md](navigation.md).
+An application's portals here are claimed membership: evidence of where people say the application appears. They don't put it in a Portal's menu. Registering an Application in a Portal and pointing a menu item at it are described in [onboarding.md](onboarding.md) and [portals.md](portals.md).
 
 ## Assertions
 

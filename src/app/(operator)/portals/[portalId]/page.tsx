@@ -27,7 +27,7 @@ import styles from "./portal.module.css";
 
 export async function generateMetadata({ params }: { params: Promise<{ portalId: string }> }): Promise<Metadata> {
   const portal = onboardedPortal((await params).portalId);
-  return { title: portal ? `${portal.label} · Navigation` : "Portal not found" };
+  return { title: portal ? `${portal.label} · Portals` : "Portal not found" };
 }
 
 /** A notice's message, built from the record so a crafted link can't inject text. */
@@ -57,13 +57,13 @@ function navigationOutcome(code: string | undefined, portal: Portal): Outcome | 
 }
 
 /**
- * A Portal's Navigation page (navigation spec): its lifecycle in the header
+ * A Portal's page under Runtime Configuration (navigation spec): its lifecycle in the header
  * with Promote to Production or Return to Prototype, its details, its saved
  * menu, its Applications no item points at, and its history, newest first.
  * The menu, and the rest of the Portal's experience, is edited in the
  * experience editor; the page itself works without JavaScript.
  */
-export default async function PortalNavigationPage({ params, searchParams }: { params: Promise<{ portalId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function PortalPage({ params, searchParams }: { params: Promise<{ portalId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ portalId }, query] = await Promise.all([params, searchParams]);
   const portal = onboardedPortal(portalId);
   if (!portal) notFound();

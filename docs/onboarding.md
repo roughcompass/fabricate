@@ -2,7 +2,7 @@
 
 Web onboarding records the Portals of DE Web and the Applications registered in them. It serves two teams:
 
-- A **Portal team** creates its Portal, arranges its menu, chooses its default route, and promotes it from Prototype to Production. See [navigation.md](navigation.md).
+- A **Portal team** creates its Portal, arranges its menu, chooses its default route, and promotes it from Prototype to Production. See [portals.md](portals.md).
 - An **Application team** registers an Application from a starter or an existing Bitbucket or GitHub repository, in one Portal, and reads how DE Web will render it. See [applications.md](applications.md).
 
 Portals and Applications are edited in place. There are no Drafts, revisions, environments, placement reviews, or validation steps: each change is saved when it's made, takes effect at once, and is recorded in the record's history with who stated they made it, labeled Unverified. Fabricate never writes to Studio, CDaaS, ServiceNow, Bitbucket, or GitHub; reading a repository for an assessment is its only contact with Bitbucket or GitHub.
@@ -21,7 +21,7 @@ A SEAL ID is metadata. Any number of Portals and Applications can carry the same
 
 ## Creating a Portal
 
-Create Portal opens a two-pane dialog from the sidebar's switcher or the Navigation list: [What's included](#whats-included) on the left, and the form on the right. `/navigation/new` shows the same panes as a page, which is where the openers lead before JavaScript runs. The form asks for:
+Create Portal opens a two-pane dialog from the sidebar's switcher, the Portals page, or Home's quick actions: [What's included](#whats-included) on the left, and the form on the right. `/portals/new` shows the same panes as a page, which is where the openers lead before JavaScript runs. The form asks for:
 
 - the **platform**: Web, Mobile, or Desktop, as choice cards with none chosen
 - the **SEAL ID**, still metadata that other records may share
@@ -30,7 +30,7 @@ Create Portal opens a two-pane dialog from the sidebar's switcher or the Navigat
 - a **description** of 500 characters or fewer
 - the **slug**, derived from the name as it's typed: accents folded, lowercased, and everything but a to z removed, so "My New Portal" is `mynewportal`. An edit button opens it for editing, which refuses anything but lowercase letters; once edited, it no longer follows the name. A slug belongs to one Portal
 
-Every field is required. The heading reads "Create a Portal" until a name is typed, then "Create" and the name, under a tag naming the chosen platform. The form doesn't ask who's creating the Portal: it's recorded as the name the browser remembers, or "Not stated", labeled Unverified. Creating it makes the Portal a Prototype and the switcher's current one, and opens its Navigation page with "<name> was created as a Prototype.".
+Every field is required. The heading reads "Create a Portal" until a name is typed, then "Create" and the name, under a tag naming the chosen platform. The form doesn't ask who's creating the Portal: it's recorded as the name the browser remembers, or "Not stated", labeled Unverified. Creating it makes the Portal a Prototype and the switcher's current one, and opens its Portal page with "<name> was created as a Prototype.".
 
 The platform only classifies what the Portal targets: nothing validates against it, and it doesn't limit which Applications its menu can point at. The platform and the slug are fixed once the Portal is created. A Portal onboarded before they existed was given the slug its name derives where that was unique, and has no platform or description.
 
@@ -38,7 +38,7 @@ The platform only classifies what the Portal targets: nothing validates against 
 
 The sidebar's top row holds the product mark and the Portal switcher: the current Portal's initial, name, platform, and lifecycle badge, or All Portals. It lists every onboarded Portal with its badge, filters by name, slug, or SEAL ID, and ends with Create Portal. The choice is kept in the `fabricate-portal` cookie, so it lasts across pages and reloads; a remembered Portal that no longer exists means All Portals.
 
-The choice scopes the Applications page, the application switcher, the Navigation item, and the Portal Create Application preselects. Choosing a Portal on a Navigation page opens that Portal's Navigation page. Nothing else is scoped: not an application dashboard, the Navigation list of every Portal, Home, Repositories, or any page in Assessments, Salt Patterns, or Prototypes. The switcher appears whenever Applications does, so the hosted profile has none.
+The choice scopes the Applications page, the application switcher, Runtime Configuration, and the Portal Create Application preselects. Choosing a Portal on a Runtime Configuration page opens the same page for that Portal, and All Portals opens the Portals page. Nothing else is scoped: not an application dashboard, the Portals page, Home, Repositories, or any page in Assessments, Salt Patterns, or Prototypes. The switcher appears whenever Applications does, so the hosted profile has none.
 
 ## What's included
 

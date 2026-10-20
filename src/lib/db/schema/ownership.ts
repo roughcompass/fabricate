@@ -120,8 +120,8 @@ export const linesOfBusiness = sqliteTable(
 /**
  * A portal, approved as an ontology concept or pending review. Its label is
  * its name. Its team arranges its menu and moves it between Prototype and
- * Production on its Navigation page; a portal first named in an ownership
- * claim is a Prototype like any other (docs/navigation.md).
+ * Production on its Portal page; a portal first named in an ownership
+ * claim is a Prototype like any other (docs/portals.md).
  */
 export const portals = sqliteTable(
   "portals",

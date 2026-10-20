@@ -11,9 +11,10 @@ import { closeDrawer } from "./sidebar-nav";
  * The sidebar's Portal switcher (portal-switcher spec): the current Portal,
  * or All Portals, and a list of the onboarded Portals to choose from, each
  * with its platform and lifecycle, filtered by name, slug, or SEAL ID.
- * Choosing one scopes Applications and Navigation to it and, in the drawer,
- * closes the drawer; each choice posts the page it was made on, so on a
- * Portal's Navigation page it opens the chosen Portal's. Create Portal opens
+ * Choosing one scopes Applications and Runtime Configuration to it and, in
+ * the drawer, closes the drawer; each choice posts the page it was made on,
+ * so on a Runtime Configuration page it opens the same page of the chosen
+ * Portal. Create Portal opens
  * the Create Portal dialog, or the New Portal page before JavaScript runs.
  */
 export function PortalSwitcher({ portals, current, action }: { portals: readonly SwitcherPortal[]; current: string | null; action: (formData: FormData) => Promise<void> }) {

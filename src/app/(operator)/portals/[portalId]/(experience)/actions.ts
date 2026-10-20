@@ -30,7 +30,7 @@ export async function saveExperienceAction(portalId: string, input: { baseNumber
   const actor = statedActor((await rememberedActor()) || UNSTATED_ACTOR);
   try {
     const { version, experience } = saveExperience(db, portalId, { baseNumber: Number(input.baseNumber), lockVersion: Number(input.lockVersion), document: input.document }, actor, catalogs());
-    // The Navigation page, the switcher, and the running portal show the saved experience.
+    // The Portal page, the switcher, and the running portal show the saved experience.
     revalidatePath("/", "layout");
     return { kind: "saved", number: version.number, lockVersion: getPortal(db, portalId).lockVersion, experience };
   } catch (error) {
