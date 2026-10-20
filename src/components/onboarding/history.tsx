@@ -15,6 +15,7 @@ const EVENTS: Record<Event["event"], string> = {
   default_changed: "Default route changed",
   promoted: "Promoted to Production",
   returned_to_prototype: "Returned to Prototype",
+  experience_saved: "Experience saved",
 };
 
 /** A record's history, newest first, each change with who stated they made it. */

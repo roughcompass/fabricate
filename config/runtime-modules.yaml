@@ -1,0 +1,26 @@
+# The federated modules a Portal's runtime bootstrap can include, and the
+# registry external-module replacements resolve against
+# (docs/experience-editor.md, "Catalogs"). A placeholder registry: the names
+# and versions are illustrative until the DE Web module registry is wired in.
+#   versions published versions; any order
+modules:
+  - { name: "@deweb/global-search", description: Header typeahead search, versions: ["1.4.0", "1.3.2", "1.2.0"] }
+  - { name: "@deweb/notifications", description: Header notifications bell and panel, versions: ["2.1.0", "2.0.3"] }
+  - { name: "@deweb/system-messages", description: Banner system messages, versions: ["3.0.1", "3.0.0", "2.6.4"] }
+  - { name: "@deweb/menu", description: Left and flyout portal menu, versions: ["5.2.0", "5.1.1"] }
+  - { name: "@deweb/session", description: Session timeout and duplicate session dialogs, versions: ["1.9.0", "1.8.2"] }
+  - { name: "@deweb/analytics", description: Page view and interaction analytics, versions: ["2.4.0", "2.3.1"] }
+  - { name: "@deweb/feature-flags", description: Feature flag client, versions: ["1.2.3", "1.2.0"] }
+  - { name: "@deweb/alert-strip", description: A replacement banner strip, versions: ["2.4.1", "2.3.0", "1.9.9"] }
+  - { name: "@deweb/brand-bar", description: A replacement header brand bar, versions: ["1.1.0", "1.0.4"] }
+  - { name: "@deweb/user-menu", description: User menu with profile and sign out, versions: ["3.3.0", "3.2.1"] }
+  - { name: "@deweb/feedback", description: In-portal feedback form, versions: ["0.8.0", "0.7.5"] }
+  - { name: "@deweb/help-center", description: Contextual help panel, versions: ["2.0.0", "1.6.2"] }
+  - { name: "@deweb/footer-links", description: Legal footer links, versions: ["1.5.0", "1.4.1"] }
+  - { name: "@deweb/workspace-switcher", description: Sidebar workspace switcher, versions: ["1.0.2", "1.0.0"] }
+  - { name: "@deweb/error-boundary", description: Host crash page and error reporting, versions: ["2.2.0", "2.1.4"] }
+  - { name: "@deweb/i18n", description: Locale and message catalogs, versions: ["4.0.1", "3.9.0"] }
+  - { name: "@deweb/telemetry", description: OpenTelemetry web instrumentation, versions: ["1.6.0", "1.5.2"] }
+  - { name: "@deweb/consent", description: Cookie and tracking consent, versions: ["1.3.0", "1.2.2"] }
+  - { name: "@salt/theme-next", description: Salt theme tokens, versions: ["1.12.0", "1.11.3"] }
+  - { name: "@salt/icons", description: Salt icon set, versions: ["1.13.1", "1.13.0"] }

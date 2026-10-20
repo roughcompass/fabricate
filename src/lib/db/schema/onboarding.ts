@@ -21,7 +21,7 @@ export const MENU_ENTRY_KINDS = ["group", "item"] as const;
 export const ONBOARDING_SUBJECTS = ["portal", "application"] as const;
 /** A person's stated identity, which nothing verifies yet, or Fabricate itself. */
 export const ATTRIBUTIONS = ["unverified", "system"] as const;
-export const ONBOARDING_EVENTS = ["created", "details_changed", "menu_changed", "default_changed", "promoted", "returned_to_prototype"] as const;
+export const ONBOARDING_EVENTS = ["created", "details_changed", "menu_changed", "default_changed", "promoted", "returned_to_prototype", "experience_saved"] as const;
 
 export type MenuEntryKind = (typeof MENU_ENTRY_KINDS)[number];
 export type OnboardingSubject = (typeof ONBOARDING_SUBJECTS)[number];
@@ -146,5 +146,44 @@ export const onboardingEvents = sqliteTable(
     check("onboarding_events_detail", sql`${t.detail} IS NULL OR length(trim(${t.detail})) BETWEEN 1 AND 500`),
     check("onboarding_events_actor", sql`length(trim(${t.actor})) BETWEEN 1 AND 200`),
     check("onboarding_events_attribution", sql.raw(`attribution IN (${sqlList(ATTRIBUTIONS)})`)),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Experience
+
+/**
+ * Each saved version of a Portal's experience (docs/experience-editor.md):
+ * the whole document the experience editor edits, numbered from 1 per Portal,
+ * with how many changes it committed and who stated they saved it. Versions
+ * are recorded once and never changed or deleted; the highest number is the
+ * Portal's current experience.
+ */
+export const portalExperienceVersions = sqliteTable(
+  "portal_experience_versions",
+  {
+    id: id(),
+    publicId: publicId(),
+    portalId: integer("portal_id")
+      .notNull()
+      .references(() => portals.id, { onDelete: "restrict" }),
+    number: integer("number").notNull(),
+    document: text("document").notNull(),
+    changeCount: integer("change_count").notNull(),
+    /** What the version changed, as people read it: a JSON list of "Section: field" labels. */
+    changes: text("changes").notNull(),
+    actor: text("actor").notNull(),
+    attribution: text("attribution", { enum: ATTRIBUTIONS }).notNull(),
+    createdAt: timestamp("created_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("portal_experience_versions_number").on(t.portalId, t.number),
+    check("portal_experience_versions_public_id", sql`${t.publicId} GLOB 'pxv_*'`),
+    check("portal_experience_versions_number_positive", sql`${t.number} >= 1`),
+    check("portal_experience_versions_document", sql`json_valid(${t.document}) AND json_type(${t.document}) = 'object' AND length(${t.document}) <= 262144`),
+    check("portal_experience_versions_changes", sql`json_valid(${t.changes}) AND json_type(${t.changes}) = 'array' AND length(${t.changes}) <= 65536`),
+    check("portal_experience_versions_change_count", sql`${t.changeCount} BETWEEN 1 AND 10000`),
+    check("portal_experience_versions_actor", sql`length(trim(${t.actor})) BETWEEN 1 AND 200`),
+    check("portal_experience_versions_attribution", sql.raw(`attribution IN (${sqlList(ATTRIBUTIONS)})`)),
   ],
 );

@@ -1,0 +1,39 @@
+# The design theme packs a Portal can choose in its experience editor
+# (docs/experience-editor.md, "Catalogs"). Each pack is maintained by its
+# owner; a Portal picks one and pins a version or tracks latest. Default is
+# the system fallback: it is always available and is a new Portal's theme.
+#   id       lowercase letters, digits, and hyphens
+#   shell    the demo portal shell that renders it: access or markets
+#   versions published versions, newest first
+themes:
+  - id: default
+    name: Default
+    owner: Design System (Salt)
+    shell: access
+    notes: System baseline. Ships with every portal; cannot be removed.
+    versions: ["3.1.0", "3.0.2", "2.9.0"]
+    default: true
+  - id: payments
+    name: Payments
+    owner: Payments LOB Design
+    shell: access
+    notes: Current J.P. Morgan Access shell, payments-ui on light surfaces.
+    versions: ["4.2.1", "4.2.0", "4.1.3"]
+  - id: digital-bank
+    name: Digital Bank
+    owner: Digital Bank Design Guild
+    shell: access
+    notes: Current DCB UX Host, Salt theme-next with low density.
+    versions: ["1.8.0", "1.7.2"]
+  - id: markets
+    name: Markets
+    owner: Markets Design Guild
+    shell: markets
+    notes: Current runtime-next dark mode, compact chrome.
+    versions: ["2.3.0", "2.2.4", "2.1.0"]
+  - id: chase
+    name: Chase
+    owner: Pepper Design System
+    shell: access
+    notes: Pepper brand shell on light surfaces. Portals keep the J.P. Morgan logo.
+    versions: ["0.9.1", "0.9.0"]
