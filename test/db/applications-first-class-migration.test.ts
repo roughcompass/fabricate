@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { carryMenus } from "@/lib/db/backfills";
 import { type Db, MIGRATIONS_FOLDER, migrateDatabase } from "@/lib/db/client";
 import { createTestDb } from "../support/db";
 import { v2Database } from "../support/onboarding-v2";
@@ -117,6 +118,30 @@ describe("migration 0032 over the onboarding fixtures", () => {
     const events = db.$client.prepare("select e.event, e.from_lifecycle as fromLifecycle, e.to_lifecycle as toLifecycle from onboarding_events e join portals p on p.id = e.portal_id where p.label = 'Access' order by e.id").all();
     expect(events).toContainEqual({ event: "created", fromLifecycle: null, toLifecycle: "prototype" });
     expect(events).toContainEqual({ event: "promoted", fromLifecycle: "prototype", toLifecycle: "production" });
+  });
+});
+
+describe("the menu carry-over over a draft group with no label", () => {
+  it("names the group Untitled group, keeps its item under it, and logs it", () => {
+    const db = createTestDb();
+    const sqlite = db.$client;
+    const now = Date.now();
+    const access = (sqlite.prepare("insert into portals (public_id, label, label_key, created_at) values ('ptl_access', 'Access', 'access', ?) returning id").get(now) as { id: number }).id;
+    const payees = (sqlite.prepare("insert into applications (public_id, name, portal_id, created_at, updated_at) values ('wap_payees', 'Payee Hub', ?, ?, ?) returning id").get(access, now, now) as { id: number }).id;
+    // What migration 0032 stages from an unvalidated draft: a group whose label is blank.
+    sqlite.exec("create table _carried_menu_groups (portal_id integer not null, key text not null, parent_key text, label text not null, ordering integer not null)");
+    sqlite.exec("create table _carried_menu_routes (portal_id integer not null, placement_id integer not null, application_id integer not null, environment text not null, route text not null, label text not null, parent_key text, ordering integer not null, is_default integer not null)");
+    sqlite.exec("create table _carried_onboarded_portals (portal_id integer primary key not null)");
+    sqlite.prepare("insert into _carried_menu_groups values (?, 'g1', null, '', 0)").run(access);
+    sqlite.prepare("insert into _carried_menu_routes values (?, 1, ?, 'PROD', '/payees', 'Payees', 'g1', 0, 1)").run(access, payees);
+    const warnings: string[] = [];
+    expect(carryMenus(sqlite, (message) => warnings.push(message)).carried).toBe(2);
+    expect(menuOf(db, "Access")).toEqual([
+      { kind: "group", label: "Untitled group", route: null, application: null, isDefault: 0, parent: null },
+      { kind: "item", label: "Payees", route: "/payees", application: "Payee Hub", isDefault: 1, parent: "Untitled group" },
+    ]);
+    expect(warnings).toContain("Menu migration: Access: named a group with no label Untitled group.");
+    sqlite.close();
   });
 });
 

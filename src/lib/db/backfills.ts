@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { MAX_MENU_DEPTH, MENU_ROUTE } from "../onboarding/menu-rules";
+import { MAX_MENU_DEPTH, MAX_MENU_LABEL, MENU_ROUTE } from "../onboarding/menu-rules";
 import { deriveSlug } from "../onboarding/slug";
 import { generatePublicId } from "./ids";
 
@@ -141,6 +141,18 @@ export function carryMenus(sqlite: Database.Database, log: (message: string) => 
         }
         taken.set(row.route, row.label);
         entries.push({ kind: "item", key: `placement:${row.placement_id}`, parentKey: row.parent_key ? `group:${row.parent_key}` : null, label: row.label, ordering: row.ordering, route: row.route, applicationId: row.application_id, isDefault: row.placement_id === defaultPlacement });
+      }
+
+      // Labels the menu accepts: a blank one is named for its kind, and a long one is cut to the limit.
+      for (const entry of entries) {
+        const label = entry.label.trim();
+        if (!label) {
+          entry.label = entry.kind === "group" ? "Untitled group" : "Untitled item";
+          skip(portalId, `named a ${entry.kind} with no label ${entry.label}`);
+        } else if (label.length > MAX_MENU_LABEL) {
+          entry.label = label.slice(0, MAX_MENU_LABEL).trim();
+          skip(portalId, `shortened ${entry.label} to ${MAX_MENU_LABEL} characters`);
+        } else entry.label = label;
       }
 
       // Parents before children, siblings by their order and then label.
