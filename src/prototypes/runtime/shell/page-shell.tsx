@@ -22,6 +22,7 @@ import {
 } from "@salt-ds/core";
 import { CloseIcon, MenuIcon } from "@salt-ds/icons";
 import { type MouseEvent, type ReactNode, useState } from "react";
+import { LOGO_SRC } from "./logo";
 import "./page-shell.css";
 
 /*
@@ -139,9 +140,9 @@ export function PageShell({ config, current, user, children }: PageShellProps) {
             </Button>
           )}
           <Link href="#" onClick={stay} className="pageShell-appName" color="primary" underline="never">
-            {/* The J.P. Morgan logo, from DE FabLab's own origin, in the variant that reads against the header's mode. */}
+            {/* The J.P. Morgan logo, inlined since the frame loads no outside images, in the variant that reads against the header's mode. */}
             {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG; the prototype runtime has no next/image */}
-            <img src={mode === "dark" ? "/brand/jpmorgan-logo-dark.svg" : "/brand/jpmorgan-logo.svg"} alt="J.P. Morgan" className="pageShell-logo" />
+            <img src={LOGO_SRC[mode === "dark" ? "dark" : "light"]} alt="J.P. Morgan" className="pageShell-logo" />
             <span className="pageShell-divider" aria-hidden="true" />
             <Text as="span" styleAs="h4">
               {config.appName}
