@@ -13,7 +13,7 @@ test("Opening the gallery: titled Salt Patterns, with the search, the filter rai
   await expect(page).toHaveTitle("Salt Patterns · DE FabLab");
   await expect(page.getByRole("heading", { level: 1, name: "Salt Patterns" })).toBeVisible();
   await expect(page.getByText("Jumpstart your app development process with pre-built solutions from DE Web and our community.")).toBeVisible();
-  await expectCurrentItem(page, "Salt Patterns", "All Salt Patterns");
+  await expectCurrentItem(page, "Salt Patterns");
 
   // The search spans the page above the rail and the results.
   const search = page.getByRole("searchbox", { name: "Search templates" });
@@ -239,7 +239,7 @@ test.describe("template detail", () => {
     await expect(overview).toContainText("Watchlist, Order ticket, Price chart, Trade blotter");
     const members = page.getByRole("table", { name: "Microfrontends in this template" });
     for (const name of ["Markets shell", "Watchlist", "Order ticket", "Price chart", "Trade blotter"]) await expect(members).toContainText(name);
-    await expectCurrentItem(page, "Salt Patterns", "All Salt Patterns");
+    await expectCurrentItem(page, "Salt Patterns", "true");
 
     await expect(page.getByRole("link", { name: "Deploy template" })).toHaveAttribute("href", "/templates/market-watch/deploy");
   });

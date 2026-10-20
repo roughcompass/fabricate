@@ -1,5 +1,6 @@
 import { expect, test } from "./support/fixtures";
 import { acceptTemplate, keepOne, previewFrame, waitForFrame } from "./support/prototypes";
+import { waitForHydration } from "./support/shell";
 
 // prototypes/sharing-and-export spec: share links and revoking them; page-shell
 // spec: the Page shell form, and share links keeping their shell.
@@ -92,6 +93,8 @@ test("renames the application in the Page shell, which previews show but an exis
 
 test("refuses a shell with one navigation item, naming the problem", async ({ page, db: _db }) => {
   await page.goto("/prototypes/shell");
+  // Typed before hydration, the text is kept beside the default items.
+  await waitForHydration(page);
   await page.getByLabel("Navigation items").fill("Overview");
   await page.getByRole("button", { name: "Save shell" }).click();
   await expect(page.getByLabel("Navigation items")).toHaveAttribute("aria-invalid", "true");

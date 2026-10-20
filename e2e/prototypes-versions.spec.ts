@@ -1,5 +1,6 @@
 import { expect, test } from "./support/fixtures";
 import { fixturePrototype, keepOne, previewFrame, refineEach, waitForAudit, waitForFrame } from "./support/prototypes";
+import { waitForHydration } from "./support/shell";
 
 // prototypes/versions spec: forking, comparing, and accepting.
 
@@ -136,6 +137,7 @@ test("accepts version 1 as a Payments template, then updates it to version 2, th
   await expect(page.locator("[data-template-version='1']")).toContainText("Salt 1.73.0");
   await expect(page.locator("[data-template-version='1']")).toContainText("Checks v1");
   await page.goBack();
+  await waitForHydration(page);
 
   await page.getByRole("button", { name: "Withdraw template" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Withdraw template" }).click();

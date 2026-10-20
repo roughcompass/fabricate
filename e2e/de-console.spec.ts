@@ -23,8 +23,8 @@ test("Failed latest read: one page alert with the recorded error, and the last s
   await expect(page.getByText(/didn't answer within 10 seconds/)).toBeVisible();
   await expect(page.getByText("Last successful read", { exact: true })).toBeVisible();
   await expect(page.getByText("1 application listed")).toBeVisible();
-  // The sidebar marks All Repositories, and the page never shows the source.
-  await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "All Repositories" })).toHaveAttribute("aria-current", "page");
+  // The sidebar marks Repositories, and the page never shows the source.
+  await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Repositories", exact: true })).toHaveAttribute("aria-current", "true");
   await expect(page.locator("body")).not.toContainText(E2E_DE_CONSOLE);
   await expect(page.getByRole("button", { name: /Resolve|Read/ })).toHaveCount(0);
 });

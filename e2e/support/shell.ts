@@ -12,13 +12,6 @@ export async function openSection(page: Page, name: string): Promise<void> {
   await nav.getByRole("link", { name, exact: true }).click();
 }
 
-/** Opens a section, then one of its sub-menu items, such as New application in Salt Patterns. */
-export async function openItem(page: Page, section: string, item: string): Promise<void> {
-  await openSection(page, section);
-  await expect(primaryNavigation(page).locator("#sidebar-section-title")).toHaveText(section);
-  await primaryNavigation(page).getByRole("link", { name: item, exact: true }).click();
-}
-
 /**
  * Waits until the page has hydrated, before clicking controls that work only
  * with JavaScript: the shell's Hide sidebar control submits a form until then,
@@ -29,9 +22,7 @@ export async function waitForHydration(page: Page): Promise<void> {
   await expect(page.locator('[data-sidebar-toggle="hidden"]')).toHaveAttribute("type", "button");
 }
 
-/** Expects the sidebar to show the sub-menu of `section` with `item` marked as the page's item. */
-export async function expectCurrentItem(page: Page, section: string, item: string): Promise<void> {
-  const nav = primaryNavigation(page);
-  await expect(nav.locator("#sidebar-section-title")).toHaveText(section);
-  await expect(nav.getByRole("link", { name: item, exact: true })).toHaveAttribute("aria-current", "page");
+/** Expects the sidebar to mark `item` as the page's item: "page" on the item's own page, "true" on a page below it. */
+export async function expectCurrentItem(page: Page, item: string, current: "page" | "true" = "page"): Promise<void> {
+  await expect(primaryNavigation(page).getByRole("link", { name: item, exact: true })).toHaveAttribute("aria-current", current);
 }

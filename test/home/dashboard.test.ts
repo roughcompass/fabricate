@@ -115,7 +115,8 @@ describe("Assessment trend", () => {
     const old = evaluate("conforms");
     backdate(db, "evaluations", "finished_at", old.id, 20);
 
-    const weeks = assessmentTrend(db, new Date(NOW + 1000));
+    // The Evaluations finish now, after NOW was read when the file loaded.
+    const weeks = assessmentTrend(db, new Date(Date.now() + 1000));
     expect(weeks).toHaveLength(8);
     expect(weeks.at(-1)!.counts).toEqual({ gaps: 2, undetermined: 0, conforms: 1, not_applicable: 0 });
     expect(weeks.reduce((sum, week) => sum + week.counts.conforms, 0)).toBe(2);

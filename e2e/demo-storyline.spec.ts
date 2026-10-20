@@ -1,6 +1,6 @@
 import { openTool, visitorContext, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
-import { openItem } from "./support/shell";
+import { openSection } from "./support/shell";
 import { paths } from "./support/paths";
 
 /**
@@ -14,7 +14,7 @@ test("runs the presenter storyline from the Salt Patterns gallery to a reset", a
 
   // The Salt Patterns gallery, opened from the sidebar, narrowed to the Payments brand.
   await page.goto(paths.assessments);
-  await openItem(page, "Salt Patterns", "All Salt Patterns");
+  await openSection(page, "Salt Patterns");
   await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Salt Patterns");
   await page.getByRole("checkbox", { name: /^Payments/ }).check();
   await expect(page).toHaveURL(/\/templates\?brand=payments$/);

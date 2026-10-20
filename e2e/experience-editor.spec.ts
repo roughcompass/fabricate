@@ -176,7 +176,7 @@ test.describe("the preview", () => {
     await preview(page).locator("[data-slot='brand']").click();
     await expect(page.getByText("Editing Header Zone → Brand Slot")).toBeVisible();
     await expect(page.locator("[data-slot-row='brand']")).toHaveAttribute("data-selected", "");
-    await expect(preview(page).locator("[data-slot='brand'] img")).toHaveAttribute("alt", "J.P. Morgan");
+    await expect(preview(page).locator("[data-slot='brand']").getByRole("img", { name: "J.P. Morgan" })).toBeVisible();
     await expect(preview(page)).toContainText("Access");
   });
 

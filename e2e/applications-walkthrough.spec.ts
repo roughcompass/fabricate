@@ -88,6 +88,6 @@ test("Access and Payee Hub, from an empty database to Production", async ({ page
   await expect(page.getByRole("table", { name: "Repositories" }).getByRole("link", { name: "Payee Hub" })).toBeVisible();
   await page.goto("/");
   const figures = page.locator('dl[aria-label="Applications"]');
-  await expect(figures.locator("div", { hasText: /^Applications/ }).locator("dd")).toHaveText("1");
-  await expect(figures.locator("div", { hasText: /^Production Portals/ }).locator("dd")).toHaveText("1");
+  await expect(figures.locator('[data-figure="Applications"] dd').first()).toHaveText("1");
+  await expect(figures.locator('[data-figure="Production Portals"] dd').first()).toHaveText("1");
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { buttonProps } from "@/components/ui/button-content";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -16,11 +17,11 @@ import {
   SCRIPT_TYPES,
   SESSION_DIALOGS,
   type SessionDialog,
+  dialogCopyOf,
   landingUrl,
 } from "@/lib/experience/document";
 import { CONFIGURATION_SECTIONS } from "@/lib/experience/sections";
-import { EditorPane } from "./editor-panes";
-import { usePreviewPane } from "./parts";
+import { editorHref } from "@/lib/portals/paths";
 import { useEditor } from "./store";
 import styles from "./configuration.module.css";
 
@@ -28,25 +29,33 @@ import styles from "./configuration.module.css";
 
 const left = (max: number, value: string) => `${Math.max(0, max - value.length)} characters left`;
 
-/** The sections whose fields change what the frame shows, with the overlays their preview opens. */
-const PREVIEWED: Partial<Record<string, "none" | "all">> = { brand: "none", theme: "none", copyright: "none", "session-language": "all" };
+/** The sections whose fields change what the frame shows, which link to it in the Experience Editor. */
+const IN_FRAME = new Set(["brand", "theme", "copyright", "session-language"]);
 
 /**
  * A configuration section's page (portal-configuration spec, "Configuration
- * sections are listed in groups"): titled in the header with the section's
- * name, its one-line description, its fields, and Reset to default; beside
- * them, the live preview when the section changes what the frame shows. The
- * Runtime Configuration sub-menu lists the sections.
+ * sections are listed in groups"), a form in the way of Shopify's settings:
+ * titled in the header with the section's name, its one-line description, its
+ * fields, and Reset to default. A section that changes something people see
+ * previews only that thing beside its fields, such as the footer's copyright
+ * line or a session dialog, never the whole frame; the Experience Editor
+ * shows the frame, with these pending changes in it. The Runtime
+ * Configuration sub-menu lists the sections.
  */
 export function ConfigurationView({ section }: { section: string }) {
   const editor = useEditor();
   const current = CONFIGURATION_SECTIONS.find((candidate) => candidate.id === section) ?? CONFIGURATION_SECTIONS[0]!;
-  const overlays = PREVIEWED[current.id];
-  const preview = usePreviewPane(overlays ?? "none", "Changes show here before they're saved");
   return (
-    <div className={styles.page} data-previewed={overlays ? "" : undefined}>
+    <div className={styles.page}>
       <article className={styles.article} data-configuration-section={current.id}>
-        <p className={styles.summary}>{current.description}</p>
+        <div className={styles.summaryRow}>
+          <p className={styles.summary}>{current.description}</p>
+          {IN_FRAME.has(current.id) && (
+            <Link href={editorHref(editor.portal.publicId)} className={styles.frameLink}>
+              See it in the Experience Editor
+            </Link>
+          )}
+        </div>
         <SectionBody id={current.id} />
         <button
           type="button"
@@ -62,8 +71,17 @@ export function ConfigurationView({ section }: { section: string }) {
           {current.id === "session-language" ? "Reset to default session language" : "Reset to default"}
         </button>
       </article>
-      {overlays && <EditorPane {...preview} label="Preview" />}
     </div>
+  );
+}
+
+/** A preview of the one thing a section changes, labeled as one, as Shopify's settings show a checkout's logo or an email's header. */
+function ElementPreview({ label, children, ...data }: { label: string; children: React.ReactNode } & Record<`data-${string}`, string>) {
+  return (
+    <figure className={styles.elementPreview} {...data}>
+      <figcaption className={styles.previewCaption}>{label}</figcaption>
+      <div className={styles.previewBody}>{children}</div>
+    </figure>
   );
 }
 
@@ -111,12 +129,15 @@ function BrandSection() {
   return (
     <>
       <Heading title="Brand & identity">The header shows the J.P. Morgan logo, then the portal name. The logo is the same in every portal.</Heading>
-      <div className={styles.brandPreview} data-brand-preview="">
-        {/* The logo file as a mask in the text color, so it reads in the light and the dark theme alike. */}
-        <span role="img" aria-label="J.P. Morgan" className={styles.logo} />
-        <span className={styles.divider} aria-hidden="true" />
-        <span>{brand.portalName || "Portal name"}</span>
-      </div>
+      <ElementPreview label="Header" data-brand-preview="">
+        <div className={styles.headerStrip}>
+          <Icon name="menu" size={16} />
+          {/* The logo file as a mask in the text color, so it reads in the light and the dark theme alike. */}
+          <span role="img" aria-label="J.P. Morgan" className={styles.logo} />
+          <span className={styles.divider} aria-hidden="true" />
+          <span>{brand.portalName || "Portal name"}</span>
+        </div>
+      </ElementPreview>
       <TextInput id="brand-name" label="Portal name" value={brand.portalName} maxLength={LIMITS.portalName} errors={editor.errorsAt("brand.portalName")} description={left(LIMITS.portalName, brand.portalName)} onChange={(event) => editor.edit((draft) => void (draft.brand.portalName = event.target.value), "brand.portalName")} onBlur={editor.seal} />
       <Checkbox id="brand-home" label="The logo links to the default landing path" checked={brand.logoLinksHome} onChange={(event) => editor.edit((draft) => void (draft.brand.logoLinksHome = event.target.checked))} />
     </>
@@ -257,7 +278,15 @@ function CopyrightSection() {
       <Heading title="Copyright Information">
         Controls the legal copy rendered by the Experience Frame footer&apos;s <strong>Primary Slot</strong>.
       </Heading>
-      <TextArea id="copyright" label="Copyright information" rows={2} value={copyright} maxLength={LIMITS.copyright} errors={editor.errorsAt("copyright")} description={`Rendered by Footer Zone → Primary Slot in the Experience Frame preview. ${left(LIMITS.copyright, copyright)}.`} onChange={(event) => editor.edit((draft) => void (draft.copyright = event.target.value), "copyright")} onBlur={editor.seal} />
+      <TextArea id="copyright" label="Copyright information" rows={2} value={copyright} maxLength={LIMITS.copyright} errors={editor.errorsAt("copyright")} description={`Rendered by Footer Zone → Primary Slot. ${left(LIMITS.copyright, copyright)}.`} onChange={(event) => editor.edit((draft) => void (draft.copyright = event.target.value), "copyright")} onBlur={editor.seal} />
+      <ElementPreview label="Footer" data-copyright-preview="">
+        <div className={styles.footerStrip}>
+          <span>{copyright}</span>
+          <span className={styles.footerLinks} aria-hidden="true">
+            Security · Privacy · Terms
+          </span>
+        </div>
+      </ElementPreview>
     </>
   );
 }
@@ -308,6 +337,26 @@ const DIALOG_TEXT: Record<SessionDialog, { toggle: string; description: string; 
   systemError: { toggle: "Change system error alert language", description: "The acknowledgement shown for platform-level outages or blocking errors.", primary: "Acknowledge action label", secondary: null },
 };
 
+/** One session dialog as people see it: the custom copy when it's on, otherwise the default. */
+function DialogPreview({ dialog }: { dialog: SessionDialog }) {
+  const editor = useEditor();
+  const copy = dialogCopyOf(editor.present, dialog);
+  return (
+    <ElementPreview label={`${DIALOG_NAMES[dialog]} dialog`} data-dialog-preview={dialog}>
+      <div className={styles.dialogMock}>
+        <p className={styles.dialogMockTitle}>{copy.title}</p>
+        <p className={styles.lede}>{copy.message}</p>
+        <p className={styles.crashActions}>
+          {DIALOG_TEXT[dialog].secondary && <span className={styles.dialogMockSecondary}>{copy.secondary}</span>}
+          <span className={styles.crashPrimary}>{copy.primary}</span>
+        </p>
+      </div>
+    </ElementPreview>
+  );
+}
+
+const DIALOG_NAMES: Record<SessionDialog, string> = { inactivity: "Session timeout", duplicate: "Duplicate session", systemError: "System error" };
+
 function SessionLanguageSection() {
   const editor = useEditor();
   return (
@@ -321,7 +370,8 @@ function SessionLanguageSection() {
         const path = `sessionLanguage.${dialog}`;
         const set = (field: "title" | "message" | "primary" | "secondary", value: string) => editor.edit((draft) => void (draft.sessionLanguage[dialog][field] = value), `${path}.${field}`);
         return (
-          <section key={dialog} className={styles.group}>
+          <section key={dialog} className={`${styles.group} ${styles.dialogGroup}`}>
+            <div className={styles.dialogSettings}>
             <Checkbox id={`${dialog}-custom`} label={text.toggle} description={text.description} checked={copy.custom} onChange={(event) => editor.edit((draft) => void (draft.sessionLanguage[dialog].custom = event.target.checked))} />
             {copy.custom && (
               <div className={styles.groupFields}>
@@ -331,6 +381,8 @@ function SessionLanguageSection() {
                 {text.secondary && <TextInput id={`${dialog}-secondary`} label={text.secondary} value={copy.secondary} maxLength={LIMITS.dialogTitle} errors={editor.errorsAt(`${path}.secondary`)} onChange={(event) => set("secondary", event.target.value)} onBlur={editor.seal} />}
               </div>
             )}
+            </div>
+            <DialogPreview dialog={dialog} />
           </section>
         );
       })}
@@ -454,15 +506,17 @@ function CrashErrorSection() {
       <TextArea id="crash-message" label="Message" rows={3} value={crashError.message} maxLength={LIMITS.dialogMessage} errors={editor.errorsAt("crashError.message")} onChange={(event) => set("message", event.target.value)} onBlur={editor.seal} />
       <TextInput id="crash-action" label="Primary action label" value={crashError.action} maxLength={LIMITS.dialogTitle} errors={editor.errorsAt("crashError.action")} onChange={(event) => set("action", event.target.value)} onBlur={editor.seal} />
       <TextInput id="crash-support" label="Support link" optional mono placeholder="/support or https://help.example.com" value={crashError.supportUrl} errors={editor.errorsAt("crashError.supportUrl")} onChange={(event) => set("supportUrl", event.target.value)} onBlur={editor.seal} />
-      <div className={styles.crashPreview} role="img" aria-label="Crash page preview" data-crash-preview="">
-        <Icon name="alert" size={20} />
-        <p className={styles.crashTitle}>{crashError.title}</p>
-        <p className={styles.lede}>{crashError.message}</p>
-        <p className={styles.crashActions}>
-          <span className={styles.crashPrimary}>{crashError.action}</span>
-          {crashError.supportUrl && <span className={styles.crashLink}>Get support</span>}
-        </p>
-      </div>
+      <ElementPreview label="Crash page" data-crash-preview="">
+        <div className={styles.crashPreview}>
+          <Icon name="alert" size={20} />
+          <p className={styles.crashTitle}>{crashError.title}</p>
+          <p className={styles.lede}>{crashError.message}</p>
+          <p className={styles.crashActions}>
+            <span className={styles.crashPrimary}>{crashError.action}</span>
+            {crashError.supportUrl && <span className={styles.crashLink}>Get support</span>}
+          </p>
+        </div>
+      </ElementPreview>
     </>
   );
 }

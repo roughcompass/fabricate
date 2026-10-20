@@ -1,13 +1,10 @@
 @layer components {
 
-  /* A section's page: its fields, and beside them the live preview when the section changes the frame; stacked on narrow content columns. */
-  .page { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); align-items: start; }
-  .page[data-previewed] { grid-template-columns: minmax(0, var(--size-prose)) minmax(0, 1fr); }
-  @container content (max-width: 1279px) {
-    .page[data-previewed] { grid-template-columns: minmax(0, 1fr); }
-  }
+  /* A section's page: a form at reading width, centered, like Shopify's settings; previews of single elements sit among its fields. */
+  .page { display: flex; justify-content: center; }
   .article { display: flex; flex-direction: column; gap: var(--space-4); width: 100%; max-width: var(--size-prose); padding: var(--space-4) 0 var(--space-8); }
-  .page:not([data-previewed]) .article { margin: 0 auto; }
+  .summaryRow { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+  .frameLink { flex: none; font-size: var(--font-size-secondary); }
   .summary { color: var(--color-text); font-weight: var(--font-weight-medium); }
   .article p { margin: 0; }
   .heading { display: flex; flex-direction: column; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
@@ -15,7 +12,17 @@
   .lede { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
   .reset { align-self: flex-start; }
 
-  .brandPreview { display: inline-flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-subtle); font-weight: var(--font-weight-medium); }
+  /* A preview of the one element a section changes: a caption, and the element on a quiet surface. */
+  .elementPreview { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; }
+  .previewCaption { color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); line-height: var(--line-height-caption); letter-spacing: var(--letter-spacing-caps); text-transform: uppercase; }
+  .previewBody { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-subtle); }
+  .headerStrip, .footerStrip { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); }
+  .headerStrip { font-weight: var(--font-weight-medium); }
+  .footerStrip { flex-wrap: wrap; justify-content: space-between; color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+  .footerLinks { text-decoration: underline; }
+  .dialogMock { display: flex; flex-direction: column; gap: var(--space-2); max-width: var(--size-dialog); margin: 0 auto; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); box-shadow: var(--shadow-menu); }
+  .dialogMockTitle { font-weight: var(--font-weight-semibold); }
+  .dialogMockSecondary { padding: var(--space-1) var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); }
   .logo { display: block; flex: none; height: var(--size-icon-lg); aspect-ratio: 132 / 28; background-color: currentColor; mask: url("/brand/jpmorgan-logo.svg") no-repeat center / contain; }
   .divider { width: 1px; height: var(--size-icon-lg); background: var(--color-border-strong); }
 
@@ -49,6 +56,13 @@
   .url { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-family: var(--font-family-mono); overflow-wrap: anywhere; }
 
   .group { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+  /* A session dialog's settings beside its preview, stacked on a narrow content column. */
+  .dialogGroup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: var(--space-4); }
+  .dialogSettings { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+  .dialogGroup .groupFields { padding-left: 0; }
+  @container content (max-width: 767px) {
+    .dialogGroup { grid-template-columns: minmax(0, 1fr); }
+  }
   .groupFields { display: flex; flex-direction: column; gap: var(--space-3); padding-left: var(--space-6); }
 
   .picker { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-subtle); }
@@ -59,9 +73,9 @@
   .moduleHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
   .moduleFields { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--size-filter), 1fr)); gap: var(--space-3); align-items: end; }
 
-  .crashPreview { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-8) var(--space-6); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); text-align: center; }
+  .crashPreview { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); text-align: center; }
   .crashTitle { font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); }
-  .crashActions { display: inline-flex; gap: var(--space-3); margin-top: var(--space-2); }
+  .crashActions { display: inline-flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-2); }
   .crashPrimary { padding: var(--space-1) var(--space-3); border-radius: var(--radius-md); background: var(--color-primary); color: var(--color-on-primary); font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); }
   .crashLink { color: var(--color-link); font-size: var(--font-size-secondary); text-decoration: underline; }
 }

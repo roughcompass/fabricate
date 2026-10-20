@@ -40,7 +40,7 @@ The configuration sections aren't a view. Each is its own page under Runtime Con
 - Runtime modules
 - Crash Error
 
-Each page is titled with the section's name and its one-line description, and offers Reset to default. Brand & identity, Design Theme, Copyright Information, and Default Session Language show the live preview beside their fields.
+Each page is a form titled with the section's name and its one-line description, and offers Reset to default. It doesn't show the whole frame. A section whose fields change something people see previews just that element beside its fields, updated as they're typed: Brand & identity the header's logo and portal name, Copyright Information the footer line, Default Session Language each session dialog with its copy, and Crash Error the crash page. Every other section is a form only. Brand & identity, Design Theme, Copyright Information, and Default Session Language link to the Experience Editor, where the frame shows the pending change.
 
 ## The header
 

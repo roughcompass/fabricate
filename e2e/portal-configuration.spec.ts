@@ -42,14 +42,14 @@ test("Sections in order, each its own Runtime Configuration page, marked current
   await expect(page.locator("[data-configuration-section='copyright']")).toContainText("Legal footer copy rendered by the Experience Frame's Footer Zone, Primary Slot.");
 });
 
-test("Brand & identity: the portal name shows beside the logo and in the preview, reaches the Experience Editor unsaved, and Reset to default restores it", async ({ page, db }) => {
+test("Brand & identity: the header preview shows the portal name beside the logo, the page has no frame preview, the change reaches the Experience Editor unsaved, and Reset to default restores it", async ({ page, db }) => {
   const access = onboardPortal(db, "Access");
   await open(page, access, "brand");
   await page.getByLabel("Portal name").fill("Digital Platform");
   await expect(page.locator("[data-brand-preview]")).toContainText("Digital Platform");
   await expect(page.locator("[data-brand-preview]").getByRole("img", { name: "J.P. Morgan" })).toBeVisible();
-  await expect(preview(page)).toContainText("Digital Platform");
-  await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Experience Editor" }).click();
+  await expect(preview(page)).toHaveCount(0);
+  await page.getByRole("link", { name: "See it in the Experience Editor" }).click();
   await expect(preview(page)).toContainText("Digital Platform");
   await expect(pending(page)).toHaveText("1 unsaved change");
   await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Brand & identity" }).click();
@@ -82,11 +82,12 @@ test("Design Theme: making Markets active and pinning a version", async ({ page,
   await expect(page.getByRole("button", { name: "Configure Payments" })).toBeDisabled();
 });
 
-test("Copyright: the footer shows the new text in the preview beside it", async ({ page, db }) => {
+test("Copyright: the footer preview reads the new text, and the page has no frame preview", async ({ page, db }) => {
   const access = onboardPortal(db, "Access");
   await open(page, access, "copyright");
   await page.getByLabel("Copyright information").fill("© 2026 JPMorgan Chase & Co. Member FDIC.");
-  await expect(preview(page).locator("[data-slot='primary']")).toHaveText("© 2026 JPMorgan Chase & Co. Member FDIC.");
+  await expect(page.locator("[data-copyright-preview]")).toContainText("© 2026 JPMorgan Chase & Co. Member FDIC.");
+  await expect(preview(page)).toHaveCount(0);
 });
 
 test("Routing: the live preview follows the base path, landing path, and mode, and Lock base path makes it read-only", async ({ page, db }) => {
@@ -110,7 +111,8 @@ test("Session language and policy: custom copy reaches the dialog preview, the r
   await open(page, access, "session-language");
   await page.getByLabel("Change session inactivity alert language").check();
   await page.getByLabel("Dialog title").fill("Still there?");
-  await expect(preview(page)).toContainText("Still there?");
+  await expect(page.locator("[data-dialog-preview='inactivity']")).toContainText("Still there?");
+  await expect(preview(page)).toHaveCount(0);
 
   await page.goto(sectionOf(access, "routing"));
   await waitForHydration(page);
