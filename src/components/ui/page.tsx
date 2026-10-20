@@ -12,7 +12,7 @@ import styles from "./page.module.css";
  * width, and everything else is centered at the page's measure. `busy` marks
  * a loading skeleton.
  */
-export function Page({ width = "content", busy = false, children }: { width?: "content" | "form"; busy?: boolean; children: React.ReactNode }) {
+export function Page({ width = "content", busy = false, children }: { width?: "content" | "form" | "full"; busy?: boolean; children: React.ReactNode }) {
   return (
     <div className={styles.page} data-width={width} aria-busy={busy || undefined} aria-label={busy ? "Loading" : undefined}>
       {children}

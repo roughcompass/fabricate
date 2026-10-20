@@ -33,7 +33,7 @@ import {
   returnToPrototypeAction,
   setDefaultAction,
 } from "../actions";
-import { navigationCrumbs, navigationHref } from "../paths";
+import { editorHref, navigationCrumbs, navigationHref } from "../paths";
 import { AddGroupForm, AddItemForm, type Choice, MoveIntoForm, RenameForm } from "./menu-forms";
 import styles from "./navigation.module.css";
 
@@ -269,6 +269,7 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
         status={<Status state={portal.lifecycle} />}
         meta={portal.ownerTeam ? [`Owned by ${portal.ownerTeam}`] : undefined}
         primaryAction={lifecycleAction ?? undefined}
+        secondaryActions={[{ href: editorHref(portal.publicId), label: "Open experience editor", icon: "frame" }]}
         extraActions={
           portal.lifecycle === "production" ? (
             <ConfirmDialog action={returnToPrototypeAction.bind(null, portal.publicId)} fields={{ lockVersion }} trigger={{ label: "Return to Prototype", icon: "undo" }} title={`Return ${portal.label} to Prototype?`} confirmLabel="Return to Prototype">

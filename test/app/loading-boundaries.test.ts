@@ -44,6 +44,8 @@ describe("navigation skeletons", () => {
     ["/navigation", "list"],
     ["/navigation/new", "form"],
     ["/navigation/ptl_abc/edit", "form"],
+    ["/navigation/ptl_abc/editor/frame-zones", "focused"],
+    ["/navigation/ptl_abc/editor/configuration/favicon", "focused"],
     ["/applications/wap_abc/edit", "form"],
     ["/navigation/ptl_abc", "detail"],
   ])("shows the %s page's skeleton as %s", (pathname, kind) => {

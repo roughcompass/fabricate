@@ -12,6 +12,8 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   // Navigation: the list of Portals, New Portal, and each Portal's page.
   [/^\/navigation\/?$/, "list"],
   [/^\/navigation\/new\/?$/, "form"],
+  // A Portal's experience editor is a focused workspace.
+  [/^\/navigation\/[^/]+\/editor(\/.*)?$/, "focused"],
   // A Portal's and an Application's Edit details.
   [/^\/(navigation|applications)\/[^/]+\/edit\/?$/, "form"],
   [/^\/navigation\/[^/]+\/?$/, "detail"],

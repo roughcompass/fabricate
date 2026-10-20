@@ -1,0 +1,20 @@
+@layer components {
+  .deviceButton, .iconButton { display: inline-grid; place-items: center; width: var(--size-control-sm); height: var(--size-control-sm); padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-text-secondary); cursor: pointer; }
+  .deviceButton:hover, .iconButton:hover:not(:disabled) { background: var(--color-bg-muted); color: var(--color-text); }
+  .deviceButton[aria-pressed="true"] { background: var(--color-bg-selected); color: var(--color-text); }
+  .iconButton:disabled { color: var(--color-text-tertiary); cursor: not-allowed; }
+  .iconButton[aria-pressed="false"] { color: var(--color-text-tertiary); }
+  .deviceButton:focus-visible, .iconButton:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+
+  .section { display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .section + .section { padding-top: var(--space-4); }
+  .section:last-child { border-bottom: 0; }
+  .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .sectionTitle { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); letter-spacing: var(--letter-spacing-caps); line-height: var(--line-height-caption); text-transform: uppercase; }
+  .sectionBody { display: flex; flex-direction: column; gap: var(--space-3); }
+  .note { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+
+  .nothing { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-6) var(--space-2); color: var(--color-text-secondary); text-align: center; }
+  .nothing p { margin: 0; }
+  .nothingTitle { color: var(--color-text); font-weight: var(--font-weight-semibold); }
+}
