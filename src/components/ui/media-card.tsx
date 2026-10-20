@@ -11,6 +11,8 @@ interface MediaCardProps {
   /** Tags and badges under the description. */
   footer?: React.ReactNode;
   headingLevel?: 2 | 3;
+  /** A shorter preview, so four cards fit a row with the rest of the page above them. */
+  compact?: boolean;
 }
 
 /**
@@ -19,10 +21,10 @@ interface MediaCardProps {
  * cropped by the card's lower edge. The title link covers the whole card, so
  * selecting anywhere opens the record while the link stays the only focus stop.
  */
-export function MediaCard({ title, description, image, href, footer, headingLevel = 3 }: MediaCardProps) {
+export function MediaCard({ title, description, image, href, footer, headingLevel = 3, compact = false }: MediaCardProps) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
-    <article className={styles.card} aria-disabled={href ? undefined : true}>
+    <article className={styles.card} aria-disabled={href ? undefined : true} data-compact={compact ? "" : undefined}>
       <div className={styles.body}>
         <Heading className={styles.title}>
           {href ? (

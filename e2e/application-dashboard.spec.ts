@@ -167,7 +167,7 @@ test.describe("a registered Application's dashboard", () => {
 });
 
 test.describe("layout", () => {
-  test("At 1440px the checklist, Observability, and Analytics sit in one row", async ({ page, db, sourcesDir }) => {
+  test("At 1440px the checklist, Observability, and Analytics sit in one row at equal heights (Layout)", async ({ page, db, sourcesDir }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const { application } = payeeHub(db, sourcesDir);
     await page.goto(`/applications/${application.publicId}`);
@@ -175,6 +175,8 @@ test.describe("layout", () => {
     expect(new Set(boxes.map((box) => Math.round(box.y))).size).toBe(1);
     expect(boxes[1]!.x).toBeGreaterThan(boxes[0]!.x);
     expect(boxes[2]!.x).toBeGreaterThan(boxes[1]!.x);
+    // As tall as the tallest, the checklist.
+    expect(new Set(boxes.map((box) => Math.round(box.height))).size).toBe(1);
   });
 
   test("At 375px they stack, and nothing overflows", async ({ page, db, sourcesDir }) => {

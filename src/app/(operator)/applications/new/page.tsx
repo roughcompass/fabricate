@@ -111,6 +111,7 @@ export default async function AddApplicationPage({ searchParams }: { searchParam
                   href={`/applications/new/create?${new URLSearchParams({ starter: starter.slug, from: "new" })}`}
                   footer={<Tag sans>{STARTER_KIND_LABELS[starter.kind]}</Tag>}
                   headingLevel={3}
+                  compact
                 />
               </li>
             ))}

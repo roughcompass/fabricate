@@ -213,3 +213,32 @@ test.describe("without JavaScript", () => {
     await expect(page).toHaveURL(new RegExp(`/portals/${markets.publicId}$`));
   });
 });
+
+// update-portal-management-journey task 6.3: names never wrap.
+test("Long name: the switcher keeps the name on one line with an ellipsis and its full text on hover, in the trigger and the list (Long name, Long name in the list)", async ({ page, db, baseURL }) => {
+  const portal = onboardPortal(db, "Global Corporate Treasury Operations Portal");
+  await page.context().addCookies([{ name: "fabricate-portal", value: portal.publicId, url: baseURL! }]);
+  await page.goto("/applications");
+  await waitForHydration(page);
+  const name = trigger(page).locator("[class*='entryLabel']");
+  await expect(name).toHaveText("Global Corporate Treasury Operations Portal");
+  const oneLine = (element: HTMLElement) => {
+    const style = getComputedStyle(element);
+    return { lines: Math.round(element.getBoundingClientRect().height / Number.parseFloat(style.lineHeight)), truncated: element.scrollWidth > element.clientWidth, ellipsis: style.textOverflow };
+  };
+  expect(await name.evaluate(oneLine)).toEqual({ lines: 1, truncated: true, ellipsis: "ellipsis" });
+  await expect(trigger(page)).toHaveAttribute("title", "Global Corporate Treasury Operations Portal");
+  await expect(trigger(page)).toHaveAccessibleName("Switch Portal, current: Global Corporate Treasury Operations Portal, Prototype");
+  await expect(trigger(page)).toContainText("Web");
+  await expect(trigger(page)).toContainText("Prototype");
+
+  await trigger(page).click();
+  const entry = list(page).getByRole("button", { name: /^Global Corporate Treasury/ });
+  const label = entry.locator("[class*='entryLabel']");
+  expect((await label.evaluate(oneLine)).lines).toBe(1);
+  await expect(label).toHaveAttribute("title", "Global Corporate Treasury Operations Portal");
+  const [entryBox, tagBox] = await Promise.all([entry.boundingBox(), entry.getByText("Web", { exact: true }).boundingBox()]);
+  // The tag and badge stay whole, inside the entry.
+  expect(tagBox!.x + tagBox!.width).toBeLessThanOrEqual(entryBox!.x + entryBox!.width);
+  expect(await entry.getByText("Web", { exact: true }).evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+});

@@ -11,8 +11,8 @@
   .facts li { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
   .evidence { display: flex; flex-wrap: wrap; gap: var(--space-2); font-family: var(--font-family-mono); overflow-wrap: anywhere; }
 
-  /* The checklist, Observability, and Analytics side by side, stacking on a narrow content area. */
-  .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
+  /* The checklist, Observability, and Analytics side by side at equal heights, as tall as the tallest, stacking on a narrow content area. */
+  .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); align-items: stretch; }
   @container content (max-width: 1023px) {
     .row { grid-template-columns: minmax(0, 1fr); }
   }

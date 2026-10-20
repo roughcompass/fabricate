@@ -86,15 +86,22 @@ test.describe("Add application", () => {
       const [first, second] = [(await starters(page).nth(0).boundingBox())!, (await starters(page).nth(1).boundingBox())!];
       expect(second.y).toBeGreaterThan(first.y + first.height - 1);
       expect(Math.abs(second.x - first.x)).toBeLessThan(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
   });
 
-  test("Two columns at 1280px", async ({ page, db: _db }) => {
-    await page.goto("/applications/new");
-    const [first, second] = [(await starters(page).nth(0).boundingBox())!, (await starters(page).nth(1).boundingBox())!];
-    expect(Math.abs(second.y - first.y)).toBeLessThan(1);
-    expect(second.x).toBeGreaterThan(first.x);
-  });
+  for (const width of [1280, 1440]) {
+    test(`One row: the four starters sit side by side at ${width}px, and the prompt bar, the heading, and the cards fit the first screen (One row)`, async ({ page, db: _db }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/applications/new");
+      const boxes = await starters(page).evaluateAll((items) => items.map((item) => item.getBoundingClientRect()).map((rect) => ({ top: Math.round(rect.top), bottom: rect.bottom, left: rect.left })));
+      expect(boxes).toHaveLength(4);
+      expect(new Set(boxes.map((box) => box.top)).size).toBe(1);
+      expect(boxes.map((box) => box.left)).toEqual([...boxes.map((box) => box.left)].sort((a, b) => a - b));
+      expect(Math.max(...boxes.map((box) => box.bottom))).toBeLessThanOrEqual(900);
+      await expect(page.getByRole("heading", { name: "Build your solution" })).toBeInViewport();
+    });
+  }
 
   test.describe("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });

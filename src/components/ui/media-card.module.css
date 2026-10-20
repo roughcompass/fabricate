@@ -53,6 +53,8 @@
    * changes size.
    */
   .media { position: relative; flex: 1 0 auto; aspect-ratio: 16 / 10; margin-top: auto; overflow: hidden; background: var(--color-bg-subtle); }
+  /* A compact card shows the top of the preview in a shorter area. */
+  .card[data-compact] .media { aspect-ratio: 2 / 1; }
   .frame {
     position: absolute;
     top: 0;
