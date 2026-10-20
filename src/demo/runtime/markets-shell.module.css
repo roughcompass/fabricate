@@ -27,6 +27,7 @@
     &:focus-visible { outline: 2px solid var(--rt-color-accent); outline-offset: 2px; border-radius: var(--rt-radius-control); }
   }
   .wordmarkName { font-family: var(--rt-font-family-display); font-weight: var(--font-weight-semibold); }
+  .logo { display: block; height: var(--space-5); width: auto; }
   .wordmarkProduct { font-weight: var(--font-weight-regular); }
 
   /* Primary tabs, marked along their top edge. */

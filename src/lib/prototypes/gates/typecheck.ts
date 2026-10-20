@@ -22,6 +22,20 @@ export const PORTAL_DECLARATIONS = `declare module "@deweb/portal" {
   export interface PortalRoute { readonly path: string; readonly label: string; readonly href: string }
   export interface PortalRoutes { readonly current: PortalRoute; readonly routes: readonly PortalRoute[] }
   export interface PortalApplication { readonly name: string; readonly portal: string; readonly environment: string | null }
+  export interface PortalMenuEntry { readonly id: string; readonly parentId: string | null; readonly kind: "group" | "item"; readonly label: string; readonly route: string | null }
+  export interface PortalBanner { readonly title: string; readonly description: string; readonly severity: "info" | "warning" | "error"; readonly dismissible: boolean }
+  export interface PortalExperience {
+    readonly portalName: string;
+    readonly logo: { readonly light: string; readonly dark: string; readonly alt: string };
+    readonly logoLinksHome: boolean;
+    readonly banner: PortalBanner | null;
+    readonly headerSlots: readonly string[];
+    readonly search: { readonly placeholder: string; readonly shortcut: string } | null;
+    readonly notifications: { readonly title: string; readonly showUnread: boolean } | null;
+    readonly sidebar: { readonly shown: boolean; readonly menuType: "left" | "flyout"; readonly slots: readonly string[] };
+    readonly menu: readonly PortalMenuEntry[];
+    readonly footer: { readonly shown: boolean; readonly slots: readonly string[]; readonly copyright: string };
+  }
   export interface Planted { blockMainThread(ms: number): void }
   export function useBus(topic: string, member: string, handler: (payload: unknown) => void): void;
   export function usePublish(member: string): (topic: string, payload: unknown) => void;
@@ -30,6 +44,7 @@ export const PORTAL_DECLARATIONS = `declare module "@deweb/portal" {
   export function routeHref(route: PortalRoute): string;
   export function useNavigate(): (route: PortalRoute) => void;
   export function useApplication(): PortalApplication;
+  export function useExperience(): PortalExperience;
   export const planted: Planted;
 }
 `;

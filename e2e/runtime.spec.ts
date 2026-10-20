@@ -9,11 +9,14 @@ const ACCESS = "J.P. Morgan Access";
 const MARKETS = "J.P. Morgan Markets";
 
 const HEROES = [
-  { slug: "payments-workspace", shell: "access", portal: ACCESS, planted: "payee-list", fixed: "2.0.0", slow: "Recalculate totals" },
-  { slug: "client-onboarding", shell: "access", portal: ACCESS, planted: "kyc-checklist", fixed: "3.3.0", slow: "Verify all documents" },
-  { slug: "market-watch", shell: "markets", portal: MARKETS, planted: "watchlist", fixed: "1.9.0", slow: "Recalculate exposure" },
-  { slug: "operations-console", shell: "access", portal: ACCESS, planted: "incident-feed", fixed: "6.1.0", slow: "Check for conflicts" },
+  { slug: "payments-workspace", shell: "access", portal: ACCESS, name: "Access", planted: "payee-list", fixed: "2.0.0", slow: "Recalculate totals" },
+  { slug: "client-onboarding", shell: "access", portal: ACCESS, name: "Access", planted: "kyc-checklist", fixed: "3.3.0", slow: "Verify all documents" },
+  { slug: "market-watch", shell: "markets", portal: MARKETS, name: "Markets", planted: "watchlist", fixed: "1.9.0", slow: "Recalculate exposure" },
+  { slug: "operations-console", shell: "access", portal: ACCESS, name: "Access", planted: "incident-feed", fixed: "6.1.0", slow: "Check for conflicts" },
 ] as const;
+
+/** The link home: the J.P. Morgan logo image, then the portal name. */
+const home = (page: Page, portal: string) => page.getByRole("link", { name: portal, exact: true });
 
 /** Whether an element lies entirely inside the viewport horizontally. */
 async function fullyVisible(page: Page, locator: ReturnType<Page["locator"]>): Promise<boolean> {
@@ -42,9 +45,12 @@ test.describe("portal shells", () => {
       const portal = page.locator("[data-demo-portal]");
       await expect(portal).toHaveAttribute("data-brand", template.brand);
       await expect(portal).toHaveAttribute("data-shell", hero.shell);
-      // A plain-text wordmark: no logo images.
-      await expect(page.getByRole("link", { name: `${hero.portal} home` })).toBeVisible();
-      await expect(page.getByRole("link", { name: `${hero.portal} home` }).locator("img, svg")).toHaveCount(0);
+      // The J.P. Morgan logo, served from DE FabLab, then the portal name; "J.P. Morgan" is never printed as text.
+      await expect(home(page, hero.portal)).toBeVisible();
+      await expect(home(page, hero.portal).getByRole("img", { name: "J.P. Morgan" })).toHaveAttribute("src", "/brand/jpmorgan-logo.svg");
+      await expect(home(page, hero.portal)).toContainText(hero.name);
+      await expect(page.locator('[data-demo-anchor="portal-header"]')).not.toContainText("J.P. Morgan");
+      await expect(page.locator('[data-demo-anchor="portal-header"]')).not.toContainText("J.P.Morgan");
       await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
       const navigation = page.getByRole("navigation", { name: `${hero.portal} navigation` });
       for (const route of template.app.routes) await expect(navigation.getByRole("link", { name: route.label })).toBeVisible();
@@ -56,7 +62,8 @@ test.describe("portal shells", () => {
       await page.keyboard.press("Escape");
       await expect(headerPanel(page, hero.shell, "User menu for Jordan Lee")).toHaveCount(0);
       await expect(user).toBeFocused();
-      await expect(page.getByRole("contentinfo")).toContainText(`An illustrative ${hero.portal} shell for the template demo.`);
+      await expect(page.getByRole("contentinfo")).toContainText(`An illustrative ${hero.name} shell for the template demo.`);
+      await expect(page.getByRole("contentinfo")).toContainText(/© \d{4} JPMorgan Chase & Co\. All rights reserved\./);
       await expect(page.getByRole("contentinfo")).toContainText("Environment: Production");
       expect(await page.locator("[data-demo-mfe]").count()).toBeGreaterThanOrEqual(3);
     });
@@ -78,7 +85,7 @@ test.describe("portal shells", () => {
     await expect(navigation.getByText("Statements")).toBeVisible();
 
     const crumbs = page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("listitem");
-    await expect(crumbs).toHaveText([ACCESS, "Payments workspace", "Activity"]);
+    await expect(crumbs).toHaveText(["Access", "Payments workspace", "Activity"]);
     await expect(crumbs.last()).toHaveAttribute("aria-current", "page");
     // The portal has no page of its own in the demo, so its crumb is text, not a link.
     await expect(crumbs.first().getByRole("link")).toHaveCount(0);
@@ -90,12 +97,28 @@ test.describe("portal shells", () => {
       await page.setViewportSize({ width, height: 800 });
       await page.goto("/run/ref-client-onboarding");
       await waitForRegions(page);
-      for (const name of ["Search", "Notifications", "Help"]) expect(await fullyVisible(page, page.getByRole("button", { name, exact: true })), name).toBe(true);
+      for (const name of ["Help", "Feedback"]) expect(await fullyVisible(page, page.getByRole("button", { name, exact: true })), name).toBe(true);
       expect(await fullyVisible(page, page.getByRole("button", { name: /Jordan Lee/ }))).toBe(true);
-      expect(await fullyVisible(page, page.getByRole("link", { name: `${ACCESS} home` }))).toBe(true);
+      expect(await fullyVisible(page, home(page, ACCESS))).toBe(true);
       await expectNoHorizontalOverflow(page);
     });
   }
+
+  test("opens the Access menu with a workspace switcher, Settings, and Collapse, which narrows it to icons", async ({ page, db: _db }) => {
+    await page.goto("/run/ref-payments-workspace");
+    await waitForRegions(page);
+    const navigation = page.getByRole("navigation", { name: `${ACCESS} navigation` });
+    await expect(navigation.getByRole("combobox", { name: "Workspace" })).toHaveText("Corporate Banking");
+    await expect(navigation.getByRole("button", { name: "Settings" })).toBeVisible();
+    const menu = page.locator('[data-demo-anchor="portal-menu"]');
+    const wide = (await menu.boundingBox())!.width;
+    await navigation.getByRole("button", { name: "Collapse" }).click();
+    await expect(navigation.getByRole("button", { name: "Expand menu" })).toBeVisible();
+    await expect(navigation.getByRole("button", { name: "Home" })).toBeVisible();
+    expect((await menu.boundingBox())!.width).toBeLessThan(wide / 2);
+    await navigation.getByRole("button", { name: "Expand menu" }).click();
+    await expect(navigation.getByRole("link", { name: "Activity" })).toBeVisible();
+  });
 
   test("collapses the Access navigation on wide screens and makes it a drawer on narrow ones", async ({ page, db: _db }) => {
     await page.goto("/run/ref-payments-workspace");
@@ -111,7 +134,8 @@ test.describe("portal shells", () => {
     const menu = page.getByRole("button", { name: "Show navigation" });
     await menu.click();
     await expect(navigation).toBeVisible();
-    await expect(navigation.getByRole("link", { name: "Home" })).toBeFocused();
+    // The drawer opens on its first control, the workspace switcher.
+    await expect(navigation.getByRole("combobox", { name: "Workspace" })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(navigation).toBeHidden();
     await expect(menu).toBeFocused();
@@ -125,7 +149,14 @@ test.describe("portal shells", () => {
     await page.goto("/run/ref-market-watch");
     await waitForRegions(page);
     await expect(page.getByRole("navigation", { name: `${MARKETS} sections` }).getByRole("link", { name: "Market watch" })).toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("button", { name: "Switch applications" })).toBeVisible();
+    const openMenu = page.getByRole("button", { name: "Open menu" });
+    await openMenu.click();
+    const flyout = page.getByRole("navigation", { name: `${MARKETS} menu` });
+    await expect(flyout.getByRole("link", { name: "Home" })).toBeVisible();
+    await expect(flyout.getByRole("link", { name: "Watch" })).toHaveAttribute("aria-current", "page");
+    await page.keyboard.press("Escape");
+    await expect(flyout).toBeHidden();
+    await expect(openMenu).toBeFocused();
     const tabs = page.getByRole("navigation", { name: `${MARKETS} navigation` });
     await tabs.getByRole("link", { name: "Blotter" }).click();
     await expect(page).toHaveURL(/\/run\/ref-market-watch\/blotter$/);
@@ -140,7 +171,7 @@ test.describe("portal shells", () => {
     const [band, surface] = await title.evaluate((element) => [getComputedStyle(element.parentElement!.parentElement!).backgroundColor, getComputedStyle(document.querySelector('[data-demo-anchor="portal-header"]')!).backgroundColor]);
     expect(band).not.toBe(surface);
     const footer = page.getByRole("contentinfo");
-    await expect(footer).toContainText("J.P.Morgan");
+    await expect(footer.getByRole("img", { name: "J.P. Morgan" })).toBeVisible();
     // Placeholder portal links: the legal entries are plain text, not links.
     for (const entry of ["Terms of Use", "Disclosures", "Security", "Privacy", "Cookies Policy", "Contact Us"]) await expect(footer.getByText(entry, { exact: true })).toBeVisible();
     await expect(footer.getByRole("link")).toHaveCount(0);
@@ -167,7 +198,7 @@ test.describe("portal shells", () => {
       await page.goto(`/run/ref-${hero.slug}`);
       await waitForRegions(page);
       await setView(page, { overrides: { [hero.planted]: { version: hero.fixed, environment: "production" } } });
-      const menus = ["Search", "Notifications", "Help", ...(hero.shell === "markets" ? ["Switch applications"] : [])];
+      const menus = ["Help", "Feedback"];
       for (const name of [...menus, "User menu for Jordan Lee"]) {
         const control = name.startsWith("User menu") ? page.getByRole("button", { name: /Jordan Lee/ }) : page.getByRole("button", { name, exact: true });
         await control.click();
@@ -213,7 +244,7 @@ test.describe("scripted loading", () => {
     for (let visit = 0; visit < 3; visit++) {
       await page.goto("/run/ref-payments-workspace");
       // The shell is visible before any region has loaded.
-      await expect(page.getByRole("link", { name: `${ACCESS} home` })).toBeVisible();
+      await expect(home(page, ACCESS)).toBeVisible();
       await waitForRegions(page);
       orders.push(await page.evaluate(() => (window as unknown as { __readyOrder: string[] }).__readyOrder));
     }
@@ -320,7 +351,7 @@ test.describe("lighter templates", () => {
     await page.goto("/run/ref-corporate-card-controls");
     await waitForRegions(page);
     await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-brand", "payments");
-    await expect(page.getByRole("link", { name: `${ACCESS} home` })).toBeVisible();
+    await expect(home(page, ACCESS)).toBeVisible();
     await expect(page.locator("[data-demo-mfe]")).toHaveCount(2);
     await expect(region(page, "overview").getByRole("heading", { name: "Corporate card controls" })).toBeVisible();
     await region(page, "overview").getByRole("button").first().click();

@@ -1,6 +1,7 @@
 import type { EnvironmentId, Profile } from "@/lib/demo/catalog";
 import type { ShareState } from "@/lib/demo/shares";
 import type { HintState } from "@/lib/demo/workspaces";
+import type { PortalExperience } from "./portal/types";
 
 /**
  * Everything the browser needs to run one view of an application, resolved on
@@ -30,4 +31,10 @@ export interface RuntimeDescriptor {
   readonly status: "ready" | "building";
   /** The application's page in Fabricate, or its template's page for a reference deployment or a shared view. */
   readonly pageHref: string;
+  /** The Portal the application is opened for, kept in every route's address; null for none. */
+  readonly portalId: string | null;
+  /** The shell the experience's theme uses, which can differ from the brand's for a Portal. */
+  readonly shell: "access" | "markets";
+  /** That Portal's saved experience, or the default one. */
+  readonly experience: PortalExperience;
 }

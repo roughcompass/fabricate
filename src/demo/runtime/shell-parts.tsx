@@ -2,7 +2,6 @@
 
 import { SaltProviderNext } from "@salt-ds/core";
 import { useEffect, useId, useRef, useState } from "react";
-import { BRANDS } from "@/lib/demo/catalog";
 import { Icon, type IconName } from "./members/icons";
 import { useEmbedded, useProfile, useRuntime, useViewState } from "./runtime-context";
 import styles from "./shell-parts.module.css";
@@ -40,7 +39,7 @@ export function PortalRoot({ className, children }: { className?: string; childr
         className={className}
         data-demo-portal=""
         data-brand={template.brand}
-        data-shell={BRANDS[template.brand].shell}
+        data-shell={descriptor.shell}
         data-theme={theme}
         data-demo-app-root=""
         data-demo-view-key={descriptor.viewKey}

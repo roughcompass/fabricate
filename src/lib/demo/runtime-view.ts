@@ -1,8 +1,10 @@
 import type { RuntimeDescriptor } from "@/demo/runtime/descriptor";
+import { catalogs } from "@/lib/experience/catalogs";
 import { type DemoView, viewApplicationId, viewTemplate } from "./access";
 import { buildProgress } from "./build";
 import type { Profile } from "./catalog";
 import { applicationUrl, buildScriptFor, referenceUrl } from "./deployments";
+import { type RuntimeExperience, defaultRuntimeExperience } from "./runtime-experience";
 import type { Workspace } from "./workspaces";
 
 /** The cookie that remembers a share link's token for one application (design.md, decision 11). */
@@ -12,11 +14,13 @@ export function shareCookieName(applicationId: string): string {
 
 /**
  * What the browser needs to run a view, or null when the view's template no
- * longer exists. `profiles` are the visiting workspace's own session profiles.
+ * longer exists. `profiles` are the visiting workspace's own session profiles;
+ * `portal` is the experience it renders, the brand's default without one.
  */
-export function runtimeDescriptor(view: DemoView, visitor: Workspace | null, shareToken: string | null, profiles: readonly Profile[] = [], now = Date.now()): RuntimeDescriptor | null {
+export function runtimeDescriptor(view: DemoView, visitor: Workspace | null, shareToken: string | null, profiles: readonly Profile[] = [], portal: RuntimeExperience | null = null, now = Date.now()): RuntimeDescriptor | null {
   const template = viewTemplate(view.target);
   if (!template) return null;
+  const { portalId, shell, experience } = portal ?? defaultRuntimeExperience(template.brand, catalogs(), new Date(now));
   const applicationId = viewApplicationId(view.target);
   const application = view.target.kind === "application" ? view.target.application : null;
   return {
@@ -35,5 +39,8 @@ export function runtimeDescriptor(view: DemoView, visitor: Workspace | null, sha
     status: application && buildProgress(buildScriptFor(application, template), application.createdAt.getTime(), now, application.buildSkippedAt?.getTime() ?? null).status === "building" ? "building" : "ready",
     // Only the owner can open an application's page; everyone else goes to the template.
     pageHref: application && view.access === "owner" ? `/applications/${application.publicId}` : `/templates/${template.slug}`,
+    portalId,
+    shell,
+    experience,
   };
 }

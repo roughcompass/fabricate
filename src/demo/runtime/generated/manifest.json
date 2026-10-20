@@ -1575,7 +1575,8 @@
         "model": "anthropic/claude-opus-5.5",
         "generationId": "gen_573pj7esz0c7l9dg",
         "edits": [
-          "Hand edit, 2026-10-16: on narrow screens the user menu button shows only the avatar, because the name and persona pushed the header 39 pixels past a 375-pixel viewport."
+          "Hand edit, 2026-10-16: on narrow screens the user menu button shows only the avatar, because the name and persona pushed the header 39 pixels past a 375-pixel viewport.",
+          "Hand edit, 2026-10-19 (add-portal-experience-editor): the shell reads useExperience(): the J.P. Morgan logo image and portal name, the banner, the header slots in order with Global Search and Notifications only when installed and Feedback beside Help, a workspace switcher, the Portal's menu nested with icons, Settings and Collapse to icons, the flyout menu type, and the footer's slots with the copyright."
         ]
       }
     },
@@ -1622,7 +1623,8 @@
         "model": "anthropic/claude-opus-5.5",
         "generationId": "gen_c6ajben1t2i8cmf2",
         "edits": [
-          "Hand edit, 2026-10-16: the top bar's sections navigation may shrink and scrolls inside itself, and both navigation rows are marked as sideways scrollers, because at 375 pixels it widened the page."
+          "Hand edit, 2026-10-16: the top bar's sections navigation may shrink and scrolls inside itself, and both navigation rows are marked as sideways scrollers, because at 375 pixels it widened the page.",
+          "Hand edit, 2026-10-19 (add-portal-experience-editor): the shell reads useExperience(): the J.P. Morgan logo image and portal name in the top bar and footer, a menu control opening the flyout menu in place of the application switcher, the banner, the header slots in order with Global Search and Notifications only when installed and Feedback beside Help, and the footer's slots with the copyright."
         ]
       }
     }

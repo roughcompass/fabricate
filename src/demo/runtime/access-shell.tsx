@@ -44,7 +44,7 @@ function NavGroup({ icon, label, defaultOpen = false, children }: { icon: IconNa
 /**
  * The J.P. Morgan Access shell, for Payments, Global Banking, and Other
  * applications (portal-runtime spec): a white header with the menu control,
- * the text wordmark, and, at its right end, search, notifications, help, and
+ * the J.P. Morgan logo and portal name, and, at its right end, search, notifications, help, and
  * the user menu; a left navigation with Home, the application's routes,
  * Reports and Insights, and Support Hub; and breadcrumbs above the page title.
  * On narrow screens the navigation is a drawer the menu control opens.
@@ -88,8 +88,9 @@ export function AccessShell({ children }: { children: React.ReactNode }) {
         >
           <Icon name="menu" size={20} />
         </button>
-        <Link href={routeHref(start)} className={styles.wordmark} aria-label={`${brand.portalName} home`}>
-          <span className={styles.wordmarkName}>J.P.Morgan</span>
+        <Link href={routeHref(start)} className={styles.wordmark}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG from DE FabLab\'s own origin */}
+          <img className={styles.logo} src="/brand/jpmorgan-logo.svg" alt="J.P. Morgan" />
           <span className={styles.wordmarkDivider} aria-hidden="true" />
           <span className={styles.wordmarkProduct}>Access</span>
         </Link>

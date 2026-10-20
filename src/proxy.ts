@@ -2,6 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getConfig } from "@/lib/config";
 import { WORKSPACE_COOKIE, WORKSPACE_COOKIE_MAX_AGE, isWorkspaceKey, newWorkspaceKey } from "@/lib/demo/workspace-key";
 
+/** The request header the run layout reads ?portal= from; the same name as PORTAL_HEADER in lib/demo/runtime-experience.ts, kept here so the proxy imports nothing from the database layer. */
+const PORTAL_HEADER = "x-fabricate-portal";
+const PORTAL_ID = /^ptl_[a-z0-9]{16}$/;
+
 /**
  * Two jobs at DE FabLab's edge.
  *
@@ -12,6 +16,11 @@ import { WORKSPACE_COOKIE, WORKSPACE_COOKIE_MAX_AGE, isWorkspaceKey, newWorkspac
  * the demo creates its workspace row on the first write, and Prototypes on
  * its first request. Every page and endpoint checks its area's switch
  * itself, so a cookie issued while an area is disabled has no effect.
+ *
+ * It also hands a running application's ?portal= to its layout, which
+ * doesn't receive the query, in a request header it sets only from the
+ * query, never from the visitor (add-portal-experience-editor, design
+ * decision 8).
  *
  * In the hosted profile (Prototypes design.md, decision 4), it answers not
  * found for everything outside Prototypes, and sends / to /prototypes.
@@ -29,13 +38,17 @@ export function proxy(request: NextRequest): NextResponse {
     if (pathname === "/") return NextResponse.redirect(new URL("/prototypes", request.url));
     if (!HOSTED_PATHS.test(pathname)) return new NextResponse("Not found", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
-  if (!WORKSPACE_PATHS.test(pathname) || isWorkspaceKey(request.cookies.get(WORKSPACE_COOKIE)?.value)) return NextResponse.next();
+  const headers = new Headers(request.headers);
+  const portal = pathname.startsWith("/run/") ? request.nextUrl.searchParams.get("portal") : null;
+  const forwardsPortal = headers.has(PORTAL_HEADER) || Boolean(portal);
+  headers.delete(PORTAL_HEADER);
+  if (portal && PORTAL_ID.test(portal)) headers.set(PORTAL_HEADER, portal);
+  if (!WORKSPACE_PATHS.test(pathname) || isWorkspaceKey(request.cookies.get(WORKSPACE_COOKIE)?.value)) return forwardsPortal ? NextResponse.next({ request: { headers } }) : NextResponse.next();
 
   const key = newWorkspaceKey();
   // Forward the new cookie on this request too, so the page being rendered
   // already sees the workspace.
   request.cookies.set(WORKSPACE_COOKIE, key);
-  const headers = new Headers(request.headers);
   headers.set("cookie", request.cookies.toString());
 
   const response = NextResponse.next({ request: { headers } });

@@ -76,7 +76,12 @@ export function useCurrentRoute(): AppRoute {
 }
 
 export function routeHref(descriptor: RuntimeDescriptor, route: AppRoute, embedded = false): string {
-  return `/run/${descriptor.applicationId}/${route.path}${embedded ? `?${EMBED_PARAM}=1` : ""}`;
+  // The Portal stays in every address, so navigation keeps its experience.
+  const query = new URLSearchParams();
+  if (descriptor.portalId) query.set("portal", descriptor.portalId);
+  if (embedded) query.set(EMBED_PARAM, "1");
+  const search = query.toString();
+  return `/run/${descriptor.applicationId}/${route.path}${search ? `?${search}` : ""}`;
 }
 
 /** Preview mode frames the application with ?embed=1, which hides the toolbar and the hints (design.md, decision 19). */

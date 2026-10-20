@@ -5,9 +5,9 @@ import { BRANDS } from "@/lib/demo/catalog";
 import { blockMainThread } from "../members/planted";
 import { useBusSubscription, useCurrentRoute, useProfile as useRuntimeProfile, usePublish as useRuntimePublish, useRouteHref, useRuntime } from "../runtime-context";
 import { ENVIRONMENT_LABELS } from "../shell-parts";
-import type { Planted, PortalApplication, PortalProfile, PortalRoute, PortalRoutes } from "./types";
+import type { Planted, PortalApplication, PortalExperience, PortalProfile, PortalRoute, PortalRoutes } from "./types";
 
-export type { Planted, PortalApplication, PortalProfile, PortalRoute, PortalRoutes } from "./types";
+export type { Planted, PortalApplication, PortalBanner, PortalExperience, PortalMenuEntry, PortalProfile, PortalRoute, PortalRoutes } from "./types";
 
 /*
  * `@deweb/portal` in the running portal (design decision 5): each call is the
@@ -56,6 +56,11 @@ export function useNavigate(): (route: PortalRoute) => void {
 export function useApplication(): PortalApplication {
   const { descriptor, template } = useRuntime();
   return { name: descriptor.applicationName, portal: BRANDS[template.brand].portalName, environment: ENVIRONMENT_LABELS[descriptor.environment] ?? null };
+}
+
+/** The portal's saved experience, or the default one when the application isn't opened for a Portal. */
+export function useExperience(): PortalExperience {
+  return useRuntime().descriptor.experience;
 }
 
 export const planted: Planted = { blockMainThread };

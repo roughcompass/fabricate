@@ -34,6 +34,47 @@ export interface PortalApplication {
   readonly environment: string | null;
 }
 
+/** One entry of the portal's menu, groups before what they hold. */
+export interface PortalMenuEntry {
+  readonly id: string;
+  readonly parentId: string | null;
+  readonly kind: "group" | "item";
+  readonly label: string;
+  /** An item's route in the portal, such as /payees; null for a group. */
+  readonly route: string | null;
+}
+
+/** The system message the banner shows. */
+export interface PortalBanner {
+  readonly title: string;
+  readonly description: string;
+  readonly severity: "info" | "warning" | "error";
+  readonly dismissible: boolean;
+}
+
+/**
+ * The portal's saved experience, as a shell renders it
+ * (add-portal-experience-editor, design decision 8): the portal name beside
+ * the logo, the banner, the header's slots in order, the menu and where it
+ * opens, and the footer. Without a Portal it's the default experience.
+ */
+export interface PortalExperience {
+  readonly portalName: string;
+  /** The logo images, light and dark, and the name they carry. */
+  readonly logo: { readonly light: string; readonly dark: string; readonly alt: string };
+  readonly logoLinksHome: boolean;
+  readonly banner: PortalBanner | null;
+  /** The header slots that render, in order: toggle, brand, global-search, actions, notifications, feedback, user-menu. */
+  readonly headerSlots: readonly string[];
+  readonly search: { readonly placeholder: string; readonly shortcut: string } | null;
+  readonly notifications: { readonly title: string; readonly showUnread: boolean } | null;
+  /** Whether the menu column renders, where the menu opens, and the sidebar slots that render, in order. */
+  readonly sidebar: { readonly shown: boolean; readonly menuType: "left" | "flyout"; readonly slots: readonly string[] };
+  readonly menu: readonly PortalMenuEntry[];
+  /** Whether the footer renders, its slots in order, and the copyright its primary slot shows. */
+  readonly footer: { readonly shown: boolean; readonly slots: readonly string[]; readonly copyright: string };
+}
+
 /** Planted demo behavior: the deliberate defects the toolbar finds. */
 export interface Planted {
   /** Occupies the main thread for +ms+ milliseconds: the one planted slow interaction. */

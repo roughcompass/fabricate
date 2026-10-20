@@ -11,6 +11,7 @@ import {
   StackLayout,
   Text,
   useCurrentBreakpoint,
+  useTheme,
   VerticalNavigation,
   VerticalNavigationItem,
   VerticalNavigationItemContent,
@@ -118,6 +119,7 @@ function Navigation({ items, current, onNavigate }: { items: readonly ShellNavIt
 
 export function PageShell({ config, current, user, children }: PageShellProps) {
   const breakpoint = useCurrentBreakpoint();
+  const { mode } = useTheme();
   const small = breakpoint === "xs" || breakpoint === "sm";
   const [opened, setOpen] = useState(false);
   // The drawer exists only at small widths, so widening the viewport closes it.
@@ -138,8 +140,8 @@ export function PageShell({ config, current, user, children }: PageShellProps) {
           )}
           <Link href="#" onClick={stay} className="pageShell-appName" color="primary" underline="never">
             {/* The J.P. Morgan logo, from DE FabLab's own origin, in the variant that reads against the header's mode. */}
-            <img src="/brand/jpmorgan-logo.svg" alt="J.P. Morgan" className="pageShell-logo pageShell-logo-light" />
-            <img src="/brand/jpmorgan-logo-dark.svg" alt="J.P. Morgan" className="pageShell-logo pageShell-logo-dark" />
+            {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG; the prototype runtime has no next/image */}
+            <img src={mode === "dark" ? "/brand/jpmorgan-logo-dark.svg" : "/brand/jpmorgan-logo.svg"} alt="J.P. Morgan" className="pageShell-logo" />
             <span className="pageShell-divider" aria-hidden="true" />
             <Text as="span" styleAs="h4">
               {config.appName}

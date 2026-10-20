@@ -46,16 +46,6 @@
   margin-inline-end: var(--salt-spacing-200);
 }
 
-/* One logo shows: the one that reads against the header in the current mode. */
-.pageShell-logo-dark,
-.salt-theme[data-mode="dark"] .pageShell-logo-light {
-  display: none;
-}
-
-.salt-theme[data-mode="dark"] .pageShell-logo-dark {
-  display: block;
-}
-
 .pageShell-divider {
   align-self: stretch;
   width: var(--salt-size-fixed-100);

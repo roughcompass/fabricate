@@ -55,6 +55,7 @@
     &:focus-visible { outline: 2px solid var(--rt-color-accent); outline-offset: 2px; border-radius: var(--rt-radius-control); }
   }
   .wordmarkName { font-family: var(--rt-font-family-display); font-weight: var(--font-weight-semibold); letter-spacing: var(--letter-spacing-normal); }
+  .logo { display: block; height: var(--space-5); width: auto; }
   .wordmarkDivider { width: 1px; height: var(--space-5); background: var(--rt-color-border); }
   .wordmarkProduct { font-weight: var(--font-weight-regular); }
   .actions { display: flex; flex: none; align-items: center; gap: var(--space-1); margin-left: auto; }

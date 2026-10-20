@@ -1,10 +1,10 @@
 import { useEffect, useEffectEvent } from "react";
 import { createBus } from "@/demo/runtime/bus";
 import { blockMainThread } from "@/demo/runtime/members/planted";
-import type { Planted, PortalApplication, PortalProfile, PortalRoute, PortalRoutes } from "@/demo/runtime/portal/types";
+import type { Planted, PortalApplication, PortalExperience, PortalProfile, PortalRoute, PortalRoutes } from "@/demo/runtime/portal/types";
 import { RENDER_CONFIG_ID, type RenderConfig } from "./protocol";
 
-export type { Planted, PortalApplication, PortalProfile, PortalRoute, PortalRoutes } from "@/demo/runtime/portal/types";
+export type { Planted, PortalApplication, PortalBanner, PortalExperience, PortalMenuEntry, PortalProfile, PortalRoute, PortalRoutes } from "@/demo/runtime/portal/types";
 
 /*
  * `@deweb/portal` inside the prototype frame (converge-templates-and-
@@ -56,6 +56,24 @@ export function useNavigate(): (route: PortalRoute) => void {
 /** The page, as the application: the frame has no portal or deployment. */
 export function useApplication(): PortalApplication {
   return { name: config?.title ?? "", portal: "", environment: null };
+}
+
+/** The frame has no Portal: a plain experience with no banner, no toolkits, and no menu of its own. */
+const EXPERIENCE: PortalExperience = {
+  portalName: "",
+  logo: { light: "/brand/jpmorgan-logo.svg", dark: "/brand/jpmorgan-logo-dark.svg", alt: "J.P. Morgan" },
+  logoLinksHome: false,
+  banner: null,
+  headerSlots: ["toggle", "brand", "actions", "user-menu"],
+  search: null,
+  notifications: null,
+  sidebar: { shown: true, menuType: "left", slots: ["top", "main", "bottom"] },
+  menu: [],
+  footer: { shown: true, slots: ["primary", "secondary", "tertiary"], copyright: "" },
+};
+
+export function useExperience(): PortalExperience {
+  return EXPERIENCE;
 }
 
 export const planted: Planted = { blockMainThread };
