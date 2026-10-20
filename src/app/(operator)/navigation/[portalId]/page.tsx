@@ -9,7 +9,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DescriptionList } from "@/components/ui/description-list";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
-import { Menu, MenuButton, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { type Outcome, OutcomeToast, param } from "@/components/ui/outcome-toast";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
@@ -18,47 +17,26 @@ import { Status } from "@/components/ui/status";
 import { Tag } from "@/components/ui/tag";
 import { applicationHref } from "@/lib/applications/applications";
 import { getDb } from "@/lib/db/client";
-import { isPublicId } from "@/lib/db/ids";
-import { MAX_MENU_DEPTH, type MenuEntry, menuOf, portalApplications, unplacedApplications } from "@/lib/onboarding/navigation";
-import { type Portal, findPortal, isOnboarded, portalHistory } from "@/lib/onboarding/portals";
+import { menuOf, portalApplications, unplacedApplications } from "@/lib/onboarding/navigation";
+import { type Portal, portalHistory } from "@/lib/onboarding/portals";
 import { PORTAL_PLATFORM_LABELS } from "@/lib/onboarding/vocabulary";
-import {
-  addGroupAction,
-  addItemAction,
-  moveEntryAction,
-  moveIntoAction,
-  promotePortalAction,
-  removeEntryAction,
-  renameEntryAction,
-  returnToPrototypeAction,
-  setDefaultAction,
-} from "../actions";
+import { promotePortalAction, returnToPrototypeAction } from "../actions";
+import { onboardedPortal } from "../load";
 import { editorHref, navigationCrumbs, navigationHref } from "../paths";
-import { AddGroupForm, AddItemForm, type Choice, MoveIntoForm, RenameForm } from "./menu-forms";
 import styles from "./navigation.module.css";
-
-function onboardedPortal(portalId: string): Portal | null {
-  if (!isPublicId(portalId, "ptl")) return null;
-  const db = getDb();
-  const portal = findPortal(db, portalId);
-  return portal && isOnboarded(db, portal.id) ? portal : null;
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ portalId: string }> }): Promise<Metadata> {
   const portal = onboardedPortal((await params).portalId);
   return { title: portal ? `${portal.label} · Navigation` : "Portal not found" };
 }
 
-/**
- * A notice's message, built from the record so a crafted link can't inject
- * text. A menu change is named by the history entry it just recorded.
- */
-function navigationOutcome(code: string | undefined, portal: Portal, latest: { event: string; detail: string | null } | undefined): Outcome | undefined {
+/** A notice's message, built from the record so a crafted link can't inject text. */
+function navigationOutcome(code: string | undefined, portal: Portal): Outcome | undefined {
   const id = `${code}:${portal.publicId}:${portal.lockVersion}`;
   const name = portal.label;
   switch (code) {
     case "created":
-      return { id, tone: "success", title: `${name} was created as a Prototype.`, description: "Add its menu, then make one item the default route to promote it to Production." };
+      return { id, tone: "success", title: `${name} was created as a Prototype.`, description: "Open the experience editor to add its menu, then make one item the default route to promote it to Production." };
     case "adopted":
       return { id, tone: "success", title: `${name} was onboarded as a Prototype.`, description: "An ownership claim already named it, so it keeps its identity." };
     case "edited":
@@ -67,21 +45,10 @@ function navigationOutcome(code: string | undefined, portal: Portal, latest: { e
       return { id, tone: "success", title: `${name} is in Production.` };
     case "returned":
       return { id, tone: "success", title: `${name} is a Prototype again.` };
-    case "item-added":
-    case "group-added":
-    case "renamed":
-    case "moved":
-    case "removed":
-    case "default":
-      return { id, tone: "success", title: latest?.detail && (latest.event === "menu_changed" || latest.event === "default_changed") ? `${latest.detail}.` : "The menu is saved." };
     case "stale":
-      return { id, tone: "warning", title: `${name} changed since you opened it.`, description: "The menu shows the current version. Check it and make your change again." };
+      return { id, tone: "warning", title: `${name} changed since you opened it.`, description: "The page shows the current version. Check it and try again." };
     case "no-default":
-      return { id, tone: "error", title: `${name} needs a default route first.`, description: "Make one of its menu items the default, then promote it." };
-    case "not-empty":
-      return { id, tone: "error", title: "That group isn't empty.", description: "Move or remove what's in it first." };
-    case "edge":
-      return { id, tone: "info", title: "That entry is already at the end of its group." };
+      return { id, tone: "error", title: `${name} needs a default route first.`, description: "Make one of its menu items the default in the experience editor, then promote it." };
     case "refused":
       return { id, tone: "error", title: "That change couldn't be made.", description: "Reload the page and try again." };
     default:
@@ -89,38 +56,12 @@ function navigationOutcome(code: string | undefined, portal: Portal, latest: { e
   }
 }
 
-/** Each entry's place in the menu, as its groups' labels, such as "Payments › Cards". */
-function paths(menu: readonly MenuEntry[]): Map<string, string> {
-  const byId = new Map(menu.map((entry) => [entry.publicId, entry]));
-  const result = new Map<string, string>();
-  for (const entry of menu) {
-    const labels = [entry.label];
-    for (let parent = entry.parentPublicId ? byId.get(entry.parentPublicId) : undefined; parent; parent = parent.parentPublicId ? byId.get(parent.parentPublicId) : undefined) labels.unshift(parent.label);
-    result.set(entry.publicId, labels.join(" › "));
-  }
-  return result;
-}
-
-/** +entry+ and everything inside it. */
-function subtree(menu: readonly MenuEntry[], entry: MenuEntry): MenuEntry[] {
-  const inside = [entry];
-  for (const candidate of menu) if (candidate.parentPublicId && inside.some((held) => held.publicId === candidate.parentPublicId)) inside.push(candidate);
-  return inside;
-}
-
-/** The groups +entry+ can move into: not itself or what it holds, and none that would nest it deeper than the limit. */
-function moveTargets(menu: readonly MenuEntry[], entry: MenuEntry, labels: Map<string, string>): Choice[] {
-  const held = subtree(menu, entry);
-  const height = Math.max(...held.map((candidate) => candidate.depth)) - entry.depth + 1;
-  return menu.filter((group) => group.kind === "group" && !held.includes(group) && group.depth + height <= MAX_MENU_DEPTH).map((group) => ({ value: group.publicId, label: labels.get(group.publicId)! }));
-}
-
 /**
  * A Portal's Navigation page (navigation spec): its lifecycle in the header
- * with Promote to Production or Return to Prototype, its details, its menu
- * edited one change at a time, its Applications no item points at, and its
- * history, newest first. Every change is a form post, so the page works
- * without JavaScript; the menu's forms open in place from `?form=`.
+ * with Promote to Production or Return to Prototype, its details, its saved
+ * menu, its Applications no item points at, and its history, newest first.
+ * The menu, and the rest of the Portal's experience, is edited in the
+ * experience editor; the page itself works without JavaScript.
  */
 export default async function PortalNavigationPage({ params, searchParams }: { params: Promise<{ portalId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ portalId }, query] = await Promise.all([params, searchParams]);
@@ -133,27 +74,8 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
   const unplaced = unplacedApplications(db, portal.id);
   const history = portalHistory(db, portal.id);
   const hasDefault = menu.some((entry) => entry.isDefault);
-  const labels = paths(menu);
   const lockVersion = String(portal.lockVersion);
-  const applicationChoices = applications.map((application) => ({ value: application.publicId, label: application.slug ? `${application.name} (${application.slug})` : (application.name ?? application.publicId) }));
-  // An item goes inside a group only while it stays within the depth limit.
-  const itemGroups = menu.filter((entry) => entry.kind === "group" && entry.depth < MAX_MENU_DEPTH).map((group) => ({ value: group.publicId, label: labels.get(group.publicId)! }));
-  const shared = { lockVersion: portal.lockVersion, portal: portal.label, cancelHref: `${here}#menu` };
-
-  const form = param(query, "form");
-  const formEntry = menu.find((entry) => entry.publicId === param(query, "entry"));
-  const inlineForm =
-    form === "add-item" ? (
-      <AddItemForm {...shared} inline action={addItemAction.bind(null, portal.publicId)} applications={applicationChoices} groups={itemGroups} application={applications.find((application) => application.publicId === param(query, "application"))?.publicId} trigger={{ label: "Add item" }} fallbackHref={here} />
-    ) : form === "add-group" ? (
-      <AddGroupForm {...shared} inline action={addGroupAction.bind(null, portal.publicId)} groups={itemGroups} trigger={{ label: "Add group" }} fallbackHref={here} />
-    ) : form === "rename" && formEntry ? (
-      <RenameForm {...shared} action={renameEntryAction.bind(null, portal.publicId)} entry={formEntry} />
-    ) : form === "move" && formEntry ? (
-      <MoveIntoForm {...shared} action={moveIntoAction.bind(null, portal.publicId)} entry={{ publicId: formEntry.publicId, label: formEntry.label, parent: formEntry.parentPublicId }} targets={moveTargets(menu, formEntry, labels)} />
-    ) : null;
-  // A rename or move whose entry is gone: someone removed it since the form opened.
-  const goneEntry = (form === "rename" || form === "move") && !formEntry;
+  const menuEditor = editorHref(portal.publicId, "menu");
 
   const lifecycleAction =
     portal.lifecycle === "production" ? null : hasDefault ? (
@@ -171,67 +93,6 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
         </span>
       </span>
     );
-
-  const entryActions = (entry: MenuEntry, children: number) => {
-    const moves = (
-      <>
-        {!entry.first && (
-          <MenuButton icon="arrowUp" formAction={moveEntryAction.bind(null, portal.publicId, "up")}>
-            Move up
-          </MenuButton>
-        )}
-        {!entry.last && (
-          <MenuButton icon="arrowDown" formAction={moveEntryAction.bind(null, portal.publicId, "down")}>
-            Move down
-          </MenuButton>
-        )}
-        <MenuItem href={`${here}?form=move&entry=${entry.publicId}#menu-form`} icon="folder">
-          Move to a group
-        </MenuItem>
-        <MenuItem href={`${here}?form=rename&entry=${entry.publicId}#menu-form`} icon="edit">
-          Rename
-        </MenuItem>
-        {entry.kind === "item" && !entry.isDefault && (
-          <MenuButton icon="home" formAction={setDefaultAction.bind(null, portal.publicId)}>
-            Make default
-          </MenuButton>
-        )}
-        <MenuSeparator />
-      </>
-    );
-    // A group that holds something can't be removed; its Remove says why.
-    if (entry.kind === "group" && children > 0) {
-      return (
-        <form className={styles.entryForm}>
-          <input type="hidden" name="lockVersion" value={lockVersion} />
-          <input type="hidden" name="entry" value={entry.publicId} />
-          <Menu label={`Actions for ${entry.label}`}>
-            {moves}
-            <MenuButton icon="trash" disabled>
-              Remove<span className="visually-hidden"> (move or remove what&apos;s in it first)</span>
-            </MenuButton>
-          </Menu>
-        </form>
-      );
-    }
-    return (
-      <ConfirmDialog
-        action={removeEntryAction.bind(null, portal.publicId)}
-        fields={{ lockVersion, entry: entry.publicId }}
-        trigger={{ label: "Remove", icon: "trash" }}
-        menu={{ label: `Actions for ${entry.label}`, items: moves }}
-        title={`Remove ${entry.label}?`}
-        confirmLabel="Remove"
-        tone="danger"
-      >
-        <p>
-          {entry.kind === "group"
-            ? "The group is empty, so nothing else changes."
-            : `${entry.route} no longer opens ${entry.application?.name ?? "its Application"} in ${portal.label}.${entry.isDefault ? ` It's the default route, so ${portal.label} has none until you choose another.` : ""}`}
-        </p>
-      </ConfirmDialog>
-    );
-  };
 
   const tree = (parent: string | null, label?: string): React.ReactNode => {
     const entries = menu.filter((entry) => entry.parentPublicId === parent);
@@ -252,7 +113,6 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
                 )}
                 {entry.isDefault && <Tag sans>Default</Tag>}
               </span>
-              <span className={styles.entryActions}>{entryActions(entry, menu.filter((candidate) => candidate.parentPublicId === entry.publicId).length)}</span>
             </div>
             {entry.kind === "group" && tree(entry.publicId)}
           </li>
@@ -277,7 +137,7 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
             </ConfirmDialog>
           ) : undefined
         }
-        alerts={<OutcomeToast outcome={navigationOutcome(param(query, "notice"), portal, history[0])} />}
+        alerts={<OutcomeToast outcome={navigationOutcome(param(query, "notice"), portal)} />}
       />
 
       <Panel
@@ -303,23 +163,16 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
       <Section
         id="menu"
         title="Menu"
-        description="Each change takes effect at once and is recorded in the history."
+        description="The saved menu. Changes are made in the experience editor and take effect when they're saved."
         actions={
-          <>
-            <AddGroupForm {...shared} action={addGroupAction.bind(null, portal.publicId)} groups={itemGroups} trigger={{ label: "Add group", icon: "folder", size: "sm" }} fallbackHref={`${here}?form=add-group#menu-form`} />
-            <AddItemForm {...shared} action={addItemAction.bind(null, portal.publicId)} applications={applicationChoices} groups={itemGroups} trigger={{ label: "Add item", icon: "plus", size: "sm" }} fallbackHref={`${here}?form=add-item#menu-form`} />
-          </>
+          <ButtonLink href={menuEditor} size="sm" icon="edit">
+            Edit menu
+          </ButtonLink>
         }
       >
-        {inlineForm && <div id="menu-form">{inlineForm}</div>}
-        {goneEntry && (
-          <Alert tone="warning" title={`${portal.label} changed since you opened it`}>
-            That entry isn&apos;t in the menu any more. The menu below is the current version.
-          </Alert>
-        )}
         {menu.some((entry) => entry.kind === "item") && !hasDefault && (
           <Alert tone="warning" title={`${portal.label} has no default route`}>
-            Choose Make default in an item&apos;s actions. The default route is where people land, and promoting to Production needs one.
+            Choose Make default on an item in the menu editor. The default route is where people land, and promoting to Production needs one.
           </Alert>
         )}
         <Panel>
@@ -327,7 +180,7 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
             tree(null, "Menu")
           ) : (
             <EmptyState title="No menu yet" icon="network">
-              {`Add an item to route a path in ${portal.label} to one of its Applications, and a group to hold items.`}
+              {`Add an item in the menu editor to route a path in ${portal.label} to one of its Applications, and a group to hold items.`}
             </EmptyState>
           )}
         </Panel>
@@ -343,16 +196,9 @@ export default async function PortalNavigationPage({ params, searchParams }: { p
                     <Link href={applicationHref(application.publicId)}>{application.name}</Link>
                     {application.slug && <span className={styles.muted}>{application.slug}</span>}
                   </span>
-                  <AddItemForm
-                    {...shared}
-                    id={`add-${application.publicId}`}
-                    action={addItemAction.bind(null, portal.publicId)}
-                    applications={applicationChoices}
-                    groups={itemGroups}
-                    application={application.publicId}
-                    trigger={{ label: "Add to menu", icon: "plus", size: "sm" }}
-                    fallbackHref={`${here}?form=add-item&application=${application.publicId}#menu-form`}
-                  />
+                  <ButtonLink href={`${menuEditor}?add=${application.publicId}`} size="sm" icon="plus">
+                    Add to menu
+                  </ButtonLink>
                 </li>
               ))}
             </ul>

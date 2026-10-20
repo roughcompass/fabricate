@@ -1,13 +1,12 @@
 "use server";
 
-import { refresh, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { DialogState } from "@/components/onboarding/form-dialog";
 import { getDb } from "@/lib/db/client";
 import { NotFoundError, StaleRecordError, TransitionError, ValidationError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
 import { type Actor, UNSTATED_ACTOR, statedActor } from "@/lib/onboarding/attribution";
-import { type Move, addGroup, addItem, moveEntry, removeEntry, renameEntry, setDefault } from "@/lib/onboarding/navigation";
 import { createPortal, editPortalDetails, promotePortal, returnToPrototype } from "@/lib/onboarding/portals";
 import { rememberedActor } from "@/lib/web/actor-cookie";
 import { errorsFrom, integer, submittedValues, text } from "@/lib/web/form-data";
@@ -95,58 +94,6 @@ export async function promotePortalAction(publicId: string, formData: FormData):
 
 export async function returnToPrototypeAction(publicId: string, formData: FormData): Promise<void> {
   await buttonAction(publicId, (who) => returnToPrototype(getDb(), publicId, { lockVersion: lockVersionOf(formData) }, who), "returned");
-}
-
-export async function setDefaultAction(publicId: string, formData: FormData): Promise<void> {
-  await buttonAction(publicId, (who) => setDefault(getDb(), publicId, { lockVersion: lockVersionOf(formData), entry: text(formData, "entry", 40) }, who), "default");
-}
-
-export async function removeEntryAction(publicId: string, formData: FormData): Promise<void> {
-  await buttonAction(publicId, (who) => removeEntry(getDb(), publicId, { lockVersion: lockVersionOf(formData), entry: text(formData, "entry", 40) }, who), "removed", { "not-empty": /isn't empty/ });
-}
-
-/** Moves an entry up or down among its siblings: one form post per move, so it works without JavaScript. */
-export async function moveEntryAction(publicId: string, direction: "up" | "down", formData: FormData): Promise<void> {
-  await buttonAction(publicId, (who) => moveEntry(getDb(), publicId, { lockVersion: lockVersionOf(formData), entry: text(formData, "entry", 40), move: { direction: direction === "down" ? "down" : "up" } }, who), "moved", { edge: /already (first|last)/ });
-}
-
-/**
- * The menu's forms: add an item or a group, rename an entry, or move one
- * into another group. A refused change keeps what was entered with the
- * problem at its field; a stale one also shows the current menu.
- */
-async function formAction(publicId: string, formData: FormData, work: (who: Actor) => void, done: string): Promise<DialogState> {
-  assertPortalId(publicId);
-  const values = submittedValues(formData);
-  try {
-    work(await actor());
-  } catch (error) {
-    if (error instanceof StaleRecordError) {
-      refresh();
-      return { values, errors: { base: [`${error.message}. The menu shows the current version; check it and make your change again.`] } };
-    }
-    if (error instanceof ValidationError) return { values, errors: errorsFrom(error) };
-    if (error instanceof TransitionError) return { values, errors: { base: [error.message] } };
-    throw error;
-  }
-  backTo(publicId, done, "#menu");
-}
-
-export async function addItemAction(publicId: string, _previous: DialogState, formData: FormData): Promise<DialogState> {
-  return formAction(publicId, formData, (who) => addItem(getDb(), publicId, { lockVersion: lockVersionOf(formData), label: text(formData, "label", 300), route: text(formData, "route", 300), application: text(formData, "application", 40), parent: text(formData, "parent", 40) || null }, who), "item-added");
-}
-
-export async function addGroupAction(publicId: string, _previous: DialogState, formData: FormData): Promise<DialogState> {
-  return formAction(publicId, formData, (who) => addGroup(getDb(), publicId, { lockVersion: lockVersionOf(formData), label: text(formData, "label", 300), parent: text(formData, "parent", 40) || null }, who), "group-added");
-}
-
-export async function renameEntryAction(publicId: string, _previous: DialogState, formData: FormData): Promise<DialogState> {
-  return formAction(publicId, formData, (who) => renameEntry(getDb(), publicId, { lockVersion: lockVersionOf(formData), entry: text(formData, "entry", 40), label: text(formData, "label", 300) }, who), "renamed");
-}
-
-export async function moveIntoAction(publicId: string, _previous: DialogState, formData: FormData): Promise<DialogState> {
-  const move: Move = { into: text(formData, "into", 40) || null };
-  return formAction(publicId, formData, (who) => moveEntry(getDb(), publicId, { lockVersion: lockVersionOf(formData), entry: text(formData, "entry", 40), move }, who), "moved");
 }
 
 /** Edit details: the SEAL ID, name, owning team, and description, in place. */

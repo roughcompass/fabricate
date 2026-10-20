@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import type { Db } from "../src/lib/db/client";
-import { addGroup, addItem, setDefault } from "../src/lib/onboarding/navigation";
+import { addItem, setDefault } from "../src/lib/onboarding/navigation";
 import { type Portal, getPortal, promotePortal } from "../src/lib/onboarding/portals";
 import { registerApplication } from "../test/support/applications";
 import { ana, onboardPortal } from "../test/support/onboarding";
@@ -17,7 +17,13 @@ const tree = (page: Page) => menuSection(page).getByRole("list", { name: "Menu" 
 const row = (page: Page, label: string) => menuSection(page).locator("[data-kind]").filter({ has: page.getByText(label, { exact: true }) });
 /** A group's list item, holding what's in it. */
 const group = (page: Page, label: string) => tree(page).locator("li").filter({ has: page.locator("[data-kind]").filter({ has: page.getByText(label, { exact: true }) }) });
-const actions = (page: Page, label: string) => menuSection(page).getByRole("button", { name: `Actions for ${label}` });
+/** An entry's row in the editor's menu page. */
+const editorEntry = (page: Page, label: string) => page.locator(`[data-entry="${label}"]`);
+const pending = (page: Page) => page.locator("[data-pending-count]");
+async function saveEditor(page: Page) {
+  await page.locator("[data-experience-editor]").getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText(/Version \d+ is saved\./);
+}
 const history = (page: Page) => page.getByRole("table", { name: "History" });
 
 const version = (db: Db, portal: Portal) => getPortal(db, portal.publicId).lockVersion;
@@ -34,6 +40,7 @@ function accessWithMenu(db: Db, { defaultItem = true } = {}) {
 }
 
 const navigationOf = (portal: Portal) => `/navigation/${portal.publicId}`;
+const menuEditorOf = (portal: Portal) => `/navigation/${portal.publicId}/editor/menu`;
 
 test.describe("the Navigation list", () => {
   test("Portal current: Navigation opens the current Portal's page", async ({ page, db, baseURL }) => {
@@ -88,47 +95,50 @@ test.describe("a Portal's Navigation page", () => {
     await expect(details).toContainText(["1042", "Web", "access", "Access Platform", "Sign-in and entitlements"]);
   });
 
-  test("Adding an item: Payees under Payments shows at once and persists across reloads", async ({ page, db }) => {
+  test("Adding an item: Payees under Payments is pending in the menu editor, and saving shows it on the Navigation page", async ({ page, db }) => {
     const access = onboardPortal(db, "Access");
     registerApplication(db, { name: "Payee Hub", portal: access });
     await page.goto(navigationOf(access));
+    await menuSection(page).getByRole("link", { name: "Edit menu" }).click();
+    await expect(page).toHaveURL(new RegExp(`${menuEditorOf(access)}$`));
     await waitForHydration(page);
 
-    await menuSection(page).getByRole("button", { name: "Add group" }).click();
-    const groupDialog = page.getByRole("dialog", { name: "Add a menu group to Access" });
-    await groupDialog.getByLabel("Label").fill("Payments");
-    await groupDialog.getByRole("button", { name: "Add group" }).click();
-    await expect(row(page, "Payments")).toBeVisible();
+    await page.getByRole("button", { name: "Add group" }).click();
+    const groupPanel = page.getByRole("complementary", { name: "Add a menu group" });
+    await groupPanel.getByLabel("Label").fill("Payments");
+    await groupPanel.getByRole("button", { name: "Add group" }).click();
+    await page.getByRole("button", { name: "Add item" }).click();
+    const itemPanel = page.getByRole("complementary", { name: "Add a menu item" });
+    await itemPanel.getByLabel("Label").fill("Payees");
+    await itemPanel.getByLabel("Route").fill("/payees");
+    await itemPanel.getByLabel("Application", { exact: true }).selectOption({ label: "Payee Hub (payee-hub)" });
+    await itemPanel.getByLabel("Group").selectOption({ label: "Payments" });
+    await itemPanel.getByRole("button", { name: "Add item" }).click();
+    await expect(editorEntry(page, "Payees")).toBeVisible();
+    await expect(pending(page)).toHaveText("2 unsaved changes");
+    await saveEditor(page);
 
-    await menuSection(page).getByRole("button", { name: "Add item" }).click();
-    const itemDialog = page.getByRole("dialog", { name: "Add a menu item to Access" });
-    await itemDialog.getByLabel("Label").fill("Payees");
-    await itemDialog.getByLabel("Route").fill("/payees");
-    await itemDialog.getByLabel("Application", { exact: true }).selectOption({ label: "Payee Hub (payee-hub)" });
-    await itemDialog.getByLabel("Group").selectOption({ label: "Payments" });
-    await itemDialog.getByRole("button", { name: "Add item" }).click();
-
-    const payments = group(page, "Payments");
-    await expect(payments.getByText("Payees", { exact: true })).toBeVisible();
+    await page.goto(navigationOf(access));
+    await expect(group(page, "Payments").getByText("Payees", { exact: true })).toBeVisible();
     await page.reload();
-    await expect(payments.getByText("Payees", { exact: true })).toBeVisible();
     await expect(row(page, "Payees")).toContainText("/payees");
     await expect(row(page, "Payees")).toContainText("Payee Hub");
   });
 
-  test("Route collision: the save is refused at the route, naming the item that uses it", async ({ page, db }) => {
+  test("Route collision: the new item is refused at its route, naming the item that uses it", async ({ page, db }) => {
     const { access } = accessWithMenu(db);
-    await page.goto(navigationOf(access));
+    await page.goto(menuEditorOf(access));
     await waitForHydration(page);
-    await menuSection(page).getByRole("button", { name: "Add item" }).click();
-    const dialog = page.getByRole("dialog", { name: "Add a menu item to Access" });
-    await dialog.getByLabel("Label").fill("Payees again");
-    await dialog.getByLabel("Route").fill("/payees");
-    await dialog.getByLabel("Application", { exact: true }).selectOption({ label: "Payee Hub (payee-hub)" });
-    await dialog.getByRole("button", { name: "Add item" }).click();
-    await expect(dialog.getByText("/payees is already used by Payees")).toBeVisible();
-    await expect(dialog.getByLabel("Route")).toHaveAttribute("aria-invalid", "true");
-    await expect(menuSection(page).locator("[data-kind]")).toHaveCount(2);
+    await page.getByRole("button", { name: "Add item" }).click();
+    const panel = page.getByRole("complementary", { name: "Add a menu item" });
+    await panel.getByLabel("Label").fill("Payees again");
+    await panel.getByLabel("Route").fill("/payees");
+    await panel.getByLabel("Application", { exact: true }).selectOption({ label: "Payee Hub (payee-hub)" });
+    await panel.getByRole("button", { name: "Add item" }).click();
+    await expect(panel.getByText("/payees is already used by Payees")).toBeVisible();
+    await expect(panel.getByLabel("Route")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.locator("[data-entry]")).toHaveCount(2);
+    await expect(pending(page)).toHaveCount(0);
   });
 
   test("Application from another Portal: only the Portal's Applications are offered", async ({ page, db }) => {
@@ -136,39 +146,55 @@ test.describe("a Portal's Navigation page", () => {
     const access = onboardPortal(db, "Access");
     registerApplication(db, { name: "Ledger", portal: markets });
     registerApplication(db, { name: "Payroll", portal: access });
-    await page.goto(navigationOf(markets));
+    await page.goto(menuEditorOf(markets));
     await waitForHydration(page);
-    await menuSection(page).getByRole("button", { name: "Add item" }).click();
-    const options = page.getByRole("dialog", { name: "Add a menu item to Markets" }).getByLabel("Application", { exact: true }).locator("option");
+    await page.getByRole("button", { name: "Add item" }).click();
+    const options = page.getByRole("complementary", { name: "Add a menu item" }).getByLabel("Application", { exact: true }).locator("option");
     await expect(options).toHaveText(["Choose an Application", "Ledger (ledger)"]);
   });
 
-  test("Unplaced application: it's listed with Add to menu, which starts an item for it", async ({ page, db }) => {
+  test("Unplaced application: Add to menu opens the menu editor with an item started for it", async ({ page, db }) => {
     const markets = onboardPortal(db, "Markets");
     const ledger = registerApplication(db, { name: "Ledger", portal: markets });
     await page.goto(navigationOf(markets));
-    await waitForHydration(page);
     const unplaced = page.getByRole("list", { name: "Applications not in the menu" });
     await expect(unplaced.getByRole("listitem")).toHaveText([/Ledger/]);
-    await unplaced.getByRole("button", { name: "Add to menu" }).click();
-    const dialog = page.getByRole("dialog", { name: "Add a menu item to Markets" });
-    await expect(dialog.getByLabel("Application", { exact: true })).toHaveValue(ledger.publicId);
-    await dialog.getByLabel("Label").fill("Ledger");
-    await dialog.getByLabel("Route").fill("/ledger");
-    await dialog.getByRole("button", { name: "Add item" }).click();
+    await unplaced.getByRole("link", { name: "Add to menu" }).click();
+    await waitForHydration(page);
+    const panel = page.getByRole("complementary", { name: "Add a menu item" });
+    await expect(panel.getByLabel("Application", { exact: true })).toHaveValue(ledger.publicId);
+    await expect(panel.getByLabel("Route")).toHaveValue("/ledger");
+    await panel.getByRole("button", { name: "Add item" }).click();
+    await saveEditor(page);
+    await page.goto(navigationOf(markets));
     await expect(row(page, "Ledger")).toContainText("/ledger");
     await expect(page.getByText("Every Application is in the menu")).toBeVisible();
   });
 
-  test("Changing the default: the new item is marked Default and the old one isn't", async ({ page, db }) => {
+  test("Changing the default: the new item is marked Default and the old one isn't, once saved", async ({ page, db }) => {
     const { access } = accessWithMenu(db);
-    await page.goto(navigationOf(access));
+    await page.goto(menuEditorOf(access));
     await waitForHydration(page);
-    await expect(row(page, "Payees")).toContainText("Default");
-    await actions(page, "Activity").click();
-    await menuSection(page).getByRole("button", { name: "Make default" }).click();
+    await expect(editorEntry(page, "Payees")).toContainText("Default");
+    await editorEntry(page, "Activity").getByRole("button", { name: "Make default" }).click();
+    await expect(editorEntry(page, "Activity")).toContainText("Default");
+    await expect(editorEntry(page, "Payees")).not.toContainText("Default");
+    await saveEditor(page);
+    await page.goto(navigationOf(access));
     await expect(row(page, "Activity")).toContainText("Default");
     await expect(row(page, "Payees")).not.toContainText("Default");
+  });
+
+  test("Flyout menu: the menu type moves the menu out of the sidebar in the preview", async ({ page, db }) => {
+    const { access } = accessWithMenu(db);
+    await page.goto(`/navigation/${access.publicId}/editor/frame-zones`);
+    await waitForHydration(page);
+    await page.locator("[data-zone-row='sidebar'] [data-slot-row='main']").getByRole("button", { name: "Main Slot", exact: true }).click();
+    const options = page.getByRole("region", { name: "Options", exact: true });
+    await expect(options.locator("[data-menu-count]")).toHaveText("2 top-level items configured");
+    await expect(page.locator("[data-frame-preview] [data-zone='sidebar']")).toBeVisible();
+    await options.getByLabel("Menu type").selectOption("flyout");
+    await expect(page.locator("[data-frame-preview] [data-zone='sidebar']")).toHaveCount(0);
   });
 
   test("Promoting: the Production badge shows in the header, the switcher, and Applications cards", async ({ page, db, baseURL }) => {
@@ -196,60 +222,56 @@ test.describe("a Portal's Navigation page", () => {
     await expect(page.getByText("Access has no default route")).toBeVisible();
   });
 
-  test("History: changes are listed newest first, with the stated name marked Unverified", async ({ page, db, baseURL }) => {
+  test("History: a saved version and a promotion are listed newest first, with the stated name marked Unverified", async ({ page, db, baseURL }) => {
     const access = onboardPortal(db, "Access");
     registerApplication(db, { name: "Payee Hub", portal: access });
     await page.context().addCookies([{ name: "fabricate-actor", value: "Ana", url: baseURL! }]);
+    await page.goto(menuEditorOf(access));
+    await waitForHydration(page);
+    await page.getByRole("button", { name: "Add item" }).click();
+    const panel = page.getByRole("complementary", { name: "Add a menu item" });
+    await panel.getByLabel("Label").fill("Payees");
+    await panel.getByLabel("Route").fill("/payees");
+    await panel.getByLabel("Application", { exact: true }).selectOption({ label: "Payee Hub (payee-hub)" });
+    await panel.getByRole("button", { name: "Add item" }).click();
+    await editorEntry(page, "Payees").getByRole("button", { name: "Make default" }).click();
+    await saveEditor(page);
     await page.goto(navigationOf(access));
     await waitForHydration(page);
-    await menuSection(page).getByRole("button", { name: "Add item" }).click();
-    const dialog = page.getByRole("dialog", { name: "Add a menu item to Access" });
-    await dialog.getByLabel("Label").fill("Payees");
-    await dialog.getByLabel("Route").fill("/payees");
-    await dialog.getByLabel("Application", { exact: true }).selectOption({ label: "Payee Hub (payee-hub)" });
-    await dialog.getByRole("button", { name: "Add item" }).click();
-    await expect(row(page, "Payees")).toBeVisible();
-    await actions(page, "Payees").click();
-    await menuSection(page).getByRole("button", { name: "Make default" }).click();
-    await expect(row(page, "Payees")).toContainText("Default");
     await header(page).getByRole("button", { name: "Promote to Production" }).click();
     await page.getByRole("dialog", { name: "Promote Access to Production?" }).getByRole("button", { name: "Promote to Production" }).click();
     await expect(header(page)).toContainText("Production");
 
     const rows = history(page).getByRole("row");
     await expect(rows.nth(1)).toContainText("Promoted to Production");
-    await expect(rows.nth(2)).toContainText("Made Payees the default route");
-    await expect(rows.nth(3)).toContainText("Added Payees at /payees");
-    for (const index of [1, 2, 3]) {
+    await expect(rows.nth(2)).toContainText("Experience saved");
+    await expect(rows.nth(2)).toContainText("Saved version 1");
+    await expect(rows.nth(2)).toContainText("added Payees /payees");
+    for (const index of [1, 2]) {
       await expect(rows.nth(index)).toContainText("Ana");
       await expect(rows.nth(index)).toContainText("Unverified");
     }
   });
 
-  test("Two editors: a rename based on an older version is refused, and the current menu shows", async ({ page, db }) => {
+  test("Two editors: a rename saved after another save is refused, and the second editor's changes are kept", async ({ page, db }) => {
     const { access } = accessWithMenu(db, { defaultItem: false });
     const other = await page.context().newPage();
-    await page.goto(navigationOf(access));
-    await other.goto(navigationOf(access));
+    await page.goto(menuEditorOf(access));
+    await other.goto(menuEditorOf(access));
     await waitForHydration(page);
     await waitForHydration(other);
 
-    await actions(other, "Payees").click();
-    await menuSection(other).getByRole("link", { name: "Rename" }).click();
-    const rename = other.locator("#menu-form");
-    await expect(rename.getByLabel("Label")).toHaveValue("Payees");
+    await editorEntry(page, "Payees").getByRole("button", { name: "Remove Payees" }).click();
+    await saveEditor(page);
 
-    await actions(page, "Payees").click();
-    await menuSection(page).getByRole("button", { name: "Remove" }).click();
-    await page.getByRole("dialog", { name: "Remove Payees?" }).getByRole("button", { name: "Remove" }).click();
+    await editorEntry(other, "Payees").getByRole("button", { name: "Edit Payees" }).click();
+    await other.getByRole("complementary", { name: "Edit Payees" }).getByLabel("Label").fill("Payees list");
+    await other.locator("[data-experience-editor]").getByRole("button", { name: "Save", exact: true }).click();
+    await expect(other.getByRole("alert").filter({ hasText: "Access changed since you opened it" })).toBeVisible();
+    await expect(pending(other)).toHaveText("1 unsaved change");
+    await page.goto(navigationOf(access));
     await expect(row(page, "Payees")).toHaveCount(0);
-
-    await rename.getByLabel("Label").fill("Payees list");
-    await rename.getByRole("button", { name: "Rename" }).click();
-    await expect(other.getByText("Access changed since you opened it")).toBeVisible();
-    await expect(row(other, "Payees")).toHaveCount(0);
-    await expect(row(other, "Payees list")).toHaveCount(0);
-    await expect(row(other, "Activity")).toBeVisible();
+    await expect(row(page, "Activity")).toBeVisible();
   });
 
   test("Edit details: the owning team and description are saved in place", async ({ page, db }) => {
@@ -269,28 +291,13 @@ test.describe("a Portal's Navigation page", () => {
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("Moving Payees: the page reloads with Activity moved up", async ({ page, db }) => {
+  test("The Navigation page shows the saved menu, and the experience editor says it needs JavaScript", async ({ page, db }) => {
     const { access } = accessWithMenu(db);
     await page.goto(navigationOf(access));
     const top = tree(page).locator(":scope > li");
     await expect(top.nth(0)).toContainText("Payees");
-    await actions(page, "Activity").click();
-    await menuSection(page).getByRole("button", { name: "Move up" }).click();
-    await expect(page).toHaveURL(/notice=moved/);
-    await expect(top.nth(0)).toContainText("Activity");
-    await expect(top.nth(1)).toContainText("Payees");
-  });
-
-  test("Adding a group: Add group opens the form on the page", async ({ page, db }) => {
-    const access = onboardPortal(db, "Access");
-    addGroup(db, access.publicId, { lockVersion: version(db, access), label: "Payments", parent: null }, ana);
-    await page.goto(navigationOf(access));
-    await menuSection(page).getByRole("link", { name: "Add group" }).click();
-    const form = page.locator("#menu-form");
-    await form.getByLabel("Label").fill("Cards");
-    await form.getByLabel("Inside").selectOption({ label: "Payments" });
-    await form.getByRole("button", { name: "Add group" }).click();
-    const payments = group(page, "Payments");
-    await expect(payments.getByText("Cards", { exact: true })).toBeVisible();
+    await expect(top.nth(1)).toContainText("Activity");
+    await page.goto(menuEditorOf(access));
+    expect(await page.content()).toContain("The experience editor needs JavaScript.");
   });
 });
