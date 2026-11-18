@@ -85,7 +85,7 @@ function FlagList() {
                     <TR key={flag.id} aria-current={current ? "true" : undefined} className={current ? styles["FlagList_selected"] : undefined} data-demo-anchor={`flag-${flag.id}`}>
                       <TD>
                         <StackLayout gap={0} align="start">
-                          <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(flag)}>
+                          <Button sentiment="neutral" appearance="transparent" className={styles["FlagList_recordName"]} aria-pressed={current} onClick={() => choose(flag)}>
                             {flag.name}
                           </Button>
                           <Text styleAs="code" color="secondary">

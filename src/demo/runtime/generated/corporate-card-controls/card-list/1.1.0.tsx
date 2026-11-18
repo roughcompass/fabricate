@@ -61,7 +61,7 @@ export default function CardList() {
                   return (
                     <TR key={card.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined} data-demo-anchor={`card-${card.id}`}>
                       <TD>
-                        <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(card)}>
+                        <Button sentiment="neutral" appearance="transparent" className={styles.recordName} aria-pressed={current} onClick={() => choose(card)}>
                           {card.holder}
                         </Button>
                       </TD>

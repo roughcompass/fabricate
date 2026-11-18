@@ -1,4 +1,5 @@
-.selected {
+/* Outranks Salt's own row background, table.saltTable tr. */
+.selected[aria-current="true"] {
   background: var(--salt-selectable-background-selected);
 }
 

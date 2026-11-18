@@ -1,6 +1,18 @@
 /* relationship-list 1.1.0 */
-.RelationshipList_selected {
+/* Outranks Salt's own row background, table.RelationshipList_saltTable tr. */
+.RelationshipList_selected[aria-current="true"] {
   background: var(--salt-selectable-background-selected);
+}
+
+/* A record's name as the control that selects it: in the text's own case, and no taller than the row's text, so it lines up with the other cells. */
+.RelationshipList_recordName[aria-pressed] {
+  height: auto;
+  min-height: 0;
+  padding-block: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  justify-content: flex-start;
+  text-align: start;
 }
 
 /* meeting-notes 1.0.0 */

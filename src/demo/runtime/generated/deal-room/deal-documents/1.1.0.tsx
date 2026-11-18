@@ -70,7 +70,7 @@ export default function DealDocuments() {
                       <TR key={doc.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined} data-demo-anchor={`document-${doc.id}`}>
                         <TD>
                           <StackLayout gap={1} align="start">
-                            <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(doc)}>
+                            <Button sentiment="neutral" appearance="transparent" className={styles.recordName} aria-pressed={current} onClick={() => choose(doc)}>
                               {doc.name}
                             </Button>
                             <Text styleAs="label" color="secondary">

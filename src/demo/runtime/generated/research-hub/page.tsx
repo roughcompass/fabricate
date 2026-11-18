@@ -98,7 +98,7 @@ function ResearchLibrary() {
                       return (
                         <TR key={report.id} aria-current={current ? "true" : undefined} className={current ? styles["ResearchLibrary_selected"] : undefined} data-demo-anchor={`report-${report.id}`}>
                           <TD>
-                            <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(report)}>
+                            <Button sentiment="neutral" appearance="transparent" className={styles["ResearchLibrary_recordName"]} aria-pressed={current} onClick={() => choose(report)}>
                               {report.title}
                             </Button>
                           </TD>

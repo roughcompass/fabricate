@@ -1,5 +1,6 @@
 /* incident-feed 6.1.0 */
-.IncidentFeed_selected {
+/* Outranks Salt's own row background, table.IncidentFeed_saltTable tr. */
+.IncidentFeed_selected[aria-current="true"] {
   background: var(--salt-selectable-background-selected);
 }
 

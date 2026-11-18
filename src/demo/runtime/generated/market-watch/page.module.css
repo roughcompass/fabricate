@@ -1,5 +1,6 @@
 /* watchlist 1.9.0 */
-.Watchlist_selected {
+/* Outranks Salt's own row background, table.Watchlist_saltTable tr. */
+.Watchlist_selected[aria-current="true"] {
   background: var(--salt-selectable-background-selected);
 }
 

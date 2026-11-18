@@ -97,7 +97,7 @@ function ReleaseWindows() {
                       return (
                         <TR key={slot.id} aria-current={current ? "true" : undefined} className={current ? styles["ReleaseWindows_selected"] : undefined} data-demo-anchor={`window-${slot.id}`}>
                           <TD>
-                            <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(slot)}>
+                            <Button sentiment="neutral" appearance="transparent" className={styles["ReleaseWindows_recordName"]} aria-pressed={current} onClick={() => choose(slot)}>
                               {slot.day}
                             </Button>
                           </TD>

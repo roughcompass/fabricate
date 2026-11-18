@@ -47,7 +47,7 @@ export default function PayeeList() {
                       <Text styleAs="label" color="secondary">
                         {payee.favorite ? `Favorite · ${payee.bank}` : payee.bank}
                       </Text>
-                      <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(payee)}>
+                      <Button sentiment="neutral" appearance="transparent" className={styles.recordName} aria-pressed={current} onClick={() => choose(payee)}>
                         {payee.name}
                       </Button>
                       <Text styleAs="label" color="secondary">{`••••${payee.account} · Last paid ${payee.lastPaid}`}</Text>

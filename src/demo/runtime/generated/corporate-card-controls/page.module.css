@@ -1,5 +1,6 @@
 /* card-list 1.1.0 */
-.CardList_selected {
+/* Outranks Salt's own row background, table.CardList_saltTable tr. */
+.CardList_selected[aria-current="true"] {
   background: var(--salt-selectable-background-selected);
 }
 
@@ -10,6 +11,17 @@
 /* Salt's LinearProgress sets a minimum width wider than a narrow region; the bar takes its container's width instead. */
 .CardList_meter {
   min-width: 0;
+}
+
+/* A record's name as the control that selects it: in the text's own case, and no taller than the row's text, so it lines up with the other cells. */
+.CardList_recordName[aria-pressed] {
+  height: auto;
+  min-height: 0;
+  padding-block: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  justify-content: flex-start;
+  text-align: start;
 }
 
 /* card-rules 1.0.0 */

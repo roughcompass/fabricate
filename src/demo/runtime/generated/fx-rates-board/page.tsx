@@ -68,7 +68,7 @@ function FxRates() {
                   return (
                     <TR key={pair.id} aria-current={current ? "true" : undefined} className={current ? styles["FxRates_selected"] : undefined} data-demo-anchor={`pair-${pair.id}`}>
                       <TD>
-                        <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(pair)}>
+                        <Button sentiment="neutral" appearance="transparent" className={styles["FxRates_recordName"]} aria-pressed={current} onClick={() => choose(pair)}>
                           {pair.pair}
                         </Button>
                       </TD>

@@ -52,6 +52,7 @@ The build runs DE FabLab's four gates on every file, with `@deweb/portal` allowe
   - Tabular numerals for figures: `font-variant-numeric: tabular-nums`.
   - A selected row's tint: `background: var(--salt-selectable-background-selected)`, applied to the row marked `aria-current`.
   - List markers off: `list-style: none; margin: 0; padding: 0`.
+  - A record's name as its selecting button: `text-transform: none`, no extra height, aligned to the start, so it reads as data and lines up with the row.
   - A `LinearProgress` in a narrow region or a table cell: `min-width: 0`, since Salt gives the bar a minimum width wider than a phone's side column.
 - **A module holds class rules only.** Select by class, pseudo-class, or `aria-` and `data-` attribute, with `@media` and `@container` where needed.
 - **Every value in a module** is a Salt token, `calc()` of tokens and numbers, a CSS keyword, `%`, `fr`, or 0. Never use a literal color, a pixel or rem size, a literal font, `@import`, `url()`, or `!important`.

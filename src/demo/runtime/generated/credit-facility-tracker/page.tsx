@@ -101,7 +101,7 @@ function FacilityList() {
                     <TR key={facility.id} aria-current={current ? "true" : undefined} className={current ? styles["FacilityList_selected"] : undefined} data-demo-anchor={`facility-${facility.id}`}>
                       <TD>
                         <StackLayout gap={1} align="start">
-                          <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(facility)}>
+                          <Button sentiment="neutral" appearance="transparent" className={styles["FacilityList_recordName"]} aria-pressed={current} onClick={() => choose(facility)}>
                             {facility.borrower}
                           </Button>
                           <Text styleAs="label" color="secondary">

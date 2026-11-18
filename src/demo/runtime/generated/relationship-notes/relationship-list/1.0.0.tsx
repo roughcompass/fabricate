@@ -55,7 +55,7 @@ export default function RelationshipList() {
                     <TR key={relationship.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined} data-demo-anchor={`relationship-${relationship.id}`}>
                       <TD>
                         <StackLayout gap={1} align="start">
-                          <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(relationship)}>
+                          <Button sentiment="neutral" appearance="transparent" className={styles.recordName} aria-pressed={current} onClick={() => choose(relationship)}>
                             {relationship.client}
                           </Button>
                           <Text styleAs="label" color="secondary">

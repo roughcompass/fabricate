@@ -81,8 +81,8 @@ function PeopleSearch() {
                     <TR key={person.id} aria-current={current ? "true" : undefined} className={current ? styles["PeopleSearch_selected"] : undefined} data-demo-anchor={`person-${person.id}`}>
                       <TD>
                         <FlexLayout gap={1} align="center">
-                          <Avatar name={person.name} aria-hidden />
-                          <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(person)}>
+                          <Avatar name={person.name} size={1} aria-hidden />
+                          <Button sentiment="neutral" appearance="transparent" className={styles["PeopleSearch_recordName"]} aria-pressed={current} onClick={() => choose(person)}>
                             {person.name}
                           </Button>
                           {person.joiner ? (

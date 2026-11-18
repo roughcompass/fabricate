@@ -1,6 +1,18 @@
 /* people-search 1.1.0 */
-.PeopleSearch_selected {
+/* Outranks Salt's own row background, table.PeopleSearch_saltTable tr. */
+.PeopleSearch_selected[aria-current="true"] {
   background: var(--salt-selectable-background-selected);
+}
+
+/* A record's name as the control that selects it: in the text's own case, and no taller than the row's text, so it lines up with the other cells. */
+.PeopleSearch_recordName[aria-pressed] {
+  height: auto;
+  min-height: 0;
+  padding-block: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  justify-content: flex-start;
+  text-align: start;
 }
 
 /* joiner-checklist 1.0.0 */

@@ -19,28 +19,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 8.057500000000005
+              "durationMs": 8.623666999999955
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 305.79333399999996
+              "durationMs": 308.6750420000001
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 34.74933299999998
+              "durationMs": 37.82208299999991
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 15.445249999999987
+              "durationMs": 16.308250000000044
             }
           ]
         },
@@ -56,28 +56,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.6100829999999178
+              "durationMs": 1.6679579999999987
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 75.93204200000002
+              "durationMs": 79.10533299999997
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.9964579999999614
+              "durationMs": 3.032459000000017
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 6.467167000000018
+              "durationMs": 4.133541999999807
             }
           ]
         },
@@ -93,28 +93,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.0884159999999383
+              "durationMs": 1.4633329999999205
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 70.94904099999985
+              "durationMs": 56.34079100000008
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.521250000000009
+              "durationMs": 2.507917000000134
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.235542000000123
+              "durationMs": 3.2764589999999316
             }
           ]
         },
@@ -130,28 +130,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.5229170000000067
+              "durationMs": 1.4816659999999047
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 79.36404199999993
+              "durationMs": 78.77062499999988
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.763291999999865
+              "durationMs": 3.8827920000001086
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.764208999999937
+              "durationMs": 3.8075000000001182
             }
           ]
         },
@@ -167,28 +167,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.352958999999828
+              "durationMs": 1.273040999999921
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 63.919083
+              "durationMs": 64.166291
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.8057909999999993
+              "durationMs": 3.8357919999998558
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.9662080000000515
+              "durationMs": 3.8017919999999776
             }
           ]
         },
@@ -204,28 +204,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.3075000000001182
+              "durationMs": 1.3678339999999025
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 71.37362499999995
+              "durationMs": 66.81579199999987
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.271041999999852
+              "durationMs": 2.688333000000057
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.188625000000002
+              "durationMs": 2.867957999999817
             }
           ]
         }
@@ -257,28 +257,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 2.3819169999999303
+            "durationMs": 2.186582999999928
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 99.3879159999999
+            "durationMs": 85.53224999999998
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 6.9305420000000595
+            "durationMs": 6.132916999999907
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 8.390791000000036
+            "durationMs": 5.989333999999872
           }
         ]
       }
@@ -299,28 +299,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9500000000000455
+              "durationMs": 0.9611250000000382
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 56.743541999999934
+              "durationMs": 53.98520899999994
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.0083329999999933
+              "durationMs": 1.9067500000001019
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.872334000000137
+              "durationMs": 2.3421670000000177
             }
           ]
         },
@@ -336,28 +336,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.1565839999998389
+              "durationMs": 0.8619590000000699
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 58.475625000000036
+              "durationMs": 53.109874999999874
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.6499999999998636
+              "durationMs": 2.226417000000083
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.8830830000001697
+              "durationMs": 2.7578330000001188
             }
           ]
         },
@@ -373,28 +373,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.7256669999999303
+              "durationMs": 0.663665999999921
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 48.48195899999996
+              "durationMs": 47.016832999999906
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.805458999999928
+              "durationMs": 1.7838749999998527
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.698417000000063
+              "durationMs": 2.699292000000014
             }
           ]
         },
@@ -410,28 +410,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.7421249999999873
+              "durationMs": 0.7364579999998568
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 46.62245800000005
+              "durationMs": 43.62195799999995
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.6304999999999836
+              "durationMs": 1.5116660000001048
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.042707999999948
+              "durationMs": 1.8998329999999441
             }
           ]
         },
@@ -447,28 +447,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0675830000000133
+              "durationMs": 0.9624589999998534
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 57.274415999999974
+              "durationMs": 52.39270799999986
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.3183749999998327
+              "durationMs": 4.448208000000022
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.6835419999999885
+              "durationMs": 2.4729580000000624
             }
           ]
         },
@@ -484,28 +484,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9009999999998399
+              "durationMs": 0.7878330000000915
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 53.74066700000003
+              "durationMs": 47.70937499999991
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.1917499999999563
+              "durationMs": 2.0894580000001497
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.709500000000162
+              "durationMs": 2.376125000000002
             }
           ]
         }
@@ -537,28 +537,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.5706669999999576
+            "durationMs": 1.5222499999999854
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 82.17454199999997
+            "durationMs": 78.6829580000001
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 5.211333999999852
+            "durationMs": 4.528334000000086
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.870249999999942
+            "durationMs": 4.541208000000097
           }
         ]
       }
@@ -579,28 +579,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9306249999999636
+              "durationMs": 0.7942920000000413
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 46.338624999999865
+              "durationMs": 40.482124999999996
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.6804999999999382
+              "durationMs": 4.628417000000127
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.120082999999795
+              "durationMs": 2.129374999999982
             }
           ]
         },
@@ -616,28 +616,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.8622920000000249
+              "durationMs": 0.6980419999999867
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 53.71829200000002
+              "durationMs": 45.081290999999965
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.9062089999999898
+              "durationMs": 1.8318340000000717
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.1726670000000468
+              "durationMs": 2.3488749999999072
             }
           ]
         },
@@ -653,28 +653,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.8761670000001232
+              "durationMs": 0.8336669999998776
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 46.16108299999996
+              "durationMs": 44.82891700000005
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.677208999999948
+              "durationMs": 1.8015419999999267
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.3297499999998763
+              "durationMs": 2.100500000000011
             }
           ]
         },
@@ -690,28 +690,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9462499999999636
+              "durationMs": 0.8530000000000655
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 65.32266600000003
+              "durationMs": 58.61854200000016
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.3540420000003905
+              "durationMs": 2.167083000000275
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.8474999999998545
+              "durationMs": 2.6128340000000208
             }
           ]
         },
@@ -727,28 +727,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.094416999999794
+              "durationMs": 1.8583330000001297
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 74.36041699999987
+              "durationMs": 60.84083299999975
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 6.494666999999936
+              "durationMs": 3.232833000000028
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 8.287915999999768
+              "durationMs": 3.422667000000274
             }
           ]
         },
@@ -764,28 +764,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.8535000000001673
+              "durationMs": 1.2950839999998607
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 67.30870800000002
+              "durationMs": 46.963582999999744
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.1572919999998703
+              "durationMs": 3.0254580000000715
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.5138750000000982
+              "durationMs": 3.1323339999999007
             }
           ]
         },
@@ -801,28 +801,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9453749999997854
+              "durationMs": 0.8649580000001151
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 76.75437499999998
+              "durationMs": 50.377334000000246
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.579041999999845
+              "durationMs": 2.1684589999999844
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.124750000000404
+              "durationMs": 2.457499999999982
             }
           ]
         }
@@ -859,28 +859,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 2.915958000000046
+            "durationMs": 2.649333999999726
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 97.8732500000001
+            "durationMs": 90.36824999999999
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 8.011375000000044
+            "durationMs": 6.658333000000312
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 6.5684580000001915
+            "durationMs": 8.81195899999966
           }
         ]
       }
@@ -901,28 +901,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.5588330000000497
+              "durationMs": 0.7918749999998909
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 58.10020800000029
+              "durationMs": 48.614500000000135
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.7952089999998861
+              "durationMs": 1.6655000000000655
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.3335839999999735
+              "durationMs": 2.2080000000000837
             }
           ]
         },
@@ -938,28 +938,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9034169999999904
+              "durationMs": 0.821292000000085
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 73.59616599999981
+              "durationMs": 59.285541000000194
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.023916999999983
+              "durationMs": 1.8157499999997526
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.46816600000011
+              "durationMs": 2.262083000000075
             }
           ]
         },
@@ -975,28 +975,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0222499999999854
+              "durationMs": 0.8902499999999236
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 53.961333000000195
+              "durationMs": 45.8637920000001
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.672833999999966
+              "durationMs": 2.3239999999996144
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.583791999999903
+              "durationMs": 2.4297499999997854
             }
           ]
         },
@@ -1012,28 +1012,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.8508750000000873
+              "durationMs": 0.7149170000002414
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 49.65429200000017
+              "durationMs": 45.72412499999973
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.957792000000154
+              "durationMs": 1.7699579999998605
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.300250000000233
+              "durationMs": 2.0912499999999454
             }
           ]
         },
@@ -1049,28 +1049,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.6242920000004233
+              "durationMs": 0.48745899999994435
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 60.43454100000008
+              "durationMs": 54.22083300000031
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.4821249999999964
+              "durationMs": 1.3401249999997162
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.176165999999739
+              "durationMs": 2.0552910000001248
             }
           ]
         }
@@ -1102,28 +1102,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.4437920000000304
+            "durationMs": 1.4275830000001406
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 92.07574999999997
+            "durationMs": 79.94391599999972
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.8220830000000205
+            "durationMs": 3.516708000000108
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.731083000000126
+            "durationMs": 3.6403340000001663
           }
         ]
       }
@@ -1144,28 +1144,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.012250000000222
+              "durationMs": 0.9469579999999951
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 55.155291000000034
+              "durationMs": 49.10500000000002
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.755500000000211
+              "durationMs": 1.8054999999999382
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.7095839999997224
+              "durationMs": 2.4839170000000195
             }
           ]
         },
@@ -1181,28 +1181,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0241249999999127
+              "durationMs": 1.049290999999812
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 58.99783400000024
+              "durationMs": 54.461083000000144
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.9743750000002365
+              "durationMs": 1.9609999999997854
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.02087500000016
+              "durationMs": 2.579584000000068
             }
           ]
         },
@@ -1218,28 +1218,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.4816659999996773
+              "durationMs": 1.320042000000285
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 89.54591699999992
+              "durationMs": 69.49016699999993
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.048791000000165
+              "durationMs": 2.8606660000000375
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.9622079999999187
+              "durationMs": 3.267707999999857
             }
           ]
         }
@@ -1266,28 +1266,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.8209170000000086
+            "durationMs": 1.7094170000000304
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 107.81316600000036
+            "durationMs": 91.98116699999991
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.787666999999601
+            "durationMs": 6.8442079999999805
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 8.963875000000371
+            "durationMs": 4.172624999999698
           }
         ]
       }
@@ -1308,28 +1308,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9416670000000522
+              "durationMs": 0.8780000000001564
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 67.85483300000033
+              "durationMs": 53.98083399999996
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.4157499999996617
+              "durationMs": 1.8879579999997986
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.63675000000012
+              "durationMs": 2.2135419999999613
             }
           ]
         },
@@ -1345,28 +1345,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.2374170000002778
+              "durationMs": 0.9637499999998909
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 78.66129199999978
+              "durationMs": 60.9091669999998
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.3965830000001915
+              "durationMs": 2.155416999999943
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.089958000000024
+              "durationMs": 2.3742919999999685
             }
           ]
         },
@@ -1382,28 +1382,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.3484159999998155
+              "durationMs": 1.0541669999997794
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 77.39200000000028
+              "durationMs": 66.86129200000005
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.649582999999893
+              "durationMs": 2.348916999999801
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.2057089999998425
+              "durationMs": 2.572958000000199
             }
           ]
         }
@@ -1430,28 +1430,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.6158330000002934
+            "durationMs": 1.5187080000000606
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 116.01870800000006
+            "durationMs": 93.24079200000006
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.130833000000166
+            "durationMs": 3.7331669999998667
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.9876249999997526
+            "durationMs": 3.687915999999859
           }
         ]
       }
@@ -1472,28 +1472,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.2173749999997199
+              "durationMs": 1.11850000000004
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 63.17683299999999
+              "durationMs": 57.87504199999967
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 7.652415999999903
+              "durationMs": 2.400165999999899
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.8724999999999454
+              "durationMs": 2.7881250000000364
             }
           ]
         },
@@ -1509,28 +1509,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.4171249999999418
+              "durationMs": 1.2235000000000582
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 71.39100000000008
+              "durationMs": 59.38270899999998
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.772165999999743
+              "durationMs": 2.755916999999954
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.702209000000039
+              "durationMs": 3.1731250000002547
             }
           ]
         },
@@ -1546,28 +1546,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.2920839999997042
+              "durationMs": 1.2358329999997295
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 73.24183400000038
+              "durationMs": 58.31995800000004
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.724083000000064
+              "durationMs": 2.524499999999989
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.902458000000024
+              "durationMs": 2.61075000000028
             }
           ]
         }
@@ -1594,28 +1594,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 2.106416999999965
+            "durationMs": 1.846875000000182
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 100.61204199999975
+            "durationMs": 104.13566700000001
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 5.039584000000104
+            "durationMs": 4.909500000000207
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.622792000000118
+            "durationMs": 4.890250000000378
           }
         ]
       }
@@ -1636,28 +1636,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.8748749999999745
+              "durationMs": 1.0115419999997357
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 73.52245800000037
+              "durationMs": 44.89895800000022
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.4791669999995065
+              "durationMs": 1.4497919999998885
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.644416000000092
+              "durationMs": 2.161333999999897
             }
           ]
         },
@@ -1673,28 +1673,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.3860829999994166
+              "durationMs": 0.9905000000003383
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 68.07175000000007
+              "durationMs": 56.16366700000026
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.401332999999795
+              "durationMs": 2.09375
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.0482090000004973
+              "durationMs": 2.5449579999999514
             }
           ]
         },
@@ -1710,28 +1710,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.2644170000003214
+              "durationMs": 1.029417000000194
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 71.12483300000076
+              "durationMs": 64.67675000000008
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.495708000000377
+              "durationMs": 2.115374999999858
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.9911250000004657
+              "durationMs": 2.5351250000003347
             }
           ]
         }
@@ -1758,28 +1758,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 2.5064579999998386
+            "durationMs": 1.5502080000001115
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 109.76883300000009
+            "durationMs": 85.36408299999994
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.612624999999753
+            "durationMs": 3.621458000000075
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.340582999999242
+            "durationMs": 3.8209999999999127
           }
         ]
       }
@@ -1800,28 +1800,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.8717500000002474
+              "durationMs": 0.7829999999999018
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 58.178625000000466
+              "durationMs": 43.85024999999996
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.778707999999824
+              "durationMs": 1.4602910000003249
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.63116699999955
+              "durationMs": 2.097874999999931
             }
           ]
         },
@@ -1837,28 +1837,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9506250000004002
+              "durationMs": 0.8447909999999865
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 57.555875000000015
+              "durationMs": 49.284124999999676
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.785041000000092
+              "durationMs": 1.723374999999578
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.5121659999995245
+              "durationMs": 2.414375000000291
             }
           ]
         },
@@ -1874,28 +1874,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.2989589999997406
+              "durationMs": 1.1227920000001177
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 85.37366699999984
+              "durationMs": 70.02766700000029
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 4.9699170000003505
+              "durationMs": 2.681666999999834
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.423208000000159
+              "durationMs": 3.0540829999999914
             }
           ]
         }
@@ -1922,28 +1922,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.9132079999999405
+            "durationMs": 1.941791999999623
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 109.84204200000022
+            "durationMs": 90.34229200000027
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.481125000000247
+            "durationMs": 3.7047920000004524
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.002459000000272
+            "durationMs": 3.6540420000001177
           }
         ]
       }
@@ -1964,28 +1964,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9242909999993572
+              "durationMs": 0.7971250000000509
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 67.25683299999946
+              "durationMs": 43.99745900000016
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.7714169999999285
+              "durationMs": 1.498874999999316
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.4283750000004147
+              "durationMs": 2.070292000000336
             }
           ]
         },
@@ -2001,28 +2001,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0241669999995793
+              "durationMs": 0.8340829999997368
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 51.91874999999982
+              "durationMs": 47.968832999999904
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.934374999999818
+              "durationMs": 1.705167000000074
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.594458000000486
+              "durationMs": 2.1899160000002666
             }
           ]
         },
@@ -2038,28 +2038,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0557500000004438
+              "durationMs": 0.8956659999994372
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 72.832042
+              "durationMs": 62.01508300000023
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.6381250000004
+              "durationMs": 2.179500000000189
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.9288329999999405
+              "durationMs": 2.3301659999997355
             }
           ]
         }
@@ -2086,28 +2086,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.7278339999993477
+            "durationMs": 1.3938749999997526
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 105.91704199999913
+            "durationMs": 83.30054100000052
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.50800000000072
+            "durationMs": 3.3823330000004717
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 5.17254099999991
+            "durationMs": 3.4808750000001965
           }
         ]
       }
@@ -2128,28 +2128,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.8902919999991354
+              "durationMs": 0.7412500000000364
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 60.031167000000096
+              "durationMs": 48.54908299999988
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.8112920000003214
+              "durationMs": 1.444416999999703
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.238083000000188
+              "durationMs": 1.8689580000000205
             }
           ]
         },
@@ -2165,28 +2165,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9106250000004366
+              "durationMs": 0.7844169999998485
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 56.41116599999987
+              "durationMs": 53.47912499999984
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.984332999999424
+              "durationMs": 1.7949170000001686
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.4696670000002996
+              "durationMs": 2.4169590000001335
             }
           ]
         },
@@ -2202,28 +2202,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.8066659999994954
+              "durationMs": 0.6935410000005504
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 40.93816699999934
+              "durationMs": 34.64333400000032
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.6169169999993755
+              "durationMs": 1.3817920000001322
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.3389170000000377
+              "durationMs": 1.7798329999995985
             }
           ]
         }
@@ -2250,28 +2250,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.2789999999995416
+            "durationMs": 1.1972079999995913
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 76.85674999999992
+            "durationMs": 65.41166599999997
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.3754580000004353
+            "durationMs": 2.7623750000002474
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.283500000000458
+            "durationMs": 3.004124999999476
           }
         ]
       }
@@ -2292,28 +2292,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0858330000000933
+              "durationMs": 0.8458339999997406
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 49.967625000000226
+              "durationMs": 44.30670800000007
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.7220409999999902
+              "durationMs": 1.6225000000004002
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.4032090000000608
+              "durationMs": 2.109958000000006
             }
           ]
         },
@@ -2329,28 +2329,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0513750000000073
+              "durationMs": 0.8822500000005675
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 51.146208000000115
+              "durationMs": 43.102750000000015
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.8873750000002474
+              "durationMs": 1.7128750000001673
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.826791999999841
+              "durationMs": 2.3273330000001806
             }
           ]
         },
@@ -2366,28 +2366,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.8915839999999662
+              "durationMs": 0.68316699999923
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 62.02283299999999
+              "durationMs": 44.85345899999993
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.5948330000001079
+              "durationMs": 1.5300420000003214
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.252582999999504
+              "durationMs": 2.058208999999806
             }
           ]
         }
@@ -2414,28 +2414,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.2929999999996653
+            "durationMs": 1.2214590000003227
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 78.89720800000032
+            "durationMs": 62.22116600000027
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.09283300000061
+            "durationMs": 2.588249999999789
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.5104580000006536
+            "durationMs": 2.9697499999992942
           }
         ]
       }
@@ -2456,28 +2456,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9293330000000424
+              "durationMs": 0.8289580000000569
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 57.36695799999961
+              "durationMs": 45.102458999999726
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.279207999999926
+              "durationMs": 1.796332999999322
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.512416000000485
+              "durationMs": 2.1774169999998776
             }
           ]
         },
@@ -2493,28 +2493,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.3129169999992882
+              "durationMs": 0.9202910000003612
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 56.74687500000073
+              "durationMs": 50.94212499999958
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.3853330000001733
+              "durationMs": 2.2015410000003612
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.719250000000102
+              "durationMs": 2.3539999999993597
             }
           ]
         },
@@ -2530,28 +2530,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0378749999999854
+              "durationMs": 0.8533330000000205
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 81.76549999999952
+              "durationMs": 64.44341700000041
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.20891599999959
+              "durationMs": 2.1620840000005046
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.647000000000844
+              "durationMs": 2.481292000000394
             }
           ]
         }
@@ -2578,28 +2578,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.5364159999999174
+            "durationMs": 1.4937919999993028
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 95.10729199999969
+            "durationMs": 84.93962499999998
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.340790999999626
+            "durationMs": 3.6183750000000146
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 4.04149999999936
+            "durationMs": 3.621917000000394
           }
         ]
       }
@@ -2620,28 +2620,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.239292000000205
+              "durationMs": 0.8527500000000146
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 58.97429199999988
+              "durationMs": 45.434416999999485
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 4.689209000000119
+              "durationMs": 1.3629590000000462
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.7561249999998836
+              "durationMs": 1.9718339999999444
             }
           ]
         },
@@ -2657,28 +2657,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.011583000000428
+              "durationMs": 0.8680000000003929
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 55.97175000000061
+              "durationMs": 48.01958300000024
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.1743340000002718
+              "durationMs": 1.6438749999997526
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.823583999999755
+              "durationMs": 4.382999999999811
             }
           ]
         },
@@ -2694,28 +2694,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0206249999991996
+              "durationMs": 0.7814159999998083
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 52.34850000000006
+              "durationMs": 42.639916000000085
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.9129579999998896
+              "durationMs": 1.5740000000005239
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.839208000000326
+              "durationMs": 1.960667000000285
             }
           ]
         }
@@ -2742,28 +2742,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.3690830000005008
+            "durationMs": 1.3171659999998155
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 76.41204099999959
+            "durationMs": 69.35216700000001
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.128791000000092
+            "durationMs": 3.104000000000269
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.3413330000003043
+            "durationMs": 3.0714579999994385
           }
         ]
       }
@@ -2784,28 +2784,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0406250000005457
+              "durationMs": 0.9354169999996884
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 53.54195900000013
+              "durationMs": 50.70766700000058
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.662125000000742
+              "durationMs": 1.8254159999996773
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 6.22191599999951
+              "durationMs": 2.439791000000696
             }
           ]
         },
@@ -2821,28 +2821,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.2753750000001673
+              "durationMs": 0.9645840000002863
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 63.83429100000012
+              "durationMs": 54.914457999999286
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.555083000000195
+              "durationMs": 2.0972499999998035
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 3.2839169999997466
+              "durationMs": 2.6212909999994736
             }
           ]
         },
@@ -2858,28 +2858,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0582500000000437
+              "durationMs": 0.9144169999999576
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 55.94270800000049
+              "durationMs": 46.31120800000008
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.8533330000000205
+              "durationMs": 1.7627080000002024
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.610916999999972
+              "durationMs": 2.1925410000003467
             }
           ]
         }
@@ -2906,28 +2906,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.5207919999993464
+            "durationMs": 1.545375000000604
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 103.90049999999974
+            "durationMs": 78.75920899999983
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.853791999999885
+            "durationMs": 3.3314999999993233
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 6.063125000000582
+            "durationMs": 3.4932920000001104
           }
         ]
       }
@@ -2948,28 +2948,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9880419999999503
+              "durationMs": 0.8044579999996131
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 61.65100000000075
+              "durationMs": 46.72033400000055
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.504124999999476
+              "durationMs": 1.5922089999994569
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.6134170000004815
+              "durationMs": 2.1262500000002547
             }
           ]
         },
@@ -2985,28 +2985,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.0861660000000484
+              "durationMs": 0.8684999999995853
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 61.472499999999854
+              "durationMs": 51.684832999999344
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.027874999999767
+              "durationMs": 1.7654590000001917
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.6397079999997004
+              "durationMs": 2.3218750000005457
             }
           ]
         },
@@ -3022,28 +3022,28 @@
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 0.9049160000004122
+              "durationMs": 0.7587089999997261
             },
             {
               "gate": "typecheck",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 58.287874999999985
+              "durationMs": 45.949499999999716
             },
             {
               "gate": "salt-usage",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 1.8544999999994616
+              "durationMs": 2.1176669999995283
             },
             {
               "gate": "build",
               "status": "passed",
               "issues": [],
               "warnings": [],
-              "durationMs": 2.730999999999767
+              "durationMs": 2.668166999999812
             }
           ]
         }
@@ -3070,28 +3070,28 @@
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1.322584000000461
+            "durationMs": 11.169917000000169
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 82.95387500000015
+            "durationMs": 76.60758299999998
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 6.030042000000321
+            "durationMs": 3.254417000000103
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 3.583708999999544
+            "durationMs": 3.380500000000211
           }
         ]
       }
@@ -3108,28 +3108,28 @@
           "status": "passed",
           "issues": [],
           "warnings": [],
-          "durationMs": 3.4711669999996957
+          "durationMs": 3.1655000000000655
         },
         {
           "gate": "typecheck",
           "status": "passed",
           "issues": [],
           "warnings": [],
-          "durationMs": 141.90362499999992
+          "durationMs": 101.58816699999988
         },
         {
           "gate": "salt-usage",
           "status": "passed",
           "issues": [],
           "warnings": [],
-          "durationMs": 7.594500000000153
+          "durationMs": 8.003083999999944
         },
         {
           "gate": "build",
           "status": "passed",
           "issues": [],
           "warnings": [],
-          "durationMs": 6.375417000000198
+          "durationMs": 5.269209000000046
         }
       ]
     },
@@ -3143,28 +3143,28 @@
           "status": "passed",
           "issues": [],
           "warnings": [],
-          "durationMs": 2.901958999999806
+          "durationMs": 2.065875000000233
         },
         {
           "gate": "typecheck",
           "status": "passed",
           "issues": [],
           "warnings": [],
-          "durationMs": 98.89733299999989
+          "durationMs": 84.87704200000007
         },
         {
           "gate": "salt-usage",
           "status": "passed",
           "issues": [],
           "warnings": [],
-          "durationMs": 5.203082999999424
+          "durationMs": 4.8107499999996435
         },
         {
           "gate": "build",
           "status": "passed",
           "issues": [],
           "warnings": [],
-          "durationMs": 4.803082999999788
+          "durationMs": 4.217209000000366
         }
       ]
     }

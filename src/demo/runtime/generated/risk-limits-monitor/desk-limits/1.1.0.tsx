@@ -94,7 +94,7 @@ export default function DeskLimits() {
                   return (
                     <TR key={desk.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined} data-demo-anchor={`desk-${desk.id}`}>
                       <TD>
-                        <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(desk)}>
+                        <Button sentiment="neutral" appearance="transparent" className={styles.recordName} aria-pressed={current} onClick={() => choose(desk)}>
                           {desk.name}
                         </Button>
                       </TD>

@@ -94,7 +94,7 @@ export default function ResearchLibrary() {
                       return (
                         <TR key={report.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined} data-demo-anchor={`report-${report.id}`}>
                           <TD>
-                            <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(report)}>
+                            <Button sentiment="neutral" appearance="transparent" className={styles.recordName} aria-pressed={current} onClick={() => choose(report)}>
                               {report.title}
                             </Button>
                           </TD>

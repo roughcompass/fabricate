@@ -78,7 +78,7 @@ function ClientSearch() {
                     return (
                       <TR key={client.id} aria-current={current ? "true" : undefined} className={current ? styles["ClientSearch_selected"] : undefined}>
                         <TD>
-                          <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(client)} data-demo-anchor={`client-${client.id}`}>
+                          <Button sentiment="neutral" appearance="transparent" className={styles["ClientSearch_recordName"]} aria-pressed={current} onClick={() => choose(client)} data-demo-anchor={`client-${client.id}`}>
                             {client.name}
                           </Button>
                         </TD>

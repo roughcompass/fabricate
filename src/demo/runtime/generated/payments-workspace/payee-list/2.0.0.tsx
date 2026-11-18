@@ -51,7 +51,7 @@ export default function PayeeList() {
                   return (
                     <TR key={payee.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined} data-demo-anchor={`payee-${payee.id}`}>
                       <TD>
-                        <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(payee)}>
+                        <Button sentiment="neutral" appearance="transparent" className={styles.recordName} aria-pressed={current} onClick={() => choose(payee)}>
                           {payee.name}
                         </Button>
                       </TD>

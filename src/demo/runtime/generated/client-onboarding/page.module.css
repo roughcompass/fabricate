@@ -1,6 +1,18 @@
 /* client-search 4.2.0 */
-.ClientSearch_selected {
+/* Outranks Salt's own row background, table.ClientSearch_saltTable tr. */
+.ClientSearch_selected[aria-current="true"] {
   background: var(--salt-selectable-background-selected);
+}
+
+/* A record's name as the control that selects it: in the text's own case, and no taller than the row's text, so it lines up with the other cells. */
+.ClientSearch_recordName[aria-pressed] {
+  height: auto;
+  min-height: 0;
+  padding-block: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  justify-content: flex-start;
+  text-align: start;
 }
 
 /* kyc-checklist 3.3.0 */

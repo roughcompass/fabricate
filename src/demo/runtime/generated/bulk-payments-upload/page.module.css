@@ -1,10 +1,22 @@
 /* payment-file-upload 1.1.0 */
-.PaymentFileUpload_selected {
+/* Outranks Salt's own row background, table.PaymentFileUpload_saltTable tr. */
+.PaymentFileUpload_selected[aria-current="true"] {
   background: var(--salt-selectable-background-selected);
 }
 
 .PaymentFileUpload_figure {
   font-variant-numeric: tabular-nums;
+}
+
+/* A record's name as the control that selects it: in the text's own case, and no taller than the row's text, so it lines up with the other cells. */
+.PaymentFileUpload_recordName[aria-pressed] {
+  height: auto;
+  min-height: 0;
+  padding-block: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  justify-content: flex-start;
+  text-align: start;
 }
 
 /* batch-release 1.0.0 */

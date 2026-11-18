@@ -69,7 +69,7 @@ export default function PaymentTracker() {
                   return (
                     <TR key={payment.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined} data-demo-anchor={`payment-${payment.id}`}>
                       <TD>
-                        <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(payment)}>
+                        <Button sentiment="neutral" appearance="transparent" className={styles.recordName} aria-pressed={current} onClick={() => choose(payment)}>
                           {payment.reference}
                         </Button>
                       </TD>

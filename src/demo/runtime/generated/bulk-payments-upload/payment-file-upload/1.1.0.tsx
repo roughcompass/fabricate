@@ -110,7 +110,7 @@ export default function PaymentFileUpload() {
                     <TR key={file.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined} data-demo-anchor={`file-${file.id}`}>
                       <TD>
                         <StackLayout gap={1} align="start">
-                          <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(file)}>
+                          <Button sentiment="neutral" appearance="transparent" className={styles.recordName} aria-pressed={current} onClick={() => choose(file)}>
                             {file.name}
                           </Button>
                           <Text styleAs="label" color="secondary">

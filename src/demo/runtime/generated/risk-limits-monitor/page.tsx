@@ -100,7 +100,7 @@ function DeskLimits() {
                   return (
                     <TR key={desk.id} aria-current={current ? "true" : undefined} className={current ? styles["DeskLimits_selected"] : undefined} data-demo-anchor={`desk-${desk.id}`}>
                       <TD>
-                        <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(desk)}>
+                        <Button sentiment="neutral" appearance="transparent" className={styles["DeskLimits_recordName"]} aria-pressed={current} onClick={() => choose(desk)}>
                           {desk.name}
                         </Button>
                       </TD>
