@@ -1,0 +1,7 @@
+.selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.figure {
+  font-variant-numeric: tabular-nums;
+}

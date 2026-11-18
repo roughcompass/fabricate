@@ -1,0 +1,8 @@
+/* The tiles fill the card group's row, which Salt lays out as a wrapping flex row. */
+.tiles {
+  flex-basis: 100%;
+}
+
+.figure {
+  font-variant-numeric: tabular-nums;
+}

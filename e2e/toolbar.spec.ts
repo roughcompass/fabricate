@@ -4,7 +4,7 @@ import { templateBySlug } from "../src/lib/demo/catalog";
 import { createApplication, validateDeployInput } from "../src/lib/demo/deployments";
 import { WORKSPACE_COOKIE } from "../src/lib/demo/workspace-key";
 import { ensureWorkspace } from "../src/lib/demo/workspaces";
-import { expectToolbarOnTop, openTool, openToolbarMenu, startComment, waitForRegions } from "./support/demo";
+import { expectToolbarOnTop, injectUnlabeledField, openTool, openToolbarMenu, startComment, waitForRegions } from "./support/demo";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 
 /** The toolbar over every running application (template-demo/toolbar spec). */
@@ -387,7 +387,8 @@ test.describe("nothing overlays the toolbar", () => {
   }
 
   test("passes an audit outline beneath the pill, whose buttons still respond", async ({ page }) => {
-    // Dock the payee list, which has the planted defects, under the pill.
+    // Dock the payee list, with a field the audit reports, under the pill.
+    await injectUnlabeledField(page);
     await page.addStyleTag({ content: '[data-demo-mfe="payee-list"] { position: fixed !important; top: calc(50% - 120px) !important; right: 0 !important; width: 320px !important; }' });
     await openTool(page, "accessibility");
     await page.getByRole("dialog", { name: "Accessibility" }).getByRole("button", { name: "Run audit" }).click();

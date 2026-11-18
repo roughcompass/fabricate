@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { planted, routeHref, useBus, useProfile, usePublish, useRoute } from "@deweb/portal";
+import { routeHref, useBus, useProfile, usePublish, useRoute } from "@deweb/portal";
 import { templateBySlug } from "@/lib/demo/catalog";
 import { createBus } from "@/demo/runtime/bus";
 import type { RuntimeDescriptor } from "@/demo/runtime/descriptor";
@@ -64,11 +64,5 @@ describe("@deweb/portal in the running portal", () => {
     expect(routes!.current).toEqual({ path: "activity", label: "Activity", href: "/run/app_payments000000000/activity?embed=1" });
     expect(routes!.routes.map((route) => route.path)).toContain("payees");
     expect(routeHref(routes!.routes.find((route) => route.path === "payees")!)).toBe("/run/app_payments000000000/payees?embed=1");
-  });
-
-  it("blocks the main thread for the requested time with planted.blockMainThread", () => {
-    const started = performance.now();
-    planted.blockMainThread(60);
-    expect(performance.now() - started).toBeGreaterThanOrEqual(60);
   });
 });

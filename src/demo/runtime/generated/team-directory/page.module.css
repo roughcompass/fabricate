@@ -1,0 +1,4 @@
+/* people-search 1.1.0 */
+.PeopleSearch_selected {
+  background: var(--salt-selectable-background-selected);
+}

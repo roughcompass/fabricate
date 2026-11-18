@@ -1,0 +1,19 @@
+/* desk-limits 1.1.0 */
+.DeskLimits_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.DeskLimits_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* limit-breaches 1.0.0 */
+.LimitBreaches_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+.LimitBreaches_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

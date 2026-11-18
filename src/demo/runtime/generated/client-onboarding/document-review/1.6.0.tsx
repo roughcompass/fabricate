@@ -1,60 +1,59 @@
-import { useState } from "react";
-import {
-  Button,
-  Card,
-  FlexLayout,
-  H2,
-  StackLayout,
-  StatusIndicator,
-  Table,
-  TableContainer,
-  TBody,
-  TD,
-  TH,
-  THead,
-  TR,
-  Text,
-} from "@salt-ds/core";
+import { useProfile } from "@deweb/portal";
+import { Button, Display3, FlexLayout, GridLayout, H2, Panel, StackLayout, StatusIndicator, TBody, TD, TH, THead, TR, Table, TableContainer, Text } from "@salt-ds/core";
 import { CheckmarkIcon } from "@salt-ds/icons";
-import { planted, useProfile } from "@deweb/portal";
+import { useState } from "react";
 import { DOCUMENTS } from "../data";
+import styles from "./1.6.0.module.css";
 
-type DocStatus = "Received" | "Awaiting review" | "Missing" | "Approved";
+type Status = (typeof DOCUMENTS)[number]["status"] | "Approved";
 
-const DOC_TONES: Record<DocStatus, "success" | "info" | "error"> = {
+const TONE = {
   Received: "success",
+  Approved: "success",
   "Awaiting review": "info",
   Missing: "error",
-  Approved: "success",
-};
+} as const;
+
+function Figure({ label, value, detail }: { label: string; value: number; detail: string }) {
+  return (
+    <StackLayout gap={1}>
+      <Text styleAs="label" color="secondary">
+        {label}
+      </Text>
+      <Display3 className={styles.figure}>{`${value}`}</Display3>
+      <Text color="secondary">{detail}</Text>
+    </StackLayout>
+  );
+}
 
 export default function DocumentReview() {
   const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
   const [verified, setVerified] = useState(false);
+  const status = (entry: (typeof DOCUMENTS)[number]): Status => (approved.includes(entry.id) ? "Approved" : entry.status);
+  const count = (wanted: Status) => DOCUMENTS.filter((entry) => status(entry) === wanted).length;
 
   return (
-    <Card data-demo-anchor="documents-panel">
+    <Panel data-demo-anchor="documents-panel">
       <StackLayout gap={2}>
-        <FlexLayout justify="space-between" align="center" gap={2} wrap>
+        <FlexLayout justify="space-between" align="center" gap={1} wrap>
           <H2>Document review</H2>
-          <Button
-            sentiment="accented"
-            appearance="solid"
-            onClick={() => {
-              planted.blockMainThread(650);
-              setVerified(true);
-            }}
-            data-demo-anchor="verify-documents"
-          >
+          <Button sentiment="accented" appearance="solid" onClick={() => setVerified(true)} data-demo-anchor="verify-documents">
             <CheckmarkIcon aria-hidden />
             Verify all documents
           </Button>
         </FlexLayout>
-        {verified && <Text color="secondary">Every received document matched its checksum.</Text>}
+        <GridLayout columns={{ xs: 1, sm: 3 }} gap={2}>
+          <Figure label="Awaiting review" value={count("Awaiting review")} detail="Needs an Approver" />
+          <Figure label="Missing" value={count("Missing")} detail="Request from the client" />
+          <Figure label="Received" value={count("Received") + count("Approved")} detail={`Of ${DOCUMENTS.length} requested`} />
+        </GridLayout>
+        <Text role="status" color="secondary">
+          {verified ? "Every received document matched its checksum." : ""}
+        </Text>
         <TableContainer>
           <Table aria-label="Onboarding documents">
-            <THead>
+            <THead sticky>
               <TR>
                 <TH>Document</TH>
                 <TH>Client</TH>
@@ -64,29 +63,31 @@ export default function DocumentReview() {
               </TR>
             </THead>
             <TBody>
-              {DOCUMENTS.map((document) => {
-                const status: DocStatus = approved.includes(document.id) ? "Approved" : document.status;
+              {DOCUMENTS.map((entry) => {
+                const current = status(entry);
                 return (
-                  <TR key={document.id} data-demo-anchor={`document-${document.id}`}>
-                    <TD>{document.name}</TD>
-                    <TD>{document.client}</TD>
-                    <TD>{document.due}</TD>
+                  <TR key={entry.id} data-demo-anchor={`document-${entry.id}`}>
+                    <TD>
+                      <StackLayout gap={0}>
+                        <Text>{entry.name}</Text>
+                        <Text styleAs="label" color="secondary">
+                          {entry.id}
+                        </Text>
+                      </StackLayout>
+                    </TD>
+                    <TD>{entry.client}</TD>
+                    <TD>{entry.due}</TD>
                     <TD>
                       <FlexLayout gap={1} align="center">
-                        <StatusIndicator status={DOC_TONES[status]} />
-                        <Text>{status}</Text>
+                        <StatusIndicator status={TONE[current]} aria-hidden />
+                        <Text>{current}</Text>
                       </FlexLayout>
                     </TD>
                     {approver && (
                       <TD>
-                        {status === "Awaiting review" ? (
-                          <Button
-                            sentiment="accented"
-                            appearance="solid"
-                            onClick={() => setApproved((ids) => [...ids, document.id])}
-                            data-demo-anchor={`approve-${document.id}`}
-                          >
-                            {`Approve ${document.id}`}
+                        {current === "Awaiting review" ? (
+                          <Button sentiment="accented" appearance="transparent" onClick={() => setApproved((ids) => [...ids, entry.id])} data-demo-anchor={`approve-${entry.id}`}>
+                            {`Approve ${entry.id}`}
                           </Button>
                         ) : (
                           <Text color="secondary">None needed</Text>
@@ -101,6 +102,6 @@ export default function DocumentReview() {
         </TableContainer>
         {!approver && <Text color="secondary">Document approvals are available to the Approver role.</Text>}
       </StackLayout>
-    </Card>
+    </Panel>
   );
 }

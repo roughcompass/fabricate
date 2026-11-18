@@ -1,23 +1,10 @@
-import { useState } from "react";
-import {
-  Button,
-  FlexLayout,
-  H2,
-  Panel,
-  StackLayout,
-  StatusIndicator,
-  Table,
-  TableContainer,
-  TBody,
-  TD,
-  Text,
-  TH,
-  THead,
-  TR,
-} from "@salt-ds/core";
+import { useProfile } from "@deweb/portal";
+import { Button, FlexLayout, H2, Panel, StackLayout, StatusIndicator, TBody, TD, TH, THead, TR, Table, TableContainer, Text } from "@salt-ds/core";
 import { CalendarIcon } from "@salt-ds/icons";
-import { planted, useProfile } from "@deweb/portal";
-import { CHANGES } from "../data";
+import { useState } from "react";
+import { CHANGES, WEEK } from "../data";
+
+const AWAITING = "Awaiting approval";
 
 export default function ChangeCalendar() {
   const approver = useProfile().persona === "Approver";
@@ -28,28 +15,20 @@ export default function ChangeCalendar() {
     <Panel data-demo-anchor="changes-panel">
       <StackLayout gap={2}>
         <FlexLayout justify="space-between" align="center" gap={2} wrap>
-          <H2>Change calendar</H2>
-          <Button
-            sentiment="neutral"
-            appearance="bordered"
-            onClick={() => {
-              planted.blockMainThread(650);
-              setChecked(true);
-            }}
-            data-demo-anchor="check-conflicts"
-          >
+          <StackLayout gap={1}>
+            <H2>Change calendar</H2>
+            <Text styleAs="label" color="secondary" role="status">
+              {checked ? `Week of ${WEEK}. No conflicting changes this week.` : `Week of ${WEEK}`}
+            </Text>
+          </StackLayout>
+          <Button sentiment="neutral" appearance="bordered" onClick={() => setChecked(true)} data-demo-anchor="check-conflicts">
             <CalendarIcon aria-hidden />
             Check for conflicts
           </Button>
         </FlexLayout>
-        {checked && (
-          <Text color="secondary" aria-live="polite">
-            No conflicting changes this week.
-          </Text>
-        )}
         <TableContainer>
           <Table aria-label="Changes this week">
-            <THead>
+            <THead sticky>
               <TR>
                 <TH>Change</TH>
                 <TH>Window</TH>
@@ -61,14 +40,21 @@ export default function ChangeCalendar() {
             <TBody>
               {CHANGES.map((change) => {
                 const status: string = approved.includes(change.id) ? "Approved" : change.status;
-                const awaiting = status === "Awaiting approval";
+                const awaiting = status === AWAITING;
                 return (
                   <TR key={change.id} data-demo-anchor={`change-${change.id}`}>
-                    <TD>{`${change.id} · ${change.title}`}</TD>
+                    <TD>
+                      <StackLayout gap={0}>
+                        <Text>{`${change.id} · ${change.title}`}</Text>
+                        <Text styleAs="label" color="secondary">
+                          {change.owner}
+                        </Text>
+                      </StackLayout>
+                    </TD>
                     <TD>{change.window}</TD>
                     <TD>{change.risk}</TD>
                     <TD>
-                      <FlexLayout gap={1} align="center">
+                      <FlexLayout gap={1} align="center" wrap={false}>
                         <StatusIndicator status={awaiting ? "warning" : "success"} />
                         <Text>{status}</Text>
                       </FlexLayout>
@@ -76,12 +62,7 @@ export default function ChangeCalendar() {
                     {approver && (
                       <TD>
                         {awaiting ? (
-                          <Button
-                            sentiment="accented"
-                            appearance="solid"
-                            onClick={() => setApproved((ids) => [...ids, change.id])}
-                            data-demo-anchor={`approve-${change.id}`}
-                          >
+                          <Button sentiment="accented" appearance="transparent" onClick={() => setApproved((ids) => [...ids, change.id])} data-demo-anchor={`approve-${change.id}`}>
                             {`Approve ${change.id}`}
                           </Button>
                         ) : (

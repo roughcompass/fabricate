@@ -1,0 +1,3 @@
+.selected {
+  background: var(--salt-selectable-background-selected);
+}

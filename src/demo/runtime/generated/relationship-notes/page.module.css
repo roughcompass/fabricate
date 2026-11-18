@@ -1,0 +1,11 @@
+/* relationship-list 1.1.0 */
+.RelationshipList_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+/* meeting-notes 1.0.0 */
+.MeetingNotes_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

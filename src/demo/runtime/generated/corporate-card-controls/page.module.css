@@ -1,0 +1,19 @@
+/* card-list 1.1.0 */
+.CardList_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.CardList_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* card-rules 1.0.0 */
+.CardRules_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+.CardRules_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

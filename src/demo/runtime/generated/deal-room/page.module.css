@@ -1,0 +1,17 @@
+/* deal-documents 1.1.0 */
+.DealDocuments_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.DealDocuments_group {
+  background: var(--salt-container-secondary-background);
+}
+
+.DealDocuments_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* open-items 1.0.0 */
+.OpenItems_figure {
+  font-variant-numeric: tabular-nums;
+}

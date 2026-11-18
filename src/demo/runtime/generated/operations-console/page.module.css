@@ -1,0 +1,20 @@
+/* incident-feed 6.1.0 */
+.IncidentFeed_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+/* service-health 2.4.0 */
+.ServiceHealth_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The focused region's column. */
+.ServiceHealth_focus {
+  background: var(--salt-selectable-background-selected);
+}
+
+.ServiceHealth_figure {
+  font-variant-numeric: tabular-nums;
+}

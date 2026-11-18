@@ -1,0 +1,13 @@
+/* payment-file-upload 1.1.0 */
+.PaymentFileUpload_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.PaymentFileUpload_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* batch-release 1.0.0 */
+.BatchRelease_figure {
+  font-variant-numeric: tabular-nums;
+}

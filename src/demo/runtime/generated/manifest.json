@@ -1,328 +1,233 @@
 {
-  "schema": "fabricate.hero_manifest",
-  "schema_version": 1,
-  "kitVersion": "2026-10-16.3",
-  "saltRelease": "1.73.0",
-  "heroes": [
+  "schema": "fabricate.template_manifest",
+  "schema_version": 2,
+  "saltRelease": "1.75.0",
+  "templates": [
     {
       "slug": "payments-workspace",
-      "data": {
-        "file": "payments-workspace/data.ts",
-        "description": "The records the payments-workspace hero shows: PAYEES, ACTIVITY."
-      },
+      "data": "payments-workspace/data.ts",
       "versions": [
-        {
-          "member": "payee-list",
-          "version": "2.0.0",
-          "prerelease": false,
-          "planted": [],
-          "file": "payments-workspace/payee-list/2.0.0.tsx",
-          "gates": [
-            {
-              "gate": "salt-only",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 2.057375000003958
-            },
-            {
-              "gate": "typecheck",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 72.62520799999766
-            },
-            {
-              "gate": "salt-usage",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 3.275333000012324
-            },
-            {
-              "gate": "build",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 2.952000000004773
-            }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_4ut9pqfbya7yodif",
-            "refinedFrom": null,
-            "message": null
-          }
-        },
         {
           "member": "payee-list",
           "version": "1.4.2",
           "prerelease": false,
-          "planted": [
-            "label",
-            "color-contrast",
-            "button-name"
-          ],
           "file": "payments-workspace/payee-list/1.4.2.tsx",
+          "stylesFile": "payments-workspace/payee-list/1.4.2.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
-              "exempted": [
-                {
-                  "rule": "color-contrast",
-                  "issue": {
-                    "code": "salt-only/literal-color",
-                    "line": 68,
-                    "column": 38,
-                    "symbol": "style.color",
-                    "message": "Line 68 sets color to #b0b0b0; use a Salt color token such as var(--salt-content-primary-foreground)."
-                  }
-                }
-              ],
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.22575000001234
+              "durationMs": 8.105916999999977
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 58.48508299997775
+              "durationMs": 292.45508400000006
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
-              "warnings": [
-                {
-                  "fix": "Replace hard-coded color literals with semantic Salt color tokens.",
-                  "code": "tokens.hardcoded-color",
-                  "message": "Hard-coded color value detected: Hard-coded color values were detected. Prefer Salt semantic color tokens."
-                }
-              ],
-              "durationMs": 2.59437499998603
+              "issues": [],
+              "warnings": [],
+              "durationMs": 33.86045899999999
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.6298330000136048
+              "durationMs": 12.494166999999948
             }
-          ],
-          "exemptions": [
+          ]
+        },
+        {
+          "member": "payee-list",
+          "version": "2.0.0",
+          "prerelease": false,
+          "file": "payments-workspace/payee-list/2.0.0.tsx",
+          "stylesFile": "payments-workspace/payee-list/2.0.0.module.css",
+          "gates": [
             {
-              "rule": "label",
-              "codes": [],
-              "exempted": []
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.2866249999999582
             },
             {
-              "rule": "color-contrast",
-              "codes": [
-                "salt-only/literal-color",
-                "salt-only/style-value"
-              ],
-              "exempted": [
-                "salt-only/literal-color"
-              ]
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 64.07491599999992
             },
             {
-              "rule": "button-name",
-              "codes": [],
-              "exempted": []
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.7234999999999445
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 3.71283399999993
             }
-          ],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_6s65pch80enlfj0f",
-            "refinedFrom": "2.0.0",
-            "message": "Make Payee list 1.4.2: Compact table with inline search and icon actions. Planted defect (label), on purpose and nowhere else: Leave the search field without a visible or accessible label: no FormField label, no aria-label. Planted defect (color-contrast), on purpose and nowhere else: Show the secondary text in one literal light gray, #b0b0b0, through a style prop, so it fails WCAG contrast on the light background. Use no other literal color. Planted defect (button-name), on purpose and nowhere else: Make the row actions icon-only buttons with no accessible name: no text, no aria-label.",
-            "edits": [
-              "Hand edit, 2026-10-16: removed the pay buttons' aria-label, which the generator added, so the planted button-name defect is present as the catalog's planted rules require."
-            ]
-          }
+          ]
         },
         {
           "member": "payee-list",
           "version": "2.1.0-beta.1",
           "prerelease": true,
-          "planted": [],
           "file": "payments-workspace/payee-list/2.1.0-beta.1.tsx",
+          "stylesFile": "payments-workspace/payee-list/2.1.0-beta.1.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 0.8432920000050217
+              "durationMs": 1.433540999999991
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 46.59533299997565
+              "durationMs": 55.80262499999992
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.3470830000005662
+              "durationMs": 2.397542000000044
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.327332999993814
+              "durationMs": 3.042583000000036
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_wgr8itabnm50718t",
-            "refinedFrom": "2.0.0",
-            "message": "Make Payee list 2.1.0-beta.1: Card layout with favorite payees pinned first. It's a prerelease: keep the stable version's behavior and change only what this summary says."
-          }
-        },
-        {
-          "member": "transfer-form",
-          "version": "3.1.0",
-          "prerelease": false,
-          "planted": [],
-          "file": "payments-workspace/transfer-form/3.1.0.tsx",
-          "gates": [
-            {
-              "gate": "salt-only",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 1.8751669999910519
-            },
-            {
-              "gate": "typecheck",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 69.76779199999874
-            },
-            {
-              "gate": "salt-usage",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 3.330958999984432
-            },
-            {
-              "gate": "build",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 3.0596669999940787
-            }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_qtvaiqz0ugayt2cg",
-            "refinedFrom": null,
-            "message": null
-          }
+          ]
         },
         {
           "member": "transfer-form",
           "version": "3.0.1",
           "prerelease": false,
-          "planted": [],
           "file": "payments-workspace/transfer-form/3.0.1.tsx",
+          "stylesFile": null,
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 0.9479170000413433
+              "durationMs": 1.504666000000043
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 58.72112499998184
+              "durationMs": 76.92825000000016
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.2118330000084825
+              "durationMs": 3.7380410000000666
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.6799580000224523
+              "durationMs": 3.834082999999964
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_v9z02oaiwbekb8fb",
-            "refinedFrom": "3.1.0",
-            "message": "Make Transfer form 3.0.1: Single-step transfer."
-          }
+          ]
+        },
+        {
+          "member": "transfer-form",
+          "version": "3.1.0",
+          "prerelease": false,
+          "file": "payments-workspace/transfer-form/3.1.0.tsx",
+          "stylesFile": null,
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.4871249999998781
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 59.57400000000007
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 3.76566600000001
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 3.7437079999999696
+            }
+          ]
         },
         {
           "member": "payment-activity",
           "version": "2.3.0",
           "prerelease": false,
-          "planted": [],
           "file": "payments-workspace/payment-activity/2.3.0.tsx",
+          "stylesFile": "payments-workspace/payment-activity/2.3.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.6778749999939464
+              "durationMs": 1.3289999999999509
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 79.42170800000895
+              "durationMs": 65.27100000000019
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 3.891332999977749
+              "durationMs": 2.721416999999974
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 3.522832999995444
+              "durationMs": 2.9776659999999993
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_by0j9iyj4958lk47",
-            "refinedFrom": null,
-            "message": null,
-            "edits": [
-              "Hand edit, 2026-10-16: the metric cards wrap at a minimum width instead of taking three columns from Salt's sm breakpoint, because the amount overflowed its card at 200 percent zoom."
-            ]
-          }
+          ]
         }
       ],
       "page": {
@@ -345,389 +250,264 @@
           }
         ],
         "file": "payments-workspace/page.tsx",
+        "stylesFile": "payments-workspace/page.module.css",
         "gates": [
           {
             "gate": "salt-only",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 57.308750000000146
+            "durationMs": 2.3265419999997903
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 5041.189166
+            "durationMs": 82.33937500000002
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 5471.875708
+            "durationMs": 7.93754100000001
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 377.32820900000297
+            "durationMs": 5.849917000000005
           }
         ]
       }
     },
     {
       "slug": "client-onboarding",
-      "data": {
-        "file": "client-onboarding/data.ts",
-        "description": "The records the client-onboarding hero shows: CLIENTS, CHECKS, DOCUMENTS."
-      },
+      "data": "client-onboarding/data.ts",
       "versions": [
-        {
-          "member": "client-search",
-          "version": "4.2.0",
-          "prerelease": false,
-          "planted": [],
-          "file": "client-onboarding/client-search/4.2.0.tsx",
-          "gates": [
-            {
-              "gate": "salt-only",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 8.298541000003752
-            },
-            {
-              "gate": "typecheck",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 101.07091700000456
-            },
-            {
-              "gate": "salt-usage",
-              "issues": [],
-              "status": "passed",
-              "warnings": [
-                {
-                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
-                  "code": "tokens.hardcoded-size",
-                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
-                }
-              ],
-              "durationMs": 4.214207999997598
-            },
-            {
-              "gate": "build",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 3.9463749999995343
-            }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_of590n9w55jatyfn",
-            "refinedFrom": null,
-            "message": null,
-            "edits": [
-              "Hand edit, 2026-10-16: the segment and country line inherits the toggle button's color, because secondary text failed contrast on the selected button."
-            ]
-          }
-        },
         {
           "member": "client-search",
           "version": "4.1.0",
           "prerelease": false,
-          "planted": [],
           "file": "client-onboarding/client-search/4.1.0.tsx",
+          "stylesFile": "client-onboarding/client-search/4.1.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.138250000003609
+              "durationMs": 0.8858330000000478
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 85.65062500000931
+              "durationMs": 47.613624999999956
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
-              "warnings": [
-                {
-                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
-                  "code": "tokens.hardcoded-size",
-                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
-                }
-              ],
-              "durationMs": 3.7059580000059213
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.7031670000001213
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 3.074124999999185
+              "durationMs": 2.2127080000000205
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_rhrvfchd2utsvw7s",
-            "refinedFrom": "4.2.0",
-            "message": "Make Client search 4.1.0: Search with recently viewed clients.",
-            "edits": [
-              "Hand edit, 2026-10-16: the segment and country line inherits the toggle button's color, because secondary text failed contrast on the selected button."
-            ]
-          }
+          ]
         },
         {
-          "member": "kyc-checklist",
-          "version": "3.3.0",
+          "member": "client-search",
+          "version": "4.2.0",
           "prerelease": false,
-          "planted": [],
-          "file": "client-onboarding/kyc-checklist/3.3.0.tsx",
+          "file": "client-onboarding/client-search/4.2.0.tsx",
+          "stylesFile": "client-onboarding/client-search/4.2.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.6900409999943804
+              "durationMs": 0.8501660000001721
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 88.55837499999325
+              "durationMs": 52.485541999999896
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
-              "warnings": [
-                {
-                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
-                  "code": "tokens.hardcoded-size",
-                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
-                }
-              ],
-              "durationMs": 3.9407919999939622
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.041541000000052
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 5.154499999989639
+              "durationMs": 2.6128329999999096
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_hfd25lo05diyemes",
-            "refinedFrom": null,
-            "message": null
-          }
+          ]
         },
         {
           "member": "kyc-checklist",
           "version": "3.2.0",
           "prerelease": false,
-          "planted": [
-            "label",
-            "color-contrast",
-            "button-name"
-          ],
           "file": "client-onboarding/kyc-checklist/3.2.0.tsx",
+          "stylesFile": "client-onboarding/kyc-checklist/3.2.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
-              "exempted": [
-                {
-                  "rule": "color-contrast",
-                  "issue": {
-                    "code": "salt-only/literal-color",
-                    "line": 53,
-                    "column": 32,
-                    "symbol": "style.color",
-                    "message": "Line 53 sets color to #b0b0b0; use a Salt color token such as var(--salt-content-primary-foreground)."
-                  }
-                }
-              ],
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.81683300001896
+              "durationMs": 0.6326670000000831
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 114.1967500000028
+              "durationMs": 39.49124999999981
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
-              "warnings": [
-                {
-                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
-                  "code": "tokens.hardcoded-size",
-                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
-                },
-                {
-                  "fix": "Replace hard-coded color literals with semantic Salt color tokens.",
-                  "code": "tokens.hardcoded-color",
-                  "message": "Hard-coded color value detected: Hard-coded color values were detected. Prefer Salt semantic color tokens."
-                }
-              ],
-              "durationMs": 4.5926670000189915
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.6295419999999012
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 5.144333000003826
+              "durationMs": 2.065958000000137
             }
-          ],
-          "exemptions": [
+          ]
+        },
+        {
+          "member": "kyc-checklist",
+          "version": "3.3.0",
+          "prerelease": false,
+          "file": "client-onboarding/kyc-checklist/3.3.0.tsx",
+          "stylesFile": "client-onboarding/kyc-checklist/3.3.0.module.css",
+          "gates": [
             {
-              "rule": "label",
-              "codes": [],
-              "exempted": []
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.6921660000000429
             },
             {
-              "rule": "color-contrast",
-              "codes": [
-                "salt-only/literal-color",
-                "salt-only/style-value"
-              ],
-              "exempted": [
-                "salt-only/literal-color"
-              ]
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 39.663125000000036
             },
             {
-              "rule": "button-name",
-              "codes": [],
-              "exempted": []
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.456707999999935
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.9359580000000278
             }
-          ],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_5bdq8zdnqetafujy",
-            "refinedFrom": "3.3.0",
-            "message": "Make KYC checklist 3.2.0: Dense checklist with icon-only actions. Planted defect (label), on purpose and nowhere else: Leave the search field without a visible or accessible label: no FormField label, no aria-label. Planted defect (color-contrast), on purpose and nowhere else: Show the secondary text in one literal light gray, #b0b0b0, through a style prop, so it fails WCAG contrast on the light background. Use no other literal color. Planted defect (button-name), on purpose and nowhere else: Make the row actions icon-only buttons with no accessible name: no text, no aria-label.",
-            "edits": [
-              "Hand edit, 2026-10-16: removed the icon button's aria-label, which the generator added, so the planted button-name defect is present as the catalog's planted rules require."
-            ]
-          }
+          ]
         },
         {
           "member": "kyc-checklist",
           "version": "4.0.0-rc.1",
           "prerelease": true,
-          "planted": [],
           "file": "client-onboarding/kyc-checklist/4.0.0-rc.1.tsx",
+          "stylesFile": "client-onboarding/kyc-checklist/4.0.0-rc.1.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.296415999997407
+              "durationMs": 0.9105420000000777
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 79.96974999998929
+              "durationMs": 50.70662500000003
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
-              "warnings": [
-                {
-                  "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
-                  "code": "tokens.hardcoded-size",
-                  "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
-                }
-              ],
-              "durationMs": 3.235625000001164
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.9786659999999756
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 3.1133330000157002
+              "durationMs": 2.234749999999849
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_7d2rzlubk9v48dbm",
-            "refinedFrom": "3.3.0",
-            "message": "Make KYC checklist 4.0.0-rc.1: Grouped steps with a progress summary. It's a prerelease: keep the stable version's behavior and change only what this summary says."
-          }
+          ]
         },
         {
           "member": "document-review",
           "version": "1.6.0",
           "prerelease": false,
-          "planted": [],
           "file": "client-onboarding/document-review/1.6.0.tsx",
+          "stylesFile": "client-onboarding/document-review/1.6.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 0.8389999999781139
+              "durationMs": 0.7972079999999551
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 48.9749170000141
+              "durationMs": 46.48287500000015
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.1116669999901205
+              "durationMs": 1.924833000000035
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.5828749999927823
+              "durationMs": 2.24612500000012
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_4jnr9m6nfhcwujud",
-            "refinedFrom": null,
-            "message": null
-          }
+          ]
         }
       ],
       "page": {
@@ -750,401 +530,301 @@
           }
         ],
         "file": "client-onboarding/page.tsx",
+        "stylesFile": "client-onboarding/page.module.css",
         "gates": [
           {
             "gate": "salt-only",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 12.621124999997846
+            "durationMs": 3.7232910000000174
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1025.5248750000028
+            "durationMs": 73.33295799999996
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
-            "warnings": [
-              {
-                "code": "tokens.hardcoded-size",
-                "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing.",
-                "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base)."
-              }
-            ],
-            "durationMs": 4536.661875000002
+            "warnings": [],
+            "durationMs": 4.3120420000000195
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 73.60762500000055
+            "durationMs": 4.044417000000067
           }
         ]
       }
     },
     {
       "slug": "market-watch",
-      "data": {
-        "file": "market-watch/data.ts",
-        "description": "The records the market-watch hero shows: INSTRUMENTS, TRADES."
-      },
+      "data": "market-watch/data.ts",
       "versions": [
-        {
-          "member": "watchlist",
-          "version": "1.9.0",
-          "prerelease": false,
-          "planted": [],
-          "file": "market-watch/watchlist/1.9.0.tsx",
-          "gates": [
-            {
-              "gate": "salt-only",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 1.818000000086613
-            },
-            {
-              "gate": "typecheck",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 109.21779100003187
-            },
-            {
-              "gate": "salt-usage",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 2.656709000002593
-            },
-            {
-              "gate": "build",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 4.4605829999782145
-            }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_3dqpnq99vs9djkgt",
-            "refinedFrom": null,
-            "message": null
-          }
-        },
         {
           "member": "watchlist",
           "version": "1.8.0",
           "prerelease": false,
-          "planted": [
-            "label",
-            "color-contrast",
-            "button-name"
-          ],
           "file": "market-watch/watchlist/1.8.0.tsx",
+          "stylesFile": "market-watch/watchlist/1.8.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
-              "exempted": [
-                {
-                  "rule": "color-contrast",
-                  "issue": {
-                    "code": "salt-only/literal-color",
-                    "line": 74,
-                    "column": 40,
-                    "symbol": "style.color",
-                    "message": "Line 74 sets color to #b0b0b0; use a Salt color token such as var(--salt-content-primary-foreground)."
-                  }
-                }
-              ],
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.8303750000195578
+              "durationMs": 0.7426249999998618
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 73.2749579999363
+              "durationMs": 38.79254199999991
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.694916999898851
+              "durationMs": 1.5602080000001024
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.15991699998267
+              "durationMs": 1.9642499999999927
             }
-          ],
-          "exemptions": [
+          ]
+        },
+        {
+          "member": "watchlist",
+          "version": "1.9.0",
+          "prerelease": false,
+          "file": "market-watch/watchlist/1.9.0.tsx",
+          "stylesFile": "market-watch/watchlist/1.9.0.module.css",
+          "gates": [
             {
-              "rule": "label",
-              "codes": [],
-              "exempted": []
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.7351670000000468
             },
             {
-              "rule": "color-contrast",
-              "codes": [
-                "salt-only/literal-color",
-                "salt-only/style-value"
-              ],
-              "exempted": [
-                "salt-only/literal-color"
-              ]
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 45.55104200000005
             },
             {
-              "rule": "button-name",
-              "codes": [],
-              "exempted": []
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.9067500000001019
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.148290999999972
             }
-          ],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_x8ohv1edxouwvith",
-            "refinedFrom": "1.9.0",
-            "message": "Make Watchlist 1.8.0: Dense price grid with icon actions. Planted defect (label), on purpose and nowhere else: Leave the search field without a visible or accessible label: no FormField label, no aria-label. Planted defect (color-contrast), on purpose and nowhere else: Show the secondary text in one literal light gray, #b0b0b0, through a style prop, so it fails WCAG contrast on the light background. Use no other literal color. Planted defect (button-name), on purpose and nowhere else: Make the row actions icon-only buttons with no accessible name: no text, no aria-label."
-          }
+          ]
         },
         {
           "member": "watchlist",
           "version": "2.0.0-beta.2",
           "prerelease": true,
-          "planted": [],
           "file": "market-watch/watchlist/2.0.0-beta.2.tsx",
+          "stylesFile": "market-watch/watchlist/2.0.0-beta.2.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.1200829999288544
+              "durationMs": 0.7329999999999472
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 70.57275000005029
+              "durationMs": 44.135957999999846
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.5874159999657422
+              "durationMs": 1.7596669999998085
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.9467090000398457
+              "durationMs": 2.075625000000173
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_ij6nitgyemfk38qh",
-            "refinedFrom": "1.9.0",
-            "message": "Make Watchlist 2.0.0-beta.2: Price tiles with daily change bars. It's a prerelease: keep the stable version's behavior and change only what this summary says."
-          }
+          ]
         },
         {
           "member": "order-ticket",
           "version": "2.2.0",
           "prerelease": false,
-          "planted": [],
           "file": "market-watch/order-ticket/2.2.0.tsx",
+          "stylesFile": "market-watch/order-ticket/2.2.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 0.8518750000512227
+              "durationMs": 0.8713749999999436
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 51.8492499999702
+              "durationMs": 55.04620799999998
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.9381670000730082
+              "durationMs": 4.846250000000055
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.163042000029236
+              "durationMs": 2.748874999999998
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_6d3spveojw5vl0mc",
-            "refinedFrom": null,
-            "message": null
-          }
-        },
-        {
-          "member": "price-chart",
-          "version": "5.1.0",
-          "prerelease": false,
-          "planted": [],
-          "file": "market-watch/price-chart/5.1.0.tsx",
-          "gates": [
-            {
-              "gate": "salt-only",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 2.4976659999229014
-            },
-            {
-              "gate": "typecheck",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 65.5842920000432
-            },
-            {
-              "gate": "salt-usage",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 2.374749999959022
-            },
-            {
-              "gate": "build",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 5.075166999944486
-            }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_izn2qwugq7gt776s",
-            "refinedFrom": null,
-            "message": null,
-            "edits": [
-              "Hand edit, 2026-10-16: --salt-sentiment-positive-foreground and --salt-sentiment-negative-foreground, which Salt's theme doesn't define, became the -foreground-informative tokens it does."
-            ]
-          }
+          ]
         },
         {
           "member": "price-chart",
           "version": "5.0.0",
           "prerelease": false,
-          "planted": [],
           "file": "market-watch/price-chart/5.0.0.tsx",
+          "stylesFile": "market-watch/price-chart/5.0.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.865749999997206
+              "durationMs": 1.8895419999998921
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 66.6655829999363
+              "durationMs": 57.58254099999999
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 3.0459579998860136
+              "durationMs": 3.3259579999999005
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.8004580000415444
+              "durationMs": 3.520625000000109
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_zm3oxvbo266wr2uu",
-            "refinedFrom": "5.1.0",
-            "message": "Make Price chart 5.0.0: Line chart with a range selector.",
-            "edits": [
-              "Hand edit, 2026-10-16: --salt-sentiment-positive-foreground and --salt-sentiment-negative-foreground, which Salt's theme doesn't define, became the -foreground-informative tokens it does."
-            ]
-          }
+          ]
+        },
+        {
+          "member": "price-chart",
+          "version": "5.1.0",
+          "prerelease": false,
+          "file": "market-watch/price-chart/5.1.0.tsx",
+          "stylesFile": "market-watch/price-chart/5.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.3432080000000042
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 49.24454200000014
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 3.0622920000000704
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 3.0965000000001055
+            }
+          ]
         },
         {
           "member": "trade-blotter",
           "version": "3.5.0",
           "prerelease": false,
-          "planted": [],
           "file": "market-watch/trade-blotter/3.5.0.tsx",
+          "stylesFile": "market-watch/trade-blotter/3.5.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.053167000063695
+              "durationMs": 0.7978330000000824
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 66.24029200000223
+              "durationMs": 45.885959000000184
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.0462919999845326
+              "durationMs": 2.024249999999938
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.3872909999918193
+              "durationMs": 2.4479999999998654
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_6onl06t2axswd8pv",
-            "refinedFrom": null,
-            "message": null
-          }
+          ]
         }
       ],
       "page": {
@@ -1172,310 +852,227 @@
           }
         ],
         "file": "market-watch/page.tsx",
+        "stylesFile": "market-watch/page.module.css",
         "gates": [
           {
             "gate": "salt-only",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 59.75966700000208
+            "durationMs": 2.7672919999999976
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 2755.2598749999997
+            "durationMs": 92.31508299999996
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 1597.6811659999985
+            "durationMs": 6.3806250000002365
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 164.94679099999848
+            "durationMs": 6.305999999999585
           }
         ]
       }
     },
     {
       "slug": "operations-console",
-      "data": {
-        "file": "operations-console/data.ts",
-        "description": "The records the operations-console hero shows: INCIDENTS, REGIONS, SERVICES, CHANGES."
-      },
+      "data": "operations-console/data.ts",
       "versions": [
-        {
-          "member": "incident-feed",
-          "version": "6.1.0",
-          "prerelease": false,
-          "planted": [],
-          "file": "operations-console/incident-feed/6.1.0.tsx",
-          "gates": [
-            {
-              "gate": "salt-only",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 0.7807089999550954
-            },
-            {
-              "gate": "typecheck",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 69.40354199998546
-            },
-            {
-              "gate": "salt-usage",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 1.7910409999312833
-            },
-            {
-              "gate": "build",
-              "issues": [],
-              "status": "passed",
-              "warnings": [],
-              "durationMs": 2.2095830000471324
-            }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_hcjv78gntmsycifm",
-            "refinedFrom": null,
-            "message": null
-          }
-        },
         {
           "member": "incident-feed",
           "version": "6.0.0",
           "prerelease": false,
-          "planted": [
-            "label",
-            "color-contrast",
-            "button-name"
-          ],
           "file": "operations-console/incident-feed/6.0.0.tsx",
+          "stylesFile": "operations-console/incident-feed/6.0.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
-              "exempted": [
-                {
-                  "rule": "color-contrast",
-                  "issue": {
-                    "code": "salt-only/literal-color",
-                    "line": 93,
-                    "column": 38,
-                    "symbol": "style.color",
-                    "message": "Line 93 sets color to #b0b0b0; use a Salt color token such as var(--salt-content-primary-foreground)."
-                  }
-                }
-              ],
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.206000000005588
+              "durationMs": 0.8272090000000389
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 71.71416700002737
+              "durationMs": 51.71391700000004
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
-              "warnings": [
-                {
-                  "fix": "Replace hard-coded color literals with semantic Salt color tokens.",
-                  "code": "tokens.hardcoded-color",
-                  "message": "Hard-coded color value detected: Hard-coded color values were detected. Prefer Salt semantic color tokens."
-                }
-              ],
-              "durationMs": 1.8133330000564456
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.6221669999999904
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.06354200001806
+              "durationMs": 2.1412499999996726
             }
-          ],
-          "exemptions": [
+          ]
+        },
+        {
+          "member": "incident-feed",
+          "version": "6.1.0",
+          "prerelease": false,
+          "file": "operations-console/incident-feed/6.1.0.tsx",
+          "stylesFile": "operations-console/incident-feed/6.1.0.module.css",
+          "gates": [
             {
-              "rule": "label",
-              "codes": [],
-              "exempted": []
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.7635000000000218
             },
             {
-              "rule": "color-contrast",
-              "codes": [
-                "salt-only/literal-color",
-                "salt-only/style-value"
-              ],
-              "exempted": [
-                "salt-only/literal-color"
-              ]
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 54.92350000000033
             },
             {
-              "rule": "button-name",
-              "codes": [],
-              "exempted": []
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.7764579999998205
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.3654579999997623
             }
-          ],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_ev4q1zpcj82qvlgb",
-            "refinedFrom": "6.1.0",
-            "message": "Make Incident feed 6.0.0: Incident list with icon actions. Planted defect (label), on purpose and nowhere else: Leave the search field without a visible or accessible label: no FormField label, no aria-label. Planted defect (color-contrast), on purpose and nowhere else: Show the secondary text in one literal light gray, #b0b0b0, through a style prop, so it fails WCAG contrast on the light background. Use no other literal color. Planted defect (button-name), on purpose and nowhere else: Make the row actions icon-only buttons with no accessible name: no text, no aria-label.",
-            "edits": [
-              "Hand edit, 2026-10-16: removed the icon button's aria-label, which the generator added, so the planted button-name defect is present as the catalog's planted rules require."
-            ]
-          }
+          ]
         },
         {
           "member": "incident-feed",
           "version": "7.0.0-alpha.3",
           "prerelease": true,
-          "planted": [],
           "file": "operations-console/incident-feed/7.0.0-alpha.3.tsx",
+          "stylesFile": "operations-console/incident-feed/7.0.0-alpha.3.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.480667000054382
+              "durationMs": 0.9519580000001042
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 80.16745800001081
+              "durationMs": 49.43358399999988
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.8162080000620335
+              "durationMs": 2.1200000000003456
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.2008749999804422
+              "durationMs": 2.3521249999998872
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_2vdoc1let8rr9aha",
-            "refinedFrom": "6.1.0",
-            "message": "Make Incident feed 7.0.0-alpha.3: Timeline view grouped by severity. It's a prerelease: keep the stable version's behavior and change only what this summary says."
-          }
+          ]
         },
         {
           "member": "service-health",
           "version": "2.4.0",
           "prerelease": false,
-          "planted": [],
           "file": "operations-console/service-health/2.4.0.tsx",
+          "stylesFile": "operations-console/service-health/2.4.0.module.css",
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 0.6876659999834374
+              "durationMs": 0.7279579999999441
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 47.89950000005774
+              "durationMs": 43.24566700000014
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.487083000014536
+              "durationMs": 1.5862499999998363
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.901708000106737
+              "durationMs": 2.031167000000096
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_fbmzg2yq2n7qqr89",
-            "refinedFrom": null,
-            "message": null
-          }
+          ]
         },
         {
           "member": "change-calendar",
           "version": "1.2.0",
           "prerelease": false,
-          "planted": [],
           "file": "operations-console/change-calendar/1.2.0.tsx",
+          "stylesFile": null,
           "gates": [
             {
               "gate": "salt-only",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.2183330000843853
+              "durationMs": 0.514292000000296
             },
             {
               "gate": "typecheck",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 59.33716699993238
+              "durationMs": 57.45991699999968
             },
             {
               "gate": "salt-usage",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 1.5950829999055713
+              "durationMs": 1.3034580000003189
             },
             {
               "gate": "build",
-              "issues": [],
               "status": "passed",
+              "issues": [],
               "warnings": [],
-              "durationMs": 2.16820800001733
+              "durationMs": 2.143583000000035
             }
-          ],
-          "exemptions": [],
-          "provenance": {
-            "model": "anthropic/claude-opus-5.5",
-            "generationId": "gen_oa5d70j3nii2k88y",
-            "refinedFrom": null,
-            "message": null
-          }
+          ]
         }
       ],
       "page": {
@@ -1498,34 +1095,2003 @@
           }
         ],
         "file": "operations-console/page.tsx",
+        "stylesFile": "operations-console/page.module.css",
         "gates": [
           {
             "gate": "salt-only",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 7.453792000000249
+            "durationMs": 1.6079160000003867
           },
           {
             "gate": "typecheck",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 656.1672089999993
+            "durationMs": 80.1545000000001
           },
           {
             "gate": "salt-usage",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 941.9883749999972
+            "durationMs": 3.43487499999992
           },
           {
             "gate": "build",
             "status": "passed",
             "issues": [],
             "warnings": [],
-            "durationMs": 336.87933300000077
+            "durationMs": 3.5743750000001455
+          }
+        ]
+      }
+    },
+    {
+      "slug": "corporate-card-controls",
+      "data": "corporate-card-controls/data.ts",
+      "versions": [
+        {
+          "member": "card-list",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "corporate-card-controls/card-list/1.0.0.tsx",
+          "stylesFile": "corporate-card-controls/card-list/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.94399999999996
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 50.59841600000027
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.6218329999996968
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.3383340000000317
+            }
+          ]
+        },
+        {
+          "member": "card-list",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "corporate-card-controls/card-list/1.1.0.tsx",
+          "stylesFile": "corporate-card-controls/card-list/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.933165999999801
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 48.2529169999998
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.9016249999999673
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.6104159999999865
+            }
+          ]
+        },
+        {
+          "member": "card-rules",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "corporate-card-controls/card-rules/1.0.0.tsx",
+          "stylesFile": "corporate-card-controls/card-rules/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.3430419999999685
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 70.05999999999995
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.828875000000153
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 3.3029169999999795
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "cards",
+        "regions": [
+          {
+            "member": "card-list",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "card-rules",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "corporate-card-controls/page.tsx",
+        "stylesFile": "corporate-card-controls/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.6779169999999795
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 92.51658399999997
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.9237080000002607
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 4.148749999999836
+          }
+        ]
+      }
+    },
+    {
+      "slug": "payment-status-tracker",
+      "data": "payment-status-tracker/data.ts",
+      "versions": [
+        {
+          "member": "payment-tracker",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "payment-status-tracker/payment-tracker/1.0.0.tsx",
+          "stylesFile": "payment-status-tracker/payment-tracker/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8492079999996349
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 55.82141700000011
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.7837500000000546
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.139499999999771
+            }
+          ]
+        },
+        {
+          "member": "payment-tracker",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "payment-status-tracker/payment-tracker/1.1.0.tsx",
+          "stylesFile": "payment-status-tracker/payment-tracker/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.9501660000000811
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 60.64195900000004
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.1499159999998483
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.5214579999997113
+            }
+          ]
+        },
+        {
+          "member": "stall-alerts",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "payment-status-tracker/stall-alerts/1.0.0.tsx",
+          "stylesFile": "payment-status-tracker/stall-alerts/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.0754589999996824
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 63.33375000000024
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.0917920000001686
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.5670829999999114
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "payments",
+        "regions": [
+          {
+            "member": "payment-tracker",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "stall-alerts",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "payment-status-tracker/page.tsx",
+        "stylesFile": "payment-status-tracker/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.525416999999834
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 103.19245799999999
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 4.11941700000034
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.891375000000153
+          }
+        ]
+      }
+    },
+    {
+      "slug": "bulk-payments-upload",
+      "data": "bulk-payments-upload/data.ts",
+      "versions": [
+        {
+          "member": "payment-file-upload",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "bulk-payments-upload/payment-file-upload/1.0.0.tsx",
+          "stylesFile": "bulk-payments-upload/payment-file-upload/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.428957999999966
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 57.172207999999955
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.3867919999997866
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.754583000000366
+            }
+          ]
+        },
+        {
+          "member": "payment-file-upload",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "bulk-payments-upload/payment-file-upload/1.1.0.tsx",
+          "stylesFile": "bulk-payments-upload/payment-file-upload/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.2306250000001455
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 59.035249999999905
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 4.663958000000093
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 3.1768339999998716
+            }
+          ]
+        },
+        {
+          "member": "batch-release",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "bulk-payments-upload/batch-release/1.0.0.tsx",
+          "stylesFile": "bulk-payments-upload/batch-release/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.1199999999998909
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 56.912874999999985
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.253958000000239
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 4.52533399999993
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "uploads",
+        "regions": [
+          {
+            "member": "payment-file-upload",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "batch-release",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "bulk-payments-upload/page.tsx",
+        "stylesFile": "bulk-payments-upload/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.9320830000001479
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 88.03079200000002
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 4.39587500000016
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 4.369458000000122
+          }
+        ]
+      }
+    },
+    {
+      "slug": "credit-facility-tracker",
+      "data": "credit-facility-tracker/data.ts",
+      "versions": [
+        {
+          "member": "facility-list",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "credit-facility-tracker/facility-list/1.0.0.tsx",
+          "stylesFile": "credit-facility-tracker/facility-list/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.7706250000001091
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 46.12187500000027
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.4256249999998545
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.0505419999999503
+            }
+          ]
+        },
+        {
+          "member": "facility-list",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "credit-facility-tracker/facility-list/1.1.0.tsx",
+          "stylesFile": "credit-facility-tracker/facility-list/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.9500840000000608
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 52.8775840000003
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 4.821959000000334
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.6170419999998558
+            }
+          ]
+        },
+        {
+          "member": "covenant-checks",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "credit-facility-tracker/covenant-checks/1.0.0.tsx",
+          "stylesFile": "credit-facility-tracker/covenant-checks/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.1132090000000971
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 64.58879200000001
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.1362910000002557
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.8107500000000982
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "facilities",
+        "regions": [
+          {
+            "member": "facility-list",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "covenant-checks",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "credit-facility-tracker/page.tsx",
+        "stylesFile": "credit-facility-tracker/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.476249999999709
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 84.23275000000012
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.440874999999778
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.6619580000001406
+          }
+        ]
+      }
+    },
+    {
+      "slug": "relationship-notes",
+      "data": "relationship-notes/data.ts",
+      "versions": [
+        {
+          "member": "relationship-list",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "relationship-notes/relationship-list/1.0.0.tsx",
+          "stylesFile": "relationship-notes/relationship-list/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.7429580000002716
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 46.6689580000002
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.544832999999926
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.212666999999783
+            }
+          ]
+        },
+        {
+          "member": "relationship-list",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "relationship-notes/relationship-list/1.1.0.tsx",
+          "stylesFile": "relationship-notes/relationship-list/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8469169999998485
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 47.37670900000012
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.6662919999998849
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.3755419999997684
+            }
+          ]
+        },
+        {
+          "member": "meeting-notes",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "relationship-notes/meeting-notes/1.0.0.tsx",
+          "stylesFile": "relationship-notes/meeting-notes/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.1739159999997355
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 65.02054199999975
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.4030829999996968
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 5.599333999999999
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "relationships",
+        "regions": [
+          {
+            "member": "relationship-list",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "meeting-notes",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "relationship-notes/page.tsx",
+        "stylesFile": "relationship-notes/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.678625000000011
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 85.39399999999978
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.6530840000000353
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.4867919999996957
+          }
+        ]
+      }
+    },
+    {
+      "slug": "deal-room",
+      "data": "deal-room/data.ts",
+      "versions": [
+        {
+          "member": "deal-documents",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "deal-room/deal-documents/1.0.0.tsx",
+          "stylesFile": "deal-room/deal-documents/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.7683749999996508
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 46.32070900000008
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.7229999999999563
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.322291999999834
+            }
+          ]
+        },
+        {
+          "member": "deal-documents",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "deal-room/deal-documents/1.1.0.tsx",
+          "stylesFile": "deal-room/deal-documents/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.810207999999875
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 46.663416999999754
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.7162920000000668
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.124917000000096
+            }
+          ]
+        },
+        {
+          "member": "open-items",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "deal-room/open-items/1.0.0.tsx",
+          "stylesFile": "deal-room/open-items/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8980000000001382
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 62.12779200000023
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.282666999999492
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.6055420000002414
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "documents",
+        "regions": [
+          {
+            "member": "deal-documents",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "open-items",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "deal-room/page.tsx",
+        "stylesFile": "deal-room/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.413249999999607
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 85.832042
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.3927080000003116
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.7462500000001455
+          }
+        ]
+      }
+    },
+    {
+      "slug": "research-hub",
+      "data": "research-hub/data.ts",
+      "versions": [
+        {
+          "member": "research-library",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "research-hub/research-library/1.0.0.tsx",
+          "stylesFile": "research-hub/research-library/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8139579999997295
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 46.75475000000006
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 3.508042000000387
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.038582999999562
+            }
+          ]
+        },
+        {
+          "member": "research-library",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "research-hub/research-library/1.1.0.tsx",
+          "stylesFile": "research-hub/research-library/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.7967920000000959
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 51.962916999999834
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.728834000000461
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.2710839999999735
+            }
+          ]
+        },
+        {
+          "member": "research-reader",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "research-hub/research-reader/1.0.0.tsx",
+          "stylesFile": "research-hub/research-reader/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.6866669999999431
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 37.434917000000496
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.4506249999994907
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.871499999999287
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "research",
+        "regions": [
+          {
+            "member": "research-library",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "research-reader",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "research-hub/page.tsx",
+        "stylesFile": "research-hub/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.1869999999998981
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 63.70037500000035
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 4.692333999999391
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 2.92095800000061
+          }
+        ]
+      }
+    },
+    {
+      "slug": "fx-rates-board",
+      "data": "fx-rates-board/data.ts",
+      "versions": [
+        {
+          "member": "fx-rates",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "fx-rates-board/fx-rates/1.0.0.tsx",
+          "stylesFile": "fx-rates-board/fx-rates/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8326250000000073
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 42.285915999999816
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.42975000000024
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.973041000000194
+            }
+          ]
+        },
+        {
+          "member": "fx-rates",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "fx-rates-board/fx-rates/1.1.0.tsx",
+          "stylesFile": "fx-rates-board/fx-rates/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8081250000004729
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 44.89349999999922
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.7325000000000728
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.3207499999998618
+            }
+          ]
+        },
+        {
+          "member": "rate-detail",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "fx-rates-board/rate-detail/1.0.0.tsx",
+          "stylesFile": "fx-rates-board/rate-detail/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.7394580000000133
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 42.8457499999995
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.4528330000002825
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.0446660000006887
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "rates",
+        "regions": [
+          {
+            "member": "fx-rates",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "rate-detail",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "fx-rates-board/page.tsx",
+        "stylesFile": "fx-rates-board/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.1355000000003201
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 63.39900000000034
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 2.759208000000399
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.116707999999562
+          }
+        ]
+      }
+    },
+    {
+      "slug": "risk-limits-monitor",
+      "data": "risk-limits-monitor/data.ts",
+      "versions": [
+        {
+          "member": "desk-limits",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "risk-limits-monitor/desk-limits/1.0.0.tsx",
+          "stylesFile": "risk-limits-monitor/desk-limits/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.798874999999498
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 47.55237500000021
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.8158330000005662
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.213542000000416
+            }
+          ]
+        },
+        {
+          "member": "desk-limits",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "risk-limits-monitor/desk-limits/1.1.0.tsx",
+          "stylesFile": "risk-limits-monitor/desk-limits/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8890419999997903
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 48.204249999999774
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.142874999999549
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.527165999999852
+            }
+          ]
+        },
+        {
+          "member": "limit-breaches",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "risk-limits-monitor/limit-breaches/1.0.0.tsx",
+          "stylesFile": "risk-limits-monitor/limit-breaches/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8825000000006185
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 61.289457999999286
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.9692079999995258
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.2802499999997963
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "limits",
+        "regions": [
+          {
+            "member": "desk-limits",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "limit-breaches",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "risk-limits-monitor/page.tsx",
+        "stylesFile": "risk-limits-monitor/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.4605830000000424
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 84.34145799999988
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.5705419999994774
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.744832999999744
+          }
+        ]
+      }
+    },
+    {
+      "slug": "team-directory",
+      "data": "team-directory/data.ts",
+      "versions": [
+        {
+          "member": "people-search",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "team-directory/people-search/1.0.0.tsx",
+          "stylesFile": "team-directory/people-search/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.6952080000000933
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 43.72312500000044
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.481166999999914
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.077291999999943
+            }
+          ]
+        },
+        {
+          "member": "people-search",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "team-directory/people-search/1.1.0.tsx",
+          "stylesFile": "team-directory/people-search/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8016670000006343
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 50.05816700000014
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.8073749999994106
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.3945000000003347
+            }
+          ]
+        },
+        {
+          "member": "joiner-checklist",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "team-directory/joiner-checklist/1.0.0.tsx",
+          "stylesFile": null,
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.7412500000000364
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 51.14258299999983
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.6552499999997963
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.9747919999999795
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "people",
+        "regions": [
+          {
+            "member": "people-search",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "joiner-checklist",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "team-directory/page.tsx",
+        "stylesFile": "team-directory/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.2742920000000595
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 76.79491599999983
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.0045420000005834
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.1401660000001357
+          }
+        ]
+      }
+    },
+    {
+      "slug": "release-calendar",
+      "data": "release-calendar/data.ts",
+      "versions": [
+        {
+          "member": "release-windows",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "release-calendar/release-windows/1.0.0.tsx",
+          "stylesFile": "release-calendar/release-windows/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.9339170000002923
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 50.37491599999976
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 5.074624999999287
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.4417499999999563
+            }
+          ]
+        },
+        {
+          "member": "release-windows",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "release-calendar/release-windows/1.1.0.tsx",
+          "stylesFile": "release-calendar/release-windows/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.0110830000003261
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 54.123499999999694
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.2205830000002607
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.6401669999995647
+            }
+          ]
+        },
+        {
+          "member": "freeze-periods",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "release-calendar/freeze-periods/1.0.0.tsx",
+          "stylesFile": "release-calendar/freeze-periods/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8853749999998399
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 65.14820799999961
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.1009579999999914
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.57037500000024
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "releases",
+        "regions": [
+          {
+            "member": "release-windows",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "freeze-periods",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "release-calendar/page.tsx",
+        "stylesFile": "release-calendar/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.507832999999664
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 82.68395800000053
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.4145410000000993
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.6989999999996144
+          }
+        ]
+      }
+    },
+    {
+      "slug": "feature-flag-console",
+      "data": "feature-flag-console/data.ts",
+      "versions": [
+        {
+          "member": "flag-list",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "feature-flag-console/flag-list/1.0.0.tsx",
+          "stylesFile": "feature-flag-console/flag-list/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.815084000000752
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 50.16783399999986
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.7252090000001772
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.559291000000485
+            }
+          ]
+        },
+        {
+          "member": "flag-list",
+          "version": "1.1.0",
+          "prerelease": false,
+          "file": "feature-flag-console/flag-list/1.1.0.tsx",
+          "stylesFile": "feature-flag-console/flag-list/1.1.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.9753330000003189
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 50.889084000000366
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.9147499999999127
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.4171669999996084
+            }
+          ]
+        },
+        {
+          "member": "flag-environments",
+          "version": "1.0.0",
+          "prerelease": false,
+          "file": "feature-flag-console/flag-environments/1.0.0.tsx",
+          "stylesFile": "feature-flag-console/flag-environments/1.0.0.module.css",
+          "gates": [
+            {
+              "gate": "salt-only",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 0.8994999999995343
+            },
+            {
+              "gate": "typecheck",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 45.98962499999925
+            },
+            {
+              "gate": "salt-usage",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 1.6728330000005371
+            },
+            {
+              "gate": "build",
+              "status": "passed",
+              "issues": [],
+              "warnings": [],
+              "durationMs": 2.211750000000393
+            }
+          ]
+        }
+      ],
+      "page": {
+        "route": "flags",
+        "regions": [
+          {
+            "member": "flag-list",
+            "version": "1.1.0",
+            "area": "main"
+          },
+          {
+            "member": "flag-environments",
+            "version": "1.0.0",
+            "area": "side"
+          }
+        ],
+        "file": "feature-flag-console/page.tsx",
+        "stylesFile": "feature-flag-console/page.module.css",
+        "gates": [
+          {
+            "gate": "salt-only",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 1.3031250000003638
+          },
+          {
+            "gate": "typecheck",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 75.46250000000055
+          },
+          {
+            "gate": "salt-usage",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.0695829999995112
+          },
+          {
+            "gate": "build",
+            "status": "passed",
+            "issues": [],
+            "warnings": [],
+            "durationMs": 3.3700840000001335
           }
         ]
       }
@@ -1535,98 +3101,72 @@
     {
       "kind": "access",
       "file": "shells/access.tsx",
+      "stylesFile": "shells/access.module.css",
       "gates": [
         {
           "gate": "salt-only",
-          "issues": [],
           "status": "passed",
+          "issues": [],
           "warnings": [],
-          "durationMs": 1.8127919998951256
+          "durationMs": 3.1478329999999914
         },
         {
           "gate": "typecheck",
-          "issues": [],
           "status": "passed",
+          "issues": [],
           "warnings": [],
-          "durationMs": 97.90341700008139
+          "durationMs": 104.10433400000056
         },
         {
           "gate": "salt-usage",
-          "issues": [],
           "status": "passed",
-          "warnings": [
-            {
-              "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
-              "code": "tokens.hardcoded-size",
-              "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
-            }
-          ],
-          "durationMs": 4.843417000025511
+          "issues": [],
+          "warnings": [],
+          "durationMs": 6.104542000000038
         },
         {
           "gate": "build",
-          "issues": [],
           "status": "passed",
+          "issues": [],
           "warnings": [],
-          "durationMs": 3.517750000115484
+          "durationMs": 5.636916999999812
         }
-      ],
-      "provenance": {
-        "model": "anthropic/claude-opus-5.5",
-        "generationId": "gen_573pj7esz0c7l9dg",
-        "edits": [
-          "Hand edit, 2026-10-16: on narrow screens the user menu button shows only the avatar, because the name and persona pushed the header 39 pixels past a 375-pixel viewport.",
-          "Hand edit, 2026-10-19 (add-portal-experience-editor): the shell reads useExperience(): the J.P. Morgan logo image and portal name, the banner, the header slots in order with Global Search and Notifications only when installed and Feedback beside Help, a workspace switcher, the Portal's menu nested with icons, Settings and Collapse to icons, the flyout menu type, and the footer's slots with the copyright."
-        ]
-      }
+      ]
     },
     {
       "kind": "markets",
       "file": "shells/markets.tsx",
+      "stylesFile": "shells/markets.module.css",
       "gates": [
         {
           "gate": "salt-only",
-          "issues": [],
           "status": "passed",
+          "issues": [],
           "warnings": [],
-          "durationMs": 3.373041999991983
+          "durationMs": 2.0354159999997137
         },
         {
           "gate": "typecheck",
-          "issues": [],
           "status": "passed",
+          "issues": [],
           "warnings": [],
-          "durationMs": 100.17258400004357
+          "durationMs": 86.16458300000068
         },
         {
           "gate": "salt-usage",
-          "issues": [],
           "status": "passed",
-          "warnings": [
-            {
-              "fix": "Replace hard-coded CSS values with semantic Salt tokens (for example --salt-size-base).",
-              "code": "tokens.hardcoded-size",
-              "message": "Hard-coded sizing value detected: Hard-coded sizing values were detected. Prefer semantic Salt tokens for control size and spacing."
-            }
-          ],
-          "durationMs": 9.509834000142291
+          "issues": [],
+          "warnings": [],
+          "durationMs": 4.991834000000381
         },
         {
           "gate": "build",
-          "issues": [],
           "status": "passed",
+          "issues": [],
           "warnings": [],
-          "durationMs": 3.5668750000186265
+          "durationMs": 4.7094999999999345
         }
-      ],
-      "provenance": {
-        "model": "anthropic/claude-opus-5.5",
-        "generationId": "gen_c6ajben1t2i8cmf2",
-        "edits": [
-          "Hand edit, 2026-10-16: the top bar's sections navigation may shrink and scrolls inside itself, and both navigation rows are marked as sideways scrollers, because at 375 pixels it widened the page.",
-          "Hand edit, 2026-10-19 (add-portal-experience-editor): the shell reads useExperience(): the J.P. Morgan logo image and portal name in the top bar and footer, a menu control opening the flyout menu in place of the application switcher, the banner, the header slots in order with Global Search and Notifications only when installed and Feedback beside Help, and the footer's slots with the copyright; the sections keep one line and scroll inside the top bar on narrow screens."
-        ]
-      }
+      ]
     }
   ]
 }

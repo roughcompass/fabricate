@@ -5,8 +5,7 @@ import { describe, expect, it } from "vitest";
 /**
  * The portal shells' palettes meet WCAG contrast in both themes (portal-runtime
  * spec: shell palettes are restrained in light and dark). The pairs below are
- * every text and control combination the shells and microfrontends draw;
- * the planted faint token is the one pair that must fail.
+ * every text and control combination the runtime's own chrome draws.
  */
 
 const source = fs.readFileSync(path.resolve("src/demo/runtime/tokens.css"), "utf8");

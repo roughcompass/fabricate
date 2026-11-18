@@ -50,7 +50,7 @@ The build runs DE FabLab's four gates on every file, with `@deweb/portal` allowe
   - `Panel`, `Card`, and `Button`: `variant`, `appearance`, and `sentiment`.
 - **Only when Salt has no prop,** put the rule in the version's CSS module and apply it with `className={styles.name}`. Common cases:
   - Tabular numerals for figures: `font-variant-numeric: tabular-nums`.
-  - A selected row's tint: `background: var(--salt-selectable-background-selected)` on `[aria-selected="true"]`.
+  - A selected row's tint: `background: var(--salt-selectable-background-selected)`, applied to the row marked `aria-current`.
   - List markers off: `list-style: none; margin: 0; padding: 0`.
 - **A module holds class rules only.** Select by class, pseudo-class, or `aria-` and `data-` attribute, with `@media` and `@container` where needed.
 - **Every value in a module** is a Salt token, `calc()` of tokens and numbers, a CSS keyword, `%`, `fr`, or 0. Never use a literal color, a pixel or rem size, a literal font, `@import`, `url()`, or `!important`.
@@ -83,11 +83,11 @@ The build runs DE FabLab's four gates on every file, with `@deweb/portal` allowe
 - Row actions are named `Button`s:
   - Text buttons use `appearance="transparent"`.
   - Icon buttons need an `aria-label` and an `aria-hidden` icon.
-- A selectable row puts a `Button` or `ToggleButton` in its first cell. It marks the row `aria-selected` with the module's selected class.
+- A selectable row puts a `Button` with `aria-pressed` in its first cell. It marks the row `aria-current="true"` with the module's selected class.
 
 ## Forms
 
-- Every control sits in a `FormField` with a `FormFieldLabel`. Add a `FormFieldHelperText` where it helps.
+- Every control sits in a `FormField` with a `FormFieldLabel`. Add a `FormFieldHelperText` where it helps. A filter of toggle buttons is named by a visible `Text` label through `aria-labelledby`.
 - Inputs are Salt `Input`, `MultilineInput`, `NumberInput`, `Dropdown`, `ComboBox`, `Switch`, `Checkbox`, `RadioButtonGroup`, or `DatePicker`.
 - Validation is the field's `validationStatus`, with helper text that says what to do.
 - A form is a `<form>` that submits on Enter.
@@ -108,7 +108,7 @@ Every version produces no automated audit violations in light and dark.
 - No meaning by color alone.
 - Text meets AA contrast. Salt's tokens do, so use them.
 - Everything works by keyboard, and at 200% zoom.
-- Selection is announced (`aria-selected`, `aria-pressed`, or `aria-current`).
+- Selection is announced (`aria-pressed` on the control, `aria-current` on the row or item).
 
 ## Content
 

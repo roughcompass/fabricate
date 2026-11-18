@@ -59,6 +59,20 @@ export async function audit(page: Page, also: string[] = []): Promise<AuditViola
  * Another visitor's browser: a fresh context with a demo workspace of its own,
  * with guided hints off like the test's main browser.
  */
+/**
+ * Puts an unlabeled field at the top of a microfrontend's region, so the
+ * accessibility tool has a violation to report: every template is clean, so
+ * tests of the tool's results bring their own (toolbar spec, "Attributing a
+ * violation").
+ */
+export async function injectUnlabeledField(page: Page, member = "payee-list"): Promise<void> {
+  await page.locator(`[data-demo-mfe="${member}"]`).evaluate((region) => {
+    const input = document.createElement("input");
+    input.dataset.demoAnchor = "injected-field";
+    region.prepend(input);
+  });
+}
+
 export async function visitorContext(browser: Browser, db: Db, baseURL: string): Promise<BrowserContext> {
   const context = await browser.newContext({ baseURL });
   const key = newWorkspaceKey();

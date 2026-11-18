@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TEMPLATES, templateBySlug } from "@/lib/demo/catalog";
 import { DEVICES, frameSize, parsePreviewState, previewHref, scaffoldCommand, sizeLabel } from "@/lib/demo/preview";
-import { isIllustrative, templateFiles } from "@/lib/demo/template-files";
+import { templateFiles } from "@/lib/demo/template-files";
 import { GENERATED_SOURCES } from "@/demo/runtime/generated/sources";
 import { RUNTIME } from "@/lib/prototypes/render";
 
@@ -47,19 +47,32 @@ describe("preview mode state", () => {
 });
 
 describe("template files", () => {
-  it("lists an illustrative template's package.json first, then microfrontends.json, the README, and one source file per child microfrontend", () => {
-    const template = templateBySlug("payment-status-tracker")!;
-    expect(isIllustrative(template)).toBe(true);
-    expect(templateFiles(template).map((file) => file.path)).toEqual(["package.json", "microfrontends.json", "README.md", ...template.app.members.filter((member) => member.role === "child").map((member) => `apps/${member.id}/src/index.tsx`)]);
+  it("shows a lighter template's real Salt source, with each member's CSS module after its source (Real source for a lighter template; A member's CSS module)", () => {
+    const template = templateBySlug("fx-rates-board")!;
+    const files = templateFiles(template);
+    expect(files.map((file) => file.path)).toEqual(["package.json", "microfrontends.json", "README.md", "src/data.ts", "src/fx-rates.tsx", "src/fx-rates.module.css", "src/rate-detail.tsx", "src/rate-detail.module.css"]);
+    const fxRates = files.find((file) => file.path === "src/fx-rates.tsx")!.content;
+    expect(fxRates).toContain('import styles from "./fx-rates.module.css";');
+    expect(fxRates).toContain('from "./data"');
+    expect(files.find((file) => file.path === "src/fx-rates.module.css")).toMatchObject({ language: "css", content: GENERATED_SOURCES["fx-rates-board"]!.memberStyles["fx-rates"]!["1.0.0"] });
+  });
+
+  it("gives every built-in template real files, the shared data, and every microfrontend's source", () => {
+    for (const template of TEMPLATES) {
+      const files = templateFiles(template);
+      expect(files.find((file) => file.path === "src/data.ts")?.content, template.slug).toMatch(/export /);
+      for (const member of template.app.members.filter((entry) => entry.role === "child")) expect(files.find((file) => file.path === `src/${member.id}.tsx`)?.content, member.id).toContain("export default function");
+    }
   });
 
   it("shows a hero's real Salt source: its data and each microfrontend at its default version, with the Salt packages it imports (Real source for a hero)", () => {
     const template = templateBySlug("payments-workspace")!;
     const files = templateFiles(template);
-    expect(isIllustrative(template)).toBe(false);
-    expect(files.map((file) => file.path)).toEqual(["package.json", "microfrontends.json", "README.md", "src/data.ts", "src/payee-list.tsx", "src/transfer-form.tsx", "src/payment-activity.tsx"]);
+    const sources = GENERATED_SOURCES["payments-workspace"]!;
+    const memberFiles = template.app.members.filter((member) => member.role === "child").flatMap((member) => [`src/${member.id}.tsx`, ...(sources.memberStyles[member.id]?.[member.defaultVersion] ? [`src/${member.id}.module.css`] : [])]);
+    expect(files.map((file) => file.path)).toEqual(["package.json", "microfrontends.json", "README.md", "src/data.ts", ...memberFiles]);
     const payeeList = files.find((file) => file.path === "src/payee-list.tsx")!.content;
-    expect(payeeList).toBe(GENERATED_SOURCES["payments-workspace"]!.members["payee-list"]!["1.4.2"]);
+    expect(payeeList).toBe(GENERATED_SOURCES["payments-workspace"]!.members["payee-list"]!["1.4.2"]!.replaceAll('"./Prototype.module.css"', '"./payee-list.module.css"'));
     expect(payeeList).toContain('from "@salt-ds/core"');
     const dependencies = JSON.parse(files[0]!.content).dependencies as Record<string, string>;
     expect(dependencies["@salt-ds/core"]).toBe(RUNTIME.packages["@salt-ds/core"]);

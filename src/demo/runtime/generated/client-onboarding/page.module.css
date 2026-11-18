@@ -1,0 +1,16 @@
+/* client-search 4.2.0 */
+.ClientSearch_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+/* kyc-checklist 3.3.0 */
+.KycChecklist_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* document-review 1.6.0 */
+.DocumentReview_figure {
+  font-variant-numeric: tabular-nums;
+}

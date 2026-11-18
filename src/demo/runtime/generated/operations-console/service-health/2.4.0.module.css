@@ -1,0 +1,14 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The focused region's column. */
+.focus {
+  background: var(--salt-selectable-background-selected);
+}
+
+.figure {
+  font-variant-numeric: tabular-nums;
+}

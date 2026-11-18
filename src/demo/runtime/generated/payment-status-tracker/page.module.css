@@ -1,0 +1,19 @@
+/* payment-tracker 1.1.0 */
+.PaymentTracker_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.PaymentTracker_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+.PaymentTracker_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* stall-alerts 1.0.0 */
+.StallAlerts_figure {
+  font-variant-numeric: tabular-nums;
+}

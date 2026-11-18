@@ -1,0 +1,13 @@
+/* fx-rates 1.1.0 */
+.FxRates_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.FxRates_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* rate-detail 1.0.0 */
+.RateDetail_figure {
+  font-variant-numeric: tabular-nums;
+}

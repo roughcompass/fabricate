@@ -137,7 +137,7 @@ export async function recordTemplateStandards(slug: string, standards: TemplateS
   return { versionId: row.id };
 }
 
-export async function staleTemplate(slug: string, code?: string): Promise<{ versionId: string } | null> {
+export async function staleTemplate(slug: string, code?: string, styles?: string): Promise<{ versionId: string } | null> {
   const { db } = await prototypesRequest();
   const [row] = await db
     .select({ version: templateVersions })
@@ -145,7 +145,7 @@ export async function staleTemplate(slug: string, code?: string): Promise<{ vers
     .innerJoin(templates, eq(templates.id, templateVersions.templateId))
     .where(and(eq(templates.slug, slug), eq(templateVersions.number, templates.latestNumber)));
   if (!row) return null;
-  const snapshot = { ...row.version.snapshot, runtimeHash: "earlier-build", code: code ?? row.version.snapshot.code };
+  const snapshot = { ...row.version.snapshot, runtimeHash: "earlier-build", code: code ?? row.version.snapshot.code, styles: styles ?? row.version.snapshot.styles ?? null };
   await db.update(templateVersions).set({ snapshot }).where(eq(templateVersions.id, row.version.id));
   // The upgrade comes after any earlier re-check, so the next request re-checks it again.
   await db.delete(templateRechecks).where(eq(templateRechecks.templateVersionId, row.version.id));

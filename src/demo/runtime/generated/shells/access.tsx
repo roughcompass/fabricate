@@ -1,18 +1,22 @@
-import { useEffect, useId, useRef, useState, type ReactNode, type MouseEvent } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode, type MouseEvent } from "react";
 import {
   Avatar,
   Badge,
   Banner,
   BannerActions,
   BannerContent,
+  Breadcrumb,
+  Breadcrumbs,
   Button,
   Divider,
   Drawer,
   DrawerContent,
+  DrawerHeader,
   Dropdown,
   FlexLayout,
   H1,
   Input,
+  Kbd,
   Link,
   NavigationItem,
   Option,
@@ -20,13 +24,17 @@ import {
   OverlayPanel,
   OverlayPanelContent,
   OverlayTrigger,
+  SkipLink,
   StackLayout,
   Text,
+  Tooltip,
+  useBreakpoint,
   useTheme,
 } from "@salt-ds/core";
 import {
+  CallIcon,
+  ChartLineIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   CloseIcon,
   DocumentIcon,
   DoubleChevronLeftIcon,
@@ -39,8 +47,6 @@ import {
   NotificationIcon,
   SearchIcon,
   SettingsIcon,
-  ChartLineIcon,
-  CallIcon,
 } from "@salt-ds/icons";
 import {
   routeHref,
@@ -52,20 +58,17 @@ import {
   type PortalMenuEntry,
   type PortalRoute,
 } from "@deweb/portal";
+import styles from "./access.module.css";
 
-const NARROW = "(max-width: 767px)";
 const WORKSPACES = ["Corporate Banking", "Treasury Services", "Commercial Banking"] as const;
 
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia(NARROW);
-    const update = () => setNarrow(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-  return narrow;
+/**
+ * Below Salt's md breakpoint the menu becomes a drawer and the header compacts.
+ * Until Salt has matched the viewport, as on the server, the shell lays out wide.
+ */
+function useCompact(): boolean {
+  const { matchedBreakpoints } = useBreakpoint();
+  return matchedBreakpoints.length > 0 && !matchedBreakpoints.includes("md");
 }
 
 /** Whether a keydown matches a shortcut such as "/", "k", or "ctrl+k". */
@@ -78,30 +81,32 @@ function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean {
 
 type MenuEntry = { primary: string; secondary?: string };
 
-function HeaderMenu({ label, icon, title, items, placement = "bottom" }: { label: string; icon: ReactNode; title: string; items: MenuEntry[]; placement?: "bottom" | "right" }) {
+/** A header action: an icon button, named by its tooltip while closed, that opens a panel of entries. */
+function HeaderMenu({ label, icon, title, items }: { label: string; icon: ReactNode; title: string; items: MenuEntry[] }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Overlay placement={placement}>
-      <OverlayTrigger>
-        <Button appearance="transparent" aria-label={label} title={label}>
-          {icon}
-        </Button>
-      </OverlayTrigger>
+    <Overlay open={open} onOpenChange={setOpen} placement="bottom">
+      <Tooltip content={label} placement="bottom" disabled={open}>
+        <OverlayTrigger>
+          <Button appearance="transparent" aria-label={label}>
+            {icon}
+          </Button>
+        </OverlayTrigger>
+      </Tooltip>
       <OverlayPanel aria-label={label}>
         <OverlayPanelContent>
           <StackLayout gap={1}>
             <Text styleAs="h4">{title}</Text>
-            <StackLayout as="ul" gap={1} style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            <StackLayout as="ul" gap={1} className={styles.list}>
               {items.map((item) => (
-                <li key={item.primary}>
-                  <StackLayout gap={0}>
-                    <Text>{item.primary}</Text>
-                    {item.secondary && (
-                      <Text styleAs="label" color="secondary">
-                        {item.secondary}
-                      </Text>
-                    )}
-                  </StackLayout>
-                </li>
+                <StackLayout as="li" key={item.primary} gap={0}>
+                  <Text>{item.primary}</Text>
+                  {item.secondary && (
+                    <Text styleAs="label" color="secondary">
+                      {item.secondary}
+                    </Text>
+                  )}
+                </StackLayout>
               ))}
             </StackLayout>
           </StackLayout>
@@ -114,38 +119,42 @@ function HeaderMenu({ label, icon, title, items, placement = "bottom" }: { label
 function UserMenu({ compact }: { compact: boolean }) {
   const profile = useProfile();
   const label = `User menu for ${profile.name}`;
+  const role = `${profile.persona} · ${profile.region}`;
   return (
-    <div data-demo-anchor="portal-session">
-      <Overlay placement="bottom">
-        <OverlayTrigger>
-          <Button appearance="transparent" aria-label={label}>
-            <Avatar name={profile.name} size={1} aria-hidden />
-            {!compact && (
-              <StackLayout gap={0} align="start">
-                <Text>{profile.name}</Text>
-                <Text styleAs="label" color="secondary">{`${profile.persona} · ${profile.region}`}</Text>
-              </StackLayout>
-            )}
-            <ChevronDownIcon aria-hidden />
-          </Button>
-        </OverlayTrigger>
-        <OverlayPanel aria-label={label}>
-          <OverlayPanelContent>
-            <StackLayout gap={1}>
-              <Text styleAs="h4">{profile.name}</Text>
-              <Text styleAs="label" color="secondary">{`${profile.persona} · ${profile.region}`}</Text>
-              <Text>The profile comes from the session context. Change it in the toolbar&apos;s Session tool.</Text>
+    <Overlay placement="bottom">
+      <OverlayTrigger>
+        <Button appearance="transparent" aria-label={label} data-demo-anchor="portal-session">
+          <Avatar name={profile.name} size={1} aria-hidden />
+          {!compact && (
+            <StackLayout gap={0} align="start">
+              <Text>{profile.name}</Text>
+              <Text styleAs="label" color="secondary">
+                {role}
+              </Text>
             </StackLayout>
-          </OverlayPanelContent>
-        </OverlayPanel>
-      </Overlay>
-    </div>
+          )}
+          <ChevronDownIcon aria-hidden />
+        </Button>
+      </OverlayTrigger>
+      <OverlayPanel aria-label={label}>
+        <OverlayPanelContent>
+          <StackLayout gap={1}>
+            <Text styleAs="h4">{profile.name}</Text>
+            <Text styleAs="label" color="secondary">
+              {role}
+            </Text>
+            <Text>The profile comes from the session context. Change it in the toolbar&apos;s Session tool.</Text>
+          </StackLayout>
+        </OverlayPanelContent>
+      </OverlayPanel>
+    </Overlay>
   );
 }
 
-/** The header's search field, the Global Search toolkit's control: a field on wide screens, a button that opens one on narrow ones. */
+/** The header's search field, the Global Search toolkit's control: a field on wide screens, a button that opens one on narrow ones. Its shortcut focuses it. */
 function GlobalSearch({ placeholder, shortcut, compact, portal }: { placeholder: string; shortcut: string; compact: boolean; portal: string }) {
   const field = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -161,26 +170,34 @@ function GlobalSearch({ placeholder, shortcut, compact, portal }: { placeholder:
     <Input
       placeholder={placeholder}
       startAdornment={<SearchIcon aria-hidden />}
+      endAdornment={compact ? undefined : <Kbd aria-hidden>{shortcut}</Kbd>}
       inputRef={field}
       inputProps={{ "aria-label": "Search", "aria-keyshortcuts": shortcut }}
-      style={{ width: "calc(var(--salt-size-base) * 9)" }}
+      className={compact ? undefined : styles.search}
     />
   );
   if (!compact) return input;
   return (
-    <Overlay placement="bottom">
-      <OverlayTrigger>
-        <Button appearance="transparent" aria-label="Search" title="Search">
-          <SearchIcon aria-hidden />
-        </Button>
-      </OverlayTrigger>
+    <Overlay open={open} onOpenChange={setOpen} placement="bottom">
+      <Tooltip content="Search" placement="bottom" disabled={open}>
+        <OverlayTrigger>
+          <Button appearance="transparent" aria-label="Search">
+            <SearchIcon aria-hidden />
+          </Button>
+        </OverlayTrigger>
+      </Tooltip>
       <OverlayPanel aria-label={`Search ${portal}`}>
-        <OverlayPanelContent>{input}</OverlayPanelContent>
+        <OverlayPanelContent>
+          <StackLayout gap={0} className={styles.searchPanel}>
+            {input}
+          </StackLayout>
+        </OverlayPanelContent>
       </OverlayPanel>
     </Overlay>
   );
 }
 
+/** A menu group: a parent navigation item that expands to the entries it holds. */
 function NavGroup({
   icon,
   label,
@@ -198,40 +215,28 @@ function NavGroup({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <li>
-      <NavigationItem
-        orientation="vertical"
-        parent
-        level={level}
-        expanded={open}
-        blurActive={containsCurrent && !open}
-        onExpand={() => setOpen((value) => !value)}
-      >
+    <StackLayout as="li" gap="var(--salt-spacing-fixed-100)">
+      <NavigationItem orientation="vertical" parent level={level} expanded={open} blurActive={containsCurrent && !open} onExpand={() => setOpen((value) => !value)}>
         {icon}
         {label}
       </NavigationItem>
       {open && (
-        <StackLayout as="ul" gap="var(--salt-spacing-fixed-100)" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        <StackLayout as="ul" gap="var(--salt-spacing-fixed-100)" className={styles.list}>
           {children}
         </StackLayout>
       )}
-    </li>
+    </StackLayout>
   );
 }
 
-/** An entry of the menu with nowhere to go in the demo, indented like an item at its level. */
+/** An entry of the menu with nowhere to go in the demo, its text aligned with a navigation item's at its level. */
 function StaticEntry({ level = 1, children }: { level?: number; children: ReactNode }) {
-  const text = <Text color="secondary">{children}</Text>;
   return (
-    <li
-      style={{
-        paddingTop: "var(--salt-spacing-100)",
-        paddingBottom: "var(--salt-spacing-100)",
-        paddingLeft: "calc(var(--salt-spacing-300) * 2)",
-      }}
-    >
-      {level > 1 ? <div style={{ paddingLeft: "var(--salt-spacing-300)" }}>{text}</div> : text}
-    </li>
+    <FlexLayout as="li" gap={0}>
+      <Text color="secondary" className={level > 1 ? styles.staticEntryNested : styles.staticEntry}>
+        {children}
+      </Text>
+    </FlexLayout>
   );
 }
 
@@ -241,24 +246,25 @@ export default function Shell({ children }: { children: ReactNode }) {
   const { name: applicationName, environment } = useApplication();
   const experience = useExperience();
   const { mode } = useTheme();
-  const narrow = useNarrow();
+  const compact = useCompact();
   const [hidden, setHidden] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const navId = useId();
+  const mainId = useId();
 
   const { portalName, logo, sidebar, footer, banner, headerSlots } = experience;
   const portalTitle = `${logo.alt} ${portalName}`;
+  const navigationLabel = `${portalTitle} navigation`;
   const start = routes[0];
   const current = currentRoute ?? start;
-  const flyout = sidebar.menuType === "flyout";
-  const inDrawer = narrow || flyout;
+  const inDrawer = compact || sidebar.menuType === "flyout";
   const expanded = inDrawer ? drawer : !hidden;
 
   useEffect(() => {
-    if (!narrow) setDrawer(false);
-  }, [narrow]);
+    if (!compact) setDrawer(false);
+  }, [compact]);
 
   const go = (event: MouseEvent, route: PortalRoute | undefined) => {
     event.preventDefault();
@@ -289,26 +295,27 @@ export default function Shell({ children }: { children: ReactNode }) {
           );
         }
         return (
-          <li key={entry.id}>
+          <FlexLayout as="li" key={entry.id} gap={0}>
             <NavigationItem orientation="vertical" level={level} href={routeHref(route)} active={route.path === current?.path} onClick={(event: MouseEvent) => go(event, route)}>
               {level === 0 && <DocumentIcon aria-hidden />}
               {entry.label}
             </NavigationItem>
-          </li>
+          </FlexLayout>
         );
       });
 
+  /** The menu: Home, the application's routes, then the Portal's menu, or the default groups without one. */
   const menuItems = (
-    <StackLayout as="ul" gap="var(--salt-spacing-fixed-100)" style={{ listStyle: "none", margin: 0, padding: 0 }}>
-      <li>
+    <StackLayout as="ul" gap="var(--salt-spacing-fixed-100)" className={styles.list}>
+      <FlexLayout as="li" gap={0}>
         <NavigationItem orientation="vertical" href={start ? routeHref(start) : undefined} onClick={(event: MouseEvent) => go(event, start)}>
           <HomeIcon aria-hidden />
           Home
         </NavigationItem>
-      </li>
+      </FlexLayout>
       <NavGroup icon={<FolderClosedIcon aria-hidden />} label={applicationName} defaultOpen containsCurrent>
         {routes.map((route) => (
-          <li key={route.path}>
+          <FlexLayout as="li" key={route.path} gap={0}>
             <NavigationItem
               orientation="vertical"
               level={1}
@@ -319,7 +326,7 @@ export default function Shell({ children }: { children: ReactNode }) {
             >
               {route.label}
             </NavigationItem>
-          </li>
+          </FlexLayout>
         ))}
       </NavGroup>
       {experience.menu.length > 0 ? (
@@ -339,126 +346,120 @@ export default function Shell({ children }: { children: ReactNode }) {
     </StackLayout>
   );
 
-  const sidebarSlot = (slot: string, inRail: boolean): ReactNode => {
+  /** One of the sidebar's slots, in the experience's order: the workspace switcher, the menu, then Settings and Collapse. */
+  const sidebarSlot = (slot: string): ReactNode => {
     if (slot === "top") {
       return (
-        <StackLayout key="top" gap={0}>
-          <Dropdown aria-label="Workspace" defaultSelected={[WORKSPACES[0]]} bordered>
-            {WORKSPACES.map((workspace) => (
-              <Option key={workspace} value={workspace} />
-            ))}
-          </Dropdown>
-        </StackLayout>
+        <Dropdown key="top" aria-label="Workspace" defaultSelected={[WORKSPACES[0]]} bordered>
+          {WORKSPACES.map((workspace) => (
+            <Option key={workspace} value={workspace} />
+          ))}
+        </Dropdown>
       );
     }
-    if (slot === "main") {
-      return (
-        <div key="main">{menuItems}</div>
-      );
-    }
+    if (slot === "main") return <Fragment key="main">{menuItems}</Fragment>;
     return (
-      <StackLayout key="bottom" gap={0.5}>
+      <StackLayout key="bottom" gap={1}>
         <Divider />
-        <Overlay placement="right">
-          <OverlayTrigger>
-            <Button appearance="transparent" style={{ justifyContent: "flex-start" }}>
-              <SettingsIcon aria-hidden />
-              Settings
+        <StackLayout gap={0.5} align="start">
+          <Overlay placement="right">
+            <OverlayTrigger>
+              <Button appearance="transparent">
+                <SettingsIcon aria-hidden />
+                Settings
+              </Button>
+            </OverlayTrigger>
+            <OverlayPanel aria-label="Settings">
+              <OverlayPanelContent>
+                <StackLayout gap={1}>
+                  <Text styleAs="h4">Settings</Text>
+                  <Text>Portal settings aren&apos;t part of the demo.</Text>
+                </StackLayout>
+              </OverlayPanelContent>
+            </OverlayPanel>
+          </Overlay>
+          {!inDrawer && (
+            <Button appearance="transparent" onClick={() => setCollapsed(true)}>
+              <DoubleChevronLeftIcon aria-hidden />
+              Collapse
             </Button>
-          </OverlayTrigger>
-          <OverlayPanel aria-label="Settings">
-            <OverlayPanelContent>
-              <StackLayout gap={1}>
-                <Text styleAs="h4">Settings</Text>
-                <Text>Portal settings aren&apos;t part of the demo.</Text>
-              </StackLayout>
-            </OverlayPanelContent>
-          </OverlayPanel>
-        </Overlay>
-        {!inRail && !inDrawer && (
-          <Button appearance="transparent" style={{ justifyContent: "flex-start" }} onClick={() => setCollapsed(true)}>
-            <DoubleChevronLeftIcon aria-hidden />
-            Collapse
-          </Button>
-        )}
+          )}
+        </StackLayout>
       </StackLayout>
     );
   };
 
-  const navigation = (
-    <nav id={navId} aria-label={`${portalTitle} navigation`} style={{ position: "sticky", top: 0 }}>
-      <StackLayout gap={2}>
-        {sidebar.slots.map((slot) => sidebarSlot(slot, false))}
-      </StackLayout>
-    </nav>
+  /** The full menu, in the column beside the content, where it stays in view, or in the drawer. */
+  const navigation = (inColumn: boolean) => (
+    <StackLayout as="nav" id={navId} aria-label={navigationLabel} gap={2} padding={inColumn ? 2 : 0} className={inColumn ? styles.sticky : undefined}>
+      {sidebar.slots.map(sidebarSlot)}
+    </StackLayout>
   );
 
-  /** The collapsed menu: one icon per top-level entry, then Settings and Expand. */
+  /** The collapsed menu: one icon per top-level entry, each named by its tooltip, then Expand. */
+  const railButton = (key: string, label: string, icon: ReactNode, onClick: (event: MouseEvent) => void) => (
+    <Tooltip key={key} content={label} placement="right">
+      <Button appearance="transparent" aria-label={label} onClick={onClick}>
+        {icon}
+      </Button>
+    </Tooltip>
+  );
   const rail = (
-    <nav id={navId} aria-label={`${portalTitle} navigation`} style={{ position: "sticky", top: 0 }}>
-      <StackLayout gap={1} align="center">
-        <Button appearance="transparent" aria-label="Home" title="Home" onClick={(event: MouseEvent) => go(event, start)}>
-          <HomeIcon aria-hidden />
-        </Button>
-        <Button appearance="transparent" aria-label={applicationName} title={applicationName} onClick={() => setCollapsed(false)}>
-          <FolderClosedIcon aria-hidden />
-        </Button>
-        {experience.menu
-          .filter((entry) => entry.parentId === null)
-          .map((entry) => (
-            <Button key={entry.id} appearance="transparent" aria-label={entry.label} title={entry.label} onClick={() => setCollapsed(false)}>
-              {entry.kind === "group" ? <FolderClosedIcon aria-hidden /> : <DocumentIcon aria-hidden />}
-            </Button>
-          ))}
-        <Divider />
-        <Button appearance="transparent" aria-label="Expand menu" title="Expand menu" onClick={() => setCollapsed(false)}>
-          <DoubleChevronRightIcon aria-hidden />
-        </Button>
-      </StackLayout>
-    </nav>
+    <StackLayout as="nav" id={navId} aria-label={navigationLabel} gap={1} padding={1} className={styles.sticky}>
+      {railButton("home", "Home", <HomeIcon aria-hidden />, (event) => go(event, start))}
+      {railButton("application", applicationName, <FolderClosedIcon aria-hidden />, () => setCollapsed(false))}
+      {experience.menu
+        .filter((entry) => entry.parentId === null)
+        .map((entry) => railButton(entry.id, entry.label, entry.kind === "group" ? <FolderClosedIcon aria-hidden /> : <DocumentIcon aria-hidden />, () => setCollapsed(false)))}
+      <Divider />
+      {railButton("expand", "Expand menu", <DoubleChevronRightIcon aria-hidden />, () => setCollapsed(false))}
+    </StackLayout>
   );
 
+  // On compact screens the logo stands alone, and the link home still names the portal.
   const brand = (
-    <FlexLayout as="span" align="center" gap={1}>
-      <img src={mode === "dark" ? logo.dark : logo.light} alt={logo.alt} style={{ display: "block", height: "calc(var(--salt-size-base) * 0.8)", width: "auto" }} />
-      {!narrow && <Divider orientation="vertical" aria-hidden />}
-      {!narrow && (
-        <Text as="span" styleAs="h3" color="secondary">
+    <>
+      <img src={mode === "dark" ? logo.dark : logo.light} alt={logo.alt} width={132} height={28} className={styles.logo} />
+      {!compact && <Divider orientation="vertical" aria-hidden />}
+      {!compact && (
+        <Text styleAs="h3" color="secondary">
           {portalName}
         </Text>
       )}
-    </FlexLayout>
+    </>
   );
 
   const headerSlot = (slot: string): ReactNode => {
     switch (slot) {
-      case "toggle":
-        return sidebar.shown ? (
-          <Button
-            key="toggle"
-            appearance="transparent"
-            aria-label={expanded ? "Hide navigation" : "Show navigation"}
-            title={expanded ? "Hide navigation" : "Show navigation"}
-            aria-expanded={expanded}
-            aria-controls={navId}
-            onClick={() => (inDrawer ? setDrawer((value) => !value) : setHidden((value) => !value))}
-          >
-            <MenuIcon aria-hidden />
-          </Button>
-        ) : null;
+      case "toggle": {
+        if (!sidebar.shown) return null;
+        const label = expanded ? "Hide navigation" : "Show navigation";
+        return (
+          <Tooltip key="toggle" content={label} placement="bottom" disabled={inDrawer && drawer}>
+            <Button
+              appearance="transparent"
+              aria-label={label}
+              aria-expanded={expanded}
+              aria-controls={navId}
+              onClick={() => (inDrawer ? setDrawer((value) => !value) : setHidden((value) => !value))}
+            >
+              <MenuIcon aria-hidden />
+            </Button>
+          </Tooltip>
+        );
+      }
       case "brand":
         return experience.logoLinksHome ? (
-          // On narrow screens the logo stands alone, and the link still names the portal.
-          <Link key="brand" href={start ? routeHref(start) : undefined} onClick={(event: MouseEvent) => go(event, start)} underline="never" aria-label={narrow ? portalTitle : undefined}>
+          <Link key="brand" href={start ? routeHref(start) : undefined} onClick={(event: MouseEvent) => go(event, start)} underline="never" aria-label={compact ? portalTitle : undefined} className={styles.brand}>
             {brand}
           </Link>
         ) : (
-          <span key="brand" aria-label={narrow ? portalTitle : undefined}>
+          <FlexLayout key="brand" align="center" gap={1}>
             {brand}
-          </span>
+          </FlexLayout>
         );
       case "global-search":
-        return experience.search ? <GlobalSearch key="search" {...experience.search} compact={narrow} portal={portalName} /> : null;
+        return experience.search ? <GlobalSearch key="search" {...experience.search} compact={compact} portal={portalName} /> : null;
       case "notifications":
         return experience.notifications ? (
           <HeaderMenu
@@ -504,7 +505,7 @@ export default function Shell({ children }: { children: ReactNode }) {
           />
         );
       case "user-menu":
-        return <UserMenu key="user" compact={narrow} />;
+        return <UserMenu key="user" compact={compact} />;
       default:
         return null;
     }
@@ -538,14 +539,20 @@ export default function Shell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <StackLayout gap={0} style={{ background: "var(--salt-container-primary-background)" }}>
+    <StackLayout gap={0} className={styles.shell}>
+      <SkipLink targetId={mainId}>Skip to main content</SkipLink>
       {banner && !dismissed && (
         <Banner status={banner.severity} data-demo-anchor="portal-banner">
           <BannerContent>
-            <Text>
-              <strong>{banner.title}</strong>
-              {banner.description ? ` ${banner.description}` : ""}
-            </Text>
+            <FlexLayout gap={1} wrap align="baseline">
+              <Text fontWeight="bolder">{banner.title}</Text>
+              {banner.description && (
+                <>
+                  {" "}
+                  <Text>{banner.description}</Text>
+                </>
+              )}
+            </FlexLayout>
           </BannerContent>
           {banner.dismissible && (
             <BannerActions>
@@ -557,20 +564,7 @@ export default function Shell({ children }: { children: ReactNode }) {
         </Banner>
       )}
       {headerSlots.length > 0 && (
-        <FlexLayout
-          as="header"
-          data-demo-anchor="portal-header"
-          align="center"
-          justify="space-between"
-          gap={2}
-          padding={1}
-          style={{
-            borderBottomWidth: "var(--salt-size-border)",
-            borderBottomStyle: "solid",
-            borderBottomColor: "var(--salt-separable-tertiary-borderColor)",
-            background: "var(--salt-container-primary-background)",
-          }}
-        >
+        <FlexLayout as="header" data-demo-anchor="portal-header" align="center" justify="space-between" gap={2} wrap padding={1} className={styles.header}>
           <FlexLayout align="center" gap={1}>
             {leading.map(headerSlot)}
           </FlexLayout>
@@ -580,88 +574,42 @@ export default function Shell({ children }: { children: ReactNode }) {
         </FlexLayout>
       )}
 
-      <FlexLayout gap={0} align="stretch" style={{ flex: 1 }}>
-        {sidebar.shown && !inDrawer && !hidden && collapsed && (
-          <div
-            data-demo-anchor="portal-menu"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              flexShrink: 0,
-              width: "calc(var(--salt-size-base) * 2)",
-              paddingTop: "var(--salt-spacing-200)",
-              paddingBottom: "var(--salt-spacing-200)",
-              paddingLeft: "var(--salt-spacing-100)",
-              paddingRight: "var(--salt-spacing-100)",
-              borderRightWidth: "var(--salt-size-border)",
-              borderRightStyle: "solid",
-              borderRightColor: "var(--salt-separable-tertiary-borderColor)",
-              background: "var(--salt-container-primary-background)",
-            }}
-          >
-            {rail}
-          </div>
-        )}
-        {sidebar.shown && !inDrawer && !hidden && !collapsed && (
-          <div
-            data-demo-anchor="portal-menu"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              flexShrink: 0,
-              width: "calc(var(--salt-size-base) * 8)",
-              padding: "var(--salt-spacing-200)",
-              borderRightWidth: "var(--salt-size-border)",
-              borderRightStyle: "solid",
-              borderRightColor: "var(--salt-separable-tertiary-borderColor)",
-              background: "var(--salt-container-primary-background)",
-            }}
-          >
-            {navigation}
-          </div>
+      <FlexLayout gap={0} align="stretch" className={styles.body}>
+        {sidebar.shown && !inDrawer && !hidden && (
+          <StackLayout gap={0} data-demo-anchor="portal-menu" className={collapsed ? styles.rail : styles.sidebar}>
+            {collapsed ? rail : navigation(true)}
+          </StackLayout>
         )}
         {sidebar.shown && inDrawer && (
-          <Drawer open={drawer} onOpenChange={setDrawer} position="left" aria-label={`${portalTitle} navigation`} style={{ width: "calc(var(--salt-size-base) * 9)" }}>
-            <DrawerContent>{navigation}</DrawerContent>
+          // The drawer opens on the menu's first control, after its close button.
+          <Drawer open={drawer} onOpenChange={setDrawer} position="left" initialFocus={1} className={styles.drawer}>
+            <DrawerHeader
+              header={portalName}
+              actions={
+                <Button appearance="transparent" aria-label="Close navigation" onClick={() => setDrawer(false)}>
+                  <CloseIcon aria-hidden />
+                </Button>
+              }
+            />
+            <DrawerContent>{navigation(false)}</DrawerContent>
           </Drawer>
         )}
 
-        <StackLayout gap={0} style={{ flex: 1, minWidth: 0 }}>
-          <StackLayout as="main" gap={2} padding={3} style={{ flex: 1 }}>
-            <nav aria-label="Breadcrumb">
-              <FlexLayout as="ol" align="center" gap={1} wrap style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                <FlexLayout as="li" align="center" gap={1}>
-                  <Text color="secondary">{portalName}</Text>
-                  <ChevronRightIcon aria-hidden />
-                </FlexLayout>
-                <FlexLayout as="li" align="center" gap={1}>
-                  <Link href={start ? routeHref(start) : undefined} onClick={(event: MouseEvent) => go(event, start)}>
-                    {applicationName}
-                  </Link>
-                  <ChevronRightIcon aria-hidden />
-                </FlexLayout>
-                <li aria-current="page">
-                  <Text>{current?.label}</Text>
-                </li>
-              </FlexLayout>
-            </nav>
+        <StackLayout gap={0} className={styles.content}>
+          <StackLayout as="main" id={mainId} tabIndex={-1} gap={2} padding={{ xs: 2, md: 3 }} className={styles.main}>
+            <Breadcrumbs aria-label="Breadcrumb" wrap>
+              {/* The portal has no page of its own in the demo, so its crumb is text, not a link. */}
+              <Breadcrumb>{portalName}</Breadcrumb>
+              <Breadcrumb href={start ? routeHref(start) : undefined} onClick={(event: MouseEvent) => go(event, start)}>
+                {applicationName}
+              </Breadcrumb>
+              <Breadcrumb aria-current="page">{current?.label}</Breadcrumb>
+            </Breadcrumbs>
             <H1>{current?.label}</H1>
             {children}
           </StackLayout>
           {footer.shown && footer.slots.length > 0 && (
-            <FlexLayout
-              as="footer"
-              data-demo-anchor="portal-footer"
-              justify="space-between"
-              wrap
-              gap={2}
-              padding={2}
-              style={{
-                borderTopWidth: "var(--salt-size-border)",
-                borderTopStyle: "solid",
-                borderTopColor: "var(--salt-separable-tertiary-borderColor)",
-              }}
-            >
+            <FlexLayout as="footer" data-demo-anchor="portal-footer" justify="space-between" wrap gap={2} padding={2} className={styles.footer}>
               {footer.slots.map(footerSlot)}
             </FlexLayout>
           )}

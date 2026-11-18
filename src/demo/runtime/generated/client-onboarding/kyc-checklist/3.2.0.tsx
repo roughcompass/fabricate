@@ -1,24 +1,14 @@
-import { useState } from "react";
-import {
-  Button,
-  H2,
-  MultilineInput,
-  Panel,
-  StackLayout,
-  FlexLayout,
-  StatusIndicator,
-  Text,
-  Divider,
-} from "@salt-ds/core";
-import { CheckmarkIcon } from "@salt-ds/icons";
 import { useBus } from "@deweb/portal";
-import { CLIENTS, CHECKS } from "../data";
-import type { Client } from "../data";
+import { Button, FlexItem, FlexLayout, FormField, FormFieldLabel, H2, MultilineInput, Panel, StackLayout, StatusIndicator, Text } from "@salt-ds/core";
+import { CheckmarkIcon } from "@salt-ds/icons";
+import { useState } from "react";
+import { CHECKS, CLIENTS, type Client } from "../data";
+import styles from "./3.2.0.module.css";
 
-const findClient = (id: string) => CLIENTS.find((entry) => entry.id === id);
+const findClient = (id: string) => CLIENTS.find((client) => client.id === id);
 
 function useSelectedClient(): Client {
-  const [id, setId] = useState<string>(CLIENTS[0]!.id);
+  const [id, setId] = useState(CLIENTS[0]!.id);
   useBus("client:selected", "kyc-checklist", (payload: unknown) => {
     const next = (payload as { id?: unknown } | null)?.id;
     if (typeof next === "string" && findClient(next)) setId(next);
@@ -26,53 +16,37 @@ function useSelectedClient(): Client {
   return findClient(id)!;
 }
 
-/**
- * PLANTED DEFECTS (KYC checklist 3.2.0): the note field has no label and the
- * check descriptions use a literal faint gray. Version 3.3.0 fixes both.
- */
 export default function KycChecklist() {
-  const current = useSelectedClient();
-  const [done, setDone] = useState<readonly string[]>(
-    CHECKS.filter((check) => check.done).map((check) => check.id),
-  );
+  const client = useSelectedClient();
+  const [done, setDone] = useState<readonly string[]>(CHECKS.filter((check) => check.done).map((check) => check.id));
 
   return (
     <Panel data-demo-anchor="kyc-panel">
-      <StackLayout gap={1}>
-        <H2 styleAs="h3">{`KYC · ${current.name}`}</H2>
-        <StackLayout as="ul" gap={0} role="list" style={{ margin: 0, padding: 0, listStyle: "none" }}>
-          {CHECKS.map((check, index) => (
-            <li key={check.id} data-demo-anchor={`check-${check.id}`}>
-              {index > 0 && <Divider variant="tertiary" />}
-              <FlexLayout
-                justify="space-between"
-                align="center"
-                gap={1}
-                style={{ paddingBlock: "var(--salt-spacing-50)" }}
-              >
-                <Text style={{ color: "#b0b0b0" }}>{check.label}</Text>
+      <StackLayout gap={2}>
+        <H2>{`KYC · ${client.name}`}</H2>
+        <StackLayout as="ul" gap={1} separators className={styles.list}>
+          {CHECKS.map((check) => (
+            <FlexLayout as="li" key={check.id} justify="space-between" align="center" gap={1} data-demo-anchor={`check-${check.id}`}>
+              <Text>{check.label}</Text>
+              <FlexItem shrink={0}>
                 {done.includes(check.id) ? (
-                  <FlexLayout gap={0.5} align="center" style={{ flexShrink: 0 }}>
-                    <StatusIndicator status="success" />
+                  <FlexLayout gap={1} align="center">
+                    <StatusIndicator status="success" aria-hidden />
                     <Text>Done</Text>
                   </FlexLayout>
                 ) : (
-                  <Button
-                    sentiment="neutral"
-                    appearance="transparent"
-                    onClick={() => setDone((ids) => [...ids, check.id])}
-                    data-demo-anchor={`complete-${check.id}`}
-                    style={{ flexShrink: 0 }}
-                  >
+                  <Button sentiment="neutral" appearance="transparent" aria-label={`Complete: ${check.label}`} onClick={() => setDone((ids) => [...ids, check.id])} data-demo-anchor={`complete-${check.id}`}>
                     <CheckmarkIcon aria-hidden />
                   </Button>
                 )}
-              </FlexLayout>
-            </li>
+              </FlexItem>
+            </FlexLayout>
           ))}
         </StackLayout>
-        <Text color="secondary">Reviewer note</Text>
-        <MultilineInput rows={2} textAreaProps={{ "data-demo-anchor": "kyc-note" } as Record<string, string>} />
+        <FormField>
+          <FormFieldLabel>Reviewer note</FormFieldLabel>
+          <MultilineInput rows={2} textAreaProps={{ "data-demo-anchor": "kyc-note" }} />
+        </FormField>
       </StackLayout>
     </Panel>
   );

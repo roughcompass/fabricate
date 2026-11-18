@@ -1,0 +1,19 @@
+/* release-windows 1.1.0 */
+.ReleaseWindows_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.ReleaseWindows_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* freeze-periods 1.0.0 */
+.FreezePeriods_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+.FreezePeriods_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

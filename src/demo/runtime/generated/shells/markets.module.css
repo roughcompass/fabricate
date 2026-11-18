@@ -1,0 +1,87 @@
+/* The Markets shell's layout where Salt has no property for it. Every value is a Salt token. */
+
+.shell {
+  background: var(--salt-container-primary-background);
+}
+
+.header {
+  background: var(--salt-container-primary-background);
+  border-bottom: var(--salt-size-border) var(--salt-borderStyle-solid) var(--salt-separable-primary-borderColor);
+}
+
+/* The logo and portal name, laid out inside the link home. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--salt-spacing-100);
+}
+
+.logo {
+  display: block;
+  height: calc(var(--salt-size-base) * 0.8);
+  width: auto;
+}
+
+/* The portal's sections take the top bar's free space and scroll sideways when it runs out. */
+.sections {
+  flex: 1 1 calc(var(--salt-size-base) * 6);
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.routes {
+  overflow-x: auto;
+}
+
+.list {
+  list-style: none;
+}
+
+.tabs {
+  list-style: none;
+  white-space: nowrap;
+}
+
+/* A section with nowhere to go in the demo, spaced like a horizontal navigation item. */
+.section {
+  padding-inline: var(--salt-spacing-100);
+}
+
+/* The search field takes its width as a flex basis, so it shrinks before the top bar wraps. */
+.search {
+  flex: 0 1 calc(var(--salt-size-base) * 7);
+}
+
+.drawer {
+  width: calc(var(--salt-size-base) * 9);
+}
+
+/* A menu entry with nowhere to go in the demo: as tall as a navigation item, its text where the item's label starts. */
+.staticEntry,
+.staticEntryNested {
+  padding-block: calc((var(--salt-size-base) - var(--salt-text-lineHeight)) / 2 + var(--salt-spacing-50));
+  padding-inline-end: var(--salt-spacing-100);
+}
+
+.staticEntry {
+  padding-inline-start: calc(var(--salt-spacing-300) * 2 + var(--salt-spacing-100));
+}
+
+.staticEntryNested {
+  padding-inline-start: calc(var(--salt-spacing-300) * 2 + var(--salt-spacing-100) * 2);
+}
+
+/* The title band contrasts with the content area below it. */
+.band {
+  background: var(--salt-container-secondary-background);
+  border-bottom: var(--salt-size-border) var(--salt-borderStyle-solid) var(--salt-separable-primary-borderColor);
+}
+
+.main {
+  flex: 1;
+}
+
+.footer {
+  background: var(--salt-container-secondary-background);
+  border-top: var(--salt-size-border) var(--salt-borderStyle-solid) var(--salt-separable-primary-borderColor);
+}

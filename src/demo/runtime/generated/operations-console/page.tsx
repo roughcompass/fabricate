@@ -2,119 +2,103 @@
 // incident-feed 6.1.0 (main)
 // service-health 2.4.0 (side)
 // change-calendar 1.2.0 (wide)
-import { planted, useBus, useProfile, usePublish } from "@deweb/portal";
+import { useBus, useProfile, usePublish } from "@deweb/portal";
 import { Button, Dropdown, FlexLayout, FormField, FormFieldLabel, GridItem, GridLayout, H2, Option, Panel, StackLayout, StatusIndicator, Table, TableContainer, Tag, TBody, TD, Text, TH, THead, TR } from "@salt-ds/core";
-import { CalendarIcon, WarningIcon } from "@salt-ds/icons";
-import { useState } from "react";
-import { CHANGES, type Incident, INCIDENTS, REGIONS, SERVICES } from "./data";
+import { CalendarIcon } from "@salt-ds/icons";
+import { type SyntheticEvent, useState } from "react";
+import { CHANGES, type Incident, INCIDENTS, REGIONS, SERVICES, SEVERITIES, UPDATED, WEEK } from "./data";
+import styles from "./page.module.css";
 
-const IncidentFeed_SEVERITY_OPTIONS = [
-  { value: "all", label: "All severities" },
-  { value: "SEV1", label: "SEV1" },
-  { value: "SEV2", label: "SEV2" },
-  { value: "SEV3", label: "SEV3" },
-] as const;
+const IncidentFeed_SEVERITY_OPTIONS = [{ value: "all", label: "All severities" }, ...SEVERITIES.map((severity) => ({ value: severity.value, label: `${severity.label} · ${severity.meaning}` }))];
 
-const IncidentFeed_SEVERITY_STATUS = {
-  SEV1: "error",
-  SEV2: "warning",
-  SEV3: "info",
-} as const;
+const IncidentFeed_SEVERITY_STATUS = { SEV1: "error", SEV2: "warning", SEV3: "info" } as const;
 
 function IncidentFeed() {
   const [severity, setSeverity] = useState<string>("all");
   const [selected, setSelected] = useState<string>(INCIDENTS[0]!.id);
   const publish = usePublish("incident-feed");
-
-  const rows = INCIDENTS.filter(
-    (incident) => severity === "all" || incident.severity === severity,
-  );
+  const rows = INCIDENTS.filter((incident) => severity === "all" || incident.severity === severity);
 
   const choose = (incident: Incident) => {
     setSelected(incident.id);
-    publish("incident:selected", {
-      id: incident.id,
-      name: incident.title,
-      region: incident.region,
-    });
+    publish("incident:selected", { id: incident.id, name: incident.title, region: incident.region });
   };
 
   return (
     <Panel data-demo-anchor="incident-panel">
       <StackLayout gap={2}>
-        <H2>Incidents</H2>
-        <FormField style={{ maxWidth: "calc(var(--salt-size-base) * 8)" }}>
-          <FormFieldLabel>Severity</FormFieldLabel>
-          <Dropdown
-            data-demo-anchor="incident-filter"
-            selected={[severity]}
-            valueToString={(value: string) =>
-              IncidentFeed_SEVERITY_OPTIONS.find((option) => option.value === value)?.label ?? value
-            }
-            onSelectionChange={(_event, newSelected: string[]) =>
-              setSeverity(newSelected[0] ?? "all")
-            }
-          >
-            {IncidentFeed_SEVERITY_OPTIONS.map((option) => (
-              <Option key={option.value} value={option.value}>
-                {option.label}
-              </Option>
-            ))}
-          </Dropdown>
-        </FormField>
-        <TableContainer>
-          <Table>
-            <caption>Open incidents</caption>
-            <THead>
-              <TR>
-                <TH>Incident</TH>
-                <TH>Severity</TH>
-                <TH>Region</TH>
-                <TH>Focus</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {rows.map((incident) => {
-                const isSelected = selected === incident.id;
-                return (
-                  <TR key={incident.id} data-demo-anchor={`incident-${incident.id}`}>
-                    <TD>
-                      <StackLayout gap={0}>
-                        <Text>{`${incident.id} · ${incident.title}`}</Text>
-                        {isSelected && (
+        <FlexLayout justify="space-between" align="baseline" gap={1} wrap>
+          <H2>Incidents</H2>
+          <Text styleAs="label" color="secondary">{`${INCIDENTS.length} open, updated ${UPDATED}`}</Text>
+        </FlexLayout>
+        <GridLayout columns={{ xs: 1, md: 2 }} gap={2}>
+          <FormField>
+            <FormFieldLabel>Severity</FormFieldLabel>
+            <Dropdown
+              data-demo-anchor="incident-filter"
+              selected={[severity]}
+              valueToString={(value: string) => IncidentFeed_SEVERITY_OPTIONS.find((option) => option.value === value)?.label ?? value}
+              onSelectionChange={(_event: SyntheticEvent, next: string[]) => setSeverity(next[0] ?? "all")}
+            >
+              {IncidentFeed_SEVERITY_OPTIONS.map((option) => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Dropdown>
+          </FormField>
+        </GridLayout>
+        {rows.length === 0 ? (
+          <Text color="secondary">No open incidents have this severity. Choose All severities to see every open incident.</Text>
+        ) : (
+          <TableContainer>
+            <Table aria-label="Open incidents">
+              <THead sticky>
+                <TR>
+                  <TH>Incident</TH>
+                  <TH>Title</TH>
+                  <TH>Severity</TH>
+                  <TH>Region</TH>
+                  <TH>Opened</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {rows.map((incident) => {
+                  const current = incident.id === selected;
+                  return (
+                    <TR key={incident.id} aria-current={current ? "true" : undefined} className={current ? styles["IncidentFeed_selected"] : undefined} data-demo-anchor={`incident-${incident.id}`}>
+                      <TD>
+                        <Button sentiment="neutral" appearance="transparent" aria-label={`Show health for ${incident.id}`} aria-pressed={current} onClick={() => choose(incident)} data-demo-anchor={`focus-${incident.id}`}>
+                          {incident.id}
+                        </Button>
+                      </TD>
+                      <TD>
+                        <StackLayout gap={0}>
+                          <Text>{incident.title}</Text>
                           <Text styleAs="label" color="secondary">
-                            Selected
+                            {current ? `${incident.service} · Selected` : incident.service}
                           </Text>
-                        )}
-                      </StackLayout>
-                    </TD>
-                    <TD>
-                      <StackLayout direction="row" gap={1} align="center">
-                        <StatusIndicator status={IncidentFeed_SEVERITY_STATUS[incident.severity]} />
-                        <Text>{incident.severity}</Text>
-                      </StackLayout>
-                    </TD>
-                    <TD>
-                      <Text>{incident.region}</Text>
-                    </TD>
-                    <TD>
-                      <Button
-                        appearance={isSelected ? "solid" : "transparent"}
-                        sentiment={isSelected ? "accented" : "neutral"}
-                        onClick={() => choose(incident)}
-                        data-demo-anchor={`focus-${incident.id}`}
-                        aria-label={`Show health for ${incident.id}`}
-                      >
-                        <WarningIcon aria-hidden />
-                        Focus
-                      </Button>
-                    </TD>
-                  </TR>
-                );
-              })}
-            </TBody>
-          </Table>
-        </TableContainer>
+                        </StackLayout>
+                      </TD>
+                      <TD>
+                        <FlexLayout gap={1} align="center" wrap={false}>
+                          <StatusIndicator status={IncidentFeed_SEVERITY_STATUS[incident.severity]} />
+                          <Text>{incident.severity}</Text>
+                        </FlexLayout>
+                      </TD>
+                      <TD>{incident.region}</TD>
+                      <TD>
+                        <Text styleAs="label" color="secondary">
+                          {incident.opened}
+                        </Text>
+                      </TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
+          </TableContainer>
+        )}
       </StackLayout>
     </Panel>
   );
@@ -122,71 +106,71 @@ function IncidentFeed() {
 
 type ServiceHealth_Health = "Healthy" | "Degraded" | "Outage";
 
-const ServiceHealth_HEALTH_STATUS = {
-  Healthy: "success",
-  Degraded: "warning",
-  Outage: "error",
-} as const;
+const ServiceHealth_HEALTH_STATUS = { Healthy: "success", Degraded: "warning", Outage: "error" } as const;
+
+const ServiceHealth_HEALTHS: readonly ServiceHealth_Health[] = ["Outage", "Degraded", "Healthy"];
+
+const ServiceHealth_healthOf = (service: (typeof SERVICES)[number], region: (typeof REGIONS)[number]) => service.status[region] as ServiceHealth_Health;
 
 function ServiceHealth() {
   const [focus, setFocus] = useState<string | null>(null);
 
   useBus("incident:selected", "service-health", (payload: unknown) => {
     const region = (payload as { region?: unknown } | null)?.region;
-    if (typeof region === "string" && (REGIONS as readonly string[]).includes(region)) {
-      setFocus(region);
-    }
+    if (typeof region === "string" && (REGIONS as readonly string[]).includes(region)) setFocus(region);
   });
+
+  const counts = ServiceHealth_HEALTHS.map((health) => ({ health, count: SERVICES.reduce((total, service) => total + REGIONS.filter((region) => ServiceHealth_healthOf(service, region) === health).length, 0) }));
 
   return (
     <Panel data-demo-anchor="health-panel">
       <StackLayout gap={2}>
-        <FlexLayout justify="space-between" align="center" gap={1} wrap>
-          <H2 styleAs="h3">Service health</H2>
-          {focus ? <Tag>{`Focused on ${focus}`}</Tag> : null}
+        <FlexLayout justify="space-between" align="baseline" gap={1} wrap>
+          <H2>Service health</H2>
+          <Text styleAs="label" color="secondary">{`Updated ${UPDATED}`}</Text>
         </FlexLayout>
+        <FlexLayout as="ul" gap={2} wrap aria-label="Health across every service and region" className={styles["ServiceHealth_list"]}>
+          {counts.map(({ health, count }) => (
+            <FlexLayout key={health} as="li" gap={1} align="center">
+              <StatusIndicator status={ServiceHealth_HEALTH_STATUS[health]} />
+              <Text className={styles["ServiceHealth_figure"]}>{`${count} ${health.toLowerCase()}`}</Text>
+            </FlexLayout>
+          ))}
+        </FlexLayout>
+        {focus ? (
+          <FlexLayout>
+            <Tag>{`Focused on ${focus}`}</Tag>
+          </FlexLayout>
+        ) : (
+          <Text color="secondary">Choose an incident to focus on its region.</Text>
+        )}
         <TableContainer>
           <Table aria-label="Service health by region">
-            <THead>
+            <THead sticky>
               <TR>
                 <TH>Service</TH>
-                {REGIONS.map((region) =>
-                  focus === region ? (
-                    <TH
-                      key={region}
-                      style={{ background: "var(--salt-selectable-background-selected)" }}
-                    >
-                      {region}
-                    </TH>
-                  ) : (
-                    <TH key={region}>{region}</TH>
-                  )
-                )}
+                {REGIONS.map((region) => (
+                  <TH key={region} className={focus === region ? styles["ServiceHealth_focus"] : undefined}>
+                    {region}
+                  </TH>
+                ))}
               </TR>
             </THead>
             <TBody>
               {SERVICES.map((service) => (
                 <TR key={service.name} data-demo-anchor={`service-${service.name}`}>
                   <TD>
-                    <Text>{service.name}</Text>
+                    <Text fontWeight="bolder">{service.name}</Text>
                   </TD>
                   {REGIONS.map((region) => {
-                    const health = service.status[region] as ServiceHealth_Health;
-                    const content = (
-                      <FlexLayout gap={1} align="center" wrap={false}>
-                        <StatusIndicator status={ServiceHealth_HEALTH_STATUS[health]} />
-                        <Text>{health}</Text>
-                      </FlexLayout>
-                    );
-                    return focus === region ? (
-                      <TD
-                        key={region}
-                        style={{ background: "var(--salt-selectable-background-selected)" }}
-                      >
-                        {content}
+                    const health = ServiceHealth_healthOf(service, region);
+                    return (
+                      <TD key={region} className={focus === region ? styles["ServiceHealth_focus"] : undefined}>
+                        <FlexLayout gap={1} align="center" wrap={false}>
+                          <StatusIndicator status={ServiceHealth_HEALTH_STATUS[health]} />
+                          <Text>{health}</Text>
+                        </FlexLayout>
                       </TD>
-                    ) : (
-                      <TD key={region}>{content}</TD>
                     );
                   })}
                 </TR>
@@ -199,6 +183,8 @@ function ServiceHealth() {
   );
 }
 
+const ChangeCalendar_AWAITING = "Awaiting approval";
+
 function ChangeCalendar() {
   const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
@@ -208,28 +194,20 @@ function ChangeCalendar() {
     <Panel data-demo-anchor="changes-panel">
       <StackLayout gap={2}>
         <FlexLayout justify="space-between" align="center" gap={2} wrap>
-          <H2>Change calendar</H2>
-          <Button
-            sentiment="neutral"
-            appearance="bordered"
-            onClick={() => {
-              planted.blockMainThread(650);
-              setChecked(true);
-            }}
-            data-demo-anchor="check-conflicts"
-          >
+          <StackLayout gap={1}>
+            <H2>Change calendar</H2>
+            <Text styleAs="label" color="secondary" role="status">
+              {checked ? `Week of ${WEEK}. No conflicting changes this week.` : `Week of ${WEEK}`}
+            </Text>
+          </StackLayout>
+          <Button sentiment="neutral" appearance="bordered" onClick={() => setChecked(true)} data-demo-anchor="check-conflicts">
             <CalendarIcon aria-hidden />
             Check for conflicts
           </Button>
         </FlexLayout>
-        {checked && (
-          <Text color="secondary" aria-live="polite">
-            No conflicting changes this week.
-          </Text>
-        )}
         <TableContainer>
           <Table aria-label="Changes this week">
-            <THead>
+            <THead sticky>
               <TR>
                 <TH>Change</TH>
                 <TH>Window</TH>
@@ -241,14 +219,21 @@ function ChangeCalendar() {
             <TBody>
               {CHANGES.map((change) => {
                 const status: string = approved.includes(change.id) ? "Approved" : change.status;
-                const awaiting = status === "Awaiting approval";
+                const awaiting = status === ChangeCalendar_AWAITING;
                 return (
                   <TR key={change.id} data-demo-anchor={`change-${change.id}`}>
-                    <TD>{`${change.id} · ${change.title}`}</TD>
+                    <TD>
+                      <StackLayout gap={0}>
+                        <Text>{`${change.id} · ${change.title}`}</Text>
+                        <Text styleAs="label" color="secondary">
+                          {change.owner}
+                        </Text>
+                      </StackLayout>
+                    </TD>
                     <TD>{change.window}</TD>
                     <TD>{change.risk}</TD>
                     <TD>
-                      <FlexLayout gap={1} align="center">
+                      <FlexLayout gap={1} align="center" wrap={false}>
                         <StatusIndicator status={awaiting ? "warning" : "success"} />
                         <Text>{status}</Text>
                       </FlexLayout>
@@ -256,12 +241,7 @@ function ChangeCalendar() {
                     {approver && (
                       <TD>
                         {awaiting ? (
-                          <Button
-                            sentiment="accented"
-                            appearance="solid"
-                            onClick={() => setApproved((ids) => [...ids, change.id])}
-                            data-demo-anchor={`approve-${change.id}`}
-                          >
+                          <Button sentiment="accented" appearance="transparent" onClick={() => setApproved((ids) => [...ids, change.id])} data-demo-anchor={`approve-${change.id}`}>
                             {`Approve ${change.id}`}
                           </Button>
                         ) : (
@@ -283,14 +263,14 @@ function ChangeCalendar() {
 
 export default function OperationsConsole() {
   return (
-    <GridLayout columns={3} gap={3}>
-      <GridItem colSpan={2}>
+    <GridLayout columns={{ xs: 1, md: 3 }} gap={3}>
+      <GridItem colSpan={{ xs: 1, md: 2 }}>
         <IncidentFeed />
       </GridItem>
-      <GridItem colSpan={1}>
+      <GridItem colSpan={{ xs: 1, md: 1 }}>
         <ServiceHealth />
       </GridItem>
-      <GridItem colSpan={3}>
+      <GridItem colSpan={{ xs: 1, md: 3 }}>
         <ChangeCalendar />
       </GridItem>
     </GridLayout>

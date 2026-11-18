@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { openTool, waitForRegions } from "./support/demo";
+import { injectUnlabeledField, openTool, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
 
 /** The toolbar's Accessibility, Timing, Session, and Settings tools (template-demo/toolbar spec). */
@@ -27,37 +27,41 @@ async function swapPayeeList(page: Page, version: string) {
 }
 
 test.describe("accessibility tool", () => {
-  test("audits, swaps to the fixed version, and re-audits clean", async ({ page, db: _db }) => {
+  test("audits a clean template, swaps a microfrontend, and re-audits clean (Auditing the reference deployment; Audit, swap, re-audit)", async ({ page, db: _db }) => {
     await open(page, "payments-workspace");
     await openPanel(page, "accessibility", "Accessibility");
     const audit = panel(page, "Accessibility");
     await audit.getByRole("button", { name: "Run audit" }).click();
-    await expect(audit.getByRole("status")).toContainText("have violations");
-
-    const results = audit.getByRole("list", { name: "Violations" }).locator("[data-audit-result]");
-    expect((await results.evaluateAll((items) => items.map((item) => item.getAttribute("data-rule")))).sort()).toEqual(["button-name", "color-contrast", "label"]);
-    await expect(audit.getByRole("button", { name: /Form elements must have labels/ })).toBeVisible();
-    // Every affected element belongs to the payee list's defective version.
-    const attributions = await audit.locator("[data-audit-node]").evaluateAll((items) => [...new Set(items.map((item) => item.firstElementChild?.textContent))]);
-    expect(attributions).toEqual(["Payee list 1.4.2"]);
-    const totals = audit.getByRole("definition");
-    expect(Number(await totals.nth(0).textContent()) + Number(await totals.nth(1).textContent())).toBeGreaterThan(0);
-    // The page is outlined, numbered by result.
-    await expect(page.locator("[data-audit-outline]").first()).toBeVisible();
+    await expect(audit.getByRole("status")).toHaveText("No violations found.");
+    await expect(audit.locator("[data-audit-result]")).toHaveCount(0);
 
     await swapPayeeList(page, "2.0.0");
     await openPanel(page, "accessibility", "Accessibility");
     await expect(audit.locator("[data-audit-stale]")).toContainText("may be out of date");
     await audit.getByRole("button", { name: "Run audit again" }).click();
     await expect(audit.getByRole("status")).toHaveText("No violations found.");
-    await expect(audit.locator("[data-audit-result]")).toHaveCount(0);
     await expect(audit.locator("[data-audit-stale]")).toHaveCount(0);
-    await expect(page.locator("[data-audit-outline]")).toHaveCount(0);
   });
 
-  test("locates a violation on the page and hides outlines without losing results", async ({ page, db: _db }) => {
+  test("attributes a violation to its microfrontend and version, and outlines it on the page (Attributing a violation)", async ({ page, db: _db }) => {
+    await open(page, "payments-workspace");
+    await injectUnlabeledField(page);
+    await openPanel(page, "accessibility", "Accessibility");
+    const audit = panel(page, "Accessibility");
+    await audit.getByRole("button", { name: "Run audit" }).click();
+    await expect(audit.getByRole("status")).toContainText("have violations");
+    await expect(audit.getByRole("button", { name: /Form elements must have labels/ })).toBeVisible();
+    const attributions = await audit.locator("[data-audit-node]").evaluateAll((items) => [...new Set(items.map((item) => item.firstElementChild?.textContent))]);
+    expect(attributions).toEqual(["Payee list 1.4.2"]);
+    const totals = audit.getByRole("definition");
+    expect(Number(await totals.nth(0).textContent()) + Number(await totals.nth(1).textContent())).toBeGreaterThan(0);
+    await expect(page.locator("[data-audit-outline]").first()).toBeVisible();
+  });
+
+  test("locates a violation on the page and hides outlines without losing results (Locating a violation)", async ({ page, db: _db }) => {
     await page.setViewportSize({ width: 1280, height: 600 });
     await open(page, "payments-workspace");
+    await injectUnlabeledField(page);
     await openPanel(page, "accessibility", "Accessibility");
     const audit = panel(page, "Accessibility");
     await audit.getByRole("button", { name: "Run audit" }).click();
@@ -66,9 +70,9 @@ test.describe("accessibility tool", () => {
     const number = await result.getAttribute("data-audit-result");
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await expect(page.locator('[data-demo-anchor="payee-search"]')).not.toBeInViewport();
+    await expect(page.locator('[data-demo-anchor="injected-field"]')).not.toBeInViewport();
     await result.getByRole("button").click();
-    await expect(page.locator('[data-demo-anchor="payee-search"]')).toBeInViewport();
+    await expect(page.locator('[data-demo-anchor="injected-field"]')).toBeInViewport();
     const outline = page.locator(`[data-audit-outline="${number}"]`);
     await expect(outline).toHaveAttribute("data-highlighted", "true");
     await expect(outline).toHaveText(number!);
@@ -91,16 +95,16 @@ test.describe("timing tool", () => {
     await expect(loads.nth(3)).toContainText("Slowest load");
   });
 
-  test("rates the planted interaction poor, attributes it, and ranks its region first", async ({ page, db: _db }) => {
+  test("rates an interaction good, attributes it, and ranks the slowest-loading region first (A fast interaction; Showing hot spots)", async ({ page, db: _db }) => {
     await open(page, "payments-workspace");
     await region(page, "payment-activity").getByRole("button", { name: "Recalculate totals" }).click();
     await openPanel(page, "timing", "Timing");
     const timing = panel(page, "Timing");
     const interaction = timing.getByRole("list", { name: "Recorded interactions" }).locator('[data-interaction-member="payment-activity"]').first();
-    await expect(interaction).toHaveAttribute("data-rating", "poor");
+    await expect(interaction).toHaveAttribute("data-rating", "good");
     await expect(interaction).toContainText('button "Recalculate totals"');
     await expect(interaction).toContainText("Payment activity");
-    await expect(timing.locator("[data-slowest-interaction]")).toContainText("Poor");
+    await expect(timing.locator("[data-slowest-interaction]")).toContainText("Good");
     await expect(timing.locator("[data-slowest-interaction]")).toContainText("Payment activity");
 
     await timing.getByRole("checkbox", { name: /^Hot spots/ }).check();
@@ -123,7 +127,7 @@ test.describe("timing tool without Event Timing", () => {
     const timing = panel(page, "Timing");
     await expect(timing).toContainText("Approximate: this browser does not support the Event Timing API");
     const interaction = timing.locator('[data-interaction-member="payment-activity"]').first();
-    await expect(interaction).toHaveAttribute("data-rating", "poor");
+    await expect(interaction).toHaveAttribute("data-rating", "good");
     await expect(interaction).toContainText("≈");
   });
 });

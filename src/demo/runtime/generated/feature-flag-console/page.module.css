@@ -1,0 +1,19 @@
+/* flag-list 1.1.0 */
+.FlagList_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.FlagList_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* flag-environments 1.0.0 */
+.FlagEnvironments_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+.FlagEnvironments_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

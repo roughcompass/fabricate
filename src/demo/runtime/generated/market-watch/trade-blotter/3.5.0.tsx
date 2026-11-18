@@ -1,46 +1,25 @@
-import { useState } from "react";
-import {
-  Button,
-  Card,
-  FlexLayout,
-  H2,
-  StackLayout,
-  StatusIndicator,
-  Table,
-  TableContainer,
-  TBody,
-  TD,
-  TH,
-  THead,
-  TR,
-  Text,
-} from "@salt-ds/core";
+import { useProfile } from "@deweb/portal";
+import { Button, Display3, FlexLayout, GridLayout, H2, Panel, StackLayout, StatusIndicator, TBody, TD, TH, THead, TR, Table, TableContainer, Text } from "@salt-ds/core";
 import { RefreshIcon } from "@salt-ds/icons";
-import { planted, useProfile } from "@deweb/portal";
-import { TRADES } from "../data";
+import { useState } from "react";
+import { EXPOSURE, TRADES } from "../data";
+import styles from "./3.5.0.module.css";
 
-function Metric({
-  label,
-  value,
-  detail,
-  emphasis,
-}: {
-  label: string;
-  value: string;
-  detail?: string;
-  emphasis?: boolean;
-}) {
+const AWAITING = "Awaiting allocation";
+const shares = (quantity: number) => quantity.toLocaleString("en-US");
+const usd = (value: number) => value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const millions = (value: number) => `USD ${(value / 1_000_000).toFixed(2)}M`;
+
+function Figure({ label, value, detail, live }: { label: string; value: string; detail: string; live?: boolean }) {
   return (
-    <StackLayout gap={0.5}>
-      <Text color="secondary">{label}</Text>
-      <Text styleAs={emphasis ? "display3" : "h2"} aria-live="polite">
-        {value}
+    <StackLayout gap={1}>
+      <Text styleAs="label" color="secondary">
+        {label}
       </Text>
-      {detail && (
-        <Text styleAs="label" color="secondary">
-          {detail}
-        </Text>
-      )}
+      <Display3 className={styles.figure}>{value}</Display3>
+      <Text styleAs="label" color="secondary" role={live ? "status" : undefined}>
+        {detail}
+      </Text>
     </StackLayout>
   );
 }
@@ -48,76 +27,77 @@ function Metric({
 export default function TradeBlotter() {
   const approver = useProfile().persona === "Approver";
   const [allocated, setAllocated] = useState<readonly string[]>([]);
-  const [exposure, setExposure] = useState("$1.42M");
+  const [recalculated, setRecalculated] = useState(false);
+  const statusOf = (trade: (typeof TRADES)[number]) => (allocated.includes(trade.id) ? "Allocated" : trade.status);
+  const awaiting = TRADES.filter((trade) => statusOf(trade) === AWAITING).length;
 
   return (
-    <Card data-demo-anchor="blotter-panel">
-      <StackLayout gap={3}>
-        <FlexLayout justify="space-between" align="center" wrap gap={2}>
+    <Panel data-demo-anchor="blotter-panel">
+      <StackLayout gap={2}>
+        <FlexLayout justify="space-between" align="center" gap={2} wrap>
           <H2>Trade blotter</H2>
-          <Button
-            sentiment="neutral"
-            appearance="bordered"
-            onClick={() => {
-              planted.blockMainThread(650);
-              setExposure("$1.43M");
-            }}
-            data-demo-anchor="recalculate-exposure"
-          >
+          <Button sentiment="neutral" appearance="bordered" onClick={() => setRecalculated(true)} data-demo-anchor="recalculate-exposure">
             <RefreshIcon aria-hidden />
             Recalculate exposure
           </Button>
         </FlexLayout>
 
-        <FlexLayout gap={3} wrap align="end">
-          <Metric
-            label="Awaiting allocation"
-            value={`${2 - allocated.length}`}
-            detail="Approver allocates"
-            emphasis
-          />
-          <Metric label="Gross exposure" value={exposure} />
-          <Metric label="Trades today" value="4" />
-        </FlexLayout>
+        <GridLayout columns={{ xs: 1, sm: 3 }} gap={2}>
+          <Figure label="Awaiting allocation" value={`${awaiting}`} detail="Approver allocates" />
+          <Figure label="Gross exposure" value={millions(recalculated ? EXPOSURE.recalculated : EXPOSURE.calculated)} detail={recalculated ? `Recalculated at ${EXPOSURE.recalculatedAt}` : `Calculated at ${EXPOSURE.at}`} live />
+          <Figure label="Trades today" value={`${TRADES.length}`} detail="Since the 09:30 ET open" />
+        </GridLayout>
 
         <TableContainer>
           <Table aria-label="Trades">
-            <THead>
+            <THead sticky>
               <TR>
                 <TH>Trade</TH>
+                <TH>Time</TH>
                 <TH>Symbol</TH>
                 <TH>Side</TH>
-                <TH style={{ textAlign: "right" }}>Quantity</TH>
-                <TH style={{ textAlign: "right" }}>Price</TH>
+                <TH textAlign="right">Quantity</TH>
+                <TH textAlign="right">Price (USD)</TH>
+                <TH textAlign="right">Notional (USD)</TH>
                 <TH>Status</TH>
                 {approver && <TH>Allocation</TH>}
               </TR>
             </THead>
             <TBody>
               {TRADES.map((trade) => {
-                const status: string = allocated.includes(trade.id) ? "Allocated" : trade.status;
-                const awaiting = status === "Awaiting allocation";
+                const status = statusOf(trade);
+                const waiting = status === AWAITING;
                 return (
                   <TR key={trade.id} data-demo-anchor={`trade-${trade.id}`}>
-                    <TD>{trade.id}</TD>
+                    <TD>
+                      <Text fontWeight="bolder">{trade.id}</Text>
+                    </TD>
+                    <TD>
+                      <Text styleAs="label" color="secondary">
+                        {trade.time}
+                      </Text>
+                    </TD>
                     <TD>{trade.symbol}</TD>
                     <TD>{trade.side}</TD>
-                    <TD style={{ textAlign: "right" }}>{trade.quantity}</TD>
-                    <TD style={{ textAlign: "right" }}>{trade.price}</TD>
+                    <TD textAlign="right" className={styles.figure}>
+                      {shares(trade.quantity)}
+                    </TD>
+                    <TD textAlign="right" className={styles.figure}>
+                      {usd(trade.price)}
+                    </TD>
+                    <TD textAlign="right" className={styles.figure}>
+                      {usd(trade.quantity * trade.price)}
+                    </TD>
                     <TD>
-                      <FlexLayout gap={1} align="center">
-                        <StatusIndicator status={awaiting ? "info" : "success"} />
+                      <FlexLayout gap={1} align="center" wrap={false}>
+                        <StatusIndicator status={waiting ? "warning" : "success"} />
                         <Text>{status}</Text>
                       </FlexLayout>
                     </TD>
                     {approver && (
                       <TD>
-                        {awaiting ? (
-                          <Button
-                            sentiment="accented"
-                            onClick={() => setAllocated((ids) => [...ids, trade.id])}
-                            data-demo-anchor={`approve-${trade.id}`}
-                          >
+                        {waiting ? (
+                          <Button sentiment="accented" appearance="transparent" onClick={() => setAllocated((ids) => [...ids, trade.id])} data-demo-anchor={`approve-${trade.id}`}>
                             {`Approve ${trade.id}`}
                           </Button>
                         ) : (
@@ -134,6 +114,6 @@ export default function TradeBlotter() {
 
         {!approver && <Text color="secondary">Allocations are approved by the Approver role.</Text>}
       </StackLayout>
-    </Card>
+    </Panel>
   );
 }

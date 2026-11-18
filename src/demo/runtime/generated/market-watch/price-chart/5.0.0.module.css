@@ -1,0 +1,10 @@
+/* The chart scales to the region's width, keeping its viewBox's proportions. */
+.chart {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+.figure {
+  font-variant-numeric: tabular-nums;
+}

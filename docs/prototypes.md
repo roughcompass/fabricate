@@ -57,7 +57,7 @@ About 15 minutes. Use a fresh browser profile or a private window, so the worksp
    - Preview: switch to Dark, then High density, then Mobile, where the navigation moves behind the menu button.
    - Checks: the four gates, any repairs with the first-pass result, the accessibility audit, and the persona-fit review with its intent-specific checks.
    - Code: the generated page, its sample data, and the shell's source.
-   - Provenance: the Salt guidance consulted, the lessons applied, and Salt 1.73.0 for both rendering and guidance.
+   - Provenance: the Salt guidance consulted, the lessons applied, and the Salt release, such as 1.75.0, for both rendering and guidance.
 5. **Lessons (2 minutes).** Lessons shows what the ratings and reasons taught, each citing its feedback, and three proposals drawn from check failures that kept recurring, ready to accept live. Progress compares the earliest and latest generations with measured values, and the lesson check shows how benchmark intents fared with and without lessons.
 6. **Compare (1 minute).** On Cut-off countdown queue, compare v1 with v3: both previews under one set of controls, the higher scores marked, the code changes, and the pairwise review.
 7. **Back to the live generation (2 minutes).** The variants page shows three directions on the same sample data. Keep one with a reason and discard another with a reason. Each reason can become a lesson.
@@ -152,38 +152,45 @@ On Vercel, Prototypes has no Salt Patterns gallery, since the template demo isn'
 
 **Known issue: previews don't render behind Deployment Protection.** The preview frame is sandboxed to an opaque origin, so its requests for the Salt runtime under `/prototype-runtime/` carry no sign-in cookie, and Vercel Authentication redirects them. Generating, the checks, reviews, and keeping work; the frames stay blank. The planned fix is to serve the runtime, which holds only public packages, from a separate public static project.
 
-## Generating the hero templates
+## A version's files
 
-The four hero templates' microfrontends and the Access and Markets shells are written by the Prototypes pipeline itself, once, and committed:
+A version is its component, `Prototype.tsx`, its sample data, `data.ts`, and, when it needs one, a CSS module, `Prototype.module.css`.
+
+The generator styles with Salt components and their properties first. It writes a module only for what Salt has no property for, such as tabular figures or a selected row's tint. The component imports it as `import styles from "./Prototype.module.css"` and applies classes with `className={styles.name}`.
+
+The Salt-only gate holds the module to class rules with Salt tokens only. The same gate refuses any inline `style`, and any HTML element other than a `form` and SVG drawing elements.
+
+Wherever a version's code goes, the module goes too:
+- Refinements and repairs keep it unless the model changes it.
+- Forks, templates, Use template, the Code view, compare, and the download all carry it.
+- The preview frame inserts it as a stylesheet with the frame's style nonce.
+
+## Building the templates
+
+Every built-in Salt Patterns template's microfrontends, and the Access and Markets shells, are committed Salt source under `src/demo/runtime/generated/`, written and reviewed to the bar in [template-quality.md](template-quality.md). No model writes them. The build checks them and writes what the runtime, the Code tab, and Use template read:
 
 ```sh
-npm run heroes:generate                          # every hero and both shells, with AI Gateway
-npm run heroes:generate -- --hero client-onboarding --skip-shells   # one hero again, keeping the rest of the committed output
-npm run heroes:generate -- --index-only          # rebuild pages, index, sources, and manifest from the committed files, with no model
-npm run heroes:generate -- --hero payments-workspace --mock --out tmp/heroes   # one hero, mock models, to try it offline
+npm run templates:build                                          # gate every template and shell, then write the pages, index, sources, and manifest
+npm run templates:build -- --check --template payments-workspace # gate one template and write nothing
+npm run templates:build -- --check --shell markets               # gate one shell
 ```
 
-It runs in-process on an in-memory Prototypes store, so it never touches `storage/prototypes-pglite` or a running dev server. A full run takes about 20 minutes. For each hero it:
-1. Lifts one shared `data.ts` from the hand-written members in `src/demo/runtime/members/`: their interfaces, types, and capitalized record arrays, with no model.
-2. Ports each microfrontend's stable version, its latest that is neither a prerelease nor planted, from its hand-written source to Salt. The port keeps every visible text, accessible name, record, bus topic, and `data-demo-anchor`, so the runtime, its toolbar, and their tests work as before.
-3. Ports the other versions as refinements of the stable one. A planted version is asked for exactly the catalog's `planted` rules, and those are its only gate exemptions; the Salt-only gate's result records each one.
-4. Composes the main route into one `page.tsx` (`src/lib/prototypes/heroes/flatten.ts`), which Use template, variant 0, and the hero's Standards use. The run stops if the page fails the gates.
+For each template in the catalog it:
+1. Reads the template's `data.ts` and each child microfrontend's versions, `<member>/<version>.tsx`, with the `<version>.module.css` beside one when it has a CSS module.
+2. Runs the four gates on every version with `@deweb/portal` allowed and no exemptions, and fails on any `--salt-` token Salt's theme doesn't define.
+3. Composes the main route into one `page.tsx` (`src/lib/prototypes/heroes/flatten.ts`), from each microfrontend's latest version that isn't a prerelease. Regions sit on Salt's responsive grid, and the members' CSS modules merge into one `page.module.css` with each class prefixed by its member. Use template, variant 0, and the template's Standards use the page.
 
-A version whose gates still fail after repair is generated once more before the run stops, and the error names the failing issues.
+It also gates both shells, which may render the logo as an image. It writes:
+- `<template>/page.tsx` and `<template>/page.module.css`
+- `index.ts`, which the runtime's registry imports
+- `sources.ts`, which the Code tab and Use template read
+- `manifest.json`, with each file's gates
 
-It writes to `src/demo/runtime/generated/`:
-- `<hero>/data.ts`, `<hero>/<member>/<version>.tsx`, and `<hero>/page.tsx`
-- `shells/<kind>.tsx` and `shells/data.ts`
-- `index.ts`, which the runtime's registry imports, and `sources.ts`, which the Code tab and Use template read
-- `manifest.json`, with each version's gates, exemptions, and provenance
-
-A generated version takes the place of the hand-written one it names, and the others stay until they're generated. Review the output, run `npm test` (`test/lint/generated-heroes.test.ts` checks that every file uses only Salt's tokens outside its planted rules, and `test/prototypes/hero-template.test.ts` that every hero's page meets both Salt starters), then the runtime's browser tests (`e2e/runtime.spec.ts`, `e2e/microfrontends.spec.ts`, the toolbar specs, and the storyline), then commit it. Generated members render under Salt's provider, which applies only inside the portal's root.
-
-**Hand edits.** Fix a generated file by hand when the model won't produce what the storyline needs. The model names icon buttons, for example, so the planted button-name defect was restored by hand. Add a sentence to that version's (or shell's) `provenance.edits` in `manifest.json` saying what changed and why, then run `--index-only` so `sources.ts` and the pages match. A later run of that hero overwrites its edits, so check its manifest first.
+On disk a microfrontend imports `../data` and `./<version>.module.css`; the gates, `sources.ts`, and Use template know them as Prototypes does, `./data` and `./Prototype.module.css`. `test/lint/template-source.test.ts` runs the same checks in `npm test`. Then run the runtime's browser tests: `e2e/runtime.spec.ts`, `e2e/microfrontends.spec.ts`, the toolbar specs, and the storyline.
 
 ## The portal runtime interface
 
-Hero templates' microfrontends and shells import `@deweb/portal` for what they share with the running portal. It has the same API in the portal and in a prototype's preview frame:
+Template microfrontends and shells import `@deweb/portal` for what they share with the running portal. It has the same API in the portal and in a prototype's preview frame:
 
 | Export | In the running portal | In the preview frame |
 | --- | --- | --- |
@@ -194,9 +201,8 @@ Hero templates' microfrontends and shells import `@deweb/portal` for what they s
 | `routeHref(route)` | The route's address, kept embedded in Preview mode | `#` |
 | `useNavigate()` | Opens a route without reloading the page | Does nothing |
 | `useApplication()` | The application's `name`, its `portal`, and its `environment` | The page's title as `name`, and no portal or environment |
-| `planted.blockMainThread(ms)` | Busy-waits for `ms` milliseconds, the planted slow interaction | The same |
 
-In the portal, a path alias in `tsconfig.json` resolves it to `src/demo/runtime/portal/`. In the frame, the prototype runtime's import map resolves it to `deweb-portal.js`, which `scripts/build-prototype-runtime.mjs` builds from `src/prototypes/runtime/portal.ts`. Only versions that start from a hero template may import it; the Salt-only gate refuses it everywhere else.
+In the portal, a path alias in `tsconfig.json` resolves it to `src/demo/runtime/portal/`. In the frame, the prototype runtime's import map resolves it to `deweb-portal.js`, which `scripts/build-prototype-runtime.mjs` builds from `src/prototypes/runtime/portal.ts`. Only versions that start from a built-in template may import it; the Salt-only gate refuses it everywhere else.
 
 ## Upgrading Salt
 

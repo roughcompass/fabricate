@@ -3,7 +3,7 @@ import { PAYMENTS_APP } from "@/lib/demo/catalog/heroes";
 import { runGates } from "@/lib/prototypes/gates";
 import { flattenMainRoute } from "@/lib/prototypes/heroes/flatten";
 
-// converge-templates-and-prototypes, design decision 7: flattening a hero's main route, deterministically.
+// update-templates-salt-quality, design decisions 3 and 5: flattening a template's main route, deterministically, with its members' CSS modules.
 
 const DATA = 'export interface Payee {\n  readonly id: string;\n  readonly name: string;\n}\n\nexport const PAYEES: readonly Payee[] = [{ id: "northwind", name: "Northwind Supplies" }];\n';
 
@@ -36,9 +36,20 @@ export default function Member() {
 }
 `;
 
-const SOURCES: Record<string, string> = { "payee-list": member("Payee list", "payee:selected"), "transfer-form": member("Transfer form", "transfer:started"), "payment-activity": member("Payment activity", "activity:refreshed") };
+// The payee list has a CSS module, which it imports as Prototypes does and reads plainly and conditionally.
+const withModule = (code: string) =>
+  code
+    .replace('import { PAYEES, type Payee } from "../data";', 'import { PAYEES, type Payee } from "../data";\nimport classes from "./Prototype.module.css";')
+    .replace("<StackLayout gap={1}>", "<StackLayout gap={1} className={picked ? classes.selected : classes[\"list\"]}>");
+const MODULE = ".list {\n  list-style: none;\n}\n\n.selected {\n  background: var(--salt-selectable-background-selected);\n}\n";
 
-describe("flattening a hero's main route", () => {
+const SOURCES: Record<string, { code: string; styles: string | null }> = {
+  "payee-list": { code: withModule(member("Payee list", "payee:selected")), styles: MODULE },
+  "transfer-form": { code: member("Transfer form", "transfer:started"), styles: null },
+  "payment-activity": { code: member("Payment activity", "activity:refreshed"), styles: null },
+};
+
+describe("flattening a template's main route", () => {
   const page = flattenMainRoute(PAYMENTS_APP, "Payments workspace", () => "1.0.0", (id) => SOURCES[id]!);
 
   it("composes the main route's regions in order, by area, as local components with prefixed helpers", () => {
@@ -57,16 +68,27 @@ describe("flattening a hero's main route", () => {
     // A shorthand property keeps its key; a parameter with a helper's name is left alone.
     expect(page.code).toContain("{ id: payee.id, MEMBER: PayeeList_MEMBER }");
     expect(page.code).toContain("onPick={pick}");
-    expect(page.code).toContain('<GridItem colSpan={2}>\n        <PayeeList />');
-    expect(page.code).toContain('<GridItem colSpan={1}>\n        <TransferForm />');
-    expect(page.code).toContain('<GridItem colSpan={3}>\n        <PaymentActivity />');
+  });
+
+  it("lays the regions out on Salt's responsive grid, in one column below the medium breakpoint (Narrow screen)", () => {
+    expect(page.code).toContain("<GridLayout columns={{ xs: 1, md: 3 }} gap={3}>");
+    expect(page.code).toContain("<GridItem colSpan={{ xs: 1, md: 2 }}>\n        <PayeeList />");
+    expect(page.code).toContain("<GridItem colSpan={{ xs: 1, md: 1 }}>\n        <TransferForm />");
+    expect(page.code).toContain("<GridItem colSpan={{ xs: 1, md: 3 }}>\n        <PaymentActivity />");
+  });
+
+  it("merges each member's CSS module into the page's, with its classes prefixed and its reads renamed to match", () => {
+    expect(page.styles).toBe("/* payee-list 1.0.0 */\n.PayeeList_list {\n  list-style: none;\n}\n\n.PayeeList_selected {\n  background: var(--salt-selectable-background-selected);\n}\n");
+    expect(page.code).toContain('import styles from "./Prototype.module.css";');
+    expect(page.code).not.toContain("classes");
+    expect(page.code).toContain('className={picked ? styles["PayeeList_selected"] : styles["PayeeList_list"]}');
   });
 
   it("merges imports once each, with ./data as the page's sample data, and passes the four gates", async () => {
     expect(page.code.match(/^import .* from "@salt-ds\/core";$/gm)).toHaveLength(1);
     expect(page.code).toContain('import { type Payee, PAYEES } from "./data";');
     expect(page.code).not.toContain("../data");
-    const run = await runGates({ code: page.code, data: DATA, portal: true });
+    const run = await runGates({ code: page.code, data: DATA, styles: page.styles, portal: true });
     expect(run.results.flatMap((result) => result.issues)).toEqual([]);
   });
 

@@ -2,24 +2,33 @@
 // client-search 4.2.0 (main)
 // kyc-checklist 3.3.0 (side)
 // document-review 1.6.0 (wide)
-import { planted, useBus, useProfile, usePublish } from "@deweb/portal";
-import { Button, Card, Divider, FlexLayout, FlowLayout, FormField, FormFieldLabel, GridItem, GridLayout, H2, Input, MultilineInput, Panel, StackLayout, StatusIndicator, Table, TableContainer, TBody, TD, Text, TH, THead, ToggleButton, TR } from "@salt-ds/core";
-import { CheckmarkIcon } from "@salt-ds/icons";
-import { useState } from "react";
+import { useBus, useProfile, usePublish } from "@deweb/portal";
+import { Button, Display3, FlexItem, FlexLayout, FlowLayout, FormField, FormFieldHelperText, FormFieldLabel, GridItem, GridLayout, H2, H3, Input, MultilineInput, Panel, StackLayout, StatusIndicator, Table, TableContainer, TBody, TD, Text, TH, THead, ToggleButton, TR } from "@salt-ds/core";
+import { CheckmarkIcon, SearchIcon } from "@salt-ds/icons";
+import { type ChangeEvent, useState } from "react";
 import { CHECKS, type Client, CLIENTS, DOCUMENTS } from "./data";
+import styles from "./page.module.css";
 
 const ClientSearch_SEGMENTS = ["All", "Corporate", "Commercial", "Financial institution"];
+
+const ClientSearch_tone = (stage: string) => (stage === "Approved" ? "success" : "info");
 
 function ClientSearch() {
   const [query, setQuery] = useState("");
   const [segment, setSegment] = useState("All");
   const [selected, setSelected] = useState(CLIENTS[0]!.id);
   const publish = usePublish("client-search");
-  const rows = CLIENTS.filter(
-    (entry) =>
-      entry.name.toLowerCase().includes(query.trim().toLowerCase()) &&
-      (segment === "All" || entry.segment === segment),
-  );
+  const search = query.trim().toLowerCase();
+  const rows = CLIENTS.filter((client) => client.name.toLowerCase().includes(search) && (segment === "All" || client.segment === segment));
+
+  const choose = (client: Client) => {
+    setSelected(client.id);
+    publish("client:selected", { id: client.id, name: client.name });
+  };
+
+  const empty = search
+    ? `No ${segment === "All" ? "" : `${segment} `}clients match "${query.trim()}". Clear the search${segment === "All" ? "" : " or choose All"} to see more clients.`
+    : `No clients are in the ${segment} segment. Choose All to see every client.`;
 
   return (
     <Panel data-demo-anchor="client-panel">
@@ -28,76 +37,81 @@ function ClientSearch() {
         <FormField>
           <FormFieldLabel>Search clients</FormFieldLabel>
           <Input
+            startAdornment={<SearchIcon aria-hidden />}
             placeholder="Client name"
             value={query}
-            onChange={(event) => setQuery((event.target as HTMLInputElement).value)}
-            inputProps={{
-              id: "client-query",
-              type: "search",
-              "data-demo-anchor": "client-search",
-            }}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
+            inputProps={{ type: "search", "data-demo-anchor": "client-search" }}
           />
         </FormField>
-        <FlowLayout gap={1} role="group" aria-label="Segment">
-          {ClientSearch_SEGMENTS.map((option) => (
-            <ToggleButton
-              key={option}
-              value={option}
-              selected={segment === option}
-              onChange={() => setSegment(option)}
-              data-demo-anchor={`segment-${option}`}
-            >
-              {option}
-            </ToggleButton>
-          ))}
-        </FlowLayout>
-        <StackLayout
-          as="ul"
-          gap={1}
-          aria-label="Recently viewed clients"
-          style={{ listStyle: "none", padding: 0, margin: 0 }}
-        >
-          {rows.map((entry) => (
-            <li key={entry.id} style={{ display: "grid" }}>
-              <ToggleButton
-                value={entry.id}
-                selected={selected === entry.id}
-                onChange={() => {
-                  setSelected(entry.id);
-                  publish("client:selected", { id: entry.id, name: entry.name });
-                }}
-                data-demo-anchor={`client-${entry.id}`}
-                style={{
-                  height: "auto",
-                  justifyContent: "space-between",
-                  padding: "var(--salt-spacing-100)",
-                  gap: "var(--salt-spacing-200)",
-                  textAlign: "left",
-                }}
-              >
-                <StackLayout gap={0} align="start">
-                  <Text styleAs="label">
-                    <strong>{entry.name}</strong>
-                  </Text>
-                  <Text color="inherit">{`${entry.segment} · ${entry.country}`}</Text>
-                </StackLayout>
-                <FlexLayout gap={1} align="center">
-                  <StatusIndicator status={entry.stage === "Approved" ? "success" : "info"} />
-                  <Text>{entry.stage}</Text>
-                </FlexLayout>
+        <StackLayout gap={1}>
+          <Text id="client-segment" styleAs="label" color="secondary">
+            Segment
+          </Text>
+          <FlowLayout gap={1} role="group" aria-labelledby="client-segment">
+            {ClientSearch_SEGMENTS.map((option) => (
+              <ToggleButton key={option} value={option} selected={segment === option} onChange={() => setSegment(option)} data-demo-anchor={`segment-${option}`}>
+                {option}
               </ToggleButton>
-            </li>
-          ))}
+            ))}
+          </FlowLayout>
+        </StackLayout>
+        <StackLayout gap={1}>
+          <H3 id="recent-clients">Recently viewed clients</H3>
+          {rows.length === 0 ? (
+            <Text color="secondary">{empty}</Text>
+          ) : (
+            <TableContainer>
+              <Table aria-labelledby="recent-clients">
+                <THead sticky>
+                  <TR>
+                    <TH>Client</TH>
+                    <TH>Segment</TH>
+                    <TH>Country</TH>
+                    <TH>Stage</TH>
+                    <TH>Last viewed</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {rows.map((client) => {
+                    const current = client.id === selected;
+                    return (
+                      <TR key={client.id} aria-current={current ? "true" : undefined} className={current ? styles["ClientSearch_selected"] : undefined}>
+                        <TD>
+                          <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(client)} data-demo-anchor={`client-${client.id}`}>
+                            {client.name}
+                          </Button>
+                        </TD>
+                        <TD>{client.segment}</TD>
+                        <TD>{client.country}</TD>
+                        <TD>
+                          <FlexLayout gap={1} align="center">
+                            <StatusIndicator status={ClientSearch_tone(client.stage)} aria-hidden />
+                            <Text>{client.stage}</Text>
+                          </FlexLayout>
+                        </TD>
+                        <TD>
+                          <Text styleAs="label" color="secondary">
+                            {client.viewed}
+                          </Text>
+                        </TD>
+                      </TR>
+                    );
+                  })}
+                </TBody>
+              </Table>
+            </TableContainer>
+          )}
         </StackLayout>
       </StackLayout>
     </Panel>
   );
 }
 
-const KycChecklist_findClient = (id: string) => CLIENTS.find((entry) => entry.id === id);
+const KycChecklist_findClient = (id: string) => CLIENTS.find((client) => client.id === id);
 
 function KycChecklist_useSelectedClient(): Client {
-  const [id, setId] = useState<string>(CLIENTS[0]!.id);
+  const [id, setId] = useState(CLIENTS[0]!.id);
   useBus("client:selected", "kyc-checklist", (payload: unknown) => {
     const next = (payload as { id?: unknown } | null)?.id;
     if (typeof next === "string" && KycChecklist_findClient(next)) setId(next);
@@ -106,96 +120,95 @@ function KycChecklist_useSelectedClient(): Client {
 }
 
 function KycChecklist() {
-  const current = KycChecklist_useSelectedClient();
-  const [done, setDone] = useState<readonly string[]>(
-    CHECKS.filter((check) => check.done).map((check) => check.id),
-  );
+  const client = KycChecklist_useSelectedClient();
+  const [done, setDone] = useState<readonly string[]>(CHECKS.filter((check) => check.done).map((check) => check.id));
 
   return (
     <Panel data-demo-anchor="kyc-panel">
       <StackLayout gap={2}>
-        <H2 styleAs="h3">{`KYC · ${current.name}`}</H2>
-        <StackLayout as="ul" gap={0} role="list" style={{ margin: 0, padding: 0, listStyle: "none" }}>
-          {CHECKS.map((check, index) => (
-            <li key={check.id} data-demo-anchor={`check-${check.id}`}>
-              {index > 0 && <Divider variant="tertiary" />}
-              <FlexLayout
-                justify="space-between"
-                align="center"
-                gap={1}
-                style={{ paddingBlock: "var(--salt-spacing-100)" }}
-              >
-                <Text>{check.label}</Text>
+        <StackLayout gap={1}>
+          <H2>{`KYC · ${client.name}`}</H2>
+          <Text color="secondary">{`${client.segment} · ${client.country}`}</Text>
+        </StackLayout>
+        <StackLayout as="ul" gap={2} separators className={styles["KycChecklist_list"]}>
+          {CHECKS.map((check) => (
+            <FlexLayout as="li" key={check.id} justify="space-between" align="center" gap={1} data-demo-anchor={`check-${check.id}`}>
+              <Text>{check.label}</Text>
+              <FlexItem shrink={0}>
                 {done.includes(check.id) ? (
-                  <FlexLayout gap={0.5} align="center" style={{ flexShrink: 0 }}>
-                    <StatusIndicator status="success" />
+                  <FlexLayout gap={1} align="center">
+                    <StatusIndicator status="success" aria-hidden />
                     <Text>Done</Text>
                   </FlexLayout>
                 ) : (
-                  <Button
-                    sentiment="neutral"
-                    appearance="transparent"
-                    onClick={() => setDone((ids) => [...ids, check.id])}
-                    data-demo-anchor={`complete-${check.id}`}
-                    aria-label={`Complete: ${check.label}`}
-                    style={{ flexShrink: 0 }}
-                  >
+                  <Button sentiment="neutral" appearance="transparent" aria-label={`Complete: ${check.label}`} onClick={() => setDone((ids) => [...ids, check.id])} data-demo-anchor={`complete-${check.id}`}>
                     <CheckmarkIcon aria-hidden />
                     Complete
                   </Button>
                 )}
-              </FlexLayout>
-            </li>
+              </FlexItem>
+            </FlexLayout>
           ))}
         </StackLayout>
         <FormField>
           <FormFieldLabel>Reviewer note</FormFieldLabel>
-          <MultilineInput
-            rows={2}
-            textAreaProps={{ id: "kyc-note", "data-demo-anchor": "kyc-note" }}
-          />
+          <MultilineInput rows={2} textAreaProps={{ "data-demo-anchor": "kyc-note" }} />
+          <FormFieldHelperText>Everyone reviewing this client can read the note.</FormFieldHelperText>
         </FormField>
       </StackLayout>
     </Panel>
   );
 }
 
-type DocumentReview_DocStatus = "Received" | "Awaiting review" | "Missing" | "Approved";
+type DocumentReview_Status = (typeof DOCUMENTS)[number]["status"] | "Approved";
 
-const DocumentReview_DOC_TONES: Record<DocumentReview_DocStatus, "success" | "info" | "error"> = {
+const DocumentReview_TONE = {
   Received: "success",
+  Approved: "success",
   "Awaiting review": "info",
   Missing: "error",
-  Approved: "success",
-};
+} as const;
+
+function DocumentReview_Figure({ label, value, detail }: { label: string; value: number; detail: string }) {
+  return (
+    <StackLayout gap={1}>
+      <Text styleAs="label" color="secondary">
+        {label}
+      </Text>
+      <Display3 className={styles["DocumentReview_figure"]}>{`${value}`}</Display3>
+      <Text color="secondary">{detail}</Text>
+    </StackLayout>
+  );
+}
 
 function DocumentReview() {
   const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
   const [verified, setVerified] = useState(false);
+  const status = (entry: (typeof DOCUMENTS)[number]): DocumentReview_Status => (approved.includes(entry.id) ? "Approved" : entry.status);
+  const count = (wanted: DocumentReview_Status) => DOCUMENTS.filter((entry) => status(entry) === wanted).length;
 
   return (
-    <Card data-demo-anchor="documents-panel">
+    <Panel data-demo-anchor="documents-panel">
       <StackLayout gap={2}>
-        <FlexLayout justify="space-between" align="center" gap={2} wrap>
+        <FlexLayout justify="space-between" align="center" gap={1} wrap>
           <H2>Document review</H2>
-          <Button
-            sentiment="accented"
-            appearance="solid"
-            onClick={() => {
-              planted.blockMainThread(650);
-              setVerified(true);
-            }}
-            data-demo-anchor="verify-documents"
-          >
+          <Button sentiment="accented" appearance="solid" onClick={() => setVerified(true)} data-demo-anchor="verify-documents">
             <CheckmarkIcon aria-hidden />
             Verify all documents
           </Button>
         </FlexLayout>
-        {verified && <Text color="secondary">Every received document matched its checksum.</Text>}
+        <GridLayout columns={{ xs: 1, sm: 3 }} gap={2}>
+          <DocumentReview_Figure label="Awaiting review" value={count("Awaiting review")} detail="Needs an Approver" />
+          <DocumentReview_Figure label="Missing" value={count("Missing")} detail="Request from the client" />
+          <DocumentReview_Figure label="Received" value={count("Received") + count("Approved")} detail={`Of ${DOCUMENTS.length} requested`} />
+        </GridLayout>
+        <Text role="status" color="secondary">
+          {verified ? "Every received document matched its checksum." : ""}
+        </Text>
         <TableContainer>
           <Table aria-label="Onboarding documents">
-            <THead>
+            <THead sticky>
               <TR>
                 <TH>Document</TH>
                 <TH>Client</TH>
@@ -205,29 +218,31 @@ function DocumentReview() {
               </TR>
             </THead>
             <TBody>
-              {DOCUMENTS.map((document) => {
-                const status: DocumentReview_DocStatus = approved.includes(document.id) ? "Approved" : document.status;
+              {DOCUMENTS.map((entry) => {
+                const current = status(entry);
                 return (
-                  <TR key={document.id} data-demo-anchor={`document-${document.id}`}>
-                    <TD>{document.name}</TD>
-                    <TD>{document.client}</TD>
-                    <TD>{document.due}</TD>
+                  <TR key={entry.id} data-demo-anchor={`document-${entry.id}`}>
+                    <TD>
+                      <StackLayout gap={0}>
+                        <Text>{entry.name}</Text>
+                        <Text styleAs="label" color="secondary">
+                          {entry.id}
+                        </Text>
+                      </StackLayout>
+                    </TD>
+                    <TD>{entry.client}</TD>
+                    <TD>{entry.due}</TD>
                     <TD>
                       <FlexLayout gap={1} align="center">
-                        <StatusIndicator status={DocumentReview_DOC_TONES[status]} />
-                        <Text>{status}</Text>
+                        <StatusIndicator status={DocumentReview_TONE[current]} aria-hidden />
+                        <Text>{current}</Text>
                       </FlexLayout>
                     </TD>
                     {approver && (
                       <TD>
-                        {status === "Awaiting review" ? (
-                          <Button
-                            sentiment="accented"
-                            appearance="solid"
-                            onClick={() => setApproved((ids) => [...ids, document.id])}
-                            data-demo-anchor={`approve-${document.id}`}
-                          >
-                            {`Approve ${document.id}`}
+                        {current === "Awaiting review" ? (
+                          <Button sentiment="accented" appearance="transparent" onClick={() => setApproved((ids) => [...ids, entry.id])} data-demo-anchor={`approve-${entry.id}`}>
+                            {`Approve ${entry.id}`}
                           </Button>
                         ) : (
                           <Text color="secondary">None needed</Text>
@@ -242,20 +257,20 @@ function DocumentReview() {
         </TableContainer>
         {!approver && <Text color="secondary">Document approvals are available to the Approver role.</Text>}
       </StackLayout>
-    </Card>
+    </Panel>
   );
 }
 
 export default function ClientOnboarding() {
   return (
-    <GridLayout columns={3} gap={3}>
-      <GridItem colSpan={2}>
+    <GridLayout columns={{ xs: 1, md: 3 }} gap={3}>
+      <GridItem colSpan={{ xs: 1, md: 2 }}>
         <ClientSearch />
       </GridItem>
-      <GridItem colSpan={1}>
+      <GridItem colSpan={{ xs: 1, md: 1 }}>
         <KycChecklist />
       </GridItem>
-      <GridItem colSpan={3}>
+      <GridItem colSpan={{ xs: 1, md: 3 }}>
         <DocumentReview />
       </GridItem>
     </GridLayout>

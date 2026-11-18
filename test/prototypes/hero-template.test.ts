@@ -4,7 +4,7 @@ import { asc, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getConfig, loadConfig, setConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
-import { HERO_SLUGS, templateBySlug } from "@/lib/demo/catalog";
+import { TEMPLATES, templateBySlug } from "@/lib/demo/catalog";
 import { newWorkspaceKey } from "@/lib/demo/workspace-key";
 import { SALT_PATTERNS_INITIATIVE_ID, saltPatternsInitiative, updateReleaseSelections } from "@/lib/initiatives/initiative-records";
 import { jobHandlers } from "@/lib/jobs/registry";
@@ -12,7 +12,7 @@ import { drainJobs } from "@/lib/jobs/worker";
 import { heroStanding } from "@/lib/prototypes/conformance";
 import { type PrototypesConnection, setPrototypesDb } from "@/lib/prototypes/db/client";
 import { generations, personas, variants, versions } from "@/lib/prototypes/db/schema";
-import { stableVersion } from "@/lib/prototypes/heroes/generate";
+import { type TemplateManifest, conformantVersion } from "@/lib/prototypes/heroes/build";
 import { heroFiles, heroSnapshot, heroTemplate, startFromHero } from "@/lib/prototypes/heroes/use";
 import { startGeneration } from "@/lib/prototypes/pipeline/start";
 import { versionsOf } from "@/lib/prototypes/prototypes";
@@ -24,9 +24,11 @@ import { orchestrateGeneration } from "@/workflows/prototypes/orchestrate";
 import { createTestDb } from "../support/db";
 import { createPrototypesTestDb } from "../support/prototypes-db";
 
-// template-gallery spec, "Using a hero template"; portal-runtime spec, "Each hero's conformant composition meets the selected Standards".
+// template-gallery spec, "Built-in template detail offers Deploy, Preview, and Use template"; portal-runtime spec, "Each template's conformant composition meets the selected Standards".
 
-describe("hero templates", () => {
+const SLUGS = TEMPLATES.map((template) => template.slug);
+
+describe("built-in templates as templates", () => {
   let connection: PrototypesConnection;
   let workspaceId: string;
   const original = getConfig();
@@ -43,8 +45,8 @@ describe("hero templates", () => {
     setConfig(original);
   });
 
-  it("has a committed page for every hero, which compiles and passes the gates with @deweb/portal allowed", async () => {
-    for (const slug of HERO_SLUGS) {
+  it("has a committed page for every built-in template, which compiles and passes the gates with @deweb/portal allowed", async () => {
+    for (const slug of SLUGS) {
       const hero = heroTemplate(slug);
       expect(hero, slug).not.toBeNull();
       const snapshot = await heroSnapshot(slug);
@@ -55,13 +57,13 @@ describe("hero templates", () => {
   });
 
   it("composes each committed page from the catalog's main route, each region at its conformant version", () => {
-    const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), "src/demo/runtime/generated/manifest.json"), "utf8")) as { heroes: { slug: string; page: { route: string; regions: unknown[] } }[] };
-    for (const slug of HERO_SLUGS) {
+    const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), "src/demo/runtime/generated/manifest.json"), "utf8")) as TemplateManifest;
+    for (const slug of SLUGS) {
       const app = templateBySlug(slug)!.app;
       const route = app.routes[0]!;
-      const page = manifest.heroes.find((hero) => hero.slug === slug)!.page;
+      const page = manifest.templates.find((template) => template.slug === slug)!.page;
       expect(page.route, slug).toBe(route.path);
-      expect(page.regions, slug).toEqual(route.regions.map(({ member, area }) => ({ member, version: stableVersion(app.members.find((entry) => entry.id === member)!).version, area })));
+      expect(page.regions, slug).toEqual(route.regions.map(({ member, area }) => ({ member, version: conformantVersion(app.members.find((entry) => entry.id === member)!), area })));
     }
   });
 
@@ -96,13 +98,13 @@ describe("hero templates", () => {
       expect(await heroStanding(db, hero, heroFiles(hero))).toMatchObject({ status: "not_evaluated", reason: "No Release is selected on Salt Patterns." });
     });
 
-    it("meets both Salt starters for every hero's page, once its Run is evaluated (The conformant composition meets the Standards)", async () => {
+    it("meets both Salt starters for every built-in template's page, once its Run is evaluated (The conformant composition meets the Standards)", async () => {
       const releases = STARTERS.map((starter) => {
         const { standard, draft } = createStandard(db, { name: starter.name, purpose: starter.purpose }, starter.document);
         return publishDraft(db, standard.publicId, draft.lockVersion).publicId;
       });
       updateReleaseSelections(db, SALT_PATTERNS_INITIATIVE_ID, saltPatternsInitiative(db).lockVersion, releases);
-      for (const slug of HERO_SLUGS) {
+      for (const slug of SLUGS) {
         const hero = heroTemplate(slug)!;
         expect(await heroStanding(db, hero, heroFiles(hero))).toMatchObject({ status: "not_evaluated", reason: "Its Evaluation is running." });
         await drainJobs(db, jobHandlers(db));

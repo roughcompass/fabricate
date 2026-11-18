@@ -189,8 +189,8 @@ test("re-evaluates a template after a Salt upgrade, showing Regressed with the C
   const slug = (await card.getByRole("link", { name: "Urgent payments queue" }).getAttribute("href"))!.replace("/templates/", "");
 
   // As if a Salt upgrade stopped recognizing a token the template uses: its gates still pass.
-  const upgraded = 'import { Text } from "@salt-ds/core";\nexport default function Prototype() {\n  return <Text style={{ color: "var(--salt-made-up-token)" }}>Release payments</Text>;\n}\n';
-  expect((await page.request.post("/api/test/prototypes/template", { data: { slug, code: upgraded } })).status()).toBe(200);
+  const upgraded = 'import { Text } from "@salt-ds/core";\nimport styles from "./Prototype.module.css";\nexport default function Prototype() {\n  return <Text className={styles.release}>Release payments</Text>;\n}\n';
+  expect((await page.request.post("/api/test/prototypes/template", { data: { slug, code: upgraded, styles: ".release {\n  color: var(--salt-made-up-token);\n}\n" } })).status()).toBe(200);
 
   // The first visit starts the re-check and its Run; the worker evaluates it against the acceptance's Releases.
   await expect(async () => {

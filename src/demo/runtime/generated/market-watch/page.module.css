@@ -1,0 +1,30 @@
+/* watchlist 1.9.0 */
+.Watchlist_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.Watchlist_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* order-ticket 2.2.0 */
+.OrderTicket_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* price-chart 5.1.0 */
+/* The chart scales to the region's width, keeping its viewBox's proportions. */
+.PriceChart_chart {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+.PriceChart_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* trade-blotter 3.5.0 */
+.TradeBlotter_figure {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,19 @@
+/* research-library 1.1.0 */
+.ResearchLibrary_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.ResearchLibrary_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* research-reader 1.0.0 */
+.ResearchReader_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+.ResearchReader_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

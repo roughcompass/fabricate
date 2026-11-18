@@ -1,0 +1,95 @@
+/* The Access shell's layout where Salt has no property for it. Every value is a Salt token. */
+
+.shell {
+  background: var(--salt-container-primary-background);
+}
+
+.header {
+  background: var(--salt-container-primary-background);
+  border-bottom: var(--salt-size-border) var(--salt-borderStyle-solid) var(--salt-separable-tertiary-borderColor);
+}
+
+/* The logo and portal name, laid out inside the link home. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--salt-spacing-100);
+}
+
+.logo {
+  display: block;
+  height: calc(var(--salt-size-base) * 0.8);
+  width: auto;
+}
+
+/* The search field takes its width as a flex basis, so it shrinks before the header overflows. */
+.search {
+  flex: 0 1 calc(var(--salt-size-base) * 9);
+}
+
+.searchPanel {
+  width: calc(var(--salt-size-base) * 9);
+  max-width: 100%;
+}
+
+.body {
+  flex: 1;
+}
+
+/* The left menu column, full height beside the content, and its collapsed rail of icons. */
+.sidebar,
+.rail {
+  flex-shrink: 0;
+  background: var(--salt-container-primary-background);
+  border-right: var(--salt-size-border) var(--salt-borderStyle-solid) var(--salt-separable-tertiary-borderColor);
+}
+
+.sidebar {
+  width: calc(var(--salt-size-base) * 8);
+}
+
+.rail {
+  width: calc(var(--salt-size-base) + var(--salt-spacing-100) * 2);
+}
+
+/* The menu stays in view while the page scrolls. */
+.sticky {
+  position: sticky;
+  top: 0;
+}
+
+.drawer {
+  width: calc(var(--salt-size-base) * 9);
+}
+
+.list {
+  list-style: none;
+}
+
+/* A menu entry with nowhere to go in the demo: as tall as a navigation item, its text where the item's label starts. */
+.staticEntry,
+.staticEntryNested {
+  padding-block: calc((var(--salt-size-base) - var(--salt-text-lineHeight)) / 2 + var(--salt-spacing-50));
+  padding-inline-end: var(--salt-spacing-100);
+}
+
+.staticEntry {
+  padding-inline-start: calc(var(--salt-spacing-300) * 2 + var(--salt-spacing-100));
+}
+
+.staticEntryNested {
+  padding-inline-start: calc(var(--salt-spacing-300) * 2 + var(--salt-spacing-100) * 2);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.main {
+  flex: 1;
+}
+
+.footer {
+  border-top: var(--salt-size-border) var(--salt-borderStyle-solid) var(--salt-separable-tertiary-borderColor);
+}

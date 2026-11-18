@@ -1,35 +1,16 @@
-import { useState } from "react";
-import {
-  Button,
-  H2,
-  Input,
-  Panel,
-  StackLayout,
-  Table,
-  TableContainer,
-  TBody,
-  TD,
-  TH,
-  THead,
-  TR,
-  Text,
-} from "@salt-ds/core";
-import { SendIcon } from "@salt-ds/icons";
 import { usePublish } from "@deweb/portal";
+import { Button, FlexLayout, FormField, FormFieldLabel, H2, Input, Panel, StackLayout, TBody, TD, TH, THead, TR, Table, TableContainer, Text } from "@salt-ds/core";
+import { SearchIcon, SendIcon } from "@salt-ds/icons";
+import { type ChangeEvent, useState } from "react";
 import { PAYEES, type Payee } from "../data";
-
-const searchInputProps = {
-  type: "search",
-  "data-demo-anchor": "payee-search",
-};
+import styles from "./1.4.2.module.css";
 
 export default function PayeeList() {
-  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const publish = usePublish("payee-list");
-
-  const query = search.trim().toLowerCase();
-  const payees = PAYEES.filter((payee) => payee.name.toLowerCase().includes(query));
+  const search = query.trim().toLowerCase();
+  const payees = PAYEES.filter((payee) => payee.name.toLowerCase().includes(search));
 
   const choose = (payee: Payee) => {
     setSelected(payee.id);
@@ -38,67 +19,58 @@ export default function PayeeList() {
 
   return (
     <Panel data-demo-anchor="payee-panel">
-      <StackLayout gap={1}>
-        <H2>Payees</H2>
-        <Text color="secondary">Search payees</Text>
-        <Input
-          value={search}
-          onChange={(event) => setSearch((event.target as HTMLInputElement).value)}
-          inputProps={searchInputProps}
-        />
-        <TableContainer>
-          <Table aria-label="Payees">
-            <THead>
-              <TR>
-                <TH>Payee</TH>
-                <TH>Account</TH>
-                <TH>Last paid</TH>
-                <TH></TH>
-              </TR>
-            </THead>
-            <TBody>
-              {payees.map((payee) => {
-                const isSelected = selected === payee.id;
-                const cells = (
-                  <>
-                    <TD>
-                      <Text>{payee.name}</Text>
-                    </TD>
-                    <TD>
-                      <Text style={{ color: "#b0b0b0" }}>{`${payee.bank} ···· ${payee.account}`}</Text>
-                    </TD>
-                    <TD>
-                      <Text>{payee.lastPaid}</Text>
-                    </TD>
-                    <TD>
-                      <Button
-                        appearance="transparent"
-                        onClick={() => choose(payee)}
-                        data-demo-anchor={`pay-${payee.id}`}
-                      >
-                        <SendIcon aria-hidden />
-                      </Button>
-                    </TD>
-                  </>
-                );
-                return isSelected ? (
-                  <TR
-                    key={payee.id}
-                    data-demo-anchor={`payee-${payee.id}`}
-                    aria-current="true"
-                    style={{ background: "var(--salt-selectable-background-selected)" }}
-                  >
-                    {cells}
-                  </TR>
-                ) : (
-                  <TR key={payee.id} data-demo-anchor={`payee-${payee.id}`}>
-                    {cells}
-                  </TR>
-                );
-              })}
-            </TBody>
-          </Table>
-        </TableContainer>
+      <StackLayout gap={2}>
+        <FlexLayout justify="space-between" align="center" gap={2} wrap>
+          <H2>Payees</H2>
+          <FormField labelPlacement="left">
+            <FormFieldLabel>Search payees</FormFieldLabel>
+            <Input
+              startAdornment={<SearchIcon aria-hidden />}
+              value={query}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
+              inputProps={{ type: "search", "data-demo-anchor": "payee-search" }}
+            />
+          </FormField>
+        </FlexLayout>
+        {payees.length === 0 ? (
+          <Text color="secondary">{`No payees match "${query.trim()}". Clear the search to see every payee.`}</Text>
+        ) : (
+          <TableContainer>
+            <Table aria-label="Payees">
+              <THead sticky>
+                <TR>
+                  <TH>Payee</TH>
+                  <TH>Account</TH>
+                  <TH>Last paid</TH>
+                  <TH>Pay</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {payees.map((payee) => {
+                  const current = payee.id === selected;
+                  return (
+                    <TR key={payee.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined} data-demo-anchor={`payee-${payee.id}`}>
+                      <TD>
+                        <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(payee)}>
+                          {payee.name}
+                        </Button>
+                      </TD>
+                      <TD>
+                        <Text color="secondary">{`${payee.bank} ••••${payee.account}`}</Text>
+                      </TD>
+                      <TD>{payee.lastPaid}</TD>
+                      <TD>
+                        <Button sentiment="accented" appearance="transparent" aria-label={`Pay ${payee.name}`} onClick={() => choose(payee)} data-demo-anchor={`pay-${payee.id}`}>
+                          <SendIcon aria-hidden />
+                        </Button>
+                      </TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
+          </TableContainer>
+        )}
       </StackLayout>
     </Panel>
   );

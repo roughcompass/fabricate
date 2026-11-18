@@ -1,0 +1,11 @@
+.selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.group {
+  background: var(--salt-container-secondary-background);
+}
+
+.figure {
+  font-variant-numeric: tabular-nums;
+}

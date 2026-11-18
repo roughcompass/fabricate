@@ -1,0 +1,19 @@
+/* facility-list 1.1.0 */
+.FacilityList_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+.FacilityList_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* covenant-checks 1.0.0 */
+.CovenantChecks_figure {
+  font-variant-numeric: tabular-nums;
+}
+
+.CovenantChecks_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

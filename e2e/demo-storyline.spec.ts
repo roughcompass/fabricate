@@ -46,12 +46,11 @@ test("runs the presenter storyline from the Salt Patterns gallery to a reset", a
   await waitForRegions(app);
   await expect(app.locator("[data-demo-portal]")).toHaveAttribute("data-shell", "access");
 
-  // Audit, swap the payee list to its fixed version, and audit again.
+  // Audit a clean template, swap the payee list to 2.0.0, and audit again.
   await openTool(app, "accessibility");
   const audit = app.getByRole("dialog", { name: "Accessibility" });
   await audit.getByRole("button", { name: "Run audit" }).click();
-  await expect(audit.locator("[data-audit-result]")).toHaveCount(3);
-  await expect(audit.getByRole("button", { name: /Form elements must have labels/ })).toBeVisible();
+  await expect(audit.getByRole("status")).toHaveText("No violations found.");
 
   await openTool(app, "microfrontends");
   const microfrontends = app.getByRole("dialog", { name: "Microfrontends" });

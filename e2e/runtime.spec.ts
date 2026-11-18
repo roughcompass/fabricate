@@ -1,18 +1,19 @@
 import type { Page } from "@playwright/test";
-import { templateBySlug } from "../src/lib/demo/catalog";
-import { type AuditViolation, audit, setView, waitForRegions } from "./support/demo";
+import { TEMPLATES, templateBySlug } from "../src/lib/demo/catalog";
+import { audit, setView, waitForRegions } from "./support/demo";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 
-/** Running demo applications: portal shells, microfrontends, and planted findings (portal-runtime spec). */
+/** Running demo applications: portal shells, microfrontends, and their accessibility and responsiveness (portal-runtime and template-quality specs). */
 
 const ACCESS = "J.P. Morgan Access";
 const MARKETS = "J.P. Morgan Markets";
 
+// Each hero's three-version member, the version after its default, and the action in its slowest-loading member.
 const HEROES = [
-  { slug: "payments-workspace", shell: "access", portal: ACCESS, name: "Access", planted: "payee-list", fixed: "2.0.0", slow: "Recalculate totals" },
-  { slug: "client-onboarding", shell: "access", portal: ACCESS, name: "Access", planted: "kyc-checklist", fixed: "3.3.0", slow: "Verify all documents" },
-  { slug: "market-watch", shell: "markets", portal: MARKETS, name: "Markets", planted: "watchlist", fixed: "1.9.0", slow: "Recalculate exposure" },
-  { slug: "operations-console", shell: "access", portal: ACCESS, name: "Access", planted: "incident-feed", fixed: "6.1.0", slow: "Check for conflicts" },
+  { slug: "payments-workspace", shell: "access", portal: ACCESS, name: "Access", swapped: "payee-list", next: "2.0.0", action: "Recalculate totals" },
+  { slug: "client-onboarding", shell: "access", portal: ACCESS, name: "Access", swapped: "kyc-checklist", next: "3.3.0", action: "Verify all documents" },
+  { slug: "market-watch", shell: "markets", portal: MARKETS, name: "Markets", swapped: "watchlist", next: "1.9.0", action: "Recalculate exposure" },
+  { slug: "operations-console", shell: "access", portal: ACCESS, name: "Access", swapped: "incident-feed", next: "6.1.0", action: "Check for conflicts" },
 ] as const;
 
 /** The link home: the J.P. Morgan logo image, then the portal name. */
@@ -33,7 +34,6 @@ const region = (page: Page, member: string) => page.locator(`[data-demo-mfe="${m
  */
 const panelSelector = (shell: "access" | "markets", name: string) => `[role="${shell === "access" ? "dialog" : "menu"}"][aria-label="${name}"]`;
 const headerPanel = (page: Page, shell: "access" | "markets", name: string) => page.locator(panelSelector(shell, name));
-const ruleIds = (violations: AuditViolation[]) => violations.map((violation) => violation.id).sort();
 
 test.describe("portal shells", () => {
   for (const hero of HEROES) {
@@ -184,7 +184,7 @@ test.describe("portal shells", () => {
       const rgb = (value: string) => value.match(/\d+/g)!.slice(0, 3).map(Number);
       const surfaces = () => page.locator('[data-demo-anchor="portal-header"]').evaluate((element) => [getComputedStyle(element).backgroundColor, getComputedStyle(element).color]);
       const [lightBar] = await surfaces();
-      await setView(page, { theme: "dark", overrides: { [hero.planted]: { version: hero.fixed, environment: "production" } } });
+      await setView(page, { theme: "dark" });
       await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-mode", "dark");
       const [darkBar] = await surfaces();
       expect(darkBar).not.toBe(lightBar);
@@ -197,7 +197,6 @@ test.describe("portal shells", () => {
     test(`keeps the ${hero.portal} header menus free of violations while they are open`, async ({ page, db: _db }) => {
       await page.goto(`/run/ref-${hero.slug}`);
       await waitForRegions(page);
-      await setView(page, { overrides: { [hero.planted]: { version: hero.fixed, environment: "production" } } });
       const menus = ["Help", "Feedback"];
       for (const name of [...menus, "User menu for Jordan Lee"]) {
         const control = name.startsWith("User menu") ? page.getByRole("button", { name: /Jordan Lee/ }) : page.getByRole("button", { name, exact: true });
@@ -283,54 +282,39 @@ test.describe("event bus", () => {
   });
 });
 
-test.describe("planted accessibility defects", () => {
-  for (const hero of HEROES) {
-    test(`finds the planted defects in ${hero.planted} and none once it is fixed (${hero.slug})`, async ({ page, db: _db }) => {
-      await page.goto(`/run/ref-${hero.slug}`);
-      await waitForRegions(page);
-      const planted = await audit(page);
-      expect(ruleIds(planted)).toEqual(["button-name", "color-contrast", "label"]);
-      for (const violation of planted) expect(violation.members, violation.id).toEqual([hero.planted]);
-
-      for (const theme of ["light", "dark"] as const) {
-        await setView(page, { theme, overrides: { [hero.planted]: { version: hero.fixed, environment: "production" } } });
-        await expect(region(page, hero.planted)).toHaveAttribute("data-demo-version", hero.fixed);
-        expect(await audit(page), `${hero.slug} ${theme}`).toEqual([]);
-      }
-    });
-  }
-
-  test("keeps every other version of the heroes free of violations", async ({ page, db: _db }) => {
-    test.setTimeout(300_000);
-    for (const hero of HEROES) {
-      const template = templateBySlug(hero.slug)!;
-      await page.goto(`/run/ref-${hero.slug}`);
-      await waitForRegions(page);
+test.describe("accessible templates", () => {
+  for (const template of TEMPLATES) {
+    test(`keeps every microfrontend version free of violations in light and dark (${template.slug}) (Every microfrontend version passes an accessibility audit)`, async ({ page, db: _db }) => {
+      test.setTimeout(300_000);
       for (const member of template.app.members.filter((entry) => entry.role === "child")) {
-        for (const version of member.versions.filter((entry) => !entry.planted?.length)) {
-          const overrides = { [member.id]: { version: version.version, environment: "production" }, ...(member.id === hero.planted ? {} : { [hero.planted]: { version: hero.fixed, environment: "production" } }) };
+        for (const version of member.versions) {
+          const overrides = { [member.id]: { version: version.version, environment: "production" } };
           for (const route of template.app.routes.filter((entry) => entry.regions.some((placement) => placement.member === member.id))) {
-            await page.goto(`/run/ref-${hero.slug}/${route.path}`);
-            await setView(page, { overrides });
-            expect(await audit(page), `${member.id}@${version.version} on /${route.path}`).toEqual([]);
+            await page.goto(`/run/ref-${template.slug}/${route.path}`);
+            await waitForRegions(page);
+            for (const theme of ["light", "dark"] as const) {
+              await setView(page, { theme, overrides });
+              await expect(region(page, member.id)).toHaveAttribute("data-demo-version", version.version);
+              expect(await audit(page), `${member.id}@${version.version} on /${route.path}, ${theme}`).toEqual([]);
+            }
           }
         }
       }
-    }
-  });
+    });
+  }
 });
 
-test.describe("slow microfrontends and roles", () => {
+test.describe("responsive interactions and roles", () => {
   for (const hero of HEROES) {
-    test(`blocks the page for at least 600 ms on ${hero.slow} (${hero.slug})`, async ({ page, db: _db }) => {
+    test(`responds to ${hero.action} within 100 ms (${hero.slug}) (Interactions respond quickly)`, async ({ page, db: _db }) => {
       await page.goto(`/run/ref-${hero.slug}`);
       await waitForRegions(page);
-      const elapsed = await page.getByRole("button", { name: hero.slow }).evaluate((button: HTMLButtonElement) => {
+      const elapsed = await page.getByRole("button", { name: hero.action }).evaluate((button: HTMLButtonElement) => {
         const started = performance.now();
         button.click();
         return performance.now() - started;
       });
-      expect(elapsed).toBeGreaterThanOrEqual(600);
+      expect(elapsed).toBeLessThan(100);
     });
   }
 
@@ -347,17 +331,28 @@ test.describe("slow microfrontends and roles", () => {
 });
 
 test.describe("lighter templates", () => {
-  test("render the shared generic application in their brand's shell with two members", async ({ page, db: _db }) => {
-    await page.goto("/run/ref-corporate-card-controls");
+  test("render their own two Salt microfrontends in their brand's shell, the main one publishing its selection to the side one (Lighter template composition)", async ({ page, db: _db }) => {
+    await page.goto("/run/ref-fx-rates-board");
     await waitForRegions(page);
-    await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-brand", "payments");
-    await expect(home(page, ACCESS)).toBeVisible();
+    await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-brand", "markets");
+    await expect(home(page, MARKETS)).toBeVisible();
     await expect(page.locator("[data-demo-mfe]")).toHaveCount(2);
-    await expect(region(page, "overview").getByRole("heading", { name: "Corporate card controls" })).toBeVisible();
-    await region(page, "overview").getByRole("button").first().click();
-    await expect(region(page, "activity")).toContainText("Opened");
-    expect(await audit(page)).toEqual([]);
+    await expect(region(page, "fx-rates").getByRole("heading", { level: 2, name: "FX rates" })).toBeVisible();
+    await expect(region(page, "rate-detail").getByRole("heading", { level: 2, name: "EUR/USD" })).toBeVisible();
+    await region(page, "fx-rates").getByRole("button", { name: "GBP/USD" }).click();
+    await expect(region(page, "fx-rates").getByRole("button", { name: "GBP/USD" })).toHaveAttribute("aria-pressed", "true");
+    await expect(region(page, "rate-detail").getByRole("heading", { level: 2, name: "GBP/USD" })).toBeVisible();
   });
+
+  for (const template of TEMPLATES.filter((entry) => !entry.hero)) {
+    test(`opens each region with one level-2 heading and reflows at 375 pixels (${template.slug}) (Region rhythm)`, async ({ page, db: _db }) => {
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.goto(`/run/ref-${template.slug}`);
+      await waitForRegions(page);
+      for (const member of template.app.members.filter((entry) => entry.role === "child")) await expect(region(page, member.id).getByRole("heading", { level: 2 }), member.id).toHaveCount(1);
+      await expectNoHorizontalOverflow(page);
+    });
+  }
 });
 
 test.describe("self-contained runtime", () => {
@@ -385,14 +380,13 @@ test.describe("self-contained runtime", () => {
     expect(outside).toEqual([]);
   });
 
-  test("stays usable with a keyboard at 200 percent zoom once the planted defects are fixed", async ({ page, db: _db }) => {
+  test("stays usable with a keyboard at 200 percent zoom", async ({ page, db: _db }) => {
     test.setTimeout(120_000);
     // A 640px-wide viewport is what a 1280px window shows at 200 percent zoom.
     await page.setViewportSize({ width: 640, height: 720 });
     for (const hero of HEROES) {
       await page.goto(`/run/ref-${hero.slug}`);
       await waitForRegions(page);
-      await setView(page, { overrides: { [hero.planted]: { version: hero.fixed, environment: "production" } } });
       await expectNoHorizontalOverflow(page);
       const reached = new Set<string>();
       for (let stop = 0; stop < 60; stop++) {

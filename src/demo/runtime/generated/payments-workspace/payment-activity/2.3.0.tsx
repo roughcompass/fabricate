@@ -1,148 +1,91 @@
-import { useState } from "react";
-import {
-  Button,
-  Card,
-  Display3,
-  FlexLayout,
-  GridLayout,
-  H2,
-  Panel,
-  StackLayout,
-  StatusIndicator,
-  Table,
-  TableContainer,
-  TBody,
-  TD,
-  Text,
-  TH,
-  THead,
-  TR,
-} from "@salt-ds/core";
+import { useProfile } from "@deweb/portal";
+import { Button, Display3, FlexLayout, GridLayout, H2, Panel, StackLayout, StatusIndicator, TBody, TD, TH, THead, TR, Table, TableContainer, Text } from "@salt-ds/core";
 import { RefreshIcon } from "@salt-ds/icons";
-import { planted, useProfile } from "@deweb/portal";
-import { ACTIVITY } from "../data";
+import { useState } from "react";
+import { ACTIVITY, type PaymentStatus, money, usd } from "../data";
+import styles from "./2.3.0.module.css";
 
-type Status = "Settled" | "Pending approval" | "Failed" | "Approved";
+type Status = PaymentStatus | "Approved";
 
-const STATUS_INDICATOR = {
+const TONE = {
   Settled: "success",
+  Approved: "success",
   "Pending approval": "info",
   Failed: "error",
-  Approved: "success",
 } as const;
 
-function StatusCell({ status }: { status: Status }) {
+function Figure({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <FlexLayout gap={1} align="center">
-      <StatusIndicator status={STATUS_INDICATOR[status]} />
-      <Text>{status}</Text>
-    </FlexLayout>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  tone?: "info" | "error";
-}) {
-  return (
-    <Card>
-      <StackLayout gap={1}>
-        <FlexLayout gap={1} align="center">
-          {tone && <StatusIndicator status={tone} />}
-          <Text color="secondary">{label}</Text>
-        </FlexLayout>
-        <Display3>{value}</Display3>
-        <Text color="secondary" styleAs="label">
-          {detail}
-        </Text>
-      </StackLayout>
-    </Card>
+    <StackLayout gap={1}>
+      <Text styleAs="label" color="secondary">
+        {label}
+      </Text>
+      <Display3 className={styles.figure}>{value}</Display3>
+      <Text color="secondary">{detail}</Text>
+    </StackLayout>
   );
 }
 
 export default function PaymentActivity() {
   const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
-  const [recalculated, setRecalculated] = useState<number>(0);
+  const [recalculated, setRecalculated] = useState(0);
+  const status = (payment: (typeof ACTIVITY)[number]): Status => (approved.includes(payment.id) ? "Approved" : payment.status);
+  const total = ACTIVITY.reduce((sum, payment) => sum + payment.amount, 0);
+  const pending = ACTIVITY.filter((payment) => status(payment) === "Pending approval").length;
+  const failed = ACTIVITY.filter((payment) => status(payment) === "Failed").length;
 
   return (
     <Panel data-demo-anchor="activity-panel">
-      <StackLayout gap={3}>
-        <FlexLayout justify="space-between" align="center" wrap gap={2}>
+      <StackLayout gap={2}>
+        <FlexLayout justify="space-between" align="center" gap={1} wrap>
           <H2>Payment activity</H2>
-          <Button
-            sentiment="neutral"
-            appearance="bordered"
-            onClick={() => {
-              planted.blockMainThread(650);
-              setRecalculated((count) => count + 1);
-            }}
-            data-demo-anchor="recalculate-totals"
-          >
+          <Button sentiment="neutral" appearance="bordered" onClick={() => setRecalculated((count) => count + 1)} data-demo-anchor="recalculate-totals">
             <RefreshIcon aria-hidden />
             Recalculate totals
           </Button>
         </FlexLayout>
-
-        <GridLayout columns="repeat(auto-fit, minmax(calc(var(--salt-size-base) * 9), 1fr))" gap={2}>
-          <Metric label="Sent today" value="$30,172.35" detail="5 payments" />
-          <Metric
-            label="Pending approval"
-            value={`${2 - approved.length}`}
-            detail="Needs an Approver"
-            tone="info"
-          />
-          <Metric label="Failed" value="1" detail="Retry before 4 p.m." tone="error" />
+        <GridLayout columns={{ xs: 1, sm: 3 }} gap={2}>
+          <Figure label="Sent today (USD)" value={money(total)} detail={`${ACTIVITY.length} payments`} />
+          <Figure label="Pending approval" value={`${pending}`} detail="Needs an Approver" />
+          <Figure label="Failed" value={`${failed}`} detail="Retry before 16:00 ET" />
         </GridLayout>
-
-        {recalculated > 0 && (
-          <Text color="secondary">
-            {`Totals recalculated ${recalculated === 1 ? "once" : `${recalculated} times`} this session.`}
-          </Text>
-        )}
-
+        <Text role="status" color="secondary">
+          {recalculated > 0 ? `Totals recalculated ${recalculated === 1 ? "once" : `${recalculated} times`} this session.` : ""}
+        </Text>
         <TableContainer>
           <Table aria-label="Today's payments">
-            <THead>
+            <THead sticky>
               <TR>
                 <TH>Payment</TH>
+                <TH>Time</TH>
                 <TH>Payee</TH>
-                <TH style={{ textAlign: "right" }}>Amount</TH>
+                <TH textAlign="right">Amount</TH>
                 <TH>Status</TH>
                 {approver && <TH>Approval</TH>}
               </TR>
             </THead>
             <TBody>
               {ACTIVITY.map((payment) => {
-                const status: Status = approved.includes(payment.id)
-                  ? "Approved"
-                  : payment.status;
+                const current = status(payment);
                 return (
                   <TR key={payment.id} data-demo-anchor={`payment-${payment.id}`}>
                     <TD>{payment.id}</TD>
+                    <TD className={styles.figure}>{payment.time}</TD>
                     <TD>{payment.payee}</TD>
-                    <TD style={{ textAlign: "right" }}>{`$${payment.amount}`}</TD>
+                    <TD textAlign="right" className={styles.figure}>
+                      {usd(payment.amount)}
+                    </TD>
                     <TD>
-                      <StatusCell status={status} />
+                      <FlexLayout gap={1} align="center">
+                        <StatusIndicator status={TONE[current]} aria-hidden />
+                        <Text>{current}</Text>
+                      </FlexLayout>
                     </TD>
                     {approver && (
                       <TD>
-                        {status === "Pending approval" ? (
-                          <Button
-                            sentiment="accented"
-                            appearance="solid"
-                            onClick={() =>
-                              setApproved((ids) => [...ids, payment.id])
-                            }
-                            data-demo-anchor={`approve-${payment.id}`}
-                          >
+                        {current === "Pending approval" ? (
+                          <Button sentiment="accented" appearance="transparent" onClick={() => setApproved((ids) => [...ids, payment.id])} data-demo-anchor={`approve-${payment.id}`}>
                             {`Approve ${payment.id}`}
                           </Button>
                         ) : (
@@ -156,10 +99,7 @@ export default function PaymentActivity() {
             </TBody>
           </Table>
         </TableContainer>
-
-        {!approver && (
-          <Text color="secondary">Approvals are available to the Approver role.</Text>
-        )}
+        {!approver && <Text color="secondary">Approvals are available to the Approver role.</Text>}
       </StackLayout>
     </Panel>
   );

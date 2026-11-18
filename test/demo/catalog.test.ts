@@ -13,7 +13,6 @@ import {
   builtInProfileFor,
   loadSequence,
   memberById,
-  plantedVersions,
   referenceTemplate,
   routeByPath,
   routingLabel,
@@ -122,39 +121,19 @@ describe("template catalog", () => {
   describe.each(heroes.map((template) => [template.slug, template] as const))("%s hero contract", (_slug, template) => {
     const { app } = template;
 
-    it("has a member with three versions including a prerelease, whose defective default is fixed by the next version", () => {
-      const planted = plantedVersions(app);
-      expect(planted.length).toBeGreaterThanOrEqual(1);
-      const { member, version } = planted[0]!;
-      const versions = member.versions.map((entry) => entry.version);
-      expect(versions.length).toBeGreaterThanOrEqual(3);
+    it("has a member with three versions that include a prerelease, starting on a stable one", () => {
+      const member = children(app).find((entry) => entry.versions.length >= 3)!;
+      expect(member, template.slug).toBeDefined();
       expect(member.versions.some((entry) => entry.prerelease)).toBe(true);
-      // The defective version is the default, so every audit story starts with something to find.
-      expect(member.defaultVersion).toBe(version);
-      const fixed = member.versions[versions.indexOf(version) + 1]!;
-      expect(fixed.planted ?? []).toEqual([]);
-      expect(fixed.prerelease).toBeFalsy();
+      expect(member.versions.find((entry) => entry.version === member.defaultVersion)!.prerelease).toBeFalsy();
+      expect(new Set(member.versions.map((entry) => entry.summary)).size).toBe(member.versions.length);
     });
 
-    it("plants a missing label, insufficient contrast, and an unnamed control in the defective version only", () => {
-      const { member, version } = plantedVersions(app)[0]!;
-      const rules = member.versions.find((entry) => entry.version === version)!.planted;
-      expect(rules).toEqual(expect.arrayContaining(["label", "color-contrast"]));
-      expect(rules?.some((rule) => rule === "button-name" || rule === "image-alt")).toBe(true);
-      expect(plantedVersions(app)).toHaveLength(1);
-    });
-
-    it("has exactly one slow member, slower to load than any other and with an interaction of at least 600 ms", () => {
-      const slow = app.members.filter((member) => member.slowInteraction);
-      expect(slow).toHaveLength(1);
-      expect(slow[0]!.loadMs).toBeGreaterThanOrEqual(1200);
-      expect(slow[0]!.slowInteraction!.blockMs).toBeGreaterThanOrEqual(600);
-      for (const member of app.members.filter((other) => other !== slow[0])) expect(member.loadMs, member.id).toBeLessThan(slow[0]!.loadMs);
-    });
-
-    it("loads the slow member on its start route, so the first waterfall shows the hot spot", () => {
-      const slow = app.members.find((member) => member.slowInteraction)!;
-      expect(startRoute(app).regions.some((region) => region.member === slow.id)).toBe(true);
+    it("has one member slower to load than any other, on its start route, so the waterfall shows a hot spot (One microfrontend loads slowly)", () => {
+      const slowest = [...app.members].sort((left, right) => right.loadMs - left.loadMs)[0]!;
+      expect(slowest.loadMs).toBeGreaterThanOrEqual(1200);
+      for (const member of app.members.filter((other) => other !== slowest)) expect(member.loadMs, member.id).toBeLessThan(slowest.loadMs);
+      expect(startRoute(app).regions.some((region) => region.member === slowest.id)).toBe(true);
     });
 
     it("has a bus publisher and a different subscriber, and content that changes for the Approver role", () => {
@@ -169,11 +148,21 @@ describe("template catalog", () => {
     });
   });
 
-  it("plants no defects or slow members outside the heroes", () => {
-    for (const template of TEMPLATES.filter((entry) => !entry.hero)) {
-      expect(plantedVersions(template.app), template.slug).toEqual([]);
-      expect(template.app.members.some((member) => member.slowInteraction), template.slug).toBe(false);
-    }
+  describe.each(TEMPLATES.filter((template) => !template.hero).map((template) => [template.slug, template] as const))("%s lighter template contract", (_slug, template) => {
+    const [main, side] = children(template.app);
+
+    it("has a main member that owns its route with two visibly different versions, and a side member in that route's sidebar (Lighter template composition)", () => {
+      expect(children(template.app)).toHaveLength(2);
+      expect(main!.routing).toEqual({ kind: "route", path: template.app.routes[0]!.path });
+      expect(main!.versions.map((version) => version.version)).toEqual(["1.0.0", "1.1.0"]);
+      expect(main!.versions[0]!.summary).not.toBe(main!.versions[1]!.summary);
+      expect(side!.routing).toEqual({ kind: "slot", route: template.app.routes[0]!.path, slot: "Sidebar" });
+    });
+
+    it("publishes the main member's selection to the side member", () => {
+      expect(main!.publishes).toHaveLength(1);
+      expect(side!.subscribes).toEqual(main!.publishes);
+    });
   });
 
   it("offers a built-in profile for each persona, keeping the persona ids", () => {

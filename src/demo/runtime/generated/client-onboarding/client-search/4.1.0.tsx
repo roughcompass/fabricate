@@ -1,26 +1,23 @@
-import { useState } from "react";
-import {
-  FlexLayout,
-  FormField,
-  FormFieldLabel,
-  H2,
-  Input,
-  Panel,
-  StackLayout,
-  StatusIndicator,
-  Text,
-  ToggleButton,
-} from "@salt-ds/core";
 import { usePublish } from "@deweb/portal";
-import { CLIENTS } from "../data";
+import { Button, FlexLayout, FormField, FormFieldLabel, H2, H3, Input, Panel, StackLayout, StatusIndicator, TBody, TD, TH, THead, TR, Table, TableContainer, Text } from "@salt-ds/core";
+import { SearchIcon } from "@salt-ds/icons";
+import { type ChangeEvent, useState } from "react";
+import { CLIENTS, type Client } from "../data";
+import styles from "./4.1.0.module.css";
+
+const tone = (stage: string) => (stage === "Approved" ? "success" : "info");
 
 export default function ClientSearch() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(CLIENTS[0]!.id);
   const publish = usePublish("client-search");
-  const rows = CLIENTS.filter((entry) =>
-    entry.name.toLowerCase().includes(query.trim().toLowerCase()),
-  );
+  const search = query.trim().toLowerCase();
+  const rows = CLIENTS.filter((client) => client.name.toLowerCase().includes(search));
+
+  const choose = (client: Client) => {
+    setSelected(client.id);
+    publish("client:selected", { id: client.id, name: client.name });
+  };
 
   return (
     <Panel data-demo-anchor="client-panel">
@@ -29,53 +26,59 @@ export default function ClientSearch() {
         <FormField>
           <FormFieldLabel>Search clients</FormFieldLabel>
           <Input
+            startAdornment={<SearchIcon aria-hidden />}
             placeholder="Client name"
             value={query}
-            onChange={(event) => setQuery((event.target as HTMLInputElement).value)}
-            inputProps={{
-              id: "client-query",
-              type: "search",
-              "data-demo-anchor": "client-search",
-            }}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
+            inputProps={{ type: "search", "data-demo-anchor": "client-search" }}
           />
         </FormField>
-        <StackLayout
-          as="ul"
-          gap={1}
-          aria-label="Recently viewed clients"
-          style={{ listStyle: "none", padding: 0, margin: 0 }}
-        >
-          {rows.map((entry) => (
-            <li key={entry.id} style={{ display: "grid" }}>
-              <ToggleButton
-                value={entry.id}
-                selected={selected === entry.id}
-                onChange={() => {
-                  setSelected(entry.id);
-                  publish("client:selected", { id: entry.id, name: entry.name });
-                }}
-                data-demo-anchor={`client-${entry.id}`}
-                style={{
-                  height: "auto",
-                  justifyContent: "space-between",
-                  padding: "var(--salt-spacing-100)",
-                  gap: "var(--salt-spacing-200)",
-                  textAlign: "left",
-                }}
-              >
-                <StackLayout gap={0} align="start">
-                  <Text styleAs="label">
-                    <strong>{entry.name}</strong>
-                  </Text>
-                  <Text color="inherit">{`${entry.segment} · ${entry.country}`}</Text>
-                </StackLayout>
-                <FlexLayout gap={1} align="center">
-                  <StatusIndicator status={entry.stage === "Approved" ? "success" : "info"} />
-                  <Text>{entry.stage}</Text>
-                </FlexLayout>
-              </ToggleButton>
-            </li>
-          ))}
+        <StackLayout gap={1}>
+          <H3 id="recent-clients">Recently viewed clients</H3>
+          {rows.length === 0 ? (
+            <Text color="secondary">{`No clients match "${query.trim()}". Clear the search to see every client.`}</Text>
+          ) : (
+            <TableContainer>
+              <Table aria-labelledby="recent-clients">
+                <THead sticky>
+                  <TR>
+                    <TH>Client</TH>
+                    <TH>Segment</TH>
+                    <TH>Country</TH>
+                    <TH>Stage</TH>
+                    <TH>Last viewed</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {rows.map((client) => {
+                    const current = client.id === selected;
+                    return (
+                      <TR key={client.id} aria-current={current ? "true" : undefined} className={current ? styles.selected : undefined}>
+                        <TD>
+                          <Button sentiment="neutral" appearance="transparent" aria-pressed={current} onClick={() => choose(client)} data-demo-anchor={`client-${client.id}`}>
+                            {client.name}
+                          </Button>
+                        </TD>
+                        <TD>{client.segment}</TD>
+                        <TD>{client.country}</TD>
+                        <TD>
+                          <FlexLayout gap={1} align="center">
+                            <StatusIndicator status={tone(client.stage)} aria-hidden />
+                            <Text>{client.stage}</Text>
+                          </FlexLayout>
+                        </TD>
+                        <TD>
+                          <Text styleAs="label" color="secondary">
+                            {client.viewed}
+                          </Text>
+                        </TD>
+                      </TR>
+                    );
+                  })}
+                </TBody>
+              </Table>
+            </TableContainer>
+          )}
         </StackLayout>
       </StackLayout>
     </Panel>

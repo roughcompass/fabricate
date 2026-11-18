@@ -1,0 +1,9 @@
+/* payee-list 2.0.0 */
+.PayeeList_selected {
+  background: var(--salt-selectable-background-selected);
+}
+
+/* payment-activity 2.3.0 */
+.PaymentActivity_figure {
+  font-variant-numeric: tabular-nums;
+}
