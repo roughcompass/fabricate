@@ -22,6 +22,9 @@
     pointer-events: none;
     transform: translateX(-50%);
   }
+  .bubble[data-placement="below"] { top: calc(100% + var(--space-1)); bottom: auto; }
+  .bubble[data-align="start"] { left: 0; transform: none; }
+  .bubble[data-align="end"] { right: 0; left: auto; transform: none; }
   /* An idle bubble takes no space, so it can never overflow the page; aria-describedby still announces it. */
   .wrap:hover > .bubble, .wrap:focus-visible > .bubble, .wrap:focus-within > .bubble { display: block; animation: appear var(--duration-fast) var(--ease-standard); }
 

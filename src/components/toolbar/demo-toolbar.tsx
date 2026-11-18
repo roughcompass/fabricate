@@ -6,7 +6,7 @@ import { boundRef, remeasureToolbarBounds } from "@/demo/toolbar/toolbar-bounds"
 import { ShortcutsPanel } from "./shortcuts-panel";
 import { ToolPanel } from "./tool-panel";
 import { type MenuContext, ToolbarMenu } from "./toolbar-menu";
-import { type ToolId, type ToolbarApi, ToolbarContext, type ToolbarItem, type ToolbarMode, activeItemFor, isTyping, itemForKey, keyLabel } from "./toolbar-context";
+import { type ToolId, type ToolbarApi, ToolbarContext, type ToolbarItem, type ToolbarMode, activeItemFor, isTyping, itemForKey, keyLabel, markToolbarKey } from "./toolbar-context";
 import { setToolbarPrefs, useToolbarPrefs } from "./toolbar-prefs";
 import { ToolbarTooltip, tooltipFor, useTooltip } from "./toolbar-tooltip";
 import styles from "./toolbar.module.css";
@@ -78,7 +78,7 @@ export function DemoToolbar({ panels, overlays, commentCount = 0, context }: { p
     setMenuRoom,
   };
 
-  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+  const handleKey = (event: KeyboardEvent) => {
     if (event.key === "Escape") {
       if (tooltip.visible) {
         tooltip.hide();
@@ -104,6 +104,12 @@ export function DemoToolbar({ panels, overlays, commentCount = 0, context }: { p
     if (item.action.kind === "command") setToolbarPrefs({ collapsed: !prefs.collapsed });
     // A shortcut has no opening control; focus goes back to wherever it was.
     else runItem(item, document.activeElement as HTMLElement | null);
+  };
+
+  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    const prevented = event.defaultPrevented;
+    handleKey(event);
+    if (!prevented && event.defaultPrevented) markToolbarKey(event);
   });
 
   useEffect(() => {

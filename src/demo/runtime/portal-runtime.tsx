@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useState } from "react";
-import { type AppRoute, loadSequence, routeByPath, shellOf, templateBySlug } from "@/lib/demo/catalog";
+import { type AppRoute, loadSequence, routeByPath, templateBySlug } from "@/lib/demo/catalog";
 import { createBus } from "./bus";
 import type { RuntimeDescriptor } from "./descriptor";
 import { createProfilesStore, sharedProfileOf } from "./profiles";
@@ -44,29 +44,28 @@ function CurrentRoute() {
   return <RouteRegions key={route.path} route={route} />;
 }
 
-/** A route's regions, revealed one by one as their scripted loads finish. */
+/** A route's regions, revealed one by one as their scripted loads finish; each reports when it paints. */
 function RouteRegions({ route }: { route: AppRoute }) {
   const { app, store, descriptor } = useRuntime();
   const [loaded, setLoaded] = useState<ReadonlySet<string>>(() => new Set());
 
   const begin = useEffectEvent(() => {
-    const startedAt = Date.now();
-    const entries = loadSequence(app, routeByPath(app, route.path) ?? route, effectiveVersions(app, descriptor.environment, store.getState().overrides));
-    store.startRoute(entries, startedAt);
-    const shell = shellOf(app).id;
-    return entries
-      .filter((entry) => entry.member !== shell)
-      .map((entry) =>
-        window.setTimeout(
-          () =>
-            setLoaded((previous) => {
-              const next = new Set(previous);
-              next.add(entry.member);
-              return next;
-            }),
-          entry.startMs + entry.durationMs,
-        ),
-      );
+    const startedAt = performance.now();
+    const [shell, ...entries] = loadSequence(app, routeByPath(app, route.path) ?? route, effectiveVersions(app, descriptor.environment, store.getState().overrides));
+    // The shell has really loaded by now, so each region's scripted delay counts from here rather than after the shell's scripted load.
+    const regions = entries.map((entry) => ({ ...entry, startMs: entry.startMs - shell!.durationMs }));
+    store.startRoute(route.path, shell!, regions, startedAt);
+    return regions.map((entry) =>
+      window.setTimeout(
+        () =>
+          setLoaded((previous) => {
+            const next = new Set(previous);
+            next.add(entry.member);
+            return next;
+          }),
+        entry.startMs + entry.durationMs,
+      ),
+    );
   });
 
   useEffect(() => {

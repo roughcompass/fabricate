@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { availableProfiles, createProfilesStore, resolveProfile, sharedProfileOf } from "@/demo/runtime/profiles";
 import { SHARED_PROFILE_ID, createViewStore, stateFromShare } from "@/demo/runtime/view-store";
 import { storageKey } from "@/demo/runtime/storage";
-import { type Profile, templateBySlug } from "@/lib/demo/catalog";
+import { type LoadEntry, type Profile, templateBySlug } from "@/lib/demo/catalog";
 import type { ShareState } from "@/lib/demo/shares";
 
 const app = templateBySlug("payments-workspace")!.app;
@@ -85,5 +85,61 @@ describe("resolving a view's profile", () => {
     unsubscribe();
     store.setProfiles([PRIYA]);
     expect(calls).toBe(1);
+  });
+});
+
+describe("the view store's measured loads", () => {
+  const shell: LoadEntry = { member: "payments-shell", version: "5.2.0", startMs: 0, durationMs: 160 };
+  const regions: LoadEntry[] = [
+    { member: "payee-list", version: "1.4.2", startMs: 0, durationMs: 420 },
+    { member: "payment-activity", version: "2.3.0", startMs: 80, durationMs: 1300 },
+  ];
+  const timings = (store: ReturnType<typeof createViewStore>) => store.getActivity().loads.map((load) => [load.member, load.kind, Math.round(load.startMs), load.durationMs === null ? null : Math.round(load.durationMs)]);
+
+  beforeEach(() => {
+    stubWindow();
+    vi.useFakeTimers({ toFake: ["setTimeout", "performance"] });
+    (globalThis as { window?: { setTimeout: unknown } }).window!.setTimeout = setTimeout;
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    delete (globalThis as { window?: unknown }).window;
+  });
+
+  it("times the first route from the navigation: the shell until the runtime started, each region until it painted", () => {
+    const store = createViewStore(app, "production", VIEW, null, null);
+    store.startRoute("payees", shell, regions, 900);
+    // Strict Mode starts the first route again; it is still the navigation's route.
+    store.startRoute("payees", shell, regions, 910);
+    expect(timings(store)).toEqual([
+      ["payments-shell", "load", 0, 910],
+      ["payee-list", "load", 910, null],
+      ["payment-activity", "load", 990, null],
+    ]);
+    store.markPainted("payee-list", 1400);
+    store.markPainted("payee-list", 1500);
+    expect(timings(store)[1]).toEqual(["payee-list", "load", 910, 490]);
+  });
+
+  it("times a later route from when it opened, without the shell, which did not reload", () => {
+    const store = createViewStore(app, "production", VIEW, null, null);
+    store.startRoute("payees", shell, regions, 900);
+    store.startRoute("activity", shell, regions.slice(1), 5000);
+    store.markPainted("payment-activity", 6500);
+    expect(timings(store)).toEqual([["payment-activity", "load", 80, 1420]]);
+    // Coming back to the first route is a later route too.
+    store.startRoute("payees", shell, regions, 8000);
+    expect(timings(store)[0]).toEqual(["payee-list", "load", 0, null]);
+  });
+
+  it("finishes a swap when the region paints, or for a member not on the page, when the swap finishes", () => {
+    const store = createViewStore(app, "production", VIEW, null, null);
+    store.startRoute("activity", shell, regions.slice(1), 0);
+    vi.advanceTimersByTime(1000);
+    store.applyOverrides({ "payee-list": { version: "2.0.0", environment: "production" } });
+    expect(store.getActivity().loads.at(-1)).toMatchObject({ member: "payee-list", kind: "swap", from: "1.4.2", startMs: 1000, durationMs: null });
+    vi.advanceTimersByTime(450);
+    expect(store.getActivity().loads.at(-1)!.durationMs).toBe(450);
+    expect(store.getActivity().swapping.size).toBe(0);
   });
 });

@@ -30,14 +30,20 @@ export interface ViewState {
   readonly overrides: Readonly<Record<string, Override>>;
 }
 
-export interface LoadRecord extends LoadEntry {
+export interface LoadRecord {
+  readonly member: string;
+  readonly version: string;
+  /** When the load began, in milliseconds from the route's start: for the page's first route, the navigation itself. */
+  readonly startMs: number;
+  /** Measured from the load's start until the member painted; null while it is still loading. */
+  readonly durationMs: number | null;
   readonly kind: "load" | "swap";
   /** For a swap, the version it replaced. */
   readonly from?: string;
 }
 
 export interface Activity {
-  /** The current route's load sequence, with any version swaps appended. */
+  /** The current route's loads, with any version swaps appended. */
   readonly loads: readonly LoadRecord[];
   /** Members reloading after a version change. */
   readonly swapping: ReadonlySet<string>;
@@ -59,8 +65,15 @@ export interface ViewStore {
   setProfile(profileId: string): void;
   /** Applies overrides, reloading only the members whose version changed. */
   applyOverrides(overrides: Readonly<Record<string, Override>>): void;
-  /** Records a route's scripted load sequence; `startedAt` is when the route began loading. */
-  startRoute(entries: readonly LoadEntry[], startedAt: number): void;
+  /**
+   * Records a route's loads. `startedAt` is when the runtime began loading the
+   * route's regions, on the performance clock; each region's `startMs` is its
+   * scripted request delay from then. The shell's load is recorded only for
+   * the page's first route, as the navigation until the runtime started.
+   */
+  startRoute(path: string, shell: LoadEntry, regions: readonly LoadEntry[], startedAt: number): void;
+  /** Finishes the member's pending loads when it paints, `at` on the performance clock. */
+  markPainted(member: string, at: number): void;
   markChanged(): void;
 }
 
@@ -92,7 +105,12 @@ export function createViewStore(app: AppDefinition, deployed: EnvironmentId, vie
   let state = serverState;
   let loadedFromBrowser = false;
   let activity: Activity = { loads: [], swapping: new Set(), changes: 0 };
+  // Load times are on the performance clock, from the navigation for the first route and from its start for later ones.
   let routeStartedAt = 0;
+  let firstPath: string | null = null;
+  let navigated = false;
+  // A swapped member with no region on the page never paints, so its swap finishes when the swap does.
+  let regions: ReadonlySet<string> = new Set();
 
   const notify = () => {
     for (const listener of listeners) listener();
@@ -113,6 +131,13 @@ export function createViewStore(app: AppDefinition, deployed: EnvironmentId, vie
   const setActivity = (next: Partial<Activity>) => {
     activity = { ...activity, ...next };
     notify();
+  };
+
+  const markPainted = (member: string, at: number) => {
+    const end = at - routeStartedAt;
+    // A load a swap replaced before it painted finishes with the swap.
+    if (!activity.loads.some((load) => load.member === member && load.durationMs === null)) return;
+    setActivity({ loads: activity.loads.map((load) => (load.member === member && load.durationMs === null ? { ...load, durationMs: Math.max(0, end - load.startMs) } : load)) });
   };
 
   return {
@@ -152,21 +177,30 @@ export function createViewStore(app: AppDefinition, deployed: EnvironmentId, vie
         setActivity({ changes: activity.changes + 1 });
         return;
       }
-      const now = Date.now();
-      const swaps = changed.map((member): LoadRecord => ({ member, version: after[member]!, startMs: Math.max(0, now - routeStartedAt), durationMs: memberById(app, member)!.swapMs, kind: "swap", from: before[member] }));
+      const startMs = Math.max(0, performance.now() - routeStartedAt);
+      const swaps = changed.map((member): LoadRecord => ({ member, version: after[member]!, startMs, durationMs: null, kind: "swap", from: before[member] }));
       setActivity({ loads: [...activity.loads, ...swaps], swapping: new Set([...activity.swapping, ...changed]), changes: activity.changes + 1 });
       for (const swap of swaps) {
         window.setTimeout(() => {
           const swapping = new Set(activity.swapping);
           swapping.delete(swap.member);
           setActivity({ swapping });
-        }, swap.durationMs);
+          if (!regions.has(swap.member)) markPainted(swap.member, performance.now());
+        }, memberById(app, swap.member)!.swapMs);
       }
     },
-    startRoute(entries, startedAt) {
-      routeStartedAt = startedAt;
-      setActivity({ loads: entries.map((entry) => ({ ...entry, kind: "load" })), swapping: new Set(), changes: activity.changes + 1 });
+    startRoute(path, shell, routeRegions, startedAt) {
+      // Strict Mode starts the first route twice, so the first route is the one before any other path.
+      firstPath ??= path;
+      if (path !== firstPath) navigated = true;
+      routeStartedAt = navigated ? startedAt : 0;
+      regions = new Set(routeRegions.map((entry) => entry.member));
+      const offset = startedAt - routeStartedAt;
+      const shellLoad: LoadRecord[] = navigated ? [] : [{ member: shell.member, version: shell.version, startMs: 0, durationMs: startedAt, kind: "load" }];
+      const loads = routeRegions.map((entry): LoadRecord => ({ member: entry.member, version: entry.version, startMs: offset + entry.startMs, durationMs: null, kind: "load" }));
+      setActivity({ loads: [...shellLoad, ...loads], swapping: new Set(), changes: activity.changes + 1 });
     },
+    markPainted,
     markChanged() {
       setActivity({ changes: activity.changes + 1 });
     },

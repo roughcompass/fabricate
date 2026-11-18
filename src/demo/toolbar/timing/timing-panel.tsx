@@ -3,15 +3,17 @@
 import { ToolPanel } from "@/components/toolbar/tool-panel";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/form";
+import { Tooltip } from "@/components/ui/tooltip";
 import { memberById } from "@/lib/demo/catalog";
 import { useActivity, useCurrentRoute, useRuntime } from "../../runtime/runtime-context";
-import { RATING_LABELS, formatMs, hotSpots, rate, slowestInteraction, waterfall } from "./timing";
+import { RATING_LABELS, VITALS, formatMs, formatVital, hotSpots, rate, rateVital, slowestInteraction, waterfall } from "./timing";
 import { useTiming } from "./timing-state";
 import styles from "./timing.module.css";
 
 /**
- * The Timing tool: the order the microfrontends loaded in, how long each
- * interaction took to paint, and the regions that cost the most.
+ * The Timing tool: the page load's Web Vitals, how long each microfrontend
+ * took to load and paint, how long each interaction took to paint, and the
+ * regions that cost the most.
  */
 export function TimingPanel() {
   const { app } = useRuntime();
@@ -23,21 +25,50 @@ export function TimingPanel() {
   const slowest = slowestInteraction(timing.interactions);
   const spots = timing.hotSpots ? hotSpots(route.regions.map((region) => region.member), loads, timing.interactions) : [];
 
+  const vitalRows = VITALS.map((vital) => {
+    const value = vital.name === "INP" ? timing.inpMs : (timing.vitals[vital.name]?.value ?? null);
+    return { ...vital, value, rating: value === null ? null : rateVital(vital.name, value) };
+  });
+
   return (
-    <ToolPanel title="Timing" description="Module load order, interaction timing, and performance hot spots for this page." wide>
+    <ToolPanel title="Timing" description="Web Vitals, module load times, interaction timing, and performance hot spots for this page." wide>
+      <section className={styles.section} aria-labelledby="timing-vitals">
+        <h3 id="timing-vitals" className={styles.sectionTitle}>
+          Web Vitals
+        </h3>
+        <ul className={styles.vitals} aria-label="Web Vitals">
+          {vitalRows.map((vital, index) => (
+            <li key={vital.name} className={styles.vital} data-vital={vital.name} data-rating={vital.rating ?? undefined}>
+              <Tooltip
+                focusable
+                className={styles.vitalBody}
+                placement="below"
+                align={index < 2 ? "start" : index > 2 ? "end" : "center"}
+                content={`${vital.title}. ${vital.description} Good at ${formatVital(vital.name, vital.good)} or less; poor above ${formatVital(vital.name, vital.poor)}. ${vital.name === "INP" ? "Measured since the page loaded." : "Measured for this page load."}`}
+              >
+                <span className={styles.vitalName}>{vital.name}</span>
+                <span className={styles.vitalValue}>{vital.value === null ? "–" : formatVital(vital.name, vital.value)}</span>
+                <span className={styles.vitalRating}>{vital.rating ? RATING_LABELS[vital.rating] : vital.name === "INP" ? "No interactions" : "Measuring"}</span>
+              </Tooltip>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section className={styles.section} aria-labelledby="timing-loads">
         <h3 id="timing-loads" className={styles.sectionTitle}>
           Load order
         </h3>
+        <p className={styles.note}>Measured until each module painted, from the navigation, or for a page opened inside the application, from when it opened.</p>
         <ol className={styles.waterfall} aria-label="Microfrontend loads">
           {rows.map((row, index) => (
-            <li key={`${row.member}-${row.kind}-${index}`} className={styles.load} data-load-member={row.member} data-load-kind={row.kind} data-slowest={row.slowest || undefined}>
+            <li key={`${row.member}-${row.kind}-${index}`} className={styles.load} data-load-member={row.member} data-load-kind={row.kind} data-slowest={row.slowest || undefined} data-loading={row.durationMs === null || undefined}>
               <span className={styles.loadName}>
                 {name(row.member)} <code>{row.version}</code>
                 {row.kind === "swap" && <span className={styles.marker}>{`Version change${row.from ? ` from ${row.from}` : ""}`}</span>}
                 {row.slowest && <span className={styles.slowFlag}>Slowest load</span>}
               </span>
-              <span className={styles.loadTimes}>{`+${formatMs(row.startMs)} · ${formatMs(row.durationMs)}`}</span>
+              <span className={styles.loadTimes}>{`+${formatMs(row.startMs)} · ${row.durationMs === null ? "Loading…" : formatMs(row.durationMs)}`}</span>
               <span className={styles.track} aria-hidden="true">
                 <span className={styles.bar} data-kind={row.kind} data-slowest={row.slowest || undefined} style={{ left: `${row.offset * 100}%`, width: `${row.width * 100}%` }} />
               </span>

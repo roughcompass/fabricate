@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, use } from "react";
+import { Fragment, use, useEffect } from "react";
 import { type RegionArea, memberById } from "@/lib/demo/catalog";
 import { elementFor } from "./registry";
 import { LoadedContext, useActivity, useRuntime, useVersions } from "./runtime-context";
@@ -10,10 +10,11 @@ import styles from "./region.module.css";
  * One microfrontend on the page. It identifies its member and version for the
  * toolbar, shows a skeleton until its scripted load finishes or while a new
  * version loads, and remounts only itself when its version changes, so the
- * rest of the page keeps its state.
+ * rest of the page keeps its state. It reports when its content first paints,
+ * which ends the load the Timing tool measures.
  */
 export function MicrofrontendRegion({ member, area }: { member: string; area: RegionArea }) {
-  const { app } = useRuntime();
+  const { app, store } = useRuntime();
   const versions = useVersions();
   const loaded = use(LoadedContext);
   const { swapping } = useActivity();
@@ -21,6 +22,19 @@ export function MicrofrontendRegion({ member, area }: { member: string; area: Re
   const version = versions[member]!;
   const ready = loaded.has(member) && !swapping.has(member);
   const element = elementFor(member, version);
+
+  useEffect(() => {
+    if (!ready) return;
+    let timer = 0;
+    // A frame callback runs before the paint that shows the content; a task queued from it runs after.
+    const frame = window.requestAnimationFrame(() => {
+      timer = window.setTimeout(() => store.markPainted(member, performance.now()), 0);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [ready, member, version, store]);
 
   return (
     <section

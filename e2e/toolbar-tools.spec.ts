@@ -89,6 +89,29 @@ test.describe("timing tool", () => {
     expect(await loads.evaluateAll((items) => items.map((item) => item.getAttribute("data-load-member")))).toEqual(["payments-shell", "payee-list", "transfer-form", "payment-activity"]);
     await expect(loads.and(page.locator("[data-slowest]"))).toHaveAttribute("data-load-member", "payment-activity");
     await expect(loads.nth(3)).toContainText("Slowest load");
+    // Measured, not scripted: the region painted after its 1,300 ms scripted load, so it took at least that long.
+    const activity = await loads.nth(3).innerText();
+    expect(Number(/· ([\d,]+) ms/.exec(activity)![1]!.replace(/,/g, ""))).toBeGreaterThanOrEqual(1300);
+    await expect(page.locator("[data-loading]")).toHaveCount(0);
+  });
+
+  test("reports the page load's Web Vitals, with INP from the application's interactions only", async ({ page, db: _db }) => {
+    await open(page, "payments-workspace");
+    await openPanel(page, "timing", "Timing");
+    const vitals = panel(page, "Timing").getByRole("list", { name: "Web Vitals" });
+    for (const name of ["LCP", "FCP", "TTFB"]) await expect(vitals.locator(`[data-vital="${name}"]`)).toHaveAttribute("data-rating", /^(good|needs-improvement|poor)$/);
+    await expect(vitals.locator('[data-vital="INP"]')).toContainText("No interactions");
+    // Each vital explains itself in a tooltip on keyboard focus.
+    await vitals.locator('[data-vital="LCP"] [tabindex="0"]').focus();
+    await expect(vitals.getByRole("tooltip", { name: /^Largest Contentful Paint\./ })).toBeVisible();
+
+    await page.getByRole("button", { name: "Close timing" }).click();
+    await region(page, "payment-activity").getByRole("button", { name: "Recalculate totals" }).click();
+    await openPanel(page, "timing", "Timing");
+    await expect(vitals.locator('[data-vital="INP"]')).toHaveAttribute("data-rating", "poor");
+    await panel(page, "Timing").getByRole("button", { name: "Clear interactions" }).click();
+    // Clearing the list keeps the page's INP.
+    await expect(vitals.locator('[data-vital="INP"]')).toHaveAttribute("data-rating", "poor");
   });
 
   test("rates the planted interaction poor, attributes it, and ranks its region first", async ({ page, db: _db }) => {
@@ -108,6 +131,20 @@ test.describe("timing tool", () => {
     await expect(page.locator('[data-hot-spot-tint="payment-activity"]')).toHaveAttribute("data-level", "high");
     // Interactions with the toolbar are never recorded.
     expect(await timing.locator("[data-interaction-member]").count()).toBe(1);
+  });
+});
+
+test.describe("timing tool's keyboard interactions", () => {
+  test("records Enter on a button once, and never the toolbar shortcut pressed in the application", async ({ page, db: _db }) => {
+    await open(page, "payments-workspace");
+    await region(page, "payee-list").locator('[data-demo-anchor="pay-northwind"]').focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("t");
+    const timing = panel(page, "Timing");
+    await expect(timing).toBeVisible();
+    const interactions = timing.getByRole("list", { name: "Recorded interactions" }).locator("[data-interaction-member]");
+    await expect(interactions).toHaveCount(1);
+    await expect(interactions.first()).toContainText("Key press on button (pay-northwind)");
   });
 });
 

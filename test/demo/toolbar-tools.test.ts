@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type RawViolation, guidanceLines, summarize } from "@/demo/toolbar/accessibility/audit";
 import { parsePayload, topicError } from "@/demo/toolbar/bus-publish";
-import { type Interaction, type WaterfallLoad, hotSpots, rate, slowestInteraction, waterfall } from "@/demo/toolbar/timing/timing";
+import { type Interaction, type WaterfallLoad, formatVital, hotSpots, interactionToNextPaint, rate, rateVital, slowestInteraction, waterfall } from "@/demo/toolbar/timing/timing";
 
 const violation = (id: string, impact: string, nodes: string[]): RawViolation => ({
   id,
@@ -80,6 +80,30 @@ describe("timing tool", () => {
     ]);
     // The latest load counts, so a swap replaces the original load's duration.
     expect(spots[1]!.loadMs).toBe(600);
+  });
+
+  it("keeps a load still in progress in order, unflagged, and costing nothing yet", () => {
+    const pending: WaterfallLoad[] = [...loads.slice(0, 3), { member: "payment-activity", version: "2.3.0", startMs: 340, durationMs: null, kind: "load" }];
+    const rows = waterfall(pending);
+    expect(rows.map((row) => row.member)).toEqual(["shell", "payee-list", "transfer-form", "payment-activity"]);
+    expect(rows.filter((row) => row.slowest).map((row) => row.member)).toEqual(["payee-list"]);
+    expect(rows[3]!.width).toBe(0.01);
+    expect(hotSpots(["payment-activity"], pending, [])[0]!.loadMs).toBe(0);
+  });
+
+  it("computes INP as the slowest interaction, less one outlier for every 50", () => {
+    expect(interactionToNextPaint([])).toBeNull();
+    expect(interactionToNextPaint([interaction(1, "payee-list", 40), interaction(2, "payment-activity", 656), interaction(3, "transfer-form", 24)])).toBe(656);
+    const many = Array.from({ length: 60 }, (_, index) => interaction(index, "payee-list", index === 7 ? 900 : 100 + index));
+    expect(interactionToNextPaint(many)).toBe(159);
+  });
+
+  it("rates Web Vitals at the published thresholds and formats layout shift as a score", () => {
+    expect([2500, 2501, 4000, 4001].map((value) => rateVital("LCP", value))).toEqual(["good", "needs-improvement", "needs-improvement", "poor"]);
+    expect([0.1, 0.11, 0.25, 0.3].map((value) => rateVital("CLS", value))).toEqual(["good", "needs-improvement", "needs-improvement", "poor"]);
+    expect([800, 1800, 1801].map((value) => rateVital("TTFB", value))).toEqual(["good", "needs-improvement", "poor"]);
+    expect(formatVital("CLS", 0.04321)).toBe("0.04");
+    expect(formatVital("LCP", 1834.6)).toBe("1,835 ms");
   });
 });
 
