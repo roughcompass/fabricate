@@ -2,12 +2,18 @@
   .muted { color: var(--color-text-secondary); }
   /* Identifiers break only where a line would overflow, so a table keeps a package name on one line when it can. */
   .mono { font-family: var(--font-family-mono); font-size: var(--font-size-secondary); overflow-wrap: break-word; }
+  /* In a table, a long path may break anywhere, so its column can narrow and the table never runs past its panel. */
+  :where(td) > .mono { overflow-wrap: anywhere; }
 
   /* Overview values: each a link to its category, wrapping as a row of items. */
   .values { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4); }
   .value { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); min-width: 0; color: inherit; text-decoration-line: none; }
   .value:hover .valueText { text-decoration-line: underline; }
   .valueText { overflow-wrap: anywhere; }
+  /* Long values, such as packages with their visibility and directory, one per line under their counts. */
+  .stacked { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+  .summary { font-weight: var(--font-weight-medium); }
+  .more { color: var(--color-text-secondary); font-size: var(--font-size-secondary); text-decoration-line: underline; text-underline-offset: 2px; }
   .secondary { color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
 
   /* Needs attention: the counts line, then one line per item. */
@@ -77,7 +83,16 @@
   .raw { margin: 0; font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); white-space: pre-wrap; overflow-wrap: anywhere; }
 
   .candidates { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding-left: var(--space-4); }
-  .steps { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+  /* A CI definition's steps, inside its row's disclosure: each command on its first line only, its job and step below. */
+  .steps { display: flex; flex-direction: column; gap: var(--space-2); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+  .step { display: flex; flex-direction: column; min-width: 0; }
+  .stepCommand { overflow: hidden; font-family: var(--font-family-mono); font-size: var(--font-size-secondary); text-overflow: ellipsis; white-space: nowrap; }
+  /* A shared table's categories with no facts, one line each above it. */
+  .notes { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+  .notes > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
+  .notes .search { margin-top: 0; }
+  /* A column header that anchors a category stops below the shell header. */
+  .anchoredTable th[id] { scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
 
   .compact { margin: 0; padding: 0; list-style: none; }
   .compactRow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-4); scroll-margin-top: calc(var(--size-header) + var(--space-4)); }

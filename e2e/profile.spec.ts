@@ -95,11 +95,12 @@ test("explains observed, inferred, unknown, conflicting, negative, and skipped-i
   await expect(ci.getByText("Unknown").first()).toBeVisible();
   await expect(ci).toContainText("1 relevant input could not be read or understood");
   await expect(ci).toContainText(".github/workflows/ci.yml");
-  // No lockfile entry resolves axios: its resolved version is unknown, never none detected.
+  // No lockfile resolves any package: resolved versions are unknown, never none detected, said once above the table instead of in a column of placeholders.
   const axios = category(page, "dependencies").getByRole("row").filter({ hasText: "axios" });
-  await expect(axios.getByText("Unknown")).toBeVisible();
   await expect(axios).not.toContainText("None detected");
+  await expect(page.getByRole("table", { name: "Dependencies" }).getByRole("columnheader", { name: /Resolved/ })).toHaveCount(0);
   await expect(category(page, "resolved_dependencies").getByText("Unknown")).toBeVisible();
+  await expect(category(page, "resolved_dependencies")).toContainText("Resolved versions aren't shown.");
 
   const submodules = category(page, "submodules");
   await expect(submodules.getByText("None detected").first()).toBeVisible();
@@ -132,6 +133,8 @@ test("shows each category's search and rule, and a row's state only where it dif
   await expect(languages.getByRole("table").getByText("Observed")).toHaveCount(0);
   await expect(languages.getByRole("row").filter({ hasText: "TypeScript" }).getByRole("button", { name: /^Show \d+ locations?$/ })).toBeVisible();
 
+  // How each category was searched is one disclosure away, since the column states say whether to look.
+  await category(page, "dependencies").getByText("How these were found").click();
   const dependencies = category(page, "dependencies").getByRole("list", { name: "Categories in Dependencies" }).getByRole("listitem").first();
   await expect(dependencies).toContainText("Searched 1 input · complete");
   await expect(dependencies).toContainText("Rule manifest.dependencies");

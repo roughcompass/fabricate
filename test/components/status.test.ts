@@ -36,6 +36,13 @@ describe("status registry", () => {
     expect(statusOf("canceling")).toEqual({ label: "Canceling", tone: "progress", indicator: "dot" });
   });
 
+  it("moves only for work under way: a settled fact or category state holds still", () => {
+    const moving = [...new Set([...FACT_STATES, ...CATEGORY_STATES])].filter((state) => statusOf(state).tone === "progress");
+    expect(moving).toEqual([]);
+    expect(statusOf("inferred")).toEqual({ label: "Inferred", tone: "info", indicator: "dot" });
+    expect(statusOf("analyzing").tone).toBe("progress");
+  });
+
   it("gives each state with no value its own neutral indicator", () => {
     expect(statusOf("unknown")).toEqual({ label: "Unknown", tone: "neutral", indicator: "ring" });
     expect(statusOf("absent")).toEqual({ label: "None detected", tone: "neutral", indicator: "dot" });

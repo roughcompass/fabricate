@@ -83,7 +83,12 @@ export function noValue(document: FactDocument, definition: CategoryDefinition):
   if (category.state === "absent") {
     return { state: "absent", reason: search.surface.length ? `After a complete search of ${countLabel(search.surface.length, "input")}` : "No input this category reads exists in this commit" };
   }
-  if (search.skipped.length) return { state: "unknown", reason: `${countLabel(search.skipped.length, "relevant input")} could not be read or understood: ${search.skipped.join(", ")}` };
+  if (search.skipped.length) {
+    // A few paths say which files; Skipped inputs lists every one, with why.
+    const named = search.skipped.slice(0, 3).join(", ");
+    const rest = search.skipped.length > 3 ? `, and ${search.skipped.length - 3} more in Skipped inputs` : "";
+    return { state: "unknown", reason: `${countLabel(search.skipped.length, "relevant input")} could not be read or understood: ${named}${rest}` };
+  }
   if (search.complete && search.surface.length && !definition.boundedNegative) {
     return { state: "unknown", reason: `Searched ${countLabel(search.surface.length, "input")} and found none, but committed files cannot prove there is none` };
   }

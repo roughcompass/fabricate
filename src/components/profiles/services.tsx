@@ -33,10 +33,10 @@ export function serviceName(summary: ServiceSummary, records: JsonObject): strin
 }
 
 /** Outbound calls, each a panel whose summary names its endpoint, client, and call site, and whether its boundary is characterized. */
-export function ServiceDependencies({ services, context }: { services: readonly ServiceSummary[]; context: EvidenceContext }) {
+export function ServiceDependencies({ services, total = services.length, context, pagination }: { services: readonly ServiceSummary[]; total?: number; context: EvidenceContext; pagination?: React.ReactNode }) {
   return (
     <Section id="services" title="Service Dependencies" description="Outbound calls found in committed source and configuration. Static discovery does not prove entitlement, reachability, or integrated behavior, so access is unknown for every service.">
-      {services.length === 0 && <p className={styles.muted}>No Service Dependency was found.</p>}
+      {total === 0 && <p className={styles.muted}>No Service Dependency was found.</p>}
       {services.map((summary) => (
         <section key={summary.key} aria-label={serviceName(summary, context.records)}>
           <Disclosure summary={<ServiceSummaryLine summary={summary} context={context} />} aside={<Status state={summary.characterized ? "characterized" : "incomplete"} />}>
@@ -44,6 +44,7 @@ export function ServiceDependencies({ services, context }: { services: readonly 
           </Disclosure>
         </section>
       ))}
+      {pagination}
     </Section>
   );
 }

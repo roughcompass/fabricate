@@ -6,6 +6,7 @@ import { ProfileOverview } from "@/components/profiles/overview";
 import { ServiceDependencies } from "@/components/profiles/services";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
@@ -17,7 +18,7 @@ import type { Assessment } from "@/lib/assessments/assessment-records";
 import { type RepositoryProfile, profileDiagnostics, profileDocument } from "@/lib/profiles/profile-records";
 import { profileCommit } from "@/lib/profiles/schema";
 import { type FactDocument, categoryDefinitions } from "@/lib/profiles/states";
-import { type DependencyFilters as Filters, type SharedBlock, filterDependencies, profileView } from "@/lib/profiles/view";
+import { type CategoryBlock, type DependencyFilters as Filters, type SharedBlock, filterDependencies, pageOfGroups, profileView } from "@/lib/profiles/view";
 import styles from "./profile-body.module.css";
 
 /** What a Profile is pinned to: a commit, or, for a template version, its files' content digest. */
@@ -35,6 +36,9 @@ export const PROFILE_DESCRIPTION = {
 
 const queryValue = (value: string | string[] | undefined) => (typeof value === "string" && value !== "" ? value : undefined);
 
+/** Rows per page of a long table, so a large repository's Profile stays quick to load and to read. */
+export const PROFILE_PAGE_SIZE = 50;
+
 /**
  * A Profile's sections: the section menu, the overview, what needs
  * attention, every category, service dependencies, skipped inputs, other
@@ -49,9 +53,41 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
   const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, assessmentId: assessment.publicId, labels: new Map(categoryDefinitions(facts).map((definition) => [definition.id, definition.label])) };
   const filters: Filters = { kind: queryValue(query.kind), manifest: queryValue(query.manifest), package: queryValue(query.package) };
 
-  const dependencies = (block: SharedBlock) => {
-    const { block: shown, shown: count, total } = filterDependencies(block, filters);
-    return <SharedTable key={block.kind} block={shown} context={context} filters={<DependencyFilters block={block} filters={filters} action={`${base}#dependencies`} shown={count} total={total} />} />;
+  // Each long table pages on its own, in the address as `<category>_page`, keeping the rest of the query.
+  const paging = (id: string, total: number) => {
+    const key = `${id}_page`;
+    const pages = Math.max(1, Math.ceil(total / PROFILE_PAGE_SIZE));
+    const requested = Number.parseInt(queryValue(query[key]) ?? "1", 10);
+    const page = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), pages) : 1;
+    const href = (number: number) => {
+      const params = new URLSearchParams();
+      for (const [name, value] of Object.entries(query)) if (typeof value === "string" && name !== key) params.set(name, value);
+      if (number > 1) params.set(key, String(number));
+      return `${base}${params.size ? `?${params}` : ""}#${id}`;
+    };
+    return { page, pages, start: (page - 1) * PROFILE_PAGE_SIZE, href };
+  };
+
+  const category = (block: CategoryBlock) => {
+    const { id, label } = block.heading.definition;
+    const { page, pages, start, href } = paging(id, block.rows.length);
+    return <CategoryTable key={id} block={{ ...block, rows: block.rows.slice(start, start + PROFILE_PAGE_SIZE) }} context={context} pagination={<Pagination label={`${label} pages`} page={page} pages={pages} href={href} scrollToTop />} />;
+  };
+
+  const shared = (block: SharedBlock) => {
+    const filtered = block.kind === "dependencies" ? filterDependencies(block, filters) : null;
+    const rows = filtered ? filtered.block : block;
+    const id = block.sources[0]!.definition.id;
+    const { page, pages, href } = paging(id, rows.groups.reduce((sum, group) => sum + group.rows.length, 0));
+    return (
+      <SharedTable
+        key={block.kind}
+        block={pageOfGroups(rows, page, PROFILE_PAGE_SIZE)}
+        context={context}
+        filters={filtered && <DependencyFilters block={block} filters={filters} action={`${base}#dependencies`} shown={filtered.shown} total={filtered.total} />}
+        pagination={<Pagination label={`${block.kind === "dependencies" ? "Dependencies" : "Package scripts"} pages`} page={page} pages={pages} href={href} scrollToTop />}
+      />
+    );
   };
 
   return (
@@ -60,6 +96,13 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
         label="Profile sections"
         jumpLabel="Jump to category"
         groups={[
+          {
+            label: "Summary",
+            items: [
+              { id: "overview", label: "Overview" },
+              { id: "attention", label: view.attention.items.length ? `Needs attention (${view.attention.items.length})` : "Needs attention" },
+            ],
+          },
           ...view.navigation,
           {
             label: "More",
@@ -78,14 +121,17 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
         {view.groups.map((group) => (
           <Section key={group.label} title={group.label}>
             {group.blocks.map((block, index) => {
-              if (block.kind === "category") return <CategoryTable key={block.heading.definition.id} block={block} context={context} />;
+              if (block.kind === "category") return category(block);
               if (block.kind === "compact") return <CompactList key={`compact-${index}`} block={block} />;
-              return block.kind === "dependencies" ? dependencies(block) : <SharedTable key={block.kind} block={block} context={context} />;
+              return shared(block);
             })}
           </Section>
         ))}
 
-        <ServiceDependencies services={view.services} context={context} />
+        {(() => {
+          const { page, pages, start, href } = paging("services", view.services.length);
+          return <ServiceDependencies services={view.services.slice(start, start + PROFILE_PAGE_SIZE)} total={view.services.length} context={context} pagination={<Pagination label="Service Dependency pages" page={page} pages={pages} href={href} scrollToTop />} />;
+        })()}
 
         <Section id="diagnostics" title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent.">
           {diagnostics.skipped.length ? (

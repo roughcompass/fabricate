@@ -32,14 +32,22 @@ export interface Row {
   cells: RowCells;
   /** Cells taken from another category, such as the CI steps of a definition. */
   steps: Cell[];
+  /** What those steps check, each named once, for the row's summary. */
+  checks: string[];
   held: HeldFact[];
   evidence: string[];
+  /** How many facts the row stands for: facts whose cells are identical share one row. */
+  occurrences: number;
 }
 
 /** A category's heading: its state, its search, and the rules its facts came from. */
 export interface Heading {
   definition: CategoryDefinition;
   state: string;
+  /** How many facts the category holds; a shared table leaves out the columns of a category with none. */
+  facts: number;
+  /** Why a category with no facts has none, in a sentence. */
+  reason: string | null;
   search: Search | null;
   rules: string[];
 }
@@ -73,7 +81,8 @@ export interface SharedBlock {
   sources: Heading[];
   /** Each column's label, and the category it's taken from. */
   columns: { label: string; category: string | null }[];
-  groups: { manifest: string | null; rows: SharedRow[] }[];
+  /** Each manifest's rows, and how many rows it holds when a page shows only some of them. */
+  groups: { manifest: string | null; rows: SharedRow[]; total?: number }[];
 }
 
 export interface CompactBlock {
@@ -119,7 +128,8 @@ const evidenceOf = (fact: Fact) => unique([...fact.evidence, ...(fact.candidates
 function headingOf(document: FactDocument, definition: CategoryDefinition): Heading {
   const category = categoryOf(document, definition.id);
   const rules = category?.facts.length ? unique(category.facts.map((fact) => fact.rule)) : (category?.search.rules ?? []);
-  return { definition, state: categoryState(document, definition.id), search: category?.search ?? null, rules };
+  const facts = category?.facts.length ?? 0;
+  return { definition, state: categoryState(document, definition.id), facts, reason: facts ? null : noValue(document, definition).reason, search: category?.search ?? null, rules };
 }
 
 function held(document: FactDocument, category: string, fact: Fact): HeldFact {
@@ -151,7 +161,8 @@ function categoryBlock(document: FactDocument, definition: CategoryDefinition, c
     heading: headingOf(document, definition),
     columns: layout.columns.map((column) => column.label),
     stepsColumn: isCi ? "Steps" : null,
-    rows: facts.map((fact) => {
+    rows: mergeIdentical(
+      facts.map((fact): Row => {
       const path = isObject(fact.value) && typeof fact.value.path === "string" ? fact.value.path : fact.key;
       const steps = isCi ? (ciSteps.get(path) ?? []) : [];
       return {
@@ -160,11 +171,30 @@ function categoryBlock(document: FactDocument, definition: CategoryDefinition, c
         reasoning: fact.reasoning ?? null,
         cells: rowCells(layout, fact),
         steps: steps.map(stepCell),
+        checks: unique(steps.flatMap((step) => (isObject(step.value) && Array.isArray(step.value.kinds) ? step.value.kinds.map((kind) => checkKind(String(kind))) : []))),
         held: [held(document, definition.id, fact), ...steps.map((step) => held(document, "verification_commands", step))],
         evidence: unique([...evidenceOf(fact), ...steps.flatMap(evidenceOf)]),
+        occurrences: 1,
       };
-    }),
+      }),
+    ),
   };
+}
+
+/**
+ * Rows a reader couldn't tell apart, such as the same module mocked in many
+ * test files, as one row that holds every one of their facts and evidence
+ * records and counts them.
+ */
+function mergeIdentical(rows: Row[]): Row[] {
+  const merged = new Map<string, Row>();
+  for (const row of rows) {
+    const key = JSON.stringify([row.cells, row.state, row.reasoning, row.steps]);
+    const existing = merged.get(key);
+    if (existing) merged.set(key, { ...existing, held: [...existing.held, ...row.held], evidence: unique([...existing.evidence, ...row.evidence]), occurrences: existing.occurrences + 1 });
+    else merged.set(key, row);
+  }
+  return [...merged.values()];
 }
 
 const NOT_ESTABLISHED = { absent: "Not found by a complete search", unknown: "Not established for this row" };
@@ -294,6 +324,19 @@ export interface DependencyFilters {
   manifest?: string;
   /** Part of a package name, in any case. */
   package?: string;
+}
+
+/** One page of a shared table's rows, in manifest order, each group keeping the count of rows it holds in all. */
+export function pageOfGroups(block: SharedBlock, page: number, size: number): SharedBlock {
+  const start = (page - 1) * size;
+  let offset = 0;
+  const groups = block.groups.flatMap((group) => {
+    const first = offset;
+    offset += group.rows.length;
+    const rows = group.rows.slice(Math.max(0, start - first), Math.max(0, start + size - first));
+    return rows.length ? [{ ...group, rows, total: group.total ?? group.rows.length }] : [];
+  });
+  return { ...block, groups };
 }
 
 /** The Dependencies table with only the rows its filters match, and how many rows it holds in all. */

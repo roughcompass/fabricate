@@ -6,7 +6,8 @@ import styles from "./status.module.css";
  * indicator, and operators never see a raw identifier.
  */
 
-export type Tone = "neutral" | "success" | "warning" | "error" | "progress";
+/** Progress is work under way, and pulses; info shares its color for a settled state that is neither good nor bad, and holds still. */
+export type Tone = "neutral" | "success" | "warning" | "error" | "progress" | "info";
 
 /** The indicator's shape. The states that carry no value each have their own, so they differ without their labels. */
 export type Indicator = "dot" | "ring" | "dash";
@@ -31,8 +32,8 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   not_applicable: ["Not applicable", "neutral"],
   // Fact and category states.
   observed: ["Observed", "success"],
-  inferred: ["Inferred", "progress"],
-  mixed: ["Mixed", "progress"],
+  inferred: ["Inferred", "info"],
+  mixed: ["Mixed", "info"],
   conflicting: ["Conflicting", "warning"],
   unknown: ["Unknown", "neutral", "ring"],
   absent: ["None detected", "neutral"],
@@ -53,7 +54,7 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   unsaved: ["Unsaved changes", "warning"],
   published: ["Published", "success"],
   // Directory import candidates.
-  importable: ["Ready to add", "progress"],
+  importable: ["Ready to add", "info"],
   registered: ["Already registered", "neutral"],
   rejected: ["Rejected", "error"],
   // Service Dependency boundaries.

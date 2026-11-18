@@ -26,6 +26,10 @@ export interface OverviewRow {
   placeholders: OverviewPlaceholder[];
   /** Values left out after the first few, such as further languages. */
   more: number;
+  /** One value per line, for values long enough that a wrapping row would run them together. */
+  stacked: boolean;
+  /** A line of counts above the values, such as how many packages are published. */
+  summary: string | null;
 }
 
 const isObject = (value: JsonValue | undefined): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -52,19 +56,36 @@ interface RowDefinition {
   /** How many values to show before "+N more". */
   limit?: number;
   order?: (facts: Fact[]) => Fact[];
+  stacked?: boolean;
+  summary?: (facts: Fact[], document: FactDocument) => string | null;
+}
+
+// A pnpm catalog, workspace, or other protocol reference names where a version is set, not the version.
+const versionLike = (value: string) => !/^[a-z]+:/i.test(value);
+
+/** Whether a package's manifest is published as the Packages produced category reports it. */
+function published(document: FactDocument, manifest: string | null): boolean {
+  const produced = categoryOf(document, "packages_produced")?.facts.find((candidate) => field(candidate, "manifest") === manifest);
+  return Boolean(produced && isObject(produced.value) && produced.value.published === true);
 }
 
 const ROWS: RowDefinition[] = [
   {
     label: "Packages",
     categories: ["package_identity"],
+    limit: 5,
+    stacked: true,
+    summary: (facts, document) => {
+      if (facts.length < 2) return null;
+      const shipped = facts.filter((fact) => published(document, field(fact, "manifest"))).length;
+      const hidden = facts.filter((fact) => isObject(fact.value) && fact.value.private === true).length;
+      return [countLabel(facts.length, "package"), shipped ? `${shipped} published` : null, hidden ? `${hidden} private` : null].filter(Boolean).join(" · ");
+    },
     describe: (fact, _category, document) => {
       const name = field(fact, "name");
       if (name === null) return null;
       const manifest = field(fact, "manifest");
-      const produced = categoryOf(document, "packages_produced")?.facts.find((candidate) => field(candidate, "manifest") === manifest);
-      const published = produced && isObject(produced.value) ? produced.value.published : undefined;
-      const visibility = published === true ? "published" : isObject(fact.value) && fact.value.private === true ? "private" : "not private";
+      const visibility = published(document, manifest) ? "published" : isObject(fact.value) && fact.value.private === true ? "private" : "not private";
       const directory = manifest && manifest.includes("/") ? `${manifest.slice(0, manifest.lastIndexOf("/") + 1)}` : null;
       return { state: fact.state, text: [name, field(fact, "version")].filter(Boolean).join(" "), secondary: [visibility, directory].filter(Boolean).join(" · ") };
     },
@@ -82,7 +103,7 @@ const ROWS: RowDefinition[] = [
     describe: (fact) => {
       const label = field(fact, "label");
       const specifiers = isObject(fact.value) ? fact.value.specifiers : undefined;
-      const version = isObject(specifiers) ? Object.values(specifiers).find((value) => typeof value === "string") : undefined;
+      const version = isObject(specifiers) ? Object.values(specifiers).find((value): value is string => typeof value === "string" && versionLike(value)) : undefined;
       return label === null ? null : { state: fact.state, text: [label, version].filter(Boolean).join(" ") };
     },
   },
@@ -123,6 +144,7 @@ export function overview(document: FactDocument): OverviewRow[] {
   const rows = ROWS.map((row): OverviewRow => {
     const values: OverviewValue[] = [];
     const placeholders: OverviewPlaceholder[] = [];
+    let summary: string | null = null;
     for (const id of row.categories) {
       const definition = definitions.get(id) as CategoryDefinition;
       const facts = categoryOf(document, id)?.facts ?? [];
@@ -136,9 +158,10 @@ export function overview(document: FactDocument): OverviewRow[] {
         return id === "runtime_requirements" && fact.state !== "observed" && fact.state !== "inferred" ? { ...value, text: `${runtimeName(fact.key)}: ${value.text}` } : value;
       });
       values.push(...distinct(described));
+      summary ??= row.summary?.(facts, document) ?? null;
     }
     const shown = row.limit ? values.slice(0, row.limit) : values;
-    return { label: row.label, category: row.categories[0]!, values: shown, placeholders, more: values.length - shown.length };
+    return { label: row.label, category: row.categories[0]!, values: shown, placeholders, more: values.length - shown.length, stacked: row.stacked ?? false, summary };
   });
   return [...rows, scope(document)];
 }
@@ -153,5 +176,5 @@ function scope(document: FactDocument): OverviewRow {
     { state: null, text: countLabel(categoryOf(document, "scripts")?.facts.length ?? 0, "script") },
     { state: null, text: countLabel(document.service_dependencies?.length ?? 0, "Service Dependency", "Service Dependencies") },
   ];
-  return { label: "Scope", category: null, values, placeholders: [], more: 0 };
+  return { label: "Scope", category: null, values, placeholders: [], more: 0, stacked: false, summary: null };
 }

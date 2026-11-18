@@ -2,7 +2,7 @@ import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { beforeAll, describe, expect, it } from "vitest";
 import { profileDiagnostics } from "@/lib/profiles/profile-records";
 import type { FactDocument } from "@/lib/profiles/states";
-import { type ProfileView, profileView } from "@/lib/profiles/view";
+import { type ProfileView, type SharedBlock, pageOfGroups, profileView } from "@/lib/profiles/view";
 import { FACT_DOCUMENT_FIXTURES, analyzedFacts, asRelease010, factDocumentFixture } from "../../support/fact-documents";
 import { manifest } from "../../support/profiles";
 
@@ -125,6 +125,28 @@ describe("The Profile view", () => {
       ["start", { kind: "value", cell: { text: "None" }, state: null }],
       ["test", { kind: "value", cell: { text: "Test" }, state: null }],
     ]);
+  });
+
+  it("shows facts a reader couldn't tell apart as one row that counts them and keeps every fact and location", () => {
+    const orders = documents.find(([name]) => name === "orders")![1];
+    const evidence = Object.keys(orders.evidence ?? {}).slice(0, 3);
+    const stub = (key: string, ref: string) => ({ key, state: "observed", value: { kind: "global_stub", global: "fetch" }, evidence: [ref], rule: "test-substitutes.global-stub" });
+    const search = orders.categories.test_substitutes?.search ?? { complete: true, rules: [], surface: [], skipped: [] };
+    const document = { ...orders, categories: { ...orders.categories, test_substitutes: { state: "observed", search, facts: [stub("a.test.ts", evidence[0]!), stub("b.test.ts", evidence[1]!), stub("c.test.ts", evidence[2]!)] } } } as FactDocument;
+    const block = viewOf(document).groups.flatMap((group) => group.blocks).find((candidate) => candidate.kind === "category" && candidate.heading.definition.id === "test_substitutes");
+    expect(block?.kind === "category" && block.rows).toHaveLength(1);
+    const row = block?.kind === "category" ? block.rows[0]! : null;
+    expect(row?.occurrences).toBe(3);
+    expect(row?.held.map((held) => held.fact.key)).toEqual(["a.test.ts", "b.test.ts", "c.test.ts"]);
+    expect(row?.evidence).toEqual(evidence);
+  });
+
+  it("pages a shared table in manifest order, each group keeping its full count", () => {
+    const row = (name: string) => ({ id: name, name, manifest: null, field: null, cells: [], held: [], evidence: [] });
+    const block: SharedBlock = { kind: "scripts", sources: [], columns: [], groups: [{ manifest: "a", rows: ["1", "2", "3"].map(row) }, { manifest: "b", rows: ["4", "5"].map(row) }] };
+    expect(pageOfGroups(block, 1, 2).groups.map((group) => [group.manifest, group.rows.map((entry) => entry.name), group.total])).toEqual([["a", ["1", "2"], 3]]);
+    expect(pageOfGroups(block, 2, 2).groups.map((group) => [group.manifest, group.rows.map((entry) => entry.name), group.total])).toEqual([["a", ["3"], 3], ["b", ["4"], 2]]);
+    expect(pageOfGroups(block, 3, 2).groups.map((group) => [group.manifest, group.rows.map((entry) => entry.name), group.total])).toEqual([["b", ["5"], 2]]);
   });
 
   it("summarizes each Service Dependency by its endpoint, client, and first call site", () => {

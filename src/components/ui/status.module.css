@@ -13,7 +13,7 @@
     &[data-tone="success"] { --_tone: var(--color-success); }
     &[data-tone="warning"] { --_tone: var(--color-warning); }
     &[data-tone="error"] { --_tone: var(--color-error); }
-    &[data-tone="progress"] { --_tone: var(--color-progress); }
+    &[data-tone="progress"], &[data-tone="info"] { --_tone: var(--color-progress); }
   }
 
   .dot {
@@ -27,6 +27,7 @@
     &[data-indicator="ring"] { background: transparent; box-shadow: inset 0 0 0 2px var(--_tone); }
     &[data-indicator="dash"] { height: 2px; }
   }
+  /* Only work under way moves; a settled state never does. */
   .status[data-tone="progress"] .dot { animation: pulse var(--duration-spin) var(--ease-standard) infinite alternate; }
 
   /* Severity: a small bar in the tone, so it reads differently from a status dot. */

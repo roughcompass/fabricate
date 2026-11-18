@@ -14,6 +14,9 @@ import type { Cell } from "@/lib/profiles/layouts";
 import type { CategoryBlock, CompactBlock, Heading, HeldFact, Row, SharedBlock, SharedCell, SharedRow } from "@/lib/profiles/view";
 import styles from "./profile.module.css";
 
+/** How many fact keys a merged row's evidence panel names before counting the rest. */
+const MERGED_KEYS = 20;
+
 /** What a cell needs to link evidence: the records, and the Run they belong to. */
 export interface EvidenceContext {
   records: JsonObject;
@@ -22,8 +25,8 @@ export interface EvidenceContext {
   labels: ReadonlyMap<string, string>;
 }
 
-/** A category with facts: its heading, its search and rule, and its facts in its own columns. */
-export function CategoryTable({ block, context }: { block: CategoryBlock; context: EvidenceContext }) {
+/** A category with facts: its heading, its search and rule, and its facts in its own columns, a page at a time when there are many. */
+export function CategoryTable({ block, context, pagination }: { block: CategoryBlock; context: EvidenceContext; pagination?: React.ReactNode }) {
   const { definition } = block.heading;
   const span = block.columns.length + (block.stepsColumn ? 1 : 0);
   return (
@@ -48,13 +51,17 @@ export function CategoryTable({ block, context }: { block: CategoryBlock; contex
               {block.stepsColumn && row.cells.kind === "cells" && (
                 <Td label={block.stepsColumn}>
                   {row.steps.length ? (
-                    <ul className={styles.steps}>
-                      {row.steps.map((step, index) => (
-                        <li key={index}>
-                          <CellView cell={step} />
-                        </li>
-                      ))}
-                    </ul>
+                    // The count and what the steps check, with the steps themselves one click away.
+                    <Disclosure variant="plain" summary={[countLabel(row.steps.length, "step"), row.checks.length ? `checks ${row.checks.join(", ").toLowerCase()}` : null].filter(Boolean).join(" · ")}>
+                      <ol className={styles.steps}>
+                        {row.steps.map((step, index) => (
+                          <li key={index} className={styles.step}>
+                            <span className={styles.stepCommand}>{step.text}</span>
+                            {step.secondary && <Secondary>{step.secondary}</Secondary>}
+                          </li>
+                        ))}
+                      </ol>
+                    </Disclosure>
                   ) : (
                     <span className={styles.muted}>None</span>
                   )}
@@ -67,6 +74,7 @@ export function CategoryTable({ block, context }: { block: CategoryBlock; contex
           ))}
         </Table>
       </Panel>
+      {pagination}
     </Section>
   );
 }
@@ -103,6 +111,7 @@ function RowCellsView({ row, columns, span, context }: { row: Row; columns: read
           {cell ? <CellView cell={cell} /> : null}
           {index === 0 && state}
           {index === 0 && reasoning}
+          {index === 0 && row.occurrences > 1 && <Secondary>{`${row.occurrences.toLocaleString("en-US")} occurrences`}</Secondary>}
         </Td>
       ))}
     </>
@@ -127,6 +136,8 @@ export function CellView({ cell }: { cell: Cell }) {
  */
 function RowDetails({ title, held, evidence, context, reasoning = true }: { title: string; held: readonly HeldFact[]; evidence: readonly string[]; context: EvidenceContext; reasoning?: boolean }) {
   const id = `evidence-${useId().replace(/[^A-Za-z0-9_-]/g, "")}`;
+  // A row that stands for several facts of one category with the same value lists their locations once, then the facts' keys and the value they share.
+  const repeated = held.length > 1 && held.every((entry) => entry.category === held[0]!.category);
   return (
     <>
       <button type="button" popoverTarget={id} className={styles.evidenceTrigger}>
@@ -139,7 +150,19 @@ function RowDetails({ title, held, evidence, context, reasoning = true }: { titl
             <Icon name="x" size={14} />
           </button>
         </div>
-        {held.map((entry) => (
+        {repeated ? (
+          <div className={styles.held}>
+            <EvidenceList ids={[...evidence]} records={context.records} assessmentId={context.assessmentId} source={false} />
+            <span className={styles.secondary}>
+              {`${countLabel(held.length, "fact")} with this value: `}
+              <span className={styles.mono}>{held.slice(0, MERGED_KEYS).map((entry) => entry.fact.key).join(", ")}</span>
+              {held.length > MERGED_KEYS && `, and ${held.length - MERGED_KEYS} more`}
+            </span>
+            <pre className={styles.raw} aria-label={`Raw value of ${held[0]!.fact.key}`}>
+              {JSON.stringify(held[0]!.fact.value, null, 2)}
+            </pre>
+          </div>
+        ) : held.map((entry) => (
           <div key={`${entry.category}:${entry.fact.key}`} className={styles.held}>
             {held.length > 1 && <span className={styles.heldLabel}>{context.labels.get(entry.category) ?? entry.category}</span>}
             <EvidenceList ids={entry.fact.evidence} records={context.records} assessmentId={context.assessmentId} source={false} />
@@ -204,71 +227,105 @@ const SHARED_TITLES: Record<SharedBlock["kind"], { title: string; description: s
   scripts: { title: "Package scripts", description: "Scripts declared in package manifests, with what each one checks (never run)" },
 };
 
-/** A table that several categories share, with one heading line per source category, each with its own anchor, state, search, and rule. */
-export function SharedTable({ block, context, filters }: { block: SharedBlock; context: EvidenceContext; filters?: React.ReactNode }) {
-  const [first, ...others] = block.sources;
+/**
+ * A table that several categories share. Its columns carry their categories'
+ * states, and the first column of each further category holds that
+ * category's anchor. A category with no facts adds no column of identical
+ * placeholders: one line above the table says what its search found. How each
+ * category was searched sits in one disclosure, since the states say whether
+ * to look.
+ */
+export function SharedTable({ block, context, filters, pagination }: { block: SharedBlock; context: EvidenceContext; filters?: React.ReactNode; pagination?: React.ReactNode }) {
+  const [first] = block.sources;
   const { title, description } = SHARED_TITLES[block.kind];
   const rows = block.groups.reduce((sum, group) => sum + group.rows.length, 0);
+  const sourceOf = (category: string | null) => block.sources.find((source) => source.definition.id === category);
+  const shown = block.columns.map((column, index) => ({ column, index })).filter(({ column }) => !column.category || sourceOf(column.category)!.facts > 0);
+  const empty = block.sources.filter((source) => source.facts === 0);
+  // The first source's anchor is the section; each other source's is its first column, or its line when it has none.
+  const anchored = new Set<string>([first!.definition.id]);
+  const anchorOf = (category: string | null) => {
+    if (!category || anchored.has(category)) return undefined;
+    anchored.add(category);
+    return category;
+  };
   return (
     <Section id={first!.definition.id} level={3} title={title} description={description}>
-      <ul className={styles.sources} aria-label={`Categories in ${title}`}>
-        {[first!, ...others].map((source, index) => (
-          <li key={source.definition.id} id={index === 0 ? undefined : source.definition.id}>
-            <span className={styles.sourceLabel}>{source.definition.label}</span>
-            <Status state={source.state} size="sm" />
-            <SearchLine heading={source} />
-          </li>
-        ))}
-      </ul>
-      {filters}
-      <Panel flush>
-        <Table
-          label={title}
-          head={
-            <>
-              {block.columns.map((column) => (
-                <Th key={column.label}>
-                  <span className={styles.header}>
-                    {column.label}
-                    {column.category && <Status state={block.sources.find((source) => source.definition.id === column.category)!.state} size="sm" />}
-                  </span>
-                </Th>
-              ))}
-              <Th>Evidence</Th>
-            </>
-          }
-        >
-          {block.groups.map((group) => (
-            <SharedGroup key={group.manifest ?? ""} kind={block.kind} manifest={group.manifest} rows={group.rows} columns={block.columns.map((column) => column.label)} context={context} />
+      {empty.length > 0 && (
+        <ul className={styles.notes} aria-label={`Not shown in ${title}`}>
+          {empty.map((source) => (
+            <li key={source.definition.id} id={anchorOf(source.definition.id)}>
+              <Status state={source.state} size="sm" />
+              <span>
+                <span className={styles.sourceLabel}>{`${source.definition.label} aren't shown.`}</span> <span className={styles.attentionReason}>{source.reason}</span>
+              </span>
+            </li>
           ))}
-          {rows === 0 && (
-            <tr>
-              <Td span={block.columns.length + 1}>
-                <span className={styles.muted}>No row matches the filters.</span>
-              </Td>
-            </tr>
-          )}
-        </Table>
-      </Panel>
+        </ul>
+      )}
+      <Disclosure variant="plain" summary="How these were found">
+        <ul className={styles.sources} aria-label={`Categories in ${title}`}>
+          {block.sources.map((source) => (
+            <li key={source.definition.id}>
+              <span className={styles.sourceLabel}>{source.definition.label}</span>
+              <Status state={source.state} size="sm" />
+              <SearchLine heading={source} />
+            </li>
+          ))}
+        </ul>
+      </Disclosure>
+      {filters}
+      <div className={styles.anchoredTable}>
+        <Panel flush>
+          <Table
+            label={title}
+            head={
+              <>
+                {shown.map(({ column }) => (
+                  <Th key={column.label} id={anchorOf(column.category)}>
+                    <span className={styles.header}>
+                      {column.label}
+                      {column.category && <Status state={sourceOf(column.category)!.state} size="sm" />}
+                    </span>
+                  </Th>
+                ))}
+                <Th>Evidence</Th>
+              </>
+            }
+          >
+            {block.groups.map((group) => (
+              <SharedGroup key={group.manifest ?? ""} kind={block.kind} manifest={group.manifest} total={group.total} rows={group.rows} columns={shown.map(({ column, index }) => ({ label: column.label, index }))} context={context} />
+            ))}
+            {rows === 0 && (
+              <tr>
+                <Td span={shown.length + 1}>
+                  <span className={styles.muted}>No row matches the filters.</span>
+                </Td>
+              </tr>
+            )}
+          </Table>
+        </Panel>
+      </div>
+      {pagination}
     </Section>
   );
 }
 
-function SharedGroup({ kind, manifest, rows, columns, context }: { kind: SharedBlock["kind"]; manifest: string | null; rows: readonly SharedRow[]; columns: readonly string[]; context: EvidenceContext }) {
+function SharedGroup({ kind, manifest, total, rows, columns, context }: { kind: SharedBlock["kind"]; manifest: string | null; total?: number; rows: readonly SharedRow[]; columns: readonly { label: string; index: number }[]; context: EvidenceContext }) {
   if (!rows.length) return null;
   const label = manifest ?? (kind === "dependencies" ? "Other packages consumed" : "Other declared commands");
   return (
     <>
       <tr className={styles.groupRow}>
         <Td span={columns.length + 1}>
-          <span className={manifest ? styles.mono : undefined}>{label}</span> <span className={styles.count}>{`(${rows.length})`}</span>
+          <span className={manifest ? styles.mono : undefined}>{label}</span> <span className={styles.count}>{`(${total ?? rows.length})`}</span>
         </Td>
       </tr>
       {rows.map((row) => (
         <tr key={row.id}>
-          {row.cells.map((cell, index) => (
-            <Td key={columns[index]} label={columns[index]}>
-              <SharedCellView cell={cell} />
+          {columns.map(({ label: column, index }) => (
+            <Td key={column} label={column}>
+              <SharedCellView cell={row.cells[index]!} />
             </Td>
           ))}
           <Td label="Evidence">

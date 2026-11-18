@@ -12,7 +12,7 @@ import styles from "./profile.module.css";
  */
 export function ProfileOverview({ rows }: { rows: readonly OverviewRow[] }) {
   return (
-    <Section title="Overview">
+    <Section id="overview" title="Overview">
       <DescriptionList surface items={rows.map((row) => [row.label, <OverviewValues key={row.label} row={row} />])} />
     </Section>
   );
@@ -21,7 +21,8 @@ export function ProfileOverview({ rows }: { rows: readonly OverviewRow[] }) {
 function OverviewValues({ row }: { row: OverviewRow }) {
   const href = row.category ? `#${row.category}` : undefined;
   return (
-    <span className={styles.values}>
+    <span className={row.stacked ? `${styles.values} ${styles.stacked}` : styles.values}>
+      {row.summary && <span className={styles.summary}>{row.summary}</span>}
       {row.values.map((value, index) => (
         <Linked key={index} href={href}>
           <Value value={value} />
@@ -29,7 +30,7 @@ function OverviewValues({ row }: { row: OverviewRow }) {
       ))}
       {row.more > 0 && (
         <Linked href={href}>
-          <span className={styles.secondary}>{`+${row.more} more`}</span>
+          <span className={styles.more}>{`+${row.more} more`}</span>
         </Linked>
       )}
       {row.placeholders.map((placeholder, index) => (

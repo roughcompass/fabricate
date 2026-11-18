@@ -29,9 +29,10 @@ export function Table({ label, head, children, scroll = false }: TableProps) {
 
 type Align = "numeric" | "actions";
 
-export function Th({ children, align, hidden }: { children?: React.ReactNode; align?: Align; hidden?: boolean }) {
+/** A column header. +id+ makes it a link target, such as the anchor of the category a column comes from. */
+export function Th({ children, align, hidden, id }: { children?: React.ReactNode; align?: Align; hidden?: boolean; id?: string }) {
   return (
-    <th scope="col" className={align ? styles[align] : undefined}>
+    <th scope="col" id={id} className={align ? styles[align] : undefined}>
       {hidden ? <span className="visually-hidden">{children}</span> : children}
     </th>
   );

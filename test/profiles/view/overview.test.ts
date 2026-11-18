@@ -69,4 +69,20 @@ describe("The Profile overview", () => {
     expect(counts).toEqual([...counts].sort((a, b) => b - a));
     expect(languages.more).toBeGreaterThanOrEqual(0);
   });
+
+  it("lists packages one per line under their counts, the first five and how many more", async () => {
+    const files: Record<string, string> = { "package.json": manifest({ name: "fleet", private: true, workspaces: ["packages/*"] }) };
+    for (const name of ["a", "b", "c", "d", "e", "f"]) files[`packages/${name}/package.json`] = manifest({ name: `@fleet/${name}`, version: "1.0.0" });
+    const packages = row(overview(await analyzedFacts(files)), "Packages");
+    expect(packages.stacked).toBe(true);
+    expect(packages.summary).toMatch(/^7 packages · .*1 private$/);
+    expect(packages.values).toHaveLength(5);
+    expect(packages.more).toBe(2);
+    expect(row(overview(storefront), "Languages").stacked).toBe(false);
+  });
+
+  it("names a framework without a catalog or workspace reference, which isn't a version", async () => {
+    const document = await analyzedFacts({ "package.json": manifest({ name: "shop", dependencies: { react: "catalog:", "react-dom": "catalog:" } }) });
+    expect(texts(overview(document), "Framework")).toEqual(["React"]);
+  });
 });
