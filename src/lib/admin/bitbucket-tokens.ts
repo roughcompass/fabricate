@@ -14,6 +14,7 @@ import { bitbucketTokens } from "@/lib/db/schema";
 /** A saved token as pages may show it. */
 export interface BitbucketTokenSummary {
   publicId: string;
+  /** The token's owner, a person or a team. */
   name: string;
   serverUrl: string;
   /** The token's last four characters, so an operator can tell tokens apart. */
@@ -67,13 +68,13 @@ export function findBitbucketToken(db: Executor, publicId: string): BitbucketTok
   return db.select(summary).from(bitbucketTokens).where(eq(bitbucketTokens.publicId, publicId)).get();
 }
 
-/** Saves a token after checking every field, reporting each problem; a token's name is unique on its server, in any case. */
+/** Saves a token after checking every field, reporting each problem; an owner has one token per server, in any case. */
 export function addBitbucketToken(db: Executor, form: BitbucketTokenForm): BitbucketTokenSummary {
   return immediate(db, (tx) => {
     const issues = new IssueCollector();
     const name = form.name.trim();
     const token = form.token.trim();
-    if (!name) issues.add("name", "Enter a name, such as the project or team the token is for");
+    if (!name) issues.add("name", "Enter the token's owner, such as a person or a team");
     else if (name.length > NAME_LIMIT) issues.add("name", `Use at most ${NAME_LIMIT} characters`);
     const server = serverBaseUrl(form.serverUrl);
     if ("error" in server) issues.add("serverUrl", server.error);
@@ -88,13 +89,13 @@ export function addBitbucketToken(db: Executor, form: BitbucketTokenForm): Bitbu
       .from(bitbucketTokens)
       .where(sql`${bitbucketTokens.serverUrl} = ${serverUrl} AND lower(${bitbucketTokens.name}) = lower(${name})`)
       .get();
-    if (taken) throw new ValidationError([{ field: "name", message: `A token named ${name} is already saved for this server` }]);
+    if (taken) throw new ValidationError([{ field: "name", message: `${name} already has a token saved for this server` }]);
 
     const now = new Date();
     try {
       return tx.insert(bitbucketTokens).values({ publicId: generatePublicId("bbt"), name, serverUrl, token, tokenHint: token.slice(-4), createdAt: now, updatedAt: now }).returning(summary).get();
     } catch (error) {
-      if (isUniqueViolation(error)) throw new ValidationError([{ field: "name", message: `A token named ${name} is already saved for this server` }]);
+      if (isUniqueViolation(error)) throw new ValidationError([{ field: "name", message: `${name} already has a token saved for this server` }]);
       throw error;
     }
   });

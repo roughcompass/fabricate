@@ -11,13 +11,15 @@ test("saves a Bitbucket Server token, shows only its last four characters, and d
   await expect(page.getByText("No Bitbucket tokens yet")).toBeVisible();
 
   await page.getByRole("link", { name: "Add token" }).first().click();
+  // The owner comes first.
+  await expect(page.locator("form input:not([type=hidden])").first()).toHaveAccessibleName(/Owner/);
+  await page.getByLabel("Owner").fill("Platform team");
   await page.getByLabel("Server").fill("http://bitbucket.example.com");
-  await page.getByLabel("Name").fill("Platform team");
   await page.getByLabel("Token").fill(TOKEN);
   await page.getByRole("button", { name: "Add token" }).click();
-  // A refused submission keeps the server and name, never the token.
+  // A refused submission keeps the owner and server, never the token.
   await expect(page.getByText("The server must use https://")).toBeVisible();
-  await expect(page.getByLabel("Name")).toHaveValue("Platform team");
+  await expect(page.getByLabel("Owner")).toHaveValue("Platform team");
   await expect(page.getByLabel("Token")).toHaveValue("");
 
   await page.getByLabel("Server").fill("https://bitbucket.example.com/bitbucket/");
@@ -27,6 +29,7 @@ test("saves a Bitbucket Server token, shows only its last four characters, and d
   await expect(toasts(page).getByText("Platform team was saved.")).toBeVisible();
   const row = page.getByRole("row").filter({ hasText: "Platform team" });
   await expect(row).toContainText("https://bitbucket.example.com/bitbucket");
+  await expect(page.getByRole("columnheader").first()).toHaveText("Owner");
   await expect(row).toContainText("••••bm9w");
   expect(await page.content()).not.toContain(TOKEN);
 

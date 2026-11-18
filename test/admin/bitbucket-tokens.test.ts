@@ -41,7 +41,7 @@ describe("Bitbucket Server tokens", () => {
 
   it("reports every problem with a submission at once", () => {
     expect(issuesOf(() => addBitbucketToken(db, form({ name: " ", serverUrl: "ftp://bitbucket.example.com", token: "two words" })))).toEqual({
-      name: expect.stringMatching(/Enter a name/),
+      name: expect.stringMatching(/Enter the token's owner/),
       serverUrl: expect.stringMatching(/https/),
       token: expect.stringMatching(/no spaces/),
     });
@@ -49,9 +49,9 @@ describe("Bitbucket Server tokens", () => {
     expect(listBitbucketTokens(db)).toEqual([]);
   });
 
-  it("keeps one token per name on a server, in any case, and allows the name on another server", () => {
+  it("keeps one token per owner on a server, in any case, and allows the owner a token on another server", () => {
     addBitbucketToken(db, form());
-    expect(issuesOf(() => addBitbucketToken(db, form({ name: "PLATFORM TEAM", serverUrl: "https://bitbucket.example.com/bitbucket" })))).toEqual({ name: expect.stringMatching(/already saved for this server/) });
+    expect(issuesOf(() => addBitbucketToken(db, form({ name: "PLATFORM TEAM", serverUrl: "https://bitbucket.example.com/bitbucket" })))).toEqual({ name: "PLATFORM TEAM already has a token saved for this server" });
     addBitbucketToken(db, form({ serverUrl: "https://git.example.org" }));
     expect(listBitbucketTokens(db).map((token) => token.serverUrl)).toEqual(["https://bitbucket.example.com/bitbucket", "https://git.example.org"]);
   });

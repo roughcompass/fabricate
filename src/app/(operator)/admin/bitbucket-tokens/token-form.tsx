@@ -10,9 +10,9 @@ import type { TokenFormState } from "./form-state";
 import { BITBUCKET_TOKENS_HREF } from "./paths";
 
 /**
- * The Add token form: the server, a name to tell tokens apart, and the token
- * in a password field the browser won't offer to remember. A refused
- * submission keeps the server and name, never the token.
+ * The Add token form: the token's owner first, then its server, and the
+ * token in a password field the browser won't offer to remember. A refused
+ * submission keeps the owner and server, never the token.
  */
 export function TokenForm({ action }: { action: (previous: TokenFormState, formData: FormData) => Promise<TokenFormState> }) {
   const [state, formAction] = useActionState(action, { values: { name: "", serverUrl: "" }, errors: {} });
@@ -29,6 +29,7 @@ export function TokenForm({ action }: { action: (previous: TokenFormState, formD
       >
         <div className={formStyles.form}>
           {state.errors.base && <FormAlert id="token-form-alert">{state.errors.base.join(" ")}</FormAlert>}
+          <TextInput id="token-owner" name="name" label="Owner" defaultValue={state.values.name} errors={state.errors.name} description="Who the token belongs to, such as a person or a team. An owner has one token per server." required maxLength={100} />
           <TextInput
             id="token-server-url"
             name="serverUrl"
@@ -41,7 +42,6 @@ export function TokenForm({ action }: { action: (previous: TokenFormState, formD
             description="The Bitbucket Server or Data Center address, with its context path if it has one."
             required
           />
-          <TextInput id="token-name" name="name" label="Name" defaultValue={state.values.name} errors={state.errors.name} description="What the token is for, such as a project or team, to tell tokens for the same server apart." required maxLength={100} />
           <TextInput
             id="token-value"
             name="token"

@@ -4,7 +4,8 @@ import { createdAt, id, publicId, updatedAt } from "./columns";
 
 /**
  * A Bitbucket Server access token an operator saved under Admin, for a
- * server and a name unique on that server. The token itself is read only
+ * server and an owner, a person or a team, with one token per owner on each
+ * server. `name` holds the owner. The token itself is read only
  * where it's used; every page sees its last four characters, `token_hint`.
  * It's stored as given, as the rest of this proof of concept stores its
  * settings, so the database file is as sensitive as the token.

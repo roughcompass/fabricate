@@ -15,7 +15,7 @@ import { NEW_BITBUCKET_TOKEN_HREF } from "./paths";
 
 export const metadata: Metadata = { title: "Bitbucket tokens" };
 
-/** Admin: the Bitbucket Server access tokens DE FabLab may use, each shown by its server, name, and last four characters. */
+/** Admin: the Bitbucket Server access tokens DE FabLab may use, each shown by its owner, server, and last four characters. */
 export default async function BitbucketTokensPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
   const db = getDb();
@@ -40,7 +40,7 @@ export default async function BitbucketTokensPage({ searchParams }: { searchPara
             label="Bitbucket tokens"
             head={
               <>
-                <Th>Name</Th>
+                <Th>Owner</Th>
                 <Th>Server</Th>
                 <Th>Token</Th>
                 <Th>Added</Th>
@@ -52,7 +52,7 @@ export default async function BitbucketTokensPage({ searchParams }: { searchPara
           >
             {tokens.map((token) => (
               <tr key={token.publicId}>
-                <Td label="Name">
+                <Td label="Owner">
                   <Primary>{token.name}</Primary>
                 </Td>
                 <Td label="Server">
