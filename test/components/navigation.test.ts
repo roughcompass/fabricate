@@ -1,12 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { HOME, NO_OPTIONAL_AREAS, type NavFlags, RUNTIME_CONFIGURATION, SALT_PATTERNS, homeLink, locate, menuItems, visibleGroups } from "@/components/shell/navigation";
-import { runtimeMenu } from "@/components/shell/runtime-menu";
+import { HOME, NO_OPTIONAL_AREAS, type NavFlags, SALT_PATTERNS, homeLink, locate, menuItems, visibleGroups } from "@/components/shell/navigation";
 
 // operator-interface/page-patterns spec: the primary menu groups areas under
-// headings and dividers, and Runtime Configuration alone drills into a
-// sub-menu (update-portal-management-journey design decision 1).
+// headings and dividers.
 
 const OPERATOR = path.resolve("src/app/(operator)");
 
@@ -21,7 +19,7 @@ function routes(directory = OPERATOR): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(directory, entry.name);
     if (entry.isDirectory()) return routes(full);
-    // Route groups such as (experience) aren't part of the address.
+    // Route groups such as (operator) aren't part of the address.
     return entry.name === "page.tsx" ? [`/${path.relative(OPERATOR, directory).split(path.sep).filter((segment) => !/^\(.*\)$/.test(segment)).join("/")}`.replace(/\/$/, "") || "/"] : [];
   });
 }
@@ -60,15 +58,8 @@ const EXPECTED: Record<string, string | null> = {
   "/standards/[standardId]/draft": "standards",
   "/standards/[standardId]/publish": "standards",
   "/standards/[standardId]/releases/[releaseId]": "standards",
-  "/applications": "applications",
-  "/applications/[applicationId]": "applications",
-  "/applications/[applicationId]/edit": "applications",
-  "/applications/new": "applications",
-  "/applications/new/templates": "applications",
-  "/applications/new/create": "applications",
   "/templates": "salt-patterns",
   "/templates/[templateSlug]": "salt-patterns",
-  "/templates/[templateSlug]/deploy": "salt-patterns",
   "/templates/[templateSlug]/preview": "salt-patterns",
   "/prototypes": "prototypes",
   "/prototypes/new": "prototypes",
@@ -86,20 +77,6 @@ const EXPECTED: Record<string, string | null> = {
   "/p/[token]": null,
   "/design-system": null,
   "/design-system/error-demo": null,
-  "/portals": "runtime-configuration",
-  "/portals/new": "runtime-configuration",
-  "/portals/[portalId]": "runtime-configuration",
-  "/portals/[portalId]/edit": "runtime-configuration",
-  "/portals/[portalId]/editor": "runtime-configuration",
-  "/portals/[portalId]/editor/frame-zones": "runtime-configuration",
-  "/portals/[portalId]/editor/frame-overlays": "runtime-configuration",
-  "/portals/[portalId]/editor/capabilities": "runtime-configuration",
-  "/portals/[portalId]/editor/change-history": "runtime-configuration",
-  "/portals/[portalId]/editor/messages": "runtime-configuration",
-  "/portals/[portalId]/editor/menu": "runtime-configuration",
-  "/portals/[portalId]/configuration": "runtime-configuration",
-  "/portals/[portalId]/configuration/[section]": "runtime-configuration",
-  "/runtime-configuration": "runtime-configuration",
 };
 
 /** A concrete path for a route template: "[standardId]" becomes "standardid-example". */
@@ -126,14 +103,13 @@ describe("primary menu", () => {
     for (const [route, expected] of Object.entries(EXPECTED)) expect(current(sample(route), ALL), route).toEqual(expected);
   });
 
-  it("lists Home, Applications, and Runtime Configuration, then the Assessments and Salt Patterns & Prototypes groups under their headings (Full menu)", () => {
+  it("lists Home, then the Assessments and Salt Patterns & Prototypes groups under their headings (Full menu)", () => {
     expect(shape(ALL)).toEqual([
-      [null, ["Home", "Applications", "Runtime Configuration"]],
+      [null, ["Home"]],
       ["Assessments", ["All Assessments", "Repositories", "Standards"]],
       ["Salt Patterns & Prototypes", ["Salt Patterns", "Prototypes", "Personas", "Lessons", "Page shell"]],
     ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
-    expect(RUNTIME_CONFIGURATION).toMatchObject({ href: "/runtime-configuration", icon: "settings" });
     for (const item of menuItems(visibleGroups(ALL))) expect(item.icon, item.id).toBeTruthy();
   });
 
@@ -143,7 +119,7 @@ describe("primary menu", () => {
 
   it("has no Salt Patterns & Prototypes group while the demo and Prototypes are disabled, and leaves their pages outside the menu (Demo disabled)", () => {
     expect(shape(BASE)).toEqual([
-      [null, ["Home", "Applications", "Runtime Configuration"]],
+      [null, ["Home"]],
       ["Assessments", ["All Assessments", "Repositories", "Standards"]],
     ]);
     for (const route of ["/templates", "/templates/payments-hub/preview", "/prototypes", "/prototypes/personas"]) expect(locate(route, BASE), route).toBeNull();
@@ -153,9 +129,9 @@ describe("primary menu", () => {
     expect(shape(PROTOTYPES)[2]).toEqual(["Salt Patterns & Prototypes", ["Prototypes", "Personas", "Lessons", "Page shell"]]);
   });
 
-  it("shows only Prototypes' pages in the hosted profile, without Home, Applications, or Runtime Configuration (Hosted profile)", () => {
+  it("shows only Prototypes' pages in the hosted profile, without Home (Hosted profile)", () => {
     expect(shape(HOSTED)).toEqual([["Salt Patterns & Prototypes", ["Prototypes", "Personas", "Lessons", "Page shell"]]]);
-    for (const route of ["/", "/applications", "/portals/ptl_0123456789abcdef", "/assessments"]) expect(locate(route, HOSTED), route).toBeNull();
+    for (const route of ["/", "/assessments", "/repositories"]) expect(locate(route, HOSTED), route).toBeNull();
     expect(visibleGroups({ ...HOSTED, prototypes: false })).toEqual([]);
   });
 
@@ -167,43 +143,13 @@ describe("primary menu", () => {
     expect(current("/prototypes/new", ALL)).toBe("prototypes");
   });
 
-  it("marks Runtime Configuration on the Portals page and every page of a Portal", () => {
-    for (const path of ["/portals", "/portals/new", "/portals/ptl_0123456789abcdef", "/portals/ptl_0123456789abcdef/editor/menu", "/portals/ptl_0123456789abcdef/configuration/favicon", "/runtime-configuration"]) expect(current(path, BASE), path).toBe("runtime-configuration");
+  it("marks nothing on the removed Applications and Portals addresses", () => {
+    for (const path of ["/applications", "/portals", "/portals/ptl_0123456789abcdef/editor/frame-zones", "/runtime-configuration"]) expect(current(path, ALL), path).toBeNull();
   });
 
   it("leads links to Home while Assessments is shown, and to the menu's first page otherwise (Profile without Assessments)", () => {
     for (const flags of [BASE, DEMO, PROTOTYPES, ALL]) expect(homeLink(visibleGroups(flags))).toEqual({ href: "/", label: "Home" });
     expect(homeLink(visibleGroups(HOSTED))).toEqual({ href: "/prototypes", label: "Prototypes" });
     expect(homeLink([{ id: "build", heading: "Salt Patterns & Prototypes", items: [SALT_PATTERNS] }])).toEqual({ href: "/templates", label: "Salt Patterns" });
-  });
-});
-
-describe("Runtime Configuration sub-menu", () => {
-  const portal = "ptl_0123456789abcdef";
-  const named = (id: string) => (id === portal ? "Access" : null);
-  const labels = (pathname: string) => runtimeMenu(pathname, named).groups.map((group) => [group.heading ?? null, group.items.map((item) => item.label)]);
-
-  it("lists All Portals, then the Portal's Experience Editor and Portal page, then the sections under their headings (Items in order)", () => {
-    expect(labels(`/portals/${portal}/editor/frame-zones`)).toEqual([
-      [null, ["All Portals"]],
-      ["Access", ["Experience Editor", "Portal"]],
-      ["Identity", ["Brand & identity", "Favicon", "Design Theme"]],
-      ["Policies", ["Copyright Information"]],
-      ["Routing & sessions", ["Routing configuration", "Default Session Language", "Session Policy"]],
-      ["Runtime", ["Runtime modules", "Crash Error"]],
-    ]);
-  });
-
-  it("marks the page's own item (Deep editor page)", () => {
-    expect(runtimeMenu(`/portals/${portal}/editor/messages`).current).toBe("editor");
-    expect(runtimeMenu(`/portals/${portal}/editor/change-history`).current).toBe("editor");
-    expect(runtimeMenu(`/portals/${portal}`).current).toBe("portal");
-    expect(runtimeMenu(`/portals/${portal}/edit`).current).toBe("portal");
-    expect(runtimeMenu(`/portals/${portal}/configuration/favicon`).current).toBe("favicon");
-  });
-
-  it("lists only All Portals, marked current, on the Portals page (All Portals current)", () => {
-    expect(labels("/portals")).toEqual([[null, ["All Portals"]]]);
-    expect(runtimeMenu("/portals").current).toBe("all-portals");
   });
 });

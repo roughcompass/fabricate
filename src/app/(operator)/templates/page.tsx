@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Form from "next/form";
 import { ButtonLink } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel } from "@/components/ui/panel";
 import { FilterRail } from "@/components/ui/filter-rail";
 import { MediaCard } from "@/components/ui/media-card";
+import { OutcomeToast, param } from "@/components/ui/outcome-toast";
 import { Page, PageHeader } from "@/components/ui/page";
 import { SearchField } from "@/components/ui/search-field";
 import { BRANDS, BRAND_IDS, ORIGIN_IDS, PROVIDERS, PROVIDER_IDS } from "@/lib/demo/catalog";
@@ -16,6 +18,8 @@ import { INTENT_LENGTH } from "@/lib/prototypes/limits";
 import { prototypesEnabled } from "@/lib/prototypes/guard";
 import { RUNTIME } from "@/lib/prototypes/render";
 import { upgradeReportFor } from "@/lib/prototypes/upgrade-report";
+import { resetDemo } from "./actions";
+import { demoOutcome } from "./outcomes";
 import { TemplateBadges } from "./template-badges";
 import styles from "./templates.module.css";
 
@@ -43,11 +47,12 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
       <PageHeader
         title="Salt Patterns"
         description="Jumpstart your app development process with pre-built solutions from DE Web and our community."
-        primaryAction={
-          <ButtonLink href="/applications/new" variant="primary" icon="plus">
-            Add application
-          </ButtonLink>
+        extraActions={
+          <ConfirmDialog action={resetDemo} trigger={{ label: "Reset demo", icon: "undo" }} menu={{ label: "More actions" }} title="Reset the demo?" confirmLabel="Reset demo" tone="danger">
+            {"Your comments, share links, and session profiles are removed. The templates and other visitors' work are not affected."}
+          </ConfirmDialog>
         }
+        alerts={<OutcomeToast outcome={demoOutcome(param(params, "notice"))} />}
       />
 
       <Form key={query.search} action="/templates" scroll={false} className={styles.search} role="search" aria-label="Search templates">

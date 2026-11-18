@@ -1,13 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { generatePublicId } from "@/lib/db/ids";
-import { demoApplications, demoShares, demoThreads, demoWorkspaces } from "@/lib/db/schema";
+import { demoShares, demoThreads, demoWorkspaces } from "@/lib/db/schema";
 import { newWorkspaceKey } from "@/lib/demo/workspace-key";
 import {
-  APPLICATION_LIMIT,
-  DemoLimitError,
-  applicationCount,
-  assertApplicationCapacity,
   ensureWorkspace,
   findWorkspace,
   keyDigest,
@@ -32,18 +28,13 @@ describe("demo workspaces", () => {
   });
   afterEach(() => db.$client.close());
 
-  const addApplication = (workspaceId: number, createdAt = NOW) =>
-    db
-      .insert(demoApplications)
-      .values({ publicId: generatePublicId("app"), workspaceId, templateSlug: "market-watch", name: "Market watch", environment: "sandbox", createdAt })
-      .returning()
-      .get();
   const addReferenceThread = (workspaceId: number) =>
     db
       .insert(demoThreads)
       .values({ publicId: generatePublicId("thr"), referenceSlug: "market-watch", viewWorkspaceId: workspaceId, route: "watch", member: "watchlist", memberVersion: "1.8.0", anchor: "filter", offsetX: 0.5, offsetY: 0.5, createdAt: NOW })
       .run();
-  const rows = (table: typeof demoApplications | typeof demoThreads | typeof demoShares | typeof demoWorkspaces) => db.select().from(table).all().length;
+  const rows = (table: typeof demoThreads | typeof demoShares | typeof demoWorkspaces) => db.select().from(table).all().length;
+  const threadsOf = (workspaceId: number) => db.select().from(demoThreads).all().filter((thread) => thread.viewWorkspaceId === workspaceId).length;
 
   it("creates nothing until the first write, then stores only the key's digest", () => {
     const key = newWorkspaceKey();
@@ -67,11 +58,11 @@ describe("demo workspaces", () => {
   it("keeps two visitors' workspaces apart", () => {
     const first = ensureWorkspace(db, newWorkspaceKey(), NOW);
     const second = ensureWorkspace(db, newWorkspaceKey(), NOW);
-    addApplication(first.id);
+    addReferenceThread(first.id);
 
     expect(first.id).not.toBe(second.id);
-    expect(applicationCount(db, first.id)).toBe(1);
-    expect(applicationCount(db, second.id)).toBe(0);
+    expect(threadsOf(first.id)).toBe(1);
+    expect(threadsOf(second.id)).toBe(0);
   });
 
   it("stores a trimmed display name and validates it", () => {
@@ -84,8 +75,8 @@ describe("demo workspaces", () => {
   it("stores only known hint state", () => {
     const key = newWorkspaceKey();
     const workspace = ensureWorkspace(db, key, NOW);
-    setHints(db, workspace.id, { off: true, create: "done", gallery: "done", surprise: 1 } as never);
-    expect(findWorkspace(db, key)!.hints).toEqual({ off: true, create: "done" });
+    setHints(db, workspace.id, { off: true, runtime: "done", gallery: "done", surprise: 1 } as never);
+    expect(findWorkspace(db, key)!.hints).toEqual({ off: true, runtime: "done" });
   });
 
   it("updates last-seen at most once an hour", () => {
@@ -101,14 +92,13 @@ describe("demo workspaces", () => {
   it("purges workspaces idle for 30 days with everything they own", () => {
     const idle = ensureWorkspace(db, newWorkspaceKey(), new Date(NOW.getTime() - 31 * DAY));
     const active = ensureWorkspace(db, newWorkspaceKey(), new Date(NOW.getTime() - 29 * DAY));
-    addApplication(idle.id);
     addReferenceThread(idle.id);
-    addApplication(active.id);
+    addReferenceThread(active.id);
 
     expect(purgeIdleWorkspaces(db, NOW)).toBe(1);
     expect(rows(demoWorkspaces)).toBe(1);
-    expect(applicationCount(db, active.id)).toBe(1);
-    expect(rows(demoThreads)).toBe(0);
+    expect(threadsOf(idle.id)).toBe(0);
+    expect(threadsOf(active.id)).toBe(1);
   });
 
   it("runs the idle purge at most once an hour", () => {
@@ -117,25 +107,12 @@ describe("demo workspaces", () => {
     expect(maybePurgeIdleWorkspaces(db, new Date(NOW.getTime() + 61 * 60 * 1000))).toBe(0);
   });
 
-  it(`refuses more than ${APPLICATION_LIMIT} applications with an explanation`, () => {
-    const workspace = ensureWorkspace(db, newWorkspaceKey(), NOW);
-    for (let index = 0; index < APPLICATION_LIMIT - 1; index++) addApplication(workspace.id);
-    expect(() => assertApplicationCapacity(db, workspace.id)).not.toThrow();
-
-    addApplication(workspace.id);
-    expect(() => assertApplicationCapacity(db, workspace.id)).toThrow(DemoLimitError);
-    expect(() => assertApplicationCapacity(db, workspace.id)).toThrow(/Delete an application or reset the demo/);
-  });
-
   it("resets one workspace without touching another", () => {
     const key = newWorkspaceKey();
     const presenter = ensureWorkspace(db, key, NOW);
     const visitor = ensureWorkspace(db, newWorkspaceKey(), NOW);
-    const app = addApplication(presenter.id);
-    addApplication(visitor.id);
     addReferenceThread(presenter.id);
     addReferenceThread(visitor.id);
-    db.insert(demoShares).values({ tokenDigest: "a".repeat(64), applicationId: app.id, viewWorkspaceId: presenter.id, state: "{}", createdAt: NOW }).run();
     db.insert(demoShares).values({ tokenDigest: "b".repeat(64), referenceSlug: "market-watch", viewWorkspaceId: presenter.id, state: "{}", createdAt: NOW }).run();
     setHints(db, presenter.id, { off: true, runtime: "done" });
     setDisplayName(db, presenter.id, "Sam");
@@ -145,8 +122,6 @@ describe("demo workspaces", () => {
     expect(reset.resetEpoch).toBe(presenter.resetEpoch + 1);
     expect(reset.hints).toEqual({});
     expect(reset.displayName).toBe("Sam");
-    expect(applicationCount(db, presenter.id)).toBe(0);
-    expect(applicationCount(db, visitor.id)).toBe(1);
     expect(db.select().from(demoThreads).all().map((thread) => thread.viewWorkspaceId)).toEqual([visitor.id]);
     expect(rows(demoShares)).toBe(0);
     expect(findWorkspace(db, key)!.id).toBe(presenter.id);

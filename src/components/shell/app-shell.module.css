@@ -85,8 +85,6 @@
   /* Monochrome, in the brand's text color. */
   .mark { flex: none; width: var(--size-icon-lg); height: var(--size-icon-lg); color: currentcolor; }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* The Portal switcher takes the room between the product mark and the hide control. */
-  .portalSwitcher { flex: 1; min-width: 0; margin-left: calc(-1 * var(--space-1)); }
 
   /* Hiding applies to the inline sidebar; the drawer is dismissed instead. */
   .hideSidebar { display: contents; }

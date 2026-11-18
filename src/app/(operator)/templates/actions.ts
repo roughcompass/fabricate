@@ -7,12 +7,12 @@ import { currentWorkspace } from "@/lib/demo/request";
 import { resetWorkspace } from "@/lib/demo/workspaces";
 
 /**
- * Clears the visitor's workspace: their applications, comments, share links,
- * and guidance state. Other visitors and the reference deployments are untouched.
+ * Clears the visitor's workspace: their comments, share links, session
+ * profiles, and guidance state. Other visitors and the reference deployments are untouched.
  */
 export async function resetDemo(): Promise<void> {
   requireDemo();
   const workspace = await currentWorkspace();
   if (workspace) resetWorkspace(getDb(), workspace.id);
-  redirect("/applications/new?notice=reset");
+  redirect("/templates?notice=reset");
 }

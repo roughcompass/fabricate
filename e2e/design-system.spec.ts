@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
+import { expect, test } from "./support/fixtures";
 
 /** The component gallery, and the component behavior it demonstrates. */
 
@@ -95,18 +95,17 @@ test("shows every role color in both themes", async ({ page }) => {
   await expect(swatch("dark", "--color-accent")).toHaveCSS("background-color", "rgb(82, 168, 255)");
 });
 
-test("draws every icon, including the Portal switcher's chevrons and the Web platform's globe, in both themes", async ({ page }) => {
+test("draws every icon at 20px in the text color, in both themes", async ({ page }) => {
   await page.goto("/design-system");
-  for (const theme of ["light", "dark"] as const) {
-    const icons = page.getByRole("region", { name: `Icons, ${theme}` });
-    for (const name of ["chevronsUpDown", "globe"]) {
-      const svg = icons.locator(`[data-icon="${name}"] svg`);
+  for (const [theme, color] of [["light", "rgb(23, 23, 23)"], ["dark", "rgb(237, 237, 237)"]] as const) {
+    const svgs = page.getByRole("region", { name: `Icons, ${theme}` }).locator("[data-icon] svg");
+    expect(await svgs.count()).toBeGreaterThan(10);
+    for (const svg of await svgs.all()) {
       await expect(svg).toBeVisible();
       expect(await svg.evaluate((element) => element.getBoundingClientRect().width)).toBe(20);
     }
+    await expect(svgs.first()).toHaveCSS("color", color);
   }
-  await expect(page.getByRole("region", { name: "Icons, light" }).locator('[data-icon="globe"] svg')).toHaveCSS("color", "rgb(23, 23, 23)");
-  await expect(page.getByRole("region", { name: "Icons, dark" }).locator('[data-icon="globe"] svg')).toHaveCSS("color", "rgb(237, 237, 237)");
 });
 
 test("draws choice cards with icons in every state, in both themes, and moves the choice with the arrow keys", async ({ page }) => {
@@ -152,18 +151,6 @@ test("tells the states with no value apart by their indicators", async ({ page }
   await expect(status.getByText("Not covered", { exact: true })).toBeVisible();
   const drawings = [await drawing("unknown"), await drawing("absent"), await drawing("not_covered")];
   expect(new Set(drawings).size, drawings.join(" | ")).toBe(3);
-});
-
-test("tells a Portal's lifecycles apart by text and fill, not only hue", async ({ page }) => {
-  await page.goto("/design-system");
-  const status = light(page, "Status and severity");
-  const prototype = status.locator('[data-state="prototype"]').first();
-  const production = status.locator('[data-state="production"]').first();
-  await expect(prototype).toHaveText("Prototype");
-  await expect(production).toHaveText("Production");
-  const fill = (locator: Locator) => locator.evaluate((element) => getComputedStyle(element).backgroundColor);
-  expect(await fill(prototype)).not.toBe(await fill(production));
-  await expect(production).toHaveAttribute("data-emphasis", "high");
 });
 
 test("draws check boxes, switches, inputs, and selects consistently", async ({ page }) => {
@@ -323,88 +310,4 @@ test.describe("without JavaScript", () => {
     await expect(page).toHaveURL(/tone=success/);
     await expect(page.getByText("Filtered to success")).toBeVisible();
   });
-});
-
-test("lays the split dialog out as two panes when wide and stacks it with a collapsed disclosure at 375px, in both themes", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/design-system#split-dialog");
-  for (const theme of ["light", "dark"] as const) {
-    const frame = page.getByRole("region", { name: `Split dialog, ${theme}` }).locator("[data-surface]");
-    await expect(frame.getByRole("region", { name: "What's included" })).toBeVisible();
-    await expect(frame.getByRole("list", { name: "What's included" }).first()).toBeVisible();
-    await expect(frame.locator("summary", { hasText: "What's included" })).toBeHidden();
-  }
-  await expect(page.getByRole("region", { name: "Split dialog, dark" }).locator("[data-surface]")).toHaveCSS("background-color", "rgb(10, 10, 10)");
-  await expectNoHorizontalOverflow(page);
-
-  // The dialog: wide, capped at the content width, and closed by Escape with focus back on its trigger.
-  const opener = page.getByRole("button", { name: "Open split dialog" });
-  await opener.click();
-  const dialog = page.getByRole("dialog", { name: "Create a Portal" });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("region", { name: "What's included" })).toBeVisible();
-  // A sheet against the right, inset 16px from the top, right, and bottom edges.
-  await expect.poll(async () => { const box = (await dialog.boundingBox())!; return [box.width, box.y, 1440 - (box.x + box.width), 900 - (box.y + box.height)]; }).toEqual([1200, 16, 16, 16]);
-  if (process.env.SPLIT_SCREENSHOTS) await page.screenshot({ path: "/tmp/aps-split-1440.png" });
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  await expect(opener).toBeFocused();
-
-  // 375px: the frames and the dialog stack, with What's included collapsed below the form.
-  await page.setViewportSize({ width: 375, height: 812 });
-  for (const theme of ["light", "dark"] as const) {
-    const frame = page.getByRole("region", { name: `Split dialog, ${theme}` }).locator("[data-surface]");
-    await expect(frame.getByRole("region", { name: "What's included" })).toBeHidden();
-    const summary = frame.locator("summary", { hasText: "What's included" });
-    await expect(summary).toBeVisible();
-    await expect(summary.locator("xpath=..")).not.toHaveAttribute("open", "");
-  }
-  await expectNoHorizontalOverflow(page);
-  await opener.click();
-  await expect.poll(async () => { const box = (await dialog.boundingBox())!; return [box.x, box.y, 375 - (box.x + box.width), 812 - (box.y + box.height)]; }).toEqual([12, 12, 12, 12]);
-  await expect(dialog.locator("summary", { hasText: "What's included" })).toBeVisible();
-  if (process.env.SPLIT_SCREENSHOTS) await page.screenshot({ path: "/tmp/aps-split-375.png" });
-  await expectNoHorizontalOverflow(page);
-});
-
-
-test("draws the switcher's entries with hover, focus, and current states, its empty state, and its footer action, in both themes", async ({ page }) => {
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.goto("/design-system#switcher");
-  for (const theme of ["light", "dark"] as const) {
-    const open = page.getByRole("list", { name: `Portals, ${theme}`, exact: true });
-    await expect(open.getByRole("button")).toHaveCount(4);
-    for (const [index, name] of ["All Portals", "Access Web", "Markets Web Current", "Treasury with a name long enough to truncate Mobile"].entries()) await expect(open.getByRole("button").nth(index)).toHaveAccessibleName(name);
-    const current = open.getByRole("button", { name: /Markets/ });
-    await expect(current).toHaveAttribute("aria-current", "true");
-    await expect(current.getByRole("img", { name: "Current" })).toBeVisible();
-    const empty = page.getByRole("region", { name: `Switcher, ${theme}` }).getByText("Portals you create appear here for quick switching.");
-    await expect(empty).toBeVisible();
-  }
-  const access = page.getByRole("list", { name: "Portals, light", exact: true }).getByRole("button", { name: /Access/ });
-  const resting = await access.evaluate((element) => getComputedStyle(element).backgroundColor);
-  await access.hover();
-  await expect(access).not.toHaveCSS("background-color", resting);
-  await expect(page.getByRole("list", { name: "Portals, light", exact: true }).getByRole("button", { name: /Markets/ })).toHaveCSS("background-color", "rgb(237, 237, 237)");
-  await expect(page.getByRole("list", { name: "Portals, dark", exact: true }).getByRole("button", { name: /Markets/ })).toHaveCSS("background-color", "rgb(35, 35, 35)");
-
-  // The trigger names the current choice, opens the list with focus in the filter, filters, and moves with the arrow keys.
-  const trigger = page.getByRole("button", { name: "Switch Portal, current: Markets" }).first();
-  await trigger.click();
-  const filter = page.locator("[popover]").getByRole("searchbox", { name: "Find Portal…" }).first();
-  await expect(filter).toBeFocused();
-  if (process.env.SPLIT_SCREENSHOTS) await page.screenshot({ path: "/tmp/aps-switcher.png" });
-  await filter.fill("1042");
-  const list = page.locator("[popover]").getByRole("list", { name: "Switch Portal" }).first();
-  await expect(list.getByRole("button")).toHaveCount(2);
-  await expect(list.getByRole("button").nth(1)).toHaveAccessibleName("Markets Web Current");
-  await filter.fill("zzz");
-  await expect(page.getByRole("status").filter({ hasText: "No Portal matches “zzz”" })).toBeVisible();
-  await filter.fill("");
-  await page.keyboard.press("ArrowDown");
-  await expect(list.getByRole("button", { name: "All Portals" })).toBeFocused();
-  await expect(list.getByRole("button", { name: "All Portals" })).toHaveCSS("background-color", "rgb(242, 242, 242)");
-  await page.keyboard.press("Escape");
-  await expect(filter).toBeHidden();
-  await expect(trigger).toBeFocused();
 });

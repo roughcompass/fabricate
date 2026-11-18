@@ -10,7 +10,6 @@ import styles from "./toolbar.module.css";
 export interface MenuContext {
   readonly name: string;
   readonly environment: string;
-  readonly status: string;
   /** Its page in Fabricate, opened in a new tab. */
   readonly href: string;
 }
@@ -100,8 +99,6 @@ export function ToolbarMenu({ context, commentCount, highlight, onClose }: { con
             <span className={styles.contextName}>{context.name}</span>
             <span className={styles.contextMeta}>
               <span>{context.environment}</span>
-              <span aria-hidden="true">·</span>
-              <span>{context.status}</span>
             </span>
             <Icon name="external" size={14} />
             <span className="visually-hidden"> (opens in a new tab)</span>

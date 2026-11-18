@@ -2,7 +2,6 @@ import { TEMPLATES } from "./templates";
 import type { AppDefinition, AppRoute, GroupMember, LoadEntry, Template } from "./types";
 
 export * from "./brands";
-export * from "./stages";
 export * from "./types";
 export { SHELL_MEMBERS } from "./heroes";
 export { HERO_SLUGS, TEMPLATES } from "./templates";

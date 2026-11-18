@@ -12,7 +12,7 @@ import styles from "./page.module.css";
  * width, and everything else is centered at the page's measure. `busy` marks
  * a loading skeleton.
  */
-export function Page({ width = "content", busy = false, children }: { width?: "content" | "form" | "full"; busy?: boolean; children: React.ReactNode }) {
+export function Page({ width = "content", busy = false, children }: { width?: "content" | "form"; busy?: boolean; children: React.ReactNode }) {
   return (
     <div className={styles.page} data-width={width} aria-busy={busy || undefined} aria-label={busy ? "Loading" : undefined}>
       {children}
@@ -48,8 +48,6 @@ interface PageHeaderProps {
    * 3 for the gallery's specimens: the title stays in the header, inline.
    */
   headingLevel?: 1 | 3;
-  /** A control for the shell header's left, such as the application switcher. */
-  headerStart?: React.ReactNode;
 }
 
 /**
@@ -57,7 +55,7 @@ interface PageHeaderProps {
  * shell header, then breadcrumbs, the status and meta line, the description,
  * and the actions. The title is never repeated in the page.
  */
-export function PageHeader({ breadcrumbs, title, status, meta, description, primaryAction, secondaryActions = [], extraActions, alerts, headingLevel = 1, headerStart }: PageHeaderProps) {
+export function PageHeader({ breadcrumbs, title, status, meta, description, primaryAction, secondaryActions = [], extraActions, alerts, headingLevel = 1 }: PageHeaderProps) {
   const inline = headingLevel === 3;
   const collapse = Boolean(primaryAction) && secondaryActions.length > 0;
   const hasActions = Boolean(primaryAction || extraActions || secondaryActions.length);
@@ -72,7 +70,7 @@ export function PageHeader({ breadcrumbs, title, status, meta, description, prim
 
   return (
     <>
-      {!inline && <ShellHeader title={title} start={headerStart} />}
+      {!inline && <ShellHeader title={title} />}
       {(hasCrumbs || hasHeading || hasActions) && (
         <header className={styles.header} data-page-header="">
           {hasCrumbs && <Breadcrumbs items={breadcrumbs!} />}

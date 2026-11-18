@@ -1,19 +1,17 @@
 /**
- * Guided hints (template-demo/demo-mode spec): one sequence on the create
- * page and one on running applications. Finishing or dismissing a sequence is
- * remembered for the workspace; replaying clears both; hints can be turned
- * off for the workspace. No Node or database dependencies, so the browser
+ * Guided hints (template-demo/demo-mode spec): one sequence on running
+ * applications. Finishing or dismissing it is remembered for the workspace;
+ * replaying clears it; hints can be turned off for the workspace. No Node or database dependencies, so the browser
  * applies the same rules the server stores.
  */
 
-export const HINT_SEQUENCES = ["create", "runtime"] as const;
+export const HINT_SEQUENCES = ["runtime"] as const;
 export type HintSequence = (typeof HINT_SEQUENCES)[number];
 export type HintAction = "done" | "replay" | "off" | "on";
 
 export interface HintState {
   /** Guided hints turned off for this workspace. */
   readonly off?: boolean;
-  readonly create?: "done";
   readonly runtime?: "done";
 }
 
@@ -35,7 +33,7 @@ export function nextHints(current: HintState, action: HintAction, sequence?: Hin
     case "off":
       return { ...current, off: true };
     case "on":
-      return { ...(current.create ? { create: current.create } : {}), ...(current.runtime ? { runtime: current.runtime } : {}) };
+      return current.runtime ? { runtime: current.runtime } : {};
   }
 }
 
@@ -50,7 +48,6 @@ export function parseHints(value: string): HintState {
     const raw = JSON.parse(value) as Record<string, unknown>;
     return {
       ...(raw.off === true ? { off: true } : {}),
-      ...(raw.create === "done" ? { create: "done" as const } : {}),
       ...(raw.runtime === "done" ? { runtime: "done" as const } : {}),
     };
   } catch {

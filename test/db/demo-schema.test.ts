@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type Db, MIGRATIONS_FOLDER, migrateDatabase, openDatabase } from "@/lib/db/client";
 import { createTestDb, rawRun } from "../support/db";
 
-const DEMO_TABLES = ["demo_applications", "demo_comments", "demo_shares", "demo_threads", "demo_workspaces"];
-const DEMO_MIGRATIONS = ["0013_demo", "0014_demo_origin", "0033_demo_imports_removed"];
+const DEMO_TABLES = ["demo_comments", "demo_shares", "demo_threads", "demo_workspaces"];
+const DEMO_MIGRATIONS = ["0013_demo", "0014_demo_origin", "0033_demo_imports_removed", "0037_demo_applications_removed"];
 const DIGEST = "a".repeat(64);
 
 function tables(db: Db): string[] {
@@ -30,17 +30,14 @@ describe("demo schema", () => {
     rawRun(db, "insert into demo_workspaces (key_digest, created_at, last_seen_at) values (?, 0, 0)", key);
     return (db.$client.prepare("select id from demo_workspaces where key_digest = ?").get(key) as { id: number }).id;
   };
-  const application = (workspaceId: number, fields: { publicId?: string; environment?: string; project?: string | null; repository?: string | null } = {}) => {
+  const thread = (workspaceId: number, publicId = "thr_0000000000000001") => {
     rawRun(
       db,
-      "insert into demo_applications (public_id, workspace_id, template_slug, name, environment, bitbucket_project, bitbucket_repository, created_at) values (?, ?, 'market-watch', 'Market watch', ?, ?, ?, 0)",
-      fields.publicId ?? "app_0000000000000001",
+      "insert into demo_threads (public_id, reference_slug, view_workspace_id, route, member, member_version, anchor, offset_x, offset_y, created_at) values (?, 'market-watch', ?, 'watch', 'watchlist', '1.8.0', 'filter', 0.5, 0.5, 0)",
+      publicId,
       workspaceId,
-      fields.environment ?? "sandbox",
-      fields.project ?? null,
-      fields.repository ?? null,
     );
-    return (db.$client.prepare("select id from demo_applications where public_id = ?").get(fields.publicId ?? "app_0000000000000001") as { id: number }).id;
+    return (db.$client.prepare("select id from demo_threads where public_id = ?").get(publicId) as { id: number }).id;
   };
 
   it("adds exactly the demo tables on top of the product schema and leaves product tables unchanged", () => {
@@ -78,101 +75,70 @@ describe("demo schema", () => {
     }
   });
 
-  it("requires BitBucket details exactly for dev environment applications", () => {
+  it("puts every thread and share link on a reference deployment", () => {
     const owner = workspace();
-    expect(() => application(owner, { environment: "dev" })).toThrow(/CHECK constraint failed: demo_applications_bitbucket/);
-    expect(() => application(owner, { environment: "sandbox", project: "PAY", repository: "payee-portal" })).toThrow(/demo_applications_bitbucket/);
-    expect(() => application(owner, { environment: "dev", project: "PAY", repository: "payee-portal" })).not.toThrow();
-  });
-
-  it("records where each application came from, and allows imports only in dev environments", () => {
-    const owner = workspace();
-    const app = application(owner);
-    expect(db.$client.prepare("select origin from demo_applications where id = ?").get(app)).toEqual({ origin: "template" });
-    const imported = (environment: string, project: string | null, repository: string | null, origin: string, publicId: string) =>
+    expect(() =>
       rawRun(
         db,
-        "insert into demo_applications (public_id, workspace_id, template_slug, name, environment, bitbucket_project, bitbucket_repository, origin, created_at) values (?, ?, 'payments-workspace', 'Payee hub', ?, ?, ?, ?, 0)",
-        publicId,
+        "insert into demo_threads (public_id, view_workspace_id, route, member, member_version, anchor, offset_x, offset_y, created_at) values ('thr_0000000000000001', ?, 'watch', 'watchlist', '1.8.0', 'filter', 0.5, 0.5, 0)",
         owner,
-        environment,
-        project,
-        repository,
-        origin,
-      );
-    expect(() => imported("dev", "PAY", "payee-hub", "import", "app_0000000000000002")).not.toThrow();
-    expect(() => imported("sandbox", null, null, "import", "app_0000000000000003")).toThrow(/CHECK constraint failed/);
-    expect(() => imported("dev", "PAY", "card-controls", "fork", "app_0000000000000004")).toThrow(/CHECK constraint failed/);
+      ),
+    ).toThrow(/NOT NULL constraint failed: demo_threads.reference_slug/);
+    expect(() => rawRun(db, "insert into demo_shares (token_digest, view_workspace_id, state, created_at) values (?, ?, '{}', 0)", DIGEST, owner)).toThrow(/NOT NULL constraint failed: demo_shares.reference_slug/);
+    expect(() => thread(owner)).not.toThrow();
   });
 
-  it("marks applications created before the origin migration as coming from templates", () => {
+  it("removes visitors' deployments with their threads, comments, and share links, keeping reference deployments' (migration 0037)", () => {
     const folder = fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-migrations-"));
     try {
       fs.cpSync(MIGRATIONS_FOLDER, folder, { recursive: true });
       const journalFile = path.join(folder, "meta", "_journal.json");
-      // A database from before the origin migration has none of it or what came after.
+      // A database from before 0037 has none of it.
       const journal = JSON.parse(fs.readFileSync(journalFile, "utf8")) as { entries: { idx: number; tag: string }[] };
-      const origin = journal.entries.find((entry) => entry.tag === "0014_demo_origin")!.idx;
-      for (const entry of journal.entries.filter((candidate) => candidate.idx >= origin)) fs.rmSync(path.join(folder, `${entry.tag}.sql`));
-      journal.entries = journal.entries.filter((entry) => entry.idx < origin);
+      const removal = journal.entries.find((entry) => entry.tag === "0037_demo_applications_removed")!.idx;
+      for (const entry of journal.entries.filter((candidate) => candidate.idx >= removal)) fs.rmSync(path.join(folder, `${entry.tag}.sql`));
+      journal.entries = journal.entries.filter((entry) => entry.idx < removal);
       fs.writeFileSync(journalFile, JSON.stringify(journal));
 
       const earlier = openDatabase(":memory:");
       migrateDatabase(earlier, folder);
       rawRun(earlier, "insert into demo_workspaces (key_digest, created_at, last_seen_at) values (?, 0, 0)", DIGEST);
-      rawRun(earlier, "insert into demo_applications (public_id, workspace_id, template_slug, name, environment, bitbucket_project, bitbucket_repository, created_at) values ('app_0000000000000001', 1, 'payments-workspace', 'Payee portal', 'dev', 'PAY', 'payee-portal', 0)");
+      rawRun(earlier, "insert into demo_applications (public_id, workspace_id, template_slug, name, environment, created_at) values ('app_0000000000000001', 1, 'market-watch', 'Desk', 'sandbox', 0)");
+      const insertThread = (publicId: string, applicationId: number | null, referenceSlug: string | null) =>
+        rawRun(
+          earlier,
+          "insert into demo_threads (public_id, application_id, reference_slug, view_workspace_id, route, member, member_version, anchor, offset_x, offset_y, created_at) values (?, ?, ?, 1, 'watch', 'watchlist', '1.8.0', 'filter', 0.5, 0.5, 0)",
+          publicId,
+          applicationId,
+          referenceSlug,
+        );
+      insertThread("thr_0000000000000001", 1, null);
+      insertThread("thr_0000000000000002", null, "market-watch");
+      rawRun(earlier, "insert into demo_comments (public_id, thread_id, author_name, body, created_at) values ('cmt_0000000000000001', 1, 'Sam', 'On the deployment', 0)");
+      rawRun(earlier, "insert into demo_comments (public_id, thread_id, author_name, body, created_at) values ('cmt_0000000000000002', 2, 'Sam', 'On the reference', 0)");
+      rawRun(earlier, "insert into demo_shares (token_digest, application_id, view_workspace_id, state, created_at) values (?, 1, 1, '{}', 0)", "a".repeat(64));
+      rawRun(earlier, "insert into demo_shares (token_digest, reference_slug, view_workspace_id, state, created_at) values (?, 'market-watch', 1, '{}', 0)", "b".repeat(64));
+
       migrateDatabase(earlier, MIGRATIONS_FOLDER);
-      expect(earlier.$client.prepare("select origin from demo_applications").all()).toEqual([{ origin: "template" }]);
+      expect(tables(earlier)).not.toContain("demo_applications");
+      expect(earlier.$client.prepare("select public_id, reference_slug from demo_threads").all()).toEqual([{ public_id: "thr_0000000000000002", reference_slug: "market-watch" }]);
+      expect(earlier.$client.prepare("select public_id from demo_comments").all()).toEqual([{ public_id: "cmt_0000000000000002" }]);
+      expect(earlier.$client.prepare("select reference_slug from demo_shares").all()).toEqual([{ reference_slug: "market-watch" }]);
       earlier.$client.close();
     } finally {
       fs.rmSync(folder, { recursive: true, force: true });
     }
   });
 
-  it("rejects a second dev application for the same repository in one workspace, but not in another", () => {
-    const first = workspace();
-    const second = workspace("b".repeat(64));
-    application(first, { publicId: "app_0000000000000001", environment: "dev", project: "PAY", repository: "payee-portal" });
-
-    expect(() => application(first, { publicId: "app_0000000000000002", environment: "dev", project: "PAY", repository: "payee-portal" })).toThrow(/UNIQUE constraint failed/);
-    expect(() => application(second, { publicId: "app_0000000000000003", environment: "dev", project: "PAY", repository: "payee-portal" })).not.toThrow();
-  });
-
-  it("targets a thread at exactly one of an application or a reference deployment", () => {
-    const owner = workspace();
-    const app = application(owner);
-    const insert = (applicationId: number | null, referenceSlug: string | null, publicId: string) =>
-      rawRun(
-        db,
-        "insert into demo_threads (public_id, application_id, reference_slug, view_workspace_id, route, member, member_version, anchor, offset_x, offset_y, created_at) values (?, ?, ?, ?, 'watch', 'watchlist', '1.8.0', 'filter', 0.5, 0.5, 0)",
-        publicId,
-        applicationId,
-        referenceSlug,
-        owner,
-      );
-
-    expect(() => insert(null, null, "thr_0000000000000001")).toThrow(/demo_threads_target/);
-    expect(() => insert(app, "market-watch", "thr_0000000000000002")).toThrow(/demo_threads_target/);
-    expect(() => insert(app, null, "thr_0000000000000003")).not.toThrow();
-    expect(() => insert(null, "market-watch", "thr_0000000000000004")).not.toThrow();
-  });
-
   it("removes everything a workspace owns when it is deleted, keeping replies it wrote elsewhere", () => {
     const owner = workspace();
     const visitor = workspace("b".repeat(64));
-    const app = application(owner);
-    rawRun(
-      db,
-      "insert into demo_threads (public_id, application_id, view_workspace_id, route, member, member_version, anchor, offset_x, offset_y, created_at) values ('thr_0000000000000001', ?, ?, 'watch', 'watchlist', '1.8.0', 'filter', 0.5, 0.5, 0)",
-      app,
-      owner,
-    );
-    const thread = (db.$client.prepare("select id from demo_threads").get() as { id: number }).id;
-    rawRun(db, "insert into demo_comments (public_id, thread_id, author_workspace_id, author_name, body, created_at) values ('cmt_0000000000000001', ?, ?, 'Sam', 'Ship v2', 0)", thread, owner);
-    rawRun(db, "insert into demo_shares (token_digest, application_id, view_workspace_id, state, created_at) values (?, ?, ?, '{}', 0)", DIGEST, app, owner);
+    const owned = thread(owner);
+    rawRun(db, "insert into demo_comments (public_id, thread_id, author_workspace_id, author_name, body, created_at) values ('cmt_0000000000000001', ?, ?, 'Sam', 'Ship v2', 0)", owned, owner);
+    rawRun(db, "insert into demo_shares (token_digest, reference_slug, view_workspace_id, state, created_at) values (?, 'market-watch', ?, '{}', 0)", DIGEST, owner);
 
     // A visitor's reply on the owner's thread survives the visitor's reset.
-    rawRun(db, "insert into demo_comments (public_id, thread_id, author_workspace_id, author_name, body, created_at) values ('cmt_0000000000000002', ?, ?, 'Robin', 'Agreed', 1)", thread, visitor);
+    rawRun(db, "insert into demo_comments (public_id, thread_id, author_workspace_id, author_name, body, created_at) values ('cmt_0000000000000002', ?, ?, 'Robin', 'Agreed', 1)", owned, visitor);
     rawRun(db, "delete from demo_workspaces where id = ?", visitor);
     expect(count(db, "demo_comments")).toBe(2);
     expect(db.$client.prepare("select author_workspace_id as author from demo_comments where public_id = 'cmt_0000000000000002'").get()).toEqual({ author: null });
@@ -187,15 +153,8 @@ describe("demo schema", () => {
     expect(() => rawRun(db, "insert into demo_shares (token_digest, reference_slug, view_workspace_id, state, created_at) values (?, 'market-watch', ?, 'nope', 0)", DIGEST, owner)).toThrow(
       /demo_shares_state/,
     );
-    const app = application(owner);
-    rawRun(
-      db,
-      "insert into demo_threads (public_id, application_id, view_workspace_id, route, member, member_version, anchor, offset_x, offset_y, created_at) values ('thr_0000000000000001', ?, ?, 'watch', 'watchlist', '1.8.0', 'filter', 0.5, 0.5, 0)",
-      app,
-      owner,
-    );
-    const thread = (db.$client.prepare("select id from demo_threads").get() as { id: number }).id;
-    expect(() => rawRun(db, "insert into demo_comments (public_id, thread_id, author_name, body, created_at) values ('cmt_0000000000000001', ?, 'Sam', ?, 0)", thread, "x".repeat(2001))).toThrow(
+    const owned = thread(owner);
+    expect(() => rawRun(db, "insert into demo_comments (public_id, thread_id, author_name, body, created_at) values ('cmt_0000000000000001', ?, 'Sam', ?, 0)", owned, "x".repeat(2001))).toThrow(
       /demo_comments_body/,
     );
   });

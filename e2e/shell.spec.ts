@@ -1,30 +1,24 @@
 import type { Page } from "@playwright/test";
 import { findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { profilesOf } from "../src/lib/profiles/profile-records";
-import { registerApplication } from "../test/support/applications";
 import { buildSource } from "../test/support/builders";
-import { onboardPortal } from "../test/support/onboarding";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate, seedResults } from "./support/results";
-import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
+import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
-import { waitForHydration } from "./support/shell";
 
 // operator-interface/page-patterns spec: the application shell, and the
-// primary menu: Home, Applications, and Runtime Configuration, then the
-// Assessments and Salt Patterns & Prototypes groups under headings and
-// dividers, with Runtime Configuration alone drilling into a sub-menu. The
-// narrow-viewport drawer has its own cases below.
+// primary menu: Home, then the Assessments and Salt Patterns & Prototypes
+// groups under headings and dividers. The narrow-viewport drawer has its own
+// cases below.
 
 const primary = (page: Page) => page.getByRole("navigation", { name: "Primary" });
-const menu = (page: Page) => primary(page).locator("#sidebar-sections");
 
 /** The primary menu is shown, with +current+ marked as the page's item, and no other. */
 async function expectCurrent(page: Page, current: string) {
-  await expect(menu(page)).toBeVisible();
-  await expect(menu(page).locator("[aria-current]")).toHaveCount(1);
-  await expect(menu(page).getByRole("link", { name: current, exact: true })).toHaveAttribute("aria-current", /page|true/);
-  await expect(primary(page).getByRole("link", { name: "Show all sections" })).toBeHidden();
+  await expect(primary(page)).toBeVisible();
+  await expect(primary(page).locator("[aria-current]")).toHaveCount(1);
+  await expect(primary(page).getByRole("link", { name: current, exact: true })).toHaveAttribute("aria-current", /page|true/);
 }
 
 test.describe("on a wide viewport", () => {
@@ -35,31 +29,27 @@ test.describe("on a wide viewport", () => {
     await expect(page).toHaveTitle("Assessments · DE FabLab");
     await expect(page.getByRole("link", { name: "Skip to content" })).toBeAttached();
     await expect(page.getByRole("link", { name: "DE FabLab home" })).toHaveAttribute("href", paths.home);
-    // Shell on a wide viewport: the product mark and, in place of the product name, the Portal switcher.
-    const brandRow = page.locator("#sidebar").getByRole("link", { name: "DE FabLab home" }).locator("xpath=..");
-    await expect(brandRow.getByRole("button", { name: "Switch Portal, current: All Portals" })).toBeVisible();
-    await expect(brandRow).not.toContainText("DE FabLab");
+    // Shell on a wide viewport: the product mark beside the product name.
+    await expect(page.locator("#sidebar").getByRole("link", { name: "DE FabLab home" })).toHaveText("DE FabLab");
     await expect(page.getByRole("button", { name: "Dark theme" })).toBeVisible();
     await expectCurrent(page, "All Assessments");
   });
 
-  test("Full menu: Home, Applications, and Runtime Configuration, then the Assessments and Salt Patterns & Prototypes groups under headings and dividers", async ({ page, db: _db }) => {
+  test("Full menu: Home, then the Assessments and Salt Patterns & Prototypes groups under headings and dividers", async ({ page, db: _db }) => {
     await page.goto(paths.home);
-    const nav = menu(page);
-    await expect(nav.getByRole("link")).toHaveText(["Home", "Applications", "Runtime Configuration", "All Assessments", "Repositories", "Standards", "Salt Patterns", "Prototypes", "Personas", "Lessons", "Page shell"]);
+    const nav = primary(page);
+    await expect(nav.getByRole("link")).toHaveText(["Home", "All Assessments", "Repositories", "Standards", "Salt Patterns", "Prototypes", "Personas", "Lessons", "Page shell"]);
     await expect(nav.locator("hr")).toHaveCount(2);
     await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["All Assessments", "Repositories", "Standards"]);
     await expect(nav.getByRole("list", { name: "Salt Patterns & Prototypes" }).getByRole("link")).toHaveText(["Salt Patterns", "Prototypes", "Personas", "Lessons", "Page shell"]);
-    // Every item has an icon; only Runtime Configuration has a sub-menu indicator.
-    for (const link of await nav.getByRole("link").all()) await expect(link.locator("svg").first()).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Runtime Configuration" }).locator("svg")).toHaveCount(2);
-    await expect(nav.getByRole("link", { name: "Repositories" }).locator("svg")).toHaveCount(1);
+    // Every item has one icon.
+    for (const link of await nav.getByRole("link").all()) await expect(link.locator("svg")).toHaveCount(1);
     await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
   });
 
   test("Repositories: choosing it opens the list and keeps the primary menu, with Repositories current", async ({ page, db: _db }) => {
     await page.goto(paths.home);
-    await menu(page).getByRole("link", { name: "Repositories", exact: true }).click();
+    await primary(page).getByRole("link", { name: "Repositories", exact: true }).click();
     await expect(page).toHaveURL(/\/repositories$/);
     await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Repositories");
     await expectCurrent(page, "Repositories");
@@ -107,9 +97,8 @@ test.describe("on a wide viewport", () => {
 
   test("Page outside every item: the gallery shows the primary menu with nothing current", async ({ page, db: _db }) => {
     await page.goto("/design-system");
-    await expect(menu(page)).toBeVisible();
-    await expect(menu(page).locator("[aria-current]")).toHaveCount(0);
-    await expect(primary(page).getByRole("link", { name: "Show all sections" })).toBeHidden();
+    await expect(primary(page)).toBeVisible();
+    await expect(primary(page).locator("[aria-current]")).toHaveCount(0);
   });
 
   test("Product mark opens Home from a Run", async ({ page, db }) => {
@@ -120,63 +109,19 @@ test.describe("on a wide viewport", () => {
     await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Home");
   });
 
-  test("Items open their pages: Applications and Salt Patterns keep the primary menu, marked current", async ({ page, db: _db }) => {
-    for (const [item, url, title] of [["Applications", /\/applications$/, "Applications"], ["Salt Patterns", /\/templates$/, "Salt Patterns"], ["Standards", /\/standards$/, "Standards"]] as const) {
+  test("Items open their pages: Salt Patterns and Standards keep the primary menu, marked current", async ({ page, db: _db }) => {
+    for (const [item, url, title] of [["Salt Patterns", /\/templates$/, "Salt Patterns"], ["Standards", /\/standards$/, "Standards"]] as const) {
       await page.goto("/design-system");
-      await menu(page).getByRole("link", { name: item, exact: true }).click();
+      await primary(page).getByRole("link", { name: item, exact: true }).click();
       await expect(page).toHaveURL(url);
       await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText(title);
       await expectCurrent(page, item);
     }
   });
 
-  test("Applications on a deep page: an application dashboard marks Applications", async ({ page, db }) => {
-    const application = registerApplication(db, { name: "Payee Hub", portal: onboardPortal(db, "Access") });
-    await page.goto(`/applications/${application.publicId}`);
-    await expectCurrent(page, "Applications");
-  });
-
   test("Templates section on a deep page: a template detail page marks Salt Patterns", async ({ page, db: _db }) => {
     await page.goto("/templates/market-watch");
     await expectCurrent(page, "Salt Patterns");
-  });
-
-  test("Web Onboarding section on a deep page: a Portal page shows the Runtime Configuration sub-menu with Portal current", async ({ page, db }) => {
-    const access = onboardPortal(db, "Access");
-    await page.goto(`/portals/${access.publicId}`);
-    const nav = primary(page);
-    await expect(nav.locator("#sidebar-submenu-title")).toHaveText("Runtime Configuration");
-    await expect(nav.getByRole("link", { name: "Portal", exact: true })).toHaveAttribute("aria-current", "page");
-    await expect(menu(page)).toBeHidden();
-  });
-
-  test("Returning to the primary menu keeps the page and focuses Runtime Configuration", async ({ page, db }) => {
-    const access = onboardPortal(db, "Access");
-    await page.goto(`/portals/${access.publicId}/configuration/favicon`);
-    await waitForHydration(page);
-    const nav = primary(page);
-    await nav.getByRole("link", { name: "Show all sections" }).click();
-    const runtime = menu(page).getByRole("link", { name: "Runtime Configuration" });
-    await expect(runtime).toHaveAttribute("aria-current", "true");
-    await expect(runtime).toBeFocused();
-    await expect(page).toHaveURL(new RegExp(`/portals/${access.publicId}/configuration/favicon$`));
-    await expect(nav.getByRole("link", { name: "Favicon" })).toBeHidden();
-  });
-
-  test.describe("without JavaScript", () => {
-    test.use({ javaScriptEnabled: false });
-
-    test("Show all sections from a Portal page shows the primary menu, and Standards opens with it current", async ({ page, db }) => {
-      const access = onboardPortal(db, "Access");
-      await page.goto(`/portals/${access.publicId}`);
-      const nav = primary(page);
-      await nav.getByRole("link", { name: "Show all sections" }).click();
-      await expect(page).toHaveURL(/#sidebar-sections$/);
-      await expect(menu(page).getByRole("link", { name: "Runtime Configuration" })).toHaveAttribute("aria-current", "true");
-      await menu(page).getByRole("link", { name: "Standards", exact: true }).click();
-      await expect(page).toHaveURL(/\/standards$/);
-      await expect(menu(page).getByRole("link", { name: "Standards", exact: true })).toHaveAttribute("aria-current", "page");
-    });
   });
 });
 
@@ -257,11 +202,11 @@ test.describe("the shell header", () => {
     expect(covered).toBe(true);
   });
 
-  test("every surface has exactly one h1, in the shell header", async ({ page, context, db, sourcesDir }) => {
+  test("every surface has exactly one h1, in the shell header", async ({ page, db, sourcesDir }) => {
     test.setTimeout(240_000);
-    const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...(await seedDemoSurfaces(page, context, db))];
+    const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...demoSurfaces()];
     for (const [name, url] of surfaces) {
-      await page.goto(surfaceUrl(url));
+      await page.goto(url);
       await expect(page.locator("h1"), name).toHaveCount(1);
       await expect(header(page).locator("h1"), name).toHaveCount(1);
     }
@@ -383,12 +328,12 @@ test.describe("a wide sidebar on a laptop", () => {
     await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "400", url: baseURL! }]);
     const surfaces = new Map(await seedOperatorSurfaces(db, sourcesDir));
     const pages: [string, string][] = [
-      ["Evaluation", surfaceUrl(surfaces.get("08-evaluation")!)],
-      ["Profile", surfaceUrl(surfaces.get("06-profile")!)],
-      ["Relationship Map", surfaceUrl(surfaces.get("07-map")!)],
+      ["Evaluation", surfaces.get("08-evaluation")!],
+      ["Profile", surfaces.get("06-profile")!],
+      ["Relationship Map", surfaces.get("07-map")!],
       ["Repositories list", paths.repositories],
       ["Templates gallery", "/templates"],
-      ["Standard draft editor", surfaceUrl(surfaces.get("04-draft")!)],
+      ["Standard draft editor", surfaces.get("04-draft")!],
     ];
     for (const [name, url] of pages) {
       await page.goto(url);
@@ -466,25 +411,10 @@ test.describe("on a narrow viewport", () => {
     await expect(openNavigation(page)).toBeFocused();
   });
 
-  test("Switcher in the drawer: the top row holds the product mark and the Portal switcher, and choosing a Portal closes the drawer", async ({ page, db }) => {
-    onboardPortal(db, "Markets");
-    await page.goto("/onboarding/portals");
-    await waitForHydration(page);
-    await openNavigation(page).click();
-    const drawer = page.locator("#sidebar");
-    await expect(drawer.getByRole("link", { name: "DE FabLab home" })).toBeVisible();
-    await drawer.getByRole("button", { name: "Switch Portal, current: All Portals" }).click();
-    await drawer.locator("[popover]").getByRole("button", { name: /^Markets/ }).click();
-    await expect(drawer).toBeHidden();
-    await openNavigation(page).click();
-    await expect(drawer.getByRole("button", { name: "Switch Portal, current: Markets" })).toBeVisible();
-    await expectNoHorizontalOverflow(page);
-  });
-
   test("choosing an item closes the drawer and opens the page", async ({ page, db: _db }) => {
     await page.goto(paths.repositories);
     await openNavigation(page).click();
-    await menu(page).getByRole("link", { name: "Standards", exact: true }).click();
+    await primary(page).getByRole("link", { name: "Standards", exact: true }).click();
     await expect(page).toHaveURL(/\/standards$/);
     await expect(page.locator("#sidebar")).toBeHidden();
     await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Standards");
@@ -511,7 +441,7 @@ test.describe("on a narrow viewport", () => {
       await page.goto(paths.repositories);
       await openNavigation(page).click();
       await expect(page.locator("#sidebar")).toBeVisible();
-      await menu(page).getByRole("link", { name: "Standards", exact: true }).click();
+      await primary(page).getByRole("link", { name: "Standards", exact: true }).click();
       await expect(page).toHaveURL(/\/standards$/);
       await expect(page.locator("#sidebar")).toBeHidden();
     });

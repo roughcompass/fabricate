@@ -1,11 +1,6 @@
 import path from "node:path";
-import type { BrowserContext, Page } from "@playwright/test";
 import type { JsonObject } from "@repo-facts/contract";
 import type { Db } from "../../src/lib/db/client";
-import { templateBySlug } from "../../src/lib/demo/catalog";
-import { createApplication, validateDeployInput } from "../../src/lib/demo/deployments";
-import { WORKSPACE_COOKIE } from "../../src/lib/demo/workspace-key";
-import { ensureWorkspace } from "../../src/lib/demo/workspaces";
 import { findingsOf } from "../../src/lib/evaluations/evaluation-records";
 import { profileDocument, profilesOf } from "../../src/lib/profiles/profile-records";
 import { reviseRelease } from "../../src/lib/standards/publish";
@@ -25,7 +20,7 @@ import { readDeConsole } from "../../test/support/home";
  * shell's one-heading check both visit these.
  */
 
-export type Surface = [name: string, url: string | (() => string)];
+export type Surface = [name: string, url: string];
 
 /** Seeds an Initiative with an Assessment, an Evaluation, Standards, and a draft, and returns the operator surfaces. */
 export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<Surface[]> {
@@ -93,21 +88,8 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
   ];
 }
 
-/**
- * Seeds two applications in the browser's demo workspace and returns the
- * template demo's operator surfaces. A building application is created each
- * time its surface is visited, so it is always mid-build.
- */
-export async function seedDemoSurfaces(page: Page, context: BrowserContext, db: Db): Promise<Surface[]> {
-  await page.goto("/templates");
-  const key = (await context.cookies()).find((cookie) => cookie.name === WORKSPACE_COOKIE)!.value;
-  const workspace = ensureWorkspace(db, key);
-  const ready = createApplication(db, workspace.id, templateBySlug("payments-workspace")!, validateDeployInput({ name: "Treasury payments", environment: "dev", project: "PAY", repository: "treasury-payments" }), new Date(Date.now() - 10 * 60_000));
-  createApplication(db, workspace.id, templateBySlug("market-watch")!, validateDeployInput({ name: "Rates desk", environment: "sandbox", project: "", repository: "" }), new Date(Date.now() - 60 * 60_000));
-  let building = 0;
-  const buildingApplication = () =>
-    `/applications/${createApplication(db, workspace.id, templateBySlug("client-onboarding")!, validateDeployInput({ name: `Onboarding ${++building}`, environment: "dev", project: "GB", repository: `onboarding-${building}` })).publicId}`;
-
+/** The template demo's operator surfaces, which need no seeding. */
+export function demoSurfaces(): Surface[] {
   const previews = (["mobile", "tablet", "desktop"] as const).flatMap((device) =>
     (["portrait", "landscape"] as const).map((orientation): Surface => [`13-preview-${device}-${orientation}`, `/templates/market-watch/preview?device=${device}&orientation=${orientation}`]),
   );
@@ -117,11 +99,5 @@ export async function seedDemoSurfaces(page: Page, context: BrowserContext, db: 
     ["12-template", "/templates/payments-workspace"],
     ...previews,
     ["13-preview-code", "/templates/payments-workspace/preview?view=code&file=microfrontends.json"],
-    ["14-deploy", "/templates/payments-workspace/deploy"],
-    ["15-application-building", buildingApplication],
-    ["15-application-ready", `/applications/${ready.publicId}`],
-    ["15-applications", "/applications"],
   ];
 }
-
-export const surfaceUrl = (url: Surface[1]): string => (typeof url === "function" ? url() : url);

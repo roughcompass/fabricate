@@ -20,9 +20,6 @@
       "source": null,
       "refreshMinutes": 60
     },
-    "applications": {
-      "bitbucketHosts": ["bitbucket.org", "bitbucket.deweb.example"]
-    },
     "profile": "full",
     "prototypes": {
       "enabled": false,

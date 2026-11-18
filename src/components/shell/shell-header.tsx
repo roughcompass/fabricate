@@ -21,21 +21,13 @@ export interface ShellBack {
  * because the title is page data the layout cannot see. Without a title it
  * shows a loading placeholder, for the page skeletons.
  *
- * With `start`, the header also holds that control at its left, after the
- * sidebar controls: the application switcher on the Applications page and
- * application dashboards (make-applications-first-class design decision 10).
- *
- * With `end`, the header holds the page's controls at its right, such as
- * Runtime Configuration's Undo, Redo, Change history, and Save
- * (update-portal-management-journey design decision 4).
- *
  * With `back`, the page is a focused page, as preview mode is: the header
  * holds a back button in place of the sidebar controls, the title stays the
  * page's heading for assistive technology only, and the shell hides the
  * sidebar while the header is on the page (app-shell.module.css). A skeleton
  * passes "placeholder" for the button.
  */
-export function ShellHeader({ title, back, start, end }: { title?: string; back?: ShellBack | "placeholder"; start?: React.ReactNode; end?: React.ReactNode }) {
+export function ShellHeader({ title, back }: { title?: string; back?: ShellBack | "placeholder" }) {
   return (
     <header className={styles.header} data-shell-header={back ? "focused" : ""}>
       <div className={styles.start}>
@@ -54,7 +46,6 @@ export function ShellHeader({ title, back, start, end }: { title?: string; back?
                 <Icon name="menu" />
               </button>
             </span>
-            {start && <div className={styles.slot}>{start}</div>}
           </>
         )}
       </div>
@@ -67,7 +58,7 @@ export function ShellHeader({ title, back, start, end }: { title?: string; back?
           {title}
         </h1>
       )}
-      <div className={styles.end}>{end}</div>
+      <div className={styles.end} />
     </header>
   );
 }

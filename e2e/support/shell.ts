@@ -4,12 +4,9 @@ import { expect } from "./fixtures";
 /** The sidebar's navigation. */
 export const primaryNavigation = (page: Page) => page.getByRole("navigation", { name: "Primary" });
 
-/** Opens a top-level section from the sidebar, first showing the section menu when a sub-menu is shown. */
+/** Opens a top-level section from the sidebar. */
 export async function openSection(page: Page, name: string): Promise<void> {
-  const nav = primaryNavigation(page);
-  const back = nav.getByRole("link", { name: "Show all sections" });
-  if (await back.isVisible()) await back.click();
-  await nav.getByRole("link", { name, exact: true }).click();
+  await primaryNavigation(page).getByRole("link", { name, exact: true }).click();
 }
 
 /**

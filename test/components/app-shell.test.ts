@@ -1,9 +1,7 @@
-import { createElement, isValidElement, type ReactElement, type ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { AppShell } from "@/components/shell/app-shell";
 import { NO_OPTIONAL_AREAS, type NavFlags, menuItems, visibleGroups } from "@/components/shell/navigation";
-import { ShellHeader } from "@/components/shell/shell-header";
 import { SidebarNav } from "@/components/shell/sidebar-nav";
 import { ThemeSwitcher } from "@/components/shell/theme-switcher";
 
@@ -26,10 +24,10 @@ const shellOf = (tree: ReactNode) => elements(tree).find((element) => "data-side
 // operator-interface/page-patterns spec: the application shell, and the
 // sidebar that can be resized and hidden.
 describe("application shell", () => {
-  it("shows Home, Applications, Runtime Configuration, and the Assessments group when the demo is disabled (Demo disabled)", () => {
+  it("shows Home and the Assessments group when the demo is disabled (Demo disabled)", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
     const flags = nav.props.nav as NavFlags;
-    expect(menuItems(visibleGroups(flags)).map((entry) => entry.label)).toEqual(["Home", "Applications", "Runtime Configuration", "All Assessments", "Repositories", "Standards"]);
+    expect(menuItems(visibleGroups(flags)).map((entry) => entry.label)).toEqual(["Home", "All Assessments", "Repositories", "Standards"]);
   });
 
   it("adds Salt Patterns in its own group when the demo is enabled, opening its list", () => {
@@ -59,16 +57,6 @@ describe("application shell", () => {
     const shell = shellOf(AppShell({ theme: "dark", sidebar: { width: 320, hidden: true }, children: null }));
     expect(shell.props["data-sidebar"]).toBe("hidden");
     expect(shell.props.style).toEqual({ "--_sidebar-width": "320px" });
-  });
-
-  it("holds a page's header start control after the sidebar controls and before the title, and none on a focused page", () => {
-    const start = createElement("button", { id: "application-switcher" }, "Payee Hub");
-    const html = renderToStaticMarkup(createElement(ShellHeader, { title: "Payee Hub", start }));
-    expect(html.indexOf('aria-label="Open navigation"')).toBeGreaterThan(-1);
-    expect(html.indexOf('aria-label="Open navigation"')).toBeLessThan(html.indexOf('id="application-switcher"'));
-    expect(html.indexOf('id="application-switcher"')).toBeLessThan(html.indexOf("<h1"));
-    const focused = renderToStaticMarkup(createElement(ShellHeader, { title: "Create Application", back: { href: "/applications", label: "Back to Applications" }, start }));
-    expect(focused).not.toContain("application-switcher");
   });
 
   it("keeps the theme control in the sidebar", () => {

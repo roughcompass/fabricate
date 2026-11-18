@@ -88,24 +88,9 @@ export function claimInitiative(db: Executor, source: RepositorySource): Initiat
   });
 }
 
-/** Whether the system created +initiative+: for a claim, the Salt Patterns initiative, or the DE Web initiative. */
-export function isSystemOwned(initiative: Pick<Initiative, "claimRepositorySourceId" | "systemOwned" | "deWeb">): boolean {
-  return initiative.claimRepositorySourceId !== null || initiative.systemOwned || initiative.deWeb;
-}
-
-/**
- * The DE Web initiative, which migration 0034 seeds: DE FabLab owns it, and
- * each of its Runs assesses one Application's repository when the
- * Application is created or re-assessed (make-applications-first-class,
- * design decision 6). Operators open it beside the Assessments created for
- * claims and choose its Releases; its scope is per Run.
- */
-export const DE_WEB_INITIATIVE_ID = "ini_dewebrendering00";
-
-export const DE_WEB_FIXED = "DE FabLab owns DE Web: its name, objective, and scope can't change, but you can choose its Releases";
-
-export function deWebInitiative(db: Executor): Initiative {
-  return getInitiative(db, DE_WEB_INITIATIVE_ID);
+/** Whether the system created +initiative+: for a claim, or the Salt Patterns initiative. */
+export function isSystemOwned(initiative: Pick<Initiative, "claimRepositorySourceId" | "systemOwned">): boolean {
+  return initiative.claimRepositorySourceId !== null || initiative.systemOwned;
 }
 
 export const SALT_PATTERNS_FIXED = "DE FabLab owns Salt Patterns: its name, objective, and template targets can't change, but you can choose its Releases";
@@ -124,7 +109,6 @@ export function saltPatternsInitiative(db: Executor): Initiative {
 /** A claim's initiative keeps its one repository, though its name and Releases can change; Salt Patterns changes only its Releases. */
 function refuseScopeChange(db: Executor, initiative: Initiative, input: Required<InitiativeInput>): void {
   if (initiative.systemOwned) throw new ValidationError([{ field: "base", message: SALT_PATTERNS_FIXED }]);
-  if (initiative.deWeb) throw new ValidationError([{ field: "base", message: DE_WEB_FIXED }]);
   if (initiative.claimRepositorySourceId === null) return;
   const own = selectedSources(db, initiative.id).map((source) => source.publicId);
   if (input.selectionMode !== "explicit" || input.sourcePublicIds.length !== 1 || input.sourcePublicIds[0] !== own[0]) {
@@ -184,7 +168,7 @@ export function updateReleaseSelections(db: Executor, publicId: string, expected
 export function deleteInitiative(db: Executor, publicId: string): void {
   immediate(db, (tx) => {
     const initiative = getInitiative(tx, publicId);
-    if (initiative.systemOwned || initiative.deWeb) throw new ValidationError([{ field: "base", message: `${initiative.name} is owned by DE FabLab and is retained` }]);
+    if (initiative.systemOwned) throw new ValidationError([{ field: "base", message: `${initiative.name} is owned by DE FabLab and is retained` }]);
     if (isSystemOwned(initiative)) throw new ValidationError([{ field: "base", message: `${initiative.name} was created for a claimed Repository and is retained` }]);
     const assessed = tx.select({ id: assessments.id }).from(assessments).where(eq(assessments.initiativeId, initiative.id)).limit(1).get();
     if (assessed) {
@@ -212,11 +196,10 @@ export function initiativeById(db: Executor, id: number): Initiative {
 
 /**
  * Initiatives operators created, or with +systemOwned+, those the system
- * created for claims. Neither includes the Salt Patterns or DE Web
- * initiative, which the Assessments list shows as DE FabLab's own.
+ * created for claims. Neither includes the Salt Patterns initiative.
  */
 export function listInitiatives(db: Executor, options: { systemOwned?: boolean } = {}): Initiative[] {
-  const owner = and(options.systemOwned ? isNotNull(initiatives.claimRepositorySourceId) : isNull(initiatives.claimRepositorySourceId), not(initiatives.systemOwned), not(initiatives.deWeb));
+  const owner = and(options.systemOwned ? isNotNull(initiatives.claimRepositorySourceId) : isNull(initiatives.claimRepositorySourceId), not(initiatives.systemOwned));
   return db.select().from(initiatives).where(owner).orderBy(sql`lower(${initiatives.name})`, asc(initiatives.publicId)).all();
 }
 

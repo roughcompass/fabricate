@@ -16,7 +16,6 @@ const shared: Settings = {
   analysis: { maxBlobBytes: 1024, maxFiles: 10, maxTotalBytes: 4096 },
   demo: { enabled: false },
   deConsole: { source: null, refreshMinutes: 60 },
-  applications: { bitbucketHosts: ["bitbucket.org", "bitbucket.deweb.example"] },
   profile: "full",
   prototypes: {
     enabled: false,
@@ -307,17 +306,6 @@ describe("configuration", () => {
       expect(JSON.stringify(config)).not.toContain("service-token");
     });
   });
-
-  describe("Bitbucket hosts", () => {
-    it("accepts the configured hosts, lowercased, besides github.com", () => {
-      expect(load().applications.bitbucketHosts).toEqual(["bitbucket.org", "bitbucket.deweb.example"]);
-      expect(load({ shared: { ...shared, applications: { bitbucketHosts: ["Bitbucket.Example.COM", "bitbucket.example.com"] } } }).applications.bitbucketHosts).toEqual(["bitbucket.example.com"]);
-    });
-
-    it("takes FABRICATE_BITBUCKET_HOSTS as a comma-separated list over the file", () => {
-      expect(load({ shared }, { FABRICATE_BITBUCKET_HOSTS: " bitbucket.example.com , git.example.com:7990 " }).applications.bitbucketHosts).toEqual(["bitbucket.example.com", "git.example.com:7990"]);
-    });
-  });
 });
 
 describe("npm run config", () => {
@@ -325,10 +313,9 @@ describe("npm run config", () => {
     const { execFileSync } = await import("node:child_process");
     const output = execFileSync("npx", ["tsx", "src/lib/config/print-cli.ts"], {
       encoding: "utf8",
-      env: { ...process.env, FABRICATE_ENV: "test", FABRICATE_DE_CONSOLE_SOURCE: "https://de-console.example.test/export", FABRICATE_DE_CONSOLE_TOKEN: "console-secret-91", FABRICATE_BITBUCKET_HOSTS: "bitbucket.example.com" },
+      env: { ...process.env, FABRICATE_ENV: "test", FABRICATE_DE_CONSOLE_SOURCE: "https://de-console.example.test/export", FABRICATE_DE_CONSOLE_TOKEN: "console-secret-91" },
     });
     expect(output).toContain("DE Console:         https://de-console.example.test/export, every 60 minutes, token set");
-    expect(output).toContain("Bitbucket hosts:    bitbucket.example.com");
     expect(output).not.toContain("console-secret-91");
   }, 30_000);
 });

@@ -1,10 +1,8 @@
 import type { RuntimeDescriptor } from "@/demo/runtime/descriptor";
-import { catalogs } from "@/lib/experience/catalogs";
-import { type DemoView, viewApplicationId, viewTemplate } from "./access";
-import { buildProgress } from "./build";
-import type { Profile } from "./catalog";
-import { applicationUrl, buildScriptFor, referenceUrl } from "./deployments";
-import { type RuntimeExperience, defaultRuntimeExperience } from "./runtime-experience";
+import type { DemoView } from "./access";
+import { type Profile, referenceId } from "./catalog";
+import { referenceUrl } from "./deployments";
+import { runtimeExperience } from "./runtime-experience";
 import type { Workspace } from "./workspaces";
 
 /** The cookie that remembers a share link's token for one application (design.md, decision 11). */
@@ -13,21 +11,18 @@ export function shareCookieName(applicationId: string): string {
 }
 
 /**
- * What the browser needs to run a view, or null when the view's template no
- * longer exists. `profiles` are the visiting workspace's own session profiles;
- * `portal` is the experience it renders, the brand's default without one.
+ * What the browser needs to run a view. `profiles` are the visiting
+ * workspace's own session profiles.
  */
-export function runtimeDescriptor(view: DemoView, visitor: Workspace | null, shareToken: string | null, profiles: readonly Profile[] = [], portal: RuntimeExperience | null = null, now = Date.now()): RuntimeDescriptor | null {
-  const template = viewTemplate(view.target);
-  if (!template) return null;
-  const { portalId, shell, experience } = portal ?? defaultRuntimeExperience(template.brand, catalogs(), new Date(now));
-  const applicationId = viewApplicationId(view.target);
-  const application = view.target.kind === "application" ? view.target.application : null;
+export function runtimeDescriptor(view: DemoView, visitor: Workspace | null, shareToken: string | null, profiles: readonly Profile[] = [], now = Date.now()): RuntimeDescriptor {
+  const { template } = view;
+  const { shell, experience } = runtimeExperience(template.brand, new Date(now));
+  const applicationId = referenceId(template.slug);
   return {
     applicationId,
-    applicationName: application?.name ?? template.title,
+    applicationName: template.title,
     templateSlug: template.slug,
-    environment: application?.environment ?? "production",
+    environment: "production",
     access: view.access,
     viewKey: `${applicationId}:${view.viewWorkspaceId ?? "anonymous"}:${visitor?.resetEpoch ?? 0}`,
     shareState: view.access === "share" ? (view.shareState ?? null) : null,
@@ -35,11 +30,8 @@ export function runtimeDescriptor(view: DemoView, visitor: Workspace | null, sha
     displayName: visitor?.displayName ?? null,
     hints: visitor?.hints ?? {},
     profiles,
-    url: application ? applicationUrl(application) : referenceUrl(template.slug),
-    status: application && buildProgress(buildScriptFor(application, template), application.createdAt.getTime(), now, application.buildSkippedAt?.getTime() ?? null).status === "building" ? "building" : "ready",
-    // Only the owner can open an application's page; everyone else goes to the template.
-    pageHref: application && view.access === "owner" ? `/applications/${application.publicId}` : `/templates/${template.slug}`,
-    portalId,
+    url: referenceUrl(template.slug),
+    pageHref: `/templates/${template.slug}`,
     shell,
     experience,
   };

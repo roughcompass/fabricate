@@ -1,12 +1,8 @@
 import type { Page } from "@playwright/test";
-import { eq } from "drizzle-orm";
-import { portals } from "../src/lib/db/schema";
 import { recordFailedDeConsoleRead } from "../src/lib/ownership/de-console";
-import { createApplication, ensurePortal } from "../src/lib/ownership/records";
+import { createApplication } from "../src/lib/ownership/records";
 import { buildAssessment, buildInitiative, buildSource } from "../test/support/builders";
 import { buildEvaluation, claim, driveEvaluation, driveRun, readDeConsole } from "../test/support/home";
-import { determineRendering, registerApplication } from "../test/support/applications";
-import { onboardPortal } from "../test/support/onboarding";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { seedResults } from "./support/results";
@@ -28,12 +24,11 @@ function assessment(db: Db, name: string, run: "complete" | "failed", conclusion
   return { initiative, run: finished };
 }
 
-/** Home shows the primary menu, Home current, with no sub-menu open. */
+/** Home shows the primary menu, with Home current. */
 async function expectClosedMenu(page: Page) {
   const nav = primary(page);
   await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(nav.getByRole("link", { name: "All Assessments", exact: true })).toBeVisible();
-  await expect(nav.getByRole("link", { name: "Show all sections" })).toBeHidden();
 }
 
 test("Opening the root address: Home opens without a redirect, titled Home, with the menu closed", async ({ page, db: _db }) => {
@@ -53,15 +48,12 @@ test("Fresh installation: each group shows its empty state and actions, and noth
   await expect(page.getByRole("link", { name: "New Repository" }).last()).toHaveAttribute("href", "/repositories/new");
   await expect(page.getByText("No Assessments yet")).toBeVisible();
   await expect(page.getByRole("main").getByRole("link", { name: "New Assessment" }).first()).toHaveAttribute("href", "/assessments/new");
-  await expect(page.getByText("No Applications yet")).toBeVisible();
-  await expect(page.getByRole("main").getByRole("link", { name: "Create Portal" }).first()).toHaveAttribute("href", "/portals/new");
-  await expect(page.getByRole("main").getByRole("link", { name: "Add application" }).first()).toHaveAttribute("href", "/applications/new");
   const needsAttention = page.getByRole("region", { name: "Needs attention" });
   await expect(needsAttention.getByText("Nothing needs attention")).toBeVisible();
   await expect(needsAttention.getByRole("link")).toHaveCount(0);
 });
 
-test("every figure opens a list showing exactly the records it counts (Unclaimed figure opens its list, Conclusion figure opens its tab)", async ({ page, db, baseURL }) => {
+test("every figure opens a list showing exactly the records it counts (Unclaimed figure opens its list, Conclusion figure opens its tab)", async ({ page, db }) => {
   const sources = Array.from({ length: 6 }, (_, index) => buildSource(db, { name: `repo-${index}` }));
   for (const source of sources.slice(0, 4)) claim(db, source);
   claim(db, buildSource(db, { name: "archived", enabled: false }));
@@ -69,76 +61,53 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
   assessment(db, "Payments baseline", "complete", "gaps");
   assessment(db, "Markets baseline", "complete", "conforms");
   assessment(db, "Ledger review", "complete");
-  // Access in Production and Markets a Prototype, with two Applications, one Undetermined; the switcher names Markets, which Home ignores (Applications figure ignores the switcher).
-  const access = onboardPortal(db, "Access");
-  const markets = onboardPortal(db, "Markets");
-  ensurePortal(db, "Lending");
-  db.update(portals).set({ lifecycle: "production" }).where(eq(portals.id, access.id)).run();
-  registerApplication(db, { name: "Payments workspace", portal: access });
-  // Ledger's rendering is Undetermined by a DE Web Assessment, which the Assessments figures leave out.
-  determineRendering(db, registerApplication(db, { name: "Ledger", portal: markets }), "undetermined");
-  await page.context().addCookies([{ name: "fabricate-portal", value: markets.publicId, url: baseURL! }]);
 
   await page.goto(paths.home);
-  const tables: Record<string, string> = { Repositories: "Repositories", Assessments: "Assessments", Applications: "" };
   const figures: { group: string; label: string; value: number; href: string }[] = [];
-  for (const group of Object.keys(tables)) {
+  for (const group of ["Repositories", "Assessments"]) {
     for (const stat of await page.locator(`dl[aria-label="${group}"] > div`).all()) {
       const link = stat.locator("dd a");
       figures.push({ group, label: (await stat.locator("dt").textContent())!, value: Number((await link.textContent())!.replaceAll(",", "")), href: (await link.getAttribute("href"))! });
     }
   }
   expect(figures.map(({ label, value }) => [label, value])).toEqual([
-    // Six Repositories, one more for each Assessment, and each Application's own.
-    ["Enabled", 12],
+    // Six Repositories, and one more for each Assessment.
+    ["Enabled", 10],
     ["Claimed", 4],
-    ["Unclaimed", 8],
+    ["Unclaimed", 6],
     ["Assessments", 4],
     ["Gaps found", 2],
     ["Undetermined", 0],
     ["Conforms", 1],
     ["Not evaluated", 1],
-    ["Applications", 2],
-    ["Undetermined rendering", 1],
-    ["Production Portals", 1],
   ]);
-  await expect(page.locator('dl[aria-label="Repositories"]')).toContainText("33% of enabled");
+  await expect(page.locator('dl[aria-label="Repositories"]')).toContainText("40% of enabled");
 
-  for (const { label, value, href } of figures) {
+  for (const { group, label, value, href } of figures) {
     await page.goto(href);
-    const group = figures.find((candidate) => candidate.label === label)!.group;
-    const rows =
-      label === "Production Portals"
-        ? page.getByRole("list", { name: "Portals", exact: true }).getByRole("listitem")
-        : group === "Applications"
-          ? page.getByRole("list", { name: "Applications", exact: true }).getByRole("listitem")
-          : page.getByRole("table", { name: ["Enabled", "Claimed", "Unclaimed"].includes(label) ? "Repositories" : "Assessments", exact: true }).locator("tbody tr");
+    const rows = page.getByRole("table", { name: group, exact: true }).locator("tbody tr");
     if (value === 0) await expect(rows, label).toHaveCount(0);
     else await expect(rows, `${label} opens ${href}`).toHaveCount(value);
   }
 });
 
-test("Same page for everyone: stated names in cookies don't change Home", async ({ page, context, db, baseURL }) => {
+test("Same page for everyone: a stated name in a cookie doesn't change Home", async ({ page, context, db, baseURL }) => {
   claim(db, buildSource(db));
   assessment(db, "Checkout platform migration", "failed");
   await page.goto(paths.home);
   const first = await page.getByRole("main").innerText();
 
-  await context.addCookies([
-    { name: "fabricate-actor", value: "Ana", url: baseURL! },
-    { name: "fabricate-claimant", value: "Bo", url: baseURL! },
-  ]);
+  await context.addCookies([{ name: "fabricate-claimant", value: "Bo", url: baseURL! }]);
   await page.reload();
   expect(await page.getByRole("main").innerText()).toBe(first);
 });
 
-test("Demo enabled: Home shows no demo applications or templates", async ({ page, db: _db }) => {
+test("Demo enabled: Home shows no templates or reference deployments", async ({ page, db: _db }) => {
   await page.goto(paths.home);
   const main = page.getByRole("main");
   await expect(main).not.toContainText("Salt Patterns");
   await expect(main).not.toContainText("template");
-  // Add application is part of the Applications group; demo deployments and templates aren't on Home.
-  await expect(main.locator('a[href^="/applications/app_"], a[href^="/templates"]')).toHaveCount(0);
+  await expect(main.locator('a[href^="/run/"], a[href^="/templates"]')).toHaveCount(0);
 });
 
 test("Failed Run: the item names the Run and its Assessment and opens the Run", async ({ page, db }) => {
@@ -188,7 +157,7 @@ test("Nothing to do: an empty state without an action", async ({ page, db }) => 
   await expect(needsAttention.getByRole("button")).toHaveCount(0);
 });
 
-// Every way to Home lands on Home with the menu closed: no section's sub-menu open, and no drawer.
+// Every way to Home lands on Home with the menu closed: no drawer open.
 test.describe("reaching Home", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -278,56 +247,37 @@ test.describe("reaching Home on a narrow viewport", () => {
   });
 });
 
-// operator-interface/home spec: the dashboard (update-portal-management-journey task 5.3).
+// operator-interface/home spec: the dashboard.
 test.describe("the dashboard", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("Wide layout: three figure panels side by side, then the Portals and the trend, then activity and Needs attention, each row at equal heights (Wide layout)", async ({ page, db }) => {
+  test("Wide layout: the Repositories and Assessments panels side by side, then the trend and activity, each row at equal heights, then Needs attention and Quick actions at full width (Wide layout)", async ({ page, db }) => {
     claim(db, buildSource(db));
     assessment(db, "Checkout platform migration", "complete", "gaps");
-    onboardPortal(db, "Access");
     await page.goto(paths.home);
     const panel = (name: string) => page.getByRole("main").getByRole("region", { name, exact: true });
     const boxes = async (names: string[]) => Promise.all(names.map(async (name) => (await panel(name).boundingBox())!));
-    for (const row of [["Repositories", "Assessments", "Applications"], ["Portals", "Assessment trend"], ["Recent activity", "Needs attention"]]) {
+    for (const row of [["Repositories", "Assessments"], ["Assessment trend", "Recent activity"]]) {
       const shown = await boxes(row);
       expect(new Set(shown.map((box) => Math.round(box.y))).size, row.join(", ")).toBe(1);
       expect(new Set(shown.map((box) => Math.round(box.height))).size, row.join(", ")).toBe(1);
     }
-    const [figures, portalsBox, activity, actions] = await boxes(["Repositories", "Portals", "Recent activity", "Quick actions"]);
-    expect(figures!.y).toBeLessThan(portalsBox!.y);
-    expect(portalsBox!.y).toBeLessThan(activity!.y);
-    expect(activity!.y).toBeLessThan(actions!.y);
+    const [figures, trend, attentionBox, actions] = await boxes(["Repositories", "Assessment trend", "Needs attention", "Quick actions"]);
+    expect(figures!.y).toBeLessThan(trend!.y);
+    expect(trend!.y).toBeLessThan(attentionBox!.y);
+    expect(attentionBox!.y).toBeLessThan(actions!.y);
+    expect(Math.round(attentionBox!.width)).toBe(Math.round(actions!.width));
+    expect(attentionBox!.width).toBeGreaterThan(figures!.width * 1.5);
   });
 
-  test("Applications added this week: each figure states its change over seven days in words (Applications added this week, No change)", async ({ page, db }) => {
-    const access = onboardPortal(db, "Access");
-    registerApplication(db, { name: "Payee Hub", portal: access });
-    registerApplication(db, { name: "Ledger", portal: access });
+  test("Repositories added this week: each figure states its change over seven days in words (No change)", async ({ page, db }) => {
+    buildSource(db, { name: "payee-hub" });
+    buildSource(db, { name: "ledger" });
     await page.goto(paths.home);
-    const applications = page.locator('dl[aria-label="Applications"]');
-    await expect(applications.locator('[data-figure="Applications"]')).toContainText("2");
-    await expect(applications.locator('[data-figure="Applications"]')).toContainText("+2 this week");
-    await expect(applications.locator('[data-figure="Production Portals"]')).toContainText("No change this week");
-  });
-
-  test("Portals overview: Portals in Production first, with Applications and last save, each opening its Portal page (Two Portals)", async ({ page, db }) => {
-    const markets = onboardPortal(db, "Markets");
-    const access = onboardPortal(db, "Access");
-    db.update(portals).set({ lifecycle: "production" }).where(eq(portals.id, access.id)).run();
-    for (const name of ["Payee Hub", "Ledger", "Treasury Desk"]) registerApplication(db, { name, portal: access });
-    registerApplication(db, { name: "Blotter", portal: markets });
-    await page.goto(paths.home);
-    const rows = page.getByRole("list", { name: "Portals" }).getByRole("listitem");
-    await expect(rows).toHaveCount(2);
-    await expect(rows.nth(0)).toContainText("Access");
-    await expect(rows.nth(0)).toContainText("Production");
-    await expect(rows.nth(0)).toContainText("3 Applications");
-    await expect(rows.nth(1)).toContainText("Markets");
-    await expect(rows.nth(1)).toContainText("1 Application");
-    await expect(rows.nth(1)).toContainText("Not saved yet");
-    await rows.nth(1).getByRole("link", { name: "Markets" }).click();
-    await expect(page).toHaveURL(new RegExp(`/portals/${markets.publicId}$`));
+    const repositories = page.locator('dl[aria-label="Repositories"]');
+    await expect(repositories.locator('[data-figure="Enabled"]')).toContainText("2");
+    await expect(repositories.locator('[data-figure="Enabled"]')).toContainText("+2 this week");
+    await expect(repositories.locator('[data-figure="Claimed"]')).toContainText("No change this week");
   });
 
   test("Trend: this week's Evaluations are charted by conclusion, with the same figures in a table (Trend)", async ({ page, db }) => {
@@ -342,23 +292,23 @@ test.describe("the dashboard", () => {
     await expect(lastWeek.locator("td")).toHaveText(["2", "0", "1", "0"]);
   });
 
-  test("Recent activity: the newest change first, by whom, linking to its record (Experience saved)", async ({ page, db }) => {
-    const access = onboardPortal(db, "Access");
-    registerApplication(db, { name: "Payee Hub", portal: access });
+  test("Recent activity: the newest finished Run first, linking to it", async ({ page, db }) => {
+    assessment(db, "Checkout platform migration", "failed");
+    const { run } = assessment(db, "Payments baseline", "complete");
     await page.goto(paths.home);
     const activity = page.getByRole("list", { name: "Recent activity" }).getByRole("listitem");
-    await expect(activity.first()).toContainText("Application added: Payee Hub");
-    await expect(activity.first()).toContainText("by ana@example.com");
-    await expect(activity.nth(1)).toContainText("Portal created: Access");
-    await activity.nth(1).getByRole("link", { name: "Access" }).click();
-    await expect(page).toHaveURL(new RegExp(`/portals/${access.publicId}$`));
+    await expect(activity).toHaveCount(2);
+    await expect(activity.first()).toContainText("Run finished: Payments baseline");
+    await expect(activity.nth(1)).toContainText("Run failed: Checkout platform migration");
+    await activity.first().getByRole("link", { name: "Payments baseline" }).click();
+    await expect(page).toHaveURL(new RegExp(`${paths.run(run.publicId)}$`));
   });
 
-  test("Quick actions: Add application, Create Portal, New Assessment, and Import Repositories (Add application)", async ({ page, db: _db }) => {
+  test("Quick actions: New Assessment and Import Repositories", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const actions = page.getByRole("group", { name: "Quick actions" });
-    await expect(actions.getByRole("link")).toHaveText(["Add application", "Create Portal", "New Assessment", "Import Repositories"]);
-    await actions.getByRole("link", { name: "Add application" }).click();
-    await expect(page).toHaveURL(/\/applications\/new$/);
+    await expect(actions.getByRole("link")).toHaveText(["New Assessment", "Import Repositories"]);
+    await actions.getByRole("link", { name: "New Assessment" }).click();
+    await expect(page).toHaveURL(/\/assessments\/new$/);
   });
 });

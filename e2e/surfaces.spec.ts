@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { buildSource } from "../test/support/builders";
 import { expect, expectNoNestedBorders, test } from "./support/fixtures";
 import { seedResults } from "./support/results";
-import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
+import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
 
 // operator-interface/page-patterns spec: content sits on white surfaces over a gray canvas.
@@ -56,11 +56,11 @@ test("Dark theme: the canvas is darker than the surfaces and the header", async 
   expect(await background(page.locator("[data-shell-header]"))).toBe(SURFACE.dark);
 });
 
-test("No nested bordered containers on any surface", async ({ page, context, db, sourcesDir }) => {
+test("No nested bordered containers on any surface", async ({ page, db, sourcesDir }) => {
   test.setTimeout(240_000);
-  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...(await seedDemoSurfaces(page, context, db))];
+  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...demoSurfaces()];
   for (const [name, url] of surfaces) {
-    await page.goto(surfaceUrl(url));
+    await page.goto(url);
     await test.step(name, () => expectNoNestedBorders(page));
   }
 });

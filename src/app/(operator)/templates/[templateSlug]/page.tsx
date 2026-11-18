@@ -70,11 +70,6 @@ export default async function TemplatePage({ params, searchParams }: { params: P
             )}
           </>
         }
-        primaryAction={
-          <ButtonLink href={`/templates/${template.slug}/deploy`} variant="primary" icon="cloud">
-            Deploy template
-          </ButtonLink>
-        }
       />
 
       <div className={styles.detail}>

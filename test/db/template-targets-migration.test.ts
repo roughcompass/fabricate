@@ -133,7 +133,7 @@ describe("migration 0028: template targets", () => {
       },
     ]);
     expect(db.$client.prepare("select * from source_snapshots").all()).toEqual(snapshotBefore);
-    expect(db.$client.prepare("select * from initiatives where public_id = 'ini_fleet00000000000'").get()).toEqual({ ...initiativeBefore, system_owned: 0, de_web: 0 });
+    expect(db.$client.prepare("select * from initiatives where public_id = 'ini_fleet00000000000'").get()).toEqual({ ...initiativeBefore, system_owned: 0 });
     expect(db.$client.prepare("select count(*) as n from initiative_targets").get()).toEqual({ n: 1 });
     // The carried-over target still obeys its rules.
     expect(() => db.$client.prepare("update assessment_targets set clone_url = 'https://elsewhere.example/x.git'").run()).toThrow(/scope snapshot cannot change/);
@@ -145,8 +145,8 @@ describe("migration 0028: template targets", () => {
       const db = openDatabase(":memory:");
       migrateDatabase(db, MIGRATIONS_FOLDER);
       const salt = (db.$client.prepare("select id from initiatives where system_owned = 1").get() as { id: number }).id;
-      db.$client.prepare("insert into initiatives (public_id, name, selection_mode, created_at, updated_at) values ('ini_fleet00000000000', 'Fleet', 'explicit', ?, ?)").run(T0, T0);
-      return { db, salt, fleet: salt + 1 };
+      const fleet = Number(db.$client.prepare("insert into initiatives (public_id, name, selection_mode, created_at, updated_at) values ('ini_fleet00000000000', 'Fleet', 'explicit', ?, ?)").run(T0, T0).lastInsertRowid);
+      return { db, salt, fleet };
     }
 
     it("records a template target under Salt Patterns, pinned to its content digest", () => {

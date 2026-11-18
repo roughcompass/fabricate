@@ -8,8 +8,6 @@ export const E2E_SOURCES = path.join(E2E_ROOT, "sources");
 export const E2E_DATABASE = path.join(E2E_ROOT, "fabricate.sqlite3");
 /** The DE Console export the server reads; tests write it when they need one. */
 export const E2E_DE_CONSOLE = path.join(E2E_ROOT, "de-console.json");
-/** The Create Portal dialog's What's included content the server reads: a copy of the committed file, which a test may replace and restore. */
-export const E2E_WHATS_INCLUDED = path.join(E2E_ROOT, "portal-whats-included.yaml");
 
 export const E2E_ENV = {
   FABRICATE_E2E: "1",
@@ -18,7 +16,6 @@ export const E2E_ENV = {
   FABRICATE_REPOSITORY_STORAGE: path.join(E2E_ROOT, "repositories"),
   FABRICATE_ALLOWED_ROOTS: E2E_SOURCES,
   FABRICATE_DE_CONSOLE_SOURCE: E2E_DE_CONSOLE,
-  FABRICATE_WHATS_INCLUDED_FILE: E2E_WHATS_INCLUDED,
   FABRICATE_PROTOTYPES_DATABASE: path.join(E2E_ROOT, "prototypes-pglite"),
   // Browser tests generate with the scripted model, so they never call a model service.
   FABRICATE_PROTOTYPES_MODEL_GENERATE: "mock",

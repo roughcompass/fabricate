@@ -97,7 +97,7 @@ test("keeps the template in the gallery when its prototype is deleted (Deleting 
 test("leaves accepted templates in place when the template demo is reset (Reset keeps accepted templates)", async ({ page, db: _db }) => {
   await keepOne(page);
   await acceptTemplate(page, { title: "Urgent payments queue" });
-  await page.goto("/new");
+  await page.goto("/templates");
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.getByRole("dialog", { name: "Reset the demo?" }).getByRole("button", { name: "Reset demo" }).click();

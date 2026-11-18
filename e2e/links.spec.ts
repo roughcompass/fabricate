@@ -1,7 +1,7 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
 import { paths } from "./support/paths";
-import { seedDemoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
+import { seedOperatorSurfaces } from "./support/surfaces";
 
 /**
  * The link check (operator-interface/page-patterns spec, "Every link opens the
@@ -15,18 +15,17 @@ import { seedDemoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 test.use({ javaScriptEnabled: false, viewport: { width: 1440, height: 900 } });
 
 // The component gallery exists only in development and test builds (design-system spec).
-const START = [paths.home, paths.assessments, "/applications", "/templates", "/new", ...(process.env.E2E_PRODUCTION ? [] : ["/design-system"])];
+const START = [paths.home, paths.assessments, "/templates", ...(process.env.E2E_PRODUCTION ? [] : ["/design-system"])];
 /** Model terms the interface never shows as record names, and the old product name. */
 const VOCABULARY = [/\bInitiatives?\b/, /\bSources?\b/, /\bAssessment #\d/, /\bFabricate\b/];
 /** Pages per route shape; records of the same kind share one shape. */
 const PER_SHAPE = 2;
 
-/** A route's shape: IDs, template slugs, and BitBucket repositories become placeholders. */
+/** A route's shape: IDs and template slugs become placeholders. */
 function shape(url: string): string {
   const [pathname] = url.split("?");
   const segments = pathname!.split("/").map((segment) => (/^[a-z]{2,4}_[a-z0-9]{6,}$/.test(segment) ? ":id" : segment));
   if (segments[1] === "templates" && segments[2]) segments[2] = ":slug";
-  if (segments[1] === "applications" && segments[2] === "import" && segments[3]) segments.splice(3, 2, ":project", ":repository");
   return segments.join("/");
 }
 
@@ -136,7 +135,6 @@ async function checkPrimaries(browser: Browser, context: BrowserContext, baseURL
 test("every link opens a page, every page uses the interface vocabulary, and every primary action has the primary fill", async ({ browser, page, context, db, sourcesDir, baseURL }) => {
   test.setTimeout(900_000);
   await seedOperatorSurfaces(db, sourcesDir);
-  await seedDemoSurfaces(page, context, db);
 
   const problems: string[] = [];
   const visited = await crawl(page, START, Infinity, problems);

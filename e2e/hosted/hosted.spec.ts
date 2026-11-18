@@ -18,11 +18,10 @@ test("serves Prototypes, shows only its section, and answers not found elsewhere
   await expect(page.getByRole("link", { name: "Personas" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Assessments" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Salt Patterns" })).toHaveCount(0);
-  // Switcher absent without Web Onboarding: the product mark and name, and no Portal switcher.
+  // The product mark and name.
   await expect(page.locator("#sidebar").getByRole("link", { name: "DE FabLab home" })).toHaveText("DE FabLab");
-  await expect(page.getByRole("button", { name: /^Switch Portal/ })).toHaveCount(0);
 
-  for (const address of ["/assessments", "/repositories", "/templates", "/applications", "/onboarding"]) expect((await page.request.get(address)).status(), address).toBe(404);
+  for (const address of ["/assessments", "/repositories", "/templates"]) expect((await page.request.get(address)).status(), address).toBe(404);
   await page.goto("/prototypes/new");
   await expect(page.getByLabel("Intent")).toBeVisible();
   // Nothing opened the SQLite database.

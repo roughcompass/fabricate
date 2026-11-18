@@ -2,17 +2,15 @@ import { describe, expect, it } from "vitest";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { attentionItems } from "@/lib/home/attention";
-import { WEEK_MS, assessmentTrend, figuresAt, portalsOverview, recentActivity } from "@/lib/home/dashboard";
+import { WEEK_MS, assessmentTrend, figuresAt, recentActivity } from "@/lib/home/dashboard";
 import { fleetSummary } from "@/lib/home/summary";
 import { createApplication } from "@/lib/ownership/records";
-import { registerApplication } from "../support/applications";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, claim, driveEvaluation, driveRun, readDeConsole } from "../support/home";
-import { onboardPortal } from "../support/onboarding";
 
-/** A fleet of +repositories+ Repositories, half claimed, +assessments+ Assessments with a mix of outcomes, and +applications+ registered Applications. */
-function seed(repositories: number, assessments: number, applications: number): Db {
+/** A fleet of +repositories+ Repositories, half claimed, and +assessments+ Assessments with a mix of outcomes. */
+function seed(repositories: number, assessments: number): Db {
   const db = createTestDb();
   const sources = Array.from({ length: repositories }, (_, index) => {
     const source = buildSource(db);
@@ -26,8 +24,6 @@ function seed(repositories: number, assessments: number, applications: number): 
   }
   createApplication(db, { sealId: "88002" });
   createApplication(db, { sealId: "88002" });
-  const portal = onboardPortal(db, "Access");
-  for (let index = 0; index < applications; index++) registerApplication(db, { name: `Application ${index + 1}`, portal });
   readDeConsole(db, [{ seal_id: "88002" }], new Date(0));
   return db;
 }
@@ -43,7 +39,6 @@ function statementsOf(db: Db): string[] {
   try {
     fleetSummary(db);
     figuresAt(db, new Date(Date.now() - WEEK_MS));
-    portalsOverview(db);
     assessmentTrend(db);
     recentActivity(db);
     attentionItems(db, withOverrides(getConfig(), { deConsole: { source: "/tmp/de-console-export.json", refreshMinutes: 60 } }));
@@ -54,9 +49,9 @@ function statementsOf(db: Db): string[] {
 }
 
 describe("Home's reads", () => {
-  it("prepare the same statements for 5 Repositories and 1 Application as for 500 and 200, and never read a Profile or Map document (Fleet at its expected maximum)", () => {
-    const small = statementsOf(seed(5, 1, 1));
-    const large = statementsOf(seed(500, 100, 200));
+  it("prepare the same statements for 5 Repositories as for 500, and never read a Profile or Map document (Fleet at its expected maximum)", () => {
+    const small = statementsOf(seed(5, 1));
+    const large = statementsOf(seed(500, 100));
 
     expect(small.length).toBeGreaterThan(5);
     expect(large.length).toBe(small.length);

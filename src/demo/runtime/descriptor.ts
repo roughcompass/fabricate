@@ -9,13 +9,13 @@ import type { PortalExperience } from "./portal/types";
  * group and routes come from the catalog by slug, so only identifiers travel.
  */
 export interface RuntimeDescriptor {
-  /** A public application ID, or ref-<slug> for a reference deployment. */
+  /** ref-<slug>: the template's reference deployment. */
   readonly applicationId: string;
   readonly applicationName: string;
   readonly templateSlug: string;
-  /** The environment the application was deployed to; reference deployments run in production. */
+  /** Reference deployments run in production. */
   readonly environment: EnvironmentId;
-  readonly access: "owner" | "reference" | "share";
+  readonly access: "reference" | "share";
   /** Scopes browser-held state to this view and to the workspace's reset epoch. */
   readonly viewKey: string;
   /** The state a share link captured, applied once as the recipient's starting state. */
@@ -27,14 +27,9 @@ export interface RuntimeDescriptor {
   readonly profiles: readonly Profile[];
   /** The simulated address shown for the application. */
   readonly url: string;
-  /** Whether the application's simulated build has finished; reference deployments are always ready. */
-  readonly status: "ready" | "building";
-  /** The application's page in Fabricate, or its template's page for a reference deployment or a shared view. */
+  /** Its template's page in Fabricate. */
   readonly pageHref: string;
-  /** The Portal the application is opened for, kept in every route's address; null for none. */
-  readonly portalId: string | null;
-  /** The shell the experience's theme uses, which can differ from the brand's for a Portal. */
+  /** The brand's shell. */
   readonly shell: "access" | "markets";
-  /** That Portal's saved experience, or the default one. */
   readonly experience: PortalExperience;
 }

@@ -3,9 +3,7 @@ import { setConfig, withOverrides, getConfig } from "@/lib/config";
 import { type Db, setDb } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { resolveView } from "@/lib/demo/access";
-import { templateBySlug } from "@/lib/demo/catalog";
 import { type ThreadInput, type WritableView, addComment, createThread, listThreads, setThreadStatus } from "@/lib/demo/comments";
-import { createApplication, validateDeployInput } from "@/lib/demo/deployments";
 import { shareCookieName } from "@/lib/demo/runtime-view";
 import { createShare } from "@/lib/demo/shares";
 import { WORKSPACE_COOKIE, newWorkspaceKey } from "@/lib/demo/workspace-key";
@@ -23,8 +21,7 @@ describe("comment threads", () => {
   let stranger: Workspace;
   let ownerKey: string;
   let strangerKey: string;
-  let appId: number;
-  let appPublicId: string;
+  const appPublicId = "ref-payments-workspace";
 
   beforeEach(() => {
     db = createTestDb();
@@ -33,9 +30,6 @@ describe("comment threads", () => {
     strangerKey = newWorkspaceKey();
     owner = ensureWorkspace(db, ownerKey);
     stranger = ensureWorkspace(db, strangerKey);
-    const application = createApplication(db, owner.id, templateBySlug("payments-workspace")!, validateDeployInput({ name: "Payments", environment: "sandbox", project: "", repository: "" }));
-    appId = application.id;
-    appPublicId = application.publicId;
     cookieJar.clear();
   });
   afterEach(() => setDb(undefined));
@@ -77,24 +71,23 @@ describe("comment threads", () => {
   });
 
   it("gives each workspace private threads on a reference deployment", () => {
-    const mine = resolveView(db, "ref-payments-workspace", owner) as WritableView;
-    const theirs = resolveView(db, "ref-payments-workspace", stranger) as WritableView;
-    createThread(db, mine, { workspaceId: owner.id, name: "Sam" }, INPUT);
-    expect(listThreads(db, mine)).toHaveLength(1);
+    const theirs = resolveView(db, appPublicId, stranger) as WritableView;
+    createThread(db, ownView(), { workspaceId: owner.id, name: "Sam" }, INPUT);
+    expect(listThreads(db, ownView())).toHaveLength(1);
     expect(listThreads(db, theirs)).toEqual([]);
-    expect(listThreads(db, resolveView(db, "ref-payments-workspace", null)!)).toEqual([]);
+    expect(listThreads(db, resolveView(db, appPublicId, null)!)).toEqual([]);
   });
 
   it("refuses to change a thread from another view", () => {
     const id = createThread(db, ownView(), { workspaceId: owner.id, name: "Sam" }, INPUT);
-    const reference = resolveView(db, "ref-payments-workspace", owner) as WritableView;
-    expect(() => addComment(db, reference, id, { workspaceId: owner.id, name: "Sam" }, "Hi")).toThrow(ValidationError);
-    expect(() => setThreadStatus(db, reference, id, "resolved")).toThrow(/does not exist/);
+    const theirs = resolveView(db, appPublicId, stranger) as WritableView;
+    expect(() => addComment(db, theirs, id, { workspaceId: stranger.id, name: "Robin" }, "Hi")).toThrow(ValidationError);
+    expect(() => setThreadStatus(db, theirs, id, "resolved")).toThrow(/does not exist/);
   });
 
   it("lets a share link holder read and reply in the shared view", () => {
     const id = createThread(db, ownView(), { workspaceId: owner.id, name: "Sam" }, INPUT);
-    const token = createShare(db, { applicationId: appId }, owner.id, { route: "payees", overrides: {}, theme: "light", persona: "analyst" });
+    const token = createShare(db, "payments-workspace", owner.id, { route: "payees", overrides: {}, theme: "light", persona: "analyst" });
     const shared = resolveView(db, appPublicId, stranger, token) as WritableView;
     addComment(db, shared, id, { workspaceId: stranger.id, name: "Robin" }, "Looks good");
     expect(listThreads(db, ownView())[0]!.comments.map((comment) => comment.authorName)).toEqual(["Sam", "Robin"]);
@@ -108,16 +101,22 @@ describe("comment threads", () => {
       return POST(new Request(`http://localhost${path}`, { method: "POST", body: JSON.stringify(body) }));
     };
 
-    it("lists the owner's threads and refuses a stranger without a share link", async () => {
+    it("lists each workspace's own threads, and the sharer's through a share link", async () => {
       const { GET } = await import("@/app/api/demo/threads/route");
+      const threads = async () => {
+        const response = await GET(new Request(`http://localhost/api/demo/threads?application=${appPublicId}`));
+        expect(response.status).toBe(200);
+        return ((await response.json()) as { threads: unknown[] }).threads;
+      };
+      createThread(db, ownView(), { workspaceId: owner.id, name: "Sam" }, INPUT);
       cookieJar.set(WORKSPACE_COOKIE, ownerKey);
-      expect((await GET(new Request(`http://localhost/api/demo/threads?application=${appPublicId}`))).status).toBe(200);
+      expect(await threads()).toHaveLength(1);
       cookieJar.set(WORKSPACE_COOKIE, strangerKey);
-      expect((await GET(new Request(`http://localhost/api/demo/threads?application=${appPublicId}`))).status).toBe(404);
+      expect(await threads()).toEqual([]);
 
-      const token = createShare(db, { applicationId: appId }, owner.id, { route: "payees", overrides: {}, theme: "light", persona: "analyst" });
+      const token = createShare(db, "payments-workspace", owner.id, { route: "payees", overrides: {}, theme: "light", persona: "analyst" });
       cookieJar.set(shareCookieName(appPublicId), token);
-      expect((await GET(new Request(`http://localhost/api/demo/threads?application=${appPublicId}`))).status).toBe(200);
+      expect(await threads()).toHaveLength(1);
     });
 
     it("asks for a display name on the first comment and remembers it", async () => {
@@ -132,12 +131,11 @@ describe("comment threads", () => {
       expect((await post("/api/demo/threads", { application: appPublicId, ...INPUT })).status).toBe(201);
     });
 
-    it("rejects an overlong comment and a request for someone else's application", async () => {
+    it("rejects an overlong comment and a request for an unknown application", async () => {
       cookieJar.set(WORKSPACE_COOKIE, ownerKey);
       const long = await post("/api/demo/threads", { application: appPublicId, ...INPUT, body: "x".repeat(2001), authorName: "Sam" });
       expect(await long.json()).toEqual({ errors: { body: ["Use at most 2,000 characters"] } });
-      cookieJar.set(WORKSPACE_COOKIE, strangerKey);
-      expect((await post("/api/demo/threads", { application: appPublicId, ...INPUT, authorName: "Robin" })).status).toBe(404);
+      expect((await post("/api/demo/threads", { application: "app_0000000000000000", ...INPUT, authorName: "Sam" })).status).toBe(404);
     });
 
     it("answers not found while the demo is disabled", async () => {

@@ -2,16 +2,13 @@
   /*
    * Equal outer columns keep the title centered against the whole header, not
    * the space the controls leave; a long title shrinks its column and truncates.
-   * An outer column is at least one control wide, not as wide as its content,
-   * so a page's switcher in the start column truncates instead of running
-   * into the title.
    */
   .header {
     position: sticky;
     top: 0;
     z-index: var(--z-header);
     display: grid;
-    grid-template-columns: minmax(var(--size-control-md), 1fr) minmax(0, auto) minmax(var(--size-control-md), 1fr);
+    grid-template-columns: 1fr minmax(0, auto) 1fr;
     align-items: center;
     gap: var(--space-3);
     height: var(--size-header);
@@ -20,9 +17,7 @@
     /* A solid surface fill, distinct from the canvas, so the title reads as a bar above the page. */
     background: var(--color-bg);
   }
-  .start { display: flex; align-items: center; gap: var(--space-1); justify-self: start; min-width: 0; max-width: 100%; }
-  /* A page's own control at the header's left, such as the application switcher; it shrinks before the title does. */
-  .slot { display: flex; align-items: center; min-width: 0; }
+  .start { display: flex; align-items: center; gap: var(--space-1); justify-self: start; }
   .end { display: flex; align-items: center; gap: var(--space-1); justify-self: end; }
 
   .title {
@@ -39,24 +34,6 @@
   .placeholder { display: block; width: var(--size-label); height: var(--space-5); border-radius: var(--radius-sm); background: var(--color-bg-muted); }
   /* A focused page's skeleton: where the back button will be. */
   .backPlaceholder { display: block; width: var(--size-control-md); height: var(--size-control-md); border-radius: var(--radius-md); background: var(--color-bg-muted); }
-
-  /*
-   * A header with controls at both ends, such as Runtime Configuration's,
-   * takes two rows on a narrow content column: the title and the end
-   * controls, then the sidebar control and the page's start controls.
-   */
-  @container content (max-width: 639px) {
-    .header:has(.end > *) {
-      grid-template-areas: "title end" "start start";
-      grid-template-columns: minmax(0, 1fr) auto;
-      row-gap: var(--space-1);
-      height: auto;
-      padding-block: var(--space-2);
-    }
-    .header:has(.end > *) .title { grid-area: title; text-align: left; }
-    .header:has(.end > *) .start { grid-area: start; }
-    .header:has(.end > *) .end { grid-area: end; }
-  }
 
   /* Open navigation exists only where the sidebar is a drawer; Show sidebar only where it is inline and hidden. */
   .openNavigation, .showSidebar { display: none; }

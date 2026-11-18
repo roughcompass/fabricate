@@ -18,10 +18,8 @@ import {
   routeByPath,
   routingLabel,
   shellOf,
-  stagesFor,
   startRoute,
   templateBySlug,
-  totalDuration,
 } from "@/lib/demo/catalog";
 
 const heroes = TEMPLATES.filter((template) => template.hero);
@@ -209,32 +207,5 @@ describe("scripted load sequence", () => {
   it("records overridden versions", () => {
     const sequence = loadSequence(app, startRoute(app), { "payee-list": "2.0.0" });
     expect(sequence.find((entry) => entry.member === "payee-list")?.version).toBe("2.0.0");
-  });
-});
-
-describe("build stage scripts", () => {
-  const context = { templateSlug: "payments-workspace", templateVersion: "3.2.0", url: "https://payments-workspace-k3f9.sandbox.deweb.example" };
-
-  it("runs a sandbox build in about 10 seconds through the specified stages", () => {
-    const stages = stagesFor("sandbox", context);
-    expect(stages.map((stage) => stage.name)).toEqual(["Queued", "Cloning template", "Installing dependencies", "Building", "Deploying to sandbox", "Assigning URL"]);
-    expect(totalDuration(stages)).toBeGreaterThanOrEqual(9000);
-    expect(totalDuration(stages)).toBeLessThanOrEqual(11000);
-  });
-
-  it("runs a dev build in about 15 seconds, naming the BitBucket project and repository", () => {
-    const stages = stagesFor("dev", { ...context, project: "PAY", repository: "payee-portal", repositoryUrl: "https://bitbucket.deweb.example/projects/PAY/repos/payee-portal" });
-    expect(stages.map((stage) => stage.name)).toEqual([
-      "Queued",
-      "Creating BitBucket repository PAY/payee-portal",
-      "Pushing initial commit",
-      "Running pipeline #1",
-      "Installing dependencies",
-      "Building",
-      "Deploying to dev",
-      "Assigning URL",
-    ]);
-    expect(totalDuration(stages)).toBeGreaterThanOrEqual(14000);
-    expect(totalDuration(stages)).toBeLessThanOrEqual(16000);
   });
 });

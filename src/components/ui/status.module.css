@@ -29,27 +29,6 @@
   }
   .status[data-tone="progress"] .dot { animation: pulse var(--duration-spin) var(--ease-standard) infinite alternate; }
 
-  /*
-   * A lifecycle badge. Prototype is a bordered neutral tag; Production is
-   * filled with the primary color, like a count, so it reads apart without
-   * relying on color.
-   */
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0 var(--space-2);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg-subtle);
-    color: var(--color-text);
-    font-size: var(--font-size-secondary);
-    line-height: var(--line-height-secondary);
-    white-space: nowrap;
-
-    &[data-emphasis="high"] { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary); font-weight: var(--font-weight-medium); }
-    &[data-size="md"] { font-size: var(--font-size-body); line-height: var(--line-height-body); }
-  }
-
   /* Severity: a small bar in the tone, so it reads differently from a status dot. */
   .bars {
     flex: none;

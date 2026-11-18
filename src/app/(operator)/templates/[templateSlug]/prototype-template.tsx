@@ -33,13 +33,12 @@ export function failingGatesPhrase(template: Pick<AcceptedTemplate, "recheck">):
 }
 
 /**
- * A template accepted from a prototype (template-gallery spec, "The template
- * detail page offers Preview and Deploy"): its latest template version, who
+ * A template accepted from a prototype (template-gallery spec): its latest template version, who
  * accepted it (unverified) and when, its personas and evidence, what it was
  * checked against, its re-check status, and every template version. Use
  * template starts a prototype from the latest version, and Generate
  * variations opens New prototype with it attached as variant 0; both are
- * unavailable while that version is Broken. It has no Deploy template.
+ * unavailable while that version is Broken.
  */
 export function PrototypeTemplateDetail({ template, notice }: { template: AcceptedTemplate; notice: string | undefined }) {
   const { latest, recheck } = template;

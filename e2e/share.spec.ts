@@ -1,22 +1,15 @@
-import { templateBySlug } from "../src/lib/demo/catalog";
-import { createApplication, validateDeployInput } from "../src/lib/demo/deployments";
 import { WORKSPACE_COOKIE } from "../src/lib/demo/workspace-key";
 import { createProfile } from "../src/lib/demo/profiles";
 import { ensureWorkspace } from "../src/lib/demo/workspaces";
 import { openTool, setView, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
 
-/** Sharing a view of a running application (template-demo/toolbar spec). */
+/** Sharing a view of a running reference deployment (template-demo/toolbar spec). */
 
-test("opens a shared view elsewhere with its versions, theme, and comments, and takes replies", async ({ page, context, browser, db }) => {
-  await page.goto("/templates");
-  const key = (await context.cookies()).find((cookie) => cookie.name === WORKSPACE_COOKIE)!.value;
-  const workspace = ensureWorkspace(db, key);
-  const application = createApplication(db, workspace.id, templateBySlug("payments-workspace")!, validateDeployInput({ name: "Shared payments", environment: "sandbox", project: "", repository: "" }), new Date(Date.now() - 60_000));
-
-  await page.goto(`/run/${application.publicId}`);
+test("opens a shared view elsewhere with its versions, theme, and comments, and takes replies", async ({ page, browser, db: _db }) => {
+  await page.goto("/run/ref-payments-workspace");
   await waitForRegions(page);
-  await setView(page, { theme: "dark", overrides: { "payee-list": { version: "2.0.0", environment: "sandbox" } } });
+  await setView(page, { theme: "dark", overrides: { "payee-list": { version: "2.0.0", environment: "production" } } });
   await page.keyboard.press("c");
   await page.locator('[data-demo-anchor="pay-lumen"]').click();
   const composer = page.getByRole("dialog", { name: "New comment" });
@@ -36,7 +29,7 @@ test("opens a shared view elsewhere with its versions, theme, and comments, and 
   const other = await browser.newContext();
   const recipient = await other.newPage();
   await recipient.goto(link);
-  await expect(recipient).toHaveURL(new RegExp(`/run/${application.publicId}/payees$`));
+  await expect(recipient).toHaveURL(/\/run\/ref-payments-workspace\/payees$/);
   await waitForRegions(recipient);
   // A first-time visitor gets the guided hints, which open the toolbar menu; this one dismisses them.
   await recipient.locator("[data-hint]").getByRole("button", { name: "Dismiss hints" }).click();
@@ -106,14 +99,16 @@ test("shares a custom profile as a snapshot that never joins the recipient's pro
   await other.close();
 });
 
-test("refuses an unknown share link with a way back to Applications", async ({ page, db: _db }) => {
+test("refuses an unknown share link with a way back that opens a page", async ({ page, db: _db }) => {
   const response = await page.goto(`/s/${"A".repeat(43)}`);
   expect(response?.status()).toBe(404);
   await expect(page).toHaveURL(/\/run\/unavailable$/);
   await expect(page.getByRole("heading", { level: 1, name: "Application not available" })).toBeVisible();
   await expect(page.getByText("This link no longer opens an application.")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Go to Applications" })).toHaveAttribute("href", "/applications");
   await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
+  const back = page.getByRole("link", { name: /^Go to / });
+  const href = (await back.getAttribute("href"))!;
+  expect((await page.request.get(href)).status(), href).toBe(200);
 });
 
 test("shares a reference deployment view, including its otherwise private comments", async ({ page, browser, db: _db }) => {

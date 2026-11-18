@@ -1,7 +1,5 @@
 import { notFound } from "next/navigation";
-import { getDb } from "@/lib/db/client";
-import { findApplication } from "@/lib/demo/applications";
-import { referenceTemplate, routeByPath, templateBySlug } from "@/lib/demo/catalog";
+import { referenceTemplate, routeByPath } from "@/lib/demo/catalog";
 import { requireDemo } from "@/lib/demo/guard";
 
 /**
@@ -13,7 +11,7 @@ export default async function RunRoute({ params }: { params: Promise<{ applicati
   const { applicationId, path = [] } = await params;
   if (path.length > 1) notFound();
   if (path.length === 1) {
-    const template = referenceTemplate(applicationId) ?? templateBySlug(findApplication(getDb(), applicationId)?.templateSlug ?? "");
+    const template = referenceTemplate(applicationId);
     if (!template || !routeByPath(template.app, path[0]!)) notFound();
   }
   return null;

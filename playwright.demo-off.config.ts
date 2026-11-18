@@ -1,13 +1,13 @@
 import "./e2e/demo-off/env";
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_ENV, E2E_PORT, E2E_ROOT, E2E_SOURCES, E2E_WHATS_INCLUDED } from "./e2e/support/env";
+import { E2E_ENV, E2E_PORT, E2E_ROOT, E2E_SOURCES } from "./e2e/support/env";
 
 const baseURL = `http://127.0.0.1:${E2E_PORT}`;
 
 // The demo-off run (npm run test:demo-off; template-demo/demo-mode spec): the
 // browser tests' fixtures against a server with the template demo turned
-// off, as a deployment without FABRICATE_DEMO runs. Applications, Add
-// application, the starters, and Create work; the demo's pages don't exist.
+// off, as a deployment without FABRICATE_DEMO runs. The demo's pages don't
+// exist.
 export default defineConfig({
   testDir: "e2e/demo-off",
   fullyParallel: false,
@@ -18,7 +18,7 @@ export default defineConfig({
   use: { baseURL, trace: "retain-on-failure", screenshot: "only-on-failure", reducedMotion: "reduce" },
   projects: [{ name: "chrome", use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1280, height: 900 } } }],
   webServer: {
-    command: `rm -rf "${E2E_ROOT}" && mkdir -p "${E2E_SOURCES}" && cp config/portal-whats-included.yaml "${E2E_WHATS_INCLUDED}" && npm run db:migrate && npm run prototypes:migrate && npm run prototypes:runtime && npx next dev --port ${E2E_PORT} --hostname 127.0.0.1`,
+    command: `rm -rf "${E2E_ROOT}" && mkdir -p "${E2E_SOURCES}" && npm run db:migrate && npm run prototypes:migrate && npm run prototypes:runtime && npx next dev --port ${E2E_PORT} --hostname 127.0.0.1`,
     env: { ...E2E_ENV, FABRICATE_DEMO: "false" },
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,
