@@ -13,7 +13,7 @@ interface InitiativeFormProps {
   action: (previous: InitiativeFormState, formData: FormData) => Promise<InitiativeFormState>;
   initial: InitiativeFormState;
   lockVersion?: number;
-  enabledSourceCount: number;
+  sourceCount: number;
   sourceChoices: Choice[];
   releaseChoices: Choice[];
   submitLabel: string;
@@ -22,12 +22,12 @@ interface InitiativeFormProps {
 
 const subscribeNever = () => () => {};
 
-export function InitiativeForm({ action, initial, lockVersion, enabledSourceCount, sourceChoices, releaseChoices, submitLabel, cancelHref }: InitiativeFormProps) {
+export function InitiativeForm({ action, initial, lockVersion, sourceCount, sourceChoices, releaseChoices, submitLabel, cancelHref }: InitiativeFormProps) {
   const [state, formAction] = useActionState(action, initial);
   const form = useFocusFirstInvalid(state, "initiative-form-alert");
   const [mode, setMode] = useState(initial.values.selectionMode);
   // Without JavaScript every field stays visible; the server ignores source
-  // selections for an all-enabled scope.
+  // selections for a scope of all Repositories.
   const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
 
   return (
@@ -69,7 +69,7 @@ export function InitiativeForm({ action, initial, lockVersion, enabledSourceCoun
               errors={state.errors.selectionMode}
               onChange={(event) => setMode(event.currentTarget.value as typeof mode)}
               choices={[
-                { value: "all_enabled", label: "All enabled Repositories", description: `Every Repository enabled when a Run starts (${enabledSourceCount} now).` },
+                { value: "all", label: "All Repositories", description: `Every Repository in the catalog when a Run starts (${sourceCount} now).` },
                 { value: "explicit", label: "Selected Repositories", description: "Exactly the Repositories chosen below." },
               ]}
             />
@@ -83,11 +83,9 @@ export function InitiativeForm({ action, initial, lockVersion, enabledSourceCoun
                 selected={state.values.sourcePublicIds}
                 errors={state.errors.sources}
                 description={
-                  sourceChoices.length ? (
-                    "A selected Repository that is later disabled blocks Runs until it is enabled or removed here."
-                  ) : (
+                  sourceChoices.length ? undefined : (
                     <>
-                      No Repository is enabled. <Link href="/repositories">Add or enable a Repository</Link> to choose it here.
+                      There are no Repositories yet. <Link href="/repositories/new">Add a Repository</Link> to choose it here.
                     </>
                   )
                 }

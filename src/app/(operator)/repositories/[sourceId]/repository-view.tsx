@@ -28,7 +28,7 @@ export function ReprofileForm({ source, variant = "primary" }: { source: Reposit
     <form action={reprofileSource} style={{ display: "contents" }}>
       <input type="hidden" name="publicId" value={source.publicId} />
       <input type="hidden" name="launchToken" value={crypto.randomUUID()} />
-      <SubmitButton icon="refresh" pendingLabel="Queuing" variant={variant} disabled={!source.enabled}>
+      <SubmitButton icon="refresh" pendingLabel="Queuing" variant={variant}>
         Re-profile
       </SubmitButton>
     </form>
@@ -80,7 +80,6 @@ export function RepositoryView({
       <PageHeader
         breadcrumbs={explicit ? [{ href: "/repositories", label: "Repositories" }, { href: repositoryHref(source.publicId), label: source.name }, { href: versionsHref(source.publicId), label: "Versions" }] : [{ href: "/repositories", label: "Repositories" }]}
         title={explicit && shown ? `Version ${shown.version}` : source.name}
-        status={!source.enabled ? <Status state="disabled" /> : undefined}
         meta={[
           ...(explicit ? [] : shown ? [<Link key="version" href={versionHref(source.publicId, shown.version)}>{`Version ${shown.version}`}</Link>] : []),
           ...(pin ? [<ShortValue key="commit" value={pin.pinned} label={pin.pinnedLabel} />] : []),
@@ -142,7 +141,7 @@ export function RepositoryView({
         <ProfileBody profile={profile} assessment={shown.assessment} query={query} base={base} />
       ) : (
         <Panel>
-          <NoProfile source={source} shown={shown} latest={latest} explicit={explicit} />
+          <NoProfile shown={shown} latest={latest} explicit={explicit} />
         </Panel>
       )}
     </Page>
@@ -150,7 +149,7 @@ export function RepositoryView({
 }
 
 /** Why there's no Profile to show: nothing profiled yet, a version still running, or a version that failed. */
-function NoProfile({ source, shown, latest, explicit }: { source: RepositorySource; shown: ProfileVersion | undefined; latest: ProfileVersion | undefined; explicit: boolean }) {
+function NoProfile({ shown, latest, explicit }: { shown: ProfileVersion | undefined; latest: ProfileVersion | undefined; explicit: boolean }) {
   if (explicit && shown && isActive(shown)) {
     return (
       <EmptyState title={`Version ${shown.version} is ${shown.assessment.state === "queued" ? "queued" : "being profiled"}`} icon="clock">
@@ -170,13 +169,6 @@ function NoProfile({ source, shown, latest, explicit }: { source: RepositorySour
     return (
       <EmptyState title="Not profiled" icon="alert">
         No version has profiled this repository yet. Fix what stopped the last one, then re-profile it.
-      </EmptyState>
-    );
-  }
-  if (!source.enabled) {
-    return (
-      <EmptyState title="Not profiled" icon="git">
-        Disabled Repositories aren&apos;t profiled. Enable it to queue its first version.
       </EmptyState>
     );
   }

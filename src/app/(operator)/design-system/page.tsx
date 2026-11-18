@@ -280,9 +280,9 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 legend="Repository scope"
                 type="radio"
                 columns
-                selected={["all_enabled"]}
+                selected={["all"]}
                 choices={[
-                  { value: "all_enabled", label: "All enabled Repositories", description: "Every Repository enabled when a Run starts." },
+                  { value: "all", label: "All Repositories", description: "Every Repository in the catalog when a Run starts." },
                   { value: "explicit", label: "Selected Repositories", description: "Exactly the Repositories chosen below." },
                 ]}
               />
@@ -698,15 +698,15 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
           description="Tabs switch views of one page and show counts; a toggle group picks one of a few choices, with labels or as icons with tooltips; breadcrumbs link a record's ancestors."
           render={() => (
             <>
-              <Tabs label="Filter Repositories">
+              <Tabs label="Filter Assessments">
                 <TabLink href="#tabs" active count={7}>
                   All
                 </TabLink>
                 <TabLink href="#tabs" active={false} count={6}>
-                  Enabled
+                  Gaps found
                 </TabLink>
                 <TabLink href="#tabs" active={false} count={1}>
-                  Disabled
+                  Conforms
                 </TabLink>
               </Tabs>
               <ToggleGroup

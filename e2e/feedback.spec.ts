@@ -42,7 +42,7 @@ test.describe("toasts", () => {
     await demo(page).getByRole("button", { name: "Error" }).click();
     await page.clock.runFor(30_000);
     await expect(toasts(page)).toHaveCount(2);
-    await toasts(page).filter({ hasText: "could not be enabled" }).getByRole("button", { name: "Dismiss notification" }).click();
+    await toasts(page).filter({ hasText: "billing could not be added" }).getByRole("button", { name: "Dismiss notification" }).click();
     await expect(toasts(page)).toHaveText([/Added 3 of 5 selected Repositories/]);
   });
 

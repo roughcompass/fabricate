@@ -51,13 +51,6 @@ describe("claims", () => {
       expect(everything).not.toContain("ghp_secret123");
       expect(everything).not.toContain("billing");
     });
-
-    it("refuses a URL whose only entry is disabled, rather than registering it twice", () => {
-      buildSource(db, { name: "legacy", enabled: false });
-      const legacy = listSources(db, { enabled: false })[0]!;
-
-      expect(() => locateRepository(db, legacy.cloneUrl)).toThrow(/disabled/);
-    });
   });
 
   describe("asking only for what's unknown", () => {
@@ -324,7 +317,7 @@ describe("claims", () => {
       expect(() => deleteInitiative(db, system!.publicId)).toThrow(/retained/);
       expect(() => rawRun(db, "delete from initiatives where id = ?", system!.id)).toThrow(/retained/);
       expect(() => rawRun(db, "insert into initiative_targets (initiative_id, repository_source_id, created_at) values (?, ?, 0)", system!.id, other.id)).toThrow(/only its own repository/);
-      expect(() => rawRun(db, "update initiatives set selection_mode = 'all_enabled' where id = ?", system!.id)).toThrow(/keeps its one repository/);
+      expect(() => rawRun(db, "update initiatives set selection_mode = 'all' where id = ?", system!.id)).toThrow(/keeps its one repository/);
     });
   });
 });

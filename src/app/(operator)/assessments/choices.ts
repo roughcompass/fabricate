@@ -5,19 +5,9 @@ import { listSelectableReleases, releaseDocument, releaseLabel } from "@/lib/sta
 
 const dateFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
 
-/**
- * Enabled sources plus any disabled source the initiative still selects, so the
- * operator can see and remove a selection that would block assessment.
- */
-export function sourceChoices(db: Executor, selectedPublicIds: readonly string[]): Choice[] {
-  const selected = new Set(selectedPublicIds);
-  return listSources(db)
-    .filter((source) => source.enabled || selected.has(source.publicId))
-    .map((source) => ({
-      value: source.publicId,
-      label: source.name,
-      description: source.enabled ? `${source.cloneUrl} · ${sourceReferenceLabel(source)}` : "Disabled. Runs are blocked until it is enabled or removed.",
-    }));
+/** Every Repository, to choose an explicit scope from. */
+export function sourceChoices(db: Executor): Choice[] {
+  return listSources(db).map((source) => ({ value: source.publicId, label: source.name, description: `${source.cloneUrl} · ${sourceReferenceLabel(source)}` }));
 }
 
 /** Every published Release. Drafts are never offered. */

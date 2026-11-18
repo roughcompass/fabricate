@@ -20,11 +20,9 @@ import type { Standard, StandardRelease } from "@/lib/standards/standard-records
  * Persistence for initiatives, their explicit repository selections, and
  * their selected Standard Releases.
  *
- * An all-enabled initiative records only its policy, never the catalog's
- * current membership. An explicit initiative records exactly its selected
- * sources. Newly selected sources must exist and be enabled; a source that was
- * selected earlier and has since been disabled stays selected so that starting
- * an Assessment can report it instead of silently narrowing the scope.
+ * An initiative of all Repositories records only its policy, never the
+ * catalog's current membership. An explicit initiative records exactly its
+ * selected sources, each of which must exist.
  *
  * Only published Releases can be selected. Each selection is independent;
  * none takes precedence over another.
@@ -48,7 +46,7 @@ interface Selections {
 export function createInitiative(db: Executor, input: InitiativeInput): Initiative {
   return immediate(db, (tx) => {
     const values = normalize(input);
-    const selections = validate(tx, values, new Set());
+    const selections = validate(tx, values);
     const now = new Date();
     const initiative = tx
       .insert(initiatives)
@@ -138,11 +136,10 @@ export function updateInitiative(db: Executor, publicId: string, expectedLockVer
 
     const values = normalize(input);
     refuseScopeChange(tx, current, values);
-    const previouslySelected = new Set(selectedSources(tx, current.id).map((source) => source.id));
-    const selections = validate(tx, values, previouslySelected);
+    const selections = validate(tx, values);
 
-    // Clear selections before the mode changes so the all-enabled trigger holds.
-    if (values.selectionMode === "all_enabled") replaceSourceSelections(tx, current, []);
+    // Clear selections before the mode changes so the all-Repositories trigger holds.
+    if (values.selectionMode === "all") replaceSourceSelections(tx, current, []);
     const updated = tx
       .update(initiatives)
       .set({ name: values.name, objective: values.objective, selectionMode: values.selectionMode, lockVersion: current.lockVersion + 1, updatedAt: new Date() })
@@ -167,7 +164,7 @@ export function updateReleaseSelections(db: Executor, publicId: string, expected
     if (current.profiling) throw new ValidationError([{ field: "base", message: PROFILING_FIXED }]);
     if (current.lockVersion !== expectedLockVersion) throw new StaleRecordError(`${current.name} was changed by someone else`);
     // Validated as a scope that selects no sources, so only the Releases are checked.
-    const { releases } = validate(tx, normalize({ name: current.name, objective: current.objective, selectionMode: "all_enabled", standardReleasePublicIds }), new Set());
+    const { releases } = validate(tx, normalize({ name: current.name, objective: current.objective, selectionMode: "all", standardReleasePublicIds }));
     const updated = tx
       .update(initiatives)
       .set({ lockVersion: current.lockVersion + 1, updatedAt: new Date() })
@@ -245,7 +242,7 @@ export function selectedReleases(db: Executor, initiativeId: number): { release:
 }
 
 export function scopeLabel(initiative: Initiative, selectedCount: number): string {
-  if (initiative.selectionMode === "all_enabled") return "All enabled Repositories";
+  if (initiative.selectionMode === "all") return "All Repositories";
   return `${selectedCount} selected ${selectedCount === 1 ? "Repository" : "Repositories"}`;
 }
 
@@ -260,12 +257,12 @@ function normalize(input: InitiativeInput): Required<InitiativeInput> {
   };
 }
 
-function validate(db: Executor, input: Required<InitiativeInput>, previouslySelected: ReadonlySet<number>): Selections {
+function validate(db: Executor, input: Required<InitiativeInput>): Selections {
   const issues = new IssueCollector();
   if (!input.name) issues.add("name", "Enter a name");
   else if (input.name.length > 120) issues.add("name", "Name must be 120 characters or fewer");
   if (input.objective.length > 2000) issues.add("objective", "Objective must be 2,000 characters or fewer");
-  if (!SELECTION_MODES.includes(input.selectionMode)) issues.add("selectionMode", "Choose all enabled sources or selected sources");
+  if (!SELECTION_MODES.includes(input.selectionMode)) issues.add("selectionMode", "Choose all Repositories or selected Repositories");
 
   let sources: RepositorySource[] = [];
   if (input.selectionMode === "explicit") {
@@ -275,7 +272,6 @@ function validate(db: Executor, input: Required<InitiativeInput>, previouslySele
     for (const publicId of ids) {
       const source = byPublicId.get(publicId);
       if (!source) issues.add("sources", `Repository source ${publicId} does not exist`);
-      else if (!source.enabled && !previouslySelected.has(source.id)) issues.add("sources", `${source.name} is disabled and cannot be selected`);
     }
     if (ids.length === 0) issues.add("sources", "Select at least one repository source for an explicit scope");
     sources = ids.flatMap((publicId) => byPublicId.get(publicId) ?? []);

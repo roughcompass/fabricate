@@ -1,16 +1,15 @@
 import crypto from "node:crypto";
-import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { targetsOf } from "@/lib/assessments/assessment-records";
 import { launchAssessment } from "@/lib/assessments/launcher";
 import { transitionAssessment } from "@/lib/assessments/transitions";
 import { ScopeResolutionError } from "@/lib/assessments/scope-resolver";
-import { disableSource, editSource, enableSource, registerSource } from "@/lib/catalog/catalog";
-import { type RepositorySource, getSource } from "@/lib/catalog/source-records";
+import { editSource, registerSource } from "@/lib/catalog/catalog";
+import type { RepositorySource } from "@/lib/catalog/source-records";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
-import { JOB_PRIORITIES, jobs, profileVersions } from "@/lib/db/schema";
+import { JOB_PRIORITIES, jobs } from "@/lib/db/schema";
 import { PROFILING_INITIATIVE_ID, listInitiatives, profilingInitiative, updateReleaseSelections } from "@/lib/initiatives/initiative-records";
 import { currentVersion, findVersion, profileSummaries, profilingActivity, queueProfile, versionCount, versionOfAssessment, versionsOf } from "@/lib/profiling/versions";
 import { buildInitiative, buildSource } from "../support/builders";
@@ -63,12 +62,6 @@ describe("profile versions", () => {
     await finish(db, orders, 2);
     expect(queueProfile(db, orders, "manual", { launchToken: token })).toMatchObject({ status: "active", version: { version: 2 } });
     expect(versionCount(db, orders.id)).toBe(2);
-  });
-
-  it("profiles no disabled repository", () => {
-    const disabled = buildSource(db, { name: "ledger", enabled: false });
-    expect(queueProfile(db, disabled, "manual")).toEqual({ status: "disabled" });
-    expect(db.select().from(profileVersions).all()).toEqual([]);
   });
 
   it("shows the newest profiled version as current while a later one runs or after one fails", async () => {
@@ -180,16 +173,4 @@ describe("profiling as the catalog changes", () => {
     expect(triggers(source)).toEqual(["edited", "added"]);
   });
 
-  it("queues a first version when a repository is enabled without one, and leaves a profiled one to the scheduled check", async () => {
-    const source = registerSource(db, form(), boundary);
-    await finish(db, source, 1);
-    disableSource(db, source.publicId);
-    enableSource(db, source.publicId);
-    expect(triggers(source)).toEqual(["added"]);
-
-    const never = buildSource(db, { name: "ledger", enabled: false });
-    enableSource(db, never.publicId);
-    expect(triggers(getSource(db, never.publicId))).toEqual(["initial"]);
-    expect(db.select().from(profileVersions).where(eq(profileVersions.repositorySourceId, never.id)).all()).toHaveLength(1);
-  });
 });

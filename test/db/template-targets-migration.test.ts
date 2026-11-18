@@ -216,7 +216,7 @@ describe("migration 0028: template targets", () => {
       const { db, salt } = migrated();
       expect(() => db.$client.prepare("update initiatives set name = 'Renamed' where id = ?").run(salt)).toThrow(/keeps its name, objective, and scope/);
       expect(() => db.$client.prepare("update initiatives set objective = '' where id = ?").run(salt)).toThrow(/keeps its name, objective, and scope/);
-      expect(() => db.$client.prepare("update initiatives set selection_mode = 'all_enabled' where id = ?").run(salt)).toThrow(/keeps its name, objective, and scope/);
+      expect(() => db.$client.prepare("update initiatives set selection_mode = 'all' where id = ?").run(salt)).toThrow(/keeps its name, objective, and scope/);
       expect(() => db.$client.prepare("update initiatives set system_owned = 0 where id = ?").run(salt)).toThrow(/keeps its name, objective, and scope/);
       expect(() => db.$client.prepare("delete from initiatives where id = ?").run(salt)).toThrow(/is retained/);
       expect(() => db.$client.prepare("update initiatives set system_owned = 1 where public_id = 'ini_fleet00000000000'").run()).toThrow(/keeps its name, objective, and scope/);

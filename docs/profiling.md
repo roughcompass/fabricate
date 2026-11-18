@@ -1,6 +1,6 @@
 # Repository profiling
 
-Every enabled Repository is profiled in the background, without anyone starting a Run. Each profiling is a numbered **profile version** of the Repository: version 1, version 2, and so on. A Repository's page shows its newest version that has a Profile, so the Repositories list leads straight to what DE FabLab knows about each repository.
+Every Repository is profiled in the background, without anyone starting a Run. Each profiling is a numbered **profile version** of the Repository: version 1, version 2, and so on. A Repository's page shows its newest version that has a Profile, so the Repositories list leads straight to what DE FabLab knows about each repository.
 
 ## When a version is queued
 
@@ -10,17 +10,17 @@ Every enabled Repository is profiled in the background, without anyone starting 
 | `added` | Added | A Repository is added with New Repository. |
 | `edited` | Edited | A Repository's clone URL or reference changes. A new name alone doesn't queue a version. |
 | `manual` | Re-profiled | Someone chooses Re-profile on the Repository's page, its Versions page, or its row in the list. |
-| `initial` | First profile | The scheduled check, or enabling a Repository, finds an enabled Repository with no version yet. |
+| `initial` | First profile | The scheduled check finds a Repository with no version yet. |
 | `commit` | New commits | The scheduled check finds that the Repository's reference names a different commit than its newest version profiled. |
 | `detector` | Detector upgrade | The scheduled check finds that the newest version was profiled with an earlier detector release or Repository Profile schema. |
 
-A Repository has at most one version queued or running. A trigger that arrives while one is in progress queues nothing, and Re-profile says so. Disabled Repositories are never profiled.
+A Repository has at most one version queued or running. A trigger that arrives while one is in progress queues nothing, and Re-profile says so.
 
 ## The scheduled check
 
-The worker checks every enabled Repository once per `profiling.checkMinutes` (default 60, `FABRICATE_PROFILING_CHECK_MINUTES`). Like the DE Console read, each period's check is one job with its own idempotency key, so any number of workers queue one check per period, and each check queues the next before it starts.
+The worker checks every Repository once per `profiling.checkMinutes` (default 60, `FABRICATE_PROFILING_CHECK_MINUTES`). Like the DE Console read, each period's check is one job with its own idempotency key, so any number of workers queue one check per period, and each check queues the next before it starts.
 
-For each enabled Repository whose newest version has finished, the check:
+For each Repository whose newest version has finished, the check:
 
 1. Queues an `initial` version if the Repository has none. This is how Repositories registered before profiling existed got their first version.
 2. Queues a `detector` version if the newest version's Run recorded a different detector release or Repository Profile schema than the worker has now. No network access is needed.

@@ -13,20 +13,19 @@ export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** The figures as they stood at +cutoff+, to state each one's change since then. */
 export interface FiguresThen {
-  repositories: { enabled: number; claimed: number; unclaimed: number };
+  repositories: { total: number; claimed: number; unclaimed: number };
   assessments: { total: number; byConclusion: Record<ConclusionFilter, number> };
 }
 
 /**
  * The figures as of +cutoff+, from when each record was created and when each
- * claim and Evaluation happened. Whether a Repository is enabled isn't kept
- * over time, so it's read as it is now.
+ * claim and Evaluation happened.
  */
 export function figuresAt(db: Executor, cutoff: Date): FiguresThen {
   const at = cutoff.getTime();
-  const repositories = db.get<{ enabled: number | null; claimed: number | null }>(sql`
-    select sum(case when s.enabled then 1 else 0 end) as enabled,
-      sum(case when s.enabled and exists (
+  const repositories = db.get<{ total: number; claimed: number | null }>(sql`
+    select count(*) as total,
+      sum(case when exists (
         select 1 from ownership_assertions a
         where a.subject_repository_source_id = s.id and a.attribute = 'application' and a.recorded_at <= ${at}
           and not exists (
@@ -48,10 +47,10 @@ export function figuresAt(db: Executor, cutoff: Date): FiguresThen {
     where i.claim_repository_source_id is null and i.system_owned = 0 and i.profiling = 0 and i.created_at <= ${at}`);
   const byConclusion = Object.fromEntries(CONCLUSION_FILTERS.map((filter) => [filter, 0])) as Record<ConclusionFilter, number>;
   for (const { conclusion } of conclusions) byConclusion[isConclusionFilter(conclusion) ? conclusion : "none"]++;
-  const enabled = repositories?.enabled ?? 0;
+  const total = repositories?.total ?? 0;
   const claimed = repositories?.claimed ?? 0;
   return {
-    repositories: { enabled, claimed, unclaimed: enabled - claimed },
+    repositories: { total, claimed, unclaimed: total - claimed },
     assessments: { total: conclusions.length, byConclusion },
   };
 }
@@ -64,11 +63,11 @@ export function weekChange(now: number, then: number, unit = ""): string {
 }
 
 /** The figures' changes over the last seven days, keyed as Home shows them: Assessments' by conclusion. */
-export function figureChanges(summary: FleetSummary, then: FiguresThen, share: (counts: { enabled: number; claimed: number }) => number | null): Record<string, string> {
+export function figureChanges(summary: FleetSummary, then: FiguresThen, share: (counts: { total: number; claimed: number }) => number | null): Record<string, string> {
   const shareNow = share(summary.repositories);
   const shareThen = share(then.repositories);
   return {
-    enabled: weekChange(summary.repositories.enabled, then.repositories.enabled),
+    repositories: weekChange(summary.repositories.total, then.repositories.total),
     claimed: weekChange(summary.repositories.claimed, then.repositories.claimed),
     claimedShare: shareNow === null || shareThen === null ? "No change this week" : weekChange(shareNow, shareThen, " pts"),
     unclaimed: weekChange(summary.repositories.unclaimed, then.repositories.unclaimed),

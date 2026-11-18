@@ -23,7 +23,7 @@ export function fleetSummary(db: Executor): FleetSummary {
   };
 }
 
-/** The Claimed figure's share of enabled Repositories, as a whole percentage; null when none is enabled. */
-export function claimedShare(repositories: Pick<RepositoryCounts, "enabled" | "claimed">): number | null {
-  return repositories.enabled === 0 ? null : Math.round((repositories.claimed / repositories.enabled) * 100);
+/** The Claimed figure's share of all Repositories, as a whole percentage; null when there are none. */
+export function claimedShare(repositories: Pick<RepositoryCounts, "total" | "claimed">): number | null {
+  return repositories.total === 0 ? null : Math.round((repositories.claimed / repositories.total) * 100);
 }

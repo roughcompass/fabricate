@@ -9,8 +9,8 @@ const query = (href: string) => new URL(href, "http://fablab.test").searchParams
 
 describe("list filter addresses", () => {
   it("builds the Repositories list's address, which the list parses back to the same filters", () => {
-    const href = repositoriesHref({ status: "enabled", ownership: "unclaimed" });
-    expect(href).toBe("/repositories?status=enabled&ownership=unclaimed");
+    const href = repositoriesHref({ ownership: "unclaimed", q: "ord" });
+    expect(href).toBe("/repositories?ownership=unclaimed&q=ord");
     expect(isOwnershipFilter(query(href).get("ownership"))).toBe(true);
     expect(repositoriesHref()).toBe("/repositories");
     expect(repositoriesHref({ ownership: null, q: "ord" })).toBe("/repositories?q=ord");

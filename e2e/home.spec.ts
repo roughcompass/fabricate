@@ -56,7 +56,6 @@ test("Fresh installation: each group shows its empty state and actions, and noth
 test("every figure opens a list showing exactly the records it counts (Unclaimed figure opens its list, Conclusion figure opens its tab)", async ({ page, db }) => {
   const sources = Array.from({ length: 6 }, (_, index) => buildSource(db, { name: `repo-${index}` }));
   for (const source of sources.slice(0, 4)) claim(db, source);
-  claim(db, buildSource(db, { name: "archived", enabled: false }));
   assessment(db, "Checkout platform migration", "complete", "gaps");
   assessment(db, "Payments baseline", "complete", "gaps");
   assessment(db, "Markets baseline", "complete", "conforms");
@@ -72,7 +71,7 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
   }
   expect(figures.map(({ label, value }) => [label, value])).toEqual([
     // Six Repositories, and one more for each Assessment.
-    ["Enabled", 10],
+    ["Repositories", 10],
     ["Claimed", 4],
     ["Unclaimed", 6],
     ["Assessments", 4],
@@ -81,7 +80,7 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
     ["Conforms", 1],
     ["Not evaluated", 1],
   ]);
-  await expect(page.locator('dl[aria-label="Repositories"]')).toContainText("40% of enabled");
+  await expect(page.locator('dl[aria-label="Repositories"]')).toContainText("40% of all");
 
   for (const { group, label, value, href } of figures) {
     await page.goto(href);
@@ -275,8 +274,8 @@ test.describe("the dashboard", () => {
     buildSource(db, { name: "ledger" });
     await page.goto(paths.home);
     const repositories = page.locator('dl[aria-label="Repositories"]');
-    await expect(repositories.locator('[data-figure="Enabled"]')).toContainText("2");
-    await expect(repositories.locator('[data-figure="Enabled"]')).toContainText("+2 this week");
+    await expect(repositories.locator('[data-figure="Repositories"]')).toContainText("2");
+    await expect(repositories.locator('[data-figure="Repositories"]')).toContainText("+2 this week");
     await expect(repositories.locator('[data-figure="Claimed"]')).toContainText("No change this week");
   });
 

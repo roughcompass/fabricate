@@ -72,8 +72,8 @@ export default async function EditInitiativePage({ params }: { params: Promise<{
           errors: {},
         }}
         lockVersion={initiative.lockVersion}
-        enabledSourceCount={listSources(db, { enabled: true }).length}
-        sourceChoices={sourceChoices(db, sourceIds)}
+        sourceCount={listSources(db).length}
+        sourceChoices={sourceChoices(db)}
         releaseChoices={releaseChoices(db)}
         submitLabel="Save changes"
         cancelHref={`/assessments/${initiative.publicId}`}

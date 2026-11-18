@@ -26,7 +26,7 @@ export type Surface = [name: string, url: string];
 export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<Surface[]> {
   const names = ["web", "client", "ui-a", "ui-b", "orders", "billing"];
   const sources = names.map((name) => buildSource(db, { name }));
-  buildSource(db, { name: "legacy-ui", enabled: false });
+  buildSource(db, { name: "legacy-ui" });
   const initiative = buildInitiative(db, { name: "Checkout platform migration", sources });
   const assessment = await seedAssessment(db, initiative, sources, [
     {

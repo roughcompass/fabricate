@@ -6,6 +6,10 @@
    */
   .cloneUrl :where(span) { overflow-wrap: anywhere; }
 
+  /* The count the search and filter leave, beside them. */
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .count { margin: 0; color: var(--color-text-secondary); }
+
   /* What is being profiled now, above the table while anything is. */
   .activity { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin-block: 0; }
 }

@@ -12,19 +12,19 @@ import { CURRENT_VERSION } from "@/lib/documents/schemas";
 const suffix = () => crypto.randomBytes(3).toString("hex");
 
 /** A remote source with a unique canonical URL unless one is given. */
-export function buildSource(db: Executor, overrides: Partial<{ name: string; cloneUrl: string; canonicalUrl: string; gitRef: string | null; enabled: boolean }> = {}): RepositorySource {
+export function buildSource(db: Executor, overrides: Partial<{ name: string; cloneUrl: string; canonicalUrl: string; gitRef: string | null }> = {}): RepositorySource {
   const name = overrides.name ?? `source-${suffix()}`;
   const cloneUrl = overrides.cloneUrl ?? `https://git.example.com/acme/${name}.git`;
   const canonicalUrl = overrides.canonicalUrl ?? cloneUrl.replace(/\.git$/, "");
-  return insertSource(db, { name, cloneUrl, canonicalUrl, gitRef: overrides.gitRef ?? null, enabled: overrides.enabled ?? true });
+  return insertSource(db, { name, cloneUrl, canonicalUrl, gitRef: overrides.gitRef ?? null });
 }
 
 /**
- * An Assessment over +sources+ (default: every enabled source), written directly without launching jobs.
+ * An Assessment over +sources+ (default: every source), written directly without launching jobs.
  * Like a launched one, it records the pinned bundle's release and configuration.
  */
 export function buildAssessment(db: Executor, options: { initiative?: Initiative; sources?: readonly RepositorySource[]; limits?: Budgets } = {}) {
-  const sources = options.sources ?? listSources(db, { enabled: true });
+  const sources = options.sources ?? listSources(db);
   return createAssessment(db, {
     initiative: options.initiative ?? buildInitiative(db),
     launchToken: crypto.randomUUID(),
@@ -46,7 +46,7 @@ export function buildInitiative(db: Executor, options: { name?: string; sources?
   return createInitiative(db, {
     name: options.name ?? `Initiative ${suffix()}`,
     objective: "Assess the fleet",
-    selectionMode: options.sources ? "explicit" : "all_enabled",
+    selectionMode: options.sources ? "explicit" : "all",
     sourcePublicIds: options.sources?.map((source) => source.publicId),
   });
 }

@@ -1,6 +1,6 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { assessmentCounts, disableSource, editSource, enableSource, registerSource } from "@/lib/catalog/catalog";
+import { assessmentCounts, editSource, registerSource } from "@/lib/catalog/catalog";
 import { versionsOf } from "@/lib/profiling/versions";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { getSource, listSources } from "@/lib/catalog/source-records";
@@ -78,18 +78,15 @@ describe("catalog service", () => {
     expect(edited).toMatchObject({ name: "orders-ui", canonicalUrl: "https://git.example.com/acme/orders-ui", gitRef: "release", lockVersion: 1 });
   });
 
-  it("preserves assessment history when a source is disabled", () => {
+  it("preserves assessment history when a source is edited", () => {
     const source = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "main" }, boundary);
     const { assessment } = buildAssessment(db, { sources: [source] });
 
-    disableSource(db, source.publicId);
-    expect(getSource(db, source.publicId).enabled).toBe(false);
+    editSource(db, source.publicId, source.lockVersion, { name: "orders-ui", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "release" }, boundary);
+    expect(getSource(db, source.publicId)).toMatchObject({ name: "orders-ui", gitRef: "release" });
     expect(targetsOf(db, assessment.id)[0]).toMatchObject({ sourceName: "orders", gitRef: "main" });
     // Its profile version's Run is shown apart, so it isn't counted.
     expect(versionsOf(db, source.id)).toHaveLength(1);
     expect(assessmentCounts(db).get(source.id)).toBe(1);
-
-    enableSource(db, source.publicId);
-    expect(getSource(db, source.publicId).enabled).toBe(true);
   });
 });

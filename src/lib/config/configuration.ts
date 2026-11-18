@@ -62,7 +62,7 @@ const settingsSchema = z.strictObject({
     source: z.string().trim().min(1).nullable(),
     refreshMinutes: positiveInteger,
   }),
-  // How often the worker checks every enabled repository's reference for new
+  // How often the worker checks every repository's reference for new
   // commits, and the detector for a new release, to queue profile versions.
   profiling: z.strictObject({
     checkMinutes: positiveInteger,

@@ -9,7 +9,7 @@ import { type ProfileTrigger, assessmentTargets, assessments, profileVersions, r
 import { PROFILING_INITIATIVE_ID } from "@/lib/initiatives/initiative-records";
 
 /*
- * Profile versions (docs/profiling.md). Every enabled repository is profiled
+ * Profile versions (docs/profiling.md). Every repository is profiled
  * in the background, and each profile is a numbered version of it: a Run of
  * the Repository profiling initiative that profiles the repository alone, at
  * the reference the catalog sets for it. A repository has at most one version
@@ -45,7 +45,7 @@ export interface ProfileVersion {
   readonly failure: { readonly code: string; readonly message: string } | null;
 }
 
-export type QueueResult = { readonly status: "queued"; readonly version: ProfileVersion } | { readonly status: "active"; readonly version: ProfileVersion } | { readonly status: "disabled" };
+export type QueueResult = { readonly status: "queued"; readonly version: ProfileVersion } | { readonly status: "active"; readonly version: ProfileVersion };
 
 export function isActive(version: Pick<ProfileVersion, "assessment">): boolean {
   return (ACTIVE_STATES as readonly string[]).includes(version.assessment.state);
@@ -53,13 +53,12 @@ export function isActive(version: Pick<ProfileVersion, "assessment">): boolean {
 
 /**
  * Queues the next profile version of +source+ for +trigger+, unless the
- * repository is disabled or already has a version queued or running. The
+ * repository already has a version queued or running. The
  * version's Run is launched in the same transaction, so the version exists
  * exactly when its jobs do.
  */
 export function queueProfile(db: Executor, source: RepositorySource, trigger: ProfileTrigger, options: { headCommit?: string | null; launchToken?: string; config?: FabricateConfig } = {}): QueueResult {
   return immediate(db, (tx) => {
-    if (!source.enabled) return { status: "disabled" };
     const latest = versionsOf(tx, source.id, 1)[0];
     if (latest && isActive(latest)) return { status: "active", version: latest };
     const launched = launchAssessment(tx, PROFILING_INITIATIVE_ID, options.launchToken ?? crypto.randomUUID(), options.config ?? getConfig(), { sources: [source] });

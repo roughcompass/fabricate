@@ -5,8 +5,8 @@ import { type ProfileTrigger, assessmentTargets, assessments, initiatives } from
 import { CloneUrl, InvalidCloneUrl } from "./clone-url";
 import { repositoryNameFromUrl } from "./repository-name";
 import { BoundaryViolation, SourceBoundary } from "./source-boundary";
-import { queueProfile, versionsOf } from "@/lib/profiling/versions";
-import { type RepositorySource, getSource, insertSource, setSourceEnabled, sourceFieldIssues, updateSource } from "./source-records";
+import { queueProfile } from "@/lib/profiling/versions";
+import { type RepositorySource, getSource, insertSource, sourceFieldIssues, updateSource } from "./source-records";
 
 /**
  * Catalog operations for the web UI: parse and canonicalize the clone URL,
@@ -14,9 +14,8 @@ import { type RepositorySource, getSource, insertSource, setSourceEnabled, sourc
  * reported at once, addressed to its field, and nothing is written unless the
  * whole submission is valid.
  *
- * A Repository is profiled whenever what it names changes: when it's added,
- * when its clone URL or reference is edited, and when it's enabled with no
- * profile version yet (docs/profiling.md).
+ * A Repository is profiled whenever what it names changes: when it's added
+ * and when its clone URL or reference is edited (docs/profiling.md).
  */
 
 export interface SourceForm {
@@ -65,19 +64,6 @@ export function editSource(db: Executor, publicId: string, lockVersion: number, 
     if (source.canonicalUrl !== before.canonicalUrl || source.gitRef !== before.gitRef) queueProfile(tx, source, "edited");
     return source;
   });
-}
-
-export function enableSource(db: Executor, publicId: string): RepositorySource {
-  return immediate(db, (tx) => {
-    const source = setSourceEnabled(tx, publicId, true);
-    // A repository profiled before it was disabled waits for the scheduled check, which queues a version if it's behind.
-    if (versionsOf(tx, source.id, 1).length === 0) queueProfile(tx, source, "initial");
-    return source;
-  });
-}
-
-export function disableSource(db: Executor, publicId: string): RepositorySource {
-  return setSourceEnabled(db, publicId, false);
 }
 
 /** How many Runs of Assessments included each source, keyed by source row id. Profile versions, which the list shows apart, aren't counted. */

@@ -14,7 +14,6 @@ import { SearchField } from "@/components/ui/search-field";
 import { Select } from "@/components/ui/form";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
-import { TabLink, Tabs } from "@/components/ui/tabs";
 import { Tag } from "@/components/ui/tag";
 import { assessmentCounts } from "@/lib/catalog/catalog";
 import { listSources, sourceReferenceLabel } from "@/lib/catalog/source-records";
@@ -25,17 +24,14 @@ import { applicationLabel } from "@/lib/ownership/records";
 import { type ProfileSummary, ACTIVE_STATES, profileSummaries, profilingActivity } from "@/lib/profiling/versions";
 import { repositoriesHref } from "@/lib/web/list-filters";
 import { repositoryHref, versionHref } from "@/lib/web/repository-paths";
-import { reprofileSource, setSourceEnabled } from "./actions";
+import { reprofileSource } from "./actions";
 import styles from "./list.module.css";
 import { sourceOutcome } from "./outcomes";
 
 export const metadata: Metadata = { title: "Repositories" };
 
-const FILTERS = { enabled: true, disabled: false } as const;
-
 export default async function SourcesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
-  const status = typeof query.status === "string" && Object.hasOwn(FILTERS, query.status) ? (query.status as keyof typeof FILTERS) : null;
   const ownership = isOwnershipFilter(query.ownership) ? query.ownership : null;
   const search = (param(query, "q") ?? "").trim().slice(0, 200);
   const db = getDb();
@@ -44,15 +40,11 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
   const owned = repositoryOwnership(db, all.map((source) => source.id));
   const needle = search.toLowerCase();
   const searched = needle ? all.filter((source) => source.name.toLowerCase().includes(needle) || source.cloneUrl.toLowerCase().includes(needle)) : all;
-  // The tabs count what the search and the ownership filter leave.
-  const matching = ownership ? searched.filter((source) => ownershipFilterOf(owned.get(source.id)) === ownership) : searched;
-  const sources = status ? matching.filter((source) => source.enabled === FILTERS[status]) : matching;
+  const sources = ownership ? searched.filter((source) => ownershipFilterOf(owned.get(source.id)) === ownership) : searched;
   const counts = assessmentCounts(db);
   const profiles = profileSummaries(db);
   const activity = profilingActivity(db);
   const busy = activity.profiling + activity.queued > 0;
-  const enabledCount = matching.filter((source) => source.enabled).length;
-  const href = (next: keyof typeof FILTERS | null, query = search) => repositoriesHref({ status: next, ownership, q: query });
   const create = (
     <ButtonLink href="/repositories/new" variant="primary" icon="plus">
       New Repository
@@ -63,7 +55,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
     <Page>
       <PageHeader
         title="Repositories"
-        description="Git repositories available to Assessments, each profiled in the background whenever it changes. Edits and disabling apply to Runs started afterward."
+        description="Git repositories available to Assessments, each profiled in the background whenever it changes. Edits apply to Runs started afterward."
         secondaryActions={[
           { href: "/repositories/bulk", label: "Add in bulk", icon: "layers" },
           { href: "/repositories/claim", label: "Claim a Repository", icon: "user" },
@@ -72,36 +64,24 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
         alerts={<OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"))} />}
       />
 
-      <Tabs
-        label="Filter Repositories"
-        aside={
-          <FilterBar key={`${search}|${ownership}`} action="/repositories" label="Search and filter Repositories" filtered={Boolean(search || ownership)} clearHref={repositoriesHref({ status })} keep={status ? { status } : {}}>
-            <Select
-              id="source-ownership"
-              name="ownership"
-              label="Ownership"
-              size="sm"
-              defaultValue={ownership ?? ""}
-              options={[
-                { value: "", label: "Any ownership" },
-                { value: "claimed", label: "Claimed" },
-                { value: "unclaimed", label: "Unclaimed" },
-              ]}
-            />
-            <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={href(status, "")} />
-          </FilterBar>
-        }
-      >
-        <TabLink href={href(null)} active={status === null} count={matching.length}>
-          All
-        </TabLink>
-        <TabLink href={href("enabled")} active={status === "enabled"} count={enabledCount}>
-          Enabled
-        </TabLink>
-        <TabLink href={href("disabled")} active={status === "disabled"} count={matching.length - enabledCount}>
-          Disabled
-        </TabLink>
-      </Tabs>
+      <div className={styles.toolbar}>
+        <p className={styles.count}>{countLabel(sources.length, "Repository", "Repositories")}{sources.length !== all.length ? ` of ${all.length}` : ""}</p>
+        <FilterBar key={`${search}|${ownership}`} action="/repositories" label="Search and filter Repositories" filtered={Boolean(search || ownership)} clearHref={repositoriesHref()}>
+          <Select
+            id="source-ownership"
+            name="ownership"
+            label="Ownership"
+            size="sm"
+            defaultValue={ownership ?? ""}
+            options={[
+              { value: "", label: "Any ownership" },
+              { value: "claimed", label: "Claimed" },
+              { value: "unclaimed", label: "Unclaimed" },
+            ]}
+          />
+          <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref({ ownership })} />
+        </FilterBar>
+      </div>
 
       {busy && (
         <>
@@ -123,7 +103,6 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                 <Th>Name</Th>
                 <Th>Reference</Th>
                 <Th>SEAL application</Th>
-                <Th>Status</Th>
                 <Th>Profile</Th>
                 <Th align="numeric">Runs</Th>
                 <Th align="actions" hidden>
@@ -150,11 +129,8 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                 <Td label="SEAL application">
                   <SealApplication ownership={owned.get(source.id)} />
                 </Td>
-                <Td label="Status">
-                  <Status state={source.enabled ? "enabled" : "disabled"} />
-                </Td>
                 <Td label="Profile">
-                  <ProfileCell sourcePublicId={source.publicId} summary={profiles.get(source.id)} enabled={source.enabled} />
+                  <ProfileCell sourcePublicId={source.publicId} summary={profiles.get(source.id)} />
                 </Td>
                 <Td label="Runs" align="numeric">
                   {countLabel(counts.get(source.id) ?? 0, "Run")}
@@ -162,17 +138,12 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                 <Td align="actions">
                   <RowActions>
                     <Menu label={`Actions for ${source.name}`}>
-                      {source.enabled && (
-                        <MenuAction action={reprofileSource} fields={{ publicId: source.publicId, from: "list" }} icon="refresh">
-                          Re-profile
-                        </MenuAction>
-                      )}
+                      <MenuAction action={reprofileSource} fields={{ publicId: source.publicId, from: "list" }} icon="refresh">
+                        Re-profile
+                      </MenuAction>
                       <MenuItem href={`/repositories/${source.publicId}/edit`} icon="edit">
                         Edit
                       </MenuItem>
-                      <MenuAction action={setSourceEnabled} fields={{ publicId: source.publicId, enabled: String(!source.enabled) }} icon={source.enabled ? "slash" : "checkCircle"}>
-                        {source.enabled ? "Disable" : "Enable"}
-                      </MenuAction>
                     </Menu>
                   </RowActions>
                 </Td>
@@ -183,8 +154,6 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
           <EmptyState title="No matching Repositories" icon="search">{`No Repository name or clone URL contains “${search}”.`}</EmptyState>
         ) : ownership ? (
           <EmptyState title={`No ${ownership} Repositories`}>{ownership === "unclaimed" ? "Every Repository listed here has a SEAL application." : "Claim a Repository to record the SEAL application it belongs to."}</EmptyState>
-        ) : status ? (
-          <EmptyState title={`No ${status} Repositories`}>{status === "disabled" ? "Every Repository is enabled." : "Enable a Repository to include it in Runs."}</EmptyState>
         ) : (
           <EmptyState
             title="No Repositories yet"
@@ -228,8 +197,8 @@ function SealApplication({ ownership }: { ownership: RepositoryOwnership | undef
  * current version, linked, and when it was profiled follow. A newest
  * version that failed is marked under the current one.
  */
-function ProfileCell({ sourcePublicId, summary, enabled }: { sourcePublicId: string; summary: ProfileSummary | undefined; enabled: boolean }) {
-  if (!summary) return <Secondary>{enabled ? "Queued" : "Not profiled"}</Secondary>;
+function ProfileCell({ sourcePublicId, summary }: { sourcePublicId: string; summary: ProfileSummary | undefined }) {
+  if (!summary) return <Secondary>Queued</Secondary>;
   const { latest, current } = summary;
   const pending = (ACTIVE_STATES as readonly string[]).includes(latest.state);
   const failed = !pending && latest.version !== current?.version;

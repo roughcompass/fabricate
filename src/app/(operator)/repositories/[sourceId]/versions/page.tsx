@@ -87,7 +87,7 @@ export default async function VersionsPage({ params, searchParams }: { params: P
           </Table>
         ) : (
           <EmptyState title="No versions yet" icon="clock">
-            {source.enabled ? "Its first version is profiled in the background." : "Disabled Repositories aren't profiled. Enable it to queue its first version."}
+            Its first version is profiled in the background.
           </EmptyState>
         )}
       </Panel>

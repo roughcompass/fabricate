@@ -10,9 +10,8 @@ import { claim, readDeConsole } from "../support/home";
 describe("ownership coverage", () => {
   it("counts claimed Repositories exactly as repositoryOwnership resolves them (Conflicting claims still count as claimed)", () => {
     const db = createTestDb();
-    const [plain, superseded, conflicting, consoleLinked, disabledClaimed] = [buildSource(db), buildSource(db), buildSource(db), buildSource(db), buildSource(db, { enabled: false })];
+    const [plain, superseded, conflicting, consoleLinked] = [buildSource(db), buildSource(db), buildSource(db), buildSource(db)];
     buildSource(db); // unclaimed
-    buildSource(db, { enabled: false }); // disabled and unclaimed
 
     claim(db, plain!);
     // A correction that supersedes the earlier claim keeps the Repository claimed.
@@ -25,18 +24,17 @@ describe("ownership coverage", () => {
     readDeConsole(db, [{ seal_id: "88001", team: "Access Platform" }], new Date());
     const consoleApplication = createApplication(db, { sealId: "88002" });
     claim(db, consoleLinked!, { application: consoleApplication });
-    claim(db, disabledClaimed!);
 
-    const enabled = listSources(db, { enabled: true });
-    const owned = repositoryOwnership(db, enabled.map((source) => source.id));
-    const claimedByReader = enabled.filter((source) => ownershipFilterOf(owned.get(source.id)) === "claimed").length;
+    const sources = listSources(db);
+    const owned = repositoryOwnership(db, sources.map((source) => source.id));
+    const claimedByReader = sources.filter((source) => ownershipFilterOf(owned.get(source.id)) === "claimed").length;
     expect(owned.get(conflicting!.id)!.application.conflict).toBe(true);
 
-    expect(repositoryCounts(db)).toEqual({ total: 7, enabled: 5, claimed: 4, unclaimed: 1 });
+    expect(repositoryCounts(db)).toEqual({ total: 5, claimed: 4, unclaimed: 1 });
     expect(claimedByReader).toBe(4);
   });
 
   it("counts nothing in an empty catalog", () => {
-    expect(repositoryCounts(createTestDb())).toEqual({ total: 0, enabled: 0, claimed: 0, unclaimed: 0 });
+    expect(repositoryCounts(createTestDb())).toEqual({ total: 0, claimed: 0, unclaimed: 0 });
   });
 });

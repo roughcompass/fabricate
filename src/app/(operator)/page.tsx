@@ -63,7 +63,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <PageHeader title="Home" description="Where the fleet's Repositories and Assessments stand, what changed, and what needs someone's attention." />
 
       <div className={styles.row} data-columns="2">
-        <Panel title="Repositories" description="Enabled Repositories, and whether each has a SEAL application.">
+        <Panel title="Repositories" description="Every Repository, and whether each has a SEAL application.">
           {summary.repositories.empty ? (
             <EmptyState
               title="No Repositories yet"
@@ -225,9 +225,9 @@ const figure = (value: number) => value.toLocaleString("en-US");
 function repositoryStats(repositories: FleetSummary["repositories"], changes: Record<string, string>): Figure[] {
   const share = claimedShare(repositories);
   return [
-    { label: "Enabled", value: figure(repositories.enabled), change: changes.enabled!, href: repositoriesHref({ status: "enabled" }) },
-    { label: "Claimed", value: figure(repositories.claimed), hint: share === null ? undefined : `${share}% of enabled`, change: changes.claimed!, href: repositoriesHref({ status: "enabled", ownership: "claimed" }) },
-    { label: "Unclaimed", value: figure(repositories.unclaimed), change: changes.unclaimed!, href: repositoriesHref({ status: "enabled", ownership: "unclaimed" }) },
+    { label: "Repositories", value: figure(repositories.total), change: changes.repositories!, href: repositoriesHref() },
+    { label: "Claimed", value: figure(repositories.claimed), hint: share === null ? undefined : `${share}% of all`, change: changes.claimed!, href: repositoriesHref({ ownership: "claimed" }) },
+    { label: "Unclaimed", value: figure(repositories.unclaimed), change: changes.unclaimed!, href: repositoriesHref({ ownership: "unclaimed" }) },
   ];
 }
 

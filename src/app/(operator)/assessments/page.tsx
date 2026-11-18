@@ -27,7 +27,7 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
   const query = await searchParams;
   const conclusion = isConclusionFilter(param(query, "conclusion")) ? (param(query, "conclusion") as ConclusionFilter) : null;
   const db = getDb();
-  const enabledCount = listSources(db, { enabled: true }).length;
+  const sourceCount = listSources(db).length;
   // Each Assessment's latest completed Evaluation, in one query; Home counts the same conclusions.
   const conclusions = latestConclusions(db);
   const counts = conclusionCounts(conclusions);
@@ -35,7 +35,7 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
     const latest = listAssessments(db, initiative.id)[0];
     return {
       initiative,
-      scope: initiative.selectionMode === "all_enabled" ? `${scopeLabel(initiative, 0)} (${enabledCount})` : scopeLabel(initiative, selectedSources(db, initiative.id).length),
+      scope: initiative.selectionMode === "all" ? `${scopeLabel(initiative, 0)} (${sourceCount})` : scopeLabel(initiative, selectedSources(db, initiative.id).length),
       releases: selectedReleases(db, initiative.id).map(({ release, standard }) => releaseLabel(standard, release)),
       latest: latest && { assessment: latest, number: assessmentNumber(db, latest) },
     };
@@ -117,7 +117,7 @@ export default async function InitiativesPage({ searchParams }: { searchParams: 
           <EmptyState title="No matching Assessments">{conclusion === "none" ? "Every Assessment has a completed Evaluation." : `No Assessment's latest completed Evaluation concluded “${statusLabelOf(conclusion)}”.`}</EmptyState>
         ) : (
           <EmptyState title="No Assessments yet" icon="checklist" action={create}>
-            An Assessment covers all enabled Repositories or a chosen subset, and can evaluate them against published Standard Releases.
+            An Assessment covers all Repositories or a chosen subset, and can evaluate them against published Standard Releases.
           </EmptyState>
         )}
       </Panel>

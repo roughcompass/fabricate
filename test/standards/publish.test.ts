@@ -117,7 +117,7 @@ describe("publication", () => {
     const { standard, draft } = draftWith(sampleStandard());
     const release = publishDraft(db, standard.publicId, draft.lockVersion);
     const initiative = buildInitiative(db);
-    updateInitiative(db, initiative.publicId, initiative.lockVersion, { name: initiative.name, objective: initiative.objective, selectionMode: "all_enabled", standardReleasePublicIds: [release.publicId] });
+    updateInitiative(db, initiative.publicId, initiative.lockVersion, { name: initiative.name, objective: initiative.objective, selectionMode: "all", standardReleasePublicIds: [release.publicId] });
     expect(selectedReleases(db, initiative.id).map((selected) => selected.release.id)).toEqual([release.id]);
 
     expect(() => rawRun(db, "update standard_releases set document = ? where id = ?", "{}", release.id)).toThrow(/immutable/);

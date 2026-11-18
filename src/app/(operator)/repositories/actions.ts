@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { LAUNCH_TOKEN } from "@/lib/assessments/assessment-records";
 import { addRepositories } from "@/lib/catalog/bulk-add";
-import { disableSource, editSource, enableSource, registerSource, type SourceForm } from "@/lib/catalog/catalog";
+import { editSource, registerSource, type SourceForm } from "@/lib/catalog/catalog";
 import { getSource } from "@/lib/catalog/source-records";
 import { CloneUrl } from "@/lib/catalog/clone-url";
 import { getDb } from "@/lib/db/client";
@@ -58,21 +58,6 @@ export async function updateSource(publicId: string, previous: SourceFormState, 
   redirect(`/repositories?notice=updated&source=${publicId}`);
 }
 
-export async function setSourceEnabled(formData: FormData): Promise<void> {
-  const publicId = text(formData, "publicId", 40);
-  const enabled = text(formData, "enabled", 5) === "true";
-  if (!isPublicId(publicId, "src")) throw new NotFoundError("Unknown repository source");
-
-  try {
-    if (enabled) enableSource(getDb(), publicId);
-    else disableSource(getDb(), publicId);
-  } catch (error) {
-    if (error instanceof ValidationError) redirect(`/repositories?notice=enable-conflict&source=${publicId}`);
-    throw error;
-  }
-  redirect(`/repositories?notice=${enabled ? "enabled" : "disabled"}&source=${publicId}`);
-}
-
 /**
  * Queues a new profile version of a Repository, unless one is queued or
  * running. The page's launch token makes a repeated submission name the
@@ -84,7 +69,7 @@ export async function reprofileSource(formData: FormData): Promise<void> {
   if (!isPublicId(publicId, "src")) throw new NotFoundError("Unknown repository source");
   const token = text(formData, "launchToken", 40);
   const result = queueProfile(getDb(), getSource(getDb(), publicId), "manual", { launchToken: LAUNCH_TOKEN.test(token) ? token : undefined });
-  const notice = result.status === "queued" ? "reprofiled" : result.status === "active" ? "profiling" : "profile-disabled";
+  const notice = result.status === "queued" ? "reprofiled" : "profiling";
   redirect(text(formData, "from", 10) === "list" ? `/repositories?notice=${notice}&source=${publicId}` : `${repositoryHref(publicId)}?notice=${notice}`);
 }
 

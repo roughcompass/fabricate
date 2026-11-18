@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createInitiative, deleteInitiative, startAssessment, updateInitiative } from "@/app/(operator)/assessments/actions";
 import type { InitiativeFormState } from "@/app/(operator)/assessments/form-state";
 import { listAssessments, targetsOf } from "@/lib/assessments/assessment-records";
-import { setSourceEnabled } from "@/lib/catalog/source-records";
 import { type Db, setDb } from "@/lib/db/client";
 import { jobs } from "@/lib/db/schema";
 import { getInitiative, listInitiatives, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
@@ -22,7 +21,7 @@ const form = (fields: Record<string, string | number | string[]>) => {
   }
   return data;
 };
-const blank: InitiativeFormState = { values: { name: "", objective: "", selectionMode: "all_enabled", sourcePublicIds: [], standardReleasePublicIds: [] }, errors: {} };
+const blank: InitiativeFormState = { values: { name: "", objective: "", selectionMode: "all", sourcePublicIds: [], standardReleasePublicIds: [] }, errors: {} };
 
 describe("initiative Server Actions", () => {
   let db: Db;
@@ -32,13 +31,13 @@ describe("initiative Server Actions", () => {
   });
   afterEach(() => setDb(undefined));
 
-  it("creates an all-enabled initiative that selects two published Releases", async () => {
+  it("creates an initiative of all Repositories that selects two published Releases", async () => {
     const [first, second] = [buildRelease(db), buildRelease(db)];
-    const location = await redirectOf(createInitiative(blank, form({ name: "Modernize", objective: "Upgrade", selectionMode: "all_enabled", standardReleasePublicIds: [first.publicId, second.publicId] })));
+    const location = await redirectOf(createInitiative(blank, form({ name: "Modernize", objective: "Upgrade", selectionMode: "all", standardReleasePublicIds: [first.publicId, second.publicId] })));
 
     const [initiative] = listInitiatives(db);
     expect(location).toBe(`/assessments/${initiative!.publicId}?notice=created`);
-    expect(initiative).toMatchObject({ selectionMode: "all_enabled" });
+    expect(initiative).toMatchObject({ selectionMode: "all" });
     expect(selectedReleases(db, initiative!.id).map(({ release }) => release.id).sort()).toEqual([first.id, second.id].sort());
   });
 
@@ -51,7 +50,7 @@ describe("initiative Server Actions", () => {
 
   it("rejects a draft Standard submitted in place of a Release", async () => {
     const { standard } = createStandard(db, { name: "Draft only", purpose: "Not yet published" });
-    const state = await createInitiative(blank, form({ name: "Drafty", selectionMode: "all_enabled", standardReleasePublicIds: [standard.publicId] }));
+    const state = await createInitiative(blank, form({ name: "Drafty", selectionMode: "all", standardReleasePublicIds: [standard.publicId] }));
 
     expect(state.errors.standardReleases).toEqual(["Draft only is a draft Standard; select one of its published Releases"]);
     expect(listInitiatives(db)).toEqual([]);
@@ -66,7 +65,7 @@ describe("initiative Server Actions", () => {
 
   it("updates with optimistic locking and reports a stale edit", async () => {
     const initiative = buildInitiative(db);
-    const fields = { name: "Renamed", selectionMode: "all_enabled", lockVersion: 0 };
+    const fields = { name: "Renamed", selectionMode: "all", lockVersion: 0 };
 
     expect(await redirectOf(updateInitiative(initiative.publicId, blank, form(fields)))).toBe(`/assessments/${initiative.publicId}?notice=updated`);
     expect((await updateInitiative(initiative.publicId, blank, form(fields))).errors.base?.[0]).toMatch(/changed by someone else/);
@@ -98,13 +97,12 @@ describe("initiative Server Actions", () => {
     expect(db.select().from(jobs).all()).toHaveLength(1);
   });
 
-  it("returns one actionable problem per invalid source and starts nothing", async () => {
-    const [orders, billing] = [buildSource(db, { name: "orders" }), buildSource(db, { name: "billing" })];
-    const initiative = buildInitiative(db, { sources: [orders, billing] });
-    setSourceEnabled(db, orders.publicId, false);
+  it("returns an actionable problem when the scope can't be resolved, and starts nothing", async () => {
+    // An Assessment of all Repositories, while the catalog has none.
+    const initiative = buildInitiative(db);
 
     const state = await startAssessment(initiative.publicId, { problems: [] }, form({ launchToken: crypto.randomUUID() }));
-    expect(state.problems).toEqual([`orders (${orders.publicId}) is disabled. Enable it in Repositories or remove it from this Assessment's scope.`]);
+    expect(state.problems).toEqual(["The scope is empty: the catalog has no Repositories. Add one before starting an assessment."]);
     expect(listAssessments(db, initiative.id)).toEqual([]);
     expect(db.select().from(jobs).all()).toEqual([]);
   });

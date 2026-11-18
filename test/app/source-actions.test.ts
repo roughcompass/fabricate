@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createSource, setSourceEnabled, updateSource } from "@/app/(operator)/repositories/actions";
-import { assessmentCounts } from "@/lib/catalog/catalog";
+import { createSource, reprofileSource, updateSource } from "@/app/(operator)/repositories/actions";
 import { getSource, insertSource, listSources } from "@/lib/catalog/source-records";
 import { type Db, setDb } from "@/lib/db/client";
-import { buildAssessment } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { redirectOf } from "../support/next";
 
@@ -59,25 +57,8 @@ describe("source Server Actions", () => {
     expect(getSource(db, source.publicId).name).toBe("orders-ui");
   });
 
-  it("disables and re-enables a source while preserving assessment history", async () => {
-    const source = insertSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", canonicalUrl: "https://git.example.com/acme/orders" });
-    buildAssessment(db, { sources: [source] });
-
-    expect(await redirectOf(setSourceEnabled(form({ publicId: source.publicId, enabled: "false" })))).toBe(`/repositories?notice=disabled&source=${source.publicId}`);
-    expect(getSource(db, source.publicId).enabled).toBe(false);
-    expect(assessmentCounts(db).get(source.id)).toBe(1);
-    expect(await redirectOf(setSourceEnabled(form({ publicId: source.publicId, enabled: "true" })))).toBe(`/repositories?notice=enabled&source=${source.publicId}`);
+  it("rejects a malformed source id when re-profiling", async () => {
+    await expect(reprofileSource(form({ publicId: "../../etc" }))).rejects.toThrow(/Unknown repository source/);
   });
 
-  it("refuses to enable a duplicate of an enabled source", async () => {
-    insertSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", canonicalUrl: "https://git.example.com/acme/orders" });
-    const duplicate = insertSource(db, { name: "old", cloneUrl: "https://git.example.com/acme/orders", canonicalUrl: "https://git.example.com/acme/orders", enabled: false });
-
-    expect(await redirectOf(setSourceEnabled(form({ publicId: duplicate.publicId, enabled: "true" })))).toBe(`/repositories?notice=enable-conflict&source=${duplicate.publicId}`);
-    expect(getSource(db, duplicate.publicId).enabled).toBe(false);
-  });
-
-  it("rejects a malformed source id", async () => {
-    await expect(setSourceEnabled(form({ publicId: "../../etc", enabled: "true" }))).rejects.toThrow(/Unknown repository source/);
-  });
 });

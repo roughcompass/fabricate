@@ -13,11 +13,9 @@ const withQuery = (path: string, entries: Record<string, string | null | undefin
   return params.size ? `${path}?${params}` : path;
 };
 
-export type RepositoryStatus = "enabled" | "disabled";
-
-/** The Repositories list on a status tab, with an ownership filter and a search. */
-export function repositoriesHref(filters: { status?: RepositoryStatus | null; ownership?: OwnershipFilter | null; q?: string } = {}): string {
-  return withQuery("/repositories", { status: filters.status, ownership: filters.ownership, q: filters.q });
+/** The Repositories list with an ownership filter and a search. */
+export function repositoriesHref(filters: { ownership?: OwnershipFilter | null; q?: string } = {}): string {
+  return withQuery("/repositories", { ownership: filters.ownership, q: filters.q });
 }
 
 /** The Assessments list on a conclusion tab. */

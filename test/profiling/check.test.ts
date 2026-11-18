@@ -50,11 +50,10 @@ describe("the profiling check", () => {
     db = createTestDb();
   });
 
-  it("queues every enabled repository without a version, and reads only the references of profiled repositories at rest", async () => {
+  it("queues every repository without a version, and reads only the references of profiled repositories at rest", async () => {
     const orders = buildSource(db, { name: "orders" });
     const ledger = buildSource(db, { name: "ledger" });
     const billing = buildSource(db, { name: "billing" });
-    buildSource(db, { name: "archive", enabled: false });
     queueProfile(db, orders, "imported");
     await finish(db, orders, 1);
     queueProfile(db, ledger, "imported");

@@ -1,14 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  findEnabledSourceByCanonicalUrl,
-  insertSource,
-  isValidGitRef,
-  listSources,
-  setSourceEnabled,
-  updateSource,
-} from "@/lib/catalog/source-records";
+import { findSourceByCanonicalUrl, insertSource, isValidGitRef, listSources, updateSource } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
-import { StaleRecordError, ValidationError } from "@/lib/db/errors";
+import { StaleRecordError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
 import { buildSource } from "../support/builders";
 import { captureValidation } from "../support/validation";
@@ -22,11 +15,11 @@ describe("repository source records", () => {
     db = createTestDb();
   });
 
-  it("creates an enabled source with a stable public id and lock version", () => {
+  it("creates a source with a stable public id and lock version", () => {
     const source = insertSource(db, { ...values, name: "  orders   ui ", gitRef: " main " });
 
     expect(isPublicId(source.publicId, "src")).toBe(true);
-    expect(source).toMatchObject({ name: "orders ui", gitRef: "main", enabled: true, lockVersion: 0 });
+    expect(source).toMatchObject({ name: "orders ui", gitRef: "main", lockVersion: 0 });
     expect(source.createdAt).toBeInstanceOf(Date);
   });
 
@@ -55,19 +48,18 @@ describe("repository source records", () => {
     },
   );
 
-  it("rejects a second enabled source with the same canonical URL and names the existing one", () => {
+  it("rejects a second source with the same canonical URL and names the existing one", () => {
     const existing = insertSource(db, values);
     const error = captureValidation(() => insertSource(db, { ...values, name: "copy", cloneUrl: "https://git.example.com/acme/orders" }));
 
     expect(error.messagesFor("cloneUrl")[0]).toContain(`orders (${existing.publicId})`);
   });
 
-  it("allows a disabled duplicate but refuses to enable it while the original is enabled", () => {
-    insertSource(db, values);
-    const duplicate = insertSource(db, { ...values, name: "old copy", enabled: false });
+  it("finds a source by its canonical URL, excluding one when asked", () => {
+    const source = insertSource(db, values);
 
-    expect(() => setSourceEnabled(db, duplicate.publicId, true)).toThrow(ValidationError);
-    expect(findEnabledSourceByCanonicalUrl(db, values.canonicalUrl)?.name).toBe("orders");
+    expect(findSourceByCanonicalUrl(db, values.canonicalUrl)?.name).toBe("orders");
+    expect(findSourceByCanonicalUrl(db, values.canonicalUrl, source.id)).toBeUndefined();
   });
 
   it("updates with optimistic locking and increments the lock version", () => {
@@ -78,14 +70,6 @@ describe("repository source records", () => {
     expect(() => updateSource(db, source.publicId, 0, { name: "stale" })).toThrow(StaleRecordError);
   });
 
-  it("disables and re-enables a source", () => {
-    const source = insertSource(db, values);
-
-    expect(setSourceEnabled(db, source.publicId, false).enabled).toBe(false);
-    expect(listSources(db, { enabled: true })).toEqual([]);
-    expect(setSourceEnabled(db, source.publicId, true).enabled).toBe(true);
-  });
-
   it("lists sources case-insensitively by name", () => {
     for (const name of ["beta", "Alpha", "gamma"]) buildSource(db, { name });
 
@@ -94,7 +78,7 @@ describe("repository source records", () => {
 
   describe("database rules", () => {
     const insert = (overrides: Record<string, unknown> = {}) => {
-      const row = { public_id: "src_aaaaaaaaaaaaaaaa", name: "raw", clone_url: "https://x/y", canonical_url: "https://x/y", enabled: 1, created_at: 0, updated_at: 0, ...overrides };
+      const row = { public_id: "src_aaaaaaaaaaaaaaaa", name: "raw", clone_url: "https://x/y", canonical_url: "https://x/y", created_at: 0, updated_at: 0, ...overrides };
       rawRun(db, `insert into repository_sources (${Object.keys(row).join(", ")}) values (${Object.keys(row).map(() => "?").join(", ")})`, ...Object.values(row));
     };
 
@@ -102,15 +86,13 @@ describe("repository source records", () => {
       ["a public id with the wrong prefix", { public_id: "ini_aaaaaaaaaaaaaaaa" }],
       ["a blank name", { name: "   " }],
       ["an empty clone URL", { clone_url: "" }],
-      ["a non-boolean enabled flag", { enabled: 2 }],
     ])("rejects %s", (_label, overrides) => {
       expect(() => insert(overrides)).toThrow(/CHECK constraint failed/);
     });
 
-    it("enforces one enabled entry per canonical URL", () => {
+    it("enforces one entry per canonical URL", () => {
       insert();
       expect(() => insert({ public_id: "src_bbbbbbbbbbbbbbbb" })).toThrow(/UNIQUE constraint failed/);
-      expect(() => insert({ public_id: "src_cccccccccccccccc", enabled: 0 })).not.toThrow();
     });
 
     it("never deletes a source or changes its public identity", () => {

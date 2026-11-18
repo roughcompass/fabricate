@@ -5,11 +5,11 @@ import { launchAssessment } from "@/lib/assessments/launcher";
 import { resolveCloneUrl } from "@/lib/catalog/catalog";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
 import { BoundaryViolation, type SourceBoundary } from "@/lib/catalog/source-boundary";
-import { type RepositorySource, findEnabledSourceByCanonicalUrl, getSource, insertSource } from "@/lib/catalog/source-records";
+import { type RepositorySource, findSourceByCanonicalUrl, getSource, insertSource } from "@/lib/catalog/source-records";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, ValidationError, isUniqueViolation } from "@/lib/db/errors";
-import { assessmentTargets, assessments, linesOfBusiness, ownershipAssertions, ownershipSupersessions, portals, repositoryProfiles, repositorySources } from "@/lib/db/schema";
+import { assessmentTargets, assessments, linesOfBusiness, ownershipAssertions, ownershipSupersessions, portals, repositoryProfiles } from "@/lib/db/schema";
 import { claimInitiative } from "@/lib/initiatives/initiative-records";
 import { type Candidate, provenanceOf } from "./effective";
 import { type ApplicationOwnership, type LabelRef, type PortalOwnership, type RepositoryOwnership, applicationOwnership, portalOwnership, repositoryOwnership } from "./read";
@@ -52,16 +52,14 @@ export function locateRepository(db: Executor, url: string, boundary?: SourceBou
     throw error;
   }
   return immediate(db, (tx) => {
-    const found = findEnabledSourceByCanonicalUrl(tx, resolved.canonicalUrl);
+    const found = findSourceByCanonicalUrl(tx, resolved.canonicalUrl);
     if (found) return { source: found, created: false };
-    const disabled = tx.select().from(repositorySources).where(eq(repositorySources.canonicalUrl, resolved.canonicalUrl)).get();
-    if (disabled) throw new ValidationError([{ field: "cloneUrl", message: `This Repository is in the catalog as ${disabled.name}, which is disabled. Ask an operator to enable it, then claim it.` }]);
     try {
       return { source: insertSource(tx, { name: repositoryName(resolved.canonicalUrl), ...resolved }), created: true };
     } catch (error) {
       // Someone registered the same URL a moment earlier.
       if (error instanceof ValidationError || isUniqueViolation(error)) {
-        const raced = findEnabledSourceByCanonicalUrl(tx, resolved.canonicalUrl);
+        const raced = findSourceByCanonicalUrl(tx, resolved.canonicalUrl);
         if (raced) return { source: raced, created: false };
       }
       throw error;

@@ -12,7 +12,7 @@ import {
 } from "@/lib/assessments/assessment-records";
 import { detectorConfiguration } from "@repo-facts/bundle";
 import { dump, sha256 } from "@repo-facts/contract";
-import { getSource, setSourceEnabled, updateSource } from "@/lib/catalog/source-records";
+import { getSource, updateSource } from "@/lib/catalog/source-records";
 import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
@@ -58,7 +58,6 @@ describe("assessment records", () => {
     const { assessment } = buildAssessment(db, { sources: [source] });
 
     updateSource(db, source.publicId, 0, { name: "orders-ui", cloneUrl: "https://git.example.com/acme/orders-ui.git", canonicalUrl: "https://git.example.com/acme/orders-ui", gitRef: "release" });
-    setSourceEnabled(db, source.publicId, false);
 
     expect(targetsOf(db, assessment.id)[0]).toMatchObject({
       sourceName: "orders",
@@ -66,7 +65,6 @@ describe("assessment records", () => {
       gitRef: "main",
     });
 
-    setSourceEnabled(db, source.publicId, true);
     const { targets } = buildAssessment(db, { sources: [getSource(db, source.publicId)] });
     expect(targets[0]).toMatchObject({ sourceName: "orders-ui", gitRef: "release" });
   });

@@ -63,8 +63,7 @@ export default async function InitiativePage({ params, searchParams }: { params:
       return releaseLabel(standardById(db, release.standardId), release);
     }),
   }));
-  const enabledCount = listSources(db, { enabled: true }).length;
-  const scope = initiative.selectionMode === "all_enabled" ? `${scopeLabel(initiative, 0)} (${enabledCount} now)` : scopeLabel(initiative, sources.length);
+  const scope = initiative.selectionMode === "all" ? `${scopeLabel(initiative, 0)} (${listSources(db).length} now)` : scopeLabel(initiative, sources.length);
   // Salt Patterns assesses template versions, which DE FabLab adds; only its Releases are chosen here.
   const templates = initiative.systemOwned;
   const editHref = `/assessments/${initiative.publicId}/edit`;
@@ -117,7 +116,6 @@ export default async function InitiativePage({ params, searchParams }: { params:
                         <span key={source.publicId}>
                           {index > 0 && ", "}
                           {source.name}
-                          {!source.enabled && " (disabled)"}
                         </span>
                       ))}
                     </span>,

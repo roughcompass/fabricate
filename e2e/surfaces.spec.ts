@@ -29,14 +29,14 @@ test("Initiative overview on a surface: the list is white, its heading on the ca
   expect(await background(page.locator("body"))).toBe(CANVAS.light);
 });
 
-test("Sources list in the light theme: canvas behind the sidebar, tabs, and filters; the header and the table on white", async ({ page, db, baseURL }) => {
+test("Sources list in the light theme: canvas behind the sidebar and filters; the header and the table on white", async ({ page, db, baseURL }) => {
   await useTheme(page, "light", baseURL!);
   buildSource(db, { name: "orders" });
   await page.goto(paths.repositories);
   expect(await background(page.locator("body"))).toBe(CANVAS.light);
   expect(await background(page.locator("#sidebar"))).toBe(CANVAS.light);
   expect(await background(page.locator("[data-shell-header]"))).toBe(SURFACE.light);
-  expect(await background(page.getByRole("navigation", { name: "Filter Repositories" }))).toBe(TRANSPARENT);
+  expect(await background(page.getByRole("form", { name: "Search and filter Repositories" }))).toBe(TRANSPARENT);
   expect(await background(page.locator("[data-panel]").filter({ has: page.getByRole("table") }))).toBe(SURFACE.light);
 });
 

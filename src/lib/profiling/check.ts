@@ -15,7 +15,7 @@ import { type CheckState, ACTIVE_STATES, latestVersions, queueProfile } from "./
  * queues the next slot's before it starts, so a failed check never ends the
  * schedule.
  *
- * For every enabled repository with no version queued or running, it queues
+ * For every repository with no version queued or running, it queues
  * a version when the repository has none yet, when the detector release or
  * the profile schema changed since its newest version, or when its reference
  * names a different commit than that version profiled. Only the last needs
@@ -82,10 +82,10 @@ export interface CheckOptions {
   readonly head?: (source: RepositorySource, signal?: AbortSignal) => Promise<string>;
 }
 
-/** Checks every enabled repository once, queueing the versions that are due. */
+/** Checks every repository once, queueing the versions that are due. */
 export async function checkProfiles(db: Executor, config: FabricateConfig, options: CheckOptions = {}): Promise<CheckResult> {
   const head = options.head ?? ((source, signal) => remoteHead(source, { config, signal }));
-  const sources = listSources(db, { enabled: true });
+  const sources = listSources(db);
   const latest = latestVersions(db);
   const queued: Partial<Record<ProfileTrigger, number>> = {};
   const unreachable: { source: string; message: string }[] = [];

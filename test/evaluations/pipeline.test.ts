@@ -52,7 +52,7 @@ describe("Evaluation pipeline", () => {
   }
 
   function select(initiative: Initiative, releases: StandardRelease[]): Initiative {
-    return updateInitiative(db, initiative.publicId, initiative.lockVersion, { name: initiative.name, objective: initiative.objective, selectionMode: "all_enabled", standardReleasePublicIds: releases.map((release) => release.publicId) });
+    return updateInitiative(db, initiative.publicId, initiative.lockVersion, { name: initiative.name, objective: initiative.objective, selectionMode: "all", standardReleasePublicIds: releases.map((release) => release.publicId) });
   }
 
   /** A finished Assessment whose targets end as +outcomes+: a file tree, or a failure. */

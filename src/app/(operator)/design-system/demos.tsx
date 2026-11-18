@@ -33,7 +33,7 @@ export function ToastDemo() {
       <Button onClick={() => toast({ title: "orders was added.", tone: "success" })}>Success</Button>{" "}
       <Button onClick={() => toast({ title: "Cancellation was requested.", tone: "info" })}>Info</Button>{" "}
       <Button onClick={() => toast({ title: "Added 3 of 5 selected Repositories.", description: "2 candidates could not be added.", tone: "warning" })}>Warning</Button>{" "}
-      <Button onClick={() => toast({ title: "billing could not be enabled.", description: "Another enabled Repository has the same clone URL.", tone: "error" })}>Error</Button>{" "}
+      <Button onClick={() => toast({ title: "billing could not be added.", description: "Another Repository has the same clone URL.", tone: "error" })}>Error</Button>{" "}
       <Button
         onClick={() => {
           setCount(count + 1);

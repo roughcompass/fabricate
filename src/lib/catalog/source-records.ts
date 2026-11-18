@@ -7,7 +7,7 @@ import { repositorySources } from "@/lib/db/schema";
 /**
  * Persistence for repository sources. Callers supply an already parsed and
  * canonicalized clone URL (see clone-url.ts); this layer enforces record rules,
- * the one-enabled-entry-per-canonical-URL rule, and optimistic locking.
+ * the one-entry-per-canonical-URL rule, and optimistic locking.
  */
 
 export type RepositorySource = typeof repositorySources.$inferSelect;
@@ -17,7 +17,6 @@ export interface SourceValues {
   cloneUrl: string;
   canonicalUrl: string;
   gitRef?: string | null;
-  enabled?: boolean;
 }
 
 /** A branch, tag, or commit name that `git check-ref-format --allow-onelevel` would accept. */
@@ -34,7 +33,7 @@ export function sourceReferenceLabel(source: Pick<RepositorySource, "gitRef">): 
 export function insertSource(db: Executor, values: SourceValues): RepositorySource {
   return immediate(db, (tx) => {
     const normalized = normalize(values);
-    validate(tx, normalized, normalized.enabled ?? true);
+    validate(tx, normalized);
     const now = new Date();
     try {
       return tx
@@ -55,18 +54,7 @@ export function updateSource(db: Executor, publicId: string, expectedLockVersion
     if (current.lockVersion !== expectedLockVersion) throw new StaleRecordError(`${current.name} was changed by someone else`);
 
     const next = normalize({ ...current, ...changes });
-    validate(tx, next, next.enabled ?? current.enabled, current.id);
-    return write(tx, current, next);
-  });
-}
-
-export function setSourceEnabled(db: Executor, publicId: string, enabled: boolean): RepositorySource {
-  return immediate(db, (tx) => {
-    const current = getSource(tx, publicId);
-    if (current.enabled === enabled) return current;
-
-    const next = { ...current, enabled };
-    validate(tx, next, enabled, current.id);
+    validate(tx, next, current.id);
     return write(tx, current, next);
   });
 }
@@ -81,14 +69,12 @@ export function getSource(db: Executor, publicId: string): RepositorySource {
   return source;
 }
 
-export function listSources(db: Executor, filter: { enabled?: boolean } = {}): RepositorySource[] {
-  const query = db.select().from(repositorySources);
-  const filtered = filter.enabled === undefined ? query : query.where(eq(repositorySources.enabled, filter.enabled));
-  return filtered.orderBy(sql`lower(${repositorySources.name})`, asc(repositorySources.publicId)).all();
+export function listSources(db: Executor): RepositorySource[] {
+  return db.select().from(repositorySources).orderBy(sql`lower(${repositorySources.name})`, asc(repositorySources.publicId)).all();
 }
 
-export function findEnabledSourceByCanonicalUrl(db: Executor, canonicalUrl: string, excludingId?: number): RepositorySource | undefined {
-  const conditions = [eq(repositorySources.canonicalUrl, canonicalUrl), eq(repositorySources.enabled, true)];
+export function findSourceByCanonicalUrl(db: Executor, canonicalUrl: string, excludingId?: number): RepositorySource | undefined {
+  const conditions = [eq(repositorySources.canonicalUrl, canonicalUrl)];
   if (excludingId !== undefined) conditions.push(ne(repositorySources.id, excludingId));
   return db.select().from(repositorySources).where(and(...conditions)).get();
 }
@@ -108,13 +94,13 @@ export function sourceFieldIssues(values: Pick<SourceValues, "name" | "gitRef">)
   return issues;
 }
 
-function validate(db: Executor, values: SourceValues, enabled: boolean, excludingId?: number): void {
+function validate(db: Executor, values: SourceValues, excludingId?: number): void {
   const issues = new IssueCollector();
   for (const issue of sourceFieldIssues(values)) issues.add(issue.field, issue.message);
   if (!values.cloneUrl || !values.canonicalUrl) issues.add("cloneUrl", "Enter a clone URL");
 
-  if (enabled && values.canonicalUrl) {
-    const existing = findEnabledSourceByCanonicalUrl(db, values.canonicalUrl, excludingId);
+  if (values.canonicalUrl) {
+    const existing = findSourceByCanonicalUrl(db, values.canonicalUrl, excludingId);
     if (existing) issues.add("cloneUrl", duplicateMessage(existing));
   }
   issues.throwIfAny();
@@ -129,7 +115,6 @@ function write(db: Executor, current: RepositorySource, next: SourceValues): Rep
         cloneUrl: next.cloneUrl,
         canonicalUrl: next.canonicalUrl,
         gitRef: next.gitRef ?? null,
-        enabled: next.enabled ?? current.enabled,
         lockVersion: current.lockVersion + 1,
         updatedAt: new Date(),
       })
@@ -145,7 +130,7 @@ function write(db: Executor, current: RepositorySource, next: SourceValues): Rep
 }
 
 function rejectDuplicate(db: Executor, canonicalUrl: string, excludingId?: number): never {
-  const existing = findEnabledSourceByCanonicalUrl(db, canonicalUrl, excludingId);
+  const existing = findSourceByCanonicalUrl(db, canonicalUrl, excludingId);
   throw new ValidationError([{ field: "cloneUrl", message: existing ? duplicateMessage(existing) : "This clone URL is already registered" }]);
 }
 

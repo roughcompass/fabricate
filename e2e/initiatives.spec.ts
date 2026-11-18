@@ -1,6 +1,5 @@
 import type { Page } from "@playwright/test";
 import { listAssessments } from "../src/lib/assessments/assessment-records";
-import { setSourceEnabled } from "../src/lib/catalog/source-records";
 import { jobs } from "../src/lib/db/schema";
 import { claimInitiative, listInitiatives, saltPatternsInitiative, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
 import { createStandard } from "../src/lib/standards/standard-records";
@@ -12,7 +11,7 @@ import { paths } from "./support/paths";
 const toast = (page: Page, text: string) => page.getByRole("region", { name: "Notifications" }).getByText(text);
 const overview = (page: Page) => page.getByRole("region", { name: "Overview" });
 
-test("creates an all-enabled Initiative with two Releases, then narrows it to an explicit subset", async ({ page, db }) => {
+test("creates an Initiative of all Repositories with two Releases, then narrows it to an explicit subset", async ({ page, db }) => {
   for (const name of ["orders", "billing", "accounts"]) buildSource(db, { name });
   const frontend = createStandard(db, { name: "Frontend baseline", purpose: "Consistent builds" }).standard;
   const security = createStandard(db, { name: "Security baseline", purpose: "Safe defaults" }).standard;
@@ -30,7 +29,7 @@ test("creates an all-enabled Initiative with two Releases, then narrows it to an
 
   await expect(toast(page, "Modernize the fleet was created.")).toBeVisible();
   await expect(page).toHaveTitle("Modernize the fleet · DE FabLab");
-  await expect(overview(page)).toContainText("All enabled Repositories (3 now)");
+  await expect(overview(page)).toContainText("All Repositories (3 now)");
   await expect(overview(page)).toContainText("Frontend baseline v1");
   await expect(overview(page)).toContainText("Security baseline v1");
   const [initiative] = listInitiatives(db);
@@ -105,20 +104,17 @@ test("starts an Assessment once and lists it in the Initiative's history", async
   await expect(history).toContainText("2 Repositories");
 });
 
-test("explains each disabled Source that blocks an Assessment, below the header", async ({ page, db }) => {
-  const [orders, billing] = [buildSource(db, { name: "orders" }), buildSource(db, { name: "billing" })];
-  const initiative = buildInitiative(db, { sources: [orders, billing] });
-  setSourceEnabled(db, orders.publicId, false);
-  setSourceEnabled(db, billing.publicId, false);
+test("explains a scope that blocks an Assessment, below the header", async ({ page, db }) => {
+  // An Assessment of all Repositories, while the catalog has none.
+  const initiative = buildInitiative(db);
 
   await page.goto(paths.assessment(initiative.publicId));
   await page.getByRole("button", { name: "Start Run" }).click();
 
   const problems = page.locator("#page-alerts").getByRole("alert");
   await expect(problems).toContainText("scope could not be resolved");
-  await expect(problems.getByRole("listitem")).toHaveCount(2);
-  await expect(problems).toContainText(`billing (${billing.publicId}) is disabled`);
-  await expect(problems).toContainText(`orders (${orders.publicId}) is disabled`);
+  await expect(problems.getByRole("listitem")).toHaveCount(1);
+  await expect(problems).toContainText("the catalog has no Repositories");
   await expect(page.locator("header").getByRole("alert")).toHaveCount(0);
   expect(listAssessments(db, initiative.id)).toEqual([]);
 });

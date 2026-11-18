@@ -7,7 +7,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type Assessment, getAssessment, snapshotOf, targetsOf } from "@/lib/assessments/assessment-records";
 import { launchAssessment } from "@/lib/assessments/launcher";
 import { requestCancellation } from "@/lib/assessments/transitions";
-import { disableSource } from "@/lib/catalog/catalog";
 import { addRepositories } from "@/lib/catalog/bulk-add";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, listSources } from "@/lib/catalog/source-records";
@@ -27,7 +26,7 @@ import { GitLog, NO_NETWORK_CALLS, NetworkTrap, countNetworkCalls } from "../sup
 
 /**
  * A temporary fleet assessed end to end: directory import into the catalog,
- * all-enabled and explicit Initiatives, one source that becomes unavailable,
+ * all-Repositories and explicit Initiatives, one source that becomes unavailable,
  * Service Dependencies, commits pinned at launch, identical reruns, and a
  * canceled run. Every job runs through the real handlers while the network
  * is trapped and every Git command is logged, so the scenario can show it
@@ -46,7 +45,7 @@ describe("Multi-repository Assessment scenario", () => {
   const networkCalls: (typeof NO_NETWORK_CALLS)[] = [];
   const savedOrdersUrl = process.env.ORDERS_URL;
   let sources: Record<string, RepositorySource>;
-  let allEnabled: Initiative;
+  let wholeFleet: Initiative;
   let explicit: Initiative;
 
   /** Runs every queued job, optionally only +limit+ of them, with the network trapped and Git logged. */
@@ -109,23 +108,23 @@ describe("Multi-repository Assessment scenario", () => {
 
   it("adds the fleet's repositories in bulk, refusing what is outside the allowed root", () => {
     const boundary = new SourceBoundary(config);
-    const urls = ["archive", "billing", "client", "ui", "web", "zz-outside-link"].map((name) => `file://${fleet}/${name}`);
+    // The archive stays out of the catalog, so the whole-fleet Assessment never sees it.
+    const urls = ["billing", "client", "ui", "web", "zz-outside-link"].map((name) => `file://${fleet}/${name}`);
     const result = addRepositories(db, [...urls, `file://${outside}`].join("\n"), boundary);
-    expect(result.failed.map((failure) => failure.line)).toEqual([6, 7]);
+    expect(result.failed.map((failure) => failure.line)).toEqual([5, 6]);
     sources = Object.fromEntries(listSources(db).map((source) => [source.name, source]));
-    expect(Object.keys(sources).sort()).toEqual(["archive", "billing", "client", "ui", "web"]);
+    expect(Object.keys(sources).sort()).toEqual(["billing", "client", "ui", "web"]);
     for (const source of Object.values(sources)) expect(source.cloneUrl.startsWith(`file://${fleet}/`)).toBe(true);
 
-    disableSource(db, sources.archive!.publicId);
-    allEnabled = createInitiative(db, { name: "Whole fleet", objective: "Current state of every enabled repository", selectionMode: "all_enabled" });
+    wholeFleet = createInitiative(db, { name: "Whole fleet", objective: "Current state of every repository", selectionMode: "all" });
     explicit = createInitiative(db, { name: "Shared packages", objective: "The UI and client packages", selectionMode: "explicit", sourcePublicIds: [sources.ui!.publicId, sources.client!.publicId] });
   });
 
   let first: Assessment;
 
-  it("assesses every enabled source independently when one becomes unavailable", async () => {
+  it("assesses every source independently when one becomes unavailable", async () => {
     fs.rmSync(path.join(fleet, "billing"), { recursive: true, force: true });
-    first = launch(allEnabled);
+    first = launch(wholeFleet);
     await run();
 
     first = refreshed(first);
@@ -157,7 +156,7 @@ describe("Multi-repository Assessment scenario", () => {
     const digests = Object.fromEntries(Object.entries(profiles(first)).map(([name, profile]) => [name, profile.digest]));
     repos.web!.write("src/inventory.ts", 'export const items = () => fetch("https://inventory.example/items").then((res) => res.json()).then((body) => body.items);\n').commit("Call inventory");
 
-    const second = launch(allEnabled);
+    const second = launch(wholeFleet);
     await run();
     expect(shas(second).web).toBe(repos.web!.head());
     expect(shas(second).web).not.toBe(pinned.web);
@@ -176,7 +175,7 @@ describe("Multi-repository Assessment scenario", () => {
     expect(refreshed(two).state).toBe("complete");
     expect(Object.fromEntries(Object.entries(profiles(two)).map(([name, profile]) => [name, profile.digest]))).toEqual(Object.fromEntries(Object.entries(profiles(one)).map(([name, profile]) => [name, profile.digest])));
     expect(withoutTargets(map(two) as unknown as JsonValue)).toEqual(withoutTargets(map(one) as unknown as JsonValue));
-    // The explicit Initiative keeps its own scope: the other enabled sources are not in it.
+    // The explicit Initiative keeps its own scope: the other sources are not in it.
     expect(Object.keys(states(two)).sort()).toEqual(["client", "ui"]);
   });
 

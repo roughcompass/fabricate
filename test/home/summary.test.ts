@@ -6,16 +6,15 @@ import { createTestDb } from "../support/db";
 import { buildEvaluation, claim, driveEvaluation, driveRun } from "../support/home";
 
 describe("fleet summary", () => {
-  it("counts enabled, claimed, and unclaimed Repositories, leaving disabled claims out (Ownership coverage)", () => {
+  it("counts every Repository, and the claimed and unclaimed ones (Ownership coverage)", () => {
     const db = createTestDb();
-    const enabled = Array.from({ length: 212 }, () => buildSource(db));
-    for (const source of enabled.slice(0, 130)) claim(db, source);
-    for (let i = 0; i < 5; i++) claim(db, buildSource(db, { enabled: false }));
+    const sources = Array.from({ length: 212 }, () => buildSource(db));
+    for (const source of sources.slice(0, 130)) claim(db, source);
 
     const { repositories } = fleetSummary(db);
-    expect(repositories).toMatchObject({ empty: false, enabled: 212, claimed: 130, unclaimed: 82 });
+    expect(repositories).toMatchObject({ empty: false, total: 212, claimed: 130, unclaimed: 82 });
     expect(claimedShare(repositories)).toBe(61);
-    expect(claimedShare({ enabled: 0, claimed: 0 })).toBeNull();
+    expect(claimedShare({ total: 0, claimed: 0 })).toBeNull();
   });
 
   it("counts the operator's Assessments by conclusion and hides Not applicable at zero (Not applicable hidden at zero)", () => {

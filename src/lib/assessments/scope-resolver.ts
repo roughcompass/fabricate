@@ -11,7 +11,7 @@ import type { Initiative } from "@/lib/initiatives/initiative-records";
  * snapshot is written.
  *
  * Resolution never narrows a scope silently: an empty scope, or an explicit
- * selection that names a missing or disabled source, fails with one problem
+ * selection that names a missing source, fails with one problem
  * per offending source.
  */
 
@@ -32,15 +32,13 @@ export class ScopeResolutionError extends Error {
 const byCatalogOrder = [sql`lower(${repositorySources.name})`, asc(repositorySources.publicId)] as const;
 
 export function resolveScope(db: Executor, initiative: Initiative): RepositorySource[] {
-  return initiative.selectionMode === "all_enabled" ? allEnabledSources(db) : explicitSources(db, initiative);
+  return initiative.selectionMode === "all" ? allSources(db) : explicitSources(db, initiative);
 }
 
-function allEnabledSources(db: Executor): RepositorySource[] {
-  const sources = db.select().from(repositorySources).where(eq(repositorySources.enabled, true)).orderBy(...byCatalogOrder).all();
+function allSources(db: Executor): RepositorySource[] {
+  const sources = db.select().from(repositorySources).orderBy(...byCatalogOrder).all();
   if (sources.length === 0) {
-    throw new ScopeResolutionError([
-      { sourcePublicId: null, sourceName: null, message: "The scope is empty: no repository sources are enabled. Add or enable a source before starting an assessment." },
-    ]);
+    throw new ScopeResolutionError([{ sourcePublicId: null, sourceName: null, message: "The scope is empty: the catalog has no Repositories. Add one before starting an assessment." }]);
   }
   return sources;
 }
@@ -67,12 +65,6 @@ function explicitSources(db: Executor, initiative: Initiative): RepositorySource
         sourcePublicId: null,
         sourceName: null,
         message: `A selected repository source (catalog record ${selection.repositorySourceId}) no longer exists. Edit the initiative's scope to remove it.`,
-      });
-    } else if (!source.enabled) {
-      problems.push({
-        sourcePublicId: source.publicId,
-        sourceName: source.name,
-        message: `${source.name} (${source.publicId}) is disabled. Enable it in Repositories or remove it from this Assessment's scope.`,
       });
     }
   }

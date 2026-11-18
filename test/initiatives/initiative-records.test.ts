@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { setSourceEnabled } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
 import { StaleRecordError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
@@ -14,13 +13,13 @@ describe("initiative records", () => {
     db = createTestDb();
   });
 
-  it("records the all-enabled policy without copying catalog membership", () => {
+  it("records the all-Repositories policy without copying catalog membership", () => {
     buildSource(db);
-    const initiative = createInitiative(db, { name: "Modernize", objective: "Upgrade", selectionMode: "all_enabled" });
+    const initiative = createInitiative(db, { name: "Modernize", objective: "Upgrade", selectionMode: "all" });
 
     expect(isPublicId(initiative.publicId, "ini")).toBe(true);
     expect(selectedSources(db, initiative.id)).toEqual([]);
-    expect(scopeLabel(initiative, 0)).toBe("All enabled Repositories");
+    expect(scopeLabel(initiative, 0)).toBe("All Repositories");
   });
 
   it("records exactly the explicitly selected sources", () => {
@@ -37,37 +36,28 @@ describe("initiative records", () => {
     expect(error.messagesFor("sources")).toEqual(["Select at least one repository source for an explicit scope"]);
   });
 
-  it("rejects unknown and newly disabled sources with one message each", () => {
-    const disabled = buildSource(db, { name: "legacy", enabled: false });
+  it("rejects unknown sources with one message each", () => {
+    const known = buildSource(db, { name: "legacy" });
     const error = captureValidation(() =>
-      createInitiative(db, { name: "Invalid", selectionMode: "explicit", sourcePublicIds: [disabled.publicId, "src_missingmissingmi"] }),
+      createInitiative(db, { name: "Invalid", selectionMode: "explicit", sourcePublicIds: [known.publicId, "src_missingmissingmi", "src_missingmissing2"] }),
     );
 
-    expect(error.messagesFor("sources")).toEqual(["legacy is disabled and cannot be selected", "Repository source src_missingmissingmi does not exist"]);
+    expect(error.messagesFor("sources")).toEqual(["Repository source src_missingmissingmi does not exist", "Repository source src_missingmissing2 does not exist"]);
   });
 
-  it("keeps an earlier selection that was disabled later so assessment start can report it", () => {
-    const source = buildSource(db, { name: "orders" });
-    const initiative = buildInitiative(db, { sources: [source] });
-    setSourceEnabled(db, source.publicId, false);
-
-    const updated = updateInitiative(db, initiative.publicId, 0, { name: "Renamed", selectionMode: "explicit", sourcePublicIds: [source.publicId] });
-    expect(selectedSources(db, updated.id).map((selected) => selected.name)).toEqual(["orders"]);
-  });
-
-  it("clears explicit selections when switching to all enabled sources", () => {
+  it("clears explicit selections when switching to all Repositories", () => {
     const initiative = buildInitiative(db, { sources: [buildSource(db)] });
-    const updated = updateInitiative(db, initiative.publicId, 0, { name: initiative.name, selectionMode: "all_enabled", sourcePublicIds: [] });
+    const updated = updateInitiative(db, initiative.publicId, 0, { name: initiative.name, selectionMode: "all", sourcePublicIds: [] });
 
-    expect(updated.selectionMode).toBe("all_enabled");
+    expect(updated.selectionMode).toBe("all");
     expect(selectedSources(db, updated.id)).toEqual([]);
   });
 
   it("uses optimistic locking", () => {
     const initiative = buildInitiative(db);
-    updateInitiative(db, initiative.publicId, 0, { name: "First", selectionMode: "all_enabled" });
+    updateInitiative(db, initiative.publicId, 0, { name: "First", selectionMode: "all" });
 
-    expect(() => updateInitiative(db, initiative.publicId, 0, { name: "Second", selectionMode: "all_enabled" })).toThrow(StaleRecordError);
+    expect(() => updateInitiative(db, initiative.publicId, 0, { name: "Second", selectionMode: "all" })).toThrow(StaleRecordError);
     expect(getInitiative(db, initiative.publicId).name).toBe("First");
   });
 
@@ -87,7 +77,7 @@ describe("initiative records", () => {
       expect(() => rawRun(db, "update initiatives set name = '' where id = ?", initiative.id)).toThrow(/CHECK constraint failed/);
     });
 
-    it("rejects explicit selections on an all-enabled initiative", () => {
+    it("rejects explicit selections on an initiative of all Repositories", () => {
       const initiative = buildInitiative(db);
       const source = buildSource(db);
 
@@ -96,10 +86,10 @@ describe("initiative records", () => {
       );
     });
 
-    it("rejects switching to all enabled while selections remain", () => {
+    it("rejects switching to all Repositories while selections remain", () => {
       const initiative = buildInitiative(db, { sources: [buildSource(db)] });
 
-      expect(() => rawRun(db, "update initiatives set selection_mode = 'all_enabled' where id = ?", initiative.id)).toThrow(/remove explicit selections/);
+      expect(() => rawRun(db, "update initiatives set selection_mode = 'all' where id = ?", initiative.id)).toThrow(/remove explicit selections/);
     });
 
     it("rejects duplicate selections", () => {

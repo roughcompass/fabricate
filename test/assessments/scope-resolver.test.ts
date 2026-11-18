@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ScopeResolutionError, resolveScope } from "@/lib/assessments/scope-resolver";
-import { setSourceEnabled, updateSource } from "@/lib/catalog/source-records";
+import { updateSource } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
 import { getInitiative } from "@/lib/initiatives/initiative-records";
 import { buildInitiative, buildSource } from "../support/builders";
@@ -22,10 +22,9 @@ describe("scope resolution", () => {
     db = createTestDb();
   });
 
-  it("includes every enabled source and no disabled source for an all-enabled initiative", () => {
+  it("includes every source for an initiative of all Repositories", () => {
     buildSource(db, { name: "billing" });
     buildSource(db, { name: "Accounts" });
-    buildSource(db, { name: "legacy", enabled: false });
     const initiative = buildInitiative(db);
 
     expect(resolveScope(db, initiative).map((source) => source.name)).toEqual(["Accounts", "billing"]);
@@ -61,9 +60,8 @@ describe("scope resolution", () => {
     expect(alphas.map((source) => source.publicId)).toEqual([...alphas.map((source) => source.publicId)].sort());
   });
 
-  it("reports an empty all-enabled scope", () => {
-    buildSource(db, { enabled: false });
-    expect(problemsOf(() => resolveScope(db, buildInitiative(db)))[0]?.message).toMatch(/The scope is empty: no repository sources are enabled/);
+  it("reports an empty scope of all Repositories", () => {
+    expect(problemsOf(() => resolveScope(db, buildInitiative(db)))[0]?.message).toMatch(/The scope is empty: the catalog has no Repositories/);
   });
 
   it("reports an explicit scope with no selections", () => {
@@ -71,17 +69,6 @@ describe("scope resolution", () => {
     rawRun(db, "delete from initiative_targets where initiative_id = ?", initiative.id);
 
     expect(problemsOf(() => resolveScope(db, getInitiative(db, initiative.publicId)))[0]?.message).toMatch(/selects no repository sources/);
-  });
-
-  it("names every disabled source in an explicit scope", () => {
-    const [orders, billing, accounts] = ["orders", "billing", "accounts"].map((name) => buildSource(db, { name }));
-    const initiative = buildInitiative(db, { sources: [orders!, billing!, accounts!] });
-    setSourceEnabled(db, orders!.publicId, false);
-    setSourceEnabled(db, billing!.publicId, false);
-
-    const problems = problemsOf(() => resolveScope(db, initiative));
-    expect(problems.map((problem) => problem.sourceName)).toEqual(["billing", "orders"]);
-    expect(problems[0]?.message).toBe(`billing (${billing!.publicId}) is disabled. Enable it in Repositories or remove it from this Assessment's scope.`);
   });
 
   it("reports a selected source that no longer exists", () => {

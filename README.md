@@ -164,7 +164,7 @@ The interface names three records differently from the code, which keeps the mod
 | Term | Meaning |
 |---|---|
 | Repository | A catalog entry for one clonable Git repository: a `file://`, `https://`, or `ssh://` URL and an optional branch, tag, or commit |
-| Assessment | A long-lived objective that selects repositories, either all enabled Repositories or an explicit subset, and optionally published Standard Releases |
+| Assessment | A long-lived objective that selects repositories, either all Repositories or an explicit subset, and optionally published Standard Releases |
 | Run | One run over an Assessment's repositories, frozen when it starts, that pins each repository to a commit and analyzes it |
 | Repository Profile | The immutable, evidence-backed facts about one repository at one commit. Each fact is observed, inferred, unknown, or conflicting. |
 | Profile version | One numbered profiling of a Repository, queued in the background when it changes. Its page shows the newest version that has a Profile. See [docs/profiling.md](docs/profiling.md). |

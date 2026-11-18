@@ -25,27 +25,25 @@ export function ownershipFilterOf(ownership: Pick<RepositoryOwnership, "applicat
 }
 
 export interface RepositoryCounts {
-  /** Every Repository, enabled or not. */
+  /** Every Repository. */
   total: number;
-  enabled: number;
-  /** Enabled Repositories with an effective SEAL application. */
+  /** Repositories with an effective SEAL application. */
   claimed: number;
-  /** Enabled Repositories without one. */
+  /** Repositories without one. */
   unclaimed: number;
 }
 
-/** Counts the catalog's Repositories and the enabled ones that are claimed, in one query. */
+/** Counts the catalog's Repositories and the claimed ones, in one query. */
 export function repositoryCounts(db: Executor): RepositoryCounts {
-  const row = db.get<{ total: number; enabled: number | null; claimed: number | null }>(sql`
+  const row = db.get<{ total: number; claimed: number | null }>(sql`
     select count(*) as total,
-      sum(case when s.enabled then 1 else 0 end) as enabled,
-      sum(case when s.enabled and exists (
+      sum(case when exists (
         select 1 from ownership_assertions a
         where a.subject_repository_source_id = s.id and a.attribute = 'application'
           and not exists (select 1 from ownership_supersessions x where x.superseded_id = a.id)
       ) then 1 else 0 end) as claimed
     from repository_sources s`);
-  const enabled = row?.enabled ?? 0;
+  const total = row?.total ?? 0;
   const claimed = row?.claimed ?? 0;
-  return { total: row?.total ?? 0, enabled, claimed, unclaimed: enabled - claimed };
+  return { total, claimed, unclaimed: total - claimed };
 }

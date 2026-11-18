@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { configurationOf, targetsOf } from "@/lib/assessments/assessment-records";
 import { COORDINATE_ASSESSMENT, launchAssessment } from "@/lib/assessments/launcher";
 import { ScopeResolutionError } from "@/lib/assessments/scope-resolver";
-import { setSourceEnabled } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
 import { assessmentTargets, assessments, jobs } from "@/lib/db/schema";
 import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
@@ -65,10 +64,8 @@ describe("assessment launch", () => {
   });
 
   it("creates nothing and enqueues nothing when the scope cannot be resolved", () => {
-    const [orders, billing] = [buildSource(db, { name: "orders" }), buildSource(db, { name: "billing" })];
-    const initiative = buildInitiative(db, { sources: [orders, billing] });
-    setSourceEnabled(db, orders.publicId, false);
-    setSourceEnabled(db, billing.publicId, false);
+    // An Assessment of all Repositories, while the catalog has none.
+    const initiative = buildInitiative(db);
 
     let error: unknown;
     try {
@@ -77,7 +74,7 @@ describe("assessment launch", () => {
       error = caught;
     }
     expect(error).toBeInstanceOf(ScopeResolutionError);
-    expect((error as ScopeResolutionError).problems.map((problem) => problem.sourceName)).toEqual(["billing", "orders"]);
+    expect((error as ScopeResolutionError).problems.map((problem) => problem.message)).toEqual([expect.stringMatching(/The scope is empty/)]);
     expect(counts()).toEqual({ assessments: 0, targets: 0, jobs: 0 });
   });
 

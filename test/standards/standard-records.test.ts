@@ -88,7 +88,7 @@ describe("standard records", () => {
     it("selects published Releases from several Standards independently", () => {
       const first = buildRelease(db);
       const second = buildRelease(db);
-      const initiative = createInitiative(db, { name: "Two Standards", selectionMode: "all_enabled", standardReleasePublicIds: [first.publicId, second.publicId] });
+      const initiative = createInitiative(db, { name: "Two Standards", selectionMode: "all", standardReleasePublicIds: [first.publicId, second.publicId] });
 
       expect(selectedReleases(db, initiative.id).map((selection) => selection.release.id).sort()).toEqual([first.id, second.id].sort());
     });
@@ -96,7 +96,7 @@ describe("standard records", () => {
     it("rejects a draft Standard and an unknown Release with one message each", () => {
       const { standard } = createStandard(db, { name: "Draft only", purpose: "Not yet published" });
       const error = captureValidation(() =>
-        createInitiative(db, { name: "Draft", selectionMode: "all_enabled", standardReleasePublicIds: [standard.publicId, "rel_unknownunknownu"] }),
+        createInitiative(db, { name: "Draft", selectionMode: "all", standardReleasePublicIds: [standard.publicId, "rel_unknownunknownu"] }),
       );
 
       expect(error.messagesFor("standardReleases")).toEqual([
@@ -109,11 +109,11 @@ describe("standard records", () => {
       const first = buildRelease(db);
       const second = buildRelease(db);
       const initiative = buildInitiative(db);
-      updateInitiative(db, initiative.publicId, 0, { name: initiative.name, selectionMode: "all_enabled", standardReleasePublicIds: [first.publicId] });
-      updateInitiative(db, initiative.publicId, 1, { name: initiative.name, selectionMode: "all_enabled", standardReleasePublicIds: [second.publicId] });
+      updateInitiative(db, initiative.publicId, 0, { name: initiative.name, selectionMode: "all", standardReleasePublicIds: [first.publicId] });
+      updateInitiative(db, initiative.publicId, 1, { name: initiative.name, selectionMode: "all", standardReleasePublicIds: [second.publicId] });
 
       expect(selectedReleases(db, initiative.id).map((selection) => selection.release.id)).toEqual([second.id]);
-      updateInitiative(db, initiative.publicId, 2, { name: initiative.name, selectionMode: "all_enabled", standardReleasePublicIds: [] });
+      updateInitiative(db, initiative.publicId, 2, { name: initiative.name, selectionMode: "all", standardReleasePublicIds: [] });
       expect(selectedReleases(db, initiative.id)).toEqual([]);
     });
   });
@@ -145,7 +145,7 @@ describe("standard records", () => {
 
     it("rejects repointing a Release selection", () => {
       const release = buildRelease(db);
-      const initiative = createInitiative(db, { name: "Selector", selectionMode: "all_enabled", standardReleasePublicIds: [release.publicId] });
+      const initiative = createInitiative(db, { name: "Selector", selectionMode: "all", standardReleasePublicIds: [release.publicId] });
 
       expect(() => rawRun(db, "update initiative_standard_releases set standard_release_id = ? where initiative_id = ?", buildRelease(db).id, initiative.id)).toThrow(
         /cannot be changed in place/,

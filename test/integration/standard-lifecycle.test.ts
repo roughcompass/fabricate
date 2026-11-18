@@ -148,7 +148,7 @@ describe("Standard lifecycle", () => {
   it("is selected by an Initiative and evaluated against an Assessment without running any Control content", async () => {
     const [v1] = releasesOf(db, getStandard(db, standardId).id);
     const storefront = buildSource(db, { name: "storefront" });
-    const blank: InitiativeFormState = { values: { name: "", objective: "", selectionMode: "all_enabled", sourcePublicIds: [], standardReleasePublicIds: [] }, errors: {} };
+    const blank: InitiativeFormState = { values: { name: "", objective: "", selectionMode: "all", sourcePublicIds: [], standardReleasePublicIds: [] }, errors: {} };
     await redirectOf(createInitiative(blank, form({ name: "Offline readiness", objective: "Work without live services", selectionMode: "explicit", sourcePublicIds: [storefront.publicId], standardReleasePublicIds: [v1!.publicId] })));
     const initiative = listInitiatives(db)[0]!;
     expect(selectedReleases(db, initiative.id).map(({ release }) => release.publicId)).toEqual([v1!.publicId]);

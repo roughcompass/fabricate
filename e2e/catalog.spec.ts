@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { buildAssessment, buildSource } from "../test/support/builders";
+import { buildSource } from "../test/support/builders";
 import { claim } from "../test/support/home";
 import { transitionAssessment } from "../src/lib/assessments/transitions";
 import { listSources } from "../src/lib/catalog/source-records";
@@ -13,7 +13,7 @@ const rowMenu = async (page: Page, name: string) => {
   return page.locator("[popover]:popover-open");
 };
 
-test("adds, edits, disables, and re-enables a Source with validation feedback", async ({ page, db: _db }) => {
+test("adds and edits a Source with validation feedback", async ({ page, db: _db }) => {
   await page.goto(paths.repositories);
   await expect(page.getByText("No Repositories yet")).toBeVisible();
   await page.getByRole("link", { name: "New Repository" }).first().click();
@@ -59,12 +59,7 @@ test("adds, edits, disables, and re-enables a Source with validation feedback", 
   await expect(toasts(page).getByText("Running and past Runs keep the configuration they started with.")).toBeVisible();
   await expect(page.getByRole("row", { name: /orders/ })).toContainText("release");
 
-  await (await rowMenu(page, "orders")).getByRole("button", { name: "Disable" }).click();
-  await expect(toasts(page).getByText("orders is disabled.")).toBeVisible();
-  await expect(page.getByRole("row", { name: /orders/ })).toContainText("Disabled");
-
-  await (await rowMenu(page, "orders")).getByRole("button", { name: "Enable" }).click();
-  await expect(toasts(page).getByText("orders is enabled for future Runs.")).toBeVisible();
+  await expect(await rowMenu(page, "orders")).not.toContainText("Disable");
 });
 
 test("asks for the clone URL first and names the Repository after its owner and repository until a name is typed", async ({ page, db: _db }) => {
@@ -114,20 +109,6 @@ test("adds Repositories in bulk, keeps the refused lines to fix, and shows what 
   await expect(page.locator("[data-profiling-activity]")).toHaveText(/Profiling 1 Repository.*2 queued/);
 });
 
-test("keeps Assessment history visible for a disabled Source", async ({ page, db }) => {
-  const source = buildSource(db, { name: "legacy-ui" });
-  buildAssessment(db, { sources: [source] });
-
-  await page.goto(paths.repositories);
-  await (await rowMenu(page, "legacy-ui")).getByRole("button", { name: "Disable" }).click();
-  await expect(toasts(page).getByText("legacy-ui is disabled.")).toBeVisible();
-
-  await page.getByRole("link", { name: /^Disabled/ }).click();
-  const row = page.getByRole("row", { name: /legacy-ui/ });
-  await expect(row).toContainText("Disabled");
-  await expect(row).toContainText("1 Run");
-});
-
 test("searches Sources by name or clone URL, keeping the search in the address", async ({ page, db }) => {
   buildSource(db, { name: "orders" });
   buildSource(db, { name: "billing", cloneUrl: "https://git.example.com/acme/ledger-ordinals.git" });
@@ -142,7 +123,7 @@ test("searches Sources by name or clone URL, keeping the search in the address",
   const rows = page.getByRole("table", { name: "Repositories" }).locator("tbody tr");
   await expect(rows).toHaveCount(2);
   await expect(rows.filter({ hasText: "accounts" })).toHaveCount(0);
-  await expect(page.getByRole("navigation", { name: "Filter Repositories" }).getByRole("link", { name: /^All/ })).toContainText("2");
+  await expect(page.getByText("2 Repositories of 3")).toBeVisible();
 
   await search.fill("nothing-matches");
   await search.press("Enter");
@@ -155,21 +136,21 @@ test("searches Sources by name or clone URL, keeping the search in the address",
 test.describe("the ownership filter", () => {
   const rows = (page: Page) => page.getByRole("table", { name: "Repositories" }).locator("tbody tr");
 
-  test("Filtering to unclaimed Repositories keeps the tab, records both in the address, and reads Unclaimed", async ({ page, db }) => {
+  test("Filtering to unclaimed Repositories keeps the search, records both in the address, and reads Unclaimed", async ({ page, db }) => {
     claim(db, buildSource(db, { name: "orders" }));
     claim(db, buildSource(db, { name: "billing" }));
     buildSource(db, { name: "accounts" });
-    buildSource(db, { name: "archive", enabled: false });
+    buildSource(db, { name: "archive" });
 
-    await page.goto(`${paths.repositories}?status=enabled`);
+    await page.goto(`${paths.repositories}?q=a`);
     await page.getByLabel("Ownership").selectOption("unclaimed");
-    await expect(page).toHaveURL(/status=enabled/);
+    await expect(page).toHaveURL(/q=a/);
     await expect(page).toHaveURL(/ownership=unclaimed/);
-    await expect(rows(page)).toHaveCount(1);
+    await expect(rows(page)).toHaveCount(2);
     await expect(rows(page).first()).toContainText("accounts");
     await expect(rows(page).first()).toContainText("Unclaimed");
-    // The tabs count what the ownership filter leaves.
-    await expect(page.getByRole("navigation", { name: "Filter Repositories" }).getByRole("link", { name: /^All/ })).toContainText("2");
+    // The count says what the search and the filter leave.
+    await expect(page.getByText("2 Repositories of 4")).toBeVisible();
   });
 
   test("Claimed Repository in conflict shows the effective application, marked", async ({ page, db }) => {
@@ -213,21 +194,6 @@ test("keeps every row one height, with or without a Reference", async ({ page, d
   await page.goto(paths.repositories);
   const heights = await page.locator("tbody tr").evaluateAll((rows) => rows.map((row) => row.querySelector("td")!.clientHeight));
   expect(new Set(heights).size).toBe(1);
-});
-
-test("keeps a conflict error until it is dismissed", async ({ page, db }) => {
-  buildSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git" });
-  buildSource(db, { name: "orders-copy", cloneUrl: "https://git.example.com/acme/orders.git", canonicalUrl: "https://git.example.com/acme/orders", enabled: false });
-  await page.clock.install();
-  await page.goto(paths.repositories);
-
-  await (await rowMenu(page, "orders-copy")).getByRole("button", { name: "Enable" }).click();
-  const error = toasts(page).getByRole("listitem").filter({ hasText: "orders-copy could not be enabled." });
-  await expect(error).toContainText("already registered as orders");
-  await page.clock.runFor(30_000);
-  await expect(error).toBeVisible();
-  await error.getByRole("button", { name: "Dismiss notification" }).click();
-  await expect(error).toBeHidden();
 });
 
 test("the catalog stays usable at mobile width", async ({ page, db }) => {

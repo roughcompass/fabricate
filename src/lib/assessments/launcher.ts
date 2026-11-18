@@ -59,8 +59,6 @@ export function launchAssessment(db: Executor, initiativePublicId: string, launc
       if (initiative.profiling !== Boolean(options.sources)) {
         throw new ScopeResolutionError([{ sourcePublicId: null, sourceName: null, message: initiative.profiling ? "Repository profiling Runs start when a repository is profiled." : "Only the Repository profiling initiative takes its scope from the launch." }]);
       }
-      const disabled = options.sources?.find((source) => !source.enabled);
-      if (disabled) throw new ScopeResolutionError([{ sourcePublicId: disabled.publicId, sourceName: disabled.name, message: `${disabled.name} is disabled, so it can't be profiled` }]);
       // A system-owned initiative assesses its claimed repository's default branch, whatever reference the catalog sets.
       const resolved = options.sources ?? resolveScope(tx, initiative);
       const sources = initiative.claimRepositorySourceId === null ? [...resolved] : resolved.map((source) => ({ ...source, gitRef: null }));
