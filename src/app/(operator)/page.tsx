@@ -172,9 +172,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               {activity.map((item) => (
                 <li key={`${item.kind}-${item.record.href}-${item.at.getTime()}`} data-activity={item.kind}>
                   <span className={styles.activityWhat}>
-                    <Status state={item.kind === "run_failed" ? "failed" : "complete"} size="sm" label="" />
-                    <span className="visually-hidden">{ACTIVITY_LABELS[item.kind]} </span>
-                    <Link href={item.record.href}>{item.record.name}</Link>
+                    <Status state={item.kind === "run_failed" ? "failed" : "complete"}>
+                      <span className="visually-hidden">{ACTIVITY_LABELS[item.kind]} </span>
+                      <Link href={item.record.href}>{item.record.name}</Link>
+                    </Status>
                   </span>
                   <span className={styles.muted}>
                     <RelativeTime value={item.at} />

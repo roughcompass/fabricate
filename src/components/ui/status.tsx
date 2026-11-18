@@ -113,12 +113,21 @@ export function statusLabel(state: string): string {
 }
 
 /** A colored indicator beside a text label; never color alone. */
-export function Status({ state, label, size = "md" }: { state: string; label?: string; size?: "sm" | "md" }) {
+/**
+ * A state's indicator and its text, one gap apart at every size. The text is
+ * the state's label, +label+ in its place, or +children+: any content that
+ * the indicator marks, such as a value or a link, which may wrap with the
+ * indicator kept level with its first line. Pages put text beside an
+ * indicator only through this, never by placing a bare indicator next to
+ * their own text, so the gap is the same everywhere. With +children+, saying
+ * the state to assistive technology is the caller's choice.
+ */
+export function Status({ state, label, size = "md", children }: { state: string; label?: string; size?: "sm" | "md"; children?: React.ReactNode }) {
   const status = statusOf(state);
   return (
-    <span className={styles.status} data-tone={status.tone} data-size={size}>
+    <span className={styles.status} data-tone={status.tone} data-size={size} data-content={children === undefined ? undefined : ""}>
       <span className={styles.dot} data-indicator={status.indicator} aria-hidden="true" />
-      <span data-state={state}>{label ?? status.label}</span>
+      <span data-state={state}>{children ?? label ?? status.label}</span>
     </span>
   );
 }

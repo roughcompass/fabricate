@@ -57,11 +57,10 @@ function Value({ value }: { value: OverviewValue }) {
   );
   if (value.state === null) return text;
   return (
-    <>
-      <Status state={value.state} size="sm" label="" />
+    <Status state={value.state}>
       {text}
       {value.state === "observed" ? <span className="visually-hidden">{`, ${statusLabel(value.state)}`}</span> : <span className={styles.secondary}>{statusLabel(value.state)}</span>}
-    </>
+    </Status>
   );
 }
 

@@ -9,7 +9,10 @@
     line-height: var(--line-height-body);
     white-space: nowrap;
 
-    &[data-size="sm"] { gap: var(--space-1); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+    /* One gap between an indicator and its text, whatever the size. */
+    &[data-size="sm"] { font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+    /* Content the indicator marks may wrap; the indicator stays level with its first line. */
+    &[data-content] { align-items: flex-start; white-space: normal; }
     &[data-tone="success"] { --_tone: var(--color-success); }
     &[data-tone="warning"] { --_tone: var(--color-warning); }
     &[data-tone="error"] { --_tone: var(--color-error); }
@@ -28,6 +31,8 @@
     &[data-indicator="dash"] { height: 2px; }
   }
   /* Only work under way moves; a settled state never does. */
+  .status[data-content] > .dot { margin-block-start: calc((1lh - var(--size-dot)) / 2); }
+  .status[data-content] > :last-child { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); min-width: 0; }
   .status[data-tone="progress"] .dot { animation: pulse var(--duration-spin) var(--ease-standard) infinite alternate; }
 
   /* Severity: a small bar in the tone, so it reads differently from a status dot. */

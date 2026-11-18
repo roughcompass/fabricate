@@ -192,7 +192,7 @@ Mark optional fields with `optional`; required fields carry no marker. Check box
 
 ### Status and values
 
-**Status** (`status.tsx`) is the single registry for how states, outcomes, fact states, resolution states, severities, and enumerated values are shown. `Status` renders a colored dot and a label; in-progress states pulse. `Severity` renders a small bar and the capitalized label. `statusLabel`, `severityLabel`, `severityOptions`, `diagnosticReason`, `edgeBasis`, and `humanize` turn values into words, so no raw identifier or underscore reaches an operator. A version is text ("v2"), never a status.
+**Status** (`status.tsx`) is the single registry for how states, outcomes, fact states, resolution states, severities, and enumerated values are shown. `Status` renders a colored dot and a label, one gap apart at every size; in-progress states pulse. Text the dot marks, such as an overview value or a linked Run, goes inside it as `children`, which may wrap with the dot level with the first line; a page never places a bare dot (an empty `label`) beside its own text, and `test/lint/status-indicators.test.ts` fails if one does. `Severity` renders a small bar and the capitalized label. `statusLabel`, `severityLabel`, `severityOptions`, `diagnosticReason`, `edgeBasis`, and `humanize` turn values into words, so no raw identifier or underscore reaches an operator. A version is text ("v2"), never a status.
 
 **Tag** (`tag.tsx`) shows an identifier, digest, commit, path, or URL in the monospace face. A tag breaks only where it would otherwise overflow, so a table column is never narrower than its identifiers. `ShortValue` shortens a long value with the whole value on hover and in its copy control; `TagList` shows plain-text chips such as Release names.
 
