@@ -95,6 +95,7 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     expect(platform).toContainEqual(expect.objectContaining({ client: expect.objectContaining({ kind: "fetch" }), characterizable: false, endpoint: expect.objectContaining({ state: "unknown" }) }));
 
     await page.getByRole("link", { name: "mf-billing Profile" }).click();
+    await page.getByRole("navigation", { name: "Profile views" }).getByRole("link", { name: /^Services/ }).click();
     // A Service Dependency's summary names its endpoint and client; its key is in its details.
     const analytics = page.locator("#services").getByRole("region", { name: /^Same origin \/__analytics · Packaged client from @acme\/analytics/ });
     await expect(analytics).toContainText("called through Packaged client from @acme/analytics");

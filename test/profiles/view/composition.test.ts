@@ -124,7 +124,7 @@ describe("Profile composition", () => {
     const shell = factDocumentFixture("federation-shell") as unknown as FactDocument;
     const columns = (document: FactDocument) => {
       const view = profileView(document, profileDiagnostics({ fact_document: document as never }));
-      const block = view.groups.flatMap((group) => group.blocks).find((candidate): candidate is CategoryBlock => candidate.kind === "category" && candidate.heading.definition.id === "composition")!;
+      const block = view.tabs.flatMap((tab) => tab.blocks).find((candidate): candidate is CategoryBlock => candidate.kind === "category" && candidate.heading.definition.id === "composition")!;
       return { columns: block.columns, widths: block.rows.map((candidate) => (candidate.cells.kind === "cells" ? candidate.cells.cells.length : 0)) };
     };
     expect(columns(shell).columns).toEqual(["Composition", "Exposes", "Loads", "Shares"]);

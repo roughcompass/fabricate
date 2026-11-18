@@ -43,8 +43,8 @@ function inView(view: ProfileView) {
   const facts = new Set<string>();
   const evidence = new Set<string>();
   let candidates = 0;
-  for (const group of view.groups) {
-    for (const block of group.blocks) {
+  for (const tab of view.tabs) {
+    for (const block of tab.blocks) {
       const rows = block.kind === "category" ? block.rows : block.kind === "compact" ? [] : block.groups.flatMap((entry) => entry.rows);
       for (const row of rows) {
         for (const ref of row.evidence) evidence.add(ref);
@@ -83,13 +83,13 @@ describe("The Profile view", () => {
     }
   });
 
-  it("gives every category a navigation entry with its state, and an anchor on the page", () => {
+  it("gives every category one view, a navigation entry with its state, and an anchor in its view", () => {
     for (const [name, document] of documents) {
       const view = viewOf(document);
-      const entries = view.navigation.flatMap((group) => group.items);
+      const entries = view.tabs.flatMap((tab) => tab.navigation);
       const anchors = new Set<string>();
-      for (const group of view.groups) {
-        for (const block of group.blocks) {
+      for (const tab of view.tabs) {
+        for (const block of tab.blocks) {
           if (block.kind === "category") anchors.add(block.heading.definition.id);
           else if (block.kind === "compact") for (const item of block.items) anchors.add(item.definition.id);
           else for (const source of block.sources) anchors.add(source.definition.id);
@@ -98,13 +98,13 @@ describe("The Profile view", () => {
       expect(entries.filter((entry) => !anchors.has(entry.id)).map((entry) => entry.id), name).toEqual([]);
       expect(new Set(entries.map((entry) => entry.id)).size, name).toBe(entries.length);
     }
-    const earlier = viewOf(documents.at(-1)![1]).navigation.flatMap((group) => group.items);
+    const earlier = viewOf(documents.at(-1)![1]).tabs.flatMap((tab) => tab.navigation);
     expect(earlier.find((entry) => entry.id === "ui_elements")?.state).toBe("not_covered");
   });
 
   it("shows dependencies and scripts in shared tables, and CI steps with their definition", () => {
     const view = viewOf(documents.find(([name]) => name === "orders")![1]);
-    const blocks = view.groups.flatMap((group) => group.blocks);
+    const blocks = view.tabs.flatMap((tab) => tab.blocks);
     const dependencies = blocks.find((block) => block.kind === "dependencies");
     expect(dependencies && dependencies.kind === "dependencies" && dependencies.sources.map((source) => [source.definition.id, source.state])).toEqual([
       ["dependencies", "observed"],
@@ -133,7 +133,7 @@ describe("The Profile view", () => {
     const stub = (key: string, ref: string) => ({ key, state: "observed", value: { kind: "global_stub", global: "fetch" }, evidence: [ref], rule: "test-substitutes.global-stub" });
     const search = orders.categories.test_substitutes?.search ?? { complete: true, rules: [], surface: [], skipped: [] };
     const document = { ...orders, categories: { ...orders.categories, test_substitutes: { state: "observed", search, facts: [stub("a.test.ts", evidence[0]!), stub("b.test.ts", evidence[1]!), stub("c.test.ts", evidence[2]!)] } } } as FactDocument;
-    const block = viewOf(document).groups.flatMap((group) => group.blocks).find((candidate) => candidate.kind === "category" && candidate.heading.definition.id === "test_substitutes");
+    const block = viewOf(document).tabs.flatMap((tab) => tab.blocks).find((candidate) => candidate.kind === "category" && candidate.heading.definition.id === "test_substitutes");
     expect(block?.kind === "category" && block.rows).toHaveLength(1);
     const row = block?.kind === "category" ? block.rows[0]! : null;
     expect(row?.occurrences).toBe(3);

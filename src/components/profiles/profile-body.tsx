@@ -1,9 +1,12 @@
 import type { JsonObject } from "@repo-facts/contract";
+import { eq } from "drizzle-orm";
 import { cache } from "react";
 import { NeedsAttention } from "@/components/profiles/attention";
 import { CategoryTable, EmptyCategory, type EvidenceContext, SharedTable } from "@/components/profiles/category-blocks";
 import { DependencyFilters } from "@/components/profiles/dependency-filters";
-import { ProfileOverview } from "@/components/profiles/overview";
+import { OverviewValues, ProfileOverview } from "@/components/profiles/overview";
+import { ProfileHashLink } from "@/components/profiles/profile-hash-link";
+import { Relationships } from "@/components/profiles/relationships";
 import { ServiceDependencies } from "@/components/profiles/services";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -13,14 +16,20 @@ import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
 import { SectionNav } from "@/components/ui/section-nav";
 import { diagnosticReason } from "@/components/ui/status";
-import { SHARED_TITLES } from "@/components/profiles/category-blocks";
 import { Secondary, Table, Td, Th } from "@/components/ui/table";
+import { TabLink, Tabs } from "@/components/ui/tabs";
 import { ShortValue, Tag } from "@/components/ui/tag";
 import type { Assessment } from "@/lib/assessments/assessment-records";
+import { getDb } from "@/lib/db/client";
+import { assessmentTargets, repositorySources } from "@/lib/db/schema";
+import { dependencyGroups } from "@/lib/profiles/joins";
 import { type RepositoryProfile, profileDiagnostics, profileDocument } from "@/lib/profiles/profile-records";
+import { packageProducers, repositoryRelationships } from "@/lib/profiles/relationships";
 import { profileCommit } from "@/lib/profiles/schema";
 import type { FactDocument } from "@/lib/profiles/states";
-import { type CategoryBlock, type DependencyFilters as Filters, type SharedBlock, filterDependencies, pageOfGroups, profileView } from "@/lib/profiles/view";
+import { type SummaryPanel, profileSummary } from "@/lib/profiles/summary";
+import { type ProfileTabId, isProfileTab, profileTabHref } from "@/lib/profiles/tabs";
+import { type CategoryBlock, type DependencyFilters as Filters, type SharedBlock, type TabView, filterDependencies, pageOfGroups, profileView } from "@/lib/profiles/view";
 import styles from "./profile-body.module.css";
 
 /** What a Profile is pinned to: a commit, or, for a template version, its files' content digest. A page's header and body share one read of the document. */
@@ -38,19 +47,22 @@ export const PROFILE_DESCRIPTION = {
 
 const queryValue = (value: string | string[] | undefined) => (typeof value === "string" && value !== "" ? value : undefined);
 
-// The group the detector release puts service categories in, where the Service Dependencies lead.
-const SERVICES_GROUP = "Services";
-
 /** Rows per page of a long table, so a large repository's Profile stays quick to load and to read. */
 const PROFILE_PAGE_SIZE = 50;
 
 /**
- * A Profile's sections: the section menu, the overview, what needs
- * attention, every category, service dependencies, skipped inputs, other
- * diagnostics, and the details. +base+ is the page's address, which the
- * dependency filters submit to; +query+ holds their values.
+ * A Profile as views, one per question a reader brings to a repository:
+ * Overview, then Composition, Dependencies, Design system, Services,
+ * Tooling, and Diagnostics, each in the address as `tab`. The
+ * Overview answers each question in a few rows that link to the view holding
+ * their facts; every other view leads with that answer, then shows its
+ * categories in full with their search, state, and evidence. A repository
+ * that isn't a frontend web repository has no frontend views, and its
+ * Overview says why. +base+ is the page's address; +query+ holds the view,
+ * the dependency filters, and each table's page.
  */
 export function ProfileBody({ profile, assessment, query, base }: { profile: RepositoryProfile; assessment: Pick<Assessment, "publicId">; query: Record<string, string | string[] | undefined>; base: string }) {
+  const db = getDb();
   const { document, commit, pinned, pinnedLabel } = profilePin(profile);
   const facts = document.fact_document as unknown as FactDocument;
   const diagnostics = profileDiagnostics(document);
@@ -58,12 +70,32 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
   const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, assessmentId: assessment.publicId, profileId: profile.publicId };
   const filters: Filters = { kind: queryValue(query.kind), manifest: queryValue(query.manifest), package: queryValue(query.package) };
 
+  const source = db
+    .select({ id: repositorySources.id, publicId: repositorySources.publicId })
+    .from(assessmentTargets)
+    .innerJoin(repositorySources, eq(repositorySources.id, assessmentTargets.repositorySourceId))
+    .where(eq(assessmentTargets.id, profile.assessmentTargetId))
+    .get();
+  const relationships = source ? repositoryRelationships(db, source.id) : { run: null, uses: [], usedBy: [], mapHref: null };
+  const declared = [...new Set(dependencyGroups(facts).flatMap((group) => group.rows.filter((row) => row.declared).map((row) => row.name)))];
+  const panels = profileSummary(facts, view.overview, {
+    kind: view.kind,
+    relationships,
+    producers: packageProducers(db, declared),
+    self: source?.publicId ?? null,
+    services: { total: view.services.length, characterized: view.services.filter((service) => service.characterized).length },
+  });
+
+  const visible = view.tabs.filter((tab) => tab.visible);
+  const requested = queryValue(query.tab);
+  const current = visible.find((tab) => tab.id === (isProfileTab(requested) ? requested : "overview")) ?? visible[0]!;
+
   // Each long table pages on its own, in the address as `<category>_page`, keeping the rest of the query.
   const paging = (id: string, total: number) => {
     const key = `${id}_page`;
     const pages = Math.max(1, Math.ceil(total / PROFILE_PAGE_SIZE));
-    const requested = Number.parseInt(queryValue(query[key]) ?? "1", 10);
-    const page = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), pages) : 1;
+    const requestedPage = Number.parseInt(queryValue(query[key]) ?? "1", 10);
+    const page = Number.isFinite(requestedPage) ? Math.min(Math.max(requestedPage, 1), pages) : 1;
     const href = (number: number) => {
       const params = new URLSearchParams();
       for (const [name, value] of Object.entries(query)) if (typeof value === "string" && name !== key) params.set(name, value);
@@ -79,14 +111,7 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
     return <CategoryTable key={id} block={{ ...block, rows: block.rows.slice(start, start + PROFILE_PAGE_SIZE) }} context={context} pagination={<Pagination label={`${label} pages`} page={page} pages={pages} href={href} scrollToTop />} />;
   };
 
-  const services = (level: 2 | 3) => {
-    const { page, pages, start, href } = paging("services", view.services.length);
-    return <ServiceDependencies key="services" level={level} services={view.services.slice(start, start + PROFILE_PAGE_SIZE)} total={view.services.length} context={context} pagination={<Pagination label="Service Dependency pages" page={page} pages={pages} href={href} scrollToTop />} />;
-  };
-  // Every menu entry shows a state: the Service Dependencies' is whether each one's boundary is characterized.
-  const servicesItem = { id: "services", label: `Service Dependencies (${view.services.length})`, state: !view.services.length ? "absent" : view.services.every((service) => service.characterized) ? "characterized" : "incomplete" };
-
-  const shared = (block: SharedBlock, level: 2 | 3 = 3) => {
+  const shared = (block: SharedBlock) => {
     const filtered = block.kind === "dependencies" ? filterDependencies(block, filters) : null;
     const rows = filtered ? filtered.block : block;
     const id = block.sources[0]!.definition.id;
@@ -94,13 +119,17 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
     return (
       <SharedTable
         key={block.kind}
-        level={level}
         block={pageOfGroups(rows, page, PROFILE_PAGE_SIZE)}
         context={context}
-        filters={filtered && <DependencyFilters block={block} filters={filters} action={`${base}#dependencies`} shown={filtered.shown} total={filtered.total} />}
+        filters={filtered && <DependencyFilters block={block} filters={filters} action={`${base}#dependencies`} tab="dependencies" shown={filtered.shown} total={filtered.total} />}
         pagination={<Pagination label={`${block.kind === "dependencies" ? "Dependencies" : "Package scripts"} pages`} page={page} pages={pages} href={href} scrollToTop />}
       />
     );
+  };
+
+  const services = () => {
+    const { page, pages, start, href } = paging("services", view.services.length);
+    return <ServiceDependencies key="services" level={3} services={view.services.slice(start, start + PROFILE_PAGE_SIZE)} total={view.services.length} context={context} pagination={<Pagination label="Service Dependency pages" page={page} pages={pages} href={href} scrollToTop />} />;
   };
 
   // A large repository skips tens of thousands of inputs, so its diagnostics page like any long table.
@@ -116,83 +145,92 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
     );
   };
 
+  const blocks = (tab: TabView) =>
+    tab.blocks.flatMap((block) => {
+      if (block.kind === "category") return [category(block)];
+      if (block.kind === "compact") return block.items.map((item) => <EmptyCategory key={item.definition.id} definition={item.definition} value={item.value} />);
+      return [shared(block)];
+    });
+
+  // A view's section menu: its categories, with the sections that aren't categories where they appear.
+  const navigation = (tab: TabView) => {
+    const items = [
+      ...(tab.id === "composition" ? [{ id: "relationships", label: "Relationships", state: relationships.run ? (relationships.uses.length + relationships.usedBy.length ? "resolved" : "absent") : "unknown" }] : []),
+      ...(tab.id === "services" ? [{ id: "services", label: `Service Dependencies (${view.services.length})`, state: !view.services.length ? "absent" : view.services.every((service) => service.characterized) ? "characterized" : "incomplete" }] : []),
+      ...tab.navigation,
+      ...(tab.id === "diagnostics"
+        ? [
+            { id: "needs-attention", label: view.attention.items.length ? `Needs attention (${view.attention.items.length})` : "Needs attention", state: view.attention.items.length ? "to_review" : "clear" },
+            { id: "diagnostics", label: `Skipped inputs (${diagnostics.skipped.length})`, state: diagnostics.skipped.length ? "to_review" : "clear" },
+            ...(diagnostics.notes.length ? [{ id: "other-diagnostics", label: `Other diagnostics (${diagnostics.notes.length})`, state: "to_review" }] : []),
+          ]
+        : []),
+    ];
+    return [{ label: tab.label, items }];
+  };
+
+  const panel = panels.find((candidate) => candidate.tab === current.id);
+  const declaredCount = declared.length;
+  const counts: Partial<Record<ProfileTabId, number>> = { dependencies: declaredCount, services: view.services.length, diagnostics: view.attention.items.length };
+
   return (
-    <div className={styles.layout}>
-      <SectionNav
-        label="Profile sections"
-        jumpLabel="Jump to category"
-        groups={[
-          {
-            label: "Summary",
-            items: [
-              { id: "overview", label: "Overview", state: view.attention.items.length ? "complete_with_issues" : "complete" },
-              { id: "attention", label: view.attention.items.length ? `Needs attention (${view.attention.items.length})` : "Needs attention", state: view.attention.items.length ? "to_review" : "clear" },
-            ],
-          },
-          // Service Dependencies lead the Services group, where the page shows them.
-          ...view.navigation.map((group) => (group.label === SERVICES_GROUP ? { ...group, items: [servicesItem, ...group.items] } : group)),
-          ...(view.navigation.some((group) => group.label === SERVICES_GROUP) ? [] : [{ label: SERVICES_GROUP, items: [servicesItem] }]),
-          {
-            label: "Diagnostics",
-            items: [
-              { id: "diagnostics", label: `Skipped inputs (${diagnostics.skipped.length})`, state: diagnostics.skipped.length ? "to_review" : "clear" },
-              ...(diagnostics.notes.length ? [{ id: "other-diagnostics", label: `Other diagnostics (${diagnostics.notes.length})`, state: "to_review" }] : []),
-            ],
-          },
-        ]}
-      />
+    <div className={styles.body}>
+      <ProfileHashLink base={base} current={current.id} />
+      <Tabs label="Profile views">
+        {visible.map((tab) => (
+          <TabLink key={tab.id} href={profileTabHref(base, tab.id)} active={tab.id === current.id} count={counts[tab.id]}>
+            {tab.label}
+          </TabLink>
+        ))}
+      </Tabs>
 
-      <div className={styles.content}>
-        <ProfileOverview rows={view.overview} scope={view.scope} />
-        <NeedsAttention attention={view.attention} />
-
-        {view.groups.map((group) => {
-          const [only] = group.blocks;
-          // A group that is one shared table of the same name is that table, so its heading isn't said twice.
-          if (group.blocks.length === 1 && (only!.kind === "dependencies" || only!.kind === "scripts") && SHARED_TITLES[only!.kind].title === group.label) return shared(only!, 2);
-          return (
-            <Section key={group.label} title={group.label}>
-              {group.label === SERVICES_GROUP && services(3)}
-              {group.blocks.flatMap((block) => {
-                if (block.kind === "category") return [category(block)];
-                if (block.kind === "compact") return block.items.map((item) => <EmptyCategory key={item.definition.id} definition={item.definition} value={item.value} />);
-                return [shared(block)];
-              })}
+      {current.id === "overview" ? (
+        <ProfileOverview view={view} panels={panels} base={base} />
+      ) : (
+        <div className={styles.layout}>
+          <SectionNav label={`${current.label} sections`} jumpLabel="Jump to section" groups={navigation(current)} />
+          <div className={styles.content}>
+            <Section id={`view-${current.id}`} title={current.label} description={current.question}>
+              {panel && panel.rows.length > 0 && <Answer panel={panel} base={base} />}
             </Section>
-          );
-        })}
-        {!view.groups.some((group) => group.label === SERVICES_GROUP) && services(2)}
-
-        <Section title="Diagnostics">
-          <Section id="diagnostics" level={3} title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent.">
-            {diagnostics.skipped.length ? (
-              diagnosticTable("diagnostics", "Skipped inputs", diagnostics.skipped)
-            ) : (
-              <p className={styles.muted}>Every input was read and understood.</p>
+            {current.id === "composition" && <Relationships relationships={relationships} />}
+            {current.id === "services" && services()}
+            {blocks(current)}
+            {current.id === "diagnostics" && (
+              <>
+                <NeedsAttention attention={view.attention} base={base} />
+                <Section id="diagnostics" level={3} title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent.">
+                  {diagnostics.skipped.length ? diagnosticTable("diagnostics", "Skipped inputs", diagnostics.skipped) : <p className={styles.muted}>Every input was read and understood.</p>}
+                </Section>
+                {diagnostics.notes.length > 0 && (
+                  <Section id="other-diagnostics" level={3} title="Other diagnostics" description="Inconsistencies and unsupported constructs the detectors noted without skipping the input.">
+                    {diagnosticTable("other-diagnostics", "Other diagnostics", diagnostics.notes)}
+                  </Section>
+                )}
+                <Disclosure summary="Details" variant="plain">
+                  <DescriptionList
+                    surface
+                    items={[
+                      [commit ? "Commit" : "Content digest", <Tag key="commit" copy label={pinnedLabel}>{pinned}</Tag>],
+                      ["Detector release", <Tag key="release">{String(document.detector_release)}</Tag>],
+                      ["Profile digest", <ShortValue key="digest" value={profile.digest} label="digest" />],
+                      ["Created", <RelativeTime key="created" value={profile.createdAt} />],
+                      ["ID", <Tag key="id" copy label="ID">{profile.publicId}</Tag>],
+                    ]}
+                  />
+                </Disclosure>
+              </>
             )}
-          </Section>
-          {diagnostics.notes.length > 0 && (
-            <Section id="other-diagnostics" level={3} title="Other diagnostics" description="Inconsistencies and unsupported constructs the detectors noted without skipping the input.">
-              {diagnosticTable("other-diagnostics", "Other diagnostics", diagnostics.notes)}
-            </Section>
-          )}
-        </Section>
-
-        <Disclosure summary="Details" variant="plain">
-          <DescriptionList
-            surface
-            items={[
-              [commit ? "Commit" : "Content digest", <Tag key="commit" copy label={pinnedLabel}>{pinned}</Tag>],
-              ["Detector release", <Tag key="release">{String(document.detector_release)}</Tag>],
-              ["Profile digest", <ShortValue key="digest" value={profile.digest} label="digest" />],
-              ["Created", <RelativeTime key="created" value={profile.createdAt} />],
-              ["ID", <Tag key="id" copy label="ID">{profile.publicId}</Tag>],
-            ]}
-          />
-        </Disclosure>
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+/** A view's answer first: the Overview's rows for its question, before the facts behind them. */
+function Answer({ panel, base }: { panel: SummaryPanel; base: string }) {
+  return <DescriptionList surface items={panel.rows.map((row) => [row.label, <OverviewValues key={row.label} row={row} base={base} />])} />;
 }
 
 function DiagnosticTable({ label, diagnostics }: { label: string; diagnostics: readonly JsonObject[] }) {

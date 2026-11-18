@@ -45,7 +45,7 @@ describe("A row's evidence panel", () => {
 
   it("finds a shared table's row by its kind, naming each category whose fact it holds", () => {
     const view = loaded(orders).view;
-    const block = view.groups.flatMap((group) => group.blocks).find((candidate) => candidate.kind === "dependencies");
+    const block = view.tabs.flatMap((tab) => tab.blocks).find((candidate) => candidate.kind === "dependencies");
     const axios = block?.kind === "dependencies" ? block.groups.flatMap((group) => group.rows).find((row) => row.name === "axios") : undefined;
     const evidence = rowEvidence(loaded(orders), "dependencies", axios!.id);
     expect(evidence?.sections.map((section) => [section.label, section.keys.length])).toEqual([

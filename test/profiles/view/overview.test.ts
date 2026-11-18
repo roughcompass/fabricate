@@ -68,9 +68,9 @@ describe("The Profile overview", () => {
     // Files read lists nothing, so it isn't a link; each count opens the section that lists what it counts.
     expect(scope).toEqual([
       { label: "Files read", value: "98", hint: "of 111 files" },
-      { label: "Dependencies", value: "4", href: "#dependencies" },
-      { label: "Scripts", value: "0", href: "#scripts" },
-      { label: "Service Dependencies", value: "1", href: "#services" },
+      { label: "Dependencies", value: "4", section: "dependencies" },
+      { label: "Scripts", value: "0", section: "scripts" },
+      { label: "Service Dependencies", value: "1", section: "services" },
     ]);
     expect(JSON.stringify(scope)).not.toMatch(/skipped/i);
   });

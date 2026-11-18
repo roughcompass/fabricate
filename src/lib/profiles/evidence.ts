@@ -38,7 +38,7 @@ const MERGED_KEYS = 20;
 
 /** The table a row is in: a category's id, or a shared table's kind. */
 function findRow(view: ProfileView, table: string, rowId: string): { held: HeldFact[]; evidence: string[]; reasoning: boolean } | undefined {
-  for (const block of view.groups.flatMap((group) => group.blocks)) {
+  for (const block of view.tabs.flatMap((tab) => tab.blocks)) {
     if (block.kind === "category" && block.heading.definition.id === table) {
       const row = block.rows.find((candidate) => candidate.id === rowId);
       // A category row shows its reasoning's statement beside its value, so its panel repeats the reasoning only when it has examples to add.

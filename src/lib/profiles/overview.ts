@@ -12,6 +12,8 @@ export interface OverviewValue {
   state: string;
   text: string;
   secondary?: string;
+  /** Where the value links when that isn't its row's category, such as another repository's page. */
+  href?: string;
 }
 
 /** A category of a row that has no value, with why. A row of several categories names which one. */
@@ -169,12 +171,12 @@ export function overview(document: FactDocument): OverviewRow[] {
   return rows;
 }
 
-/** A key figure of a Profile's scope, linked to the section that lists what it counts when there is one. */
+/** A key figure of a Profile's scope, with the section that lists what it counts when there is one. */
 export interface ScopeFigure {
   label: string;
   value: string;
   hint?: string;
-  href?: string;
+  section?: string;
 }
 
 const figure = (count: number) => count.toLocaleString("en-US");
@@ -187,11 +189,13 @@ const figure = (count: number) => count.toLocaleString("en-US");
  */
 export function scopeFigures(document: FactDocument): ScopeFigure[] {
   const inventory = document.inventory ?? {};
-  const dependencies = dependencyGroups(document).reduce((sum, group) => sum + group.rows.filter((row) => row.declared).length, 0);
+  // Packages, each counted once however many manifests declare it; the declarations are the hint when they differ.
+  const declarations = dependencyGroups(document).flatMap((group) => group.rows.filter((row) => row.declared));
+  const packages = new Set(declarations.map((row) => row.name)).size;
   return [
     ...(typeof inventory.files === "number" ? [{ label: "Files read", value: figure(inventory.files_read ?? 0), hint: `of ${countLabel(inventory.files, "file")}` }] : []),
-    { label: "Dependencies", value: figure(dependencies), href: "#dependencies" },
-    { label: "Scripts", value: figure(categoryOf(document, "scripts")?.facts.length ?? 0), href: "#scripts" },
-    { label: "Service Dependencies", value: figure(document.service_dependencies?.length ?? 0), href: "#services" },
+    { label: "Dependencies", value: figure(packages), ...(declarations.length > packages ? { hint: `${countLabel(declarations.length, "declaration")} in ${countLabel(dependencyGroups(document).filter((group) => group.manifest && group.rows.some((row) => row.declared)).length, "manifest")}` } : {}), section: "dependencies" },
+    { label: "Scripts", value: figure(categoryOf(document, "scripts")?.facts.length ?? 0), section: "scripts" },
+    { label: "Service Dependencies", value: figure(document.service_dependencies?.length ?? 0), section: "services" },
   ];
 }

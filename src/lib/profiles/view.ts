@@ -5,8 +5,10 @@ import { isJsonObject } from "@/lib/json";
 import { type Attention, attention } from "./attention";
 import { type DependencyRow, type ScriptGroup, type ScriptRow, dependencyGroups, missingCell, scriptGroups } from "./joins";
 import { type Cell, type Layout, type RowCells, layoutOf, rowCells } from "./layouts";
+import { type RepositoryKind, repositoryKind } from "./kind";
 import { type OverviewRow, type ScopeFigure, overview, scopeFigures } from "./overview";
 import { type Fact, type FactDocument, type NoValue, type Search, categoryDefinitions, categoryOf, categoryState, noValue } from "./states";
+import { PROFILE_TABS, type ProfileTabId } from "./tabs";
 
 /**
  * Everything the Repository Profile page shows, derived once from the stored
@@ -109,14 +111,26 @@ export interface ServiceSummary {
   service: JsonObject;
 }
 
+/** One view of the Profile: the sections that answer its question, in order. */
+export interface TabView {
+  id: ProfileTabId;
+  label: string;
+  question: string;
+  /** False for a view that only applies to a frontend, in a Profile of a repository that isn't one. */
+  visible: boolean;
+  blocks: Block[];
+  /** Its categories with their states, for the view's section menu. */
+  navigation: { id: string; label: string; state: string }[];
+}
+
 export interface ProfileView {
+  /** Whether the repository is a frontend web repository, which decides the views that apply. */
+  kind: RepositoryKind;
   overview: OverviewRow[];
   /** How much of the commit was read, and how much the Profile found. */
   scope: ScopeFigure[];
   attention: Attention;
-  groups: { label: string; blocks: Block[] }[];
-  /** Navigation entries: each category with its state, by group. */
-  navigation: { label: string; items: { id: string; label: string; state: string }[] }[];
+  tabs: TabView[];
   services: ServiceSummary[];
   diagnostics: { skipped: JsonObject[]; notes: JsonObject[] };
 }
@@ -379,12 +393,16 @@ export function profileView(document: FactDocument, diagnostics: { skipped: Json
   const hasFacts = (id: string) => Boolean(categoryOf(document, id)?.facts.length);
   const dependenciesShared = DEPENDENCY_SOURCES.some(hasFacts);
   const scriptsShared = SCRIPT_SOURCES.some(hasFacts);
+  const kind = repositoryKind(document);
+  // Extension categories have no view of their own; they're shown with the tooling that runs beside them.
+  const extensions = definitions.filter((definition) => !PROFILE_TABS.some((tab) => (tab.categories as readonly string[]).includes(definition.id))).map((definition) => definition.id);
 
-  const groups = unique(definitions.map((definition) => definition.group)).map((group) => {
+  const tabs = PROFILE_TABS.map((tab): TabView => {
+    const ids = [...tab.categories, ...(tab.id === "tooling" ? extensions : [])].filter((id) => byId.has(id));
     const blocks: Block[] = [];
-    const compact: CompactBlock = { kind: "compact", group, items: [] };
-    for (const definition of definitions.filter((candidate) => candidate.group === group)) {
-      const id = definition.id;
+    const compact: CompactBlock = { kind: "compact", group: tab.label, items: [] };
+    for (const id of ids) {
+      const definition = byId.get(id)!;
       if (SHARED.has(id) && (DEPENDENCY_SOURCES.includes(id) ? dependenciesShared : scriptsShared)) {
         // The shared table appears once, where its first source category is.
         if (id === "dependencies") blocks.push(dependencyBlock(document, byId));
@@ -395,18 +413,24 @@ export function profileView(document: FactDocument, diagnostics: { skipped: Json
       else compact.items.push({ definition, value: noValue(document, definition) });
     }
     if (compact.items.length) blocks.push(compact);
-    return { label: group, blocks };
+    return {
+      id: tab.id,
+      label: tab.label,
+      question: tab.question,
+      visible: kind.frontend || !tab.frontendOnly,
+      blocks,
+      navigation: ids.map((id) => ({ id, label: byId.get(id)!.label, state: categoryState(document, id) })),
+    };
   });
+  // A view that doesn't apply leaves its categories out of what needs attention, too.
+  const hidden = new Set(tabs.filter((tab) => !tab.visible).flatMap((tab) => tab.navigation.map((item) => item.id)));
 
   return {
+    kind,
     overview: overview(document),
     scope: scopeFigures(document),
-    attention: attention(document, diagnostics),
-    groups,
-    navigation: unique(definitions.map((definition) => definition.group)).map((group) => ({
-      label: group,
-      items: definitions.filter((definition) => definition.group === group).map((definition) => ({ id: definition.id, label: definition.label, state: categoryState(document, definition.id) })),
-    })),
+    attention: attention(document, diagnostics, hidden),
+    tabs,
     services: (document.service_dependencies ?? []).map(serviceSummary),
     diagnostics,
   };

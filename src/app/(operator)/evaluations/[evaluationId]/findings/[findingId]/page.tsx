@@ -20,6 +20,7 @@ import { evaluationNumber, findEvaluation, findingDocument } from "@/lib/evaluat
 import type { TraceNode } from "@/lib/evaluations/interpreter";
 import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { findingCategory } from "@/lib/profiles/links";
+import { profileSectionHref } from "@/lib/profiles/tabs";
 import { releaseById, standardById } from "@/lib/standards/standard-records";
 import { COLLECTION_BY_ID, SELECTOR_BY_ID } from "@/lib/standards/registry";
 import styles from "./finding.module.css";
@@ -77,7 +78,7 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
   const subjectLink =
     subject.type === "repository" ? (
       profile ? (
-        <Link href={`/profiles/${String(profile.public_id)}${category && categoryLabel ? `#${category}` : ""}`}>{category && categoryLabel ? `${categoryLabel} in the ${String(subject.name)} Profile` : `${String(subject.name)} Profile`}</Link>
+        <Link href={category && categoryLabel ? profileSectionHref(`/profiles/${String(profile.public_id)}`, category) : `/profiles/${String(profile.public_id)}`}>{category && categoryLabel ? `${categoryLabel} in the ${String(subject.name)} Profile` : `${String(subject.name)} Profile`}</Link>
       ) : (
         <span>{`${String(subject.name)} (no Profile)`}</span>
       )

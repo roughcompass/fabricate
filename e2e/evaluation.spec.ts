@@ -175,9 +175,10 @@ test("opens the Profile at the category a Finding's Control reads", async ({ pag
   await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
 
   await page.getByRole("region", { name: "Result" }).getByRole("link", { name: "CI systems in the orders Profile" }).click();
-  await expect(page).toHaveURL(/\/profiles\/prf_\w+#ci_systems$/);
+  // The link names the view that holds CI systems, so the Profile opens there.
+  await expect(page).toHaveURL(/\/profiles\/prf_\w+\?tab=tooling#ci_systems$/);
   await expect(page.locator("#ci_systems")).toBeInViewport();
-  await expect(page.getByRole("navigation", { name: "Profile sections" }).getByRole("link", { name: /^CI systems/ })).toHaveAttribute("aria-current", "location");
+  await expect(page.getByRole("navigation", { name: "Tooling sections" }).getByRole("link", { name: /^CI systems/ })).toHaveAttribute("aria-current", "location");
 });
 
 test("Evaluation pages stay readable at mobile width", async ({ page, db }) => {

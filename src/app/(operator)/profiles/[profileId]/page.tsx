@@ -45,7 +45,11 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
   if (!found) notFound();
   const { profile, target, assessment, initiative, number } = found;
   const version = initiative.profiling ? versionOfAssessment(db, assessment.id) : null;
-  if (version) redirect(versionHref(version.sourcePublicId, version.version));
+  // The view and the tables' pages carry over; the browser keeps the section in the fragment.
+  if (version) {
+    const params = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    redirect(`${versionHref(version.sourcePublicId, version.version)}${params.size ? `?${params}` : ""}`);
+  }
 
   const { document, commit, pinned, pinnedLabel } = profilePin(profile);
   const latest = latestProfileOfSource(db, target.sourcePublicId);

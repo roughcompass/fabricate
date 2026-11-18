@@ -26,20 +26,30 @@ export function SectionNav({ label, groups, jumpLabel = "Jump to a section" }: {
     const sections = ids.map((id) => document.getElementById(id)).filter((element): element is HTMLElement => element !== null);
     if (!sections.length) return;
     const visible = new Map<string, boolean>();
+    // A section the address names is current, even when the page is too short to scroll it to the top, until the reader scrolls.
+    const named = decodeURIComponent(window.location.hash.slice(1));
+    let pinned = ids.includes(named);
+    const frame = pinned ? requestAnimationFrame(() => setCurrent(named)) : 0;
+    const unpin = () => {
+      pinned = false;
+    };
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) visible.set(entry.target.id, entry.isIntersecting);
         const first = ids.find((id) => visible.get(id));
-        if (first) setCurrent(first);
+        if (first && !pinned) setCurrent(first);
       },
       { rootMargin: "-80px 0px -60% 0px" },
     );
     for (const section of sections) observer.observe(section);
     const onHash = () => setCurrent(decodeURIComponent(window.location.hash.slice(1)) || null);
     window.addEventListener("hashchange", onHash);
+    for (const event of ["wheel", "touchmove", "keydown"]) window.addEventListener(event, unpin, { passive: true });
     return () => {
       observer.disconnect();
+      cancelAnimationFrame(frame);
       window.removeEventListener("hashchange", onHash);
+      for (const event of ["wheel", "touchmove", "keydown"]) window.removeEventListener(event, unpin);
     };
   }, [ids.join(" ")]); // eslint-disable-line react-hooks/exhaustive-deps
 

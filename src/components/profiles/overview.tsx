@@ -1,35 +1,66 @@
+import Link from "next/link";
 import { NoValuePlaceholder } from "@/components/results/no-value";
+import { Alert } from "@/components/ui/alert";
 import { DescriptionList } from "@/components/ui/description-list";
+import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { StatGroup } from "@/components/ui/stat-group";
 import { Status, spaced, statusLabel } from "@/components/ui/status";
-import type { OverviewRow, OverviewValue, ScopeFigure } from "@/lib/profiles/overview";
+import type { OverviewRow, OverviewValue } from "@/lib/profiles/overview";
+import type { SummaryPanel } from "@/lib/profiles/summary";
+import { PROFILE_TABS, profileSectionHref, profileTabHref } from "@/lib/profiles/tabs";
+import type { ProfileView } from "@/lib/profiles/view";
+import { NeedsAttention } from "./attention";
 import styles from "./profile.module.css";
 
 /**
- * What the repository is, first: its scope as key figures, each count a link
- * to the section that lists it, then fixed rows whose values each carry their
- * state and link to their category. An observed value names its state for
- * assistive technology only; any other state is shown.
+ * The Profile's first view: its scope as key figures, what needs attention,
+ * then one panel per question, each answering it in a few rows whose values
+ * carry their state and link to the facts behind them, with the way to the
+ * view that holds them all. A repository that isn't a frontend web repository
+ * is named as such first, with what decided it, and gets only the panels
+ * that apply to any repository.
  */
-export function ProfileOverview({ rows, scope }: { rows: readonly OverviewRow[]; scope: readonly ScopeFigure[] }) {
+export function ProfileOverview({ view, panels, base }: { view: ProfileView; panels: readonly SummaryPanel[]; base: string }) {
+  const { kind } = view;
   return (
     <Section id="overview" title="Overview">
-      <StatGroup label="Scope" stats={scope} />
-      <DescriptionList surface items={rows.map((row) => [row.label, <OverviewValues key={row.label} row={row} />])} />
+      {!kind.frontend && (
+        <Alert tone="info" title="Not a frontend web repository">
+          {`No UI framework, UI elements, composition mechanism, browser bundler, or markup was found${kind.languages.length ? `; its main languages are ${kind.languages.join(", ")}` : ""}. The Composition and Design system views apply only to frontend web repositories, so they're left out; its dependencies, services, and tooling are below.`}
+        </Alert>
+      )}
+      <StatGroup label="Scope" stats={view.scope.map((figure) => ({ label: figure.label, value: figure.value, hint: figure.hint, href: figure.section ? profileSectionHref(base, figure.section) : undefined }))} />
+      <NeedsAttention attention={view.attention} base={base} limit={5} />
+      <div className={styles.panels}>
+        {panels.map((panel) => {
+          const tab = PROFILE_TABS.find((candidate) => candidate.id === panel.tab)!;
+          return (
+            <Panel
+              key={panel.title}
+              level={3}
+              title={panel.title}
+              actions={panel.tab === "overview" ? undefined : <Link href={profileTabHref(base, panel.tab)} className={styles.panelLink}>{`Open ${tab.label}`}</Link>}
+            >
+              <DescriptionList items={panel.rows.map((row) => [row.label, <OverviewValues key={row.label} row={row} base={base} />])} />
+            </Panel>
+          );
+        })}
+      </div>
     </Section>
   );
 }
 
-function OverviewValues({ row }: { row: OverviewRow }) {
-  const href = `#${row.category}`;
+/** A row's values, each its own item in the row and a link to its facts, then how many more there are, or why there are none. */
+export function OverviewValues({ row, base }: { row: OverviewRow; base: string }) {
+  const href = profileSectionHref(base, row.category);
   return (
     // Each value is its own item in the row; spaced() keeps them apart in copied and spoken text too.
     <span className={row.stacked ? `${styles.values} ${styles.stacked}` : styles.values}>
       {spaced([
         row.summary && <span key="summary" className={styles.summary}>{row.summary}</span>,
         ...row.values.map((value, index) => (
-          <Linked key={`value-${index}`} href={href}>
+          <Linked key={`value-${index}`} href={value.href ?? href}>
             <Value value={value} />
           </Linked>
         )),

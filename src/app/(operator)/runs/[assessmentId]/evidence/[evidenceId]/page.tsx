@@ -16,6 +16,7 @@ import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { evidenceSection } from "@/lib/profiles/links";
+import { profileSectionHref } from "@/lib/profiles/tabs";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import type { FactDocument } from "@/lib/profiles/states";
 import { openSnapshot } from "@/lib/snapshot/open";
@@ -86,7 +87,7 @@ export default async function EvidencePage({ params }: { params: Promise<{ asses
         breadcrumbs={[
           ...context.parents,
           { href: `/runs/${assessment.publicId}`, label: context.name },
-          { href: `/profiles/${owner.profile.publicId}${section ? `#${section}` : ""}`, label: owner.target.sourceName },
+          { href: section ? profileSectionHref(`/profiles/${owner.profile.publicId}`, section) : `/profiles/${owner.profile.publicId}`, label: owner.target.sourceName },
         ]}
         title={evidenceLocation(owner.record as JsonObject)}
         description="Committed content that a fact, relationship, or Finding cites, re-read from the pinned snapshot and verified against its recorded digests."

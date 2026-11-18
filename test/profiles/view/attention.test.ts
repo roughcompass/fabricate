@@ -22,18 +22,18 @@ describe("The Profile's needs-attention list", () => {
 
   it("lists conflicting categories, then unknown categories with their reasons", () => {
     const { items } = attention(orders, diagnosticsOf(orders));
-    expect(items[0]).toEqual({ kind: "conflicting", label: "Runtime requirements", reason: "1 fact with conflicting candidates: node", href: "#runtime_requirements" });
+    expect(items[0]).toEqual({ kind: "conflicting", label: "Runtime requirements", reason: "1 fact with conflicting candidates: node", section: "runtime_requirements" });
     const unknown = items.filter((item) => item.kind === "unknown");
-    expect(unknown).toContainEqual({ kind: "unknown", label: "CI systems", reason: "1 relevant input could not be read or understood: .github/workflows/ci.yml", href: "#ci_systems" });
+    expect(unknown).toContainEqual({ kind: "unknown", label: "CI systems", reason: "1 relevant input could not be read or understood: .github/workflows/ci.yml", section: "ci_systems" });
     expect(unknown.map((item) => item.label)).toContain("Composition");
     expect(items.findIndex((item) => item.kind === "unknown")).toBeGreaterThan(items.findIndex((item) => item.kind === "conflicting"));
   });
 
   it("links the skipped and diagnostic counts to their sections", () => {
     const { items } = attention(orders, diagnosticsOf(orders));
-    expect(items).toContainEqual({ kind: "skipped", label: "1 skipped input", reason: expect.any(String), href: "#diagnostics" });
+    expect(items).toContainEqual({ kind: "skipped", label: "1 skipped input", reason: expect.any(String), section: "diagnostics" });
     const noted = attention(orders, { skipped: [], notes: [{ path: "a" }, { path: "b" }] }).items;
-    expect(noted).toContainEqual({ kind: "diagnostics", label: "2 other diagnostics", reason: expect.any(String), href: "#other-diagnostics" });
+    expect(noted).toContainEqual({ kind: "diagnostics", label: "2 other diagnostics", reason: expect.any(String), section: "other-diagnostics" });
   });
 
   it("lists a category with facts but unread inputs as partial, and marks its overview row", () => {
@@ -43,7 +43,7 @@ describe("The Profile's needs-attention list", () => {
       kind: "partial",
       label: "Dependencies",
       reason: "Found from what was read, but 4 relevant inputs could not be read or understood, so there may be more: a/package.json, b/package.json, c/package.json, and 1 more in Skipped inputs",
-      href: "#dependencies",
+      section: "dependencies",
     });
     expect(attention(orders, diagnosticsOf(orders)).items.some((item) => item.kind === "partial")).toBe(false);
     expect(overview(budgeted).find((row) => row.label === "Packages")!.partial).toBe(false);
@@ -55,7 +55,7 @@ describe("The Profile's needs-attention list", () => {
   it("lists the categories a detector release doesn't cover on one line", () => {
     const earlier = asRelease010(orders);
     const uncovered = attention(earlier, diagnosticsOf(earlier)).items.filter((item) => item.kind === "not_covered");
-    expect(uncovered).toEqual([{ kind: "not_covered", label: "Design systems, UI elements, Style values", reason: "Detector release 0.1.0 doesn't report these categories", href: "#design_systems" }]);
+    expect(uncovered).toEqual([{ kind: "not_covered", label: "Design systems, UI elements, Style values", reason: "Detector release 0.1.0 doesn't report these categories", section: "design_systems" }]);
     expect(attention(earlier, diagnosticsOf(earlier)).counts).toContainEqual({ state: "not_covered", count: 3 });
   });
 
