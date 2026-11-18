@@ -67,18 +67,6 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   undetermined: ["Undetermined", "warning"],
   conforms: ["Conforms", "success"],
   not_evaluated: ["Not evaluated", "neutral", "dash"],
-  // Template demo applications and their simulated builds.
-  building: ["Building", "progress"],
-  ready: ["Ready", "success"],
-  // An Application's DE Web assessment (applications/assessment.ts).
-  not_assessed: ["Not assessed", "neutral"],
-  couldnt_start: ["Couldn't start", "error"],
-  assessing: ["Assessing", "progress"],
-  assessed: ["Assessed", "success"],
-  assessed_with_issues: ["Assessed with issues", "warning"],
-  // Portal lifecycles, shown as badges (BADGES).
-  prototype: ["Prototype", "neutral"],
-  production: ["Production", "neutral"],
   // Checks and their outcomes.
   active: ["Active", "success"],
   retired: ["Retired", "neutral"],
@@ -141,30 +129,9 @@ export function statusLabel(state: string): string {
   return statusOf(state).label;
 }
 
-/**
- * The states shown as a badge rather than an indicator: a Portal's
- * lifecycle (make-applications-first-class design decision 9). A Prototype
- * is a neutral tag; Production is filled with the primary color, so the two
- * differ in text and fill, never only in hue.
- */
-const BADGES: Record<string, "default" | "high"> = { prototype: "default", production: "high" };
-
-/** How a badge state is emphasized, or null for a state shown with an indicator. */
-export function badgeEmphasis(state: string): "default" | "high" | null {
-  return BADGES[state] ?? null;
-}
-
-/** A colored indicator beside a text label, or a badge for a lifecycle; never color alone. */
+/** A colored indicator beside a text label; never color alone. */
 export function Status({ state, label, size = "md" }: { state: string; label?: string; size?: "sm" | "md" }) {
   const status = statusOf(state);
-  const emphasis = badgeEmphasis(state);
-  if (emphasis) {
-    return (
-      <span className={styles.badge} data-emphasis={emphasis} data-size={size} data-state={state}>
-        {label ?? status.label}
-      </span>
-    );
-  }
   return (
     <span className={styles.status} data-tone={status.tone} data-size={size}>
       <span className={styles.dot} data-indicator={status.indicator} aria-hidden="true" />

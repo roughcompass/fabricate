@@ -15,7 +15,6 @@ export async function POST(request: Request) {
   const state = shareStateSchema.safeParse(body.state);
   if (!state.success) return Response.json({ error: "Invalid view state" }, { status: 400 });
   const { view } = resolved;
-  const target = view.target.kind === "application" ? { applicationId: view.target.application.id } : { referenceSlug: view.target.template.slug };
-  const token = createShare(getDb(), target, view.viewWorkspaceId, state.data);
+  const token = createShare(getDb(), view.template.slug, view.viewWorkspaceId, state.data);
   return Response.json({ path: `/s/${token}` }, { status: 201 });
 }

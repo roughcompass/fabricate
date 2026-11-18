@@ -69,7 +69,7 @@ If live generation is slow or the model service fails, stay on the seeded protot
 ## Reset
 
 - **Prototypes:** All Prototypes, More actions, Reset Prototypes. It deletes the workspace's prototypes, versions, feedback, lessons, personas, page shell, and share links, and restores the seeded examples. Templates it accepted stay in the gallery, and today's generation count stays as it is.
-- **The template demo:** reset it from Add application's More actions menu. Accepted templates survive that reset too.
+- **The template demo:** reset it from the More actions menu in the Salt Patterns page header. Accepted templates survive that reset too.
 - **Everything, locally:** stop `npm run dev`, delete `storage/prototypes-pglite`, and run `npm run prototypes:migrate`.
 
 Each workspace can generate 500 variants a day (`FABRICATE_PROTOTYPES_DAILY_LIMIT` changes it); refinements and automatic repairs count toward it, and it resets at midnight UTC. Workspaces idle for 30 days are deleted, keeping the templates they accepted.

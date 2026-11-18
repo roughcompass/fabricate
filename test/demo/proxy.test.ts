@@ -38,7 +38,7 @@ describe("demo workspace proxy", () => {
 
   it("issues the cookie only once", () => {
     const first = proxy(request("/templates")).cookies.get(WORKSPACE_COOKIE)!.value;
-    const second = proxy(request("/applications", `${WORKSPACE_COOKIE}=${first}`));
+    const second = proxy(request("/run/ref-market-watch/watch", `${WORKSPACE_COOKIE}=${first}`));
 
     expect(second.headers.get("set-cookie")).toBeNull();
   });
@@ -53,14 +53,14 @@ describe("demo workspace proxy", () => {
     expect(keys.size).toBe(50);
   });
 
-  it.each(["/applications/new", "/applications/new/templates", "/templates", "/templates/market-watch", "/templates/market-watch/deploy", "/applications", "/applications/app_0000000000000001", "/run/ref-market-watch/watch", "/s/abc", "/api/demo/comments"])(
+  it.each(["/templates", "/templates/market-watch", "/templates/market-watch/preview", "/run/ref-market-watch/watch", "/s/abc", "/api/demo/comments"])(
     "runs on the demo path %s",
     (url) => {
       expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);
     },
   );
 
-  it.each(["/", "/repositories", "/standards", "/assessments/new", "/runs/asm_0000000000000001", "/design-system", "/api/health", "/api/test/reset", "/templatesx", "/running", "/newsroom"])(
+  it.each(["/", "/repositories", "/standards", "/assessments/new", "/runs/asm_0000000000000001", "/design-system", "/api/health", "/api/test/reset", "/templatesx", "/running", "/newsroom", "/applications"])(
     "issues no credential on the operator path %s",
     (url) => {
       const response = proxy(request(url));

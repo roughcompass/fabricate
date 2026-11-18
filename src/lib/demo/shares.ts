@@ -31,10 +31,9 @@ export const shareStateSchema = z.strictObject({
 
 export type ShareState = z.infer<typeof shareStateSchema>;
 
-export type ShareTarget = { readonly applicationId: number } | { readonly referenceSlug: string };
-
 export interface Share {
-  readonly target: ShareTarget;
+  /** The template whose reference deployment the link opens. */
+  readonly referenceSlug: string;
   readonly viewWorkspaceId: number;
   readonly state: ShareState;
 }
@@ -44,7 +43,7 @@ export function isShareToken(value: unknown): value is string {
 }
 
 /** Stores a share link for a view and returns its token, which is never stored. */
-export function createShare(db: Executor, target: ShareTarget, viewWorkspaceId: number, state: ShareState, now = new Date()): string {
+export function createShare(db: Executor, referenceSlug: string, viewWorkspaceId: number, state: ShareState, now = new Date()): string {
   const parsed = shareStateSchema.parse(state);
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
@@ -52,8 +51,7 @@ export function createShare(db: Executor, target: ShareTarget, viewWorkspaceId: 
   db.insert(demoShares)
     .values({
       tokenDigest: keyDigest(token),
-      applicationId: "applicationId" in target ? target.applicationId : null,
-      referenceSlug: "referenceSlug" in target ? target.referenceSlug : null,
+      referenceSlug,
       viewWorkspaceId,
       state: JSON.stringify(parsed),
       createdAt: now,
@@ -68,6 +66,5 @@ export function findShare(db: Executor, token: string | undefined | null): Share
   if (!row) return null;
   const state = shareStateSchema.safeParse(JSON.parse(row.state));
   if (!state.success) return null;
-  const target: ShareTarget = row.applicationId !== null ? { applicationId: row.applicationId } : { referenceSlug: row.referenceSlug! };
-  return { target, viewWorkspaceId: row.viewWorkspaceId, state: state.data };
+  return { referenceSlug: row.referenceSlug, viewWorkspaceId: row.viewWorkspaceId, state: state.data };
 }

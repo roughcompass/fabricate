@@ -30,24 +30,9 @@ describe("navigation skeletons", () => {
     ["/standards/std_abc/releases/rel_1", "detail"],
     ["/templates", "list"],
     ["/templates/market-watch", "detail"],
-    ["/templates/market-watch/deploy", "form"],
     ["/templates/market-watch/preview", "focused"],
     ["/templates/payments-workspace/preview", "focused"],
-    ["/templates/payments-workspace/deploy", "form"],
     ["/templates/payments-workspace", "detail"],
-    ["/applications", "list"],
-    ["/applications/app_abc", "detail"],
-    ["/applications/wap_abc", "detail"],
-    ["/applications/new", "focused"],
-    ["/applications/new/templates", "focused"],
-    ["/applications/new/create", "focused"],
-    ["/portals", "list"],
-    ["/portals/new", "form"],
-    ["/portals/ptl_abc/edit", "form"],
-    ["/portals/ptl_abc/editor/frame-zones", "detail"],
-    ["/portals/ptl_abc/configuration/favicon", "detail"],
-    ["/applications/wap_abc/edit", "form"],
-    ["/portals/ptl_abc", "detail"],
   ])("shows the %s page's skeleton as %s", (pathname, kind) => {
     expect(skeletonFor(pathname)).toBe(kind);
   });
@@ -57,11 +42,13 @@ describe("navigation skeletons", () => {
     expect(skeletonFor("/api/health")).toBeNull();
     expect(skeletonFor("/run/ref-market-watch/watch")).toBeNull();
     expect(skeletonFor("/s/token")).toBeNull();
+    expect(skeletonFor("/applications")).toBeNull();
+    expect(skeletonFor("/portals/ptl_abc")).toBeNull();
   });
 
   it("has a not-found page for each section", () => {
     expect(fs.existsSync(path.resolve("src/app/not-found.tsx")), "root").toBe(true);
-    for (const section of ["assessments", "runs", "evaluations", "profiles", "repositories", "standards", "templates", "applications"]) {
+    for (const section of ["assessments", "runs", "evaluations", "profiles", "repositories", "standards", "templates"]) {
       expect(fs.existsSync(path.resolve("src/app/(operator)", section, "not-found.tsx")), section).toBe(true);
     }
   });

@@ -1,21 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
-import { catalogs } from "@/lib/experience/catalogs";
-import { currentExperience, saveExperience } from "@/lib/experience/versions";
-import { WEEK_MS, assessmentTrend, figureChanges, figuresAt, portalsOverview, recentActivity, weekChange } from "@/lib/home/dashboard";
+import { WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity, weekChange } from "@/lib/home/dashboard";
 import { claimedShare, fleetSummary } from "@/lib/home/summary";
-import { addItem, setDefault } from "@/lib/onboarding/navigation";
-import { getPortal, promotePortal } from "@/lib/onboarding/portals";
+import { claimInitiative } from "@/lib/initiatives/initiative-records";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
-import { registerApplication } from "../support/applications";
-import { ana, onboardPortal } from "../support/onboarding";
 
 /*
- * Home's dashboard readers (update-portal-management-journey task 5.1): each
- * figure's change over seven days, the Portals overview, the Assessment trend,
- * and the recent activity.
+ * Home's dashboard readers: each figure's change over seven days, the
+ * Assessment trend, and the recent activity.
  */
 
 const NOW = Date.now();
@@ -26,14 +20,6 @@ function backdate(db: Db, table: string, column: string, id: number, days: numbe
   db.$client.prepare(`update ${table} set ${column} = ? where id = ?`).run(daysAgo(days), id);
 }
 
-/** Promotes +portal+, giving it the default route promotion needs. */
-function promote(db: Db, portal: { publicId: string }) {
-  const version = () => getPortal(db, portal.publicId).lockVersion;
-  const application = registerApplication(db, { name: `${portal.publicId} home`, portal: getPortal(db, portal.publicId) });
-  const item = addItem(db, portal.publicId, { lockVersion: version(), label: "Home", route: "/home", application: application.publicId, parent: null }, ana);
-  setDefault(db, portal.publicId, { lockVersion: version(), entry: item.publicId }, ana);
-  promotePortal(db, portal.publicId, { lockVersion: version() }, ana);
-}
 const changes = (db: Db) => figureChanges(fleetSummary(db), figuresAt(db, new Date(NOW - WEEK_MS)), claimedShare);
 
 describe("figures over seven days", () => {
@@ -42,24 +28,6 @@ describe("figures over seven days", () => {
     expect(weekChange(3, 5)).toBe("−2 this week");
     expect(weekChange(5, 5)).toBe("No change this week");
     expect(weekChange(61, 58, " pts")).toBe("+3 pts this week");
-  });
-
-  it("counts Applications registered in the last seven days (Applications added this week)", () => {
-    const db = createTestDb();
-    const access = onboardPortal(db, "Access");
-    const registered = Array.from({ length: 6 }, (_, index) => registerApplication(db, { name: `App ${index}`, portal: access }));
-    for (const application of registered.slice(0, 4)) backdate(db, "applications", "created_at", application.id, 10);
-    expect(figuresAt(db, new Date(NOW - WEEK_MS)).applications.applications).toBe(4);
-    expect(changes(db).applications).toBe("+2 this week");
-  });
-
-  it("reads Production Portals from lifecycle changes, and says No change for an older promotion (No change)", () => {
-    const db = createTestDb();
-    const access = onboardPortal(db, "Access");
-    promote(db, access);
-    expect(changes(db).productionPortals).toBe("+1 this week");
-    for (const { id } of db.$client.prepare("select id from onboarding_events where portal_id = ?").all(access.id) as { id: number }[]) backdate(db, "onboarding_events", "occurred_at", id, 10);
-    expect(changes(db).productionPortals).toBe("No change this week");
   });
 
   it("counts an Assessment's conclusion from Evaluations completed by then", () => {
@@ -72,32 +40,6 @@ describe("figures over seven days", () => {
     expect(changes(db)).toMatchObject({ assessments: "No change this week", gaps: "+1 this week", none: "−1 this week" });
     backdate(db, "evaluations", "finished_at", evaluation.id, 9);
     expect(changes(db).gaps).toBe("No change this week");
-  });
-});
-
-describe("Portals overview", () => {
-  it("lists Portals in Production first, with their Application counts and last save (Two Portals)", () => {
-    const db = createTestDb();
-    const markets = onboardPortal(db, "Markets");
-    const access = onboardPortal(db, "Access");
-    promote(db, access);
-    for (const name of ["Payee Hub", "Ledger"]) registerApplication(db, { name, portal: access });
-    registerApplication(db, { name: "Blotter", portal: markets });
-    const current = currentExperience(db, getPortal(db, markets.publicId), catalogs());
-    saveExperience(db, markets.publicId, { baseNumber: current.number, lockVersion: getPortal(db, markets.publicId).lockVersion, document: { ...current.experience, copyright: "© Markets" } }, ana, catalogs());
-
-    const { portals, total } = portalsOverview(db);
-    expect(total).toBe(2);
-    expect(portals.map((portal) => [portal.label, portal.lifecycle, portal.applications, portal.savedAt !== null])).toEqual([
-      ["Access", "production", 3, false],
-      ["Markets", "prototype", 1, true],
-    ]);
-  });
-
-  it("lists at most the limit, and says how many there are", () => {
-    const db = createTestDb();
-    for (const name of ["Alpha", "Bravo", "Charlie"]) onboardPortal(db, name);
-    expect(portalsOverview(db, 2)).toMatchObject({ total: 3, portals: [{ label: "Alpha" }, { label: "Bravo" }] });
   });
 });
 
@@ -125,22 +67,24 @@ describe("Assessment trend", () => {
 });
 
 describe("recent activity", () => {
-  it("leads with the newest event, naming who saved and linking to the Portal (Experience saved)", () => {
+  it("leads with the newest finished Run, linking to it, and leaves claims' Runs out", () => {
     const db = createTestDb();
-    const access = onboardPortal(db, "Access");
-    const payeeHub = registerApplication(db, { name: "Payee Hub", portal: access });
-    backdate(db, "applications", "created_at", payeeHub.id, 1);
-    const current = currentExperience(db, getPortal(db, access.publicId), catalogs());
-    saveExperience(db, access.publicId, { baseNumber: current.number, lockVersion: getPortal(db, access.publicId).lockVersion, document: { ...current.experience, copyright: "© Access" } }, ana, catalogs());
+    const source = buildSource(db);
+    const orders = buildInitiative(db, { name: "Orders review", sources: [source] });
+    const older = driveRun(db, buildAssessment(db, { initiative: orders }).assessment, "complete");
+    backdate(db, "assessments", "finished_at", older.id, 1);
+    const failed = driveRun(db, buildAssessment(db, { initiative: orders }).assessment, "failed");
+    driveRun(db, buildAssessment(db, { initiative: claimInitiative(db, source) }).assessment, "complete");
 
     const activity = recentActivity(db);
-    expect(activity[0]).toMatchObject({ kind: "experience_saved", actor: ana.name, record: { name: "Access", href: `/portals/${access.publicId}` } });
-    expect(activity.map((item) => item.kind)).toEqual(["experience_saved", "portal_created", "application_created"]);
+    expect(activity.map((item) => item.kind)).toEqual(["run_failed", "run_completed"]);
+    expect(activity[0]).toMatchObject({ record: { name: "Orders review", href: `/runs/${failed.publicId}` } });
   });
 
   it("lists at most ten", () => {
     const db = createTestDb();
-    for (let index = 0; index < 12; index++) onboardPortal(db, `Portal ${String.fromCharCode(65 + index)}`);
+    const initiative = buildInitiative(db, { sources: [buildSource(db)] });
+    for (let index = 0; index < 12; index++) driveRun(db, buildAssessment(db, { initiative }).assessment, "complete");
     expect(recentActivity(db)).toHaveLength(10);
   });
 });

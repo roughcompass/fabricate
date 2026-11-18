@@ -1,7 +1,7 @@
-import { and, count, eq, lt } from "drizzle-orm";
+import { and, eq, lt } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
-import { demoApplications, demoProfiles, demoShares, demoThreads, demoWorkspaces } from "@/lib/db/schema";
+import { demoProfiles, demoShares, demoThreads, demoWorkspaces } from "@/lib/db/schema";
 import { keyDigest } from "./workspace-digest";
 import { isWorkspaceKey } from "./workspace-key";
 import { type HintState, parseHints } from "./hints";
@@ -12,7 +12,6 @@ import { type HintState, parseHints } from "./hints";
  * browsing alone leaves nothing behind.
  */
 
-export const APPLICATION_LIMIT = 25;
 export const COMMENT_LIMIT = 2000;
 export const DISPLAY_NAME_LIMIT = 60;
 export const IDLE_DAYS = 30;
@@ -101,27 +100,14 @@ export function setHints(db: Executor, workspaceId: number, hints: HintState): H
   return next;
 }
 
-export function applicationCount(db: Executor, workspaceId: number): number {
-  return db.select({ n: count() }).from(demoApplications).where(eq(demoApplications.workspaceId, workspaceId)).get()?.n ?? 0;
-}
-
-/** Refuses a new application once the workspace holds the maximum. */
-export function assertApplicationCapacity(db: Executor, workspaceId: number): void {
-  if (applicationCount(db, workspaceId) >= APPLICATION_LIMIT) {
-    throw new DemoLimitError(`You have ${APPLICATION_LIMIT} applications, the most a demo workspace can hold. Delete an application or reset the demo to create another.`);
-  }
-}
-
 /**
- * Clears a workspace: its applications (with their threads and share links),
- * its threads and share links on reference deployments, its custom session
- * profiles, and its guidance state. Other workspaces and the reference deployments are untouched. The
- * reset epoch advances so state the browser kept from before is ignored.
+ * Clears a workspace: its threads and share links on reference deployments,
+ * its custom session profiles, and its guidance state. Other workspaces and
+ * the reference deployments are untouched. The reset epoch advances so state
+ * the browser kept from before is ignored.
  */
 export function resetWorkspace(db: Executor, workspaceId: number): Workspace {
   return immediate(db, (tx) => {
-    tx.delete(demoApplications).where(eq(demoApplications.workspaceId, workspaceId)).run();
-    // Threads on the workspace's own applications went with them; these are its reference-deployment threads.
     tx.delete(demoThreads).where(eq(demoThreads.viewWorkspaceId, workspaceId)).run();
     tx.delete(demoShares).where(eq(demoShares.viewWorkspaceId, workspaceId)).run();
     tx.delete(demoProfiles).where(eq(demoProfiles.workspaceId, workspaceId)).run();

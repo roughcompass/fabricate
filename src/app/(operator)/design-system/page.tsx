@@ -14,8 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { FilterRail } from "@/components/ui/filter-rail";
 import { ToggleGroup } from "@/components/ui/toggle-group";
-import { CheckList } from "@/components/ui/check-list";
-import { Checkbox, ChoiceGroup, FormFooter, FormNote, FormSection, Select, Switch, TextArea, TextInput, formStyles } from "@/components/ui/form";
+import { Checkbox, ChoiceGroup, FormFooter, FormNote, FormSection, Select, Switch, TextArea, TextInput } from "@/components/ui/form";
 import { ICON_NAMES, Icon } from "@/components/ui/icon";
 import { MediaCard } from "@/components/ui/media-card";
 import { Menu, MenuAction, MenuItem, MenuSeparator } from "@/components/ui/menu";
@@ -28,14 +27,11 @@ import { RelativeTime } from "@/components/ui/relative-time";
 import { SearchField } from "@/components/ui/search-field";
 import { Section } from "@/components/ui/section";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switcher } from "@/components/ui/switcher";
-import { SplitPanes } from "@/components/ui/split-dialog";
 import { StatGroup } from "@/components/ui/stat-group";
 import { Severity, Status } from "@/components/ui/status";
 import { EmptyRow, Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { BarChart } from "@/components/ui/bar-chart";
-import { CardGrid } from "@/components/ui/card-grid";
 import { ShortValue, Tag, TagList } from "@/components/ui/tag";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ChecksPanel } from "@/components/ui/checks-panel";
@@ -49,7 +45,7 @@ import { Diagram } from "@/components/relationships/diagram";
 import { type DiagramEdge, diagramModel } from "@/lib/relationships/diagram";
 import type { DiagramData } from "@/lib/relationships/levels";
 import { composerDemo, confirmDemo, noopDemo, validateDemo } from "./actions";
-import { AlertDemo, FocusDemo, IndeterminateCheckbox, InjectedError, SplitDialogDemo, ToastDemo } from "./demos";
+import { AlertDemo, FocusDemo, IndeterminateCheckbox, InjectedError, ToastDemo } from "./demos";
 import { diffFile } from "@/lib/prototypes/diff";
 import { Row, Specimen } from "./specimen";
 import styles from "./design-system.module.css";
@@ -79,26 +75,6 @@ const COLOR_ROLES: [token: string, role: string][] = [
   ["--color-accent-subtle", "Selection highlight and targeted outlines"],
   ["--color-progress", "In-progress status"],
 ];
-
-/** The sample content the split dialog specimens show. */
-const SPLIT_SAMPLE = {
-  title: "What's included",
-  items: [
-    { title: "Environments from the catalog", description: "Enable the environments Studio lists" },
-    { title: "Placement reviews", description: "Approve each request on its own", badge: "new" as const },
-    { title: "Revision history", description: "Every decision is attributed and kept" },
-  ],
-};
-
-/** The Switcher specimen's choices. */
-const SWITCHER_SAMPLE = {
-  pinned: { value: "", label: "All Portals", icon: "layers" as const },
-  options: [
-    { value: "access", label: "Access", tag: "Web", terms: ["access", "88001"] },
-    { value: "markets", label: "Markets", tag: "Web", terms: ["markets", "1042"] },
-    { value: "treasury", label: "Treasury with a name long enough to truncate", tag: "Mobile", terms: ["treasury"] },
-  ],
-};
 
 /** A portal diagram for the Diagram specimen: a host above the applications it loads, and the library they share. */
 function sampleDiagram(): DiagramData {
@@ -146,7 +122,6 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
     ["description-list", "Description list"],
     ["stat-group", "Stat group"],
     ["bar-chart", "Bar chart"],
-    ["card-grid", "Card grid"],
     ["media-card", "Media card"],
     ["empty-state", "Empty state"],
     ["disclosure", "Disclosure"],
@@ -156,7 +131,6 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
     ["pagination", "Pagination"],
     ["diagram", "Diagram"],
     ["menu", "Menu"],
-    ["switcher", "Switcher"],
     ["tooltip", "Tooltip and relative time"],
     ["progress", "Progress and skeleton"],
     ["filter-bar", "Filter bar"],
@@ -164,7 +138,6 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
     ["feedback", "Toast"],
     ["alert", "Alert"],
     ["dialog", "Confirmation dialog"],
-    ["split-dialog", "Split dialog"],
     ["form-feedback", "Form feedback"],
     ["page-header", "Page header"],
   ];
@@ -366,7 +339,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
         <Specimen
           id="status"
           title="Status and severity"
-          description="A colored indicator and a label, never color alone. In-progress states pulse, the states with no value differ by shape, and a Portal's lifecycle is a badge that differs in text and fill."
+          description="A colored indicator and a label, never color alone. In-progress states pulse, and the states with no value differ by shape."
           render={() => (
             <>
               <Row label="Tones">
@@ -394,12 +367,6 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 <Severity value="medium" />
                 <Severity value="low" />
                 <Severity value="info" />
-              </Row>
-              <Row label="Lifecycle">
-                <Status state="prototype" />
-                <Status state="production" />
-                <Status state="prototype" size="sm" />
-                <Status state="production" size="sm" />
               </Row>
             </>
           )}
@@ -726,22 +693,6 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
         />
 
         <Specimen
-          id="card-grid"
-          title="Card grid"
-          description="At most three cards per row, two on a medium column, one on a phone; cards in a row share the tallest one's height."
-          single
-          render={() => (
-            <CardGrid label="Sample cards">
-              {["Access", "Markets", "Treasury", "Lending"].map((name, index) => (
-                <li key={name}>
-                  <Panel title={name}>{index === 1 ? "A longer description that wraps onto a second line, so the row's other cards stretch to match it." : "A short description."}</Panel>
-                </li>
-              ))}
-            </CardGrid>
-          )}
-        />
-
-        <Specimen
           id="tabs"
           title="Tabs and breadcrumbs"
           description="Tabs switch views of one page and show counts; a toggle group picks one of a few choices, with labels or as icons with tooltips; breadcrumbs link a record's ancestors."
@@ -862,27 +813,6 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 <MenuItem href="#menu">Edit name and purpose</MenuItem>
               </Menu>
             </Row>
-          )}
-        />
-
-        <Specimen
-          id="switcher"
-          title="Switcher"
-          description="Chooses the context the app works in, such as the current Portal: the trigger shows the choice, and the list filters, checks the current entry, and ends with an action. Without JavaScript it still opens and chooses."
-          render={(theme) => (
-            <div className={styles.stack}>
-              <Row label="Trigger">
-                <div className={styles.switcherTrigger}>
-                  <Switcher label="Switch Portal" {...SWITCHER_SAMPLE} current="markets" action={noopDemo} field="portal" searchLabel="Find Portal…" empty="Portals you create appear here for quick switching." noMatch="No Portal matches" footer={{ label: "Create Portal", description: "Onboard a Portal its team configures", icon: "plus", href: "#switcher" }} />
-                </div>
-              </Row>
-              <Row label="Open">
-                <Switcher preview label={`Portals, ${theme}`} {...SWITCHER_SAMPLE} current="markets" action={noopDemo} field="portal" searchLabel="Find Portal…" empty="Portals you create appear here for quick switching." noMatch="No Portal matches" footer={{ label: "Create Portal", description: "Onboard a Portal its team configures", icon: "plus", href: "#switcher" }} />
-              </Row>
-              <Row label="Empty">
-                <Switcher preview label={`No Portals, ${theme}`} pinned={SWITCHER_SAMPLE.pinned} options={[]} current="" action={noopDemo} field="portal" searchLabel="Find Portal…" empty="Portals you create appear here for quick switching." noMatch="No Portal matches" footer={{ label: "Create Portal", description: "Onboard a Portal its team configures", icon: "plus", href: "#switcher" }} />
-              </Row>
-            </div>
           )}
         />
 
@@ -1030,31 +960,6 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 <p>Release v2 will be published from draft version 7. A published Release can never be edited or deleted.</p>
               </ConfirmDialog>
             </Row>
-          )}
-        />
-
-        <Specimen
-          id="split-dialog"
-          title="Split dialog"
-          description="A create flow that explains before it asks: supporting content in a check list beside the form. Below 720px the form comes first and the content collapses under a disclosure. The same panes stand on a page without the dialog."
-          stacked
-          render={(theme) => (
-            <div className={styles.stack}>
-              {theme === "light" && (
-                <Row label="Dialog">
-                  <SplitDialogDemo title={SPLIT_SAMPLE.title} items={SPLIT_SAMPLE.items} />
-                </Row>
-              )}
-              <SplitPanes asideTitle={SPLIT_SAMPLE.title} aside={<CheckList label={SPLIT_SAMPLE.title} items={SPLIT_SAMPLE.items} link={{ label: "Learn more about Portal onboarding", href: "https://docs.example.com/portals" }} />} surface>
-                <div className={formStyles.form}>
-                  <TextInput id={`${theme}-split-name`} label="Name" defaultValue="Treasury" />
-                  <FormFooter>
-                    <Button>Cancel</Button>
-                    <Button variant="primary">Create Portal</Button>
-                  </FormFooter>
-                </div>
-              </SplitPanes>
-            </div>
           )}
         />
 

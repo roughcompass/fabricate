@@ -53,10 +53,9 @@ export interface PortalBanner {
 }
 
 /**
- * The portal's saved experience, as a shell renders it
- * (add-portal-experience-editor, design decision 8): the portal name beside
- * the logo, the banner, the header's slots in order, the menu and where it
- * opens, and the footer. Without a Portal it's the default experience.
+ * The portal's experience, as a shell renders it: the portal name beside the
+ * logo, the banner, the header's slots in order, the menu and where it opens,
+ * and the footer.
  */
 export interface PortalExperience {
   readonly portalName: string;

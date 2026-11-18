@@ -1,8 +1,4 @@
 import type { Locator, Page } from "@playwright/test";
-import { templateBySlug } from "../src/lib/demo/catalog";
-import { createApplication, validateDeployInput } from "../src/lib/demo/deployments";
-import { WORKSPACE_COOKIE } from "../src/lib/demo/workspace-key";
-import { ensureWorkspace } from "../src/lib/demo/workspaces";
 import { expectToolbarOnTop, openTool, setView, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
 
@@ -194,23 +190,16 @@ test.describe("overlays beside the toolbar", () => {
   });
 });
 
-test("explains each routing decision in debug mode for a dev application", async ({ page, context, db }) => {
-  const key = (await context.cookies()).find((cookie) => cookie.name === WORKSPACE_COOKIE)!.value;
-  const workspace = ensureWorkspace(db, key);
-  const application = createApplication(db, workspace.id, templateBySlug("payments-workspace")!, validateDeployInput({ name: "Dev payments", environment: "dev", project: "PAY", repository: "dev-payments" }), new Date(Date.now() - 60_000));
-
-  await page.goto(`/run/${application.publicId}`);
-  await waitForRegions(page);
-  await setView(page, { overrides: { "payee-list": { version: "2.0.0", environment: "dev" } } });
+test("explains each routing decision in debug mode", async ({ page }) => {
+  await setView(page, { overrides: { "payee-list": { version: "2.0.0", environment: "production" } } });
   await openPanel(page);
   await panel(page).getByLabel("Enable debug mode").check();
 
-  await expect(page.locator('[data-debug-label="payee-list"]')).toHaveText("payee-list@2.0.0 · Dev · override");
-  await expect(page.locator('[data-debug-label="payments-shell"]')).toHaveText("payments-shell@5.2.0 · Production (fallback) · fallback");
-  await expect(page.locator('[data-debug-label="transfer-form"]')).toHaveText("transfer-form@3.0.1 · Dev · default");
-  await expect(page.locator('[data-debug-label="payment-activity"]')).toHaveText("payment-activity@2.3.0 · Dev · default");
+  await expect(page.locator('[data-debug-label="payee-list"]')).toHaveText("payee-list@2.0.0 · Production · override");
+  await expect(page.locator('[data-debug-label="payments-shell"]')).toHaveText("payments-shell@5.2.0 · Production · default");
+  await expect(page.locator('[data-debug-label="transfer-form"]')).toHaveText("transfer-form@3.0.1 · Production · default");
+  await expect(page.locator('[data-debug-label="payment-activity"]')).toHaveText("payment-activity@2.3.0 · Production · default");
 
-  const headers = panel(page).getByRole("definition").filter({ hasText: "fallback" });
-  await expect(headers).toHaveCount(1);
+  await expect(panel(page).getByRole("definition").filter({ hasText: "fallback" })).toHaveCount(0);
   await expect(panel(page).getByLabel("Routing headers for Payee list")).toContainText("x-demo-mfe-reasonoverride");
 });

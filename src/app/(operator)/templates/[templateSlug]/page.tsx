@@ -54,7 +54,7 @@ export default async function TemplatePage({ params, searchParams }: { params: P
             <ButtonLink href={`/templates/${template.slug}/preview`} icon="eye">
               Preview template
             </ButtonLink>
-            {/* A hero is real Salt: while Prototypes is enabled, its main route can start a prototype as one page. */}
+            {/* Every built-in template is real Salt: while Prototypes is enabled, its main route can start a prototype as one page. */}
             {usable && (
               <>
                 <form action={startFromHeroAction}>
@@ -69,11 +69,6 @@ export default async function TemplatePage({ params, searchParams }: { params: P
               </>
             )}
           </>
-        }
-        primaryAction={
-          <ButtonLink href={`/templates/${template.slug}/deploy`} variant="primary" icon="cloud">
-            Deploy template
-          </ButtonLink>
         }
       />
 

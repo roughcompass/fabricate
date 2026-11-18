@@ -7,17 +7,6 @@ import { createdAt, id, publicId, sqlList, timestamp, updatedAt } from "./column
 // catalog, assessment, evaluation, or standard rows, and nothing outside
 // src/lib/demo reads them. Deleting a workspace removes everything it owns.
 
-export const DEMO_ENVIRONMENTS = ["sandbox", "dev"] as const;
-export type DemoEnvironment = (typeof DEMO_ENVIRONMENTS)[number];
-
-/**
- * Where an application came from: a template's deploy form. Import from
- * BitBucket is gone, and migration 0033 deleted what it made; the column's
- * CHECK still names it.
- */
-export const DEMO_ORIGINS = ["template"] as const;
-export type DemoOrigin = (typeof DEMO_ORIGINS)[number];
-
 export const THREAD_STATUSES = ["open", "resolved"] as const;
 export type ThreadStatus = (typeof THREAD_STATUSES)[number];
 
@@ -48,50 +37,13 @@ export const demoWorkspaces = sqliteTable(
   ],
 );
 
-/** An application a visitor created from a template. Its deployment is simulated. */
-export const demoApplications = sqliteTable(
-  "demo_applications",
-  {
-    id: id(),
-    publicId: publicId(),
-    workspaceId: integer("workspace_id")
-      .notNull()
-      .references(() => demoWorkspaces.id, { onDelete: "cascade" }),
-    templateSlug: text("template_slug").notNull(),
-    name: text("name").notNull(),
-    environment: text("environment", { enum: DEMO_ENVIRONMENTS }).notNull(),
-    bitbucketProject: text("bitbucket_project"),
-    bitbucketRepository: text("bitbucket_repository"),
-    /** Added by migration 0014; earlier applications all came from templates. */
-    origin: text("origin", { enum: DEMO_ORIGINS }).notNull().default("template"),
-    createdAt: createdAt(),
-    buildSkippedAt: timestamp("build_skipped_at"),
-  },
-  (t) => [
-    index("demo_applications_workspace").on(t.workspaceId, t.createdAt),
-    uniqueIndex("demo_applications_repository").on(t.workspaceId, t.bitbucketProject, t.bitbucketRepository).where(sql`${t.environment} = 'dev'`),
-    check("demo_applications_public_id", sql`${t.publicId} GLOB 'app_*'`),
-    check("demo_applications_name", sql`length(trim(${t.name})) BETWEEN 1 AND 80`),
-    check("demo_applications_environment", sql.raw(`environment IN (${sqlList(DEMO_ENVIRONMENTS)})`)),
-    check(
-      "demo_applications_bitbucket",
-      sql`(${t.environment} = 'dev' AND ${t.bitbucketProject} IS NOT NULL AND ${t.bitbucketRepository} IS NOT NULL) OR (${t.environment} = 'sandbox' AND ${t.bitbucketProject} IS NULL AND ${t.bitbucketRepository} IS NULL)`,
-    ),
-  ],
-);
-
-/**
- * A comment thread on one view of an application: a visitor's own application,
- * or a reference deployment as seen from one workspace. Exactly one of
- * application_id and reference_slug is set.
- */
+/** A comment thread on one view: a reference deployment as seen from one workspace. */
 export const demoThreads = sqliteTable(
   "demo_threads",
   {
     id: id(),
     publicId: publicId(),
-    applicationId: integer("application_id").references(() => demoApplications.id, { onDelete: "cascade" }),
-    referenceSlug: text("reference_slug"),
+    referenceSlug: text("reference_slug").notNull(),
     viewWorkspaceId: integer("view_workspace_id")
       .notNull()
       .references(() => demoWorkspaces.id, { onDelete: "cascade" }),
@@ -106,10 +58,8 @@ export const demoThreads = sqliteTable(
     resolvedAt: timestamp("resolved_at"),
   },
   (t) => [
-    index("demo_threads_application").on(t.applicationId),
     index("demo_threads_reference").on(t.referenceSlug, t.viewWorkspaceId),
     check("demo_threads_public_id", sql`${t.publicId} GLOB 'thr_*'`),
-    check("demo_threads_target", sql`(${t.applicationId} IS NULL) <> (${t.referenceSlug} IS NULL)`),
     check("demo_threads_status", sql.raw(`status IN (${sqlList(THREAD_STATUSES)})`)),
     check("demo_threads_offsets", sql`${t.offsetX} BETWEEN 0 AND 1 AND ${t.offsetY} BETWEEN 0 AND 1`),
     check("demo_threads_resolved", sql`(${t.status} = 'resolved') = (${t.resolvedAt} IS NOT NULL)`),
@@ -140,16 +90,15 @@ export const demoComments = sqliteTable(
 
 /**
  * A share link to one view. The link carries a random token; only its SHA-256
- * digest is stored. Deleting the application or resetting the sharer's
- * workspace removes the row, so the link stops working.
+ * digest is stored. Resetting the sharer's workspace removes the row, so the
+ * link stops working.
  */
 export const demoShares = sqliteTable(
   "demo_shares",
   {
     id: id(),
     tokenDigest: text("token_digest").notNull().unique(),
-    applicationId: integer("application_id").references(() => demoApplications.id, { onDelete: "cascade" }),
-    referenceSlug: text("reference_slug"),
+    referenceSlug: text("reference_slug").notNull(),
     viewWorkspaceId: integer("view_workspace_id")
       .notNull()
       .references(() => demoWorkspaces.id, { onDelete: "cascade" }),
@@ -158,10 +107,8 @@ export const demoShares = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [
-    index("demo_shares_application").on(t.applicationId),
     index("demo_shares_view_workspace").on(t.viewWorkspaceId),
     check("demo_shares_token_digest", sql`length(${t.tokenDigest}) = 64`),
-    check("demo_shares_target", sql`(${t.applicationId} IS NULL) <> (${t.referenceSlug} IS NULL)`),
     check("demo_shares_state", sql`json_valid(${t.state}) AND json_type(${t.state}) = 'object'`),
   ],
 );

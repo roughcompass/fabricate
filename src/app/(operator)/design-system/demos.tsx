@@ -3,8 +3,6 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { CheckList, type CheckListItem } from "@/components/ui/check-list";
-import { SplitPanes, splitDialogClass } from "@/components/ui/split-dialog";
 import { FormAlert, FormFooter, TextInput, formStyles } from "@/components/ui/form";
 import { PageAlertPortal } from "@/components/ui/page-alert-portal";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -101,31 +99,4 @@ export function InjectedError() {
     });
   }, []);
   return null;
-}
-
-/** Opens a split dialog: supporting content beside the main pane, closed with Escape, the close button, or Cancel. */
-export function SplitDialogDemo({ title, items }: { title: string; items: readonly CheckListItem[] }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const close = () => dialog.current?.close();
-  return (
-    <>
-      <Button onClick={() => dialog.current?.showModal()} aria-haspopup="dialog">
-        Open split dialog
-      </Button>
-      <dialog ref={dialog} className={splitDialogClass} aria-labelledby="split-demo-title">
-        <SplitPanes asideTitle={title} aside={<CheckList label={title} items={items} />}>
-          <div className={formStyles.form}>
-            <h2 id="split-demo-title">Create a Portal</h2>
-            <TextInput id="split-demo-name" label="Name" />
-            <FormFooter>
-              <Button onClick={close}>Cancel</Button>
-              <Button variant="primary" onClick={close}>
-                Create Portal
-              </Button>
-            </FormFooter>
-          </div>
-        </SplitPanes>
-      </dialog>
-    </>
-  );
 }

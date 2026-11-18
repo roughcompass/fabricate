@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db/client";
-import { findApplicationById } from "@/lib/demo/applications";
 import { referenceId, routeByPath, startRoute, templateBySlug } from "@/lib/demo/catalog";
 import { demoUnavailable } from "@/lib/demo/guard";
 import { shareCookieName } from "@/lib/demo/runtime-view";
@@ -23,22 +22,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
   const unavailable = demoUnavailable();
   if (unavailable) return unavailable;
   const { token } = await params;
-  const db = getDb();
-  const share = findShare(db, token);
-  if (!share) return notFound();
-
-  let applicationId: string;
-  let template;
-  if ("applicationId" in share.target) {
-    const application = findApplicationById(db, share.target.applicationId);
-    if (!application) return notFound();
-    applicationId = application.publicId;
-    template = templateBySlug(application.templateSlug);
-  } else {
-    applicationId = referenceId(share.target.referenceSlug);
-    template = templateBySlug(share.target.referenceSlug);
-  }
-  if (!template) return notFound();
+  const share = findShare(getDb(), token);
+  const template = share && templateBySlug(share.referenceSlug);
+  if (!share || !template) return notFound();
+  const applicationId = referenceId(template.slug);
 
   const route = routeByPath(template.app, share.state.route) ?? startRoute(template.app);
   // A relative Location keeps the browser on the host it used, where its cookies are.

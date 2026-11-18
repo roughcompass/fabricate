@@ -110,12 +110,11 @@ test("opens from Preview template in the same tab, on the Preview tab with the D
   await expect(pressed(page, "Device")).toHaveAccessibleName("Desktop");
   await expect(landscape(page)).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("[data-scaffold-command]")).toContainText("npx @deweb/create-app@latest my-app --template market-watch");
-  await expect(page.getByRole("link", { name: "Deploy template" })).toHaveAttribute("href", "/templates/market-watch/deploy");
+  await expect(page.getByRole("link", { name: "Deploy template" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Open full screen/ })).toBeVisible();
-  // The command and Deploy template sit above the tabs.
+  // The command sits above the tabs.
   const [command, tabs] = [(await page.locator("[data-scaffold-command]").boundingBox())!, (await page.getByRole("navigation", { name: "Preview mode" }).boundingBox())!];
   expect(command.y + command.height).toBeLessThanOrEqual(tabs.y);
-  expect((await page.getByRole("link", { name: "Deploy template" }).boundingBox())!.y + 1).toBeLessThan(tabs.y);
 
   await expect(frameElement(page)).toHaveAttribute("title", "Market watch on Desktop, Landscape");
   await expect(page.locator("[data-frame-size]")).toHaveText("1440 × 900");
@@ -287,7 +286,6 @@ test.describe("the icon controls", () => {
     await page.getByRole("navigation", { name: "Preview mode" }).getByRole("link", { name: "Code" }).click();
     await expect(page.getByRole("navigation", { name: "Files" })).toBeVisible();
     await expect(page.locator("[data-scaffold-command]")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Deploy template" })).toBeVisible();
     const [command, tabs] = [(await page.locator("[data-scaffold-command]").boundingBox())!, (await page.getByRole("navigation", { name: "Preview mode" }).boundingBox())!];
     expect(command.y + command.height).toBeLessThanOrEqual(tabs.y);
     await expect(page.getByRole("group", { name: "Device" })).toHaveCount(0);
@@ -338,7 +336,6 @@ test.describe("the browser window", () => {
     for (const control of [
       page.locator("[data-shell-header]").getByRole("link", { name: "Back to Payments workspace" }),
       page.getByRole("button", { name: "Copy command" }),
-      page.getByRole("link", { name: "Deploy template" }),
       page.getByRole("navigation", { name: "Preview mode" }).getByRole("link", { name: "Code" }),
       page.getByRole("group", { name: "Device" }).getByRole("button", { name: "Mobile" }),
       landscape(page),

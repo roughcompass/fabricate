@@ -89,7 +89,7 @@ The DE Console endpoint's read-only token comes only from `FABRICATE_DE_CONSOLE_
 
 ### Template demo
 
-The template demo is an interactive demonstration of starting an application from a template, inside DE FabLab. Its deployments are simulated: the demo never builds or deploys code, runs a repository's commands, or contacts BitBucket or any other service. When `demo.enabled` is on, the sidebar adds the Applications and Salt Patterns sections. When it is off, every demo page, running application, share link, and demo endpoint answers not found, and no other part of DE FabLab changes.
+The template demo is an interactive demonstration of starting an application from a template, inside DE FabLab. Its deployments are simulated: each template has one reference deployment that runs inside DE FabLab, and the demo never builds or deploys code, runs a repository's commands, or contacts Bitbucket or any other service. When `demo.enabled` is on, the sidebar adds Salt Patterns to its Salt Patterns & Prototypes group. When it is off, every demo page, running application, share link, and demo endpoint answers not found, and no other part of DE FabLab changes.
 
 To run the demo locally, start the web server with the switch on, then open Salt Patterns:
 
@@ -99,7 +99,7 @@ FABRICATE_DEMO=true npm run dev
 
 For a hosted demo that self-serve visitors can reach, run the production image with `-e FABRICATE_DEMO=true`. To turn the demo off again, restart without the override.
 
-Each visitor gets an anonymous workspace, which is tied to their browser by an httpOnly cookie and needs no sign-in. A workspace holds the visitor's applications, comments, share links, and session profiles, and other visitors cannot see it except through a share link. DE FabLab stores only a digest of the cookie. A workspace can hold 25 applications and 20 custom session profiles, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted, together with their applications, comments, share links, and session profiles. The demo's tables are separate from catalog, assessment, evaluation, and standard data. See [docs/template-demo.md](docs/template-demo.md) for the presenter script.
+Each visitor gets an anonymous workspace, which is tied to their browser by an httpOnly cookie and needs no sign-in. A workspace holds the visitor's comments, share links, and session profiles, and other visitors cannot see it except through a share link. DE FabLab stores only a digest of the cookie. A workspace can hold 20 custom session profiles, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted, together with their comments, share links, and session profiles. The demo's tables are separate from catalog, assessment, evaluation, and standard data. See [docs/template-demo.md](docs/template-demo.md) for the presenter script.
 
 ### Source roots
 

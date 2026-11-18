@@ -16,10 +16,9 @@ export interface NavItem {
 }
 
 /**
- * A run of the primary menu (update-portal-management-journey design
- * decision 1): the first has no heading; Assessments and Salt Patterns &
- * Prototypes each have a heading, and a divider sets every group after the
- * first apart.
+ * A run of the primary menu: the first has no heading; Assessments and Salt
+ * Patterns & Prototypes each have a heading, and a divider sets every group
+ * after the first apart.
  */
 export interface MenuGroup {
   readonly id: "main" | "assessments" | "build";
@@ -29,16 +28,6 @@ export interface MenuGroup {
 
 /** Home (home spec): the first entry of the primary menu. */
 export const HOME = { id: "home", label: "Home", href: "/", icon: "home", match: [/^\/$/] } as const satisfies NavItem;
-
-/** Applications covers its dashboards, demo pages, and the Add application flow. */
-export const APPLICATIONS = { id: "applications", label: "Applications", href: "/applications", icon: "layers", match: [/^\/applications(\/.*)?$/] } as const satisfies NavItem;
-
-/**
- * Runtime Configuration (runtime-configuration spec): the only item with a
- * sub-menu. Its address redirects to the current Portal's Experience Editor,
- * or to the Portals page; every Portal page sits under /portals.
- */
-export const RUNTIME_CONFIGURATION = { id: "runtime-configuration", label: "Runtime Configuration", href: "/runtime-configuration", icon: "settings", match: [/^\/(portals|runtime-configuration)(\/.*)?$/] } as const satisfies NavItem;
 
 /** Assessments' pages, each list with its create and import pages and its records. */
 const ASSESSMENT_ITEMS: readonly NavItem[] = [
@@ -59,7 +48,7 @@ const PROTOTYPE_ITEMS: readonly NavItem[] = [
 
 /** Which optional areas exist in this configuration. Pages read it from the configuration; client error pages, which can't, use NO_OPTIONAL_AREAS. */
 export interface NavFlags {
-  /** The template demo: Salt Patterns, and demo deployments on the Applications page. */
+  /** The template demo: Salt Patterns. */
   readonly demo: boolean;
   readonly prototypes: boolean;
   /** The hosted profile shows only Prototypes. */
@@ -70,15 +59,14 @@ export const NO_OPTIONAL_AREAS: NavFlags = { demo: false, prototypes: false, hos
 
 /**
  * The primary menu's groups (page-patterns spec, "The primary menu groups
- * areas under headings and dividers"): Home, Applications, and Runtime
- * Configuration; Assessments; then Salt Patterns while the demo is enabled
- * and Prototypes' pages while it is enabled. The hosted profile shows only
- * Prototypes' pages.
+ * areas under headings and dividers"): Home; Assessments; then Salt
+ * Patterns while the demo is enabled and Prototypes' pages while it is
+ * enabled. The hosted profile shows only Prototypes' pages.
  */
 export function visibleGroups(flags: NavFlags): readonly MenuGroup[] {
   const build: MenuGroup = { id: "build", heading: "Salt Patterns & Prototypes", items: [...(flags.demo && !flags.hosted ? [SALT_PATTERNS] : []), ...(flags.prototypes ? PROTOTYPE_ITEMS : [])] };
   if (flags.hosted) return build.items.length ? [build] : [];
-  return [{ id: "main", items: [HOME, APPLICATIONS, RUNTIME_CONFIGURATION] }, { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS }, ...(build.items.length ? [build] : [])];
+  return [{ id: "main", items: [HOME] }, { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS }, ...(build.items.length ? [build] : [])];
 }
 
 /** Every item of the menu, in order. */

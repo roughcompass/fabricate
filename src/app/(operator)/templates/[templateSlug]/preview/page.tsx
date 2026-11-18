@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ButtonLink } from "@/components/ui/button";
 import { CodeBlock } from "@/components/ui/code-block";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Icon } from "@/components/ui/icon";
@@ -98,7 +97,7 @@ function FileTree({ files, selected, hrefFor }: { files: readonly TemplateFile[]
 /**
  * Preview mode (template-preview spec), modeled on shadcn blocks: a focused
  * page, with no sidebar or page header, whose header holds a back button to
- * the template. The scaffold command and Deploy template sit above the tabs;
+ * the template. The scaffold command sits above the tabs;
  * the Preview tab shows the reference deployment in a browser window at a
  * device's size, with the device, Landscape, and full-screen controls as
  * icons, and the Code tab shows the template's files. Every choice lives in
@@ -131,9 +130,6 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
           <code className={styles.commandText}>{command}</code>
           <CopyButton value={command} label="Copy command" />
         </div>
-        <ButtonLink href={`/templates/${template.slug}/deploy`} variant="primary" size="sm" icon="cloud">
-          Deploy template
-        </ButtonLink>
       </div>
 
       <div className={styles.controls}>

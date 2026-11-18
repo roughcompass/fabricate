@@ -1,9 +1,5 @@
 import type { Page } from "@playwright/test";
 import { createRequire } from "node:module";
-import { templateBySlug } from "../src/lib/demo/catalog";
-import { createApplication, validateDeployInput } from "../src/lib/demo/deployments";
-import { WORKSPACE_COOKIE } from "../src/lib/demo/workspace-key";
-import { ensureWorkspace } from "../src/lib/demo/workspaces";
 import { expectToolbarOnTop, injectUnlabeledField, openTool, openToolbarMenu, startComment, waitForRegions } from "./support/demo";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 
@@ -117,7 +113,7 @@ test.describe("the menu", () => {
     await expect(menu(page).getByRole("combobox")).toHaveAttribute("placeholder", "What do you need?");
     await expect(menu(page).locator("[data-menu-context]")).toContainText("Payments workspace");
     await expect(menu(page).locator("[data-menu-context]")).toContainText("Production");
-    await expect(menu(page).locator("[data-menu-context]")).toContainText("Ready");
+    await expect(menu(page).locator("[data-menu-context]")).not.toContainText(/Ready|Building/);
     const shortcuts = menu(page).getByRole("group", { name: "Shortcuts" }).getByRole("button");
     await expect(shortcuts).toHaveCount(7);
     for (const group of ["Collaboration", "Inspect", "Runtime", "More"]) await expect(menu(page).getByRole("group", { name: group })).toBeVisible();
@@ -167,20 +163,13 @@ test.describe("the menu", () => {
     await expect(menu(page).getByRole("option")).toHaveCount(0);
   });
 
-  test("links a dev application's context row to its page, in a new tab", async ({ page, context, db }) => {
-    const key = (await context.cookies()).find((cookie) => cookie.name === WORKSPACE_COOKIE)!.value;
-    const workspace = ensureWorkspace(db, key);
-    const application = createApplication(db, workspace.id, templateBySlug("payments-workspace")!, validateDeployInput({ name: "Payee portal", environment: "dev", project: "PAY", repository: "payee-portal" }), new Date(Date.now() - 60 * 60_000));
-    await page.goto(`/run/${application.publicId}`);
-    await waitForRegions(page);
+  test("links the context row to the template's page, in a new tab", async ({ page, context }) => {
     await openToolbarMenu(page);
     const row = menu(page).locator("[data-menu-context]");
-    await expect(row).toContainText("Payee portal");
-    await expect(row).toContainText("Dev");
-    await expect(row).toContainText("Ready");
+    await expect(row).toContainText("Payments workspace");
     const [opened] = await Promise.all([context.waitForEvent("page"), row.click()]);
     await opened.waitForLoadState("domcontentloaded");
-    expect(new URL(opened.url()).pathname).toBe(`/applications/${application.publicId}`);
+    expect(new URL(opened.url()).pathname).toBe("/templates/payments-workspace");
     await opened.close();
   });
 

@@ -23,7 +23,7 @@ describe("share link profile snapshots", () => {
   afterEach(() => db.$client.close());
 
   it("stores and reads back a profile snapshot, trimmed, beside the matching built-in persona id", () => {
-    const token = createShare(db, { referenceSlug: "payments-workspace" }, workspace, { ...STATE, profile: { name: " Priya Shah ", persona: "Approver", region: "Mumbai " } });
+    const token = createShare(db, "payments-workspace", workspace, { ...STATE, profile: { name: " Priya Shah ", persona: "Approver", region: "Mumbai " } });
     expect(findShare(db, token)?.state).toEqual({ ...STATE, profile: PRIYA });
     expect(JSON.parse(db.select().from(demoShares).get()!.state)).toMatchObject({ persona: "approver", profile: PRIYA });
   });
@@ -42,7 +42,7 @@ describe("share link profile snapshots", () => {
   });
 
   it("still reads a link from before profiles, which opens as the built-in profile its persona names", () => {
-    const token = createShare(db, { referenceSlug: "payments-workspace" }, workspace, STATE);
+    const token = createShare(db, "payments-workspace", workspace, STATE);
     const share = findShare(db, token)!;
     expect(share.state.profile).toBeUndefined();
     expect(stateFromShare(templateBySlug("payments-workspace")!.app, share.state).profileId).toBe("approver");

@@ -42,7 +42,7 @@ function Toolbar() {
   return (
     <HintsContext value={hints}>
       <DemoToolbar
-        context={{ name: descriptor.applicationName, environment: ENVIRONMENT_LABELS[descriptor.environment], status: descriptor.status === "ready" ? "Ready" : "Building", href: descriptor.pageHref }}
+        context={{ name: descriptor.applicationName, environment: ENVIRONMENT_LABELS[descriptor.environment], href: descriptor.pageHref }}
         commentCount={comments.threads.filter((thread) => thread.status === "open").length}
         panels={{
           comments: <CommentsPanel />,

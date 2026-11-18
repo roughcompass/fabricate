@@ -18,23 +18,6 @@ async function openSettings(page: Page) {
   return page.getByRole("dialog", { name: "Settings" });
 }
 
-test("walks a first-time visitor through the create page, and does not repeat", async ({ page, db: _db }) => {
-  await page.goto("/applications/new");
-  // Two hints, on Add application: the prompt bar, then the starters.
-  await expect(page.getByRole("dialog", { name: "Hint 1 of 2: Describe what you need" })).toBeVisible();
-  await hint(page).getByRole("button", { name: "Next hint" }).click();
-  await expect(page.getByRole("dialog", { name: "Hint 2 of 2: Start from a starter" })).toBeVisible();
-  const stored = page.waitForResponse((response) => response.url().endsWith("/api/demo/hints") && response.ok());
-  await hint(page).getByRole("button", { name: "Finish hints" }).click();
-  await expect(hint(page)).toHaveCount(0);
-  await stored;
-
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Let's build something new" })).toBeVisible();
-  await page.waitForTimeout(500);
-  await expect(hint(page)).toHaveCount(0);
-});
-
 test("opens the toolbar menu for a first running application's visitor, points to its items, and remembers a dismissal", async ({ page, db: _db }) => {
   await openRunning(page, "payments-workspace");
   const first = page.getByRole("dialog", { name: "Hint 1 of 3: Audit accessibility" });
@@ -93,9 +76,6 @@ test("replays the hints from the toolbar's Settings", async ({ page, db: _db }) 
   const settings = await openSettings(page);
   await settings.getByRole("button", { name: "Replay hints" }).click();
   await expect(page.getByRole("dialog", { name: "Hint 1 of 3: Audit accessibility" })).toBeVisible();
-  // Replaying covers the create page too.
-  await page.goto("/applications/new");
-  await expect(page.getByRole("dialog", { name: "Hint 1 of 2: Describe what you need" })).toBeVisible();
 });
 
 test("never shows hints once they are turned off", async ({ page, db: _db }) => {
@@ -107,10 +87,6 @@ test("never shows hints once they are turned off", async ({ page, db: _db }) => 
   await expect(settings.getByRole("button", { name: "Replay hints" })).toBeDisabled();
 
   await openRunning(page, "client-onboarding");
-  await page.waitForTimeout(500);
-  await expect(hint(page)).toHaveCount(0);
-  await page.goto("/applications/new");
-  await expect(page.getByRole("heading", { name: "Let's build something new" })).toBeVisible();
   await page.waitForTimeout(500);
   await expect(hint(page)).toHaveCount(0);
 

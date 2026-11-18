@@ -1,6 +1,4 @@
-import type { RenderingMode } from "@/lib/applications/vocabulary";
 import type { ConclusionFilter } from "@/lib/evaluations/conclusions";
-import type { PortalTab } from "@/lib/onboarding/catalog";
 import type { OwnershipFilter } from "@/lib/ownership/coverage";
 
 /**
@@ -25,18 +23,4 @@ export function repositoriesHref(filters: { status?: RepositoryStatus | null; ow
 /** The Assessments list on a conclusion tab. */
 export function assessmentsHref(filters: { conclusion?: ConclusionFilter | null } = {}): string {
   return withQuery("/assessments", { conclusion: filters.conclusion });
-}
-
-/**
- * The Applications page (application-catalog spec), across all Portals with
- * `portal: "all"` rather than the switcher's Portal, filtered to a rendering
- * mode, searched, and in grid or list view.
- */
-export function applicationsHref(filters: { portal?: "all" | null; rendering?: RenderingMode | null; q?: string; view?: "grid" | "list" | null } = {}): string {
-  return withQuery("/applications", { portal: filters.portal, q: filters.q, rendering: filters.rendering, view: filters.view === "list" ? "list" : null });
-}
-
-/** The Portals page (runtime-configuration spec), on a lifecycle tab and searched. */
-export function portalsHref(filters: { tab?: PortalTab | null; q?: string | null } = {}): string {
-  return withQuery("/portals", { q: filters.q || null, tab: filters.tab === "all" ? null : filters.tab });
 }

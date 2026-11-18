@@ -32,12 +32,22 @@ test("Opening the gallery: titled Salt Patterns, with the search, the filter rai
   await expect(page.getByText("Showing 16 of 16 templates")).toBeVisible();
   await expect(cards(page)).toHaveCount(16);
   expect((await cardTitles(page)).slice(0, 4)).toEqual(["Client onboarding", "Market watch", "Operations console", "Payments workspace"]);
-  // Resetting the demo is on Add application, which the header's one action opens.
-  await expect(page.getByRole("button", { name: "More actions" })).toHaveCount(0);
+  // No primary action; resetting the demo is under More actions.
   const header = page.locator("[data-page-header]");
-  await expect(header.locator('[data-variant="primary"]')).toHaveCount(1);
-  await header.getByRole("link", { name: "Add application" }).click();
-  await expect(page).toHaveURL(/\/applications\/new$/);
+  await expect(header.locator('[data-variant="primary"]')).toHaveCount(0);
+  await expect(header.getByRole("button", { name: "More actions" })).toBeVisible();
+});
+
+test("Reset demo: More actions asks first, then the gallery says the demo was reset", async ({ page, db: _db }) => {
+  await page.goto("/templates");
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  const dialog = page.getByRole("dialog", { name: "Reset the demo?" });
+  await expect(dialog).toContainText("Your comments, share links, and session profiles are removed.");
+  await dialog.getByRole("button", { name: "Reset demo" }).click();
+  const toast = page.getByRole("region", { name: "Notifications" });
+  await expect(toast.getByText("The demo was reset.")).toBeVisible();
+  await expect(toast.getByText("Your comments, share links, and session profiles were removed.")).toBeVisible();
 });
 
 test("shows how many options each group has selected, including while it is collapsed", async ({ page, db: _db }) => {
@@ -225,7 +235,7 @@ test.describe("without JavaScript", () => {
 });
 
 test.describe("template detail", () => {
-  test("names the brand, the provider, and each microfrontend, with Deploy and Preview", async ({ page, db: _db }) => {
+  test("names the brand, the provider, and each microfrontend, with no Deploy template", async ({ page, db: _db }) => {
     await page.goto("/templates/market-watch");
     await expect(page).toHaveTitle("Market watch · Salt Patterns · DE FabLab");
     await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Salt Patterns" })).toHaveAttribute("href", "/templates");
@@ -241,7 +251,7 @@ test.describe("template detail", () => {
     for (const name of ["Markets shell", "Watchlist", "Order ticket", "Price chart", "Trade blotter"]) await expect(members).toContainText(name);
     await expectCurrentItem(page, "Salt Patterns", "true");
 
-    await expect(page.getByRole("link", { name: "Deploy template" })).toHaveAttribute("href", "/templates/market-watch/deploy");
+    await expect(page.getByRole("link", { name: "Deploy template" })).toHaveCount(0);
   });
 
   test("Breadcrumb names its page: Salt Patterns opens the page titled Salt Patterns", async ({ page, db: _db }) => {

@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_ENV, E2E_PORT, E2E_ROOT, E2E_SOURCES, E2E_WHATS_INCLUDED } from "./e2e/support/env";
+import { E2E_ENV, E2E_PORT, E2E_ROOT, E2E_SOURCES } from "./e2e/support/env";
 
 const baseURL = `http://127.0.0.1:${E2E_PORT}`;
 
@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   // A throwaway database, repository store, and allowed source root.
   webServer: {
-    command: `rm -rf "${E2E_ROOT}" && mkdir -p "${E2E_SOURCES}" && cp config/portal-whats-included.yaml "${E2E_WHATS_INCLUDED}" && npm run db:migrate && npm run prototypes:migrate && npm run prototypes:runtime && npx next dev --port ${E2E_PORT} --hostname 127.0.0.1`,
+    command: `rm -rf "${E2E_ROOT}" && mkdir -p "${E2E_SOURCES}" && npm run db:migrate && npm run prototypes:migrate && npm run prototypes:runtime && npx next dev --port ${E2E_PORT} --hostname 127.0.0.1`,
     env: E2E_ENV,
     url: `${baseURL}/api/health`,
     reuseExistingServer: !process.env.CI,

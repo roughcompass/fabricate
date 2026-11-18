@@ -124,9 +124,3 @@ export interface LoadEntry {
   readonly startMs: number;
   readonly durationMs: number;
 }
-
-export interface StageScript {
-  readonly name: string;
-  readonly durationMs: number;
-  readonly lines: readonly string[];
-}

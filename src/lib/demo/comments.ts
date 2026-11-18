@@ -4,14 +4,14 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { type ThreadStatus, demoComments, demoThreads } from "@/lib/db/schema";
-import { type DemoView, viewTemplate } from "./access";
+import type { DemoView } from "./access";
 import { memberById, routeByPath } from "./catalog";
 import { COMMENT_LIMIT, normalizeDisplayName } from "./workspaces";
 
 /**
  * Comment threads anchored to rendered elements (template-demo/toolbar spec).
- * Every operation is scoped to one view: a thread belongs to an application
- * (or a reference deployment) as seen from one workspace, so a visitor never
+ * Every operation is scoped to one view: a thread belongs to a reference
+ * deployment as seen from one workspace, so a visitor never
  * reads or changes another view's threads. Bodies are stored as written,
  * Markdown markers included; comment-format.ts styles them only for display.
  */
@@ -70,13 +70,8 @@ export function authorName(stored: string | null, provided: string | undefined):
   throw new ValidationError([{ field: "authorName", message: "Enter a display name" }]);
 }
 
-function targetColumns(view: DemoView) {
-  return view.target.kind === "application" ? { applicationId: view.target.application.id, referenceSlug: null } : { applicationId: null, referenceSlug: view.target.template.slug };
-}
-
 function viewCondition(view: DemoView & { viewWorkspaceId: number }) {
-  const target = view.target.kind === "application" ? eq(demoThreads.applicationId, view.target.application.id) : eq(demoThreads.referenceSlug, view.target.template.slug);
-  return and(target, eq(demoThreads.viewWorkspaceId, view.viewWorkspaceId));
+  return and(eq(demoThreads.referenceSlug, view.template.slug), eq(demoThreads.viewWorkspaceId, view.viewWorkspaceId));
 }
 
 /** Every thread in a view, oldest first, with its comments. */
@@ -108,8 +103,7 @@ export function listThreads(db: Executor, view: DemoView): ThreadRecord[] {
 
 /** Starts a thread on an element in the view, with its first comment. */
 export function createThread(db: Executor, view: WritableView, author: Author, input: ThreadInput, now = new Date()): string {
-  const template = viewTemplate(view.target);
-  if (!template) throw new ValidationError([{ field: "application", message: "This application's template no longer exists" }]);
+  const { template } = view;
   const member = memberById(template.app, input.member);
   const issues = [];
   if (!routeByPath(template.app, input.route)) issues.push({ field: "route", message: "This route is not part of the application" });
@@ -122,7 +116,7 @@ export function createThread(db: Executor, view: WritableView, author: Author, i
       .insert(demoThreads)
       .values({
         publicId: generatePublicId("thr"),
-        ...targetColumns(view),
+        referenceSlug: template.slug,
         viewWorkspaceId: view.viewWorkspaceId,
         route: input.route,
         member: input.member,

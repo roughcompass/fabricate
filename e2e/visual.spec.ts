@@ -2,15 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOverlappingContent, test } from "./support/fixtures";
 import { openTool, setView, waitForRegions } from "./support/demo";
-import { seedDemoSurfaces, seedOperatorSurfaces, surfaceUrl } from "./support/surfaces";
+import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
-import { evaluate, seedResults } from "./support/results";
-import { saveDirectly } from "./support/experience";
-import { waitForHydration } from "./support/shell";
-import { addItem, setDefault } from "../src/lib/onboarding/navigation";
-import { getPortal, promotePortal } from "../src/lib/onboarding/portals";
-import { determineRendering, registerApplication } from "../test/support/applications";
-import { ana, onboardPortal } from "../test/support/onboarding";
 
 /**
  * Captures every product surface at desktop and mobile width, in the light and
@@ -39,7 +32,7 @@ test("captures every product surface at desktop and mobile width, in both themes
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize(viewport);
       for (const [name, url] of surfaces) {
-        await page.goto(surfaceUrl(url));
+        await page.goto(url);
         // The development server's floating indicator is not part of the product.
         await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -56,11 +49,9 @@ test("captures every product surface at desktop and mobile width, in both themes
 
 /**
  * Captures the shell's own states in both themes: the sidebar hidden and the
- * section menu shown after Show all sections on a desktop, and the drawer
- * open on a phone.
+ * primary menu on a desktop, and the drawer open on a phone.
  */
-test("captures the shell's sidebar states in both themes", async ({ page, db, baseURL }) => {
-  const access = onboardPortal(db, "Access");
+test("captures the shell's sidebar states in both themes", async ({ page, db: _db, baseURL }) => {
   const output = path.join(OUTPUT, "shell");
   fs.rmSync(output, { recursive: true, force: true });
   fs.mkdirSync(output, { recursive: true });
@@ -79,13 +70,9 @@ test("captures the shell's sidebar states in both themes", async ({ page, db, ba
     await capture("sidebar-hidden-desktop", theme);
     await page.context().clearCookies({ name: "fabricate-sidebar" });
 
-    // The Runtime Configuration sub-menu, then Show all sections back to the primary menu.
-    await page.goto(`/portals/${access.publicId}`);
-    await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Experience Editor" })).toBeVisible();
-    await capture("runtime-submenu-desktop", theme);
-    await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Show all sections" }).click();
+    await page.goto(paths.home);
     await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Salt Patterns", exact: true })).toBeVisible();
-    await capture("section-menu-desktop", theme);
+    await capture("menu-desktop", theme);
 
     await page.setViewportSize(VIEWPORTS[1]!);
     await page.goto(paths.repositories);
@@ -93,255 +80,7 @@ test("captures the shell's sidebar states in both themes", async ({ page, db, ba
     await expect(page.locator("#sidebar")).toBeVisible();
     await capture("drawer-open-mobile", theme);
   }
-  expect(fs.readdirSync(output)).toHaveLength(4 * THEMES.length);
-});
-
-/**
- * Captures the Portal switcher, closed and open, and the Create Portal dialog
- * at 1440px and 375px in both themes. On a phone the switcher is in the
- * drawer, so the drawer is opened first.
- */
-test("captures the Portal switcher and the Create Portal dialog in both themes", async ({ page, db, baseURL }) => {
-  const output = path.join(OUTPUT, "portal-switcher");
-  fs.rmSync(output, { recursive: true, force: true });
-  fs.mkdirSync(output, { recursive: true });
-  for (const name of ["Access", "Markets", "Treasury"]) onboardPortal(db, name);
-  const sidebar = page.locator("#sidebar");
-  const capture = async (name: string) => {
-    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
-    await expectNoHorizontalOverflow(page);
-    await page.screenshot({ path: path.join(output, `${name}.jpg`), type: "jpeg", quality: 75 });
-  };
-  const viewports = [{ name: "desktop", width: 1440, height: 900 }, VIEWPORTS[1]!];
-  for (const theme of THEMES) {
-    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
-    for (const viewport of viewports) {
-      await page.setViewportSize(viewport);
-      await page.goto("/applications");
-      await waitForHydration(page);
-      if (viewport.name === "mobile") await page.getByRole("button", { name: "Open navigation" }).click();
-      const trigger = sidebar.getByRole("button", { name: /^Switch Portal/ });
-      await expect(trigger).toBeVisible();
-      await capture(`switcher-closed-${viewport.name}-${theme}`);
-      await trigger.click();
-      await expect(sidebar.locator("[popover]").getByRole("list", { name: "Switch Portal" })).toBeVisible();
-      await capture(`switcher-open-${viewport.name}-${theme}`);
-      await sidebar.locator("[popover]").getByRole("link", { name: /^Create Portal/ }).click();
-      const dialog = page.getByRole("dialog", { name: /^Create/ });
-      await expect(dialog).toBeVisible();
-      // The dialog slides in from the right; capture it where it settles.
-      await dialog.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished)));
-      await capture(`create-portal-${viewport.name}-${theme}`);
-    }
-  }
-  expect(fs.readdirSync(output)).toHaveLength(3 * viewports.length * THEMES.length);
-});
-
-/**
- * Captures the Applications pages (make-applications-first-class task 11.3)
- * at 1440px and 375px in both themes: the Applications grid and list, the
- * application switcher open, Add application, the full catalog, Create
- * Application, a dashboard, and a Navigation page with Access in Production.
- */
-test("captures the Applications pages and a Navigation page in both themes", async ({ page, db, baseURL }) => {
-  const output = path.join(OUTPUT, "applications");
-  fs.rmSync(output, { recursive: true, force: true });
-  fs.mkdirSync(output, { recursive: true });
-  const access = onboardPortal(db, "Access");
-  const markets = onboardPortal(db, "Markets");
-  const payeeHub = determineRendering(db, registerApplication(db, { name: "Payee Hub", portal: access }), "esm");
-  determineRendering(db, registerApplication(db, { name: "Ledger", portal: markets }), "module_federation_2");
-  registerApplication(db, { name: "Treasury Desk", portal: markets });
-  const version = () => getPortal(db, access.publicId).lockVersion;
-  addItem(db, access.publicId, { lockVersion: version(), label: "Payments", route: "/payments", application: payeeHub.publicId, parent: null }, ana);
-  const payees = addItem(db, access.publicId, { lockVersion: version(), label: "Payees", route: "/payees", application: payeeHub.publicId, parent: null }, ana);
-  setDefault(db, access.publicId, { lockVersion: version(), entry: payees.publicId }, ana);
-  promotePortal(db, access.publicId, { lockVersion: version() }, ana);
-
-  const pages: [name: string, url: string, ready?: () => Promise<void>][] = [
-    ["applications-grid", "/applications?portal=all"],
-    ["applications-list", "/applications?portal=all&view=list"],
-    [
-      "switcher-open",
-      "/applications?portal=all",
-      async () => {
-        await waitForHydration(page);
-        await page.locator("[data-shell-header]").getByRole("button", { name: /^Switch Application/ }).click();
-        await expect(page.locator("[data-shell-header] [popover]").getByRole("list", { name: "Switch Application" })).toBeVisible();
-      },
-    ],
-    ["add-application", "/applications/new"],
-    ["catalog", "/applications/new/templates"],
-    ["create-application", "/applications/new/create?starter=salt-starter&from=new"],
-    ["dashboard", `/applications/${payeeHub.publicId}`],
-    ["navigation", `/portals/${access.publicId}`],
-  ];
-  const viewports = [{ name: "desktop", width: 1440, height: 900 }, VIEWPORTS[1]!];
-  for (const theme of THEMES) {
-    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
-    for (const viewport of viewports) {
-      await page.setViewportSize(viewport);
-      for (const [name, url, ready] of pages) {
-        await page.goto(url);
-        await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
-        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-        if (ready) await ready();
-        await expectNoHorizontalOverflow(page);
-        await page.screenshot({ path: path.join(output, `${name}-${viewport.name}-${theme}.jpg`), fullPage: !ready, type: "jpeg", quality: 75 });
-      }
-    }
-  }
-  expect(fs.readdirSync(output)).toHaveLength(pages.length * viewports.length * THEMES.length);
-});
-
-/**
- * Captures the experience editor (add-portal-experience-editor task 7.2) at
- * 1440px and 375px in both themes: its four views, Change history with a
- * pending change, the System messages editor, the menu editor, and the
- * Install dialog. Then an Access and a Markets running portal with a saved
- * experience, in both runtime themes.
- */
-test("captures the experience editor and running portals with a saved experience, in both themes", async ({ page, db, baseURL }) => {
-  const output = path.join(OUTPUT, "experience");
-  fs.rmSync(output, { recursive: true, force: true });
-  fs.mkdirSync(output, { recursive: true });
-  const access = onboardPortal(db, "Access");
-  const desk = onboardPortal(db, "Markets Desk");
-  const payeeHub = registerApplication(db, { name: "Payee Hub", portal: access });
-  saveDirectly(db, access, (draft) => {
-    draft.brand.portalName = "Digital Platform";
-    draft.toolkits.installed.push("global-search", "notifications");
-    draft.messages.push({ id: "msg_maint", title: "Scheduled maintenance", description: "Saturday 02:00 to 04:00 UTC.", severity: "warning", dismissible: true, enabled: true, startsAt: null, endsAt: null });
-    draft.menu = [
-      { id: "tmp_group", parentId: null, kind: "group", label: "Cash Management", route: null, application: null, isDefault: false },
-      { id: "tmp_payees", parentId: "tmp_group", kind: "item", label: "Payees", route: "/payees", application: payeeHub.publicId, isDefault: true },
-    ];
-  });
-  saveDirectly(db, desk, (draft) => {
-    draft.theme.id = "markets";
-    draft.frame.sidebar.menuType = "flyout";
-  });
-  const editor = `/portals/${access.publicId}/editor`;
-  const capture = async (name: string, fullPage = false) => {
-    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
-    await expectNoHorizontalOverflow(page);
-    await page.screenshot({ path: path.join(output, `${name}.jpg`), fullPage, type: "jpeg", quality: 75 });
-  };
-  const viewports = [{ name: "desktop", width: 1440, height: 900 }, VIEWPORTS[1]!];
-  const views = ["frame-zones", "frame-overlays", "capabilities", "configuration/brand", "messages", "menu"];
-  for (const theme of THEMES) {
-    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
-    for (const viewport of viewports) {
-      await page.setViewportSize(viewport);
-      const suffix = `${viewport.name}-${theme}`;
-      for (const view of views) {
-        await page.goto(view.startsWith("configuration/") ? `/portals/${access.publicId}/${view}` : `${editor}/${view}`);
-        await waitForHydration(page);
-        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-        await capture(`${view.replace("/", "-")}-${suffix}`);
-      }
-      await page.goto(`/portals/${access.publicId}/configuration/copyright`);
-      await waitForHydration(page);
-      await page.getByLabel("Copyright information").fill("© 2026 JPMorgan Chase & Co. Digital Platform.");
-      await page.locator("[data-runtime-actions]").getByRole("link", { name: /^Change history/ }).click();
-      await expect(page.getByRole("table", { name: "Pending changes" })).toBeVisible();
-      await capture(`change-history-${suffix}`);
-      // The Install dialog, for a Portal that hasn't installed Global Search.
-      await page.goto(`/portals/${desk.publicId}/editor/capabilities`);
-      await waitForHydration(page);
-      await page.getByRole("list", { name: "Toolkits" }).getByRole("button", { name: /^Global Search/ }).click();
-      await page.getByRole("region", { name: "Options", exact: true }).getByRole("button", { name: "Install" }).click();
-      await expect(page.getByRole("dialog", { name: "Install Global Search" })).toBeVisible();
-      await capture(`install-dialog-${suffix}`);
-      await page.keyboard.press("Escape");
-      // Clear the pending change, so the next viewport starts from the saved version.
-      await page.evaluate(() => window.sessionStorage.clear());
-    }
-  }
-
-  // The running portals, in the runtime's own themes.
-  const portals: [name: string, url: string][] = [
-    ["running-access", `/run/ref-payments-workspace?portal=${access.publicId}`],
-    ["running-markets", `/run/ref-market-watch?portal=${desk.publicId}`],
-  ];
-  for (const viewport of viewports) {
-    await page.setViewportSize(viewport);
-    for (const [name, url] of portals) {
-      await page.goto(url);
-      await waitForRegions(page);
-      for (const theme of THEMES) {
-        await setView(page, { theme });
-        await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-theme", theme);
-        await expectNoOverlappingContent(page);
-        await capture(`${name}-${viewport.name}-${theme}`);
-      }
-    }
-  }
-  expect(fs.readdirSync(output)).toHaveLength((views.length + 2) * viewports.length * THEMES.length + portals.length * viewports.length * THEMES.length);
-});
-
-/**
- * Captures the portal management journey (update-portal-management-journey
- * task 7.2) in both themes: Home and its primary menu, the Portals page, the
- * Experience Editor with its header controls at 1440, 1280, and 375 pixels, a
- * configuration page, the device toolbar rotated, Add application, an
- * application dashboard, and the switcher with a long Portal name.
- */
-test("captures the portal management journey in both themes", async ({ page, db, baseURL }) => {
-  const output = path.join(OUTPUT, "journey");
-  fs.rmSync(output, { recursive: true, force: true });
-  fs.mkdirSync(output, { recursive: true });
-  const access = onboardPortal(db, "Access");
-  onboardPortal(db, "Markets");
-  const long = onboardPortal(db, "Global Corporate Treasury Operations Portal");
-  const payeeHub = registerApplication(db, { name: "Payee Hub", portal: access });
-  registerApplication(db, { name: "Ledger", portal: access });
-  const { initiative, assessment } = await seedResults(db);
-  await evaluate(db, initiative.publicId, assessment.publicId);
-  const capture = async (name: string, fullPage = false) => {
-    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
-    await expectNoHorizontalOverflow(page);
-    await page.screenshot({ path: path.join(output, `${name}.jpg`), fullPage, type: "jpeg", quality: 75 });
-  };
-  let count = 0;
-  for (const theme of THEMES) {
-    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
-    await page.context().clearCookies({ name: "fabricate-portal" });
-    await page.setViewportSize({ width: 1440, height: 900 });
-    for (const [name, url] of [["home", "/"], ["portals", "/portals"], ["add-application", "/applications/new"], ["dashboard", `/applications/${payeeHub.publicId}`]] as const) {
-      await page.goto(url);
-      await waitForHydration(page);
-      await capture(`${name}-${theme}`, name !== "add-application");
-      count++;
-    }
-    for (const width of [1440, 1280, 375]) {
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto(`/portals/${access.publicId}/editor/frame-zones`);
-      await waitForHydration(page);
-      await page.locator("[data-slot-row='feedback']").getByRole("button", { name: "Show Feedback Slot" }).click();
-      await capture(`editor-${width}-${theme}`);
-      count++;
-    }
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(`/portals/${access.publicId}/configuration/brand`);
-    await waitForHydration(page);
-    await capture(`configuration-brand-${theme}`);
-    await page.goto(`/portals/${access.publicId}/editor/frame-zones`);
-    await waitForHydration(page);
-    await page.getByLabel("Device", { exact: true }).selectOption("iphone-14");
-    await page.getByRole("button", { name: /^Rotate/ }).click();
-    await expect(page.locator("[data-frame-preview]")).toHaveAttribute("data-width", "844");
-    await capture(`device-rotated-${theme}`);
-    await page.evaluate(() => window.sessionStorage.clear());
-    await page.context().addCookies([{ name: "fabricate-portal", value: long.publicId, url: baseURL! }]);
-    await page.goto("/applications");
-    await waitForHydration(page);
-    await capture(`switcher-long-name-${theme}`);
-    await page.locator("#sidebar").getByRole("button", { name: /^Switch Portal/ }).click();
-    await capture(`switcher-long-name-open-${theme}`);
-    count += 4;
-  }
-  expect(fs.readdirSync(output)).toHaveLength(count);
+  expect(fs.readdirSync(output)).toHaveLength(3 * THEMES.length);
 });
 
 /**
@@ -373,24 +112,21 @@ test("captures every portal shell at desktop and mobile width, in both runtime t
 });
 
 /**
- * Captures the template demo's operator surfaces: the create page and the
- * import, the gallery, template detail, preview mode on every device and
- * orientation and its Code tab, the deploy form, building and ready
- * applications, and the Applications list. A building application is created
- * just before each capture of it, so it is always mid-build.
+ * Captures the template demo's operator surfaces: the gallery, template
+ * detail, and preview mode on every device and orientation and its Code tab.
  */
-test("captures every template demo surface at desktop and mobile width, in both themes", async ({ page, context, db, baseURL }) => {
+test("captures every template demo surface at desktop and mobile width, in both themes", async ({ page, context, db: _db, baseURL }) => {
   const output = path.join(OUTPUT, "demo");
   fs.rmSync(output, { recursive: true, force: true });
   fs.mkdirSync(output, { recursive: true });
-  const surfaces = await seedDemoSurfaces(page, context, db);
+  const surfaces = demoSurfaces();
 
   for (const theme of THEMES) {
     await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize(viewport);
       for (const [name, url] of surfaces) {
-        await page.goto(surfaceUrl(url));
+        await page.goto(url);
         await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);

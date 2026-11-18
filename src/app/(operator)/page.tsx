@@ -14,15 +14,11 @@ import { RelativeTime } from "@/components/ui/relative-time";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
-import { NewPortalLink } from "@/components/onboarding/create-portal";
 import { BarChart, type BarSeries } from "@/components/ui/bar-chart";
-import { Status } from "@/components/ui/status";
 import { ATTENTION_PAGE_SIZE, type AttentionItem, attentionItems } from "@/lib/home/attention";
-import { type ActivityKind, WEEK_MS, assessmentTrend, figureChanges, figuresAt, portalsOverview, recentActivity } from "@/lib/home/dashboard";
-import { PORTAL_LIFECYCLE_LABELS } from "@/lib/onboarding/vocabulary";
-import { PORTALS_HREF, portalHref } from "@/lib/portals/paths";
+import { type ActivityKind, WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity } from "@/lib/home/dashboard";
 import { type FleetSummary, claimedShare, fleetSummary } from "@/lib/home/summary";
-import { applicationsHref, assessmentsHref, portalsHref, repositoriesHref } from "@/lib/web/list-filters";
+import { assessmentsHref, repositoriesHref } from "@/lib/web/list-filters";
 import styles from "./home.module.css";
 
 // The root layout's title template applies only to child segments, and this page shares the root segment.
@@ -38,9 +34,9 @@ function requestTime(): number {
 /**
  * Home (home spec), laid out as a dashboard: the fleet's figures, each
  * opening a list filtered to exactly what it counts, with its change over the
- * last seven days; the Portals beside the Assessment trend; the recent
- * activity beside the problems that need someone; and quick actions. Every visitor
- * sees the same page. Where Assessments aren't available, the root address
+ * last seven days; the Assessment trend beside the recent activity; the
+ * problems that need someone; and quick actions. Every visitor sees the same
+ * page. Where Assessments aren't available, the root address
  * opens wherever links to Home lead instead.
  */
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -59,15 +55,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   const then = figuresAt(db, new Date(requestTime() - WEEK_MS));
   const changes = figureChanges(summary, then, claimedShare);
-  const overview = portalsOverview(db);
   const trend = assessmentTrend(db);
   const activity = recentActivity(db);
 
   return (
     <Page>
-      <PageHeader title="Home" description="Where the fleet's Portals, Applications, Repositories, and Assessments stand, what changed, and what needs someone's attention." />
+      <PageHeader title="Home" description="Where the fleet's Repositories and Assessments stand, what changed, and what needs someone's attention." />
 
-      <div className={styles.row} data-columns="3">
+      <div className={styles.row} data-columns="2">
         <Panel title="Repositories" description="Enabled Repositories, and whether each has a SEAL application.">
           {summary.repositories.empty ? (
             <EmptyState
@@ -108,79 +103,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <Figures label="Assessments" figures={assessmentStats(summary.assessments, changes)} />
           )}
         </Panel>
-
-        <Panel title="Applications" description="Registered Applications, those DE Web couldn't determine a rendering for, and Portals in Production.">
-          {summary.applications.empty ? (
-            <EmptyState
-              title="No Applications yet"
-              icon="network"
-              action={
-                <>
-                  <ButtonLink href="/portals/new" variant="secondary" icon="plus">
-                    Create Portal
-                  </ButtonLink>
-                  <ButtonLink href="/applications/new" variant="secondary" icon="plus">
-                    Add application
-                  </ButtonLink>
-                </>
-              }
-            >
-              Create a Portal, then add the Applications its menu points at.
-            </EmptyState>
-          ) : (
-            <Figures
-              label="Applications"
-              figures={[
-                { label: "Applications", value: figure(summary.applications.applications), change: changes.applications!, href: applicationsHref({ portal: "all" }) },
-                { label: "Undetermined rendering", value: figure(summary.applications.undetermined), change: changes.undeterminedRendering!, href: applicationsHref({ portal: "all", rendering: "undetermined" }) },
-                { label: "Production Portals", value: figure(summary.applications.productionPortals), change: changes.productionPortals!, href: portalsHref({ tab: "production" }) },
-              ]}
-            />
-          )}
-        </Panel>
       </div>
 
       <div className={styles.row} data-columns="2">
-        <Panel
-          title="Portals"
-          description="In Production first, with their Applications and when their experience was last saved."
-          actions={
-            overview.total > overview.portals.length ? (
-              <ButtonLink href={PORTALS_HREF} size="sm" variant="tertiary">
-                {`View all ${overview.total} Portals`}
-              </ButtonLink>
-            ) : undefined
-          }
-          flush={overview.portals.length > 0}
-        >
-          {overview.portals.length > 0 ? (
-            <ul className={styles.portals} aria-label="Portals">
-              {overview.portals.map((portal) => (
-                <li key={portal.publicId} data-portal-row={portal.publicId}>
-                  <span className={styles.portalName}>
-                    <Link href={portalHref(portal.publicId)}>{portal.label}</Link>
-                    <Status state={portal.lifecycle} label={PORTAL_LIFECYCLE_LABELS[portal.lifecycle]} size="sm" />
-                  </span>
-                  <span className={styles.muted}>{countLabel(portal.applications, "Application")}</span>
-                  <span className={styles.muted}>
-                    {portal.savedAt ? (
-                      <>
-                        Saved <RelativeTime value={portal.savedAt} />
-                      </>
-                    ) : (
-                      "Not saved yet"
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState title="No Portals yet" icon="network" action={<NewPortalLink variant="secondary">Create Portal</NewPortalLink>}>
-              A Portal is the configuration its team owns: its experience, its menu, and its lifecycle.
-            </EmptyState>
-          )}
-        </Panel>
-
         <Panel title="Assessment trend" description="Evaluations completed each week, by conclusion, over the last eight weeks.">
           <BarChart
             id="assessment-trend"
@@ -191,10 +116,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             empty="No Evaluation completed in the last eight weeks."
           />
         </Panel>
-      </div>
 
-      <div className={styles.row} data-columns="2">
-        <Panel title="Recent activity" description="The latest changes to Portals, Applications, and Runs." flush={activity.length > 0}>
+        <Panel title="Recent activity" description="The latest finished Runs." flush={activity.length > 0}>
           {activity.length > 0 ? (
             <ol className={styles.activity} aria-label="Recent activity">
               {activity.map((item) => (
@@ -203,48 +126,43 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                     {ACTIVITY_LABELS[item.kind]} <Link href={item.record.href}>{item.record.name}</Link>
                   </span>
                   <span className={styles.muted}>
-                    {item.actor ? `by ${item.actor} · ` : ""}
                     <RelativeTime value={item.at} />
                   </span>
                 </li>
               ))}
             </ol>
           ) : (
-            <EmptyState title="Nothing has happened yet">Created Portals and Applications, saved experiences, and finished Runs appear here.</EmptyState>
+            <EmptyState title="Nothing has happened yet">Finished Runs appear here.</EmptyState>
           )}
         </Panel>
+      </div>
 
-        <div id="needs-attention" className={styles.attention}>
-          <Panel title="Needs attention" description={items.length > 0 ? countLabel(items.length, "problem") : undefined} flush>
-            {shown.length > 0 ? (
-              <Table
-                label="Needs attention"
-                head={
-                  <>
-                    <Th>Problem</Th>
-                    <Th>Record</Th>
-                    <Th>Since</Th>
-                  </>
-                }
-              >
-                {shown.map((item) => (
-                  <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : "evaluation" in item ? item.evaluation.publicId : item.kind}`} item={item} refreshMinutes={config.deConsole.refreshMinutes} />
-                ))}
-              </Table>
-            ) : (
-              <EmptyState title="Nothing needs attention">{"Home checks each Assessment's latest Run and Evaluation, and the DE Console import."}</EmptyState>
-            )}
-          </Panel>
-          <Pagination label="Needs attention pages" page={page} pages={pages} href={(number) => (number === 1 ? "/#needs-attention" : `/?page=${number}#needs-attention`)} />
-        </div>
+      <div id="needs-attention" className={styles.attention}>
+        <Panel title="Needs attention" description={items.length > 0 ? countLabel(items.length, "problem") : undefined} flush>
+          {shown.length > 0 ? (
+            <Table
+              label="Needs attention"
+              head={
+                <>
+                  <Th>Problem</Th>
+                  <Th>Record</Th>
+                  <Th>Since</Th>
+                </>
+              }
+            >
+              {shown.map((item) => (
+                <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : "evaluation" in item ? item.evaluation.publicId : item.kind}`} item={item} refreshMinutes={config.deConsole.refreshMinutes} />
+              ))}
+            </Table>
+          ) : (
+            <EmptyState title="Nothing needs attention">{"Home checks each Assessment's latest Run and Evaluation, and the DE Console import."}</EmptyState>
+          )}
+        </Panel>
+        <Pagination label="Needs attention pages" page={page} pages={pages} href={(number) => (number === 1 ? "/#needs-attention" : `/?page=${number}#needs-attention`)} />
       </div>
 
       <Panel title="Quick actions">
         <div className={styles.actions} role="group" aria-label="Quick actions">
-          <ButtonLink href="/applications/new" variant="secondary" icon="plus">
-            Add application
-          </ButtonLink>
-          <NewPortalLink variant="secondary">Create Portal</NewPortalLink>
           <ButtonLink href="/assessments/new" variant="secondary" icon="checklist">
             New Assessment
           </ButtonLink>
@@ -265,11 +183,6 @@ const TREND_SERIES: BarSeries[] = [
 ];
 
 const ACTIVITY_LABELS: Record<ActivityKind, string> = {
-  portal_created: "Portal created:",
-  portal_promoted: "Promoted to Production:",
-  portal_returned: "Returned to Prototype:",
-  experience_saved: "Experience saved:",
-  application_created: "Application added:",
   run_completed: "Run finished:",
   run_failed: "Run failed:",
 };

@@ -17,7 +17,7 @@ const loadInitiative = cache((publicId: string) => findInitiative(getDb(), publi
 
 export async function generateMetadata({ params }: { params: Promise<{ initiativeId: string }> }): Promise<Metadata> {
   const initiative = loadInitiative((await params).initiativeId);
-  return { title: initiative ? (initiative.systemOwned || initiative.deWeb ? `Releases · ${initiative.name}` : `Edit ${initiative.name}`) : "Assessment not found" };
+  return { title: initiative ? (initiative.systemOwned ? `Releases · ${initiative.name}` : `Edit ${initiative.name}`) : "Assessment not found" };
 }
 
 export default async function EditInitiativePage({ params }: { params: Promise<{ initiativeId: string }> }) {
@@ -30,8 +30,8 @@ export default async function EditInitiativePage({ params }: { params: Promise<{
   const releaseIds = selectedReleases(db, initiative.id).map(({ release }) => release.publicId);
   const assessed = listAssessments(db, initiative.id).length > 0;
 
-  // Salt Patterns and DE Web: DE FabLab owns their name, objective, and targets; only their Releases are chosen here.
-  if (initiative.systemOwned || initiative.deWeb) {
+  // Salt Patterns: DE FabLab owns its name, objective, and template targets; only its Releases are chosen here.
+  if (initiative.systemOwned) {
     return (
       <Page width="form">
         <PageHeader
@@ -40,7 +40,7 @@ export default async function EditInitiativePage({ params }: { params: Promise<{
             { href: `/assessments/${initiative.publicId}`, label: initiative.name },
           ]}
           title="Select Releases"
-          description={initiative.systemOwned ? "Changes apply to template versions accepted or re-checked from now on." : "Changes apply to Applications created or re-assessed from now on."}
+          description="Changes apply to template versions accepted or re-checked from now on."
         />
         <ReleaseSelectionForm
           action={updateReleaseSelections.bind(null, initiative.publicId)}

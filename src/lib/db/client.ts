@@ -7,7 +7,6 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { getConfig } from "@/lib/config";
-import { backfillPortalSlugs, carryMenus } from "./backfills";
 import * as schema from "./schema";
 
 export type Schema = typeof schema;
@@ -40,8 +39,7 @@ export function openDatabase(file: string): Db {
  * foreign key refuses. SQLite can switch enforcement only outside a
  * transaction, and Drizzle applies every pending migration in one, so
  * enforcement is off for the run; a rebuilding migration checks every foreign
- * key before it ends, so a broken reference rolls the whole run back. Then it
- * fills in the data SQL can't compute (backfills.ts).
+ * key before it ends, so a broken reference rolls the whole run back.
  */
 export function migrateDatabase(db: Db, migrationsFolder = MIGRATIONS_FOLDER): void {
   if (!hasMigrations(migrationsFolder)) return;
@@ -52,8 +50,6 @@ export function migrateDatabase(db: Db, migrationsFolder = MIGRATIONS_FOLDER): v
   } finally {
     if (enforced) db.$client.pragma("foreign_keys = ON");
   }
-  backfillPortalSlugs(db.$client);
-  carryMenus(db.$client);
 }
 
 /** Number of committed migrations not yet applied to this database. */

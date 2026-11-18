@@ -56,12 +56,6 @@ export const initiatives = sqliteTable(
      * design decision 2). Operators choose its Releases, nothing else.
      */
     systemOwned: integer("system_owned", { mode: "boolean" }).notNull().default(false),
-    /**
-     * Set on the DE Web initiative, which DE FabLab owns and which assesses
-     * one Application's repository per Run (make-applications-first-class,
-     * design decision 6). It selects no sources: each launch names its own.
-     */
-    deWeb: integer("de_web", { mode: "boolean" }).notNull().default(false),
     lockVersion: lockVersion(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -73,7 +67,6 @@ export const initiatives = sqliteTable(
     check("initiatives_objective", sql`length(${t.objective}) <= 2000`),
     check("initiatives_selection_mode", sql.raw(`selection_mode IN (${sqlList(SELECTION_MODES)})`)),
     check("initiatives_system_owned", sql`${t.systemOwned} IN (0, 1)`),
-    check("initiatives_de_web", sql`${t.deWeb} IN (0, 1) AND NOT (${t.deWeb} = 1 AND (${t.systemOwned} = 1 OR ${t.claimRepositorySourceId} IS NOT NULL))`),
   ],
 );
 

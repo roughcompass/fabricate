@@ -1,19 +1,8 @@
 @layer components {
   .nav { flex: 1 1 auto; min-height: 0; padding: var(--space-2); overflow-y: auto; }
 
-  /*
-   * One menu at a time: Runtime Configuration's sub-menu on its pages, the
-   * primary menu everywhere else or after Show all sections. Without
-   * JavaScript, Show all sections targets the primary menu, which then takes
-   * over.
-   */
   .menu { display: flex; flex-direction: column; }
   .list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
-  .menu:focus { outline: none; }
-  .nav[data-view="submenu"] .menu { display: none; }
-  .nav[data-view="menu"] .submenu { display: none; }
-  .nav:has(.menu:target) .menu { display: flex; }
-  .nav:has(.menu:target) .submenu { display: none; }
 
   /* Sets each group of the primary menu apart from the one before it. */
   .divider { width: 100%; height: 1px; margin: var(--space-3) 0; border: 0; background: var(--color-border-subtle); }
@@ -36,25 +25,8 @@
   }
   .icon { flex: none; color: var(--color-text-secondary); }
   .label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chevron { flex: none; color: var(--color-text-tertiary); }
 
-  /* The sub-menu's heading: Show all sections, then the section's name, centered. */
-  .head { display: grid; grid-template-columns: var(--size-control-md) minmax(0, 1fr) var(--size-control-md); align-items: center; min-height: var(--size-control-md); margin-bottom: var(--space-1); }
-  .back {
-    display: inline-grid;
-    place-items: center;
-    width: var(--size-control-md);
-    height: var(--size-control-md);
-    border-radius: var(--radius-md);
-    color: var(--color-text-secondary);
-
-    &:hover { background: var(--color-bg-muted); color: var(--color-text); }
-    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
-  }
-  .heading { overflow: hidden; font-weight: var(--font-weight-medium); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-
-  /* A group's caption: Assessments in the primary menu, or a Portal or Identity in the sub-menu. */
-  .group + .group { margin-top: var(--space-4); }
+  /* A group's caption, such as Assessments. */
   .groupHeading {
     overflow: hidden;
     margin: 0 0 var(--space-1);

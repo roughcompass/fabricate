@@ -1,10 +1,9 @@
 @layer pages {
   /* Home's rows of panels (home spec, "Home is laid out as a dashboard"): side by side at equal heights, stacked on a narrow content column. */
   .row { display: grid; gap: var(--space-4); align-items: stretch; }
-  .row[data-columns="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .row[data-columns="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   @container content (max-width: 1023px) {
-    .row[data-columns="3"], .row[data-columns="2"] { grid-template-columns: minmax(0, 1fr); }
+    .row[data-columns="2"] { grid-template-columns: minmax(0, 1fr); }
   }
 
   /* A group's figures, two per row. */
@@ -18,12 +17,10 @@
   .change { color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
   .muted { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
 
-  /* The Portals overview and Recent activity: one row per entry. */
-  .portals, .activity { margin: 0; padding: 0; list-style: none; }
-  .portals li, .activity li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
-  .portals li:last-child, .activity li:last-child { border-bottom: 0; }
-  .portalName { display: inline-flex; flex: 1 1 auto; align-items: center; gap: var(--space-2); min-width: 0; font-weight: var(--font-weight-medium); }
-  .activity li { justify-content: space-between; }
+  /* Recent activity: one row per entry. */
+  .activity { margin: 0; padding: 0; list-style: none; }
+  .activity li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
+  .activity li:last-child { border-bottom: 0; }
   .activityWhat { min-width: 0; overflow-wrap: anywhere; }
 
   /* Needs attention keeps its pagination under its panel, and stretches with its row. */

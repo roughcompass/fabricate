@@ -5,11 +5,11 @@ import { demoEnabled } from "@/lib/demo/guard";
 import styles from "./not-found.module.css";
 
 /**
- * A running application that is no longer available: deleted, reset, another
- * visitor's, or opened from a share link that no longer resolves. It renders
+ * A running application that is no longer available: an unknown template, or
+ * a share link that no longer resolves. It renders
  * full screen, without the operator shell, and offers a way back
  * (page-patterns spec, "Every link opens the page it names"). While the demo
- * is disabled, the way back is the Assessments list.
+ * is disabled, the way back is the Assessments list; otherwise, Salt Patterns.
  */
 export default function RunNotFound() {
   const demo = demoEnabled();
@@ -20,9 +20,9 @@ export default function RunNotFound() {
           <Icon name="help" size={20} />
         </span>
         <h1 className={styles.title}>Application not available</h1>
-        <p className={styles.text}>This link no longer opens an application. The application may have been deleted, or the demo may have been reset.</p>
-        <Link href={demo ? "/applications" : "/assessments"} {...buttonProps("primary")}>
-          {demo ? "Go to Applications" : "Go to Assessments"}
+        <p className={styles.text}>This link no longer opens an application. Its template may have been removed, or the demo may have been reset.</p>
+        <Link href={demo ? "/templates" : "/assessments"} {...buttonProps("primary")}>
+          {demo ? "Go to Salt Patterns" : "Go to Assessments"}
         </Link>
       </div>
     </main>
