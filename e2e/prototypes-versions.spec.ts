@@ -1,6 +1,10 @@
 import { expect, test } from "./support/fixtures";
+import runtime from "../src/lib/prototypes/runtime-manifest.json";
 import { fixturePrototype, keepOne, previewFrame, refineEach, waitForAudit, waitForFrame } from "./support/prototypes";
 import { waitForHydration } from "./support/shell";
+
+/** The Salt release DE FabLab renders and checks with. */
+const SALT = runtime.packages["@salt-ds/core"];
 
 // prototypes/versions spec: forking, comparing, and accepting.
 
@@ -134,7 +138,7 @@ test("accepts version 1 as a Payments template, then updates it to version 2, th
   await expect(page.locator("[data-template-version='2']")).toContainText("Maya's team (unverified)");
   await expect(page.locator("[data-template-version='1']")).toContainText("Exception-first queue v1");
   await expect(page.locator("[data-template-version='1']")).toContainText("Anonymous visitor (unverified)");
-  await expect(page.locator("[data-template-version='1']")).toContainText("Salt 1.73.0");
+  await expect(page.locator("[data-template-version='1']")).toContainText(`Salt ${SALT}`);
   await expect(page.locator("[data-template-version='1']")).toContainText("Checks v1");
   await page.goBack();
   await waitForHydration(page);

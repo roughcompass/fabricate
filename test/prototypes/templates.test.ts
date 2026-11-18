@@ -13,6 +13,7 @@ import { versionsOf } from "@/lib/prototypes/prototypes";
 import { ANONYMOUS, type Acceptance, acceptVersion, eligibility, liveTemplates, previewPng, templateBySlug, validateAcceptance, withdrawTemplate } from "@/lib/prototypes/templates";
 import { keepVariant } from "@/lib/prototypes/variants";
 import { ensurePrototypesWorkspace } from "@/lib/prototypes/workspace";
+import { RUNTIME } from "@/lib/prototypes/render";
 import { orchestrateGeneration } from "@/workflows/prototypes/orchestrate";
 import { createPrototypesTestDb } from "../support/prototypes-db";
 
@@ -82,7 +83,7 @@ describe("templates from prototypes", () => {
     expect(version.snapshot).toMatchObject({ versionId, number: 1, prototypeName: "Exception-first queue", personas: [{ name: "Maya Lindqvist" }] });
     expect(version.snapshot.sampleData?.source).toContain("payments");
     expect(version.shell.appName).toBe("Meridian Corporate Banking");
-    expect(version.reproducibility).toEqual({ saltRelease: "1.73.0", registryRelease: expect.stringMatching(/^1\.73\.0/), kitVersion: expect.any(String), checksVersion: CHECKS_VERSION, checkDigest: checkDigest(version.snapshot.gates) });
+    expect(version.reproducibility).toEqual({ saltRelease: RUNTIME.packages["@salt-ds/core"], registryRelease: expect.stringContaining(RUNTIME.packages["@salt-ds/core"]!), kitVersion: expect.any(String), checksVersion: CHECKS_VERSION, checkDigest: checkDigest(version.snapshot.gates) });
     expect(version.reproducibility.checkDigest).toMatch(/^[0-9a-f]{64}$/);
 
     await connection.db.update(versions).set({ audit: null }).where(eq(versions.id, versionId));

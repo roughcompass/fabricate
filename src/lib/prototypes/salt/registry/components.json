@@ -1,6 +1,6 @@
 {
-  "generated_at": "1.73.0",
-  "version": "1.73.0",
+  "generated_at": "1.75.0",
+  "version": "1.75.0",
   "components": [
     {
       "id": "component.accordion",
@@ -13,7 +13,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Accordion displays a panel that the user can expand or collapse to show or hide content and control the complexity of a given view.",
       "status": "stable",
@@ -238,7 +238,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.avatar",
@@ -251,7 +251,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Avatar is a graphical element that you can use to represent a person, group, entity or communication channel.",
       "status": "stable",
@@ -443,7 +443,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.avatar-group",
@@ -455,7 +455,7 @@
       "package": {
         "name": "@salt-ds/lab",
         "status": "lab",
-        "since": "1.0.0-alpha.106"
+        "since": "1.0.0-alpha.108"
       },
       "summary": "AvatarGroup displays multiple Avatar components in a compact horizontal stack of overlapping avatars, representing users, entities or objects. When space is limited, an AvatarGroupCount indicates how many members are hidden.",
       "status": "lab",
@@ -604,7 +604,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.badge",
@@ -617,7 +617,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Badge is an alphanumeric annotation. It appears either inline or in the top-right corner of an element.",
       "status": "stable",
@@ -780,7 +780,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.banner",
@@ -795,7 +795,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Banner is a type of notification that displays a message or provides feedback related to the user’s current workflow, spanning the page or container horizontally. It can communicate new information, errors, warnings or successful completion of a process or task.",
       "status": "stable",
@@ -1014,7 +1014,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.border-layout",
@@ -1028,7 +1028,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "BorderLayout manages the top-level arrangement of your application, website or widget by positioning elements such as a footer, header and side navigation around the main content area. BorderLayout builds on top of GridLayout, defining five distinct regions, of which four surround the main content region. This layout is best for entire website pages or application screens with at least one additional region alongside the main area.",
       "status": "stable",
@@ -1217,7 +1217,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.breadcrumbs",
@@ -1229,7 +1229,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Breadcrumbs display a secondary navigation trail that helps users understand their current location within a hierarchy.",
       "status": "stable",
@@ -1238,8 +1238,7 @@
       ],
       "tags": [
         "breadcrumb trail",
-        "secondary navigation",
-        "breadcrumbs"
+        "secondary navigation"
       ],
       "when_to_use": [
         "To show a user's current location within a hierarchy when they navigate related pages or drill down into data.",
@@ -1275,9 +1274,7 @@
         ]
       },
       "tokens": [],
-      "patterns": [
-        "Breadcrumbs"
-      ],
+      "patterns": [],
       "deprecations": [],
       "examples": [
         {
@@ -1389,7 +1386,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.button",
@@ -1401,7 +1398,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Button is an interactive component that allows the user to execute an action. Button comes in three distinct appearances: solid, bordered, and transparent. These styles provide greater choice and flexibility for establishing hierarchy and affordance within a UI. You can display a button with or without a text description or icon.",
       "status": "stable",
@@ -1640,7 +1637,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.calendar",
@@ -1649,7 +1646,7 @@
       "package": {
         "name": "@salt-ds/date-components",
         "status": "stable",
-        "since": "1.1.2"
+        "since": "1.1.4"
       },
       "summary": "Calendar enables users to quickly navigate to and select one or a range of dates. Currently, all date-based controls need to be wrapped in a LocalizationProvider",
       "status": "stable",
@@ -1871,7 +1868,7 @@
             "with today button"
           ],
           "complexity": "basic",
-          "code": "import { Button, Divider, StackLayout, useAriaAnnouncer } from \"@salt-ds/core\";\nimport {\n  Calendar,\n  CalendarGrid,\n  CalendarNavigation,\n  type UseCalendarSelectionSingleProps,\n  useLocalization,\n} from \"@salt-ds/date-components\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const TodayButton = (): ReactElement => {\n  const { dateAdapter } = useLocalization();\n  const { announce } = useAriaAnnouncer();\n  const today = dateAdapter.today();\n  const [selectedDate, setSelectedDate] =\n    useState<UseCalendarSelectionSingleProps[\"selectedDate\"]>(null);\n  return (\n    <Calendar\n      selectionVariant=\"single\"\n      selectedDate={selectedDate}\n      defaultVisibleMonth={dateAdapter.startOf(today, \"month\")}\n      onSelectionChange={(_event, newSelectedDate) =>\n        setSelectedDate(newSelectedDate)\n      }\n    >\n      <StackLayout gap={0}>\n        <CalendarNavigation />\n        <CalendarGrid />\n        <Divider />\n        <Button\n          aria-label={`Change Date, ${dateAdapter.format(today, \"dddd DD MMMM YYYY\")}`}\n          style={{ margin: \"var(--salt-spacing-100)\" }}\n          sentiment=\"accented\"\n          appearance=\"solid\"\n          onClick={() => {\n            setSelectedDate(today);\n            announce(\n              `${dateAdapter.format(today, \"dddd D MMMM YYYY\")}, selected`,\n            );\n          }}\n        >\n          Today\n        </Button>\n      </StackLayout>\n    </Calendar>\n  );\n};\n",
+          "code": "import { Button, Divider, StackLayout, useAriaAnnouncer } from \"@salt-ds/core\";\nimport {\n  Calendar,\n  CalendarGrid,\n  CalendarNavigation,\n  type UseCalendarSelectionSingleProps,\n  useLocalization,\n} from \"@salt-ds/date-components\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const TodayButton = (): ReactElement => {\n  const { dateAdapter } = useLocalization();\n  const { announce } = useAriaAnnouncer();\n  const today = dateAdapter.today();\n  const [selectedDate, setSelectedDate] =\n    useState<UseCalendarSelectionSingleProps[\"selectedDate\"]>(null);\n  return (\n    <Calendar\n      selectionVariant=\"single\"\n      selectedDate={selectedDate}\n      defaultVisibleMonth={dateAdapter.startOf(today, \"month\")}\n      onSelectionChange={(_event, newSelectedDate) =>\n        setSelectedDate(newSelectedDate)\n      }\n    >\n      <StackLayout gap={0}>\n        <CalendarNavigation />\n        <CalendarGrid />\n        <Divider />\n        <Button\n          aria-label={`Today, ${dateAdapter.format(today, \"dddd DD MMMM YYYY\")}`}\n          style={{ margin: \"var(--salt-spacing-100)\" }}\n          sentiment=\"accented\"\n          appearance=\"solid\"\n          onClick={() => {\n            setSelectedDate(today);\n            announce(\n              `${dateAdapter.format(today, \"dddd DD MMMM YYYY\")}, selected`,\n            );\n          }}\n        >\n          Today\n        </Button>\n      </StackLayout>\n    </Calendar>\n  );\n};\n",
           "source_url": "/salt/components/calendar/examples",
           "package": "@salt-ds/date-components",
           "target_type": "component",
@@ -1908,7 +1905,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.card",
@@ -1919,7 +1916,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Card, LinkCard, and InteractableCard are visually distinct containers that group information about a single subject. Use LinkCard for navigation and InteractableCard for actions or selection.",
       "status": "stable",
@@ -2267,7 +2264,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.carousel",
@@ -2438,7 +2435,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.chart",
@@ -2449,7 +2446,7 @@
       "package": {
         "name": "@salt-ds/highcharts-theme",
         "status": "stable",
-        "since": "1.0.6"
+        "since": "1.0.7"
       },
       "summary": "Chart is a visually rich way to represent datasets, built on the Highcharts library to support a wide range of graph types and accessibility features while leveraging well-documented APIs for flexible integration and customization.",
       "status": "stable",
@@ -2684,7 +2681,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.checkbox",
@@ -2697,7 +2694,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Checkbox and CheckboxGroup allow users to select or deselect a specific option. A checkbox can stand alone to control a single option or form part of a checkbox group to control multiple options.",
       "status": "stable",
@@ -2990,7 +2987,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.collapsible",
@@ -3001,7 +2998,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Collapsible enables content to be either collapsed (hidden) or expanded (visible). It has two elements: a trigger and a panel whose visibility is controlled by the button.",
       "status": "stable",
@@ -3098,7 +3095,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.combo-box",
@@ -3113,7 +3110,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "ComboBox helps users to select an item from a large list of options without scrolling. The typeahead functionality makes this selection process quicker and easier, while reducing errors. Users see a list of options when they click on the component and then filter the list as they type. Once they’ve made a selection, it populates the field and the overlay list closes.",
       "status": "stable",
@@ -3466,7 +3463,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.country-symbol",
@@ -3631,7 +3628,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.data-grid",
@@ -3642,7 +3639,7 @@
       "package": {
         "name": "@salt-ds/ag-grid-theme",
         "status": "stable",
-        "since": "2.10.2"
+        "since": "2.11.0"
       },
       "summary": "Data grid is an interactive table for efficiently displaying data, supporting advanced features such as frozen columns, editable cells, custom cell renderers and flexible selection capabilities for rows and columns.",
       "status": "stable",
@@ -3897,7 +3894,7 @@
             "\"no data\" overlay"
           ],
           "complexity": "basic",
-          "code": "import {\n  Button,\n  DialogActions,\n  DialogContent,\n  DialogHeader,\n} from \"@salt-ds/core\";\nimport { AgGridReact, type AgGridReactProps } from \"ag-grid-react\";\n// refer to https://github.com/jpmorganchase/salt-ds/tree/main/site/src/examples/ag-grid-theme/data\nimport { defaultColumns } from \"./data\";\nimport { useAgGridHelpers } from \"./useAgGridHelpers\";\n\n// Assembling a custom Dialog so it's not floating to the center of the full screen.\nconst CustomDialog = () => {\n  return (\n    <div\n      style={{\n        paddingBlock: \"var(--salt-spacing-300)\",\n        border:\n          \"var(--salt-size-fixed-100) var(--salt-borderStyle-solid) var(--salt-status-error-borderColor)\",\n      }}\n    >\n      <DialogHeader status=\"error\" header=\"Can`t move file\" />\n      <DialogContent>\n        You don&apos;t have permission to move or delete this file.\n      </DialogContent>\n      <DialogActions>\n        <Button>Help Desk</Button>\n        <Button sentiment=\"accented\">Reload</Button>\n      </DialogActions>\n    </div>\n  );\n};\n\nexport const NoDataOverlay = (props: AgGridReactProps) => {\n  // We've created a local custom hook to set the rows and column sizes.\n  // refer to https://github.com/jpmorganchase/salt-ds/blob/main/site/src/examples/ag-grid-theme/useAgGridHelpers.ts\n  const { agGridProps, containerProps } = useAgGridHelpers();\n\n  return (\n    <div style={{ height: 800, width: 800 }} {...containerProps}>\n      <AgGridReact\n        {...agGridProps}\n        {...props}\n        columnDefs={defaultColumns}\n        rowData={[]}\n        noRowsOverlayComponent={CustomDialog}\n      />\n    </div>\n  );\n};\n",
+          "code": "import {\n  Button,\n  DialogActions,\n  DialogContent,\n  DialogHeader,\n} from \"@salt-ds/core\";\nimport { AgGridReact, type AgGridReactProps } from \"ag-grid-react\";\n// refer to https://github.com/jpmorganchase/salt-ds/tree/main/site/src/examples/ag-grid-theme/data\nimport { defaultColumns } from \"./data\";\nimport { useAgGridHelpers } from \"./useAgGridHelpers\";\n\n// Assembling a custom Dialog so it's not floating to the center of the full screen.\nconst CustomDialog = () => {\n  return (\n    <div\n      style={{\n        paddingBlock: \"var(--salt-spacing-300)\",\n        border:\n          \"var(--salt-size-fixed-100) var(--salt-borderStyle-solid) var(--salt-status-error-borderColor)\",\n        // Matching Salt's Dialog\n        borderRadius: \"var(--salt-palette-corner, 0)\",\n        background: \"var(--salt-container-primary-background)\",\n        boxShadow: \"var(--salt-overlayable-shadow-modal)\",\n      }}\n    >\n      <DialogHeader status=\"error\" header=\"Can`t move file\" />\n      <DialogContent>\n        You don&apos;t have permission to move or delete this file.\n      </DialogContent>\n      <DialogActions>\n        <Button>Help Desk</Button>\n        <Button sentiment=\"accented\">Reload</Button>\n      </DialogActions>\n    </div>\n  );\n};\n\nexport const NoDataOverlay = (props: AgGridReactProps) => {\n  // We've created a local custom hook to set the rows and column sizes.\n  // refer to https://github.com/jpmorganchase/salt-ds/blob/main/site/src/examples/ag-grid-theme/useAgGridHelpers.ts\n  const { agGridProps, containerProps } = useAgGridHelpers();\n\n  return (\n    <div style={{ height: 800, width: 800 }} {...containerProps}>\n      <AgGridReact\n        {...agGridProps}\n        {...props}\n        columnDefs={defaultColumns}\n        rowData={[]}\n        noRowsOverlayComponent={CustomDialog}\n      />\n    </div>\n  );\n};\n",
           "source_url": "/salt/components/ag-grid-theme/examples",
           "package": "@salt-ds/ag-grid-theme",
           "target_type": "component",
@@ -4051,7 +4048,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.date-input",
@@ -4063,7 +4060,7 @@
       "package": {
         "name": "@salt-ds/date-components",
         "status": "stable",
-        "since": "1.1.2"
+        "since": "1.1.4"
       },
       "summary": "DateInputSingle and DateInputRange provide an editable field where users can enter a single date or a date range. Currently, all date-based controls need to be wrapped in a LocalizationProvider",
       "status": "stable",
@@ -4284,7 +4281,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.date-picker",
@@ -4293,7 +4290,7 @@
       "package": {
         "name": "@salt-ds/date-components",
         "status": "stable",
-        "since": "1.1.2"
+        "since": "1.1.4"
       },
       "summary": "DatePicker is composed of both a DateInput and Calendar controls. They allow users to select a single date, providing a flexible and intuitive way to make a selection.",
       "status": "stable",
@@ -4488,7 +4485,7 @@
             "with today button"
           ],
           "complexity": "basic",
-          "code": "import {\n  Button,\n  Divider,\n  FlexItem,\n  FlexLayout,\n  FormField,\n  FormFieldLabel as FormLabel,\n} from \"@salt-ds/core\";\nimport {\n  type DateInputSingleDetails,\n  DatePicker,\n  DatePickerHelperText,\n  DatePickerOverlay,\n  DatePickerSingleGridPanel,\n  DatePickerSingleInput,\n  DatePickerTrigger,\n  type SingleDatePickerState,\n  type SingleDateSelection,\n  useDatePickerContext,\n  useLocalization,\n} from \"@salt-ds/date-components\";\nimport {\n  type ReactElement,\n  type SyntheticEvent,\n  useCallback,\n  useState,\n} from \"react\";\n\nconst TodayButton = () => {\n  const {\n    helpers: { select },\n  } = useDatePickerContext({\n    selectionVariant: \"single\",\n  }) as SingleDatePickerState;\n  const { dateAdapter } = useLocalization();\n  const today = dateAdapter.today();\n  return (\n    <div style={{ display: \"flex\" }}>\n      <Button\n        aria-label={`Change Date, ${dateAdapter.format(today, \"dddd DD MMMM YYYY\")}`}\n        style={{ margin: \"var(--salt-spacing-50)\", flexGrow: 1 }}\n        sentiment=\"accented\"\n        appearance=\"solid\"\n        onClick={(event: SyntheticEvent) => select(event, today)}\n      >\n        Select Today\n      </Button>\n    </div>\n  );\n};\n\nexport const SingleWithTodayButton = (): ReactElement => {\n  const { dateAdapter } = useLocalization();\n  const defaultHelperText = \"Date format DD MMM YYYY (e.g. 09 Jun 2024)\";\n  const errorHelperText = \"Please enter a valid date in DD MMM YYYY format\";\n  const [helperText, setHelperText] = useState(defaultHelperText);\n  const [validationStatus, setValidationStatus] = useState<\"error\" | undefined>(\n    undefined,\n  );\n  const handleSelectionChange = useCallback(\n    (\n      _event: SyntheticEvent,\n      date: SingleDateSelection | null,\n      details: DateInputSingleDetails | undefined,\n    ) => {\n      const { value, errors } = details || {};\n      console.log(\n        `Selected date: ${dateAdapter.isValid(date) ? dateAdapter.format(date, \"DD MMM YYYY\") : date}`,\n      );\n      if (errors?.length) {\n        console.log(\n          `Error(s): ${errors\n            .map(({ type, message }) => `type=${type} message=${message}`)\n            .join(\",\")}`,\n        );\n        if (value) {\n          console.log(`Original Value: ${value}`);\n        }\n      }\n      if (errors?.length && details?.value?.length) {\n        setHelperText(`${errorHelperText} - ${errors[0].message}`);\n        setValidationStatus(\"error\");\n      } else {\n        setHelperText(defaultHelperText);\n        setValidationStatus(undefined);\n      }\n    },\n    [dateAdapter],\n  );\n\n  return (\n    <FormField style={{ width: \"256px\" }} validationStatus={validationStatus}>\n      <FormLabel>Select a date</FormLabel>\n      <DatePicker\n        selectionVariant=\"single\"\n        onSelectionChange={handleSelectionChange}\n      >\n        <DatePickerTrigger>\n          <DatePickerSingleInput />\n        </DatePickerTrigger>\n        <DatePickerOverlay>\n          <FlexLayout gap={0} direction=\"column\">\n            <FlexItem>\n              <Divider />\n            </FlexItem>\n            <FlexItem>\n              <DatePickerSingleGridPanel helperText={helperText} />\n            </FlexItem>\n            <FlexItem>\n              <Divider />\n            </FlexItem>\n            <FlexItem margin={1}>\n              <TodayButton />\n            </FlexItem>\n          </FlexLayout>\n        </DatePickerOverlay>\n        <DatePickerHelperText>{helperText}</DatePickerHelperText>\n      </DatePicker>\n    </FormField>\n  );\n};\n",
+          "code": "import {\n  Button,\n  Divider,\n  FlexItem,\n  FlexLayout,\n  FormField,\n  FormFieldLabel as FormLabel,\n} from \"@salt-ds/core\";\nimport {\n  type DateInputSingleDetails,\n  DatePicker,\n  DatePickerHelperText,\n  DatePickerOverlay,\n  DatePickerSingleGridPanel,\n  DatePickerSingleInput,\n  DatePickerTrigger,\n  type SingleDatePickerState,\n  type SingleDateSelection,\n  useDatePickerContext,\n  useLocalization,\n} from \"@salt-ds/date-components\";\nimport {\n  type ReactElement,\n  type SyntheticEvent,\n  useCallback,\n  useState,\n} from \"react\";\n\nconst TodayButton = () => {\n  const {\n    helpers: { select },\n  } = useDatePickerContext({\n    selectionVariant: \"single\",\n  }) as SingleDatePickerState;\n  const { dateAdapter } = useLocalization();\n  const today = dateAdapter.today();\n  return (\n    <div style={{ display: \"flex\" }}>\n      <Button\n        aria-label={`Select Today, ${dateAdapter.format(today, \"dddd DD MMMM YYYY\")}`}\n        style={{ margin: \"var(--salt-spacing-50)\", flexGrow: 1 }}\n        sentiment=\"accented\"\n        appearance=\"solid\"\n        onClick={(event: SyntheticEvent) => select(event, today)}\n      >\n        Select Today\n      </Button>\n    </div>\n  );\n};\n\nexport const SingleWithTodayButton = (): ReactElement => {\n  const { dateAdapter } = useLocalization();\n  const defaultHelperText = \"Date format DD MMM YYYY (e.g. 09 Jun 2024)\";\n  const errorHelperText = \"Please enter a valid date in DD MMM YYYY format\";\n  const [helperText, setHelperText] = useState(defaultHelperText);\n  const [validationStatus, setValidationStatus] = useState<\"error\" | undefined>(\n    undefined,\n  );\n  const handleSelectionChange = useCallback(\n    (\n      _event: SyntheticEvent,\n      date: SingleDateSelection | null,\n      details: DateInputSingleDetails | undefined,\n    ) => {\n      const { value, errors } = details || {};\n      console.log(\n        `Selected date: ${dateAdapter.isValid(date) ? dateAdapter.format(date, \"DD MMM YYYY\") : date}`,\n      );\n      if (errors?.length) {\n        console.log(\n          `Error(s): ${errors\n            .map(({ type, message }) => `type=${type} message=${message}`)\n            .join(\",\")}`,\n        );\n        if (value) {\n          console.log(`Original Value: ${value}`);\n        }\n      }\n      if (errors?.length && details?.value?.length) {\n        setHelperText(`${errorHelperText} - ${errors[0].message}`);\n        setValidationStatus(\"error\");\n      } else {\n        setHelperText(defaultHelperText);\n        setValidationStatus(undefined);\n      }\n    },\n    [dateAdapter],\n  );\n\n  return (\n    <FormField style={{ width: \"256px\" }} validationStatus={validationStatus}>\n      <FormLabel>Select a date</FormLabel>\n      <DatePicker\n        selectionVariant=\"single\"\n        onSelectionChange={handleSelectionChange}\n      >\n        <DatePickerTrigger>\n          <DatePickerSingleInput />\n        </DatePickerTrigger>\n        <DatePickerOverlay>\n          <FlexLayout gap={0} direction=\"column\">\n            <FlexItem>\n              <Divider />\n            </FlexItem>\n            <FlexItem>\n              <DatePickerSingleGridPanel helperText={helperText} />\n            </FlexItem>\n            <FlexItem>\n              <Divider />\n            </FlexItem>\n            <FlexItem margin={1}>\n              <TodayButton />\n            </FlexItem>\n          </FlexLayout>\n        </DatePickerOverlay>\n        <DatePickerHelperText>{helperText}</DatePickerHelperText>\n      </DatePicker>\n    </FormField>\n  );\n};\n",
           "source_url": "/salt/components/date-picker/examples",
           "package": "@salt-ds/date-components",
           "target_type": "component",
@@ -4616,7 +4613,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.dialog",
@@ -4630,7 +4627,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Dialog is a window that opens over the application content, focusing the user’s attention on a particular task or piece of information. It communicates new information, errors, warnings or successful completion of a process.",
       "status": "stable",
@@ -4868,7 +4865,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.divider",
@@ -4879,7 +4876,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Divider provides a thin, unobtrusive line for grouping elements and reinforcing visual hierarchy.",
       "status": "stable",
@@ -4970,7 +4967,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.drawer",
@@ -4982,7 +4979,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Drawer is a temporary, focused region that supports a small, self-contained action, such as choosing an option, confirming a decision, or entering a few fields, without leaving the current screen. It's designed to briefly pause the primary flow, allow the completion of tasks and then return directly to the prior context.",
       "status": "stable",
@@ -5033,7 +5030,33 @@
             "default"
           ],
           "complexity": "basic",
-          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const Default = (): ReactElement => {\n  const [openPrimary, setOpenPrimary] = useState(false);\n  const [openSecondary, setOpenSecondary] = useState(false);\n  const [openTertiary, setOpenTertiary] = useState(false);\n\n  return (\n    <StackLayout>\n      <Button onClick={() => setOpenPrimary(true)}>Open Primary Drawer</Button>\n      <Drawer\n        open={openPrimary}\n        onOpenChange={setOpenPrimary}\n        style={{ width: 300 }}\n      >\n        <DrawerHeader\n          header=\"Primary drawer\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={() => setOpenPrimary(false)}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <Text>Primary drawers sit on the container primary background.</Text>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button sentiment=\"accented\" onClick={() => setOpenPrimary(false)}>\n            Done\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n      <Button onClick={() => setOpenSecondary(true)}>\n        Open Secondary Drawer\n      </Button>\n      <Drawer\n        open={openSecondary}\n        onOpenChange={setOpenSecondary}\n        variant=\"secondary\"\n        style={{ width: 300 }}\n      >\n        <DrawerHeader\n          header=\"Secondary drawer\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={() => setOpenSecondary(false)}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <Text>\n            Secondary drawers sit on the container secondary background.\n          </Text>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button sentiment=\"accented\" onClick={() => setOpenSecondary(false)}>\n            Done\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n      <Button onClick={() => setOpenTertiary(true)}>\n        Open Tertiary Drawer\n      </Button>\n      <Drawer\n        open={openTertiary}\n        onOpenChange={setOpenTertiary}\n        variant=\"tertiary\"\n        style={{ width: 300 }}\n      >\n        <DrawerHeader\n          header=\"Tertiary drawer\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={() => setOpenTertiary(false)}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <Text>\n            Tertiary drawers sit on the container tertiary background.\n          </Text>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button sentiment=\"accented\" onClick={() => setOpenTertiary(false)}>\n            Done\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </StackLayout>\n  );\n};\n",
+          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const Default = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>Open Drawer</Button>\n      <Drawer open={open} onOpenChange={setOpen} style={{ width: 300 }}>\n        <DrawerHeader\n          header=\"Drawer title\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <Text>Drawer content goes here.</Text>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n",
+          "source_url": "/salt/components/drawer/examples",
+          "package": "@salt-ds/core",
+          "target_type": "component",
+          "target_name": "Drawer"
+        },
+        {
+          "id": "drawer.variants",
+          "title": "Variants",
+          "intent": [
+            "variants"
+          ],
+          "complexity": "basic",
+          "code": "import {\n  Button,\n  capitalize,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  type DrawerProps,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nconst DrawerTemplate = ({\n  variant = \"primary\",\n}: Pick<DrawerProps, \"variant\">): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>{variant}</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        variant={variant}\n        style={{ width: 300 }}\n      >\n        <DrawerHeader\n          header={`${capitalize(variant)} drawer`}\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <Text>\n            {capitalize(variant)} drawers sit on the container {variant}{\" \"}\n            background.\n          </Text>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n\nexport const Variants = (): ReactElement => (\n  <StackLayout gap={1}>\n    <DrawerTemplate variant=\"primary\" />\n    <DrawerTemplate variant=\"secondary\" />\n    <DrawerTemplate variant=\"tertiary\" />\n  </StackLayout>\n);\n",
+          "source_url": "/salt/components/drawer/examples",
+          "package": "@salt-ds/core",
+          "target_type": "component",
+          "target_name": "Drawer"
+        },
+        {
+          "id": "drawer.placement",
+          "title": "Best practices",
+          "intent": [
+            "best practices"
+          ],
+          "complexity": "basic",
+          "code": "import {\n  Button,\n  Display2,\n  Display3,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  FlexLayout,\n  FlowLayout,\n  FormField,\n  FormFieldHelperText,\n  FormFieldLabel,\n  H3,\n  Input,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { AgGridReact } from \"ag-grid-react\";\nimport { type ReactElement, useState } from \"react\";\nimport { useAgGridHelpers } from \"../ag-grid-theme/useAgGridHelpers\";\n\nconst placeholderText =\n  \"This placeholder text is provided to illustrate how content will appear within the component. The sentences are intended for demonstration only and do not convey specific information. Generic examples like this help review layout, spacing, and overall design. Adjust the wording as needed to fit your use case or display requirements.\";\n\nconst columns = [\n  {\n    headerName: \"Market Type\",\n    field: \"market\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n  },\n  {\n    headerName: \"AUC\",\n    field: \"auc\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n  },\n  {\n    headerName: \"Price 1\",\n    field: \"price1\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Threshold 1\",\n    field: \"threshold1\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Price 2\",\n    field: \"price2\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Threshold 2\",\n    field: \"threshold2\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Price 3\",\n    field: \"price3\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Threshold 3\",\n    field: \"threshold3\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Price 4\",\n    field: \"price4\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Threshold 4\",\n    field: \"threshold4\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n];\n\nconst defaultData = [\n  {\n    market: \"Australia\",\n    auc: \"$15,000,000,000\",\n    price1: \"1\",\n    threshold1: \"$10,000mm\",\n    price2: \"0.90\",\n    threshold2: \"$20,000mm\",\n    price3: \"0.75\",\n    threshold3: \"$20,000mm\",\n    price4: \"0.65\",\n    threshold4: \"$30,000mm\",\n  },\n];\n\nconst FormFieldExample = () => (\n  <FormField>\n    <FormFieldLabel>Label</FormFieldLabel>\n    <Input />\n    <FormFieldHelperText>Help text appears here</FormFieldHelperText>\n  </FormField>\n);\n\nconst SideContent = () => (\n  <StackLayout>\n    <Text>{placeholderText}</Text>\n    {Array.from({ length: 7 }, (_, index) => (\n      <FormFieldExample key={index} />\n    ))}\n  </StackLayout>\n);\n\nconst TopContent = () => (\n  <StackLayout>\n    <Text>{placeholderText}</Text>\n    <FlexLayout>\n      {Array.from({ length: 4 }, (_, index) => (\n        <FormFieldExample key={index} />\n      ))}\n    </FlexLayout>\n  </StackLayout>\n);\n\nconst BottomContent = () => {\n  const { containerProps, agGridProps } = useAgGridHelpers();\n\n  return (\n    <StackLayout gap={3}>\n      <div\n        {...containerProps}\n        style={{ height: \"calc(3 * var(--salt-size-base))\" }}\n      >\n        <AgGridReact\n          columnDefs={columns}\n          rowData={defaultData}\n          {...agGridProps}\n        />\n      </div>\n      <FlowLayout gap={1}>\n        <H3>Threshold Summary</H3>\n        <Text>(Projected Revenue)</Text>\n      </FlowLayout>\n      <FlowLayout justify=\"space-between\">\n        <StackLayout direction=\"row\" gap={3}>\n          <StackLayout gap={0}>\n            <Text>Below Threshold 1</Text>\n            <Display3>$1,000,000</Display3>\n          </StackLayout>\n          <StackLayout gap={0}>\n            <Text>Below Threshold 1 & 2</Text>\n            <Display3>$450,000</Display3>\n          </StackLayout>\n          <StackLayout gap={0}>\n            <Text>Below Threshold 2 & 3</Text>\n            <Display3>$0</Display3>\n          </StackLayout>\n          <StackLayout gap={0}>\n            <Text>Below Threshold 3 & 4</Text>\n            <Display3>$0</Display3>\n          </StackLayout>\n          <StackLayout gap={0}>\n            <Text>Total</Text>\n            <Display3>$1,450,000</Display3>\n          </StackLayout>\n        </StackLayout>\n        <StackLayout gap={0}>\n          <Text style={{ position: \"absolute\" }}>Blended bps</Text>\n          <Display2>0.968</Display2>\n        </StackLayout>\n      </FlowLayout>\n    </StackLayout>\n  );\n};\n\nconst LeftDrawer = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>left</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"left\"\n        style={{ width: 500 }}\n      >\n        <DrawerHeader\n          header=\"Left drawer\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <SideContent />\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n\nconst RightDrawer = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>right</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"right\"\n        style={{ width: 500 }}\n      >\n        <DrawerHeader\n          header=\"Right drawer\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <SideContent />\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n\nconst TopDrawer = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>top</Button>\n      <Drawer open={open} onOpenChange={setOpen} position=\"top\">\n        <DrawerHeader\n          header=\"Top drawer\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <TopContent />\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n\nconst BottomDrawer = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>bottom</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"bottom\"\n        style={{ height: \"max-content\" }}\n      >\n        <DrawerHeader\n          header=\"Marginal Tiering\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <BottomContent />\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Update Tier\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n\nexport const Placement = (): ReactElement => (\n  <StackLayout gap={1}>\n    <LeftDrawer />\n    <RightDrawer />\n    <TopDrawer />\n    <BottomDrawer />\n  </StackLayout>\n);\n",
           "source_url": "/salt/components/drawer/examples",
           "package": "@salt-ds/core",
           "target_type": "component",
@@ -5046,7 +5069,7 @@
             "header"
           ],
           "complexity": "basic",
-          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerHeader,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nconst placeholderText =\n  \"This placeholder text is provided to illustrate how content will appear within the component. The sentences are intended for demonstration only and do not convey specific information. Generic examples like this help review layout, spacing, and overall design. Adjust the wording as needed to fit your use case or display requirements. \";\n\nexport const Header = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>Open Drawer</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"right\"\n        style={{ width: 400 }}\n      >\n        <DrawerHeader\n          header=\"Check deposit #1278\"\n          description=\"Pending transaction review\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <StackLayout>\n            <Text>{placeholderText.repeat(4)}</Text>\n            <Text>{placeholderText.repeat(4)}</Text>\n          </StackLayout>\n        </DrawerContent>\n      </Drawer>\n    </>\n  );\n};\n",
+          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nconst placeholderText =\n  \"This placeholder text is provided to illustrate how content will appear within the component. The sentences are intended for demonstration only and do not convey specific information. Generic examples like this help review layout, spacing, and overall design. Adjust the wording as needed to fit your use case or display requirements. \";\n\nexport const Header = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>Open Drawer</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"right\"\n        style={{ width: 400 }}\n      >\n        <DrawerHeader\n          preheader=\"Payments\"\n          header=\"Check deposit #1278\"\n          description=\"Pending transaction review\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <StackLayout>\n            <Text>{placeholderText.repeat(4)}</Text>\n            <Text>{placeholderText.repeat(4)}</Text>\n          </StackLayout>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n",
           "source_url": "/salt/components/drawer/examples",
           "package": "@salt-ds/core",
           "target_type": "component",
@@ -5066,52 +5089,13 @@
           "target_name": "Drawer"
         },
         {
-          "id": "drawer.preheader",
-          "title": "Preheader",
+          "id": "drawer.resizable",
+          "title": "Resizable",
           "intent": [
-            "preheader"
+            "resizable"
           ],
           "complexity": "basic",
-          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerHeader,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nconst placeholderText =\n  \"This placeholder text is provided to illustrate how content will appear within the component. The sentences are intended for demonstration only and do not convey specific information. Generic examples like this help review layout, spacing, and overall design. Adjust the wording as needed to fit your use case or display requirements. \";\n\nexport const Preheader = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>Open Drawer</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"right\"\n        style={{ width: 400 }}\n      >\n        <DrawerHeader\n          preheader=\"Payments\"\n          header=\"Check deposit #1278\"\n          description=\"Pending transaction review\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <StackLayout>\n            <Text>{placeholderText.repeat(4)}</Text>\n          </StackLayout>\n        </DrawerContent>\n      </Drawer>\n    </>\n  );\n};\n",
-          "source_url": "/salt/components/drawer/examples",
-          "package": "@salt-ds/core",
-          "target_type": "component",
-          "target_name": "Drawer"
-        },
-        {
-          "id": "drawer.rightdrawer",
-          "title": "Right drawer usage example",
-          "intent": [
-            "right drawer usage example"
-          ],
-          "complexity": "basic",
-          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  FormField,\n  FormFieldHelperText,\n  FormFieldLabel,\n  Input,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nconst placeholderText =\n  \"This placeholder text is provided to illustrate how content will appear within the component. The sentences are intended for demonstration only and do not convey specific information. Generic examples like this help review layout, spacing, and overall design. Adjust the wording as needed to fit your use case or display requirements. \";\n\nconst FormFieldExample = () => (\n  <FormField>\n    <FormFieldLabel>Label</FormFieldLabel>\n    <Input />\n    <FormFieldHelperText>Help text appears here</FormFieldHelperText>\n  </FormField>\n);\n\nexport const RightDrawer = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>Open Right Drawer</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"right\"\n        style={{ width: 500 }}\n      >\n        <DrawerHeader\n          header=\"Section title\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <StackLayout>\n            <Text>{placeholderText}</Text>\n            {Array.from({ length: 7 }, (_, index) => (\n              <FormFieldExample key={index} />\n            ))}\n          </StackLayout>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n",
-          "source_url": "/salt/components/drawer/examples",
-          "package": "@salt-ds/core",
-          "target_type": "component",
-          "target_name": "Drawer"
-        },
-        {
-          "id": "drawer.topdrawer",
-          "title": "Top drawer usage example",
-          "intent": [
-            "top drawer usage example"
-          ],
-          "complexity": "basic",
-          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  FlexLayout,\n  FormField,\n  FormFieldHelperText,\n  FormFieldLabel,\n  Input,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nconst placeholderText =\n  \"This placeholder text is provided to illustrate how content will appear within the component. The sentences are intended for demonstration only and do not convey specific information. Generic examples like this help review layout, spacing, and overall design. Adjust the wording as needed to fit your use case or display requirements. \";\n\nconst FormFieldExample = () => (\n  <FormField>\n    <FormFieldLabel>Label</FormFieldLabel>\n    <Input />\n    <FormFieldHelperText>Help text appears here</FormFieldHelperText>\n  </FormField>\n);\n\nexport const TopDrawer = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>Open Top Drawer</Button>\n      <Drawer open={open} onOpenChange={setOpen} position=\"top\">\n        <DrawerHeader\n          header=\"Section title\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <StackLayout>\n            <Text>{placeholderText}</Text>\n            <FlexLayout>\n              {Array.from({ length: 4 }, (_, index) => (\n                <FormFieldExample key={index} />\n              ))}\n            </FlexLayout>\n          </StackLayout>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n",
-          "source_url": "/salt/components/drawer/examples",
-          "package": "@salt-ds/core",
-          "target_type": "component",
-          "target_name": "Drawer"
-        },
-        {
-          "id": "drawer.bottomdrawer",
-          "title": "Bottom drawer usage example",
-          "intent": [
-            "bottom drawer usage example"
-          ],
-          "complexity": "basic",
-          "code": "import {\n  Button,\n  Display2,\n  Display3,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  FlowLayout,\n  H3,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { AgGridReact } from \"ag-grid-react\";\nimport { type ReactElement, useState } from \"react\";\nimport { useAgGridHelpers } from \"../ag-grid-theme/useAgGridHelpers\";\n\nconst columns = [\n  {\n    headerName: \"Market Type\",\n    field: \"market\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n  },\n  {\n    headerName: \"AUC\",\n    field: \"auc\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n  },\n  {\n    headerName: \"Price 1\",\n    field: \"price1\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Threshold 1\",\n    field: \"threshold1\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Price 2\",\n    field: \"price2\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Threshold 2\",\n    field: \"threshold2\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Price 3\",\n    field: \"price3\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Threshold 3\",\n    field: \"threshold3\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Price 4\",\n    field: \"price4\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n  {\n    headerName: \"Threshold 4\",\n    field: \"threshold4\",\n    type: \"rightAligned\",\n    suppressHeaderMenuButton: true,\n    width: 120,\n    editable: true,\n    cellClass: [\"editable-cell\", \"numeric-cell\"],\n  },\n];\n\nconst defaultData = [\n  {\n    market: \"Australia\",\n    auc: \"$15,000,000,000\",\n    price1: \"1\",\n    threshold1: \"$10,000mm\",\n    price2: \"0.90\",\n    threshold2: \"$20,000mm\",\n    price3: \"0.75\",\n    threshold3: \"$20,000mm\",\n    price4: \"0.65\",\n    threshold4: \"$30,000mm\",\n  },\n];\n\nexport const BottomDrawer = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n  const { containerProps, agGridProps } = useAgGridHelpers();\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>Open Bottom Drawer</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"bottom\"\n        style={{ height: \"max-content\" }}\n      >\n        <DrawerHeader\n          header=\"Marginal Tiering\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <StackLayout gap={3}>\n            <div\n              {...containerProps}\n              style={{ height: \"calc(3 * var(--salt-size-base))\" }}\n            >\n              <AgGridReact\n                columnDefs={columns}\n                rowData={defaultData}\n                {...agGridProps}\n              />\n            </div>\n            <FlowLayout gap={1}>\n              <H3>Threshold Summary</H3>\n              <Text>(Projected Revenue)</Text>\n            </FlowLayout>\n            <FlowLayout justify=\"space-between\">\n              <StackLayout direction=\"row\" gap={3}>\n                <StackLayout gap={0}>\n                  <Text>Below Threshold 1</Text>\n                  <Display3>$1,000,000</Display3>\n                </StackLayout>\n                <StackLayout gap={0}>\n                  <Text>Below Threshold 1 & 2</Text>\n                  <Display3>$450,000</Display3>\n                </StackLayout>\n                <StackLayout gap={0}>\n                  <Text>Below Threshold 2 & 3</Text>\n                  <Display3>$0</Display3>\n                </StackLayout>\n                <StackLayout gap={0}>\n                  <Text>Below Threshold 3 & 4</Text>\n                  <Display3>$0</Display3>\n                </StackLayout>\n                <StackLayout gap={0}>\n                  <Text>Total</Text>\n                  <Display3>$1,450,000</Display3>\n                </StackLayout>\n              </StackLayout>\n              <StackLayout gap={0}>\n                <Text\n                  style={{\n                    position: \"absolute\",\n                  }}\n                >\n                  Blended bps\n                </Text>\n                <Display2>0.968</Display2>\n              </StackLayout>\n            </FlowLayout>\n          </StackLayout>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Update Tier\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n",
+          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type CSSProperties, type ReactElement, useState } from \"react\";\n\nconst placeholderText =\n  \"This placeholder text is provided to illustrate how content will appear within the component. The sentences are intended for demonstration only and do not convey specific information. Generic examples like this help review layout, spacing, and overall design. Adjust the wording as needed to fit your use case or display requirements. \";\n\nexport const Resizable = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>Open Drawer</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        resizable\n        style={\n          {\n            width: 320,\n            \"--saltDrawer-minResize\": \"200px\",\n            \"--saltDrawer-maxResize\": \"640px\",\n          } as CSSProperties\n        }\n      >\n        <DrawerHeader\n          header=\"Resizable drawer\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <StackLayout>\n            <Text>\n              This drawer can be resized between 200px and 640px wide.\n            </Text>\n            <Text>{placeholderText.repeat(2)}</Text>\n          </StackLayout>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </>\n  );\n};\n",
           "source_url": "/salt/components/drawer/examples",
           "package": "@salt-ds/core",
           "target_type": "component",
@@ -5137,7 +5121,7 @@
             "disable accent"
           ],
           "complexity": "basic",
-          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerHeader,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const DisableAccent = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  return (\n    <StackLayout>\n      <Button onClick={() => setOpen(true)}>Open Drawer without accent</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"right\"\n        style={{ width: 400 }}\n      >\n        <DrawerHeader\n          disableAccent\n          header=\"Drawer without accent\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={() => setOpen(false)}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <Text>Use disableAccent to hide the accent bar.</Text>\n        </DrawerContent>\n      </Drawer>\n    </StackLayout>\n  );\n};\n",
+          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const DisableAccent = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <StackLayout>\n      <Button onClick={() => setOpen(true)}>Open Drawer without accent</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"right\"\n        style={{ width: 400 }}\n      >\n        <DrawerHeader\n          disableAccent\n          header=\"Drawer without accent\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <Text>Use disableAccent to hide the accent bar.</Text>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </StackLayout>\n  );\n};\n",
           "source_url": "/salt/components/drawer/examples",
           "package": "@salt-ds/core",
           "target_type": "component",
@@ -5150,7 +5134,7 @@
             "disable scrim"
           ],
           "complexity": "basic",
-          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerHeader,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const DisableScrim = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  return (\n    <StackLayout>\n      <Button onClick={() => setOpen(true)}>Open Primary Drawer</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        style={{ width: 300 }}\n        disableScrim\n      >\n        <DrawerHeader\n          header=\"Drawer without scrim\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={() => setOpen(false)}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <Text>The content behind this drawer isn't obscured.</Text>\n        </DrawerContent>\n      </Drawer>\n    </StackLayout>\n  );\n};\n",
+          "code": "import {\n  Button,\n  Drawer,\n  DrawerContent,\n  DrawerFooter,\n  DrawerHeader,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const DisableScrim = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <StackLayout>\n      <Button onClick={() => setOpen(true)}>Open Primary Drawer</Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        style={{ width: 300 }}\n        disableScrim\n      >\n        <DrawerHeader\n          header=\"Drawer without scrim\"\n          actions={\n            <Button\n              aria-label=\"Close drawer\"\n              appearance=\"transparent\"\n              onClick={handleClose}\n            >\n              <CloseIcon aria-hidden />\n            </Button>\n          }\n        />\n        <DrawerContent>\n          <Text>The content behind this drawer isn't obscured.</Text>\n        </DrawerContent>\n        <DrawerFooter>\n          <Button\n            sentiment=\"accented\"\n            appearance=\"bordered\"\n            onClick={handleClose}\n          >\n            Cancel\n          </Button>\n          <Button sentiment=\"accented\" onClick={handleClose}>\n            Save\n          </Button>\n        </DrawerFooter>\n      </Drawer>\n    </StackLayout>\n  );\n};\n",
           "source_url": "/salt/components/drawer/examples",
           "package": "@salt-ds/core",
           "target_type": "component",
@@ -5163,7 +5147,7 @@
             "deprecated close button"
           ],
           "complexity": "basic",
-          "code": "import {\n  Button,\n  Drawer,\n  DrawerCloseButton,\n  H2,\n  StackLayout,\n  Text,\n  useId,\n} from \"@salt-ds/core\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const DeprecatedCloseButton = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n  const id = useId();\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>\n        Open drawer with close button\n      </Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"right\"\n        style={{ width: 400 }}\n        aria-labelledby={id}\n      >\n        <DrawerCloseButton onClick={handleClose} />\n        <StackLayout>\n          <H2 id={id}>Section title</H2>\n          <Text>\n            The close button renders in the top right corner of the drawer.\n          </Text>\n        </StackLayout>\n      </Drawer>\n    </>\n  );\n};\n",
+          "code": "import {\n  Button,\n  Drawer,\n  DrawerCloseButton,\n  H2,\n  StackLayout,\n  Text,\n  useId,\n} from \"@salt-ds/core\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const DeprecatedCloseButton = (): ReactElement => {\n  const [open, setOpen] = useState(false);\n  const id = useId();\n\n  const handleClose = () => {\n    setOpen(false);\n  };\n\n  return (\n    <>\n      <Button onClick={() => setOpen(true)}>\n        Open drawer with close button\n      </Button>\n      <Drawer\n        open={open}\n        onOpenChange={setOpen}\n        position=\"right\"\n        style={{ width: 400 }}\n        aria-labelledby={id}\n      >\n        <DrawerCloseButton onClick={handleClose} />\n        <StackLayout>\n          <H2 id={id}>Drawer title</H2>\n          <Text>\n            The close button renders in the top right corner of the drawer.\n          </Text>\n        </StackLayout>\n      </Drawer>\n    </>\n  );\n};\n",
           "source_url": "/salt/components/drawer/examples",
           "package": "@salt-ds/core",
           "target_type": "component",
@@ -5200,7 +5184,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.dropdown",
@@ -5212,7 +5196,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Dropdown allows the user to select from an overlaid vertical list of options. A selected value or values is displayed in the dropdown field, providing a screen space-efficient way of interacting with the list.",
       "status": "stable",
@@ -5505,7 +5489,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.file-drop-zone",
@@ -5522,7 +5506,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "FileDropZone provides a target area for users to drag and drop files, such as documents or images, and automatically upload them to the web application.",
       "status": "stable",
@@ -5660,7 +5644,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.flex-layout",
@@ -5673,7 +5657,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "FlexLayout enables complex arrangement of UI elements within a container and facilitates responsive design by controlling the alignment, direction and size of items. Use it to arrange items in a row, evenly spaced and centered vertically, or to implement customized direction more complex than StackLayout, FlowLayout or SplitLayout. For additional control of the size and position of content, use FlexItem for each content item within FlexLayout.",
       "status": "stable",
@@ -5858,7 +5842,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.flow-layout",
@@ -5871,7 +5855,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "FlowLayout is a simple mechanism that arranges UI elements in a horizontal order and responsively wraps them onto subsequent rows. It builds on top of FlexLayout and is best for small-scale layouts to display components in a responsive row, such as a row of metrics or a filter bar where fields wrap over multiple lines. For additional control of the size and position of content, use FlexItem for each content item inside a FlowLayout.",
       "status": "stable",
@@ -6028,7 +6012,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.form-field",
@@ -6041,7 +6025,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "FormField is a wrapper for user interface controls that are typically found in a form, such as Input, ComboBox or RadioButton. To make these controls accessible, you must provide them with a visible label, validation control, states and descriptive text elements.",
       "status": "stable",
@@ -6320,7 +6304,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.grid-layout",
@@ -6332,7 +6316,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "GridLayout enables complex arrangement of UI elements within a system of columns and rows to create an evenly distributed, responsive and organized user interface. Use it to position repeating widgets in the main content area, such as in a Dashboard. When combined with responsive breakpoints, you can configure GridLayout and GridItem to determine how content is displayed across different viewports and screen sizes.",
       "status": "stable",
@@ -6516,7 +6500,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.icon",
@@ -6528,7 +6512,7 @@
       "package": {
         "name": "@salt-ds/icons",
         "status": "stable",
-        "since": "1.18.4"
+        "since": "1.19.0"
       },
       "summary": "Icon is a visual representation of an application, a capability, a concept or a specific entity with meaning on an interface (e.g., a floppy disk to represent a save action). Icons help users to recognize and understand actions that transcend linguistic or cultural boundaries. The list of available icons is in the icon foundation.",
       "status": "stable",
@@ -6692,7 +6676,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.input",
@@ -6704,7 +6688,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Input provides an editable field for users to enter text using alphanumeric characters. It is ideal for short, freeform content and data entry.",
       "status": "stable",
@@ -6924,7 +6908,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.kbd",
@@ -6935,7 +6919,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Kbd is a decorative element used to represent specific keyboard keys. It is typically embedded inside components (e.g., menu, table, button) or paragraph text, to communicate an associated keyboard shortcut or a user instruction.",
       "status": "stable",
@@ -7065,7 +7049,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.link",
@@ -7077,7 +7061,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Link allows users to navigate to a different site or to another page within the current site. Use a link on its own, inline within a sentence, or after a sentence.",
       "status": "stable",
@@ -7273,7 +7257,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.link-button",
@@ -7286,7 +7270,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "LinkButton allows users to navigate to another destination while presenting the navigation affordance with button styling.",
       "status": "stable",
@@ -7486,7 +7470,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.list-box",
@@ -7498,7 +7482,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "ListBox allows the user to select an item from an array of options, where selected items are visually distinct from non-selected items. To ensure efficient space usage, long lists of items are in a scrolling pane providing access to options not immediately visible.",
       "status": "stable",
@@ -7664,7 +7648,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.localization-provider",
@@ -7675,7 +7659,7 @@
       "package": {
         "name": "@salt-ds/date-components",
         "status": "stable",
-        "since": "1.1.2"
+        "since": "1.1.4"
       },
       "summary": "LocalizationProvider configures the locale and date adapter for components with date objects.",
       "status": "stable",
@@ -7774,7 +7758,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.mega-menu",
@@ -7787,7 +7771,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "MegaMenu is a large, expandable panel which opens from the main navigation. It displays and categorizes links to key application pages, allowing users to easily access a wide range of app features and content from a single menu. It organizes complex site structures into a visually clear, multi-column layout, enhancing user experience by reducing the number of clicks needed to find information.",
       "status": "stable",
@@ -7962,7 +7946,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.menu",
@@ -7973,7 +7957,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Menu is a container that presents a selection of choices or actions from which to choose. The user opens it with a customizable trigger, such as an interactive button, or an interaction, such as a keyboard shortcut or mouse right-click.",
       "status": "stable",
@@ -8003,8 +7987,16 @@
       ],
       "props": [],
       "accessibility": {
-        "summary": [],
-        "rules": []
+        "summary": [
+          "Use a menu for a list of actions or commands, such as \"More actions\"."
+        ],
+        "rules": [
+          {
+            "id": "menu-a11y-1",
+            "severity": "warning",
+            "rule": "Use a menu for a list of actions or commands, such as \"More actions\"."
+          }
+        ]
       },
       "tokens": [],
       "patterns": [],
@@ -8057,6 +8049,45 @@
           ],
           "complexity": "basic",
           "code": "import {\n  Button,\n  Menu,\n  MenuGroup,\n  MenuItem,\n  MenuPanel,\n  MenuTrigger,\n} from \"@salt-ds/core\";\nimport { MicroMenuIcon } from \"@salt-ds/icons\";\nimport type { ReactElement } from \"react\";\n\nexport const SeparatorOnly = (): ReactElement => {\n  return (\n    <Menu>\n      <MenuTrigger>\n        <Button appearance=\"transparent\" aria-label=\"Open Menu\">\n          <MicroMenuIcon aria-hidden />\n        </Button>\n      </MenuTrigger>\n      <MenuPanel>\n        <MenuGroup>\n          <MenuItem>Copy</MenuItem>\n          <MenuItem>Paste</MenuItem>\n        </MenuGroup>\n        <MenuGroup>\n          <MenuItem>Export</MenuItem>\n          <MenuItem>Settings</MenuItem>\n        </MenuGroup>\n      </MenuPanel>\n    </Menu>\n  );\n};\n",
+          "source_url": "/salt/components/menu/examples",
+          "package": "@salt-ds/core",
+          "target_type": "component",
+          "target_name": "Menu"
+        },
+        {
+          "id": "menu.singleselection",
+          "title": "Single selection",
+          "intent": [
+            "single selection"
+          ],
+          "complexity": "basic",
+          "code": "import {\n  Button,\n  Menu,\n  MenuGroup,\n  MenuItem,\n  MenuPanel,\n  MenuTrigger,\n} from \"@salt-ds/core\";\nimport { MicroMenuIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const SingleSelection = (): ReactElement => {\n  const [sortBy, setSortBy] = useState<string[]>([\"name\"]);\n\n  return (\n    <Menu>\n      <MenuTrigger>\n        <Button appearance=\"transparent\" aria-label=\"Open Menu\">\n          <MicroMenuIcon aria-hidden />\n        </Button>\n      </MenuTrigger>\n      <MenuPanel>\n        <MenuGroup\n          label=\"Sort by\"\n          selectionVariant=\"single\"\n          selected={sortBy}\n          onSelectionChange={(_event, newSelected) => setSortBy(newSelected)}\n        >\n          <MenuItem value=\"name\">Name</MenuItem>\n          <MenuItem value=\"modified\">Date modified</MenuItem>\n          <MenuItem value=\"size\">Size</MenuItem>\n        </MenuGroup>\n      </MenuPanel>\n    </Menu>\n  );\n};\n",
+          "source_url": "/salt/components/menu/examples",
+          "package": "@salt-ds/core",
+          "target_type": "component",
+          "target_name": "Menu"
+        },
+        {
+          "id": "menu.multipleselection",
+          "title": "Multiple selection",
+          "intent": [
+            "multiple selection"
+          ],
+          "complexity": "basic",
+          "code": "import {\n  Button,\n  Menu,\n  MenuGroup,\n  MenuItem,\n  MenuPanel,\n  MenuTrigger,\n} from \"@salt-ds/core\";\nimport { MicroMenuIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nexport const MultipleSelection = (): ReactElement => {\n  const [columns, setColumns] = useState<string[]>([\"owner\", \"size\"]);\n\n  return (\n    <Menu>\n      <MenuTrigger>\n        <Button appearance=\"transparent\" aria-label=\"Open Menu\">\n          <MicroMenuIcon aria-hidden />\n        </Button>\n      </MenuTrigger>\n      <MenuPanel>\n        <MenuGroup\n          label=\"Columns\"\n          selectionVariant=\"multiple\"\n          selected={columns}\n          onSelectionChange={(_event, newSelected) => setColumns(newSelected)}\n        >\n          <MenuItem value=\"owner\">Owner</MenuItem>\n          <MenuItem value=\"modified\">Date modified</MenuItem>\n          <MenuItem value=\"size\">Size</MenuItem>\n          <MenuItem value=\"type\">Type</MenuItem>\n        </MenuGroup>\n      </MenuPanel>\n    </Menu>\n  );\n};\n",
+          "source_url": "/salt/components/menu/examples",
+          "package": "@salt-ds/core",
+          "target_type": "component",
+          "target_name": "Menu"
+        },
+        {
+          "id": "menu.selectionwithactions",
+          "title": "Selection with actions",
+          "intent": [
+            "selection with actions"
+          ],
+          "complexity": "basic",
+          "code": "import {\n  Button,\n  Menu,\n  MenuGroup,\n  MenuItem,\n  MenuPanel,\n  MenuTrigger,\n} from \"@salt-ds/core\";\nimport { MicroMenuIcon } from \"@salt-ds/icons\";\nimport { type ReactElement, useState } from \"react\";\n\nconst defaultSortBy = [\"name\"];\nconst defaultColumns = [\"owner\", \"size\"];\n\nexport const SelectionWithActions = (): ReactElement => {\n  const [sortBy, setSortBy] = useState<string[]>(defaultSortBy);\n  const [columns, setColumns] = useState<string[]>(defaultColumns);\n\n  return (\n    <Menu>\n      <MenuTrigger>\n        <Button appearance=\"transparent\" aria-label=\"Open Menu\">\n          <MicroMenuIcon aria-hidden />\n        </Button>\n      </MenuTrigger>\n      <MenuPanel>\n        <MenuGroup\n          label=\"Sort by\"\n          selectionVariant=\"single\"\n          selected={sortBy}\n          onSelectionChange={(_event, newSelected) => setSortBy(newSelected)}\n        >\n          <MenuItem value=\"name\">Name</MenuItem>\n          <MenuItem value=\"modified\">Date modified</MenuItem>\n        </MenuGroup>\n        <MenuGroup\n          label=\"Columns\"\n          selectionVariant=\"multiple\"\n          selected={columns}\n          onSelectionChange={(_event, newSelected) => setColumns(newSelected)}\n        >\n          <MenuItem value=\"owner\">Owner</MenuItem>\n          <MenuItem value=\"size\">Size</MenuItem>\n          <MenuItem value=\"type\">Type</MenuItem>\n        </MenuGroup>\n        <MenuGroup>\n          <MenuItem\n            onClick={() => {\n              setSortBy(defaultSortBy);\n              setColumns(defaultColumns);\n            }}\n          >\n            Reset view\n          </MenuItem>\n          <MenuItem>Export</MenuItem>\n        </MenuGroup>\n      </MenuPanel>\n    </Menu>\n  );\n};\n",
           "source_url": "/salt/components/menu/examples",
           "package": "@salt-ds/core",
           "target_type": "component",
@@ -8171,7 +8202,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.multiline-input",
@@ -8183,7 +8214,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "MultilineInput provides an editable text area where users can enter multiple lines of alphanumeric characters, while retaining visibility of what they've written.",
       "status": "stable",
@@ -8416,7 +8447,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.navigation-item",
@@ -8428,7 +8459,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "NavigationItem allows users to navigate between discrete applications and/or web pages.",
       "status": "stable",
@@ -8570,7 +8601,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.number-input",
@@ -8582,7 +8613,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "NumberInput displays a default numeric value that users can increase or decrease using the controls or with keyboard actions. Users can also manually enter a specific value. The component is useful for scenarios where users need to make small adjustments to a value within a well-defined range.",
       "status": "stable",
@@ -8881,7 +8912,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.overlay",
@@ -8892,7 +8923,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Overlay reveals supplementary content after the user clicks a UI trigger element. It remains active and open until dismissed by the user. It can contain interactive and focusable elements, such as buttons or links.",
       "status": "stable",
@@ -9056,7 +9087,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.pagination",
@@ -9069,7 +9100,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Pagination allows users navigate easily between multiple pages of content. It enables users to jump to specific points within a set of results, helping to focus their attention and provide a sense of scale.",
       "status": "stable",
@@ -9254,7 +9285,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.panel",
@@ -9266,7 +9297,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Panel organizes content into distinct regions within an application. It uses background color and elevation to convey visual hierarchy.",
       "status": "stable",
@@ -9357,7 +9388,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.parent-child-layout",
@@ -9366,7 +9397,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Parent-childLayout provides a parent content area alongside a dependent child content area and responsively stacks them at a given breakpoint. It is used for interactions where selection in the parent (master) determines detail displayed in the child, such as navigation for a preferences dialog.",
       "status": "stable",
@@ -9503,7 +9534,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.pill",
@@ -9515,7 +9546,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Pill is a small visual element that can contain text and an icon. Pills help label, filter or sort interactive content, allowing users to trigger actions or make selections.",
       "status": "stable",
@@ -9683,7 +9714,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.progress",
@@ -9695,7 +9726,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Progress indicator gives the user a precise view of how long a system operation is taking. Use it when the action will last more than a second. Two variants are available to accommodate different layouts: CircularProgress and LinearProgress.",
       "status": "stable",
@@ -9852,7 +9883,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.radio-button",
@@ -9864,7 +9895,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "RadioButton and RadioButtonGroup show a set of mutually exclusive options. Users can only select one radio button at a time. When selecting a new option, the previously selected option automatically clears. Radio buttons should be used to display a choice between two or more options, since users cannot clear a single radio button after selecting it.",
       "status": "stable",
@@ -10083,7 +10114,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.range-date-picker",
@@ -10092,7 +10123,7 @@
       "package": {
         "name": "@salt-ds/date-components",
         "status": "stable",
-        "since": "1.1.2"
+        "since": "1.1.4"
       },
       "summary": "RangeDatePicker is composed of both a DateInput and Calendar controls. They enable users to select a date range that consists of a start and end date, offering a flexible and intuitive way to make a selection.",
       "status": "stable",
@@ -10362,7 +10393,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.range-slider",
@@ -10371,7 +10402,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "RangeSlider enables the selection of an interval within a range of values. It offers inline label positioning and can display marks under the track.",
       "status": "stable",
@@ -10597,7 +10628,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.rating",
@@ -10610,7 +10641,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Rating component allows users to submit feedback and view average scores on a defined scale, reflecting your product, service or experience.",
       "status": "stable",
@@ -10775,7 +10806,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.salt-provider",
@@ -10786,7 +10817,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "SaltProvider is a required component for changing the theme, mode, density and breakpoints of your application. Refer to the get started section for a step-by-step implementation guide.",
       "status": "stable",
@@ -10924,7 +10955,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.scrim",
@@ -10936,7 +10967,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Scrim is a temporary, translucent layer that makes underlying content less prominent.",
       "status": "stable",
@@ -11033,7 +11064,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.segmented-button-group",
@@ -11045,7 +11076,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "SegmentedButtonGroup displays a set of actionable buttons that are flush with separators.",
       "status": "stable",
@@ -11142,7 +11173,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.semantic-icon-provider",
@@ -11151,7 +11182,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "SemanticIconProvider centralizes icon management and customization with Salt. It allows flexible configuration of icons and ensures consistent usage across your application.",
       "status": "stable",
@@ -11228,7 +11259,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.side-panel",
@@ -11240,7 +11271,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "A side panel is a persistent, side-by-side workspace that keeps supporting information and controls available while users continue their main task. It’s intended for ongoing parallel work—such as referencing details, inspecting data, filtering results, or editing attributes—where maintaining visibility and context improves accuracy and efficiency.",
       "status": "stable",
@@ -11434,7 +11465,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.skip-link",
@@ -11443,7 +11474,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "SkipLink allows screen reader and keyboard users to bypass menus and jump directly into the main content. This removes accessibility barriers by reducing keystroke repetition and streamlining navigation.",
       "status": "stable",
@@ -11516,7 +11547,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.slider",
@@ -11525,7 +11556,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Slider enables the selection of a single value within a range of values. It offers inline label positioning and can display marks under the track.",
       "status": "stable",
@@ -11752,7 +11783,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.spinner",
@@ -11765,7 +11796,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Spinner is a visual representation of a process taking indeterminate time to complete. Triggers include automated system processes and user actions. It can also indicate content loading. Displaying a spinner reassures the user that the system is still working, especially when the operation takes longer than one second.",
       "status": "stable",
@@ -11922,7 +11953,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.split-layout",
@@ -11934,7 +11965,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "SplitLayout is a simple mechanism which arranges UI elements at opposite ends of a container. Use it with vertical or horizontal orientation, to provide visual hierarchy for controls such as buttons or toolbars.",
       "status": "stable",
@@ -12132,7 +12163,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.splitter",
@@ -12248,7 +12279,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.stack-layout",
@@ -12261,7 +12292,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "StackLayout is a simple mechanism to arrange UI elements in a line, either horizontally or vertically. It builds on the FlexLayout component and is best for small-scale layouts where displaying components in a single row or column is necessary. It may benefit from supported visual separators, such as a row of charts or a scrolling side panel comprising multiple sections. For additional control of the size and position of content, use FlexItem for each content item inside StackLayout.",
       "status": "stable",
@@ -12454,7 +12485,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.static-list",
@@ -12465,7 +12496,7 @@
       "package": {
         "name": "@salt-ds/lab",
         "status": "lab",
-        "since": "1.0.0-alpha.106"
+        "since": "1.0.0-alpha.108"
       },
       "summary": "StaticList manages the layout of non-interactive list items, providing a structured and composable way to display content. It's ideal for use in checkout baskets and patterns such as file upload.",
       "status": "lab",
@@ -12600,7 +12631,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.status-indicator",
@@ -12612,7 +12643,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "StatusIndicator is a specialized icon to show info, warning, error or success. Use on its own or within another component (e.g., Tooltip) to help convey a message.",
       "status": "stable",
@@ -12745,7 +12776,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.stepper",
@@ -12762,7 +12793,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Stepper communicates user progress through a linear process. It gives context about where they are, which steps are completed, how many steps are remaining, and whether errors or warnings have occurred.",
       "status": "stable",
@@ -12901,7 +12932,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.switch",
@@ -12914,7 +12945,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Switch is a binary control used as a toggle between two different states. When engaged, the thumb travels within the track to indicate change of state. Use it for adjusting settings, preferences or actions within an application or system.",
       "status": "stable",
@@ -13076,7 +13107,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.system-status",
@@ -13087,7 +13118,7 @@
       "package": {
         "name": "@salt-ds/lab",
         "status": "lab",
-        "since": "1.0.0-alpha.106"
+        "since": "1.0.0-alpha.108"
       },
       "summary": "SystemStatus communicates essential platform-wide information, such as maintenance or outage alerts. These messages are displayed to be noticed immediately, prompting users to consider taking action based on four severity levels (with corresponding icons and colors): info, success, warning and error.",
       "status": "lab",
@@ -13138,19 +13169,25 @@
       "props": [],
       "accessibility": {
         "summary": [
-          "If the status is critical and requires immediate attention, apply role=\"alert\" to ensure the message is announced immediately.",
-          "If the status is not critical, consider applying role=\"region\"."
+          "Check and test any focusable elements included in the system status content.",
+          "When using a system status to alert the user, apply role=\"alert\". When using a system status to notify the user, use the default role=\"status\".",
+          "**Note:** There are known screen reader announcement issues when dynamically inserting content with role=\"status\", which a system status has by default. During your testing, check that a system status added to the page is properly announced using a screen reader."
         ],
         "rules": [
           {
             "id": "system-status-a11y-1",
             "severity": "warning",
-            "rule": "If the status is critical and requires immediate attention, apply role=\"alert\" to ensure the message is announced immediately."
+            "rule": "Check and test any focusable elements included in the system status content."
           },
           {
             "id": "system-status-a11y-2",
             "severity": "warning",
-            "rule": "If the status is not critical, consider applying role=\"region\"."
+            "rule": "When using a system status to alert the user, apply role=\"alert\". When using a system status to notify the user, use the default role=\"status\"."
+          },
+          {
+            "id": "system-status-a11y-3",
+            "severity": "warning",
+            "rule": "**Note:** There are known screen reader announcement issues when dynamically inserting content with role=\"status\", which a system status has by default. During your testing, check that a system status added to the page is properly announced using a screen reader."
           }
         ]
       },
@@ -13178,7 +13215,7 @@
             "error"
           ],
           "complexity": "basic",
-          "code": "import { Text } from \"@salt-ds/core\";\nimport { SystemStatus, SystemStatusContent } from \"@salt-ds/lab\";\nimport type { ReactElement } from \"react\";\n\nexport const Error = (): ReactElement => (\n  <SystemStatus status=\"error\">\n    <SystemStatusContent>\n      <Text color=\"inherit\">System failure. Please try again.</Text>\n    </SystemStatusContent>\n  </SystemStatus>\n);\n",
+          "code": "import { OnSolidButton, Text } from \"@salt-ds/core\";\nimport {\n  SystemStatus,\n  SystemStatusActions,\n  SystemStatusContent,\n} from \"@salt-ds/lab\";\nimport type { ReactElement } from \"react\";\n\nexport const Error = (): ReactElement => (\n  <SystemStatus status=\"error\" role=\"alert\">\n    <SystemStatusContent>\n      <Text color=\"inherit\">System failure. Please try again.</Text>\n    </SystemStatusContent>\n    <SystemStatusActions>\n      <OnSolidButton>Try again</OnSolidButton>\n    </SystemStatusActions>\n  </SystemStatus>\n);\n",
           "source_url": "/salt/components/system-status/examples",
           "package": "@salt-ds/lab",
           "target_type": "component",
@@ -13230,7 +13267,7 @@
             "placement"
           ],
           "complexity": "basic",
-          "code": "import {\n  Banner,\n  BannerActions,\n  BannerContent,\n  Button,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport { SystemStatus, SystemStatusContent } from \"@salt-ds/lab\";\n\nimport type { ReactElement } from \"react\";\n\nexport const Placement = (): ReactElement => {\n  return (\n    <StackLayout\n      style={{\n        width: \"100%\",\n        background: \"var( --salt-container-primary-background)\",\n      }}\n    >\n      <SystemStatus>\n        <SystemStatusContent>\n          <Text color=\"inherit\">New feature updates are available.</Text>\n        </SystemStatusContent>\n      </SystemStatus>\n      <StackLayout\n        gap={4.5}\n        style={{\n          padding:\n            \"var(--salt-spacing-100) var(--salt-spacing-300) calc(var(--salt-spacing-100)*4.5) \",\n        }}\n      >\n        <Text styleAs=\"display2\"> Payment Activity</Text>\n        <Banner status=\"warning\" variant=\"secondary\">\n          <BannerContent role=\"status\">\n            You have outstanding checks more than 30 days old. Review to prevent\n            fraud.\n          </BannerContent>\n          <BannerActions>\n            <Button aria-label=\"Dismiss\" appearance=\"transparent\">\n              <CloseIcon aria-hidden />\n            </Button>\n          </BannerActions>\n        </Banner>\n      </StackLayout>\n    </StackLayout>\n  );\n};\n",
+          "code": "import {\n  Banner,\n  BannerContent,\n  H1,\n  OnSolidButton,\n  StackLayout,\n  Text,\n} from \"@salt-ds/core\";\nimport { CloseIcon } from \"@salt-ds/icons\";\nimport {\n  SystemStatus,\n  SystemStatusActions,\n  SystemStatusContent,\n} from \"@salt-ds/lab\";\nimport type { ReactElement } from \"react\";\n\nexport const Placement = (): ReactElement => (\n  <StackLayout gap={0} style={{ width: \"100%\" }}>\n    <SystemStatus>\n      <SystemStatusContent>\n        <Text color=\"inherit\">New feature updates are available.</Text>\n      </SystemStatusContent>\n      <SystemStatusActions>\n        <OnSolidButton aria-label=\"Dismiss\">\n          <CloseIcon aria-hidden />\n        </OnSolidButton>\n      </SystemStatusActions>\n    </SystemStatus>\n    <StackLayout\n      style={{\n        padding: \"var(--salt-spacing-300) var(--salt-layout-page-margin)\",\n      }}\n    >\n      <H1 styleAs=\"display2\">Payment activity</H1>\n      <Banner status=\"warning\" variant=\"secondary\">\n        <BannerContent>\n          You have outstanding checks more than 30 days old. Review to prevent\n          fraud.\n        </BannerContent>\n      </Banner>\n    </StackLayout>\n  </StackLayout>\n);\n",
           "source_url": "/salt/components/system-status/examples",
           "package": "@salt-ds/lab",
           "target_type": "component",
@@ -13267,7 +13304,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.table",
@@ -13276,7 +13313,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Table is a basic HTML component intended for simple but structured tabular data display.",
       "status": "stable",
@@ -13423,7 +13460,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.tabs",
@@ -13437,7 +13474,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Tabs allow users to move between different views of related content without leaving the current page. A tab strip includes at least two tabs. Only one tab is actively engaged at a time and is differentiated from inactive tabs by a colored indicator either on the top or bottom edge of the tab, depending on the variant. Tab strips can cover the full width of the page or be limited to content areas within components such as dialogs, cards, and drawers.",
       "status": "stable",
@@ -13630,7 +13667,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.tag",
@@ -13639,7 +13676,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Tag displays metadata categorizing or grouping content in an application. They are read-only and do not interfere with page interactions but use categorical colors to draw attention. Tags appear as stylized elements with text, optionally accompanied by an icon to reinforce their meaning.",
       "status": "stable",
@@ -13770,7 +13807,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.text",
@@ -13779,7 +13816,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Text component facilitates use of Salt typography styles throughout a product or application, ensuring consistency and unified look and feel. It includes attributes such as font size, weight, letter spacing, line height and decoration.",
       "status": "stable",
@@ -13943,7 +13980,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.toast",
@@ -13957,7 +13994,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Toast displays a small pop-up notification with short feedback in response to a user action. It can also contextualize a system event in a workflow or application outside the user’s current focus. Toasts communicate new information, errors, warnings or successful completion of a process.",
       "status": "stable",
@@ -14128,7 +14165,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.toggle-button",
@@ -14142,7 +14179,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "ToggleButton allows users to switch states, typically representing on/off or active/inactive status. The corresponding action takes effect immediately. With ToggleButtonGroup, users can make a single choice from a set of related commands, with only one option selected at a time.",
       "status": "stable",
@@ -14336,7 +14373,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.toggletip",
@@ -14347,7 +14384,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Toggletip shows a user supplementary information on click.",
       "status": "stable",
@@ -14486,7 +14523,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.tokenized-input",
@@ -14500,7 +14537,7 @@
       "package": {
         "name": "@salt-ds/lab",
         "status": "lab",
-        "since": "1.0.0-alpha.106"
+        "since": "1.0.0-alpha.108"
       },
       "summary": "TokenizedInput provides a field for text entry that is converted into a pill once the user enters a delimiting character (e.g., comma, semicolon or space).",
       "status": "lab",
@@ -14605,7 +14642,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.toolbar",
@@ -14614,7 +14651,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Toolbar is a container that groups a set of related and interactive controls. It enables users to quickly access key functions relevant to the current context.",
       "status": "stable",
@@ -14785,7 +14822,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.tooltip",
@@ -14796,7 +14833,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Tooltip is a non-modal overlay that appears on hover or focus. Initially hidden, it provides concise, text-only content related to the associated interactive element. It also typically offers supplementary, non-essential information without disturbing the user workflow.",
       "status": "stable",
@@ -14985,7 +15022,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.tree",
@@ -14996,7 +15033,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "Tree displays hierarchical data as an expandable and collapsible structure. Users can navigate nested items and optionally select one or more nodes.",
       "status": "stable",
@@ -15145,7 +15182,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "component.vertical-navigation",
@@ -15154,7 +15191,7 @@
       "package": {
         "name": "@salt-ds/core",
         "status": "stable",
-        "since": "1.73.0"
+        "since": "1.75.0"
       },
       "summary": "VerticalNavigation allows users to move between distinct applications and web pages.",
       "status": "stable",
@@ -15346,7 +15383,7 @@
           "ambiguous_match_count": 0
         }
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     }
   ]
 }

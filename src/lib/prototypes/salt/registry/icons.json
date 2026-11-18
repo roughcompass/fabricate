@@ -1,6 +1,6 @@
 {
-  "generated_at": "1.73.0",
-  "version": "1.73.0",
+  "generated_at": "1.75.0",
+  "version": "1.75.0",
   "icons": [
     {
       "id": "icon.accessible-icon",
@@ -49,7 +49,7 @@
         "export_name": "AccessibleIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.accessible-solid-icon",
@@ -108,7 +108,7 @@
         "export_name": "AccessibleSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.add-icon",
@@ -151,7 +151,7 @@
         "export_name": "AddIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.add-document-icon",
@@ -199,7 +199,7 @@
         "export_name": "AddDocumentIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.add-document-solid-icon",
@@ -255,7 +255,7 @@
         "export_name": "AddDocumentSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.add-to-grid-icon",
@@ -295,7 +295,7 @@
         "export_name": "AddToGridIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.add-to-grid-solid-icon",
@@ -339,7 +339,7 @@
         "export_name": "AddToGridSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.add-user-icon",
@@ -385,7 +385,7 @@
         "export_name": "AddUserIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.announcement-icon",
@@ -430,7 +430,7 @@
         "export_name": "AnnouncementIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.api-icon",
@@ -473,7 +473,7 @@
         "export_name": "ApiIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.app-switcher-icon",
@@ -519,7 +519,7 @@
         "export_name": "AppSwitcherIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.arrow-down-icon",
@@ -565,7 +565,7 @@
         "export_name": "ArrowDownIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.arrow-left-icon",
@@ -613,7 +613,7 @@
         "export_name": "ArrowLeftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.arrow-right-icon",
@@ -659,7 +659,7 @@
         "export_name": "ArrowRightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.arrow-up-icon",
@@ -705,7 +705,7 @@
         "export_name": "ArrowUpIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.attach-icon",
@@ -748,7 +748,7 @@
         "export_name": "AttachIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.bank-icon",
@@ -789,7 +789,7 @@
         "export_name": "BankIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.bank-check-icon",
@@ -833,7 +833,7 @@
         "export_name": "BankCheckIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.bank-check-solid-icon",
@@ -883,7 +883,7 @@
         "export_name": "BankCheckSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.bank-solid-icon",
@@ -930,7 +930,7 @@
         "export_name": "BankSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.bar-chart-icon",
@@ -967,7 +967,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-barchart.barcharticon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.battery-icon",
@@ -1012,7 +1012,7 @@
         "export_name": "BatteryIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.battery-solid-icon",
@@ -1065,7 +1065,7 @@
         "export_name": "BatterySolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.bookmark-icon",
@@ -1110,7 +1110,7 @@
         "export_name": "BookmarkIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.bookmark-solid-icon",
@@ -1163,7 +1163,7 @@
         "export_name": "BookmarkSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.boolean-icon",
@@ -1206,7 +1206,7 @@
         "export_name": "BooleanIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.boolean-solid-icon",
@@ -1256,7 +1256,7 @@
         "export_name": "BooleanSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.browser-icon",
@@ -1299,7 +1299,7 @@
         "export_name": "BrowserIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.browser-solid-icon",
@@ -1349,7 +1349,7 @@
         "export_name": "BrowserSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.building-icon",
@@ -1394,7 +1394,7 @@
         "export_name": "BuildingIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.buildings-icon",
@@ -1437,7 +1437,7 @@
         "export_name": "BuildingsIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.building-solid-icon",
@@ -1490,7 +1490,7 @@
         "export_name": "BuildingSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.buildings-solid-icon",
@@ -1540,7 +1540,7 @@
         "export_name": "BuildingsSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.build-report-icon",
@@ -1584,7 +1584,7 @@
         "export_name": "BuildReportIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.build-report-solid-icon",
@@ -1634,7 +1634,7 @@
         "export_name": "BuildReportSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.calculator-icon",
@@ -1677,7 +1677,7 @@
         "export_name": "CalculatorIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.calculator-solid-icon",
@@ -1727,7 +1727,7 @@
         "export_name": "CalculatorSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.calendar-icon",
@@ -1770,7 +1770,7 @@
         "export_name": "CalendarIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.calendar-solid-icon",
@@ -1820,7 +1820,7 @@
         "export_name": "CalendarSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.call-icon",
@@ -1863,7 +1863,7 @@
         "export_name": "CallIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.call-solid-icon",
@@ -1913,7 +1913,7 @@
         "export_name": "CallSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cart-icon",
@@ -1958,7 +1958,7 @@
         "export_name": "CartIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cart-solid-icon",
@@ -2011,7 +2011,7 @@
         "export_name": "CartSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-area-icon",
@@ -2055,7 +2055,7 @@
         "export_name": "ChartAreaIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-bar-icon",
@@ -2101,7 +2101,7 @@
         "export_name": "ChartBarIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-box-plot-icon",
@@ -2147,7 +2147,7 @@
         "export_name": "ChartBoxPlotIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-bubble-icon",
@@ -2193,7 +2193,7 @@
         "export_name": "ChartBubbleIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-bubble-solid-icon",
@@ -2246,7 +2246,7 @@
         "export_name": "ChartBubbleSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-bullet-icon",
@@ -2294,7 +2294,7 @@
         "export_name": "ChartBulletIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-candlestick-icon",
@@ -2344,7 +2344,7 @@
         "export_name": "ChartCandlestickIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-candlestick-solid-icon",
@@ -2403,7 +2403,7 @@
         "export_name": "ChartCandlestickSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-column-icon",
@@ -2451,7 +2451,7 @@
         "export_name": "ChartColumnIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-donut-icon",
@@ -2499,7 +2499,7 @@
         "export_name": "ChartDonutIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-line-icon",
@@ -2545,7 +2545,7 @@
         "export_name": "ChartLineIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-line-solid-icon",
@@ -2598,7 +2598,7 @@
         "export_name": "ChartLineSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-pie-icon",
@@ -2646,7 +2646,7 @@
         "export_name": "ChartPieIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-pie-solid-icon",
@@ -2702,7 +2702,7 @@
         "export_name": "ChartPieSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-scatter-icon",
@@ -2754,7 +2754,7 @@
         "export_name": "ChartScatterIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-scatter-solid-icon",
@@ -2816,7 +2816,7 @@
         "export_name": "ChartScatterSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-stacked-bar-icon",
@@ -2864,7 +2864,7 @@
         "export_name": "ChartStackedBarIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chart-waterfall-icon",
@@ -2912,7 +2912,7 @@
         "export_name": "ChartWaterfallIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chat-icon",
@@ -2961,7 +2961,7 @@
         "export_name": "ChatIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chat-group-icon",
@@ -3011,7 +3011,7 @@
         "export_name": "ChatGroupIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chat-group-solid-icon",
@@ -3070,7 +3070,7 @@
         "export_name": "ChatGroupSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chat-solid-icon",
@@ -3129,7 +3129,7 @@
         "export_name": "ChatSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chatting-icon",
@@ -3174,7 +3174,7 @@
         "export_name": "ChattingIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chatting-solid-icon",
@@ -3227,7 +3227,7 @@
         "export_name": "ChattingSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.checkmark-icon",
@@ -3272,7 +3272,7 @@
         "export_name": "CheckmarkIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.checkmark-solid-icon",
@@ -3325,7 +3325,7 @@
         "export_name": "CheckmarkSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chevron-down-icon",
@@ -3375,7 +3375,7 @@
         "export_name": "ChevronDownIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chevron-left-icon",
@@ -3425,7 +3425,7 @@
         "export_name": "ChevronLeftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chevron-right-icon",
@@ -3475,7 +3475,7 @@
         "export_name": "ChevronRightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.chevron-up-icon",
@@ -3525,7 +3525,7 @@
         "export_name": "ChevronUpIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.clock-icon",
@@ -3568,7 +3568,7 @@
         "export_name": "ClockIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.clock-solid-icon",
@@ -3618,7 +3618,7 @@
         "export_name": "ClockSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.clone-icon",
@@ -3659,7 +3659,7 @@
         "export_name": "CloneIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.close-icon",
@@ -3708,7 +3708,7 @@
         "export_name": "CloseIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.closedcaption-icon",
@@ -3757,7 +3757,7 @@
         "export_name": "ClosedcaptionIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.closedcaption-disabled-icon",
@@ -3805,7 +3805,7 @@
         "export_name": "ClosedcaptionDisabledIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.closedcaption-disabled-solid-icon",
@@ -3861,7 +3861,7 @@
         "export_name": "ClosedcaptionDisabledSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.closedcaption-solid-icon",
@@ -3920,7 +3920,7 @@
         "export_name": "ClosedcaptionSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.close-small-icon",
@@ -3955,7 +3955,7 @@
         "export_name": "CloseSmallIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-icon",
@@ -3998,7 +3998,7 @@
         "export_name": "CloudIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-disabled-icon",
@@ -4046,7 +4046,7 @@
         "export_name": "CloudDisabledIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-disabled-solid-icon",
@@ -4102,7 +4102,7 @@
         "export_name": "CloudDisabledSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-download-icon",
@@ -4144,7 +4144,7 @@
         "export_name": "CloudDownloadIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-download-solid-icon",
@@ -4191,7 +4191,7 @@
         "export_name": "CloudDownloadSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-solid-icon",
@@ -4241,7 +4241,7 @@
         "export_name": "CloudSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-success-icon",
@@ -4285,7 +4285,7 @@
         "export_name": "CloudSuccessIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-success-solid-icon",
@@ -4335,7 +4335,7 @@
         "export_name": "CloudSuccessSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-sync-icon",
@@ -4379,7 +4379,7 @@
         "export_name": "CloudSyncIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-sync-solid-icon",
@@ -4429,7 +4429,7 @@
         "export_name": "CloudSyncSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-upload-icon",
@@ -4473,7 +4473,7 @@
         "export_name": "CloudUploadIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cloud-upload-solid-icon",
@@ -4523,7 +4523,7 @@
         "export_name": "CloudUploadSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.coffee-icon",
@@ -4566,7 +4566,7 @@
         "export_name": "CoffeeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.coffee-solid-icon",
@@ -4616,7 +4616,7 @@
         "export_name": "CoffeeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.collapse-icon",
@@ -4663,7 +4663,7 @@
         "export_name": "CollapseIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.collapse-all-icon",
@@ -4711,7 +4711,7 @@
         "export_name": "CollapseAllIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.collapse-all-horizontal-icon",
@@ -4757,7 +4757,7 @@
         "export_name": "CollapseAllHorizontalIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.column-chooser-icon",
@@ -4803,7 +4803,7 @@
         "export_name": "ColumnChooserIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.column-chooser-solid-icon",
@@ -4856,7 +4856,7 @@
         "export_name": "ColumnChooserSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.commentary-icon",
@@ -4905,7 +4905,7 @@
         "export_name": "CommentaryIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.commentary-solid-icon",
@@ -4964,7 +4964,7 @@
         "export_name": "CommentarySolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.compare-icon",
@@ -5007,7 +5007,7 @@
         "export_name": "CompareIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.compare-solid-icon",
@@ -5057,7 +5057,7 @@
         "export_name": "CompareSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.compass-icon",
@@ -5098,7 +5098,7 @@
         "export_name": "CompassIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.compass-solid-icon",
@@ -5145,7 +5145,7 @@
         "export_name": "CompassSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cookie-icon",
@@ -5186,7 +5186,7 @@
         "export_name": "CookieIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cookie-solid-icon",
@@ -5233,7 +5233,7 @@
         "export_name": "CookieSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.copy-icon",
@@ -5280,7 +5280,7 @@
         "export_name": "CopyIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.copy-solid-icon",
@@ -5336,7 +5336,7 @@
         "export_name": "CopySolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.credit-card-icon",
@@ -5384,7 +5384,7 @@
         "export_name": "CreditCardIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.credit-card-solid-icon",
@@ -5440,7 +5440,7 @@
         "export_name": "CreditCardSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.crops-icon",
@@ -5487,7 +5487,7 @@
         "export_name": "CropsIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.crops-solid-icon",
@@ -5543,7 +5543,7 @@
         "export_name": "CropsSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.csv-icon",
@@ -5586,7 +5586,7 @@
         "export_name": "CsvIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.csv-solid-icon",
@@ -5636,7 +5636,7 @@
         "export_name": "CsvSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.currency-icon",
@@ -5681,7 +5681,7 @@
         "export_name": "CurrencyIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.currency-exchange-icon",
@@ -5725,7 +5725,7 @@
         "export_name": "CurrencyExchangeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.currency-solid-icon",
@@ -5778,7 +5778,7 @@
         "export_name": "CurrencySolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.cut-icon",
@@ -5821,7 +5821,7 @@
         "export_name": "CutIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.dark-icon",
@@ -5864,7 +5864,7 @@
         "export_name": "DarkIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.dark-solid-icon",
@@ -5914,7 +5914,7 @@
         "export_name": "DarkSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.dashboard-icon",
@@ -5957,7 +5957,7 @@
         "export_name": "DashboardIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.dashboard-solid-icon",
@@ -6007,7 +6007,7 @@
         "export_name": "DashboardSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.database-icon",
@@ -6046,7 +6046,7 @@
         "export_name": "DatabaseIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.database-solid-icon",
@@ -6090,7 +6090,7 @@
         "export_name": "DatabaseSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.dataset-icon",
@@ -6129,7 +6129,7 @@
         "export_name": "DatasetIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.dataset-manager-icon",
@@ -6171,7 +6171,7 @@
         "export_name": "DatasetManagerIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.dataset-manager-solid-icon",
@@ -6218,7 +6218,7 @@
         "export_name": "DatasetManagerSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.delete-icon",
@@ -6265,7 +6265,7 @@
         "export_name": "DeleteIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.delete-solid-icon",
@@ -6321,7 +6321,7 @@
         "export_name": "DeleteSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.devices-icon",
@@ -6364,7 +6364,7 @@
         "export_name": "DevicesIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.devices-solid-icon",
@@ -6414,7 +6414,7 @@
         "export_name": "DevicesSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.diamond-icon",
@@ -6457,7 +6457,7 @@
         "export_name": "DiamondIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.display-icon",
@@ -6498,7 +6498,7 @@
         "export_name": "DisplayIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.display-solid-icon",
@@ -6545,7 +6545,7 @@
         "export_name": "DisplaySolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.divide-icon",
@@ -6590,7 +6590,7 @@
         "export_name": "DivideIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.document-icon",
@@ -6637,7 +6637,7 @@
         "export_name": "DocumentIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.document-draft-icon",
@@ -6687,7 +6687,7 @@
         "export_name": "DocumentDraftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.document-edit-icon",
@@ -6735,7 +6735,7 @@
         "export_name": "DocumentEditIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.document-search-icon",
@@ -6785,7 +6785,7 @@
         "export_name": "DocumentSearchIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.document-solid-icon",
@@ -6841,7 +6841,7 @@
         "export_name": "DocumentSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.does-not-equal-icon",
@@ -6881,7 +6881,7 @@
         "export_name": "DoesNotEqualIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.double-chevron-down-icon",
@@ -6925,7 +6925,7 @@
         "export_name": "DoubleChevronDownIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.double-chevron-left-icon",
@@ -6975,7 +6975,7 @@
         "export_name": "DoubleChevronLeftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.double-chevron-right-icon",
@@ -7025,7 +7025,7 @@
         "export_name": "DoubleChevronRightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.double-chevron-up-icon",
@@ -7069,7 +7069,7 @@
         "export_name": "DoubleChevronUpIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.download-icon",
@@ -7110,7 +7110,7 @@
         "export_name": "DownloadIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.drag-row-icon",
@@ -7156,7 +7156,7 @@
         "export_name": "DragRowIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.edit-icon",
@@ -7199,7 +7199,7 @@
         "export_name": "EditIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.edit-solid-icon",
@@ -7249,7 +7249,7 @@
         "export_name": "EditSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.equal-icon",
@@ -7292,7 +7292,7 @@
         "export_name": "EqualIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.error-icon",
@@ -7339,7 +7339,7 @@
         "export_name": "ErrorIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.error-execute-icon",
@@ -7376,7 +7376,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-errorexecute.errorexecuteicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.error-solid-icon",
@@ -7432,7 +7432,7 @@
         "export_name": "ErrorSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.expand-icon",
@@ -7479,7 +7479,7 @@
         "export_name": "ExpandIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.expand-all-icon",
@@ -7525,7 +7525,7 @@
         "export_name": "ExpandAllIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.expand-all-horizontal-icon",
@@ -7571,7 +7571,7 @@
         "export_name": "ExpandAllHorizontalIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.exponentiation-icon",
@@ -7618,7 +7618,7 @@
         "export_name": "ExponentiationIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.export-icon",
@@ -7661,7 +7661,7 @@
         "export_name": "ExportIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.export-solid-icon",
@@ -7711,7 +7711,7 @@
         "export_name": "ExportSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.favorite-icon",
@@ -7762,7 +7762,7 @@
         "export_name": "FavoriteIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.favorite-half-icon",
@@ -7784,8 +7784,7 @@
         "save",
         "favourite",
         "rate",
-        "rating",
-        "star outline"
+        "rating"
       ],
       "aliases": [
         "FavoriteHalfIcon",
@@ -7799,7 +7798,6 @@
         "favourite",
         "rate",
         "rating",
-        "star outline",
         "favorite-half icon",
         "Favorite Half icon"
       ],
@@ -7814,7 +7812,7 @@
         "export_name": "FavoriteHalfIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.favorite-solid-icon",
@@ -7876,7 +7874,7 @@
         "export_name": "FavoriteSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.favorite-strong-icon",
@@ -7898,8 +7896,7 @@
         "save",
         "favourite",
         "rate",
-        "rating",
-        "star outline"
+        "rating"
       ],
       "aliases": [
         "FavoriteStrongIcon",
@@ -7913,7 +7910,6 @@
         "favourite",
         "rate",
         "rating",
-        "star outline",
         "favorite-strong icon",
         "Favorite Strong icon"
       ],
@@ -7928,7 +7924,7 @@
         "export_name": "FavoriteStrongIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.feedback-icon",
@@ -7971,7 +7967,7 @@
         "export_name": "FeedbackIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.feedback-solid-icon",
@@ -8021,7 +8017,7 @@
         "export_name": "FeedbackSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.figma-icon",
@@ -8064,7 +8060,7 @@
         "export_name": "FigmaIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.filter-icon",
@@ -8105,7 +8101,7 @@
         "export_name": "FilterIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.filter-clear-icon",
@@ -8147,7 +8143,7 @@
         "export_name": "FilterClearIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.filter-clear-solid-icon",
@@ -8194,7 +8190,7 @@
         "export_name": "FilterClearSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.filter-solid-icon",
@@ -8241,7 +8237,7 @@
         "export_name": "FilterSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.first-icon",
@@ -8280,7 +8276,7 @@
         "export_name": "FirstIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.flag-icon",
@@ -8319,7 +8315,7 @@
         "export_name": "FlagIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.flag-solid-icon",
@@ -8363,7 +8359,7 @@
         "export_name": "FlagSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.folder-closed-icon",
@@ -8407,7 +8403,7 @@
         "export_name": "FolderClosedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.folder-closed-solid-icon",
@@ -8457,7 +8453,7 @@
         "export_name": "FolderClosedSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.folder-open-icon",
@@ -8503,7 +8499,7 @@
         "export_name": "FolderOpenIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.folder-open-solid-icon",
@@ -8556,7 +8552,7 @@
         "export_name": "FolderOpenSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.forward10-icon",
@@ -8603,7 +8599,7 @@
         "export_name": "Forward10Icon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.forward15-icon",
@@ -8648,7 +8644,7 @@
         "export_name": "Forward15Icon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.forward30-icon",
@@ -8691,7 +8687,7 @@
         "export_name": "Forward30Icon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.forward5-icon",
@@ -8734,7 +8730,7 @@
         "export_name": "Forward5Icon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.github-icon",
@@ -8777,7 +8773,7 @@
         "export_name": "GithubIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.globe-icon",
@@ -8820,7 +8816,7 @@
         "export_name": "GlobeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.globe-solid-icon",
@@ -8870,7 +8866,7 @@
         "export_name": "GlobeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.greater-than-icon",
@@ -8910,7 +8906,7 @@
         "export_name": "GreaterThanIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.greater-than-equal-to-icon",
@@ -8950,7 +8946,7 @@
         "export_name": "GreaterThanEqualToIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.grid-icon",
@@ -8991,7 +8987,7 @@
         "export_name": "GridIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.grid-solid-icon",
@@ -9038,7 +9034,7 @@
         "export_name": "GridSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.group-icon",
@@ -9079,7 +9075,7 @@
         "export_name": "GroupIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.group-solid-icon",
@@ -9126,7 +9122,7 @@
         "export_name": "GroupSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.growth-icon",
@@ -9175,7 +9171,7 @@
         "export_name": "GrowthIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.guide-closed-icon",
@@ -9221,7 +9217,7 @@
         "export_name": "GuideClosedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.guide-closed-solid-icon",
@@ -9274,7 +9270,7 @@
         "export_name": "GuideClosedSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.guide-open-icon",
@@ -9322,7 +9318,7 @@
         "export_name": "GuideOpenIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.guide-open-solid-icon",
@@ -9378,7 +9374,7 @@
         "export_name": "GuideOpenSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.handshake-icon",
@@ -9423,7 +9419,7 @@
         "export_name": "HandshakeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.handshake-solid-icon",
@@ -9476,7 +9472,7 @@
         "export_name": "HandshakeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.headphones-icon",
@@ -9519,7 +9515,7 @@
         "export_name": "HeadphonesIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.headphones-disabled-icon",
@@ -9565,7 +9561,7 @@
         "export_name": "HeadphonesDisabledIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.headphones-disabled-solid-icon",
@@ -9618,7 +9614,7 @@
         "export_name": "HeadphonesDisabledSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.headphones-solid-icon",
@@ -9668,7 +9664,7 @@
         "export_name": "HeadphonesSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.help-icon",
@@ -9704,7 +9700,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-help.helpicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.help-circle-icon",
@@ -9724,7 +9720,7 @@
         "support",
         "information",
         "assist",
-        "question mark circle"
+        "question mark"
       ],
       "aliases": [
         "HelpCircleIcon",
@@ -9735,7 +9731,7 @@
         "support",
         "information",
         "assist",
-        "question mark circle",
+        "question mark",
         "help-circle icon",
         "Help Circle icon"
       ],
@@ -9750,7 +9746,7 @@
         "export_name": "HelpCircleIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.help-circle-solid-icon",
@@ -9770,7 +9766,7 @@
         "support",
         "information",
         "assist",
-        "question mark circle"
+        "question mark"
       ],
       "aliases": [
         "HelpCircleSolidIcon",
@@ -9781,7 +9777,7 @@
         "support",
         "information",
         "assist",
-        "question mark circle",
+        "question mark",
         "help-circle solid",
         "help-circle-solid",
         "Help Circle solid",
@@ -9790,7 +9786,7 @@
         "solid support",
         "solid information",
         "solid assist",
-        "solid question mark circle"
+        "solid question mark"
       ],
       "variant": "solid",
       "related_docs": {
@@ -9803,7 +9799,7 @@
         "export_name": "HelpCircleSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.help-solid-icon",
@@ -9842,7 +9838,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-helpsolid.helpsolidicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.hidden-icon",
@@ -9891,7 +9887,7 @@
         "export_name": "HiddenIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.hidden-solid-icon",
@@ -9950,7 +9946,7 @@
         "export_name": "HiddenSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.hierarchy-icon",
@@ -9995,7 +9991,7 @@
         "export_name": "HierarchyIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.hierarchy-solid-icon",
@@ -10048,7 +10044,7 @@
         "export_name": "HierarchySolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.history-icon",
@@ -10091,7 +10087,7 @@
         "export_name": "HistoryIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.holiday-icon",
@@ -10136,7 +10132,7 @@
         "export_name": "HolidayIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.holiday-solid-icon",
@@ -10189,7 +10185,7 @@
         "export_name": "HolidaySolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.home-icon",
@@ -10228,7 +10224,7 @@
         "export_name": "HomeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.home-solid-icon",
@@ -10272,7 +10268,7 @@
         "export_name": "HomeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.hospital-icon",
@@ -10317,7 +10313,7 @@
         "export_name": "HospitalIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.hospital-solid-icon",
@@ -10370,7 +10366,7 @@
         "export_name": "HospitalSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.icon-figma-icon",
@@ -10407,7 +10403,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-iconfigma.iconfigmaicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.image-icon",
@@ -10452,7 +10448,7 @@
         "export_name": "ImageIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.image-solid-icon",
@@ -10505,7 +10501,7 @@
         "export_name": "ImageSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.import-icon",
@@ -10544,7 +10540,7 @@
         "export_name": "ImportIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.import-solid-icon",
@@ -10588,7 +10584,7 @@
         "export_name": "ImportSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.inbox-icon",
@@ -10631,7 +10627,7 @@
         "export_name": "InboxIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.inbox-solid-icon",
@@ -10681,7 +10677,7 @@
         "export_name": "InboxSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.indent-icon",
@@ -10724,7 +10720,7 @@
         "export_name": "IndentIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.infinite-icon",
@@ -10763,7 +10759,7 @@
         "export_name": "InfiniteIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.info-icon",
@@ -10810,7 +10806,7 @@
         "export_name": "InfoIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.info-solid-icon",
@@ -10866,7 +10862,7 @@
         "export_name": "InfoSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.jigsaw-icon",
@@ -10907,7 +10903,7 @@
         "export_name": "JigsawIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.jigsaw-solid-icon",
@@ -10954,7 +10950,7 @@
         "export_name": "JigsawSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-icon",
@@ -11003,7 +10999,7 @@
         "export_name": "KeyIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-backspace-icon",
@@ -11051,7 +11047,7 @@
         "export_name": "KeyBackspaceIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-capslock-icon",
@@ -11095,7 +11091,7 @@
         "export_name": "KeyCapslockIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-command-icon",
@@ -11135,7 +11131,7 @@
         "export_name": "KeyCommandIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-control-icon",
@@ -11179,7 +11175,7 @@
         "export_name": "KeyControlIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-enter-icon",
@@ -11223,7 +11219,7 @@
         "export_name": "KeyEnterIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-option-icon",
@@ -11265,7 +11261,7 @@
         "export_name": "KeyOptionIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-shift-icon",
@@ -11305,7 +11301,7 @@
         "export_name": "KeyShiftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-solid-icon",
@@ -11364,7 +11360,7 @@
         "export_name": "KeySolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.key-tab-icon",
@@ -11408,7 +11404,7 @@
         "export_name": "KeyTabIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.laptop-icon",
@@ -11449,7 +11445,7 @@
         "export_name": "LaptopIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.laptop-solid-icon",
@@ -11496,7 +11492,7 @@
         "export_name": "LaptopSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.last-icon",
@@ -11533,7 +11529,7 @@
         "export_name": "LastIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.layers-icon",
@@ -11576,7 +11572,7 @@
         "export_name": "LayersIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.layers-solid-icon",
@@ -11626,7 +11622,7 @@
         "export_name": "LayersSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.less-than-icon",
@@ -11666,7 +11662,7 @@
         "export_name": "LessThanIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.less-than-equal-to-icon",
@@ -11706,7 +11702,7 @@
         "export_name": "LessThanEqualToIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.light-icon",
@@ -11753,7 +11749,7 @@
         "export_name": "LightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.lightbulb-icon",
@@ -11804,7 +11800,7 @@
         "export_name": "LightbulbIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.lightbulb-solid-icon",
@@ -11866,7 +11862,7 @@
         "export_name": "LightbulbSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.light-solid-icon",
@@ -11922,7 +11918,7 @@
         "export_name": "LightSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.like-icon",
@@ -11965,7 +11961,7 @@
         "export_name": "LikeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.like-solid-icon",
@@ -12015,7 +12011,7 @@
         "export_name": "LikeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.line-chart-icon",
@@ -12052,7 +12048,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-linechart.linecharticon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.line-chart-solid-icon",
@@ -12089,7 +12085,7 @@
         "export_name": "LineChartSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.linked-icon",
@@ -12132,7 +12128,7 @@
         "export_name": "LinkedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.linkedin-icon",
@@ -12175,7 +12171,7 @@
         "export_name": "LinkedinIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.linkedin-solid-icon",
@@ -12225,7 +12221,7 @@
         "export_name": "LinkedinSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.list-icon",
@@ -12259,7 +12255,7 @@
         "export_name": "ListIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.loader-icon",
@@ -12304,7 +12300,7 @@
         "export_name": "LoaderIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.location-icon",
@@ -12349,7 +12345,7 @@
         "export_name": "LocationIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.location-solid-icon",
@@ -12402,7 +12398,7 @@
         "export_name": "LocationSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.locked-icon",
@@ -12451,7 +12447,7 @@
         "export_name": "LockedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.locked-solid-icon",
@@ -12510,7 +12506,7 @@
         "export_name": "LockedSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.magic-wand-icon",
@@ -12554,7 +12550,7 @@
         "export_name": "MagicWandIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.maintenance-icon",
@@ -12601,7 +12597,7 @@
         "export_name": "MaintenanceIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.maintenance-solid-icon",
@@ -12657,7 +12653,7 @@
         "export_name": "MaintenanceSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.man-icon",
@@ -12702,7 +12698,7 @@
         "export_name": "ManIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.man-solid-icon",
@@ -12755,7 +12751,7 @@
         "export_name": "ManSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.man-woman-icon",
@@ -12805,7 +12801,7 @@
         "export_name": "ManWomanIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.man-woman-solid-icon",
@@ -12864,7 +12860,7 @@
         "export_name": "ManWomanSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.map-icon",
@@ -12905,7 +12901,7 @@
         "export_name": "MapIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.map-solid-icon",
@@ -12952,7 +12948,7 @@
         "export_name": "MapSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.marker-icon",
@@ -12993,7 +12989,7 @@
         "export_name": "MarkerIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.marker-solid-icon",
@@ -13040,7 +13036,7 @@
         "export_name": "MarkerSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.maximize-icon",
@@ -13085,7 +13081,7 @@
         "export_name": "MaximizeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.maximize-solid-icon",
@@ -13138,7 +13134,7 @@
         "export_name": "MaximizeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.medical-kit-icon",
@@ -13180,7 +13176,7 @@
         "export_name": "MedicalKitIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.medical-kit-solid-icon",
@@ -13227,7 +13223,7 @@
         "export_name": "MedicalKitSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.menu-icon",
@@ -13274,7 +13270,7 @@
         "export_name": "MenuIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.message-icon",
@@ -13319,7 +13315,7 @@
         "export_name": "MessageIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.message-forward-icon",
@@ -13365,7 +13361,7 @@
         "export_name": "MessageForwardIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.message-reply-icon",
@@ -13409,7 +13405,7 @@
         "export_name": "MessageReplyIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.message-reply-all-icon",
@@ -13453,7 +13449,7 @@
         "export_name": "MessageReplyAllIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.message-solid-icon",
@@ -13506,7 +13502,7 @@
         "export_name": "MessageSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.micro-menu-icon",
@@ -13556,7 +13552,7 @@
         "export_name": "MicroMenuIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.microphone-icon",
@@ -13605,7 +13601,7 @@
         "export_name": "MicrophoneIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.microphone-disabled-icon",
@@ -13657,7 +13653,7 @@
         "export_name": "MicrophoneDisabledIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.microphone-disabled-solid-icon",
@@ -13719,7 +13715,7 @@
         "export_name": "MicrophoneDisabledSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.microphone-solid-icon",
@@ -13778,7 +13774,7 @@
         "export_name": "MicrophoneSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.minimize-icon",
@@ -13819,7 +13815,7 @@
         "export_name": "MinimizeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.mobile-icon",
@@ -13864,7 +13860,7 @@
         "export_name": "MobileIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.mobile-solid-icon",
@@ -13917,7 +13913,7 @@
         "export_name": "MobileSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.mouse-icon",
@@ -13962,7 +13958,7 @@
         "export_name": "MouseIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.mouse-solid-icon",
@@ -14015,7 +14011,7 @@
         "export_name": "MouseSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.move-all-icon",
@@ -14059,7 +14055,7 @@
         "export_name": "MoveAllIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.move-horizontal-icon",
@@ -14105,7 +14101,7 @@
         "export_name": "MoveHorizontalIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.move-vertical-icon",
@@ -14151,7 +14147,7 @@
         "export_name": "MoveVerticalIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.multiply-icon",
@@ -14196,7 +14192,7 @@
         "export_name": "MultiplyIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.music-icon",
@@ -14237,7 +14233,7 @@
         "export_name": "MusicIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.music-disabled-icon",
@@ -14283,7 +14279,7 @@
         "export_name": "MusicDisabledIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.music-disabled-solid-icon",
@@ -14336,7 +14332,7 @@
         "export_name": "MusicDisabledSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.music-solid-icon",
@@ -14383,7 +14379,7 @@
         "export_name": "MusicSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.not-allowed-icon",
@@ -14395,15 +14391,34 @@
         "status": "stable",
         "since": null
       },
-      "summary": "Not Allowed icon in Salt Design System.",
+      "summary": "Not Allowed icon for indicators concepts such as alert, stop, failure.",
       "status": "stable",
       "category": "indicators",
-      "synonyms": [],
+      "synonyms": [
+        "alert",
+        "stop",
+        "failure",
+        "crash",
+        "mistake",
+        "forbidden",
+        "prohibited",
+        "block",
+        "exclude"
+      ],
       "aliases": [
         "NotAllowedIcon",
         "NotAllowed",
         "not-allowed",
         "Not Allowed",
+        "alert",
+        "stop",
+        "failure",
+        "crash",
+        "mistake",
+        "forbidden",
+        "prohibited",
+        "block",
+        "exclude",
         "not-allowed icon",
         "Not Allowed icon"
       ],
@@ -14418,7 +14433,7 @@
         "export_name": "NotAllowedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.note-icon",
@@ -14461,7 +14476,7 @@
         "export_name": "NoteIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.note-solid-icon",
@@ -14511,7 +14526,7 @@
         "export_name": "NoteSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.notification-icon",
@@ -14554,7 +14569,7 @@
         "export_name": "NotificationIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.notification-read-icon",
@@ -14602,7 +14617,7 @@
         "export_name": "NotificationReadIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.notification-read-solid-icon",
@@ -14658,7 +14673,7 @@
         "export_name": "NotificationReadSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.notification-solid-icon",
@@ -14708,7 +14723,7 @@
         "export_name": "NotificationSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.outdent-icon",
@@ -14751,7 +14766,7 @@
         "export_name": "OutdentIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.overflow-menu-icon",
@@ -14799,7 +14814,7 @@
         "export_name": "OverflowMenuIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-close-bottom-icon",
@@ -14845,7 +14860,7 @@
         "export_name": "PanelCloseBottomIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-close-bottom-solid-icon",
@@ -14898,7 +14913,7 @@
         "export_name": "PanelCloseBottomSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-close-left-icon",
@@ -14944,7 +14959,7 @@
         "export_name": "PanelCloseLeftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-close-left-solid-icon",
@@ -14997,7 +15012,7 @@
         "export_name": "PanelCloseLeftSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-close-right-icon",
@@ -15043,7 +15058,7 @@
         "export_name": "PanelCloseRightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-close-right-solid-icon",
@@ -15096,7 +15111,7 @@
         "export_name": "PanelCloseRightSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-close-top-icon",
@@ -15142,7 +15157,7 @@
         "export_name": "PanelCloseTopIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-close-top-solid-icon",
@@ -15195,7 +15210,7 @@
         "export_name": "PanelCloseTopSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-open-bottom-icon",
@@ -15239,7 +15254,7 @@
         "export_name": "PanelOpenBottomIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-open-bottom-solid-icon",
@@ -15289,7 +15304,7 @@
         "export_name": "PanelOpenBottomSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-open-left-icon",
@@ -15333,7 +15348,7 @@
         "export_name": "PanelOpenLeftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-open-left-solid-icon",
@@ -15383,7 +15398,7 @@
         "export_name": "PanelOpenLeftSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-open-right-icon",
@@ -15427,7 +15442,7 @@
         "export_name": "PanelOpenRightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-open-right-solid-icon",
@@ -15477,7 +15492,7 @@
         "export_name": "PanelOpenRightSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-open-top-icon",
@@ -15521,7 +15536,7 @@
         "export_name": "PanelOpenTopIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.panel-open-top-solid-icon",
@@ -15571,7 +15586,7 @@
         "export_name": "PanelOpenTopSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.paste-icon",
@@ -15612,7 +15627,7 @@
         "export_name": "PasteIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.paste-solid-icon",
@@ -15659,7 +15674,7 @@
         "export_name": "PasteSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pause-icon",
@@ -15704,7 +15719,7 @@
         "export_name": "PauseIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pause-solid-icon",
@@ -15757,7 +15772,7 @@
         "export_name": "PauseSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pdf-icon",
@@ -15804,7 +15819,7 @@
         "export_name": "PdfIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pdf-solid-icon",
@@ -15860,7 +15875,7 @@
         "export_name": "PdfSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.percentage-icon",
@@ -15907,7 +15922,7 @@
         "export_name": "PercentageIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pi-icon",
@@ -15952,7 +15967,7 @@
         "export_name": "PiIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.picnic-icon",
@@ -15995,7 +16010,7 @@
         "export_name": "PicnicIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.picnic-solid-icon",
@@ -16045,7 +16060,7 @@
         "export_name": "PicnicSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pie-chart-icon",
@@ -16082,7 +16097,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-piechart.piecharticon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pin-icon",
@@ -16131,7 +16146,7 @@
         "export_name": "PinIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pin-solid-icon",
@@ -16190,7 +16205,7 @@
         "export_name": "PinSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pivot-icon",
@@ -16235,7 +16250,7 @@
         "export_name": "PivotIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pivot-solid-icon",
@@ -16288,7 +16303,7 @@
         "export_name": "PivotSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.place-in-icon",
@@ -16334,7 +16349,7 @@
         "export_name": "PlaceInIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.play-icon",
@@ -16389,7 +16404,7 @@
         "export_name": "PlayIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.play-solid-icon",
@@ -16457,7 +16472,7 @@
         "export_name": "PlaySolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.policy-icon",
@@ -16504,7 +16519,7 @@
         "export_name": "PolicyIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pot-food-icon",
@@ -16546,7 +16561,7 @@
         "export_name": "PotFoodIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.pot-food-solid-icon",
@@ -16593,7 +16608,7 @@
         "export_name": "PotFoodSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.presentation-icon",
@@ -16636,7 +16651,7 @@
         "export_name": "PresentationIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.presentation-solid-icon",
@@ -16686,7 +16701,7 @@
         "export_name": "PresentationSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.price-ladder-icon",
@@ -16732,7 +16747,7 @@
         "export_name": "PriceLadderIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.print-icon",
@@ -16773,7 +16788,7 @@
         "export_name": "PrintIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.print-solid-icon",
@@ -16820,7 +16835,53 @@
         "export_name": "PrintSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
+    },
+    {
+      "id": "icon.progress-active-icon",
+      "name": "ProgressActiveIcon",
+      "base_name": "ProgressActive",
+      "figma_name": "progress-active",
+      "package": {
+        "name": "@salt-ds/icons",
+        "status": "stable",
+        "since": null
+      },
+      "summary": "Progress Active icon for indicators concepts such as progress, circle fill, status.",
+      "status": "stable",
+      "category": "indicators",
+      "synonyms": [
+        "progress",
+        "circle fill",
+        "status",
+        "work in progress",
+        "wip"
+      ],
+      "aliases": [
+        "ProgressActiveIcon",
+        "ProgressActive",
+        "progress-active",
+        "Progress Active",
+        "progress",
+        "circle fill",
+        "status",
+        "work in progress",
+        "wip",
+        "progress-active icon",
+        "Progress Active icon"
+      ],
+      "variant": "outline",
+      "related_docs": {
+        "overview": "/salt/components/icon",
+        "examples": "/salt/components/icon/examples",
+        "foundation": "/salt/foundations/assets/index"
+      },
+      "source": {
+        "repo_path": "packages/icons/src/components/ProgressActive.tsx",
+        "export_name": "ProgressActiveIcon"
+      },
+      "deprecations": [],
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.progress-cancelled-icon",
@@ -16870,7 +16931,7 @@
         "export_name": "ProgressCancelledIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.progress-closed-icon",
@@ -16910,7 +16971,7 @@
         "export_name": "ProgressClosedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.progress-complete-icon",
@@ -16960,7 +17021,7 @@
         "export_name": "ProgressCompleteIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.progress-draft-icon",
@@ -17004,7 +17065,7 @@
         "export_name": "ProgressDraftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.progress-inprogress-icon",
@@ -17050,7 +17111,7 @@
         "export_name": "ProgressInprogressIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.progress-onhold-icon",
@@ -17098,7 +17159,7 @@
         "export_name": "ProgressOnholdIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.progress-pending-icon",
@@ -17144,7 +17205,7 @@
         "export_name": "ProgressPendingIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.progress-rejected-icon",
@@ -17186,7 +17247,7 @@
         "export_name": "ProgressRejectedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.progress-todo-icon",
@@ -17232,7 +17293,7 @@
         "export_name": "ProgressTodoIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.protection-icon",
@@ -17279,7 +17340,7 @@
         "export_name": "ProtectionIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.protection-solid-icon",
@@ -17335,7 +17396,7 @@
         "export_name": "ProtectionSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.receipt-icon",
@@ -17382,7 +17443,7 @@
         "export_name": "ReceiptIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.receipt-solid-icon",
@@ -17438,7 +17499,7 @@
         "export_name": "ReceiptSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.redo-icon",
@@ -17487,7 +17548,7 @@
         "export_name": "RedoIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.refresh-icon",
@@ -17538,7 +17599,7 @@
         "export_name": "RefreshIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.remove-icon",
@@ -17589,7 +17650,7 @@
         "export_name": "RemoveIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.remove-document-icon",
@@ -17637,7 +17698,7 @@
         "export_name": "RemoveDocumentIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.remove-document-solid-icon",
@@ -17693,7 +17754,7 @@
         "export_name": "RemoveDocumentSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.remove-user-icon",
@@ -17735,7 +17796,7 @@
         "export_name": "RemoveUserIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.replay10-icon",
@@ -17782,7 +17843,7 @@
         "export_name": "Replay10Icon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.replay15-icon",
@@ -17827,7 +17888,7 @@
         "export_name": "Replay15Icon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.replay30-icon",
@@ -17870,7 +17931,7 @@
         "export_name": "Replay30Icon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.replay5-icon",
@@ -17913,7 +17974,7 @@
         "export_name": "Replay5Icon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.restore-icon",
@@ -17956,7 +18017,53 @@
         "export_name": "RestoreIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
+    },
+    {
+      "id": "icon.rotate-left-icon",
+      "name": "RotateLeftIcon",
+      "base_name": "RotateLeft",
+      "figma_name": "rotate-left",
+      "package": {
+        "name": "@salt-ds/icons",
+        "status": "stable",
+        "since": null
+      },
+      "summary": "Rotate Left icon for organize concepts such as turn, arrow, organize.",
+      "status": "stable",
+      "category": "organize",
+      "synonyms": [
+        "turn",
+        "arrow",
+        "organize",
+        "spin",
+        "counterclockwise"
+      ],
+      "aliases": [
+        "RotateLeftIcon",
+        "RotateLeft",
+        "rotate-left",
+        "Rotate Left",
+        "turn",
+        "arrow",
+        "organize",
+        "spin",
+        "counterclockwise",
+        "rotate-left icon",
+        "Rotate Left icon"
+      ],
+      "variant": "outline",
+      "related_docs": {
+        "overview": "/salt/components/icon",
+        "examples": "/salt/components/icon/examples",
+        "foundation": "/salt/foundations/assets/index"
+      },
+      "source": {
+        "repo_path": "packages/icons/src/components/RotateLeft.tsx",
+        "export_name": "RotateLeftIcon"
+      },
+      "deprecations": [],
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.run-report-icon",
@@ -18004,7 +18111,7 @@
         "export_name": "RunReportIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.run-report-solid-icon",
@@ -18060,7 +18167,7 @@
         "export_name": "RunReportSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.salt-shaker-icon",
@@ -18102,7 +18209,7 @@
         "export_name": "SaltShakerIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.salt-shaker-solid-icon",
@@ -18149,7 +18256,7 @@
         "export_name": "SaltShakerSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.save-icon",
@@ -18192,7 +18299,7 @@
         "export_name": "SaveIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.save-solid-icon",
@@ -18242,7 +18349,7 @@
         "export_name": "SaveSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.scales-icon",
@@ -18285,7 +18392,7 @@
         "export_name": "ScalesIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.scales-solid-icon",
@@ -18335,7 +18442,7 @@
         "export_name": "ScalesSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.schedule-icon",
@@ -18380,7 +18487,7 @@
         "export_name": "ScheduleIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.schedule-time-icon",
@@ -18426,7 +18533,7 @@
         "export_name": "ScheduleTimeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.schedule-time-solid-icon",
@@ -18479,7 +18586,7 @@
         "export_name": "ScheduleTimeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.school-icon",
@@ -18530,7 +18637,7 @@
         "export_name": "SchoolIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.school-solid-icon",
@@ -18592,7 +18699,7 @@
         "export_name": "SchoolSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.search-icon",
@@ -18637,7 +18744,7 @@
         "export_name": "SearchIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.search-solid-icon",
@@ -18690,7 +18797,7 @@
         "export_name": "SearchSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-dissatisfied-icon",
@@ -18736,7 +18843,7 @@
         "export_name": "SemanticDissatisfiedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-dissatisfied-solid-icon",
@@ -18789,7 +18896,7 @@
         "export_name": "SemanticDissatisfiedSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-neutral-icon",
@@ -18831,7 +18938,7 @@
         "export_name": "SemanticNeutralIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-neutral-solid-icon",
@@ -18878,7 +18985,7 @@
         "export_name": "SemanticNeutralSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-satisfied-icon",
@@ -18922,7 +19029,7 @@
         "export_name": "SemanticSatisfiedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-satisfied-solid-icon",
@@ -18972,7 +19079,7 @@
         "export_name": "SemanticSatisfiedSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-very-dissatisfied-icon",
@@ -19018,7 +19125,7 @@
         "export_name": "SemanticVeryDissatisfiedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-very-dissatisfied-solid-icon",
@@ -19071,7 +19178,7 @@
         "export_name": "SemanticVeryDissatisfiedSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-very-satisfied-icon",
@@ -19115,7 +19222,7 @@
         "export_name": "SemanticVerySatisfiedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.semantic-very-satisfied-solid-icon",
@@ -19165,7 +19272,7 @@
         "export_name": "SemanticVerySatisfiedSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.send-icon",
@@ -19210,7 +19317,7 @@
         "export_name": "SendIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.send-solid-icon",
@@ -19263,7 +19370,7 @@
         "export_name": "SendSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.settings-icon",
@@ -19308,7 +19415,7 @@
         "export_name": "SettingsIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.settings-solid-icon",
@@ -19361,7 +19468,7 @@
         "export_name": "SettingsSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.share-icon",
@@ -19408,7 +19515,7 @@
         "export_name": "ShareIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.share-solid-icon",
@@ -19464,7 +19571,7 @@
         "export_name": "ShareSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.signal-icon",
@@ -19509,7 +19616,7 @@
         "export_name": "SignalIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.signature-icon",
@@ -19556,7 +19663,7 @@
         "export_name": "SignatureIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.signpost-icon",
@@ -19601,7 +19708,7 @@
         "export_name": "SignpostIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.signpost-solid-icon",
@@ -19654,7 +19761,7 @@
         "export_name": "SignpostSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.slide-icon",
@@ -19697,7 +19804,7 @@
         "export_name": "SlideIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.slide-solid-icon",
@@ -19747,7 +19854,7 @@
         "export_name": "SlideSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sort-icon",
@@ -19792,7 +19899,7 @@
         "export_name": "SortIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sortable-alpha-icon",
@@ -19836,7 +19943,7 @@
         "export_name": "SortableAlphaIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sortable-num-icon",
@@ -19882,7 +19989,7 @@
         "export_name": "SortableNumIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sort-alpha-ascend-icon",
@@ -19928,7 +20035,7 @@
         "export_name": "SortAlphaAscendIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sort-alpha-descend-icon",
@@ -19974,7 +20081,7 @@
         "export_name": "SortAlphaDescendIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sort-ascend-icon",
@@ -20018,7 +20125,7 @@
         "export_name": "SortAscendIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sort-descend-icon",
@@ -20062,7 +20169,7 @@
         "export_name": "SortDescendIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sort-num-ascend-icon",
@@ -20108,7 +20215,7 @@
         "export_name": "SortNumAscendIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sort-num-descend-icon",
@@ -20154,7 +20261,7 @@
         "export_name": "SortNumDescendIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sparkle-icon",
@@ -20199,7 +20306,7 @@
         "export_name": "SparkleIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sparkle-refresh-icon",
@@ -20243,7 +20350,7 @@
         "export_name": "SparkleRefreshIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sparkle-refresh-solid-icon",
@@ -20293,7 +20400,7 @@
         "export_name": "SparkleRefreshSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sparkle-solid-icon",
@@ -20346,7 +20453,7 @@
         "export_name": "SparkleSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.split-view-icon",
@@ -20388,7 +20495,7 @@
         "export_name": "SplitViewIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.square-root-icon",
@@ -20432,7 +20539,7 @@
         "export_name": "SquareRootIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.stackoverflow-icon",
@@ -20477,7 +20584,7 @@
         "export_name": "StackoverflowIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.step-active-icon",
@@ -20523,7 +20630,7 @@
         "export_name": "StepActiveIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.step-default-icon",
@@ -20569,7 +20676,7 @@
         "export_name": "StepDefaultIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.step-success-icon",
@@ -20606,7 +20713,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-stepsuccess.stepsuccessicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.stethoscope-icon",
@@ -20651,7 +20758,7 @@
         "export_name": "StethoscopeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.stethoscope-solid-icon",
@@ -20704,7 +20811,7 @@
         "export_name": "StethoscopeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.stop-icon",
@@ -20753,7 +20860,7 @@
         "export_name": "StopIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.stop-solid-icon",
@@ -20812,7 +20919,7 @@
         "export_name": "StopSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.storage-icon",
@@ -20857,7 +20964,7 @@
         "export_name": "StorageIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.storage-solid-icon",
@@ -20910,7 +21017,7 @@
         "export_name": "StorageSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.storefront-icon",
@@ -20955,7 +21062,7 @@
         "export_name": "StorefrontIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.storefront-solid-icon",
@@ -21008,7 +21115,7 @@
         "export_name": "StorefrontSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.string-number-icon",
@@ -21052,7 +21159,7 @@
         "export_name": "StringNumberIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.string-text-icon",
@@ -21094,7 +21201,7 @@
         "export_name": "StringTextIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.success-icon",
@@ -21130,7 +21237,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-success.successicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.success-circle-icon",
@@ -21182,7 +21289,7 @@
         "export_name": "SuccessCircleIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.success-circle-solid-icon",
@@ -21244,7 +21351,7 @@
         "export_name": "SuccessCircleSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.success-small-icon",
@@ -21281,7 +21388,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-successsmall.successsmallicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.success-small-solid-icon",
@@ -21320,7 +21427,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-successsmallsolid.successsmallsolidicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.success-solid-icon",
@@ -21359,7 +21466,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-successsolid.successsolidicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.success-tick-icon",
@@ -21396,7 +21503,7 @@
       "deprecations": [
         "dep.salt-ds-icons.components-successtick.successtickicon.component.10"
       ],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sum-icon",
@@ -21441,7 +21548,7 @@
         "export_name": "SumIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.summarize-icon",
@@ -21486,7 +21593,7 @@
         "export_name": "SummarizeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sum-solid-icon",
@@ -21539,7 +21646,7 @@
         "export_name": "SumSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.swap-icon",
@@ -21586,7 +21693,7 @@
         "export_name": "SwapIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.symphony-icon",
@@ -21631,7 +21738,7 @@
         "export_name": "SymphonyIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.sync-icon",
@@ -21678,7 +21785,7 @@
         "export_name": "SyncIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tag-icon",
@@ -21721,7 +21828,7 @@
         "export_name": "TagIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tag-clear-icon",
@@ -21769,7 +21876,7 @@
         "export_name": "TagClearIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tag-clear-solid-icon",
@@ -21825,7 +21932,7 @@
         "export_name": "TagClearSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tag-solid-icon",
@@ -21875,7 +21982,7 @@
         "export_name": "TagSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tails-icon",
@@ -21918,7 +22025,7 @@
         "export_name": "TailsIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tails-solid-icon",
@@ -21968,7 +22075,7 @@
         "export_name": "TailsSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.target-icon",
@@ -22011,7 +22118,7 @@
         "export_name": "TargetIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tear-out-icon",
@@ -22061,7 +22168,7 @@
         "export_name": "TearOutIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-align-center-icon",
@@ -22103,7 +22210,7 @@
         "export_name": "TextAlignCenterIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-align-justify-icon",
@@ -22147,7 +22254,7 @@
         "export_name": "TextAlignJustifyIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-align-left-icon",
@@ -22189,7 +22296,7 @@
         "export_name": "TextAlignLeftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-align-right-icon",
@@ -22231,7 +22338,7 @@
         "export_name": "TextAlignRightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-bold-icon",
@@ -22277,7 +22384,7 @@
         "export_name": "TextBoldIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-color-icon",
@@ -22319,7 +22426,7 @@
         "export_name": "TextColorIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-highlight-icon",
@@ -22363,7 +22470,7 @@
         "export_name": "TextHighlightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-italics-icon",
@@ -22407,7 +22514,7 @@
         "export_name": "TextItalicsIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-ordered-list-icon",
@@ -22455,7 +22562,7 @@
         "export_name": "TextOrderedListIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-strikethrough-icon",
@@ -22501,7 +22608,7 @@
         "export_name": "TextStrikethroughIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-underline-icon",
@@ -22545,7 +22652,7 @@
         "export_name": "TextUnderlineIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.text-unordered-list-icon",
@@ -22589,7 +22696,7 @@
         "export_name": "TextUnorderedListIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.thumbs-down-icon",
@@ -22637,7 +22744,7 @@
         "export_name": "ThumbsDownIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.thumbs-down-solid-icon",
@@ -22693,7 +22800,7 @@
         "export_name": "ThumbsDownSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.thumbs-up-icon",
@@ -22741,7 +22848,7 @@
         "export_name": "ThumbsUpIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.thumbs-up-solid-icon",
@@ -22797,7 +22904,7 @@
         "export_name": "ThumbsUpSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tote-icon",
@@ -22840,7 +22947,7 @@
         "export_name": "ToteIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tote-solid-icon",
@@ -22890,7 +22997,7 @@
         "export_name": "ToteSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.travel-icon",
@@ -22939,7 +23046,7 @@
         "export_name": "TravelIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.travel-solid-icon",
@@ -22998,7 +23105,7 @@
         "export_name": "TravelSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tree-icon",
@@ -23039,7 +23146,7 @@
         "export_name": "TreeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.tree-solid-icon",
@@ -23086,7 +23193,7 @@
         "export_name": "TreeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.triangle-down-icon",
@@ -23136,7 +23243,7 @@
         "export_name": "TriangleDownIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.triangle-left-icon",
@@ -23184,7 +23291,7 @@
         "export_name": "TriangleLeftIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.triangle-right-icon",
@@ -23230,7 +23337,7 @@
         "export_name": "TriangleRightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.triangle-right-down-icon",
@@ -23270,7 +23377,7 @@
         "export_name": "TriangleRightDownIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.triangle-up-icon",
@@ -23318,7 +23425,7 @@
         "export_name": "TriangleUpIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.type-icon",
@@ -23361,7 +23468,7 @@
         "export_name": "TypeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.type-solid-icon",
@@ -23411,7 +23518,7 @@
         "export_name": "TypeSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.undo-icon",
@@ -23456,7 +23563,7 @@
         "export_name": "UndoIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.ungroup-icon",
@@ -23497,7 +23604,7 @@
         "export_name": "UngroupIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.ungroup-solid-icon",
@@ -23544,7 +23651,7 @@
         "export_name": "UngroupSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.universal-access-icon",
@@ -23588,7 +23695,7 @@
         "export_name": "UniversalAccessIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.universal-access-solid-icon",
@@ -23638,7 +23745,7 @@
         "export_name": "UniversalAccessSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.unlinked-icon",
@@ -23681,7 +23788,7 @@
         "export_name": "UnlinkedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.unlocked-icon",
@@ -23728,7 +23835,7 @@
         "export_name": "UnlockedIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.unlocked-solid-icon",
@@ -23784,7 +23891,7 @@
         "export_name": "UnlockedSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.upload-icon",
@@ -23829,7 +23936,7 @@
         "export_name": "UploadIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.urgency-critical-icon",
@@ -23873,7 +23980,7 @@
         "export_name": "UrgencyCriticalIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.urgency-high-icon",
@@ -23917,7 +24024,7 @@
         "export_name": "UrgencyHighIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.urgency-low-icon",
@@ -23963,7 +24070,7 @@
         "export_name": "UrgencyLowIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.urgency-medium-icon",
@@ -24007,7 +24114,7 @@
         "export_name": "UrgencyMediumIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.urgency-none-icon",
@@ -24049,7 +24156,7 @@
         "export_name": "UrgencyNoneIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.urgency-ontime-icon",
@@ -24087,7 +24194,7 @@
         "export_name": "UrgencyOntimeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.user-icon",
@@ -24132,7 +24239,7 @@
         "export_name": "UserIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.user-admin-icon",
@@ -24178,7 +24285,7 @@
         "export_name": "UserAdminIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.user-admin-solid-icon",
@@ -24231,7 +24338,7 @@
         "export_name": "UserAdminSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.user-badge-icon",
@@ -24277,7 +24384,7 @@
         "export_name": "UserBadgeIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.user-group-icon",
@@ -24325,7 +24432,7 @@
         "export_name": "UserGroupIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.user-group-solid-icon",
@@ -24381,7 +24488,7 @@
         "export_name": "UserGroupSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.user-search-icon",
@@ -24421,7 +24528,7 @@
         "export_name": "UserSearchIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.user-solid-icon",
@@ -24474,7 +24581,7 @@
         "export_name": "UserSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.utensils-icon",
@@ -24521,7 +24628,7 @@
         "export_name": "UtensilsIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.utensils-solid-icon",
@@ -24577,7 +24684,7 @@
         "export_name": "UtensilsSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.video-icon",
@@ -24622,7 +24729,7 @@
         "export_name": "VideoIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.video-disabled-icon",
@@ -24670,7 +24777,7 @@
         "export_name": "VideoDisabledIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.video-solid-icon",
@@ -24723,7 +24830,7 @@
         "export_name": "VideoSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.visible-icon",
@@ -24768,7 +24875,7 @@
         "export_name": "VisibleIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.visible-solid-icon",
@@ -24821,7 +24928,7 @@
         "export_name": "VisibleSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.volume-down-icon",
@@ -24867,7 +24974,7 @@
         "export_name": "VolumeDownIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.volume-off-icon",
@@ -24913,7 +25020,7 @@
         "export_name": "VolumeOffIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.volume-up-icon",
@@ -24963,7 +25070,7 @@
         "export_name": "VolumeUpIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.warning-icon",
@@ -25010,7 +25117,7 @@
         "export_name": "WarningIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.warning-solid-icon",
@@ -25066,7 +25173,7 @@
         "export_name": "WarningSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.watch-icon",
@@ -25107,7 +25214,7 @@
         "export_name": "WatchIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.watch-solid-icon",
@@ -25154,7 +25261,7 @@
         "export_name": "WatchSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.waveform-icon",
@@ -25193,7 +25300,7 @@
         "export_name": "WaveformIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.weight-icon",
@@ -25236,7 +25343,7 @@
         "export_name": "WeightIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.weight-solid-icon",
@@ -25286,7 +25393,7 @@
         "export_name": "WeightSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.wifi-icon",
@@ -25331,7 +25438,7 @@
         "export_name": "WifiIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.wifi-disabled-icon",
@@ -25379,7 +25486,7 @@
         "export_name": "WifiDisabledIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.woman-icon",
@@ -25420,7 +25527,7 @@
         "export_name": "WomanIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.woman-solid-icon",
@@ -25467,7 +25574,7 @@
         "export_name": "WomanSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.woodland-icon",
@@ -25512,7 +25619,7 @@
         "export_name": "WoodlandIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.woodland-solid-icon",
@@ -25565,7 +25672,7 @@
         "export_name": "WoodlandSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.workflow-icon",
@@ -25606,7 +25713,7 @@
         "export_name": "WorkflowIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.workflow-solid-icon",
@@ -25653,7 +25760,7 @@
         "export_name": "WorkflowSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.xls-icon",
@@ -25698,7 +25805,7 @@
         "export_name": "XlsIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.xls-solid-icon",
@@ -25751,7 +25858,7 @@
         "export_name": "XlsSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.zip-icon",
@@ -25794,7 +25901,7 @@
         "export_name": "ZipIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "icon.zip-solid-icon",
@@ -25844,7 +25951,7 @@
         "export_name": "ZipSolidIcon"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     }
   ]
 }

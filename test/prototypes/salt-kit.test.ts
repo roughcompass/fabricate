@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { saltRegistry } from "@/lib/prototypes/salt/adapter";
 import { KIT_VERSION, catalog, instructions, kitText, lessonRules } from "@/lib/prototypes/salt-kit";
+import { RUNTIME } from "@/lib/prototypes/render";
 
 // design.md, decision 6: the generator's instructions, built from the committed registry.
 describe("Salt kit", () => {
@@ -27,7 +28,7 @@ describe("Salt kit", () => {
 
   it("states the provider, shell, and data contracts, and carries a version stamp", async () => {
     const text = kitText(await saltRegistry());
-    for (const phrase of ["Never render SaltProvider", "Write only the page body", 'import from it so every variant shows the same data', "If something can't be verified from Salt's sources, don't use it", "Salt 1.73.0"]) expect(text).toContain(phrase);
+    for (const phrase of ["Never render SaltProvider", "Write only the page body", 'import from it so every variant shows the same data', "If something can't be verified from Salt's sources, don't use it", `Salt ${RUNTIME.packages["@salt-ds/core"]}`]) expect(text).toContain(phrase);
     expect(KIT_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}\.\d+$/);
   });
 

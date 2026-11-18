@@ -1,6 +1,6 @@
 {
-  "generated_at": "1.73.0",
-  "version": "1.73.0",
+  "generated_at": "1.75.0",
+  "version": "1.75.0",
   "guides": [
     {
       "id": "guide.developing-with-salt",
@@ -101,7 +101,7 @@
           "@salt-ds/icons"
         ]
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "guide.themes",
@@ -152,7 +152,7 @@
           "@salt-ds/theme"
         ]
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     }
   ]
 }

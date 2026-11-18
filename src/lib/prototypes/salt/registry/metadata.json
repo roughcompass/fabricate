@@ -1,16 +1,16 @@
 {
-  "generated_at": "1.73.0",
-  "version": "1.73.0",
+  "generated_at": "1.75.0",
+  "version": "1.75.0",
   "build_info": {
-    "source_root": "jpmorganchase/salt-ds@@salt-ds/core@1.73.0",
+    "source_root": "jpmorganchase/salt-ds@@salt-ds/core@1.75.0",
     "source_artifacts": {
       "docs_root": {
         "path": "site/docs",
         "kind": "directory",
         "exists": true,
-        "sha256": "7d16c028b4e7d276d91c6d5e122278e9fd8a0768dbfa519a153bca3d01ade82d",
+        "sha256": "48f5293f3b340c2ca0ac034c263a20cdaf9a4b08719cffb792e73006efe6f89e",
         "last_modified_at": null,
-        "file_count": 397,
+        "file_count": 396,
         "newest_file_modified_at": null
       },
       "search_data": {

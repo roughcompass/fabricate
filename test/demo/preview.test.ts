@@ -3,6 +3,7 @@ import { TEMPLATES, templateBySlug } from "@/lib/demo/catalog";
 import { DEVICES, frameSize, parsePreviewState, previewHref, scaffoldCommand, sizeLabel } from "@/lib/demo/preview";
 import { isIllustrative, templateFiles } from "@/lib/demo/template-files";
 import { GENERATED_SOURCES } from "@/demo/runtime/generated/sources";
+import { RUNTIME } from "@/lib/prototypes/render";
 
 describe("preview mode state", () => {
   it("starts on the Preview tab with the Desktop device in landscape", () => {
@@ -61,7 +62,7 @@ describe("template files", () => {
     expect(payeeList).toBe(GENERATED_SOURCES["payments-workspace"]!.members["payee-list"]!["1.4.2"]);
     expect(payeeList).toContain('from "@salt-ds/core"');
     const dependencies = JSON.parse(files[0]!.content).dependencies as Record<string, string>;
-    expect(dependencies["@salt-ds/core"]).toBe("1.73.0");
+    expect(dependencies["@salt-ds/core"]).toBe(RUNTIME.packages["@salt-ds/core"]);
     expect(dependencies["@deweb/portal"]).toBeDefined();
   });
 

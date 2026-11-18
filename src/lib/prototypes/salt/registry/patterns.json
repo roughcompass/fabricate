@@ -1,6 +1,6 @@
 {
-  "generated_at": "1.73.0",
-  "version": "1.73.0",
+  "generated_at": "1.75.0",
+  "version": "1.75.0",
   "patterns": [
     {
       "id": "pattern.analytical-dashboard",
@@ -68,7 +68,7 @@
       "related_docs": {
         "overview": "/salt/patterns/analytical-dashboard"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.announcement-dialog",
@@ -127,7 +127,7 @@
       "related_docs": {
         "overview": "/salt/patterns/announcement-dialog"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.app-header",
@@ -185,125 +185,7 @@
       "related_docs": {
         "overview": "/salt/patterns/app-header"
       },
-      "last_verified_at": "1.73.0"
-    },
-    {
-      "id": "pattern.breadcrumbs",
-      "name": "Breadcrumbs",
-      "aliases": [
-        "/salt/patterns/breadcrumbs"
-      ],
-      "summary": "Breadcrumbs are a secondary navigation pattern that helps users keep track of their current location within a hierarchy. It provides a space-efficient means of allowing quick navigation to previous levels.",
-      "status": "stable",
-      "when_to_use": [
-        "Use the pattern when the user navigates through related pages, or drills down into tables or charts. It provides further navigation relative to a users workflow/selection within their current area, page or widget. They are especially useful for identifying a location in a hierarchy when the user lands on a page via deep-linking from search or an external source.",
-        "We recommend keeping the number of breadcrumb levels concise to a maximum of four, including the first level if it's displayed. Content is more easily discoverable when navigating a relatively wide and flat information hierarchy within applications. This prevents users from feeling overwhelmed.",
-        "Use breadcrumbs to complement the application's main navigation—never to replace it.",
-        "Don't show breadcrumbs when there is only one level in a hierarchy."
-      ],
-      "when_not_to_use": [],
-      "composed_of": [
-        {
-          "component": "Button",
-          "role": null
-        },
-        {
-          "component": "Icon",
-          "role": null
-        },
-        {
-          "component": "Link",
-          "role": null
-        },
-        {
-          "component": "Text",
-          "role": null
-        }
-      ],
-      "related_patterns": [],
-      "how_to_build": [],
-      "how_it_works": [],
-      "accessibility": {
-        "summary": []
-      },
-      "resources": [
-        {
-          "label": "Breadcrumbs examples",
-          "href": "https://storybook.saltdesignsystem.com/?path=/story/patterns-breadcrumbs--breadcrumbs",
-          "internal": false
-        }
-      ],
-      "examples": [
-        {
-          "id": "pattern-story.packages-core-stories-patterns-breadcrumbs-breadcrumbs-stories-tsx.breadcrumbs",
-          "title": "Breadcrumbs",
-          "intent": [
-            "pattern example"
-          ],
-          "complexity": "intermediate",
-          "code": "// See packages/core/stories/patterns/breadcrumbs/breadcrumbs.stories.tsx (Breadcrumbs)",
-          "source_url": null,
-          "package": "@salt-ds/core",
-          "target_type": "pattern",
-          "target_name": "Breadcrumbs"
-        },
-        {
-          "id": "pattern-story.packages-core-stories-patterns-breadcrumbs-breadcrumbs-stories-tsx.expansion",
-          "title": "Expansion",
-          "intent": [
-            "pattern example"
-          ],
-          "complexity": "intermediate",
-          "code": "// See packages/core/stories/patterns/breadcrumbs/breadcrumbs.stories.tsx (Expansion)",
-          "source_url": null,
-          "package": "@salt-ds/core",
-          "target_type": "pattern",
-          "target_name": "Breadcrumbs"
-        },
-        {
-          "id": "pattern-story.packages-core-stories-patterns-breadcrumbs-breadcrumbs-stories-tsx.overflowmenu",
-          "title": "OverflowMenu",
-          "intent": [
-            "pattern example"
-          ],
-          "complexity": "intermediate",
-          "code": "// See packages/core/stories/patterns/breadcrumbs/breadcrumbs.stories.tsx (OverflowMenu)",
-          "source_url": null,
-          "package": "@salt-ds/core",
-          "target_type": "pattern",
-          "target_name": "Breadcrumbs"
-        },
-        {
-          "id": "pattern-story.packages-core-stories-patterns-breadcrumbs-breadcrumbs-stories-tsx.wrapped",
-          "title": "Wrapped",
-          "intent": [
-            "pattern example"
-          ],
-          "complexity": "intermediate",
-          "code": "// See packages/core/stories/patterns/breadcrumbs/breadcrumbs.stories.tsx (Wrapped)",
-          "source_url": null,
-          "package": "@salt-ds/core",
-          "target_type": "pattern",
-          "target_name": "Breadcrumbs"
-        },
-        {
-          "id": "pattern.breadcrumbs.resource.1",
-          "title": "Breadcrumbs examples",
-          "intent": [
-            "pattern resource"
-          ],
-          "complexity": "basic",
-          "code": "// Linked resource: https://storybook.saltdesignsystem.com/?path=/story/patterns-breadcrumbs--breadcrumbs",
-          "source_url": "https://storybook.saltdesignsystem.com/?path=/story/patterns-breadcrumbs--breadcrumbs",
-          "package": null,
-          "target_type": "pattern",
-          "target_name": "Breadcrumbs"
-        }
-      ],
-      "related_docs": {
-        "overview": "/salt/patterns/breadcrumbs"
-      },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.button-bar",
@@ -470,7 +352,7 @@
       "related_docs": {
         "overview": "/salt/patterns/button-bar"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.comments",
@@ -614,7 +496,7 @@
       "related_docs": {
         "overview": "/salt/patterns/comments"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.contact-details",
@@ -770,7 +652,7 @@
       "related_docs": {
         "overview": "/salt/patterns/contact-details"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.content-status",
@@ -922,7 +804,7 @@
       "related_docs": {
         "overview": "/salt/patterns/content-status"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.experience-customization",
@@ -1090,7 +972,7 @@
       "related_docs": {
         "overview": "/salt/patterns/experience-customization"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.file-upload",
@@ -1163,7 +1045,7 @@
       "related_docs": {
         "overview": "/salt/patterns/file-upload"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.formatted-input",
@@ -1224,7 +1106,7 @@
       "related_docs": {
         "overview": "/salt/patterns/formatted-input"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.forms",
@@ -1398,7 +1280,7 @@
       "related_docs": {
         "overview": "/salt/patterns/forms"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.header-block",
@@ -1440,7 +1322,7 @@
       "related_docs": {
         "overview": "/salt/patterns/header-block"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.indication",
@@ -1541,7 +1423,7 @@
       "related_docs": {
         "overview": "/salt/patterns/indication"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.international-address-form",
@@ -1603,7 +1485,7 @@
       "related_docs": {
         "overview": "/salt/patterns/international-address-form"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.international-phone-number",
@@ -1692,7 +1574,7 @@
       "related_docs": {
         "overview": "/salt/patterns/international-phone-number-input"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.keyboard-shortcuts",
@@ -1787,7 +1669,7 @@
       "related_docs": {
         "overview": "/salt/patterns/keyboard-shortcuts"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.list-builder",
@@ -1902,7 +1784,7 @@
       "related_docs": {
         "overview": "/salt/patterns/list-builder"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.list-filtering",
@@ -1947,7 +1829,7 @@
       "related_docs": {
         "overview": "/salt/patterns/list-filtering"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.menu-button",
@@ -2081,7 +1963,7 @@
       "related_docs": {
         "overview": "/salt/patterns/menu-button"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.metric",
@@ -2271,7 +2153,7 @@
       "related_docs": {
         "overview": "/salt/patterns/metric"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.navigation",
@@ -2341,7 +2223,7 @@
       "related_docs": {
         "overview": "/salt/patterns/navigation"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.preferences-dialog",
@@ -2449,7 +2331,7 @@
       "related_docs": {
         "overview": "/salt/patterns/preferences-dialog"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.search",
@@ -2482,7 +2364,7 @@
       "related_docs": {
         "overview": "/salt/patterns/search"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.selectable-card",
@@ -2554,7 +2436,7 @@
       "related_docs": {
         "overview": "/salt/patterns/selectable-card"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.split-button",
@@ -2684,7 +2566,7 @@
       "related_docs": {
         "overview": "/salt/patterns/split-button"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.vertical-navigation",
@@ -2765,7 +2647,7 @@
       "related_docs": {
         "overview": "/salt/patterns/vertical-navigation"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "pattern.wizard",
@@ -2889,7 +2771,7 @@
       "related_docs": {
         "overview": "/salt/patterns/wizard"
       },
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     }
   ]
 }

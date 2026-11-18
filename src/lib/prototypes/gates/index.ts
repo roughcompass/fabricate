@@ -76,7 +76,7 @@ export function failureSignatures(results: readonly GateResult[]): string[] {
  * The version of these gates' rules (design.md, decision 13). Bump it whenever
  * a gate's rules change, so a template version records which checks it passed.
  */
-export const CHECKS_VERSION = 1;
+export const CHECKS_VERSION = 2;
 
 /**
  * The SHA-256 of gate results with their timings left out and their issues

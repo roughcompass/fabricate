@@ -10,7 +10,7 @@ import { RULES } from "./rules";
  */
 
 /** Bumped whenever a rule changes. */
-export const KIT_VERSION = "2026-10-16.3";
+export const KIT_VERSION = "2026-11-17.1";
 
 /** Packages generated code may import, as the registry names them. */
 const CATALOG_PACKAGES = ["@salt-ds/core", "@salt-ds/date-components", "@salt-ds/countries", "@salt-ds/icons", "@salt-ds/lab"] as const;

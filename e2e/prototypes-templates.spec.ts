@@ -1,5 +1,9 @@
 import { expect, test } from "./support/fixtures";
+import runtime from "../src/lib/prototypes/runtime-manifest.json";
 import { acceptTemplate, keepOne, previewFrame, waitForFrame } from "./support/prototypes";
+
+/** The Salt release DE FabLab renders and checks with. */
+const SALT = runtime.packages["@salt-ds/core"];
 
 // template-gallery spec: templates accepted from prototypes in Salt Patterns; demo-mode spec: reset keeps them.
 
@@ -44,7 +48,7 @@ test("shows an accepted prototype as the 17th template, with its badges, Origin 
   await expect(overview).toContainText("From Prototypes");
   await expect(overview).toContainText("v1, from Exception-first queue v1");
   await expect(overview).toContainText("Anonymous visitor (unverified)");
-  await expect(overview).toContainText("Salt 1.73.0");
+  await expect(overview).toContainText(`Salt ${SALT}`);
   await expect(overview).toContainText("Maya Lindqvist, Treasury payments approver");
   await expect(overview).toContainText("Checks passed");
   await expect(page.getByRole("link", { name: "Deploy template" })).toHaveCount(0);
@@ -122,11 +126,11 @@ test("keeps a template that no longer typechecks after a Salt upgrade listed as 
   // The first request after the upgrade starts the re-check, and a later one shows its result.
   await expect(async () => {
     await page.goto("/templates?origin=prototypes");
-    await expect(page.locator("li").filter({ has: page.getByRole("link", { name: "Urgent payments queue" }) })).toContainText("Broken on Salt 1.73.0");
+    await expect(page.locator("li").filter({ has: page.getByRole("link", { name: "Urgent payments queue" }) })).toContainText(`Broken on Salt ${SALT}`);
   }).toPass({ timeout: 30_000 });
   await expect(page.getByText("Showing 1 of 17 templates")).toBeVisible();
   await page.getByRole("link", { name: "Urgent payments queue" }).click();
-  await expect(page.getByText("Broken on Salt 1.73.0").first()).toBeVisible();
+  await expect(page.getByText(`Broken on Salt ${SALT}`).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Use template" })).toBeDisabled();
   await expect(page.getByRole("link", { name: "Generate variations" })).toHaveCount(0);
   await expect(page.getByText(/fails the typecheck gate/)).toBeVisible();

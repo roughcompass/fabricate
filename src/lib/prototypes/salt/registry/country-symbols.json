@@ -1,6 +1,6 @@
 {
-  "generated_at": "1.73.0",
-  "version": "1.73.0",
+  "generated_at": "1.75.0",
+  "version": "1.75.0",
   "country_symbols": [
     {
       "id": "country_symbol.ad",
@@ -36,7 +36,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ae",
@@ -74,7 +74,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.af",
@@ -110,7 +110,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ag",
@@ -146,7 +146,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ai",
@@ -182,7 +182,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.al",
@@ -218,7 +218,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.am",
@@ -254,7 +254,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ao",
@@ -290,7 +290,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.aq",
@@ -326,7 +326,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ar",
@@ -362,7 +362,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.as",
@@ -398,7 +398,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.at",
@@ -434,7 +434,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.au",
@@ -470,7 +470,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.aw",
@@ -506,7 +506,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ax",
@@ -542,7 +542,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.az",
@@ -578,7 +578,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ba",
@@ -614,7 +614,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bb",
@@ -650,7 +650,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bd",
@@ -686,7 +686,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.be",
@@ -722,7 +722,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bf",
@@ -758,7 +758,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bg",
@@ -794,7 +794,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bh",
@@ -830,7 +830,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bi",
@@ -866,7 +866,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bj",
@@ -902,7 +902,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bl",
@@ -938,7 +938,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bm",
@@ -974,7 +974,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bn",
@@ -1010,7 +1010,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bo",
@@ -1048,7 +1048,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bq",
@@ -1084,7 +1084,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.br",
@@ -1120,7 +1120,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bs",
@@ -1158,7 +1158,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bt",
@@ -1194,7 +1194,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bv",
@@ -1230,7 +1230,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bw",
@@ -1266,7 +1266,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.by",
@@ -1302,7 +1302,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.bz",
@@ -1338,7 +1338,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ca",
@@ -1374,7 +1374,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cc",
@@ -1413,7 +1413,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cd",
@@ -1451,7 +1451,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cf",
@@ -1489,7 +1489,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cg",
@@ -1527,7 +1527,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ch",
@@ -1563,7 +1563,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ci",
@@ -1599,7 +1599,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ck",
@@ -1637,7 +1637,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cl",
@@ -1673,7 +1673,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cm",
@@ -1709,7 +1709,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cn",
@@ -1745,7 +1745,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.co",
@@ -1781,7 +1781,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cr",
@@ -1817,7 +1817,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cu",
@@ -1853,7 +1853,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cv",
@@ -1889,7 +1889,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cw",
@@ -1925,7 +1925,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cx",
@@ -1961,7 +1961,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cy",
@@ -1997,7 +1997,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.cz",
@@ -2033,7 +2033,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.de",
@@ -2069,7 +2069,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.dj",
@@ -2105,7 +2105,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.dk",
@@ -2141,7 +2141,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.dm",
@@ -2177,7 +2177,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.do",
@@ -2215,7 +2215,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.dz",
@@ -2251,7 +2251,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ec",
@@ -2287,7 +2287,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ee",
@@ -2323,7 +2323,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.eg",
@@ -2359,7 +2359,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.eh",
@@ -2395,7 +2395,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.er",
@@ -2431,7 +2431,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.es",
@@ -2467,7 +2467,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.et",
@@ -2503,7 +2503,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.eu",
@@ -2539,7 +2539,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.fi",
@@ -2575,7 +2575,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.fj",
@@ -2611,7 +2611,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.fk",
@@ -2650,7 +2650,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.fm",
@@ -2688,7 +2688,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.fo",
@@ -2726,7 +2726,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.fr",
@@ -2762,7 +2762,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ga",
@@ -2798,7 +2798,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gb",
@@ -2837,7 +2837,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gb-eng",
@@ -2875,7 +2875,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gb-nir",
@@ -2913,7 +2913,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gb-sct",
@@ -2951,7 +2951,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gb-wls",
@@ -2989,7 +2989,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gd",
@@ -3025,7 +3025,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ge",
@@ -3061,7 +3061,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gf",
@@ -3097,7 +3097,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gg",
@@ -3133,7 +3133,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gh",
@@ -3169,7 +3169,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gi",
@@ -3205,7 +3205,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gl",
@@ -3241,7 +3241,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gm",
@@ -3279,7 +3279,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gn",
@@ -3315,7 +3315,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gp",
@@ -3351,7 +3351,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gq",
@@ -3387,7 +3387,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gr",
@@ -3423,7 +3423,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gs",
@@ -3459,7 +3459,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gt",
@@ -3495,7 +3495,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gu",
@@ -3531,7 +3531,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gw",
@@ -3567,7 +3567,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.gy",
@@ -3603,7 +3603,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.hk",
@@ -3639,7 +3639,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.hm",
@@ -3675,7 +3675,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.hn",
@@ -3711,7 +3711,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.hr",
@@ -3747,7 +3747,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ht",
@@ -3783,7 +3783,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.hu",
@@ -3819,7 +3819,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.id",
@@ -3855,7 +3855,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ie",
@@ -3891,7 +3891,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.il",
@@ -3927,7 +3927,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.im",
@@ -3963,7 +3963,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.in",
@@ -3999,7 +3999,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.io",
@@ -4037,7 +4037,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.iq",
@@ -4073,7 +4073,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ir",
@@ -4111,7 +4111,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.is",
@@ -4147,7 +4147,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.it",
@@ -4183,7 +4183,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.je",
@@ -4219,7 +4219,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.jm",
@@ -4255,7 +4255,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.jo",
@@ -4291,7 +4291,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.jp",
@@ -4327,7 +4327,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ke",
@@ -4363,7 +4363,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.kg",
@@ -4399,7 +4399,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.kh",
@@ -4435,7 +4435,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ki",
@@ -4471,7 +4471,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.km",
@@ -4509,7 +4509,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.kn",
@@ -4545,7 +4545,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.kp",
@@ -4583,7 +4583,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.kr",
@@ -4621,7 +4621,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.kw",
@@ -4657,7 +4657,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ky",
@@ -4695,7 +4695,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.kz",
@@ -4731,7 +4731,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.la",
@@ -4769,7 +4769,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.lb",
@@ -4805,7 +4805,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.lc",
@@ -4841,7 +4841,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.li",
@@ -4877,7 +4877,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.lk",
@@ -4913,7 +4913,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.lr",
@@ -4949,7 +4949,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ls",
@@ -4985,7 +4985,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.lt",
@@ -5021,7 +5021,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.lu",
@@ -5057,7 +5057,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.lv",
@@ -5093,7 +5093,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ly",
@@ -5129,7 +5129,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ma",
@@ -5165,7 +5165,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mc",
@@ -5201,7 +5201,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.md",
@@ -5239,7 +5239,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.me",
@@ -5275,7 +5275,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mf",
@@ -5313,7 +5313,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mg",
@@ -5349,7 +5349,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mh",
@@ -5387,7 +5387,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mk",
@@ -5423,7 +5423,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ml",
@@ -5459,7 +5459,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mm",
@@ -5495,7 +5495,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mn",
@@ -5531,7 +5531,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mo",
@@ -5567,7 +5567,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mp",
@@ -5605,7 +5605,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mq",
@@ -5641,7 +5641,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mr",
@@ -5677,7 +5677,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ms",
@@ -5713,7 +5713,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mt",
@@ -5749,7 +5749,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mu",
@@ -5785,7 +5785,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mv",
@@ -5821,7 +5821,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mw",
@@ -5857,7 +5857,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mx",
@@ -5893,7 +5893,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.my",
@@ -5929,7 +5929,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.mz",
@@ -5965,7 +5965,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.na",
@@ -6001,7 +6001,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.nc",
@@ -6037,7 +6037,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ne",
@@ -6075,7 +6075,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.nf",
@@ -6111,7 +6111,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ng",
@@ -6147,7 +6147,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ni",
@@ -6183,7 +6183,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.nl",
@@ -6221,7 +6221,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.no",
@@ -6257,7 +6257,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.np",
@@ -6293,7 +6293,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.nr",
@@ -6329,7 +6329,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.nu",
@@ -6365,7 +6365,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.nz",
@@ -6401,7 +6401,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.om",
@@ -6437,7 +6437,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pa",
@@ -6473,7 +6473,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pe",
@@ -6509,7 +6509,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pf",
@@ -6545,7 +6545,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pg",
@@ -6581,7 +6581,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ph",
@@ -6619,7 +6619,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pk",
@@ -6655,7 +6655,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pl",
@@ -6691,7 +6691,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pm",
@@ -6727,7 +6727,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pn",
@@ -6763,7 +6763,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pr",
@@ -6799,7 +6799,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ps",
@@ -6837,7 +6837,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pt",
@@ -6873,7 +6873,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.pw",
@@ -6909,7 +6909,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.py",
@@ -6945,7 +6945,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.qa",
@@ -6981,7 +6981,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.re",
@@ -7017,7 +7017,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ro",
@@ -7053,7 +7053,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.rs",
@@ -7089,7 +7089,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ru",
@@ -7127,7 +7127,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.rw",
@@ -7163,7 +7163,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sa",
@@ -7199,7 +7199,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sb",
@@ -7235,7 +7235,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sc",
@@ -7271,7 +7271,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sd",
@@ -7309,7 +7309,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.se",
@@ -7345,7 +7345,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sg",
@@ -7381,7 +7381,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sh",
@@ -7417,7 +7417,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.si",
@@ -7453,7 +7453,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sj",
@@ -7489,7 +7489,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sk",
@@ -7525,7 +7525,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sl",
@@ -7561,7 +7561,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sm",
@@ -7597,7 +7597,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sn",
@@ -7633,7 +7633,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.so",
@@ -7669,7 +7669,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sr",
@@ -7705,7 +7705,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ss",
@@ -7741,7 +7741,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.st",
@@ -7777,7 +7777,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sv",
@@ -7813,7 +7813,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sx",
@@ -7851,7 +7851,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sy",
@@ -7889,7 +7889,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.sz",
@@ -7925,7 +7925,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tc",
@@ -7963,7 +7963,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.td",
@@ -7999,7 +7999,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tf",
@@ -8037,7 +8037,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tg",
@@ -8073,7 +8073,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.th",
@@ -8109,7 +8109,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tj",
@@ -8145,7 +8145,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tk",
@@ -8181,7 +8181,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tl",
@@ -8217,7 +8217,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tm",
@@ -8253,7 +8253,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tn",
@@ -8289,7 +8289,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.to",
@@ -8325,7 +8325,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tr",
@@ -8361,7 +8361,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tt",
@@ -8397,7 +8397,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tv",
@@ -8433,7 +8433,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tw",
@@ -8471,7 +8471,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.tz",
@@ -8509,7 +8509,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ua",
@@ -8545,7 +8545,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ug",
@@ -8581,7 +8581,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.um",
@@ -8619,7 +8619,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.un",
@@ -8655,7 +8655,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.us",
@@ -8694,7 +8694,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.uy",
@@ -8730,7 +8730,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.uz",
@@ -8766,7 +8766,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.va",
@@ -8804,7 +8804,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.vc",
@@ -8840,7 +8840,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ve",
@@ -8878,7 +8878,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.vg",
@@ -8916,7 +8916,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.vi",
@@ -8954,7 +8954,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.vn",
@@ -8990,7 +8990,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.vu",
@@ -9026,7 +9026,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.wf",
@@ -9062,7 +9062,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ws",
@@ -9098,7 +9098,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.xk",
@@ -9136,7 +9136,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.ye",
@@ -9172,7 +9172,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.yt",
@@ -9208,7 +9208,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.za",
@@ -9244,7 +9244,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.zm",
@@ -9280,7 +9280,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     },
     {
       "id": "country_symbol.zw",
@@ -9316,7 +9316,7 @@
         "foundation": "/salt/foundations/assets/country-symbols"
       },
       "deprecations": [],
-      "last_verified_at": "1.73.0"
+      "last_verified_at": "1.75.0"
     }
   ]
 }
