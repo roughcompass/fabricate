@@ -34,13 +34,14 @@ test.describe("on a wide viewport", () => {
     await expectCurrent(page, "All Assessments");
   });
 
-  test("Full menu: Home, then the Assessments and Templates groups under headings and dividers", async ({ page, db: _db }) => {
+  test("Full menu: Home, then the Assessments, Templates, and Admin groups under headings and dividers", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
-    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Salt Patterns"]);
-    await expect(nav.locator("hr")).toHaveCount(2);
+    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Salt Patterns", "Bitbucket tokens"]);
+    await expect(nav.locator("hr")).toHaveCount(3);
     await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["Repositories", "All Assessments", "Standards"]);
     await expect(nav.getByRole("list", { name: "Templates" }).getByRole("link")).toHaveText(["Salt Patterns"]);
+    await expect(nav.getByRole("list", { name: "Admin" }).getByRole("link")).toHaveText(["Bitbucket tokens"]);
     // Every item has one icon.
     for (const link of await nav.getByRole("link").all()) await expect(link.locator("svg")).toHaveCount(1);
     await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");

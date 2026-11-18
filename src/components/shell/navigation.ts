@@ -21,7 +21,7 @@ export interface NavItem {
  * first apart.
  */
 export interface MenuGroup {
-  readonly id: "main" | "assessments" | "build";
+  readonly id: "main" | "assessments" | "build" | "admin";
   readonly heading?: string;
   readonly items: readonly NavItem[];
 }
@@ -36,6 +36,9 @@ const ASSESSMENT_ITEMS: readonly NavItem[] = [
   { id: "standards", label: "Standards", href: "/standards", icon: "target", match: [/^\/standards(\/.*)?$/] },
 ];
 
+/** Admin: settings DE FabLab keeps for every operator, such as Bitbucket Server tokens. */
+const ADMIN_ITEMS: readonly NavItem[] = [{ id: "bitbucket-tokens", label: "Bitbucket tokens", href: "/admin/bitbucket-tokens", icon: "lock", match: [/^\/admin(\/.*)?$/] }];
+
 export const SALT_PATTERNS = { id: "salt-patterns", label: "Salt Patterns", href: "/templates", icon: "sparkle", match: [/^\/templates(\/.*)?$/] } as const satisfies NavItem;
 
 /** Which optional areas exist in this configuration. Pages read it from the configuration; client error pages, which can't, use NO_OPTIONAL_AREAS. */
@@ -48,11 +51,16 @@ export const NO_OPTIONAL_AREAS: NavFlags = { demo: false };
 
 /**
  * The primary menu's groups (page-patterns spec, "The primary menu groups
- * areas under headings and dividers"): Home; Assessments; then Salt
- * Patterns, under Templates, while the demo is enabled.
+ * areas under headings and dividers"): Home; Assessments; Salt Patterns,
+ * under Templates, while the demo is enabled; and Admin last.
  */
 export function visibleGroups(flags: NavFlags): readonly MenuGroup[] {
-  return [{ id: "main", items: [HOME] }, { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS }, ...(flags.demo ? [{ id: "build", heading: "Templates", items: [SALT_PATTERNS] } as const] : [])];
+  return [
+    { id: "main", items: [HOME] },
+    { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS },
+    ...(flags.demo ? [{ id: "build", heading: "Templates", items: [SALT_PATTERNS] } as const] : []),
+    { id: "admin", heading: "Admin", items: ADMIN_ITEMS },
+  ];
 }
 
 /** Every item of the menu, in order. */

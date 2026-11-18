@@ -271,6 +271,7 @@ Every page follows one of a few patterns, built from `Page` and `PageHeader` (`p
 - First, Home, with no heading.
 - **Assessments:** Repositories, All Assessments, and Standards.
 - **Templates:** Salt Patterns, while the template demo is enabled.
+- **Admin:** Bitbucket tokens, last.
 - Every item has an icon, and every page is listed inline.
 - `locate()` takes a `NavFlags` with the demo switch; pages build it with `navFlags()`.
 

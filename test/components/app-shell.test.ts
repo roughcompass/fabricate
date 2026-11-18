@@ -24,10 +24,10 @@ const shellOf = (tree: ReactNode) => elements(tree).find((element) => "data-side
 // operator-interface/page-patterns spec: the application shell, and the
 // sidebar that can be resized and hidden.
 describe("application shell", () => {
-  it("shows Home and the Assessments group when the demo is disabled (Demo disabled)", () => {
+  it("shows Home, the Assessments group, and Admin when the demo is disabled (Demo disabled)", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
     const flags = nav.props.nav as NavFlags;
-    expect(menuItems(visibleGroups(flags)).map((entry) => entry.label)).toEqual(["Home", "Repositories", "All Assessments", "Standards"]);
+    expect(menuItems(visibleGroups(flags)).map((entry) => entry.label)).toEqual(["Home", "Repositories", "All Assessments", "Standards", "Bitbucket tokens"]);
   });
 
   it("adds Salt Patterns in its own group when the demo is enabled, opening its list", () => {
@@ -37,6 +37,7 @@ describe("application shell", () => {
       [null, "/"],
       ["Assessments", "/repositories"],
       ["Templates", "/templates"],
+      ["Admin", "/admin/bitbucket-tokens"],
     ]);
   });
 

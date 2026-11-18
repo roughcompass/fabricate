@@ -61,6 +61,9 @@ const EXPECTED: Record<string, string | null> = {
   "/templates": "salt-patterns",
   "/templates/[templateSlug]": "salt-patterns",
   "/templates/[templateSlug]/preview": "salt-patterns",
+  "/admin": "bitbucket-tokens",
+  "/admin/bitbucket-tokens": "bitbucket-tokens",
+  "/admin/bitbucket-tokens/new": "bitbucket-tokens",
   "/design-system": null,
   "/design-system/error-demo": null,
 };
@@ -89,11 +92,12 @@ describe("primary menu", () => {
     for (const [route, expected] of Object.entries(EXPECTED)) expect(current(sample(route), ALL), route).toEqual(expected);
   });
 
-  it("lists Home, then the Assessments and Templates groups under their headings (Full menu)", () => {
+  it("lists Home, then the Assessments, Templates, and Admin groups under their headings (Full menu)", () => {
     expect(shape(ALL)).toEqual([
       [null, ["Home"]],
       ["Assessments", ["Repositories", "All Assessments", "Standards"]],
       ["Templates", ["Salt Patterns"]],
+      ["Admin", ["Bitbucket tokens"]],
     ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
     for (const item of menuItems(visibleGroups(ALL))) expect(item.icon, item.id).toBeTruthy();
@@ -103,6 +107,7 @@ describe("primary menu", () => {
     expect(shape(BASE)).toEqual([
       [null, ["Home"]],
       ["Assessments", ["Repositories", "All Assessments", "Standards"]],
+      ["Admin", ["Bitbucket tokens"]],
     ]);
     for (const route of ["/templates", "/templates/payments-hub/preview"]) expect(locate(route, BASE), route).toBeNull();
   });

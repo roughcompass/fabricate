@@ -170,6 +170,7 @@ The interface names three records differently from the code, which keeps the mod
 | Assessments | `/assessments`, `/assessments/new`, and `/assessments/<ini_ id>` with its `/edit` page |
 | Runs | `/runs/<asm_ id>`, with its `/map` and `/evidence/<id>` pages |
 | Repositories | `/repositories`, `/repositories/new`, `/repositories/bulk`, `/repositories/de-console`, and `/repositories/<src_ id>` with its `/settings`, `/versions`, and `/versions/<number>` pages |
+| Admin | `/admin/bitbucket-tokens` and `/admin/bitbucket-tokens/new`; `/admin` opens the first. Bitbucket Server access tokens are saved in the SQLite database as given and never shown again, only their last four characters, so the database file is as sensitive as the tokens |
 | Evaluations and Profiles | `/evaluations/<id>` and `/profiles/<id>`, unchanged |
 
 `/` opens Home: the fleet's figures, each linked to the list it counts, and the problems that need attention. Addresses from before the rename, under `/initiatives`, `/sources`, and `/assessments/<asm_ id>`, redirect permanently to the new ones (`next.config.ts`).
