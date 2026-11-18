@@ -1,6 +1,6 @@
 import type { JsonObject } from "@repo-facts/contract";
 import { NeedsAttention } from "@/components/profiles/attention";
-import { CategoryTable, CompactList, type EvidenceContext, SharedTable } from "@/components/profiles/category-blocks";
+import { CategoryTable, EmptyCategory, type EvidenceContext, SharedTable } from "@/components/profiles/category-blocks";
 import { DependencyFilters } from "@/components/profiles/dependency-filters";
 import { ProfileOverview } from "@/components/profiles/overview";
 import { ServiceDependencies } from "@/components/profiles/services";
@@ -12,6 +12,7 @@ import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
 import { SectionNav } from "@/components/ui/section-nav";
 import { diagnosticReason } from "@/components/ui/status";
+import { SHARED_TITLES } from "@/components/profiles/category-blocks";
 import { Secondary, Table, Td, Th } from "@/components/ui/table";
 import { ShortValue, Tag } from "@/components/ui/tag";
 import type { Assessment } from "@/lib/assessments/assessment-records";
@@ -35,6 +36,9 @@ export const PROFILE_DESCRIPTION = {
 };
 
 const queryValue = (value: string | string[] | undefined) => (typeof value === "string" && value !== "" ? value : undefined);
+
+// The group the detector release puts service categories in, where the Service Dependencies lead.
+const SERVICES_GROUP = "Services";
 
 /** Rows per page of a long table, so a large repository's Profile stays quick to load and to read. */
 export const PROFILE_PAGE_SIZE = 50;
@@ -74,7 +78,13 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
     return <CategoryTable key={id} block={{ ...block, rows: block.rows.slice(start, start + PROFILE_PAGE_SIZE) }} context={context} pagination={<Pagination label={`${label} pages`} page={page} pages={pages} href={href} scrollToTop />} />;
   };
 
-  const shared = (block: SharedBlock) => {
+  const services = (level: 2 | 3) => {
+    const { page, pages, start, href } = paging("services", view.services.length);
+    return <ServiceDependencies key="services" level={level} services={view.services.slice(start, start + PROFILE_PAGE_SIZE)} total={view.services.length} context={context} pagination={<Pagination label="Service Dependency pages" page={page} pages={pages} href={href} scrollToTop />} />;
+  };
+  const servicesItem = { id: "services", label: `Service Dependencies (${view.services.length})` };
+
+  const shared = (block: SharedBlock, level: 2 | 3 = 3) => {
     const filtered = block.kind === "dependencies" ? filterDependencies(block, filters) : null;
     const rows = filtered ? filtered.block : block;
     const id = block.sources[0]!.definition.id;
@@ -82,6 +92,7 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
     return (
       <SharedTable
         key={block.kind}
+        level={level}
         block={pageOfGroups(rows, page, PROFILE_PAGE_SIZE)}
         context={context}
         filters={filtered && <DependencyFilters block={block} filters={filters} action={`${base}#dependencies`} shown={filtered.shown} total={filtered.total} />}
@@ -103,12 +114,14 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
               { id: "attention", label: view.attention.items.length ? `Needs attention (${view.attention.items.length})` : "Needs attention" },
             ],
           },
-          ...view.navigation,
+          // Service Dependencies lead the Services group, where the page shows them.
+          ...view.navigation.map((group) => (group.label === SERVICES_GROUP ? { ...group, items: [servicesItem, ...group.items] } : group)),
+          ...(view.navigation.some((group) => group.label === SERVICES_GROUP) ? [] : [{ label: SERVICES_GROUP, items: [servicesItem] }]),
           {
-            label: "More",
+            label: "Diagnostics",
             items: [
-              { id: "services", label: `Service Dependencies (${view.services.length})` },
               { id: "diagnostics", label: `Skipped inputs (${diagnostics.skipped.length})` },
+              ...(diagnostics.notes.length ? [{ id: "other-diagnostics", label: `Other diagnostics (${diagnostics.notes.length})` }] : []),
             ],
           },
         ]}
@@ -118,37 +131,41 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
         <ProfileOverview rows={view.overview} />
         <NeedsAttention attention={view.attention} />
 
-        {view.groups.map((group) => (
-          <Section key={group.label} title={group.label}>
-            {group.blocks.map((block, index) => {
-              if (block.kind === "category") return category(block);
-              if (block.kind === "compact") return <CompactList key={`compact-${index}`} block={block} />;
-              return shared(block);
-            })}
+        {view.groups.map((group) => {
+          const [only] = group.blocks;
+          // A group that is one shared table of the same name is that table, so its heading isn't said twice.
+          if (group.blocks.length === 1 && (only!.kind === "dependencies" || only!.kind === "scripts") && SHARED_TITLES[only!.kind].title === group.label) return shared(only!, 2);
+          return (
+            <Section key={group.label} title={group.label}>
+              {group.label === SERVICES_GROUP && services(3)}
+              {group.blocks.flatMap((block) => {
+                if (block.kind === "category") return [category(block)];
+                if (block.kind === "compact") return block.items.map((item) => <EmptyCategory key={item.definition.id} definition={item.definition} value={item.value} />);
+                return [shared(block)];
+              })}
+            </Section>
+          );
+        })}
+        {!view.groups.some((group) => group.label === SERVICES_GROUP) && services(2)}
+
+        <Section title="Diagnostics">
+          <Section id="diagnostics" level={3} title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent.">
+            {diagnostics.skipped.length ? (
+              <Panel flush>
+                <DiagnosticTable label="Skipped inputs" diagnostics={diagnostics.skipped} />
+              </Panel>
+            ) : (
+              <p className={styles.muted}>Every input was read and understood.</p>
+            )}
           </Section>
-        ))}
-
-        {(() => {
-          const { page, pages, start, href } = paging("services", view.services.length);
-          return <ServiceDependencies services={view.services.slice(start, start + PROFILE_PAGE_SIZE)} total={view.services.length} context={context} pagination={<Pagination label="Service Dependency pages" page={page} pages={pages} href={href} scrollToTop />} />;
-        })()}
-
-        <Section id="diagnostics" title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent.">
-          {diagnostics.skipped.length ? (
-            <Panel flush>
-              <DiagnosticTable label="Skipped inputs" diagnostics={diagnostics.skipped} />
-            </Panel>
-          ) : (
-            <p className={styles.muted}>Every input was read and understood.</p>
+          {diagnostics.notes.length > 0 && (
+            <Section id="other-diagnostics" level={3} title="Other diagnostics" description="Inconsistencies and unsupported constructs the detectors noted without skipping the input.">
+              <Panel flush>
+                <DiagnosticTable label="Other diagnostics" diagnostics={diagnostics.notes} />
+              </Panel>
+            </Section>
           )}
         </Section>
-        {diagnostics.notes.length > 0 && (
-          <Section id="other-diagnostics" title="Other diagnostics" description="Inconsistencies and unsupported constructs the detectors noted without skipping the input.">
-            <Panel flush>
-              <DiagnosticTable label="Other diagnostics" diagnostics={diagnostics.notes} />
-            </Panel>
-          </Section>
-        )}
 
         <Disclosure summary="Details" variant="plain">
           <DescriptionList
@@ -182,15 +199,36 @@ function DiagnosticTable({ label, diagnostics }: { label: string; diagnostics: r
       {diagnostics.map((diagnostic, index) => (
         <tr key={`${String(diagnostic.path)}:${index}`}>
           <Td label="Path">
-            <Tag>{String(diagnostic.path) || "(repository)"}</Tag>
+            <span className={styles.mono}>{String(diagnostic.path) || "(repository)"}</span>
           </Td>
           <Td label="Reason">
             {diagnosticReason(String(diagnostic.reason))}
             {diagnostic.detector !== null && <Secondary mono>{String(diagnostic.detector)}</Secondary>}
           </Td>
-          <Td label="Detail">{String(diagnostic.detail)}</Td>
+          <Td label="Detail">
+            <DiagnosticDetail detail={String(diagnostic.detail)} />
+          </Td>
         </tr>
       ))}
     </Table>
+  );
+}
+
+/**
+ * A diagnostic's detail in words first: "Origin is not a literal", then the
+ * line and the rule it came from, rather than leading with a rule id.
+ */
+function DiagnosticDetail({ detail }: { detail: string }) {
+  const match = /^([a-z0-9-]+(?:\.[a-z0-9-]+)+) at line (\d+): (.+)$/s.exec(detail);
+  if (!match) return <>{detail}</>;
+  const [, rule, line, message] = match;
+  return (
+    <>
+      {message!.charAt(0).toUpperCase() + message!.slice(1)}
+      <Secondary>
+        {`Line ${line} · rule `}
+        <span className={styles.mono}>{rule}</span>
+      </Secondary>
+    </>
   );
 }

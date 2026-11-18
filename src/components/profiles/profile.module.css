@@ -13,7 +13,8 @@
   /* Long values, such as packages with their visibility and directory, one per line under their counts. */
   .stacked { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
   .summary { font-weight: var(--font-weight-medium); }
-  .more { color: var(--color-text-secondary); font-size: var(--font-size-secondary); text-decoration-line: underline; text-underline-offset: 2px; }
+  /* "+N more" leads to the category, so it reads as the page's other links do. */
+  .more { color: var(--color-link); font-size: var(--font-size-secondary); text-decoration-line: underline; text-underline-offset: 2px; }
   .secondary { color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
 
   /* Needs attention: the counts line, then one line per item. */
@@ -27,10 +28,17 @@
   .search { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); margin-top: calc(var(--space-2) * -1); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
   .search code { font-family: var(--font-family-mono); }
   .inputs { margin: var(--space-2) 0 0; padding-left: var(--space-4); }
+  /* What a disclosure of a category's search holds: its rules, then its inputs. */
+  .searchDetails { display: flex; flex-direction: column; gap: var(--space-1); }
+  .searchPart { margin: 0; }
+  .searchPart code { font-family: var(--font-family-mono); }
+  .sourceHeading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); }
+  /* Every quiet toggle, a disclosure or an evidence button, reads at the secondary size. */
+  .quiet { font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
 
   /* A shared table's source categories, one line each. */
   .sources { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-  .sources > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
+  .sources > li { display: flex; flex-direction: column; gap: var(--space-1); scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
   .sourceLabel { font-weight: var(--font-weight-medium); }
   /* Beside a source's label, the search line keeps its place in the wrapping line rather than tucking under a heading. */
   .sources .search { margin-top: 0; }
@@ -49,7 +57,9 @@
     background: none;
     color: var(--color-text-secondary);
     font: inherit;
+    font-size: var(--font-size-secondary);
     font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-secondary);
     white-space: nowrap;
     cursor: pointer;
 
@@ -94,10 +104,6 @@
   /* A column header that anchors a category stops below the shell header. */
   .anchoredTable th[id] { scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
 
-  .compact { margin: 0; padding: 0; list-style: none; }
-  .compactRow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-4); scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
-  .compactRow + .compactRow { border-top: 1px solid var(--color-border-subtle); }
-  .compactName { min-width: 0; }
 
   /* Service Dependency summaries. */
   .serviceSummary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); min-width: 0; }

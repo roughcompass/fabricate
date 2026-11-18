@@ -23,6 +23,8 @@
     &:hover { background: var(--color-bg-muted); color: var(--color-text); }
     &[aria-current="location"] { background: var(--color-bg-muted); color: var(--color-text); font-weight: var(--font-weight-medium); }
   }
+  /* A section that belongs to the one above it, indented by one dot and gap. */
+  .link[data-depth="1"] { padding-left: calc(var(--space-2) * 2 + var(--size-dot)); }
   .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .dot {
@@ -39,6 +41,7 @@
     &[data-tone="progress"], &[data-tone="info"] { --_tone: var(--color-progress); }
     &[data-indicator="ring"] { background: transparent; box-shadow: inset 0 0 0 2px var(--_tone); }
     &[data-indicator="dash"] { height: 2px; }
+    &[data-empty] { background: transparent; }
   }
 
   /* The same toggle as a Disclosure: a chevron that turns when open, not the browser's marker. */

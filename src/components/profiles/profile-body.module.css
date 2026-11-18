@@ -1,6 +1,20 @@
 @layer components {
   .layout { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-10); align-items: start; }
-  .content { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
+  .content { display: flex; flex-direction: column; gap: var(--space-12); min-width: 0; }
+
+  /*
+   * Three heading levels a reader can tell apart: the page title in the shell
+   * header; each part of the Profile (Overview, Inventory, Diagnostics) at the
+   * subtitle size on a rule; and each category under it at the heading size.
+   * Categories in a part sit further apart than a category's own heading,
+   * description, and table.
+   */
+  .content > section[data-level="2"] { gap: var(--space-8); }
+  .content > section[data-level="2"] > :first-child { padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); }
+  .content > section[data-level="2"] > :first-child h2 { font-size: var(--font-size-subtitle); line-height: var(--line-height-subtitle); }
+  .content section[data-level="3"] > :first-child h3 { font-size: var(--font-size-heading); line-height: var(--line-height-heading); }
+
+  .mono { font-family: var(--font-family-mono); font-size: var(--font-size-secondary); overflow-wrap: anywhere; }
 
   .muted { color: var(--color-text-secondary); }
   .alertLink { font-weight: var(--font-weight-medium); }

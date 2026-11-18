@@ -4,10 +4,12 @@ import { countLabel, formatBytes } from "@/components/ui/count";
 import { checkKind, ciSystem, dependencyKind, humanize, kindLabel, runtimeName } from "@/components/ui/status";
 import type { Fact } from "./states";
 
-/** A cell's content: text, set in the monospace face for identifiers and paths, with optional secondary text below. */
+/** A cell's content: text, set in the monospace face for identifiers, paths, and versions, with optional secondary text below. */
 export interface Cell {
   text: string;
   mono?: boolean;
+  /** Kept on one line, for short values such as a version or a kind that would otherwise wrap in a narrow column. */
+  nowrap?: boolean;
   /** Set in the secondary color, as a value that repeats its neighbor is, so differences stand out. */
   muted?: boolean;
   secondary?: string;
@@ -19,6 +21,10 @@ export interface Column {
   cell: (fact: Fact) => Cell | null;
   /** A column a row may leave empty. When a required column has no cell, the row writes its value out in full. */
   optional?: boolean;
+  /** A count or size, aligned right so its digits line up. */
+  numeric?: boolean;
+  /** Short values kept on one line. */
+  nowrap?: boolean;
 }
 
 /** The columns a category's facts are shown in. A generic layout shows each fact's key and its value as text. */
@@ -37,9 +43,11 @@ const field = (fact: Fact, name: string): JsonValue | undefined => (isObject(fac
 const text = (value: JsonValue | undefined): string | null => (typeof value === "string" && value !== "" ? value : typeof value === "number" ? String(value) : null);
 
 /** A column that shows one field of the value. */
-const fieldColumn = (label: string, name: string, options: { mono?: boolean; optional?: boolean; format?: (value: string) => string } = {}): Column => ({
+const fieldColumn = (label: string, name: string, options: { mono?: boolean; optional?: boolean; numeric?: boolean; nowrap?: boolean; format?: (value: string) => string } = {}): Column => ({
   label,
   optional: options.optional,
+  numeric: options.numeric,
+  nowrap: options.nowrap,
   cell: (fact) => {
     const value = text(field(fact, name));
     return value === null ? null : { text: options.format ? options.format(value) : value, mono: options.mono };
@@ -61,6 +69,7 @@ const toolColumn: Column = {
 
 const booleanColumn = (label: string, name: string, yes: string, no: string): Column => ({
   label,
+  nowrap: true,
   cell: (fact) => {
     const value = field(fact, name);
     return typeof value === "boolean" ? { text: value ? yes : no } : null;
@@ -76,6 +85,7 @@ const KIND_FIRST: Layout = {
   columns: [
     {
       label: "Kind",
+      nowrap: true,
       cell: (fact) => {
         const kind = KIND_FIELDS.map((name) => text(field(fact, name))).find((value) => value !== null);
         return kind ? { text: kindLabel(kind) } : null;
@@ -87,8 +97,8 @@ const KIND_FIRST: Layout = {
       cell: (fact) => {
         if (!isObject(fact.value)) return null;
         const location = LOCATION_FIELDS.find((name) => text(field(fact, name)) !== null);
-        const rest = Object.fromEntries(Object.entries(fact.value).filter(([name]) => !KIND_FIELDS.includes(name) && name !== location));
-        return Object.keys(rest).length ? { text: formatValue(rest) } : null;
+        const rest = Object.entries(fact.value).filter(([name]) => !KIND_FIELDS.includes(name) && name !== location);
+        return rest.length ? { text: detailText(rest) } : null;
       },
     },
     {
@@ -103,6 +113,18 @@ const KIND_FIRST: Layout = {
 };
 
 const layout = (...columns: Column[]): Layout => ({ generic: false, columns });
+
+/** A value's remaining fields in words, "Direction: send · Target origin: none", each long or nested value cut short; the evidence panel keeps the raw value. */
+function detailText(entries: [string, JsonValue][]): string {
+  const DETAIL_LIMIT = 80;
+  return entries
+    .map(([name, value]) => {
+      const text = formatValue(value);
+      // A camelCase field such as targetOrigin reads as "Target origin".
+      return `${humanize(name.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase())}: ${text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT - 1)}…` : text}`;
+    })
+    .join(" · ");
+}
 
 // The Interface categories: what a design system is and how it's set up, how
 // elements use it, and how style values use its tokens. Their values count
@@ -210,6 +232,7 @@ const uiElements: Layout = {
     },
     {
       label: "Uses in the app",
+      numeric: true,
       cell: (fact) => {
         const app = scopeOf(fact, "app");
         if (keyParts(fact)[0] === "summary") return typeof app.elements === "number" ? { text: `${number(count(app, "design_system"))} of ${number(count(app, "elements"))}` } : null;
@@ -287,6 +310,7 @@ const styleValues: Layout = {
     },
     {
       label: "In the app",
+      numeric: true,
       cell: (fact) => {
         const app = scopeOf(fact, "app");
         const kind = keyParts(fact)[0];
@@ -319,10 +343,10 @@ const styleValues: Layout = {
 };
 
 const LAYOUTS: Record<string, Layout> = {
-  languages: layout(keyColumn("Language"), fieldColumn("Files", "files"), { label: "Size", cell: (fact) => (typeof field(fact, "bytes") === "number" ? { text: formatBytes(field(fact, "bytes") as number) } : null) }),
+  languages: layout(keyColumn("Language"), fieldColumn("Files", "files", { numeric: true, format: (files) => Number(files).toLocaleString("en-US") }), { label: "Size", numeric: true, cell: (fact) => (typeof field(fact, "bytes") === "number" ? { text: formatBytes(field(fact, "bytes") as number) } : null) }),
   submodules: layout(fieldColumn("Path", "path", { mono: true }), fieldColumn("Commit", "commit", { mono: true, format: (commit) => commit.slice(0, 12) })),
-  package_identity: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Version", "version", { optional: true }), booleanColumn("Visibility", "private", "Private", "Not private"), manifestColumn),
-  packages_produced: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Version", "version", { optional: true }), booleanColumn("Visibility", "published", "Published", "Not published"), manifestColumn),
+  package_identity: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Version", "version", { optional: true, mono: true, nowrap: true }), booleanColumn("Visibility", "private", "Private", "Public"), manifestColumn),
+  packages_produced: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Version", "version", { optional: true, mono: true, nowrap: true }), booleanColumn("Published", "published", "Published", "Not published"), manifestColumn),
   workspaces: layout(fieldColumn("Directory", "directory", { mono: true }), fieldColumn("Package", "package", { mono: true, optional: true })),
   package_managers: layout(keyColumn("Directory", { mono: true, format: (directory) => (directory === "." ? "Repository root" : directory) }), { label: "Manager", cell: (fact) => (typeof fact.value === "string" ? { text: fact.value } : null) }),
   build_tools: layout(toolColumn),
@@ -340,7 +364,7 @@ const LAYOUTS: Record<string, Layout> = {
     },
     manifestColumn,
   ),
-  ci_systems: layout(fieldColumn("Definition", "path", { mono: true }), fieldColumn("System", "system", { format: ciSystem })),
+  ci_systems: layout(fieldColumn("Definition", "path", { mono: true }), fieldColumn("System", "system", { nowrap: true, format: ciSystem })),
   runtime_requirements: layout(
     keyColumn("Runtime", { format: runtimeName }),
     fieldColumn("Allowed range", "range", { mono: true }),
@@ -396,7 +420,10 @@ export function layoutOf(id: string): Layout {
 export function rowCells(layout: Layout, fact: Fact): RowCells {
   if (fact.state === "conflicting") return { kind: "candidates", candidates: (fact.candidates ?? []).map((candidate) => ({ text: formatValue(candidate.value), evidence: candidate.evidence })) };
   if (fact.state === "unknown") return { kind: "whole", text: factText(fact.state, fact.value) };
-  const cells = layout.columns.map((column) => column.cell(fact));
+  const cells = layout.columns.map((column) => {
+    const cell = column.cell(fact);
+    return cell && column.nowrap ? { ...cell, nowrap: true } : cell;
+  });
   if (layout.columns.some((column, index) => !column.optional && cells[index] === null)) return { kind: "whole", text: formatValue(fact.value) };
   return { kind: "cells", cells };
 }

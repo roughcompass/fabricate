@@ -56,6 +56,8 @@ export interface CategoryBlock {
   kind: "category";
   heading: Heading;
   columns: string[];
+  /** Each column's alignment: counts and sizes to the right. */
+  numeric: boolean[];
   /** The label of a column filled from another category, such as Steps. */
   stepsColumn: string | null;
   rows: Row[];
@@ -108,8 +110,8 @@ export interface ProfileView {
   overview: OverviewRow[];
   attention: Attention;
   groups: { label: string; blocks: Block[] }[];
-  /** Navigation entries: each category with its state, by group. */
-  navigation: { label: string; items: { id: string; label: string; state: string }[] }[];
+  /** Navigation entries: each category with its state, by group; a category shown in another's shared table sits under it. */
+  navigation: { label: string; items: { id: string; label: string; state: string; depth?: 1 }[] }[];
   services: ServiceSummary[];
   diagnostics: { skipped: JsonObject[]; notes: JsonObject[] };
 }
@@ -162,6 +164,7 @@ function categoryBlock(document: FactDocument, definition: CategoryDefinition, c
     kind: "category",
     heading: headingOf(document, definition),
     columns: layout.columns.map((column) => column.label),
+    numeric: layout.columns.map((column) => Boolean(column.numeric)),
     stepsColumn: isCi ? "Steps" : null,
     rows: mergeIdentical(
       facts.map((fact): Row => {
@@ -382,7 +385,12 @@ export function profileView(document: FactDocument, diagnostics: { skipped: Json
     groups,
     navigation: unique(definitions.map((definition) => definition.group)).map((group) => ({
       label: group,
-      items: definitions.filter((definition) => definition.group === group).map((definition) => ({ id: definition.id, label: definition.label, state: categoryState(document, definition.id) })),
+      items: definitions
+        .filter((definition) => definition.group === group)
+        .map((definition) => {
+          const nested = (dependenciesShared && DEPENDENCY_SOURCES.indexOf(definition.id) > 0) || (scriptsShared && SCRIPT_SOURCES.indexOf(definition.id) > 0);
+          return { id: definition.id, label: definition.label, state: categoryState(document, definition.id), ...(nested ? { depth: 1 as const } : {}) };
+        }),
     })),
     services: (document.service_dependencies ?? []).map(serviceSummary),
     diagnostics,

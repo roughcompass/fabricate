@@ -7,7 +7,8 @@ import styles from "./section-nav.module.css";
 
 export interface NavGroup {
   label: string;
-  items: readonly { id: string; label: string; state?: string }[];
+  /** +depth+ 1 indents a section that belongs to the one above it. */
+  items: readonly { id: string; label: string; state?: string; depth?: 1 }[];
 }
 
 /**
@@ -17,6 +18,8 @@ export interface NavGroup {
  */
 export function SectionNav({ label, groups, jumpLabel = "Jump to a section" }: { label: string; groups: readonly NavGroup[]; jumpLabel?: string }) {
   const ids = groups.flatMap((group) => group.items.map((item) => item.id));
+  // When any section shows a state, the others keep its place, so every label starts at the same edge.
+  const stated = groups.some((group) => group.items.some((item) => item.state));
   const [current, setCurrent] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,8 +51,8 @@ export function SectionNav({ label, groups, jumpLabel = "Jump to a section" }: {
           <ol className={styles.items}>
             {group.items.map((item) => (
               <li key={item.id}>
-                <a href={`#${item.id}`} className={styles.link} aria-current={current === item.id ? "location" : undefined} onClick={() => setCurrent(item.id)}>
-                  {item.state && <span className={styles.dot} data-tone={statusOf(item.state).tone satisfies Tone} data-indicator={statusOf(item.state).indicator} aria-hidden="true" />}
+                <a href={`#${item.id}`} className={styles.link} data-depth={item.depth} aria-current={current === item.id ? "location" : undefined} onClick={() => setCurrent(item.id)}>
+                  {item.state ? <span className={styles.dot} data-tone={statusOf(item.state).tone satisfies Tone} data-indicator={statusOf(item.state).indicator} aria-hidden="true" /> : stated && <span className={styles.dot} data-empty="" aria-hidden="true" />}
                   <span className={styles.label}>{item.label}</span>
                   {item.state && <span className="visually-hidden">{`, ${statusOf(item.state).label}`}</span>}
                 </a>

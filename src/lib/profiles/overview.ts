@@ -85,7 +85,7 @@ const ROWS: RowDefinition[] = [
       const name = field(fact, "name");
       if (name === null) return null;
       const manifest = field(fact, "manifest");
-      const visibility = published(document, manifest) ? "published" : isObject(fact.value) && fact.value.private === true ? "private" : "not private";
+      const visibility = published(document, manifest) ? "published" : isObject(fact.value) && fact.value.private === true ? "private" : "public";
       const directory = manifest && manifest.includes("/") ? `${manifest.slice(0, manifest.lastIndexOf("/") + 1)}` : null;
       return { state: fact.state, text: [name, field(fact, "version")].filter(Boolean).join(" "), secondary: [visibility, directory].filter(Boolean).join(" · ") };
     },

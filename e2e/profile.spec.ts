@@ -158,7 +158,11 @@ test("shows dependencies and scripts in shared tables, and CI steps with their d
   for (const id of ["resolved_dependencies", "packages_consumed"]) await expect(page.getByRole("table", { name: id })).toHaveCount(0);
   await expect(page.getByRole("table", { name: "Resolved versions" })).toHaveCount(0);
   await expect(page.getByRole("table", { name: "Packages consumed" })).toHaveCount(0);
-  for (const column of ["Kind", "Declared", "Resolved", "Consumed"]) await expect(table.getByRole("columnheader").filter({ hasText: column })).toContainText("Observed");
+  // The table's own state is in its heading; only the columns another category fills show that category's state.
+  // A group that is one table of the same name is headed once.
+  await expect(page.locator("main").getByRole("heading", { name: "Dependencies", exact: true })).toHaveCount(1);
+  for (const column of ["Kind", "Declared"]) await expect(table.getByRole("columnheader").filter({ hasText: column })).not.toContainText("Observed");
+  for (const column of ["Resolved", "Consumed"]) await expect(table.getByRole("columnheader").filter({ hasText: column })).toContainText("Observed");
 
   const nav = page.getByRole("navigation", { name: "Profile sections" });
   await nav.getByRole("link", { name: /^Resolved versions/ }).click();
@@ -344,7 +348,7 @@ test("opens verified evidence excerpts from a real snapshot without rendering UR
   await expect(page.locator("body")).not.toContainText("hunter2");
 });
 
-test("navigates between categories and keeps categories without facts compact", async ({ page, db }) => {
+test("navigates between categories and heads a category without facts like every other", async ({ page, db }) => {
   const { profile } = await seedOrders(db);
   await page.goto(`/profiles/${profile.publicId}`);
   // A current Profile has no alert.
@@ -357,9 +361,10 @@ test("navigates between categories and keeps categories without facts compact", 
   await expect(managers).toHaveAttribute("aria-current", "location");
   await expect(category(page, "package_managers")).toBeInViewport();
 
-  // A category with nothing to show is one row in a list, not a card with a table.
+  // A category with nothing to show has the same heading, description, and state as any other, and one line where its table would be.
   const submodules = category(page, "submodules");
-  await expect(submodules).toHaveJSProperty("tagName", "LI");
+  await expect(submodules).toHaveJSProperty("tagName", "SECTION");
+  await expect(submodules.getByRole("heading", { level: 3, name: "Submodules" })).toBeVisible();
   await expect(submodules.getByRole("table")).toHaveCount(0);
   await expect(submodules).toContainText("None detected");
 });
@@ -416,11 +421,9 @@ test("shows a version 1 Profile's facts unchanged, with the design-system catego
 
   await page.goto(`/profiles/${profile.publicId}`);
   await expect(category(page, "languages").getByRole("row").filter({ hasText: "TypeScript" })).toBeVisible();
-  const interfaceCategories = page.getByRole("list", { name: "Interface categories without facts" });
-  for (const label of ["Design systems", "UI elements", "Style values"]) {
-    const item = interfaceCategories.getByRole("listitem").filter({ hasText: label });
-    await expect(item).toContainText("Not covered");
-    await expect(item).not.toContainText("Unknown");
+  for (const id of ["design_systems", "ui_elements", "style_values"]) {
+    await expect(category(page, id), id).toContainText("Not covered");
+    await expect(category(page, id), id).not.toContainText("Unknown");
   }
   const designSystem = detail(page.getByRole("region", { name: "Overview" }), "Design system");
   await expect(designSystem).toContainText("Not covered");

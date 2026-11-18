@@ -9,7 +9,7 @@ import { Icon } from "@/components/ui/icon";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { Status } from "@/components/ui/status";
-import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
+import { Secondary, Table, Td, Th } from "@/components/ui/table";
 import type { Cell } from "@/lib/profiles/layouts";
 import type { CategoryBlock, CompactBlock, Heading, HeldFact, Row, SharedBlock, SharedCell, SharedRow } from "@/lib/profiles/view";
 import styles from "./profile.module.css";
@@ -37,37 +37,41 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
           label={definition.label}
           head={
             <>
-              {block.columns.map((column) => (
-                <Th key={column}>{column}</Th>
+              {block.columns.map((column, index) => (
+                <Th key={column} align={block.numeric[index] ? "numeric" : undefined}>
+                  {column}
+                </Th>
               ))}
               {block.stepsColumn && <Th>{block.stepsColumn}</Th>}
-              <Th>Evidence</Th>
+              <Th align="actions">Evidence</Th>
             </>
           }
         >
           {block.rows.map((row) => (
             <tr key={row.id}>
-              <RowCellsView row={row} columns={block.columns} span={span} context={context} />
+              <RowCellsView row={row} columns={block.columns} numeric={block.numeric} span={span} context={context} />
               {block.stepsColumn && row.cells.kind === "cells" && (
                 <Td label={block.stepsColumn}>
                   {row.steps.length ? (
                     // The count and what the steps check, with the steps themselves one click away.
-                    <Disclosure variant="plain" summary={[countLabel(row.steps.length, "step"), row.checks.length ? `checks ${row.checks.join(", ").toLowerCase()}` : null].filter(Boolean).join(" · ")}>
-                      <ol className={styles.steps}>
-                        {row.steps.map((step, index) => (
-                          <li key={index} className={styles.step}>
-                            <span className={styles.stepCommand}>{step.text}</span>
-                            {step.secondary && <Secondary>{step.secondary}</Secondary>}
-                          </li>
-                        ))}
-                      </ol>
-                    </Disclosure>
+                    <div className={styles.quiet}>
+                      <Disclosure variant="plain" summary={[countLabel(row.steps.length, "step"), row.checks.length ? `checks ${row.checks.join(", ").toLowerCase()}` : null].filter(Boolean).join(" · ")}>
+                        <ol className={styles.steps}>
+                          {row.steps.map((step, index) => (
+                            <li key={index} className={styles.step}>
+                              <span className={styles.stepCommand}>{step.text}</span>
+                              {step.secondary && <Secondary>{step.secondary}</Secondary>}
+                            </li>
+                          ))}
+                        </ol>
+                      </Disclosure>
+                    </div>
                   ) : (
                     <span className={styles.muted}>None</span>
                   )}
                 </Td>
               )}
-              <Td label="Evidence">
+              <Td label="Evidence" align="actions">
                 <RowDetails title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} held={row.held} evidence={row.evidence} context={context} reasoning={Boolean(row.reasoning && firstSentence(row.reasoning) !== row.reasoning)} />
               </Td>
             </tr>
@@ -85,7 +89,7 @@ function firstSentence(text: string): string {
   return end === -1 ? text : text.slice(0, end + 1);
 }
 
-function RowCellsView({ row, columns, span, context }: { row: Row; columns: readonly string[]; span: number; context: EvidenceContext }) {
+function RowCellsView({ row, columns, numeric, span, context }: { row: Row; columns: readonly string[]; numeric: readonly boolean[]; span: number; context: EvidenceContext }) {
   const state = row.state && <Status state={row.state} size="sm" />;
   // A long reasoning shows its first sentence here and in full in the row's evidence panel.
   const reasoning = row.reasoning && <Secondary>{firstSentence(row.reasoning)}</Secondary>;
@@ -114,7 +118,7 @@ function RowCellsView({ row, columns, span, context }: { row: Row; columns: read
   return (
     <>
       {row.cells.cells.map((cell, index) => (
-        <Td key={columns[index]} label={columns[index]}>
+        <Td key={columns[index]} label={columns[index]} align={numeric[index] ? "numeric" : undefined}>
           {cell ? <CellView cell={cell} /> : null}
           {index === 0 && state}
           {index === 0 && reasoning}
@@ -128,7 +132,7 @@ function RowCellsView({ row, columns, span, context }: { row: Row; columns: read
 export function CellView({ cell }: { cell: Cell }) {
   return (
     <>
-      <span className={[cell.mono && styles.mono, cell.muted && styles.muted].filter(Boolean).join(" ") || undefined}>{cell.text}</span>
+      <span className={[cell.mono && styles.mono, cell.muted && styles.muted, cell.nowrap && styles.nowrap].filter(Boolean).join(" ") || undefined}>{cell.text}</span>
       {cell.secondary && <Secondary>{cell.secondary}</Secondary>}
     </>
   );
@@ -193,43 +197,58 @@ function RowDetails({ title, held, evidence, context, reasoning = true }: { titl
   );
 }
 
-/** How far a category's search went and which rule its facts came from. */
-export function SearchLine({ heading }: { heading: Heading }) {
-  const { search, rules } = heading;
+/** How many inputs searched before listing them stops, so a large repository's list stays short. */
+const INPUTS_SHOWN = 100;
+
+/** How far a category's search went, in one line: "Searched 40 inputs · complete". */
+function searchSummary(heading: Heading): string | null {
+  const { search } = heading;
   if (!search) return null;
   const outcome = search.skipped.length ? `${countLabel(search.skipped.length, "input")} skipped` : search.complete ? "complete" : "incomplete";
-  const parts = search.surface.length ? [`Searched ${countLabel(search.surface.length, "input")}`, outcome] : [`Search ${outcome}`];
+  return search.surface.length ? `Searched ${countLabel(search.surface.length, "input")} · ${outcome}` : `Search ${outcome}`;
+}
+
+/** The rules a category's facts came from and the inputs it searched, the same way for every category. */
+function SearchDetails({ heading }: { heading: Heading }) {
+  const { search, rules } = heading;
+  const surface = search?.surface ?? [];
+  return (
+    <div className={styles.searchDetails}>
+      {rules.length > 0 && (
+        <p className={styles.searchPart}>
+          {rules.length === 1 ? "Rule " : "Rules "}
+          <code>{rules.join(", ")}</code>
+        </p>
+      )}
+      {surface.length > 0 && (
+        <ul className={`${styles.inputs} ${styles.mono}`} aria-label="Inputs searched">
+          {surface.slice(0, INPUTS_SHOWN).map((path) => (
+            <li key={path}>{path || "(repository)"}</li>
+          ))}
+          {surface.length > INPUTS_SHOWN && <li className={styles.muted}>{`and ${(surface.length - INPUTS_SHOWN).toLocaleString("en-US")} more`}</li>}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** A category's search, as every category shows it: the one-line summary, then its rules and inputs one disclosure away. */
+export function SearchLine({ heading }: { heading: Heading }) {
+  const summary = searchSummary(heading);
+  if (!summary) return null;
   return (
     <div className={styles.search}>
-      <span>{parts.join(" · ")}</span>
-      {rules.length === 1 && (
-        <span>
-          Rule <code>{rules[0]}</code>
-        </span>
-      )}
-      {rules.length > 1 && (
-        <Disclosure variant="plain" summary={countLabel(rules.length, "rule")}>
-          <ul className={`${styles.inputs} ${styles.mono}`}>
-            {rules.map((rule) => (
-              <li key={rule}>{rule}</li>
-            ))}
-          </ul>
-        </Disclosure>
-      )}
-      {search.surface.length > 0 && (
-        <Disclosure variant="plain" summary="Inputs searched">
-          <ul className={`${styles.inputs} ${styles.mono}`}>
-            {search.surface.map((path) => (
-              <li key={path}>{path || "(repository)"}</li>
-            ))}
-          </ul>
+      <span>{summary}</span>
+      {(heading.rules.length > 0 || (heading.search?.surface.length ?? 0) > 0) && (
+        <Disclosure variant="plain" summary="How this was found">
+          <SearchDetails heading={heading} />
         </Disclosure>
       )}
     </div>
   );
 }
 
-const SHARED_TITLES: Record<SharedBlock["kind"], { title: string; description: string }> = {
+export const SHARED_TITLES: Record<SharedBlock["kind"], { title: string; description: string }> = {
   dependencies: { title: "Dependencies", description: "Direct dependencies by manifest, with their declared ranges, the versions lockfiles resolve, and whether they're internal" },
   scripts: { title: "Package scripts", description: "Scripts declared in package manifests, with what each one checks (never run)" },
 };
@@ -242,7 +261,7 @@ const SHARED_TITLES: Record<SharedBlock["kind"], { title: string; description: s
  * category was searched sits in one disclosure, since the states say whether
  * to look.
  */
-export function SharedTable({ block, context, filters, pagination }: { block: SharedBlock; context: EvidenceContext; filters?: React.ReactNode; pagination?: React.ReactNode }) {
+export function SharedTable({ block, context, filters, pagination, level = 3 }: { block: SharedBlock; context: EvidenceContext; filters?: React.ReactNode; pagination?: React.ReactNode; level?: 2 | 3 }) {
   const [first] = block.sources;
   const { title, description } = SHARED_TITLES[block.kind];
   const rows = block.groups.reduce((sum, group) => sum + group.rows.length, 0);
@@ -257,7 +276,7 @@ export function SharedTable({ block, context, filters, pagination }: { block: Sh
     return category;
   };
   return (
-    <Section id={first!.definition.id} level={3} title={title} description={description}>
+    <Section id={first!.definition.id} level={level} title={title} description={description} actions={<Status state={first!.state} />}>
       {empty.length > 0 && (
         <ul className={styles.notes} aria-label={`Not shown in ${title}`}>
           {empty.map((source) => (
@@ -270,17 +289,23 @@ export function SharedTable({ block, context, filters, pagination }: { block: Sh
           ))}
         </ul>
       )}
-      <Disclosure variant="plain" summary="How these were found">
-        <ul className={styles.sources} aria-label={`Categories in ${title}`}>
-          {block.sources.map((source) => (
-            <li key={source.definition.id}>
-              <span className={styles.sourceLabel}>{source.definition.label}</span>
-              <Status state={source.state} size="sm" />
-              <SearchLine heading={source} />
-            </li>
-          ))}
-        </ul>
-      </Disclosure>
+      <div className={styles.search}>
+        <span>{block.sources.map((source) => searchSummary(source)).filter(Boolean)[0]}</span>
+        <Disclosure variant="plain" summary="How these were found">
+          <ul className={styles.sources} aria-label={`Categories in ${title}`}>
+            {block.sources.map((source) => (
+              <li key={source.definition.id}>
+                <span className={styles.sourceHeading}>
+                  <span className={styles.sourceLabel}>{source.definition.label}</span>
+                  <Status state={source.state} size="sm" />
+                  <span>{searchSummary(source)}</span>
+                </span>
+                <SearchDetails heading={source} />
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
+      </div>
       {filters}
       <div className={styles.anchoredTable}>
         <Panel flush>
@@ -292,11 +317,12 @@ export function SharedTable({ block, context, filters, pagination }: { block: Sh
                   <Th key={column.label} id={anchorOf(column.category)}>
                     <span className={styles.header}>
                       {column.label}
-                      {column.category && <Status state={sourceOf(column.category)!.state} size="sm" />}
+                      {/* The table's own state is in its heading; a column from another category shows that category's. */}
+                      {column.category && column.category !== first!.definition.id && <Status state={sourceOf(column.category)!.state} size="sm" />}
                     </span>
                   </Th>
                 ))}
-                <Th>Evidence</Th>
+                <Th align="actions">Evidence</Th>
               </>
             }
           >
@@ -335,7 +361,7 @@ function SharedGroup({ kind, manifest, total, rows, columns, context }: { kind: 
               <SharedCellView cell={row.cells[index]!} />
             </Td>
           ))}
-          <Td label="Evidence">
+          <Td label="Evidence" align="actions">
             <RowDetails title={row.manifest ? `${row.name} · ${row.manifest}` : row.name} held={row.held} evidence={row.evidence} context={context} />
           </Td>
         </tr>
@@ -355,21 +381,15 @@ function SharedCellView({ cell }: { cell: SharedCell }) {
   );
 }
 
-/** The categories of a group that have no facts: one compact row each, with its state and reason. */
-export function CompactList({ block }: { block: CompactBlock }) {
+/**
+ * A category with no facts, headed like every other category: its title,
+ * description, and state, then why it has none in one line where a table
+ * would be.
+ */
+export function EmptyCategory({ definition, value }: { definition: CompactBlock["items"][number]["definition"]; value: CompactBlock["items"][number]["value"] }) {
   return (
-    <Panel flush>
-      <ul className={styles.compact} aria-label={`${block.group} categories without facts`}>
-        {block.items.map(({ definition, value }) => (
-          <li key={definition.id} id={definition.id} className={styles.compactRow}>
-            <div className={styles.compactName}>
-              <Primary>{definition.label}</Primary>
-              <Secondary>{value.reason}</Secondary>
-            </div>
-            <Status state={value.state} />
-          </li>
-        ))}
-      </ul>
-    </Panel>
+    <Section id={definition.id} level={3} title={definition.label} description={definition.description} actions={<Status state={value.state} />}>
+      <p className={styles.search}>{value.reason}</p>
+    </Section>
   );
 }
