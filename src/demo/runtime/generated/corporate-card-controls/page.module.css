@@ -7,6 +7,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Salt's LinearProgress sets a minimum width wider than a narrow region; the bar takes its container's width instead. */
+.CardList_meter {
+  min-width: 0;
+}
+
 /* card-rules 1.0.0 */
 .CardRules_figure {
   font-variant-numeric: tabular-nums;

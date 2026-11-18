@@ -65,7 +65,7 @@ export default function LimitBreaches() {
             Limit used
           </Text>
           <Display4 className={styles.figure}>{`${used(desk)}%`}</Display4>
-          <LinearProgress value={Math.min(used(desk), 100)} hideLabel aria-label={`${desk.name} has used ${used(desk)}% of its limit`} />
+          <LinearProgress className={styles.meter} value={Math.min(used(desk), 100)} hideLabel aria-label={`${desk.name} has used ${used(desk)}% of its limit`} />
           <FlexLayout gap={1} align="center">
             <StatusIndicator status={STATUS[status].indicator} />
             <Text>{STATUS[status].label}</Text>

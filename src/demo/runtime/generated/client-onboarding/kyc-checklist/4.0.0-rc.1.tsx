@@ -35,7 +35,7 @@ export default function KycChecklist() {
             Steps remaining
           </Text>
           <Display4 className={styles.figure}>{`${remaining}`}</Display4>
-          <LinearProgress value={progress} hideLabel aria-label={`KYC for ${client.name} ${progress}% complete`} />
+          <LinearProgress className={styles.meter} value={progress} hideLabel aria-label={`KYC for ${client.name} ${progress}% complete`} />
           <Text color="secondary">{remaining ? "Complete every step before approval." : "Ready for approval."}</Text>
         </StackLayout>
         {GROUPS.map((group) => (

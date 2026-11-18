@@ -79,7 +79,7 @@ function CardList() {
                       </TD>
                       <TD>
                         <StackLayout gap={1}>
-                          <LinearProgress value={CardList_utilization(card)} hideLabel aria-label={`${card.holder} has spent ${CardList_utilization(card)}% of the monthly limit`} />
+                          <LinearProgress className={styles["CardList_meter"]} value={CardList_utilization(card)} hideLabel aria-label={`${card.holder} has spent ${CardList_utilization(card)}% of the monthly limit`} />
                           <Text styleAs="label" color="secondary" className={styles["CardList_figure"]}>{`${CardList_utilization(card)}% of limit`}</Text>
                         </StackLayout>
                       </TD>

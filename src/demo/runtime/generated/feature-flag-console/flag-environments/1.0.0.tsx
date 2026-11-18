@@ -61,7 +61,7 @@ export default function FlagEnvironments() {
               return (
                 <StackLayout as="li" key={environment.id} gap={1} data-demo-anchor={`flag-env-${environment.id}`}>
                   <Switch label={environment.label} checked={state.enabled} onChange={toggle(environment.id, environment.label)} />
-                  <LinearProgress value={reach} hideLabel aria-label={`${flag.name} reaches ${reach}% of ${environment.label.toLowerCase()} users`} />
+                  <LinearProgress className={styles.meter} value={reach} hideLabel aria-label={`${flag.name} reaches ${reach}% of ${environment.label.toLowerCase()} users`} />
                   <Text styleAs="label" color="secondary" className={styles.figure}>
                     {describe(state)}
                   </Text>

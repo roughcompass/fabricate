@@ -101,7 +101,7 @@ export default function FlagList() {
                       </TD>
                       <TD>
                         <StackLayout gap={1}>
-                          <LinearProgress value={rolloutOf(state)} hideLabel aria-label={`${flag.name} reaches ${rolloutOf(state)}% of ${where} users`} />
+                          <LinearProgress className={styles.meter} value={rolloutOf(state)} hideLabel aria-label={`${flag.name} reaches ${rolloutOf(state)}% of ${where} users`} />
                           <Text styleAs="label" color="secondary" className={styles.figure}>{`${rolloutOf(state)}% of users`}</Text>
                         </StackLayout>
                       </TD>

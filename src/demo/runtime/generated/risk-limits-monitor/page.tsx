@@ -118,7 +118,7 @@ function DeskLimits() {
                       </TD>
                       <TD>
                         <StackLayout gap={1}>
-                          <LinearProgress value={Math.min(DeskLimits_used(desk), 100)} hideLabel aria-label={`${desk.name} has used ${DeskLimits_used(desk)}% of its limit`} />
+                          <LinearProgress className={styles["DeskLimits_meter"]} value={Math.min(DeskLimits_used(desk), 100)} hideLabel aria-label={`${desk.name} has used ${DeskLimits_used(desk)}% of its limit`} />
                           <Text styleAs="label" color="secondary" className={styles["DeskLimits_figure"]}>{`${DeskLimits_used(desk)}%`}</Text>
                         </StackLayout>
                       </TD>
@@ -203,7 +203,7 @@ function LimitBreaches() {
             Limit used
           </Text>
           <Display4 className={styles["LimitBreaches_figure"]}>{`${LimitBreaches_used(desk)}%`}</Display4>
-          <LinearProgress value={Math.min(LimitBreaches_used(desk), 100)} hideLabel aria-label={`${desk.name} has used ${LimitBreaches_used(desk)}% of its limit`} />
+          <LinearProgress className={styles["LimitBreaches_meter"]} value={Math.min(LimitBreaches_used(desk), 100)} hideLabel aria-label={`${desk.name} has used ${LimitBreaches_used(desk)}% of its limit`} />
           <FlexLayout gap={1} align="center">
             <StatusIndicator status={LimitBreaches_STATUS[status].indicator} />
             <Text>{LimitBreaches_STATUS[status].label}</Text>

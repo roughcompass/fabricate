@@ -51,15 +51,18 @@ test("shows the Payments hero's Evaluation against the selected Salt starters on
   await expect(page.locator("dl").first()).toContainText("Meets selected Standards");
 });
 
-test("labels a non-hero built-in Illustrative on its card, detail page, and Code tab (Illustrative templates)", async ({ page, db: _db }) => {
+test("marks no built-in template Illustrative, and shows a lighter template's real Salt source and CSS module on its Code tab (No illustrative templates; Real source for a lighter template)", async ({ page, db: _db }) => {
   await page.goto("/templates");
-  await expect(card(page, "Corporate card controls").locator("[data-illustrative]")).toHaveText("Illustrative");
-  await expect(card(page, "Payments workspace").locator("[data-illustrative]")).toHaveCount(0);
-
+  await expect(page.locator("[data-illustrative]")).toHaveCount(0);
   await page.goto("/templates/corporate-card-controls");
-  await expect(page.locator("dl").first()).toContainText("Illustrative: its code is generated from the catalog, not real Salt.");
-  await page.goto("/templates/corporate-card-controls/preview?view=code");
-  await expect(page.locator("[data-illustrative]")).toContainText("These files are illustrative");
+  await expect(page.locator("[data-illustrative]")).toHaveCount(0);
+  await page.goto("/templates/fx-rates-board/preview?view=code");
+  await expect(page.locator("[data-illustrative]")).toHaveCount(0);
+  const files = page.getByRole("navigation", { name: "Files" });
+  await files.getByRole("link", { name: "src/fx-rates.tsx" }).click();
+  await expect(page.getByRole("figure", { name: "src/fx-rates.tsx" })).toContainText('import styles from "./fx-rates.module.css";');
+  await files.getByRole("link", { name: "src/fx-rates.module.css" }).click();
+  await expect(page.getByRole("figure", { name: "src/fx-rates.module.css" })).toContainText("font-variant-numeric: tabular-nums;");
 });
 
 test("shows a hero's real Salt source on the Code tab, with package.json naming its Salt packages", async ({ page, db: _db }) => {

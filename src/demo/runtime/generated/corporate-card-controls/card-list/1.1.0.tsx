@@ -75,7 +75,7 @@ export default function CardList() {
                       </TD>
                       <TD>
                         <StackLayout gap={1}>
-                          <LinearProgress value={utilization(card)} hideLabel aria-label={`${card.holder} has spent ${utilization(card)}% of the monthly limit`} />
+                          <LinearProgress className={styles.meter} value={utilization(card)} hideLabel aria-label={`${card.holder} has spent ${utilization(card)}% of the monthly limit`} />
                           <Text styleAs="label" color="secondary" className={styles.figure}>{`${utilization(card)}% of limit`}</Text>
                         </StackLayout>
                       </TD>

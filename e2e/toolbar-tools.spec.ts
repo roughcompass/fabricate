@@ -49,7 +49,7 @@ test.describe("accessibility tool", () => {
     await openPanel(page, "accessibility", "Accessibility");
     const audit = panel(page, "Accessibility");
     await audit.getByRole("button", { name: "Run audit" }).click();
-    await expect(audit.getByRole("status")).toContainText("have violations");
+    await expect(audit.getByRole("status")).toHaveText("1 element has violations.");
     await expect(audit.getByRole("button", { name: /Form elements must have labels/ })).toBeVisible();
     const attributions = await audit.locator("[data-audit-node]").evaluateAll((items) => [...new Set(items.map((item) => item.firstElementChild?.textContent))]);
     expect(attributions).toEqual(["Payee list 1.4.2"]);

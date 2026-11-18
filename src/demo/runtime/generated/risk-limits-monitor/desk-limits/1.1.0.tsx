@@ -112,7 +112,7 @@ export default function DeskLimits() {
                       </TD>
                       <TD>
                         <StackLayout gap={1}>
-                          <LinearProgress value={Math.min(used(desk), 100)} hideLabel aria-label={`${desk.name} has used ${used(desk)}% of its limit`} />
+                          <LinearProgress className={styles.meter} value={Math.min(used(desk), 100)} hideLabel aria-label={`${desk.name} has used ${used(desk)}% of its limit`} />
                           <Text styleAs="label" color="secondary" className={styles.figure}>{`${used(desk)}%`}</Text>
                         </StackLayout>
                       </TD>

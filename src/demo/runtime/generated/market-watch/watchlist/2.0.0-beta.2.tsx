@@ -60,7 +60,7 @@ export default function Watchlist() {
                       {entry.name}
                     </Text>
                     <Display4 className={styles.figure}>{entry.price.toFixed(2)}</Display4>
-                    <LinearProgress aria-hidden value={Math.round((Math.abs(entry.change) / LARGEST) * 100)} hideLabel />
+                    <LinearProgress className={styles.meter} aria-hidden value={Math.round((Math.abs(entry.change) / LARGEST) * 100)} hideLabel />
                   </StackLayout>
                 </InteractableCard>
               ))}

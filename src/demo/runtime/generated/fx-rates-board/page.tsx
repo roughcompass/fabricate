@@ -88,7 +88,7 @@ function FxRates() {
                       </TD>
                       <TD>
                         <StackLayout gap={1}>
-                          <LinearProgress value={FxRates_position(pair)} hideLabel aria-label={`${pair.pair} bid at ${FxRates_position(pair)}% of the day's range`} />
+                          <LinearProgress className={styles["FxRates_meter"]} value={FxRates_position(pair)} hideLabel aria-label={`${pair.pair} bid at ${FxRates_position(pair)}% of the day's range`} />
                           <Text styleAs="label" color="secondary" className={styles["FxRates_figure"]}>{`${FxRates_price(pair, pair.low)} – ${FxRates_price(pair, pair.high)}`}</Text>
                         </StackLayout>
                       </TD>

@@ -56,7 +56,7 @@ export default function FacilityList() {
             <Text styleAs="label" color="secondary">
               Portfolio utilization
             </Text>
-            <LinearProgress value={PORTFOLIO} aria-label={`Portfolio utilization, ${PORTFOLIO}% drawn`} />
+            <LinearProgress className={styles.meter} value={PORTFOLIO} aria-label={`Portfolio utilization, ${PORTFOLIO}% drawn`} />
           </StackLayout>
           <FlexLayout gap={1} align="center">
             <StatusIndicator status={NEAR_LIMIT > 0 ? "warning" : "success"} />

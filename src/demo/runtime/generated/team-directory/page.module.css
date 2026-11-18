@@ -2,3 +2,9 @@
 .PeopleSearch_selected {
   background: var(--salt-selectable-background-selected);
 }
+
+/* joiner-checklist 1.0.0 */
+/* Salt's LinearProgress sets a minimum width wider than a narrow region; the bar takes its container's width instead. */
+.JoinerChecklist_meter {
+  min-width: 0;
+}

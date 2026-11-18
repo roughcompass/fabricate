@@ -6,3 +6,8 @@
 .figure {
   font-variant-numeric: tabular-nums;
 }
+
+/* Salt's LinearProgress sets a minimum width wider than a narrow region; the bar takes its container's width instead. */
+.meter {
+  min-width: 0;
+}

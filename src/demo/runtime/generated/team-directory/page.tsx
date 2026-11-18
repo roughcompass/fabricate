@@ -178,7 +178,7 @@ function JoinerChecklist() {
           {person.joiner && tasks.length > 0 ? (
             <>
               <StackLayout gap={1}>
-                <LinearProgress value={progress} aria-label={`${first}'s onboarding progress`} />
+                <LinearProgress className={styles["JoinerChecklist_meter"]} value={progress} aria-label={`${first}'s onboarding progress`} />
                 <Text role="status" color="secondary">
                   {checked.length === tasks.length ? `All ${tasks.length} tasks done. ${first} has finished onboarding.` : `${checked.length} of ${tasks.length} tasks done.`}
                 </Text>

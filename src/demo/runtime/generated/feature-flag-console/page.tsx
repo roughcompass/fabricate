@@ -104,7 +104,7 @@ function FlagList() {
                       </TD>
                       <TD>
                         <StackLayout gap={1}>
-                          <LinearProgress value={FlagList_rolloutOf(state)} hideLabel aria-label={`${flag.name} reaches ${FlagList_rolloutOf(state)}% of ${where} users`} />
+                          <LinearProgress className={styles["FlagList_meter"]} value={FlagList_rolloutOf(state)} hideLabel aria-label={`${flag.name} reaches ${FlagList_rolloutOf(state)}% of ${where} users`} />
                           <Text styleAs="label" color="secondary" className={styles["FlagList_figure"]}>{`${FlagList_rolloutOf(state)}% of users`}</Text>
                         </StackLayout>
                       </TD>
@@ -177,7 +177,7 @@ function FlagEnvironments() {
               return (
                 <StackLayout as="li" key={environment.id} gap={1} data-demo-anchor={`flag-env-${environment.id}`}>
                   <Switch label={environment.label} checked={state.enabled} onChange={toggle(environment.id, environment.label)} />
-                  <LinearProgress value={reach} hideLabel aria-label={`${flag.name} reaches ${reach}% of ${environment.label.toLowerCase()} users`} />
+                  <LinearProgress className={styles["FlagEnvironments_meter"]} value={reach} hideLabel aria-label={`${flag.name} reaches ${reach}% of ${environment.label.toLowerCase()} users`} />
                   <Text styleAs="label" color="secondary" className={styles["FlagEnvironments_figure"]}>
                     {FlagEnvironments_describe(state)}
                   </Text>

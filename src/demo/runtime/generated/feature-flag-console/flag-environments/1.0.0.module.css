@@ -7,3 +7,8 @@
   margin: 0;
   padding: 0;
 }
+
+/* Salt's LinearProgress sets a minimum width wider than a narrow region; the bar takes its container's width instead. */
+.meter {
+  min-width: 0;
+}

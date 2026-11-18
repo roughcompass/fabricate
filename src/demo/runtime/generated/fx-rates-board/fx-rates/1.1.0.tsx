@@ -82,7 +82,7 @@ export default function FxRates() {
                       </TD>
                       <TD>
                         <StackLayout gap={1}>
-                          <LinearProgress value={position(pair)} hideLabel aria-label={`${pair.pair} bid at ${position(pair)}% of the day's range`} />
+                          <LinearProgress className={styles.meter} value={position(pair)} hideLabel aria-label={`${pair.pair} bid at ${position(pair)}% of the day's range`} />
                           <Text styleAs="label" color="secondary" className={styles.figure}>{`${price(pair, pair.low)} – ${price(pair, pair.high)}`}</Text>
                         </StackLayout>
                       </TD>

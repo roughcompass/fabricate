@@ -2,6 +2,7 @@ import { useBus } from "@deweb/portal";
 import { Avatar, Checkbox, CheckboxGroup, Divider, FlexLayout, GridLayout, H2, H3, LinearProgress, Panel, StackLayout, Tag, Text } from "@salt-ds/core";
 import { type ChangeEvent, useState } from "react";
 import { CHECKLISTS, PEOPLE } from "../data";
+import styles from "./1.0.0.module.css";
 
 /** Each joiner's completed tasks, starting from the checklist data. */
 const INITIAL_DONE: Readonly<Record<string, readonly string[]>> = Object.fromEntries(Object.entries(CHECKLISTS).map(([id, tasks]) => [id, tasks.filter((task) => task.done).map((task) => task.id)]));
@@ -66,7 +67,7 @@ export default function JoinerChecklist() {
           {person.joiner && tasks.length > 0 ? (
             <>
               <StackLayout gap={1}>
-                <LinearProgress value={progress} aria-label={`${first}'s onboarding progress`} />
+                <LinearProgress className={styles.meter} value={progress} aria-label={`${first}'s onboarding progress`} />
                 <Text role="status" color="secondary">
                   {checked.length === tasks.length ? `All ${tasks.length} tasks done. ${first} has finished onboarding.` : `${checked.length} of ${tasks.length} tasks done.`}
                 </Text>
