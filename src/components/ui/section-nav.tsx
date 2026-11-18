@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Icon } from "./icon";
-import { type Tone, statusOf } from "./status";
+import { Indicator } from "./indicator";
+import { StateIndicator, statusOf } from "./status";
 import styles from "./section-nav.module.css";
 
 export interface NavGroup {
@@ -51,7 +52,7 @@ export function SectionNav({ label, groups, jumpLabel = "Jump to a section" }: {
             {group.items.map((item) => (
               <li key={item.id}>
                 <a href={`#${item.id}`} className={styles.link} aria-current={current === item.id ? "location" : undefined} onClick={() => setCurrent(item.id)}>
-                  {item.state ? <span className={styles.dot} data-tone={statusOf(item.state).tone satisfies Tone} data-indicator={statusOf(item.state).indicator} aria-hidden="true" /> : stated && <span className={styles.dot} data-empty="" aria-hidden="true" />}
+                  {item.state ? <StateIndicator state={item.state} /> : stated && <Indicator shape="blank" />}
                   <span className={styles.label}>{item.label}</span>
                   {item.state && <span className="visually-hidden">{`, ${statusOf(item.state).label}`}</span>}
                 </a>

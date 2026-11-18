@@ -1,10 +1,8 @@
 "use client";
 
 import { useLayoutEffect } from "react";
-import { Icon, type IconName } from "./icon";
-import { type ToastAction, type ToastTone, useToast } from "./toast";
+import { StaticToast, type ToastAction, type ToastTone, useToast } from "./toast";
 import { useHydrated } from "./use-hydrated";
-import styles from "./flash-toast.module.css";
 
 export interface Outcome {
   /** Identifies the event, such as "added:src_abc". */
@@ -14,8 +12,6 @@ export interface Outcome {
   description?: string;
   action?: Pick<ToastAction, "label" | "href">;
 }
-
-const ICONS: Record<ToastTone, IconName> = { success: "checkCircle", info: "info", warning: "alert", error: "xCircle" };
 
 /**
  * Shows an action's outcome once. The server renders it as a toast in the
@@ -37,15 +33,5 @@ export function FlashToast({ outcome, strip }: { outcome: Outcome; strip: readon
   }, [outcome.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (hydrated) return null;
-  return (
-    <div className={styles.viewport}>
-      <div className={styles.static} data-tone={outcome.tone} role="status">
-        <Icon name={ICONS[outcome.tone]} className={styles.icon} />
-        <div className={styles.body}>
-          <p className={styles.title}>{outcome.title}</p>
-          {outcome.description && <p className={styles.description}>{outcome.description}</p>}
-        </div>
-      </div>
-    </div>
-  );
+  return <StaticToast toast={outcome} />;
 }

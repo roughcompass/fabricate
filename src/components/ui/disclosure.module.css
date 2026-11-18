@@ -1,6 +1,6 @@
 @layer components {
   .panel, .plain { min-width: 0; }
-  .panel { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
+  .panel { border: var(--surface-border); border-radius: var(--surface-radius); background: var(--surface-background); }
 
   .summary {
     display: flex;

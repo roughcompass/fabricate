@@ -11,7 +11,8 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { Status } from "@/components/ui/status";
+import { toneClass } from "@/components/ui/indicator";
+import { StateIndicator, Status, statusLabel, statusOf } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
@@ -275,12 +276,13 @@ function RepositoryCards({ repositories, profiling, changes }: { repositories: F
   );
 }
 
-const CONCLUSIONS: { id: "gaps" | "undetermined" | "conforms" | "not_applicable" | "none"; label: string; tone: string }[] = [
-  { id: "gaps", label: "Gaps found", tone: "error" },
-  { id: "undetermined", label: "Undetermined", tone: "warning" },
-  { id: "conforms", label: "Conforms", tone: "success" },
-  { id: "not_applicable", label: "Not applicable", tone: "neutral" },
-  { id: "none", label: "Not evaluated", tone: "none" },
+// Each conclusion's filter, and its state in the status registry, which gives its label, tone, and indicator.
+const CONCLUSIONS: { id: "gaps" | "undetermined" | "conforms" | "not_applicable" | "none"; state: string }[] = [
+  { id: "gaps", state: "gaps" },
+  { id: "undetermined", state: "undetermined" },
+  { id: "conforms", state: "conforms" },
+  { id: "not_applicable", state: "not_applicable" },
+  { id: "none", state: "not_evaluated" },
 ];
 
 /**
@@ -299,16 +301,16 @@ function AssessmentCard({ assessments, changes }: { assessments: FleetSummary["a
         <Link href={assessmentsHref()}>{figure(total)}</Link>
       </dd>
       <Change change={changes.assessments!} />
-      <dd className={styles.split} role="img" aria-label={shown.map((conclusion) => `${conclusion.label} ${byConclusion[conclusion.id]}`).join(", ")}>
-        {shown.map((conclusion) => byConclusion[conclusion.id] > 0 && <span key={conclusion.id} data-tone={conclusion.tone} style={{ flexGrow: byConclusion[conclusion.id] }} />)}
+      <dd className={styles.split} role="img" aria-label={shown.map((conclusion) => `${statusLabel(conclusion.state)} ${byConclusion[conclusion.id]}`).join(", ")}>
+        {shown.map((conclusion) => byConclusion[conclusion.id] > 0 && <span key={conclusion.id} className={toneClass} data-tone={statusOf(conclusion.state).tone} style={{ flexGrow: byConclusion[conclusion.id] }} />)}
       </dd>
       <dd className={styles.legendWrap}>
         <dl className={styles.legend} aria-label="By conclusion">
           {shown.map((conclusion) => (
-            <div key={conclusion.id} data-figure={conclusion.label}>
+            <div key={conclusion.id} data-figure={statusLabel(conclusion.state)}>
               <dt>
-                <span className={styles.swatch} data-tone={conclusion.tone} aria-hidden="true" />
-                {conclusion.label}
+                <StateIndicator state={conclusion.state} />
+                {statusLabel(conclusion.state)}
               </dt>
               <dd>
                 <Link href={assessmentsHref({ conclusion: conclusion.id })}>{figure(byConclusion[conclusion.id])}</Link>

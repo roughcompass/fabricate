@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon, type IconName } from "./icon";
+import { toneClass } from "./indicator";
 import styles from "./toast.module.css";
 
 /**
@@ -109,7 +110,7 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
 
   return (
     <li
-      className={styles.toast}
+      className={`${styles.toast} ${toneClass}`}
       data-tone={toast.tone}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -118,31 +119,61 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
         if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false);
       }}
     >
+      <ToastContent toast={toast} onDismiss={onDismiss} />
+      <button type="button" className={styles.close} aria-label="Dismiss notification" onClick={() => onDismiss(toast.id)}>
+        <Icon name="x" size={14} />
+      </button>
+    </li>
+  );
+}
+
+/**
+ * A toast's content, the same in a live toast and in an outcome the server
+ * renders before JavaScript runs: its tone's icon, its title and
+ * description, and its action. A link action works without JavaScript; one
+ * that runs code needs it.
+ */
+function ToastContent({ toast, onDismiss }: { toast: Pick<Toast, "id" | "tone" | "title" | "description" | "action">; onDismiss?: (id: string) => void }) {
+  const { action } = toast;
+  return (
+    <>
       <Icon name={ICONS[toast.tone]} className={styles.icon} />
       <div className={styles.body}>
         <p className={styles.title}>{toast.title}</p>
         {toast.description && <p className={styles.description}>{toast.description}</p>}
       </div>
-      {toast.action &&
-        (toast.action.href ? (
-          <Link href={toast.action.href} className={styles.action} onClick={() => onDismiss(toast.id)}>
-            {toast.action.label}
-          </Link>
-        ) : (
-          <button
-            type="button"
-            className={styles.action}
-            onClick={() => {
-              toast.action?.onAction?.();
-              onDismiss(toast.id);
-            }}
-          >
-            {toast.action.label}
-          </button>
-        ))}
-      <button type="button" className={styles.close} aria-label="Dismiss notification" onClick={() => onDismiss(toast.id)}>
-        <Icon name="x" size={14} />
-      </button>
-    </li>
+      {action?.href && (
+        <Link href={action.href} className={styles.action} onClick={() => onDismiss?.(toast.id)}>
+          {action.label}
+        </Link>
+      )}
+      {action && !action.href && onDismiss && (
+        <button
+          type="button"
+          className={styles.action}
+          onClick={() => {
+            action.onAction?.();
+            onDismiss(toast.id);
+          }}
+        >
+          {action.label}
+        </button>
+      )}
+    </>
+  );
+}
+
+/**
+ * A toast the server renders, where and as a live toast shows, so it's seen
+ * on first paint and without JavaScript; it has no dismiss button, which
+ * needs JavaScript, and the live toast takes over once the page hydrates.
+ */
+export function StaticToast({ toast }: { toast: Pick<Toast, "id" | "tone" | "title" | "description" | "action"> }) {
+  return (
+    <div className={styles.viewport}>
+      <div className={`${styles.toast} ${toneClass}`} data-tone={toast.tone} data-static="" role="status">
+        <ToastContent toast={toast} />
+      </div>
+    </div>
   );
 }

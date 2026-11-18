@@ -29,8 +29,10 @@ Every visual value is a token, and every token name starts with its type. A styl
 | `--z-*` | `raised`, `header`, `sticky`, `dialog`, `toast` | `z-index` |
 | `--duration-*` | `fast` 120ms, `base` 200ms, `slow` 300ms, `spin` 800ms (one spinner turn) | `transition`, `animation` |
 | `--ease-*` | `standard`, `emphasized` | `transition`, `animation` |
+| `--surface-*` | `border`, `radius`, `background`, `padding`: the content surface every panel, card, and list surface shares | the surface's `border`, `border-radius`, `background`, `padding` |
+| `--focus-*` | `ring`, and `offset` (outside) or `offset-inset` (inside, for a row in a menu or list, an input, or a control in a group) | `outline`, `outline-offset` |
 
-Literal lengths are limited to `0`, `1px`, and `2px`, for hairline borders and outlines. Percentages, `fr`, `auto`, and viewport units are allowed where they make sense. A stylesheet may define private custom properties named `--_*`, whose values follow the same rules.
+Literal lengths are limited to `0`, `1px`, and `2px`, for hairline borders and outlines. Percentages, `fr`, `auto`, and viewport units are allowed where they make sense. A stylesheet may define private custom properties named `--_*`, whose values follow the same rules; `--_tone`, which `toneClass` sets from an element's `data-tone`, is the one shared private token.
 
 Shared components (`src/components/`) wrap their rules in `@layer components`, and route stylesheets (`src/app/`) wrap theirs in `@layer pages`. The layer order is `reset, tokens, base, components, pages`, so composition rules win over component defaults however the stylesheets load.
 
@@ -230,6 +232,7 @@ Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: t
 | `ProgressBar` (`progress-bar.tsx`) | Finished work out of the total |
 | `Skeleton` (`skeleton.tsx`) | Placeholders, and the list, Repositories, detail, and form page skeletons |
 | `Icon` (`icon.tsx`) | Inline SVG icons on a 24px grid, drawn with the current text color. The gallery's Icons specimen shows every one |
+| `Indicator` (`indicator.tsx`) | The one state indicator: a dot, a ring, a dash, or a blank that keeps its place, in its tone, pulsing only for work under way. `Status`, `StateIndicator`, the section menu, and Home's legend all draw it, and `toneClass` is the one map from a tone to its color, which `Severity`, toasts, and Home's conclusion bar paint with. `test/lint/consistency.test.ts` fails on a dot, a tone map, a focus ring, or a surface drawn anywhere else |
 | `useHydrated` (`use-hydrated.ts`, client) | Whether a client component has hydrated: false in the server render and the first client render, so they match, then true. A control that works without JavaScript renders its fallback until then |
 
 ## Feedback

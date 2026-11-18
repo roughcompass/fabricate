@@ -15,11 +15,11 @@
   .skeleton[data-height="block"] { height: var(--space-16); }
 
   .header { display: flex; flex-direction: column; gap: var(--space-3); }
-  .panel { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
-  .panelPadded { display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
+  .panel { border: var(--surface-border); border-radius: var(--surface-radius); background: var(--surface-background); }
+  .panelPadded { display: flex; flex-direction: column; gap: var(--space-6); padding: var(--surface-padding); border: var(--surface-border); border-radius: var(--surface-radius); background: var(--surface-background); }
   .row { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: var(--space-6); padding: var(--space-4) var(--space-5); }
   .row + .row { border-top: 1px solid var(--color-border-subtle); }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--size-filter)), 1fr)); gap: 1px; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-border); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--size-filter)), 1fr)); gap: 1px; overflow: hidden; border: var(--surface-border); border-radius: var(--surface-radius); background: var(--color-border); }
   .stat { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-5); background: var(--color-bg); }
   .field { display: flex; flex-direction: column; gap: var(--space-2); }
   /* The focused skeleton: preview mode's tab row, and close below it, the gray container. */

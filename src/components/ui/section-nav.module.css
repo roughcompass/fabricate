@@ -25,22 +25,6 @@
   }
   .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  .dot {
-    --_tone: var(--color-neutral);
-    flex: none;
-    width: var(--size-dot);
-    height: var(--size-dot);
-    border-radius: var(--radius-full);
-    background: var(--_tone);
-
-    &[data-tone="success"] { --_tone: var(--color-success); }
-    &[data-tone="warning"] { --_tone: var(--color-warning); }
-    &[data-tone="error"] { --_tone: var(--color-error); }
-    &[data-tone="progress"], &[data-tone="info"] { --_tone: var(--color-progress); }
-    &[data-indicator="ring"] { background: transparent; box-shadow: inset 0 0 0 2px var(--_tone); }
-    &[data-indicator="dash"] { height: 2px; }
-    &[data-empty] { background: transparent; }
-  }
 
   /* The same toggle as a Disclosure: a chevron that turns when open, not the browser's marker. */
   .summary {

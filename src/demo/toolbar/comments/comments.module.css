@@ -25,7 +25,7 @@
     cursor: pointer;
     transform: translate(-2px, -100%);
 
-    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
     &[aria-expanded="true"] { box-shadow: var(--shadow-focus); }
   }
 
@@ -75,7 +75,7 @@
     cursor: pointer;
 
     &:hover { background: var(--color-bg-muted); color: var(--color-text); }
-    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+    &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
     &[aria-expanded="true"] { border-color: var(--color-border-strong); background: var(--color-bg-selected); color: var(--color-text); }
   }
 

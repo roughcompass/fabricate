@@ -11,7 +11,7 @@
   .cards.single { grid-template-columns: minmax(0, 1fr); }
 
   /* One figure as a card on the surface: its label, its count, how much of the whole it is, and its change this week. */
-  .card { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
+  .card { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--surface-padding); border: var(--surface-border); border-radius: var(--surface-radius); background: var(--surface-background); }
   .card dd { margin: 0; }
   .cardLabel { color: var(--color-text-secondary); font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); }
   .cardValue { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); line-height: var(--line-height-display); font-variant-numeric: tabular-nums; }
@@ -25,17 +25,13 @@
 
   /* The Assessments by conclusion: one bar split in the conclusions' tones, and a legend whose counts open each tab. */
   .split { display: flex; gap: 2px; height: var(--space-2); overflow: hidden; border-radius: var(--radius-full); background: var(--color-bg-muted); }
-  .split > span, .swatch { --_tone: var(--color-neutral); background: var(--_tone); }
-  .split > span[data-tone="error"], .swatch[data-tone="error"] { --_tone: var(--color-error); }
-  .split > span[data-tone="warning"], .swatch[data-tone="warning"] { --_tone: var(--color-warning); }
-  .split > span[data-tone="success"], .swatch[data-tone="success"] { --_tone: var(--color-success); }
-  .split > span[data-tone="none"], .swatch[data-tone="none"] { --_tone: var(--color-border-strong, var(--color-border)); }
+  /* Each segment takes its conclusion's tone from the shared tone map (indicator.tsx). */
+  .split > span { background: var(--_tone); }
   .legendWrap { margin-top: var(--space-1); }
   .legend { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; }
   .legend > div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
   .legend dt { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-text-secondary); }
   .legend dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: var(--font-weight-medium); }
-  .swatch { flex: none; width: var(--size-dot); height: var(--size-dot); border-radius: var(--radius-full); }
 
   .change { color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
   .change[data-change="up"] { color: var(--color-success); }

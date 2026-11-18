@@ -1,6 +1,5 @@
 @layer components {
   .status, .severity {
-    --_tone: var(--color-neutral);
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
@@ -13,27 +12,13 @@
     &[data-size="sm"] { font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
     /* Content the indicator marks may wrap; the indicator stays level with its first line. */
     &[data-content] { align-items: flex-start; white-space: normal; }
-    &[data-tone="success"] { --_tone: var(--color-success); }
-    &[data-tone="warning"] { --_tone: var(--color-warning); }
-    &[data-tone="error"] { --_tone: var(--color-error); }
-    &[data-tone="progress"], &[data-tone="info"] { --_tone: var(--color-progress); }
   }
 
-  .dot {
-    flex: none;
-    width: var(--size-dot);
-    height: var(--size-dot);
-    border-radius: var(--radius-full);
-    background: var(--_tone);
-
-    /* The states with no value differ by shape as well as label: Unknown is hollow, Not covered a dash. */
-    &[data-indicator="ring"] { background: transparent; box-shadow: inset 0 0 0 2px var(--_tone); }
-    &[data-indicator="dash"] { height: 2px; }
-  }
-  /* Only work under way moves; a settled state never does. */
-  .status[data-content] > .dot { margin-block-start: calc((1lh - var(--size-dot)) / 2); }
-  .status[data-content] > :last-child { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); min-width: 0; }
-  .status[data-tone="progress"] .dot { animation: pulse var(--duration-spin) var(--ease-standard) infinite alternate; }
+  /* The indicator (indicator.tsx) is the first child; beside content that wraps, it stays level with the first line. */
+  .status[data-content] > :first-child { margin-block-start: calc((1lh - var(--size-dot)) / 2); }
+  /* The content flows as text, its parts apart by a real space in a box one gap wide. */
+  .status[data-content] > :last-child { display: block; min-width: 0; }
+  .space { display: inline-block; inline-size: var(--space-2); white-space: pre; }
 
   /* Severity: a small bar in the tone, so it reads differently from a status dot. */
   .bars {
@@ -42,10 +27,5 @@
     height: var(--size-icon-sm);
     border-radius: var(--radius-full);
     background: var(--_tone);
-  }
-
-  @keyframes pulse {
-    from { opacity: 1; }
-    to { opacity: 0.35; }
   }
 }

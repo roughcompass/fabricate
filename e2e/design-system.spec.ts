@@ -142,7 +142,7 @@ test("tells the states with no value apart by their indicators", async ({ page }
   await page.goto("/design-system");
   const status = light(page, "Status and severity");
   const drawing = (state: string) =>
-    status.locator(`span:has(> [data-state="${state}"]) > [data-indicator]`).evaluate((element) => {
+    status.locator(`span:has(> [data-state="${state}"]) > [data-shape]`).evaluate((element) => {
       const style = getComputedStyle(element);
       return `${style.backgroundColor} ${style.boxShadow} ${style.height}`;
     });

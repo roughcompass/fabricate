@@ -1,3 +1,5 @@
+import { Children, isValidElement } from "react";
+import { Indicator as Mark, type IndicatorShape, type Tone, toneClass } from "./indicator";
 import styles from "./status.module.css";
 
 /**
@@ -6,11 +8,10 @@ import styles from "./status.module.css";
  * indicator, and operators never see a raw identifier.
  */
 
-/** Progress is work under way, and pulses; info shares its color for a settled state that is neither good nor bad, and holds still. */
-export type Tone = "neutral" | "success" | "warning" | "error" | "progress" | "info";
+export type { Tone } from "./indicator";
 
 /** The indicator's shape. The states that carry no value each have their own, so they differ without their labels. */
-export type Indicator = "dot" | "ring" | "dash";
+type Indicator = Exclude<IndicatorShape, "blank">;
 
 const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]> = {
   // Assessments, targets, Evaluations, and pinned Releases.
@@ -125,11 +126,37 @@ export function statusLabel(state: string): string {
 export function Status({ state, label, size = "md", children }: { state: string; label?: string; size?: "sm" | "md"; children?: React.ReactNode }) {
   const status = statusOf(state);
   return (
-    <span className={styles.status} data-tone={status.tone} data-size={size} data-content={children === undefined ? undefined : ""}>
-      <span className={styles.dot} data-indicator={status.indicator} aria-hidden="true" />
-      <span data-state={state}>{children ?? label ?? status.label}</span>
+    <span className={styles.status} data-size={size} data-content={children === undefined ? undefined : ""}>
+      <Mark tone={status.tone} shape={status.indicator} />
+      <span data-state={state}>{children === undefined ? (label ?? status.label) : joined(children)}</span>
     </span>
   );
+}
+
+const hidden = (part: React.ReactNode) => isValidElement<{ className?: string }>(part) && part.props.className === "visually-hidden";
+
+/**
+ * A Status's content parts as text: each pair is separated by a real space
+ * in a box one gap wide, so the parts look one gap apart, wrap like words,
+ * and read and copy as "Unknown Composition Searched 3 inputs", never
+ * "UnknownCompositionSearched 3 inputs". Text only assistive technology
+ * hears follows directly, with its own punctuation.
+ */
+function joined(children: React.ReactNode): React.ReactNode[] {
+  return Children.toArray(children).flatMap((part, index) => {
+    if (index === 0) return [part];
+    // Hidden text, such as ", Observed", follows directly; it carries its own punctuation.
+    return hidden(part) ? [part] : [<span key={`space-${index}`} className={styles.space}>{" "}</span>, part];
+  });
+}
+
+/**
+ * Items of a row laid out apart by its own gap, such as an overview's values,
+ * with a real space between each pair that only copied and spoken text
+ * sees, so they never run together there.
+ */
+export function spaced(children: React.ReactNode): React.ReactNode[] {
+  return Children.toArray(children).flatMap((part, index) => (index === 0 ? [part] : [<span key={`space-${index}`} className="visually-hidden">{" "}</span>, part]));
 }
 
 const SEVERITIES: Record<string, [label: string, tone: Tone]> = {
@@ -148,7 +175,7 @@ export function severityLabel(severity: string): string {
 export function Severity({ value }: { value: string }) {
   const [label, tone] = SEVERITIES[value] ?? [humanize(value), "neutral"];
   return (
-    <span className={styles.severity} data-tone={tone}>
+    <span className={`${styles.severity} ${toneClass}`} data-tone={tone}>
       <span className={styles.bars} aria-hidden="true" />
       {label}
     </span>
@@ -277,4 +304,10 @@ export function edgeBasis(basis: string): string {
 /** A boolean choice for a select or a summary. */
 export function booleanLabel(value: boolean): string {
   return value ? "Yes" : "No";
+}
+
+/** A state's indicator alone, for a place that shows its label elsewhere, such as a section menu entry. */
+export function StateIndicator({ state }: { state: string }) {
+  const status = statusOf(state);
+  return <Mark tone={status.tone} shape={status.indicator} />;
 }

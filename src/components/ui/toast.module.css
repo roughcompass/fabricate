@@ -12,8 +12,8 @@
   :global(body:has([data-sticky-footer])) .viewport { bottom: calc(var(--space-16) + var(--space-8)); }
   .list { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 
+  /* A live toast and an outcome the server renders before JavaScript runs share this look (toast.tsx); its tone's color comes from the shared tone map (indicator.tsx). */
   .toast {
-    --_tone: var(--color-success);
     display: flex;
     align-items: flex-start;
     gap: var(--space-3);
@@ -25,10 +25,9 @@
     color: var(--color-text);
     pointer-events: auto;
     animation: enter var(--duration-base) var(--ease-emphasized);
+    /* An outcome the server renders is there from first paint; only the live toast that takes over enters. */
+    &[data-static] { animation: none; }
 
-    &[data-tone="info"] { --_tone: var(--color-progress); }
-    &[data-tone="warning"] { --_tone: var(--color-warning); }
-    &[data-tone="error"] { --_tone: var(--color-error); }
   }
 
   .icon { flex: none; margin-top: 2px; color: var(--_tone); }

@@ -19,7 +19,7 @@
     transition: background var(--duration-fast) var(--ease-standard);
 
     &:hover { background: var(--color-bg-muted); color: var(--color-text); }
-    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+    &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
     /* The current item: a neutral fill and a heavier weight, never a hue. */
     &[aria-current] { background: var(--color-bg-selected); font-weight: var(--font-weight-medium); }
   }

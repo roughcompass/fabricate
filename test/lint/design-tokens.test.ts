@@ -26,6 +26,8 @@ const NOT_YET_MIGRATED = new Set<string>([]);
 
 /** Custom properties defined outside the stylesheets, by the font loader. */
 const EXTERNAL_TOKENS = new Set(["--font-geist-sans", "--font-geist-mono"]);
+// Private tokens a shared class sets, which an element that takes the class may read: --_tone from toneClass (indicator.module.css).
+const SHARED_PRIVATE_TOKENS = new Set(["--_tone"]);
 
 type Rule = { prefixes: string[]; keywords?: RegExp };
 
@@ -35,17 +37,18 @@ const SIZE: Rule = { prefixes: ["--size-", "--space-"] };
 
 const RULES: [RegExp, Rule][] = [
   [/^(color|background-color|border(-(top|right|bottom|left|block|inline)(-(start|end))?)?-color|outline-color|fill|stroke|accent-color|caret-color|text-decoration-color|column-rule-color)$/, COLOR],
-  [/^background$/, COLOR],
-  [/^(border(-(top|right|bottom|left|block|inline)(-(start|end))?)?|outline|text-decoration)$/, COLOR],
+  // The composite tokens (globals.css) name one whole shared value: a surface's edge and fill, and the focus ring.
+  [/^background$/, { ...COLOR, prefixes: ["--color-", "--surface-background"] }],
+  [/^(border(-(top|right|bottom|left|block|inline)(-(start|end))?)?|outline|text-decoration)$/, { ...COLOR, prefixes: ["--color-", "--surface-border", "--focus-ring"] }],
   [/^font-size$/, { prefixes: ["--font-size-"] }],
   [/^font-weight$/, { prefixes: ["--font-weight-"] }],
   [/^line-height$/, { prefixes: ["--line-height-"], keywords: /^(1|normal|inherit)$/ }],
   [/^letter-spacing$/, { prefixes: ["--letter-spacing-"] }],
   [/^font-family$/, { prefixes: ["--font-family-"] }],
-  [/^(margin|padding|scroll-margin|scroll-padding)(-.+)?$|^(gap|row-gap|column-gap|inset(-.+)?|top|right|bottom|left|text-indent)$/, SPACE],
+  [/^(margin|padding|scroll-margin|scroll-padding)(-.+)?$|^(gap|row-gap|column-gap|inset(-.+)?|top|right|bottom|left|text-indent)$/, { prefixes: [...SPACE.prefixes, "--surface-padding"] }],
   [/^((min|max)-)?(width|height|inline-size|block-size)$|^flex-basis$/, SIZE],
   [/^grid-template-(columns|rows)$|^grid-auto-(columns|rows)$/, SIZE],
-  [/^border(-(top|bottom)-(left|right)|-(start|end)-(start|end))?-radius$/, { prefixes: ["--radius-"] }],
+  [/^border(-(top|bottom)-(left|right)|-(start|end)-(start|end))?-radius$/, { prefixes: ["--radius-", "--surface-radius"] }],
   [/^box-shadow$/, { prefixes: ["--shadow-"], keywords: /^none$/ }],
   [/^z-index$/, { prefixes: ["--z-"], keywords: /^(0|auto)$/ }],
   [/^(transition|animation)(-duration|-delay|-timing-function)?$/, { prefixes: ["--duration-", "--ease-"] }],
@@ -136,7 +139,7 @@ export function violations(file: string, source: string, runtimeTokens: Readonly
         : file.startsWith("src/app/") && file !== GLOBALS
           ? "@layer pages"
           : null;
-  const known = (name: string) => GLOBAL_TOKENS.has(name) || local.has(name) || EXTERNAL_TOKENS.has(name) || (isRuntime(file) && runtimeTokens.has(name));
+  const known = (name: string) => GLOBAL_TOKENS.has(name) || local.has(name) || EXTERNAL_TOKENS.has(name) || SHARED_PRIVATE_TOKENS.has(name) || (isRuntime(file) && runtimeTokens.has(name));
   const reportedSelectors = new Set<string>();
   const reportedQueries = new Set<string>();
 
@@ -182,7 +185,7 @@ export function violations(file: string, source: string, runtimeTokens: Readonly
     if (!rule) continue;
     for (const name of references) {
       const typed = rule.prefixes.some((prefix) => typeName(name).startsWith(prefix));
-      if (!typed && !(local.has(name) && name.startsWith("--_"))) report(declaration, `uses ${name}, which is not a ${rule.prefixes.join(" or ")} token`);
+      if (!typed && !((local.has(name) || SHARED_PRIVATE_TOKENS.has(name)) && name.startsWith("--_"))) report(declaration, `uses ${name}, which is not a ${rule.prefixes.join(" or ")} token`);
     }
     if (property.startsWith("transition") || property.startsWith("animation")) {
       const reducedMotion = declaration.context.some((prelude) => prelude.includes("prefers-reduced-motion"));
@@ -266,7 +269,7 @@ describe("design token check", () => {
     });
 
     it("rejects a runtime token of the wrong type", () => {
-      expect(runtime("@layer runtime { .shell { padding: var(--rt-color-brand); } }")).toContainEqual(expect.stringContaining("not a --space- or --size- token"));
+      expect(runtime("@layer runtime { .shell { padding: var(--rt-color-brand); } }")).toContainEqual(expect.stringContaining("not a --space- or --size-"));
     });
 
     it.each([

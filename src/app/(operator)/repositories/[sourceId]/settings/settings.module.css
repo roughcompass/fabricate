@@ -45,7 +45,7 @@
   .confirm > button { width: 100%; justify-content: center; }
   .confirmLabel { font-weight: var(--font-weight-medium); overflow-wrap: anywhere; }
   .confirmInput { width: 100%; min-height: var(--size-control-md); padding: 0 var(--space-3); border: 1px solid var(--color-border-strong, var(--color-border)); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text); font: inherit; }
-  .confirmInput:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -1px; }
+  .confirmInput:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
   .confirmError { margin: 0; color: var(--color-error); }
   /* Without JavaScript, the last step stands on the page under the action's
      description, in place of the button that opens the dialog. Which one shows

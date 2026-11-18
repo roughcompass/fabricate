@@ -1,0 +1,36 @@
+@layer components {
+  /*
+   * The one map from a tone to its color. Anything that shows a tone, such as
+   * an indicator, a severity's bar, or a segment of a split bar, takes this
+   * class and its data-tone, then paints with var(--_tone).
+   */
+  .tone {
+    --_tone: var(--color-neutral);
+
+    &[data-tone="success"] { --_tone: var(--color-success); }
+    &[data-tone="warning"] { --_tone: var(--color-warning); }
+    &[data-tone="error"] { --_tone: var(--color-error); }
+    &[data-tone="progress"], &[data-tone="info"] { --_tone: var(--color-progress); }
+  }
+
+  /* A state's indicator: a dot in its tone. The states with no value differ by shape too: a hollow ring, or a dash. */
+  .indicator {
+    flex: none;
+    width: var(--size-dot);
+    height: var(--size-dot);
+    border-radius: var(--radius-full);
+    background: var(--_tone);
+
+    &[data-shape="ring"] { background: transparent; box-shadow: inset 0 0 0 2px var(--_tone); }
+    &[data-shape="dash"] { height: 2px; }
+    /* Keeps an indicator's place where an entry has none, so labels line up. */
+    &[data-shape="blank"] { background: transparent; }
+    /* Only work under way moves; a settled state never does. */
+    &[data-tone="progress"] { animation: pulse var(--duration-spin) var(--ease-standard) infinite alternate; }
+  }
+
+  @keyframes pulse {
+    from { opacity: 1; }
+    to { opacity: 0.35; }
+  }
+}

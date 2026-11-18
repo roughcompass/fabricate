@@ -51,7 +51,7 @@
     border-radius: var(--radius-md);
 
     &:hover { color: var(--color-text); }
-    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+    &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
   }
 
   /* The key that focuses the field, shown at its end while the field has nothing to clear. */

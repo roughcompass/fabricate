@@ -23,7 +23,7 @@
   /* The Code tab: the file tree beside the selected file. */
   .illustrative { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
   .code { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
-  .tree { padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+  .tree { padding: var(--space-2); border: var(--surface-border); border-radius: var(--surface-radius); }
   .treeList { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
   .treeList .treeList { padding-left: var(--space-3); }
   .folder { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
@@ -40,7 +40,7 @@
     text-decoration-line: none;
 
     &:hover { background: var(--color-bg-muted); }
-    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+    &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
     &[aria-current="true"] { background: var(--color-bg-selected); }
   }
   .fileName { overflow-wrap: anywhere; }

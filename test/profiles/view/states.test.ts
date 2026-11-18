@@ -52,7 +52,7 @@ describe("Profile category states and the reasons for no value", () => {
 
   it("shows a placeholder as its state's indicator and label, then the reason", () => {
     const markup = renderToStaticMarkup(createElement(NoValuePlaceholder, { value: { state: "not_covered", reason: "Detector release 0.1.0 doesn't report this category" } }));
-    expect(markup).toContain('data-indicator="dash"');
+    expect(markup).toContain('data-shape="dash"');
     expect(markup).toContain("Not covered");
     expect(markup).toContain("Detector release 0.1.0");
     expect(markup).not.toMatch(/No data|>—</);

@@ -17,7 +17,7 @@
 
     &::-webkit-details-marker { display: none; }
     &:hover { border-color: var(--color-border-strong); }
-    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
   }
   .chevron, .groupChevron { flex: none; color: var(--color-text-secondary); transition: transform var(--duration-fast) var(--ease-standard); }
   .disclosure[open] > .summary { margin-bottom: var(--space-4); }
@@ -57,7 +57,7 @@
 
     &::-webkit-details-marker { display: none; }
     &:hover .groupName { text-decoration-line: underline; }
-    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
   }
   .group[open] > .groupSummary { margin-bottom: var(--space-2); }
   .group[open] > .groupSummary .groupChevron { transform: rotate(90deg); }
