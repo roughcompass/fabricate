@@ -13,7 +13,6 @@ import { serverConfig } from "./support/results";
 // template-gallery spec: "Using a hero template" and "Illustrative templates"; template-preview spec: the Code tab shows a hero's real source.
 
 const toasts = (page: Page) => page.getByRole("region", { name: "Notifications" });
-const card = (page: Page, title: string) => page.locator("li").filter({ has: page.getByRole("link", { name: title, exact: true }) });
 
 function selectStarters(db: Db): void {
   const releases = STARTERS.map((starter) => {
