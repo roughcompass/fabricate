@@ -47,6 +47,11 @@
   .confirmInput { width: 100%; min-height: var(--size-control-md); padding: 0 var(--space-3); border: 1px solid var(--color-border-strong, var(--color-border)); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text); font: inherit; }
   .confirmInput:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -1px; }
   .confirmError { margin: 0; color: var(--color-error); }
-  /* Before JavaScript runs, the last step stands on the page, under the action's description. */
+  /* Without JavaScript, the last step stands on the page under the action's
+     description, in place of the button that opens the dialog. Which one shows
+     is the browser's call, so a page with JavaScript never paints the fallback
+     while it hydrates. */
   .inlineConfirm { flex-basis: 100%; }
+  @media (scripting: enabled) { .inlineConfirm { display: none; } }
+  @media (scripting: none) { .trigger { display: none; } }
 }

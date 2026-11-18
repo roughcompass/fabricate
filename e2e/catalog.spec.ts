@@ -94,6 +94,25 @@ test("deletes a Repository only after its effects are read and its name is typed
   expect((await page.goto(`/repositories/${orders.publicId}`))!.status()).toBe(404);
 });
 
+test.describe("without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("deletes a Repository from the name field on the page, in place of the dialog's button", async ({ page, db }) => {
+    const orders = buildSource(db, { name: "orders" });
+
+    await page.goto(`/repositories/${orders.publicId}/settings`);
+    const zone = page.locator("#danger-zone");
+    await expect(zone.getByRole("button", { name: "Delete this repository" })).toHaveCount(1);
+    await zone.getByLabel(/To confirm, type/).fill("order");
+    await zone.getByRole("button", { name: "Delete this repository" }).click();
+    await expect(page.getByText("Type orders to confirm")).toBeVisible();
+
+    await page.locator("#danger-zone").getByLabel(/To confirm, type/).fill("orders");
+    await page.locator("#danger-zone").getByRole("button", { name: "Delete this repository" }).click();
+    await expect(page.getByText("orders was deleted.")).toBeVisible();
+  });
+});
+
 test("asks for the clone URL first and names the Repository after its owner and repository until a name is typed", async ({ page, db: _db }) => {
   await page.goto(`${paths.repositories}/new`);
   const fields = page.locator("form input:not([type=hidden])");

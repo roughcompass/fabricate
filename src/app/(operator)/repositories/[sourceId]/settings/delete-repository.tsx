@@ -20,8 +20,9 @@ interface DeleteRepositoryProps {
  * Delete this repository, confirmed as GitHub confirms it: a dialog that
  * first asks whether you want to, then states every effect and asks you to
  * say you read them, then asks you to type the repository's name, which
- * alone enables the button. The server checks the name again. Before
- * JavaScript runs, the last step stands on the page instead.
+ * alone enables the button. The server checks the name again. Without
+ * JavaScript, the last step stands on the page instead; CSS picks which one
+ * shows, so hydrating never flashes the fallback.
  */
 export function DeleteRepository({ name, effects, action }: DeleteRepositoryProps) {
   const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
@@ -69,11 +70,10 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
     </form>
   );
 
-  if (!hydrated) return <div className={styles.inlineConfirm}>{confirmation}</div>;
-
   return (
     <>
-      <button ref={opener} type="button" {...buttonProps("secondary")} className={`${buttonProps("secondary").className} ${styles.dangerButton}`} aria-haspopup="dialog" onClick={open}>
+      {!hydrated && <div className={styles.inlineConfirm}>{confirmation}</div>}
+      <button ref={opener} type="button" {...buttonProps("secondary")} className={`${buttonProps("secondary").className} ${styles.dangerButton} ${styles.trigger}`} aria-haspopup="dialog" onClick={open}>
         Delete this repository
       </button>
       <dialog ref={dialog} className={styles.dialog} aria-labelledby={titleId} onClose={() => opener.current?.focus()}>
