@@ -12,7 +12,7 @@
  * - An unmatched marker stays literal.
  */
 
-export type CommentStyle = "strong" | "em" | "s" | "code";
+type CommentStyle = "strong" | "em" | "s" | "code";
 
 export type CommentNode = string | { readonly style: CommentStyle; readonly children: readonly CommentNode[] } | { readonly style: "break" };
 

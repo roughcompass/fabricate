@@ -1,12 +1,12 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+
 import { setSidebarVisibility } from "@/app/sidebar-actions";
 import { buttonProps } from "@/components/ui/button-content";
 import { Icon } from "@/components/ui/icon";
+import { useHydrated } from "@/components/ui/use-hydrated";
 import { SIDEBAR_HIDDEN, SIDEBAR_HIDDEN_COOKIE } from "@/lib/web/sidebar";
 
-const subscribeNever = () => () => {};
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 /** Applies a visibility at once and remembers it, as the Server Action would. */
@@ -24,7 +24,7 @@ function apply(to: "hidden" | "shown"): void {
  * writes the same cookie.
  */
 export function SidebarToggle({ to }: { to: "hidden" | "shown" }) {
-  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const hydrated = useHydrated();
   const label = to === "hidden" ? "Hide sidebar" : "Show sidebar";
   return (
     <form action={setSidebarVisibility}>

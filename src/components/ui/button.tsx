@@ -4,7 +4,7 @@ import type { IconName } from "./icon";
 import { SubmitButton } from "./submit-button";
 import styles from "./button.module.css";
 
-export { type ButtonSize, type ButtonVariant, buttonClass, buttonProps } from "./button-content";
+export { buttonProps } from "./button-content";
 
 interface CommonProps {
   variant?: ButtonVariant;

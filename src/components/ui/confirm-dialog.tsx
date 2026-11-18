@@ -1,13 +1,12 @@
 "use client";
 
-import { useId, useRef, useSyncExternalStore } from "react";
+import { useId, useRef } from "react";
 import { type ButtonSize, type ButtonVariant, ButtonContent, buttonProps } from "./button-content";
 import type { IconName } from "./icon";
 import { Menu, MenuButton } from "./menu";
 import { SubmitButton } from "./submit-button";
+import { useHydrated } from "./use-hydrated";
 import styles from "./confirm-dialog.module.css";
-
-const subscribeNever = () => () => {};
 
 interface ConfirmDialogProps {
   action: (formData: FormData) => void | Promise<void>;
@@ -35,7 +34,7 @@ interface ConfirmDialogProps {
  * JavaScript runs, the trigger submits the action directly.
  */
 export function ConfirmDialog({ action, fields = {}, trigger, title, children, confirmLabel, tone = "default", menu }: ConfirmDialogProps) {
-  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const hydrated = useHydrated();
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);

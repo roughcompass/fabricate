@@ -27,7 +27,7 @@ const SERVICE_FACTS: [key: string, label: string][] = [
 ];
 
 /** What a Service Dependency's summary reads as: its endpoint, its client, and where it's called. */
-export function serviceName(summary: ServiceSummary, records: JsonObject): string {
+function serviceName(summary: ServiceSummary, records: JsonObject): string {
   const record = summary.callSite ? (records[summary.callSite] as JsonObject | undefined) : undefined;
   return [summary.endpoint.text, summary.client, record ? evidenceLocation(record) : null].filter(Boolean).join(" · ");
 }

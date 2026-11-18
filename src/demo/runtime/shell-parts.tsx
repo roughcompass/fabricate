@@ -14,7 +14,7 @@ export const ENVIRONMENT_LABELS = {
   dev: "Dev",
 } as const;
 
-export function initials(name: string): string {
+function initials(name: string): string {
   return name
     .split(" ")
     .map((part) => part[0])

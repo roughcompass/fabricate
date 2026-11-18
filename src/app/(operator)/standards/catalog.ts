@@ -17,7 +17,7 @@ export interface CatalogSelector {
   choices: string[] | null;
 }
 
-export interface CatalogCollection {
+interface CatalogCollection {
   id: string;
   label: string;
   description: string;

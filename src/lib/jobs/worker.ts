@@ -10,13 +10,13 @@ import { DEFAULT_LEASE_MS, type Job, claimNext, fail, jobPayload, renewLease, su
  * so it can stop before another worker takes over.
  */
 
-export interface JobContext {
+interface JobContext {
   job: Job;
   /** Aborts when the lease is lost or the worker stops. */
   signal: AbortSignal;
 }
 
-export type JobHandler = (payload: JsonObject, context: JobContext) => Promise<void> | void;
+type JobHandler = (payload: JsonObject, context: JobContext) => Promise<void> | void;
 export type HandlerRegistry = Readonly<Record<string, JobHandler>>;
 
 /** Thrown by a handler whose failure retrying cannot fix. */

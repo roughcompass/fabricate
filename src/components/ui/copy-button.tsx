@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "./icon";
+import { useHydrated } from "./use-hydrated";
 import styles from "./copy-button.module.css";
-
-const subscribeNever = () => () => {};
 
 /**
  * Copies a full value to the clipboard and confirms it. Hidden until
  * JavaScript runs; the value it copies stays selectable either way.
  */
 export function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
-  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const hydrated = useHydrated();
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {

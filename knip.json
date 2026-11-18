@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/worker/main.ts", "scripts/*.{mjs,ts}", "test/support/concurrent-acquire.ts"],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{mjs,ts}", "test/**/*.ts", "e2e/**/*.ts"],
+  "ignore": ["src/demo/runtime/generated/**"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreUnresolved": ["worker=src/worker/main.ts"]
+}

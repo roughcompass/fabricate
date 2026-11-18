@@ -24,13 +24,13 @@ type Query = Record<string, string | string[] | undefined>;
 const KIND_TITLES: Record<SearchMatch["kind"], string> = { repository: "Repositories", application: "Applications", portal: "Portals", service: "Services", package: "Packages" };
 
 /** A positive page number from the address, or 1. */
-export function pageParam(query: Query, name: string): number {
+function pageParam(query: Query, name: string): number {
   const value = Number.parseInt(param(query, name) ?? "", 10);
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
 
 /** The breadcrumbs from the Assessments list, or for a profile version the Repositories list, to the Run's map. */
-export function runCrumbs(run: LoadedRun, withMap: boolean): PathStep[] {
+function runCrumbs(run: LoadedRun, withMap: boolean): PathStep[] {
   return [
     ...run.context.parents,
     { href: `/runs/${run.assessment.publicId}`, label: run.context.name },

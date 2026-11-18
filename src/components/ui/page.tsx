@@ -20,7 +20,7 @@ export function Page({ width = "content", busy = false, children }: { width?: "c
   );
 }
 
-export interface HeaderLink {
+interface HeaderLink {
   label: string;
   href: string;
   icon?: IconName;

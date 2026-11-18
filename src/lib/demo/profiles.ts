@@ -15,7 +15,7 @@ import { DemoLimitError } from "./workspaces";
  */
 
 export const PROFILE_LIMIT = 20;
-export { PROFILE_FIELD_LIMIT, type ProfileFields, profileFieldsSchema } from "./profile-fields";
+export type { ProfileFields } from "./profile-fields";
 
 /** Validates submitted profile fields, raising every problem by field. */
 export function parseProfileFields(value: unknown): ProfileFields {

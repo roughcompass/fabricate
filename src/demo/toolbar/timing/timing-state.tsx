@@ -2,6 +2,7 @@
 
 import { createContext, use, useEffect, useState, useSyncExternalStore } from "react";
 import { isToolbarKey } from "@/components/toolbar/toolbar-context";
+import { subscribeNever } from "@/components/ui/use-hydrated";
 import { shellOf } from "@/lib/demo/catalog";
 import { useRuntime } from "../../runtime/runtime-context";
 import { memberOf } from "../geometry";
@@ -48,7 +49,7 @@ function truncate(text: string, length: number): string {
 }
 
 /** A person-readable name for the element an interaction targeted; an unnamed one is told apart by its demo anchor. */
-export function describeTarget(target: Element): string {
+function describeTarget(target: Element): string {
   const control = target.closest("button, a, input, select, textarea, [role='button'], [role='link'], [data-demo-anchor]") ?? target;
   const tag = control.tagName.toLowerCase();
   const name = (control.getAttribute("aria-label") || control.textContent || control.getAttribute("placeholder") || "").replace(/\s+/g, " ").trim();
@@ -68,8 +69,6 @@ interface Draft {
   fallbackMs: number | null;
   exactMs: number | null;
 }
-
-const subscribeNever = () => () => {};
 
 // Ids run across the provider's lifetime, so an interaction cleared from the list is never confused with a later one.
 let nextId = 1;

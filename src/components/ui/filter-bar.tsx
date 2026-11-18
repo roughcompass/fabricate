@@ -2,11 +2,10 @@
 
 import Form from "next/form";
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
-import { buttonProps } from "./button-content";
-import styles from "./filter-bar.module.css";
 
-const subscribeNever = () => () => {};
+import { buttonProps } from "./button-content";
+import { useHydrated } from "./use-hydrated";
+import styles from "./filter-bar.module.css";
 
 interface FilterBarProps {
   /** The page the filters apply to; the chosen values become its query. */
@@ -27,7 +26,7 @@ interface FilterBarProps {
  * filters live in the URL.
  */
 export function FilterBar({ action, label, filtered, clearHref, keep = {}, children }: FilterBarProps) {
-  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const hydrated = useHydrated();
   return (
     <Form action={action} scroll={false} className={styles.bar} aria-label={label} onChange={(event) => event.currentTarget.requestSubmit()}>
       {Object.entries(keep).map(([name, value]) => (

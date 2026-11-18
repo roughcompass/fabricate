@@ -27,7 +27,7 @@ export interface PositionedBox extends LayoutBox {
   height: number;
 }
 
-export interface PositionedArrow extends LayoutArrow {
+interface PositionedArrow extends LayoutArrow {
   /** SVG path data from the source box to the target box. */
   path: string;
 }

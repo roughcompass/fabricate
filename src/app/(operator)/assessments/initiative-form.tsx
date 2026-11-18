@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState, useSyncExternalStore } from "react";
+import { useActionState, useState } from "react";
 import { ButtonLink } from "@/components/ui/button";
 import { type Choice, ChoiceGroup, FormAlert, FormFooter, FormSection, TextArea, TextInput, formStyles } from "@/components/ui/form";
 import { Panel } from "@/components/ui/panel";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { useFocusFirstInvalid } from "@/components/ui/use-focus-first-invalid";
+import { useHydrated } from "@/components/ui/use-hydrated";
 import type { InitiativeFormState } from "./form-state";
 
 interface InitiativeFormProps {
@@ -20,15 +21,13 @@ interface InitiativeFormProps {
   cancelHref: string;
 }
 
-const subscribeNever = () => () => {};
-
 export function InitiativeForm({ action, initial, lockVersion, sourceCount, sourceChoices, releaseChoices, submitLabel, cancelHref }: InitiativeFormProps) {
   const [state, formAction] = useActionState(action, initial);
   const form = useFocusFirstInvalid(state, "initiative-form-alert");
   const [mode, setMode] = useState(initial.values.selectionMode);
   // Without JavaScript every field stays visible; the server ignores source
   // selections for a scope of all Repositories.
-  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const hydrated = useHydrated();
 
   return (
     <form ref={form} action={formAction} noValidate>

@@ -1,7 +1,8 @@
-import type { CategoryDefinition, JsonObject, JsonValue } from "@repo-facts/contract";
+import type { CategoryDefinition, JsonValue } from "@repo-facts/contract";
 import { factText, formatValue } from "@/components/results/value";
 import { countLabel } from "@/components/ui/count";
 import { ciSystem, kindLabel, runtimeName } from "@/components/ui/status";
+import { isJsonObject } from "@/lib/json";
 import { dependencyGroups } from "./joins";
 import { type Fact, type FactDocument, type NoValue, categoryDefinitions, categoryOf, noValue, partial } from "./states";
 
@@ -13,7 +14,7 @@ export interface OverviewValue {
 }
 
 /** A category of a row that has no value, with why. A row of several categories names which one. */
-export interface OverviewPlaceholder {
+interface OverviewPlaceholder {
   label?: string;
   value: NoValue;
 }
@@ -34,13 +35,12 @@ export interface OverviewRow {
   partial: boolean;
 }
 
-const isObject = (value: JsonValue | undefined): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
-const field = (fact: Fact, name: string): string | null => (isObject(fact.value) && (typeof fact.value[name] === "string" || typeof fact.value[name] === "number") ? String(fact.value[name]) : null);
+const field = (fact: Fact, name: string): string | null => (isJsonObject(fact.value) && (typeof fact.value[name] === "string" || typeof fact.value[name] === "number") ? String(fact.value[name]) : null);
 const distinct = (values: OverviewValue[]) => values.filter((value, index) => values.findIndex((other) => other.text === value.text && other.state === value.state) === index);
 
 /** A conflicting fact's candidates as one value, so the overview never picks one: "18 or >=20". */
 function candidates(fact: Fact): string {
-  const declared = (value: JsonValue) => (isObject(value) && (typeof value.declared === "string" || Array.isArray(value.declared)) ? formatValue(value.declared) : formatValue(value));
+  const declared = (value: JsonValue) => (isJsonObject(value) && (typeof value.declared === "string" || Array.isArray(value.declared)) ? formatValue(value.declared) : formatValue(value));
   return (fact.candidates ?? []).map((candidate) => declared(candidate.value)).join(" or ");
 }
 
@@ -68,7 +68,7 @@ const versionLike = (value: string) => !/^[a-z]+:/i.test(value);
 /** Whether a package's manifest is published as the Packages produced category reports it. */
 function published(document: FactDocument, manifest: string | null): boolean {
   const produced = categoryOf(document, "packages_produced")?.facts.find((candidate) => field(candidate, "manifest") === manifest);
-  return Boolean(produced && isObject(produced.value) && produced.value.published === true);
+  return Boolean(produced && isJsonObject(produced.value) && produced.value.published === true);
 }
 
 const ROWS: RowDefinition[] = [
@@ -80,14 +80,14 @@ const ROWS: RowDefinition[] = [
     summary: (facts, document) => {
       if (facts.length < 2) return null;
       const shipped = facts.filter((fact) => published(document, field(fact, "manifest"))).length;
-      const hidden = facts.filter((fact) => isObject(fact.value) && fact.value.private === true).length;
+      const hidden = facts.filter((fact) => isJsonObject(fact.value) && fact.value.private === true).length;
       return [countLabel(facts.length, "package"), shipped ? `${shipped} published` : null, hidden ? `${hidden} private` : null].filter(Boolean).join(" · ");
     },
     describe: (fact, _category, document) => {
       const name = field(fact, "name");
       if (name === null) return null;
       const manifest = field(fact, "manifest");
-      const visibility = published(document, manifest) ? "published" : isObject(fact.value) && fact.value.private === true ? "private" : "public";
+      const visibility = published(document, manifest) ? "published" : isJsonObject(fact.value) && fact.value.private === true ? "private" : "public";
       const directory = manifest && manifest.includes("/") ? `${manifest.slice(0, manifest.lastIndexOf("/") + 1)}` : null;
       return { state: fact.state, text: [name, field(fact, "version")].filter(Boolean).join(" "), secondary: [visibility, directory].filter(Boolean).join(" · ") };
     },
@@ -104,8 +104,8 @@ const ROWS: RowDefinition[] = [
     categories: ["frameworks"],
     describe: (fact) => {
       const label = field(fact, "label");
-      const specifiers = isObject(fact.value) ? fact.value.specifiers : undefined;
-      const version = isObject(specifiers) ? Object.values(specifiers).find((value): value is string => typeof value === "string" && versionLike(value)) : undefined;
+      const specifiers = isJsonObject(fact.value) ? fact.value.specifiers : undefined;
+      const version = isJsonObject(specifiers) ? Object.values(specifiers).find((value): value is string => typeof value === "string" && versionLike(value)) : undefined;
       return label === null ? null : { state: fact.state, text: [label, version].filter(Boolean).join(" ") };
     },
   },

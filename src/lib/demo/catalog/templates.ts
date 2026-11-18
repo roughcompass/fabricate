@@ -199,6 +199,3 @@ export const TEMPLATES: readonly Template[] = [
     version: "1.2.5",
   }),
 ];
-
-/** The hero templates, whose microfrontends are real Salt that hero generation writes. */
-export const HERO_SLUGS: readonly string[] = TEMPLATES.filter((template) => template.hero).map((template) => template.slug);

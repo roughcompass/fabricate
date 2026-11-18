@@ -45,7 +45,7 @@ export interface PortalMenuEntry {
 }
 
 /** The system message the banner shows. */
-export interface PortalBanner {
+interface PortalBanner {
   readonly title: string;
   readonly description: string;
   readonly severity: "info" | "warning" | "error";

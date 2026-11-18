@@ -26,13 +26,13 @@ import { type Application, type OwnershipAssertion, applicationsWithSealId, crea
  * recorded as a conflict for review, and nothing is merged.
  */
 
-export const DE_CONSOLE_FORMAT = "de-console-ownership";
+const DE_CONSOLE_FORMAT = "de-console-ownership";
 export const DE_CONSOLE_VERSIONS = [1, 2] as const;
 /** Larger exports are refused rather than read into memory. */
 export const MAX_EXPORT_BYTES = 10 * 1024 * 1024;
 const MAX_APPLICATIONS = 20_000;
 /** The scheduled read waits longer than a claim, which a person is waiting on. */
-export const READ_TIMEOUT_MS = { schedule: 30_000, claim: 5_000 } as const satisfies Record<DeConsoleReadTrigger, number>;
+const READ_TIMEOUT_MS = { schedule: 30_000, claim: 5_000 } as const satisfies Record<DeConsoleReadTrigger, number>;
 
 const label = (max: number) => z.string().trim().min(1).max(max);
 const portalList = z.array(label(100)).max(100).default([]);
@@ -54,7 +54,7 @@ const exportSchema = z.discriminatedUnion("version", [
   }),
 ]);
 
-export interface DeConsoleApplication {
+interface DeConsoleApplication {
   /** The DE Console's own stable ID; null in a legacy version 1 export. */
   consoleId: string | null;
   sealId: string | null;
@@ -76,7 +76,7 @@ export class DeConsoleReadError extends Error {
 }
 
 /** The key an entry is linked by: its stable ID, or, in a legacy export, its SEAL ID. */
-export function consoleKey(application: Pick<DeConsoleApplication, "consoleId" | "sealId">): string {
+function consoleKey(application: Pick<DeConsoleApplication, "consoleId" | "sealId">): string {
   return application.consoleId !== null ? `id:${application.consoleId}` : `seal:${application.sealId}`;
 }
 

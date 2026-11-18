@@ -3,7 +3,7 @@ import { countLabel } from "@/components/ui/count";
 import { humanize } from "@/components/ui/status";
 
 /** A candidate value of a conflicting fact, with its own evidence. */
-export interface Candidate {
+interface Candidate {
   value: JsonValue;
   evidence: string[];
   rule: string;

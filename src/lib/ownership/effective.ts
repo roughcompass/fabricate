@@ -62,7 +62,7 @@ const newest = (a: OwnershipAssertion, b: OwnershipAssertion) => b.recordedAt.ge
 const byPrecedence = (a: OwnershipAssertion, b: OwnershipAssertion) => rank(b) - rank(a) || newest(a, b);
 
 /** Assertions no other assertion has replaced, keeping only each source's newest. */
-export function currentAssertions(assertions: readonly OwnershipAssertion[], superseded: ReadonlySet<number>): OwnershipAssertion[] {
+function currentAssertions(assertions: readonly OwnershipAssertion[], superseded: ReadonlySet<number>): OwnershipAssertion[] {
   const latest = new Map<string, OwnershipAssertion>();
   for (const assertion of [...assertions].filter((item) => !superseded.has(item.id)).sort(newest)) {
     if (!latest.has(origin(assertion))) latest.set(origin(assertion), assertion);

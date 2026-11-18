@@ -46,7 +46,7 @@ export type Placement =
   | { kind: "line_of_business"; lineOfBusiness: string | null }
   | { kind: "unassigned"; system: string };
 
-export interface RuntimeSystem {
+interface RuntimeSystem {
   /** The node ID of the repository the system is named for. */
   id: string;
   name: string;

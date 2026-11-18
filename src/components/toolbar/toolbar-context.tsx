@@ -11,9 +11,9 @@ export type ToolId = (typeof TOOLS)[number];
 export type ToolbarMode = "none" | "comment" | "select";
 
 export const ITEM_GROUPS = ["Collaboration", "Inspect", "Runtime", "More"] as const;
-export type ItemGroup = (typeof ITEM_GROUPS)[number];
+type ItemGroup = (typeof ITEM_GROUPS)[number];
 
-export type ItemAction = { readonly kind: "tool"; readonly tool: ToolId } | { readonly kind: "mode"; readonly mode: "comment" } | { readonly kind: "command"; readonly command: "hide" };
+type ItemAction = { readonly kind: "tool"; readonly tool: ToolId } | { readonly kind: "mode"; readonly mode: "comment" } | { readonly kind: "command"; readonly command: "hide" };
 
 export interface ToolbarItem {
   readonly id: string;

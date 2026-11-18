@@ -16,7 +16,6 @@ import { PROFILING_INITIATIVE_ID } from "@/lib/initiatives/initiative-records";
  * queued or running at a time.
  */
 
-export type ProfileVersionRow = typeof profileVersions.$inferSelect;
 
 /** A Run that hasn't finished. */
 export const ACTIVE_STATES = ["queued", "acquiring", "analyzing", "finalizing"] as const;

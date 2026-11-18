@@ -5,9 +5,9 @@ import { type Position, type Size, intersects, placeOutside } from "./placement"
 import { useToolbarBounds } from "./toolbar-bounds";
 
 /** Matches --space-3: the gap a corner overlay keeps from the viewport's edges. */
-export const EDGE_GAP = 12;
+const EDGE_GAP = 12;
 /** Matches --space-6: the gap between a mode banner and the bottom of the viewport. */
-export const BANNER_GAP = 24;
+const BANNER_GAP = 24;
 
 /** Where an overlay would go, given its own size and the viewport's. */
 export type Preferred = (box: Size, viewport: Size) => Position;

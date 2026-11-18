@@ -13,8 +13,8 @@ import { type HintState, parseHints } from "./hints";
  */
 
 export const COMMENT_LIMIT = 2000;
-export const DISPLAY_NAME_LIMIT = 60;
-export const IDLE_DAYS = 30;
+const DISPLAY_NAME_LIMIT = 60;
+const IDLE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 

@@ -42,7 +42,7 @@ function useIncidents() {
  * regions use the deliberately faint token, and the acknowledge buttons are
  * icons with no accessible name. Version 6.1.0 fixes all three.
  */
-export function IncidentFeed600() {
+function IncidentFeed600() {
   const { selected, rows, choose } = useIncidents();
   const [text, setText] = useState("");
   const visible = rows.filter((incident) => `${incident.id} ${incident.title}`.toLowerCase().includes(text.trim().toLowerCase()));
@@ -113,7 +113,7 @@ const SERVICES = [
 ] as const;
 const HEALTH_TONES = { Healthy: "positive", Degraded: "accent", Outage: "negative" } as const;
 
-export function ServiceHealth() {
+function ServiceHealth() {
   const [focus, setFocus] = useState<string | null>(null);
   useBusSubscription("incident:selected", "service-health", (payload) => {
     const region = (payload as { region?: unknown })?.region;
@@ -143,7 +143,7 @@ const CHANGES = [
   { id: "CHG-733", title: "Resize reporting cluster", window: "Thu 20:00", risk: "Medium", status: "Awaiting approval" },
 ] as const;
 
-export function ChangeCalendar() {
+function ChangeCalendar() {
   const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
   const [checked, setChecked] = useState(false);

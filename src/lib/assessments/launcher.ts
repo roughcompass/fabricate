@@ -37,7 +37,7 @@ export interface LaunchResult {
 }
 
 /** The priority of a Run's jobs: background for the Repository profiling initiative. */
-export function runPriority(initiative: Pick<Initiative, "profiling">): number {
+function runPriority(initiative: Pick<Initiative, "profiling">): number {
   return initiative.profiling ? JOB_PRIORITIES.background : JOB_PRIORITIES.normal;
 }
 

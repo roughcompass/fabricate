@@ -1,9 +1,9 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type Db, MIGRATIONS_FOLDER, migrateDatabase, openDatabase } from "@/lib/db/client";
 import { applicationsWithSealId, createApplication, ensurePortal, findApplication } from "@/lib/ownership/records";
+import { migrationFolderAt } from "../support/migrations";
 
 const PRE_ONBOARDING_MIGRATION = "0021_claim_initiative_triggers";
 const FIXTURE = path.resolve("test/fixtures/onboarding/ownership-before-onboarding.sql");
@@ -15,19 +15,6 @@ const EXPECTED = {
   supersessions: [{ assertionId: 503, supersededId: 502 }],
   counts: { applications: 2, portals: 1, assertions: 7, supersessions: 1 },
 };
-
-function migrationFolderAt(tag: string): string {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-onboarding-migrations-"));
-  fs.cpSync(MIGRATIONS_FOLDER, folder, { recursive: true });
-  const journalFile = path.join(folder, "meta", "_journal.json");
-  const journal = JSON.parse(fs.readFileSync(journalFile, "utf8")) as { entries: { idx: number; tag: string }[] };
-  const selected = journal.entries.find((entry) => entry.tag === tag);
-  if (!selected) throw new Error(`Migration ${tag} does not exist`);
-  for (const entry of journal.entries.filter((candidate) => candidate.idx > selected.idx)) fs.rmSync(path.join(folder, `${entry.tag}.sql`), { force: true });
-  journal.entries = journal.entries.filter((entry) => entry.idx <= selected.idx);
-  fs.writeFileSync(journalFile, JSON.stringify(journal));
-  return folder;
-}
 
 function snapshot(db: Db) {
   const ids = (table: string) => (db.$client.prepare(`select id from ${table} order by id`).all() as { id: number }[]).map((row) => row.id);

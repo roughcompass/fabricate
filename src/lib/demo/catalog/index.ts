@@ -3,8 +3,7 @@ import type { AppDefinition, AppRoute, GroupMember, LoadEntry, Template } from "
 
 export * from "./brands";
 export * from "./types";
-export { SHELL_MEMBERS } from "./heroes";
-export { HERO_SLUGS, TEMPLATES } from "./templates";
+export { TEMPLATES } from "./templates";
 
 /** Reference deployments are virtual applications with this ID prefix (design.md, decision 2). */
 export const REFERENCE_PREFIX = "ref-";

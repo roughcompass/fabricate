@@ -6,7 +6,7 @@ export type ButtonSize = "sm" | "md" | "lg";
 const ICON_SIZES: Record<ButtonSize, number> = { sm: 14, md: 16, lg: 16 };
 
 /** The class of a button in a variant and size, for buttons, links, and submit buttons alike. */
-export function buttonClass(variant: ButtonVariant = "secondary", size: ButtonSize = "md", iconOnly = false): string {
+function buttonClass(variant: ButtonVariant = "secondary", size: ButtonSize = "md", iconOnly = false): string {
   return [styles.button, styles[variant], styles[size], iconOnly && styles.iconOnly].filter(Boolean).join(" ");
 }
 

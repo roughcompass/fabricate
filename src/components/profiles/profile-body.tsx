@@ -41,7 +41,7 @@ const queryValue = (value: string | string[] | undefined) => (typeof value === "
 const SERVICES_GROUP = "Services";
 
 /** Rows per page of a long table, so a large repository's Profile stays quick to load and to read. */
-export const PROFILE_PAGE_SIZE = 50;
+const PROFILE_PAGE_SIZE = 50;
 
 /**
  * A Profile's sections: the section menu, the overview, what needs

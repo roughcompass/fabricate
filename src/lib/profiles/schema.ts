@@ -28,9 +28,9 @@ import { CURRENT_VERSION, DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
  */
 
 export const PROFILE_SCHEMA = DOCUMENT_SCHEMAS.repositoryProfile.name;
-export const PROFILE_SCHEMA_VERSION = CURRENT_VERSION.repositoryProfile;
+const PROFILE_SCHEMA_VERSION = CURRENT_VERSION.repositoryProfile;
 
-export interface ProfileSource {
+interface ProfileSource {
   public_id: string;
   name: string;
   clone_url: string;
@@ -60,7 +60,7 @@ export function buildProfile(input: ProfileInput): JsonObject {
 }
 
 /** Whether +document+ is a template version's Profile rather than a repository's. */
-export function isTemplateProfile(document: JsonObject): boolean {
+function isTemplateProfile(document: JsonObject): boolean {
   return "template" in document;
 }
 

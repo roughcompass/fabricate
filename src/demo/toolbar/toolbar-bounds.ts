@@ -32,7 +32,7 @@ function measure() {
 }
 
 /** Registers a control's element under a key, or removes it when `element` is null. */
-export function trackToolbarBound(key: string, element: Element | null): void {
+function trackToolbarBound(key: string, element: Element | null): void {
   if (typeof window === "undefined") return;
   observer ??= new ResizeObserver(() => measure());
   const previous = elements.get(key);

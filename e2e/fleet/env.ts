@@ -7,7 +7,7 @@ import path from "node:path";
  */
 export const FLEET_PORT = Number(process.env.FLEET_PORT ?? 3200);
 export const FLEET_ROOT = path.resolve(process.env.FLEET_ROOT ?? "../fleet");
-export const FLEET_RUN = path.resolve("tmp/fleet-run");
+const FLEET_RUN = path.resolve("tmp/fleet-run");
 export const FLEET_DATABASE = path.join(FLEET_RUN, "fabricate.sqlite3");
 
 export const FLEET_ENV = {

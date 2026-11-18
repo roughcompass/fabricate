@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect } from "./fixtures";
 
 /** The sidebar's navigation. */
-export const primaryNavigation = (page: Page) => page.getByRole("navigation", { name: "Primary" });
+const primaryNavigation = (page: Page) => page.getByRole("navigation", { name: "Primary" });
 
 /** Opens a top-level section from the sidebar. */
 export async function openSection(page: Page, name: string): Promise<void> {

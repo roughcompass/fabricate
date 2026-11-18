@@ -38,7 +38,7 @@ export interface Share {
   readonly state: ShareState;
 }
 
-export function isShareToken(value: unknown): value is string {
+function isShareToken(value: unknown): value is string {
   return typeof value === "string" && TOKEN_PATTERN.test(value);
 }
 

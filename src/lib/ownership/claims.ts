@@ -73,7 +73,7 @@ export function repositoryName(canonicalUrl: string): string {
   return segment.replace(/\.git$/, "").slice(0, 100) || "repository";
 }
 
-export interface ClaimQuestions {
+interface ClaimQuestions {
   /** Which application the repository belongs to. */
   application: boolean;
   team: boolean;
@@ -115,7 +115,7 @@ export interface ClaimView {
 }
 
 /** An existing application a choice names, the SEAL ID of a new one, and the applications its SEAL ID finds. */
-export interface ResolvedChoice {
+interface ResolvedChoice {
   record: Application | null;
   newSealId: string | null;
   sealId: string | null;
@@ -127,7 +127,7 @@ export interface ResolvedChoice {
  * carries, so it makes a new one; or one application carries, so it names
  * it; or several carry, so the person must choose. Nothing is merged.
  */
-export function resolveChoice(db: Executor, choice: ApplicationChoice): ResolvedChoice {
+function resolveChoice(db: Executor, choice: ApplicationChoice): ResolvedChoice {
   const sealId = choice.sealId?.trim() || null;
   if (choice.application) return { record: findApplication(db, choice.application) ?? null, newSealId: null, sealId, sameSeal: [] };
   if (!sealId) return { record: null, newSealId: null, sealId: null, sameSeal: [] };

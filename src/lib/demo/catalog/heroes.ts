@@ -5,7 +5,7 @@ import type { AppDefinition, BrandId, GroupMember } from "./types";
  * Shells are platform-owned, so a dev environment application serves them
  * from production as a fallback.
  */
-export const SHELL_MEMBERS: Readonly<Record<BrandId, GroupMember>> = {
+const SHELL_MEMBERS: Readonly<Record<BrandId, GroupMember>> = {
   payments: shell("payments-shell", "Access shell for Payments", "Payments Platform", "5.2.0", 160),
   "global-banking": shell("global-banking-shell", "Access shell for Global Banking", "Global Banking Platform", "8.0.3", 180),
   markets: shell("markets-shell", "Markets shell", "Markets Platform", "12.4.0", 150),

@@ -39,7 +39,7 @@ export interface ViewApplication {
   lineOfBusiness: string | null;
 }
 
-export interface ViewPortal {
+interface ViewPortal {
   id: string;
   label: string;
   /** The approved ontology concept, or null while the portal is pending review. */
@@ -75,7 +75,7 @@ export function repositoryFocusHref(db: Executor, assessment: Pick<Assessment, "
 }
 
 /** The map record of an Assessment, without its document. */
-export function mapRecordOf(db: Executor, assessmentId: number): RelationshipMap | undefined {
+function mapRecordOf(db: Executor, assessmentId: number): RelationshipMap | undefined {
   return db.select().from(relationshipMaps).where(eq(relationshipMaps.assessmentId, assessmentId)).get();
 }
 

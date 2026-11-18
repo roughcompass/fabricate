@@ -6,7 +6,7 @@ import type { SourceBoundary } from "./source-boundary";
 import { BULK_LIMIT, parseBulkLines } from "./bulk-lines";
 import type { RepositorySource } from "./source-records";
 
-export { BULK_LIMIT, type BulkLine, parseBulkLines } from "./bulk-lines";
+export { BULK_LIMIT, parseBulkLines } from "./bulk-lines";
 
 /*
  * Adding Repositories in bulk: one clone URL per line, optionally followed by

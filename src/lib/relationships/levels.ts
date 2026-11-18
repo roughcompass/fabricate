@@ -68,7 +68,7 @@ export function withQuery(levelHref: string, query: Record<string, string | numb
   return search ? `${levelHref}?${search}` : levelHref;
 }
 
-export const focusParam = {
+const focusParam = {
   node: (nodeId: string) => nodeId,
   package: (name: string) => `package:${name}`,
 };
@@ -123,7 +123,7 @@ function applicationOf(view: MapView): Map<string, string> {
 // Shared libraries and services
 
 /** The libraries built in the Run, and the services, that +members+ depend on, with their number of dependents among them. */
-export function sharedAt(db: Executor, view: MapView, levelHref: string, members: ReadonlySet<string>): SharedEntry[] {
+function sharedAt(db: Executor, view: MapView, levelHref: string, members: ReadonlySet<string>): SharedEntry[] {
   const dependents = new Map<string, Set<string>>();
   const rows = db
     .select({ from: graphEdges.fromNode, to: graphEdges.toNode, type: graphEdges.type })
@@ -396,7 +396,7 @@ function marksOf(view: MapView, node: string): string[] {
 // ---------------------------------------------------------------------------
 // Focus
 
-export interface FocusRow {
+interface FocusRow {
   nodeId: string | null;
   label: string;
   href: string | null;
@@ -405,7 +405,7 @@ export interface FocusRow {
   signals: Signal[];
 }
 
-export interface FocusGroup {
+interface FocusGroup {
   label: string;
   rows: FocusRow[];
 }

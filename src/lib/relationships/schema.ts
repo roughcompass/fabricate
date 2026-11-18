@@ -27,7 +27,6 @@ export const NODE_KINDS = ["repository", "package", "external_service", "out_of_
 export const EDGE_TYPES = ["package_dependency", "package_production", "composition", "iframe", "runtime_contract", "service_call"] as const;
 export const RESOLUTION_STATES = ["resolved", "ambiguous", "unresolved", "out_of_scope"] as const;
 
-export type NodeKind = (typeof NODE_KINDS)[number];
 export type EdgeType = (typeof EDGE_TYPES)[number];
 export type ResolutionState = (typeof RESOLUTION_STATES)[number];
 

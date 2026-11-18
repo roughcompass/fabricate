@@ -61,7 +61,7 @@ export interface Context {
   collection(id: string): Collection;
 }
 
-export interface Collection {
+interface Collection {
   items: { subject: string; context: Context }[];
   /** Items that may exist but were not observed, such as relationships from a repository without a Profile. */
   unseen: { reason: string; context: Context }[];
@@ -532,7 +532,7 @@ function designSystemFlag(categories: JsonObject, system: string, field: "theme_
   return fact && !established ? unknownReading(`The ${system} design-system fact is not established`, evidence) : known(false, evidence);
 }
 
-export function serviceContext(service: JsonObject): Context {
+function serviceContext(service: JsonObject): Context {
   return { scope: "service_dependency", read: (selector) => readService(service, selector), collection: () => ({ items: [], unseen: [] }) };
 }
 
@@ -631,7 +631,7 @@ export function mapContext(map: MapDocument): Context {
   };
 }
 
-export function nodeName(node: MapNode | undefined): string | null {
+function nodeName(node: MapNode | undefined): string | null {
   if (!node) return null;
   switch (node.kind) {
     case "repository":

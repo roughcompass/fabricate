@@ -4,7 +4,7 @@ import { WORKSPACE_COOKIE } from "./workspace-key";
 import { type Workspace, ensureWorkspace, findWorkspace, maybePurgeIdleWorkspaces, touchWorkspace } from "./workspaces";
 
 /** The workspace credential the request proxy issued to this browser. */
-export async function workspaceKey(): Promise<string | undefined> {
+async function workspaceKey(): Promise<string | undefined> {
   return (await cookies()).get(WORKSPACE_COOKIE)?.value;
 }
 

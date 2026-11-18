@@ -3,7 +3,7 @@ import { FlashToast, type Outcome } from "./flash-toast";
 export type { Outcome } from "./flash-toast";
 
 /** The URL parameters an outcome travels in; they are removed once it shows. */
-export const OUTCOME_PARAMS = ["notice", "source", "count", "failed"] as const;
+const OUTCOME_PARAMS = ["notice", "source", "count", "failed"] as const;
 
 /**
  * Shows the outcome of the action that redirected here. Server Actions redirect

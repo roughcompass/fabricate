@@ -9,7 +9,7 @@ import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { getConfig } from "@/lib/config";
 import * as schema from "./schema";
 
-export type Schema = typeof schema;
+type Schema = typeof schema;
 export type Db = BetterSQLite3Database<Schema> & { $client: Database.Database };
 /** A database handle or an open transaction; data-access functions accept either. */
 export type Executor = BaseSQLiteDatabase<"sync", Database.RunResult, Schema>;

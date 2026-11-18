@@ -221,12 +221,6 @@ export function findingsOf(db: Executor, evaluationId: number, filter: FindingFi
     .map((row) => row.findings);
 }
 
-export function getFinding(db: Executor, publicId: string): Finding {
-  const finding = db.select().from(findings).where(eq(findings.publicId, publicId)).get();
-  if (!finding) throw new NotFoundError(`Finding ${publicId} does not exist`);
-  return finding;
-}
-
 /** The Finding document, verified against its digest. */
 export function findingDocument(finding: Finding): JsonObject {
   return readDocument("finding", finding, `Finding ${finding.publicId}`);

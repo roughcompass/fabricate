@@ -20,7 +20,7 @@ const permanent = (source: string, destination: string): Redirect => ({ source, 
  * pages are told apart from the new ones by their public ID prefix: a model
  * Assessment (asm_) is now a Run, while /assessments/ini_… is an Assessment.
  */
-export const VOCABULARY_REDIRECTS: Redirect[] = [
+const VOCABULARY_REDIRECTS: Redirect[] = [
   permanent("/initiatives/new", "/assessments/new"),
   permanent("/initiatives/:id(ini_[a-z0-9]{16})/:rest*", "/assessments/:id/:rest*"),
   permanent("/assessments/:id(asm_[a-z0-9]{16})/:rest*", "/runs/:id/:rest*"),
@@ -28,6 +28,6 @@ export const VOCABULARY_REDIRECTS: Redirect[] = [
 ];
 
 /** A Repository's Edit page became its Settings. */
-export const SETTINGS_REDIRECTS: Redirect[] = [permanent("/repositories/:id(src_[a-z0-9]{16})/edit", "/repositories/:id/settings")];
+const SETTINGS_REDIRECTS: Redirect[] = [permanent("/repositories/:id(src_[a-z0-9]{16})/edit", "/repositories/:id/settings")];
 
 export const LEGACY_REDIRECTS: Redirect[] = [...VOCABULARY_REDIRECTS, ...SETTINGS_REDIRECTS];

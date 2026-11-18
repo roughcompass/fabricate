@@ -25,7 +25,7 @@ import { redact } from "./redact";
  * configuration outranks the repository's own.
  */
 
-export const PROTOCOLS = ["file", "https", "ssh"] as const;
+const PROTOCOLS = ["file", "https", "ssh"] as const;
 export type Protocol = (typeof PROTOCOLS)[number];
 
 /** subcommand => permitted options. */

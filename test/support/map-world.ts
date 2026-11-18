@@ -45,7 +45,7 @@ const federationRemote = (name: string, federationName: string, dependencies: Re
 
 const tokens = { "@acme/design-tokens": "^1.0.0", react: "^18.3.1" };
 
-export const MAP_WORLD: Record<string, Record<string, MemoryFile>> = {
+const MAP_WORLD: Record<string, Record<string, MemoryFile>> = {
   "access-shell": federationHost(
     "access-shell",
     { fxBoard: 9101, rates: 9102, payeeHub: 9103, legacyTool: 9104 },
@@ -62,7 +62,7 @@ export const MAP_WORLD: Record<string, Record<string, MemoryFile>> = {
   scratch: { "package.json": manifest({ name: "scratch", version: "1.0.0" }) },
 };
 
-export type MapClaims = ReturnType<typeof claimMapWorld>;
+type MapClaims = ReturnType<typeof claimMapWorld>;
 
 export interface MapWorldRun {
   assessment: Assessment;

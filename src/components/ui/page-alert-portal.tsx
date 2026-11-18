@@ -2,8 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-
-const subscribeNever = () => () => {};
+import { subscribeNever } from "./use-hydrated";
 
 /**
  * Renders an alert raised by a client component, such as a failed launch, into

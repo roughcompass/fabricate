@@ -15,6 +15,15 @@ import { parseReasoning } from "@/lib/profiles/reasoning";
 import type { CategoryBlock, CompactBlock, Heading, HeldFact, Row, SharedBlock, SharedCell, SharedRow } from "@/lib/profiles/view";
 import styles from "./profile.module.css";
 
+/**
+ * A detector's category description in the interface's words: detectors
+ * describe what they read as "source-visible", and the interface never names
+ * a Source, so the phrase reads as "visible in source".
+ */
+function inVocabulary(text: string): string {
+  return text.replace(/\bSource-visible\b/g, "Visible in source").replace(/\bsource-visible\b/g, "visible in source");
+}
+
 /** How many fact keys a merged row's evidence panel names before counting the rest. */
 const MERGED_KEYS = 20;
 
@@ -31,7 +40,7 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
   const { definition } = block.heading;
   const span = block.columns.length + (block.stepsColumn ? 1 : 0);
   return (
-    <Section id={definition.id} level={3} title={definition.label} description={definition.description} actions={<Status state={block.heading.state} />}>
+    <Section id={definition.id} level={3} title={definition.label} description={inVocabulary(definition.description)} actions={<Status state={block.heading.state} />}>
       <SearchLine heading={block.heading} />
       <div className={styles.dataTable}>
         <Panel flush>
@@ -154,7 +163,7 @@ function RowCellsView({ row, columns, numeric, unit, span, context }: { row: Row
   );
 }
 
-export function CellView({ cell }: { cell: Cell }) {
+function CellView({ cell }: { cell: Cell }) {
   return (
     <>
       <span className={[cell.mono && styles.mono, cell.muted && styles.muted, cell.nowrap && styles.nowrap, cell.breakable && styles.breakable].filter(Boolean).join(" ") || undefined}>{cell.text}</span>
@@ -289,7 +298,7 @@ function SearchDetails({ heading }: { heading: Heading }) {
 }
 
 /** A category's search, as every category shows it: the one-line summary, then its rules and inputs one disclosure away. */
-export function SearchLine({ heading }: { heading: Heading }) {
+function SearchLine({ heading }: { heading: Heading }) {
   const summary = searchSummary(heading);
   if (!summary) return null;
   return (
@@ -444,7 +453,7 @@ function SharedCellView({ cell }: { cell: SharedCell }) {
  */
 export function EmptyCategory({ definition, value }: { definition: CompactBlock["items"][number]["definition"]; value: CompactBlock["items"][number]["value"] }) {
   return (
-    <Section id={definition.id} level={3} title={definition.label} description={definition.description} actions={<Status state={value.state} />}>
+    <Section id={definition.id} level={3} title={definition.label} description={inVocabulary(definition.description)} actions={<Status state={value.state} />}>
       <p className={styles.search}>{value.reason}</p>
     </Section>
   );

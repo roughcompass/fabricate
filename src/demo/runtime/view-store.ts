@@ -16,7 +16,7 @@ export const SHARED_PROFILE_ID = "shared";
 // A built-in profile, a share link's snapshot, or one of the visitor's own. Which exist is resolved on render.
 const PROFILE_ID = /^(?:[a-z]{1,20}|dpf_[a-z0-9]{16})$/;
 
-export type RuntimeTheme = "light" | "dark";
+type RuntimeTheme = "light" | "dark";
 
 export interface Override {
   readonly version: string;
@@ -30,7 +30,7 @@ export interface ViewState {
   readonly overrides: Readonly<Record<string, Override>>;
 }
 
-export interface LoadRecord {
+interface LoadRecord {
   readonly member: string;
   readonly version: string;
   /** When the load began, in milliseconds from the route's start: for the page's first route, the navigation itself. */

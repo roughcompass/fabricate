@@ -12,7 +12,7 @@ import { deConsoleStatus, openDeConsoleConflicts } from "@/lib/ownership/de-cons
  */
 
 /** DE Console values are out of date once three scheduled reads have gone by without a success (design decision 5). */
-export const STALE_AFTER_INTERVALS = 3;
+const STALE_AFTER_INTERVALS = 3;
 
 /** How many items one page of the list shows. */
 export const ATTENTION_PAGE_SIZE = 20;

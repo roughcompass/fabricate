@@ -123,14 +123,6 @@ export function Stat({ label, value, detail, tone }: { label: string; value: str
   );
 }
 
-export function Stack({ children, gap = "md" }: { children: React.ReactNode; gap?: "sm" | "md" }) {
-  return <div className={gap === "sm" ? styles.stackSmall : styles.stack}>{children}</div>;
-}
-
-export function Row({ children }: { children: React.ReactNode }) {
-  return <div className={styles.row}>{children}</div>;
-}
-
 export function Muted({ children }: { children: React.ReactNode }) {
   return <p className={styles.muted}>{children}</p>;
 }

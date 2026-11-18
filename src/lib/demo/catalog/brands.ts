@@ -6,8 +6,8 @@ import type { Brand, BrandId, Persona, Profile, Provider, ProviderId } from "./t
  * Markets shell. The names are plain-text wordmarks in an internal demo; the
  * shells are illustrative, and the sample data inside them is fictional.
  */
-export const ACCESS_PORTAL = "J.P. Morgan Access";
-export const MARKETS_PORTAL = "J.P. Morgan Markets";
+const ACCESS_PORTAL = "J.P. Morgan Access";
+const MARKETS_PORTAL = "J.P. Morgan Markets";
 
 export const BRANDS: Readonly<Record<BrandId, Brand>> = {
   payments: { id: "payments", label: "Payments", shell: "access", portalName: ACCESS_PORTAL, tagline: "Move money with confidence" },

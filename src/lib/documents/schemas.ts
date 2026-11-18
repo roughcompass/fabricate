@@ -22,7 +22,7 @@ export const CURRENT_VERSION = {
  * version can therefore read them. Repository Profile version 2 extends
  * version 1.
  */
-export const EXTENDS: Readonly<Partial<Record<DocumentKind, Readonly<Record<number, readonly number[]>>>>> = {
+const EXTENDS: Readonly<Partial<Record<DocumentKind, Readonly<Record<number, readonly number[]>>>>> = {
   repositoryProfile: { 2: [1] },
 };
 

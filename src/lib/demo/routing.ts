@@ -6,7 +6,7 @@ import type { AppDefinition, EnvironmentId, GroupMember } from "./catalog";
  * application page and the toolbar agree.
  */
 
-export type RoutingReason = "default" | "override" | "fallback";
+type RoutingReason = "default" | "override" | "fallback";
 
 export interface MemberRouting {
   readonly member: string;

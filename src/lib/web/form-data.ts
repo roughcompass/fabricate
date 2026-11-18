@@ -33,14 +33,3 @@ export function errorsFrom(error: ValidationError): Record<string, string[]> {
   return errors;
 }
 
-/** Every submitted field, as a refused form keeps it to show again. Fields named with "$", which React adds, are left out. */
-export function submittedValues(formData: FormData): Record<string, string | string[]> {
-  const values: Record<string, string | string[]> = {};
-  for (const [key, entry] of formData.entries()) {
-    if (typeof entry !== "string" || key.startsWith("$") || key.length > 200) continue;
-    const existing = values[key];
-    if (existing === undefined) values[key] = entry.slice(0, 5_000);
-    else values[key] = [...(Array.isArray(existing) ? existing : [existing]), entry.slice(0, 5_000)].slice(0, 500);
-  }
-  return values;
-}

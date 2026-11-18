@@ -16,7 +16,7 @@ interface Instrument {
   change: number;
 }
 
-export const INSTRUMENTS: readonly Instrument[] = [
+const INSTRUMENTS: readonly Instrument[] = [
   { symbol: "ACME", name: "Acme Corp", price: 182.4, change: 1.84 },
   { symbol: "GLBX", name: "Globex Holdings", price: 64.12, change: -0.92 },
   { symbol: "INIT", name: "Initech Systems", price: 41.07, change: 0.35 },
@@ -54,7 +54,7 @@ function useWatchlist() {
  * names use the deliberately faint token, and the chart buttons have no
  * accessible name. Version 1.9.0 fixes all three.
  */
-export function Watchlist180() {
+function Watchlist180() {
   const { filter, setFilter, selected, rows, choose } = useWatchlist();
   return (
     <Panel title="Watchlist" anchor="watchlist-panel">
@@ -82,7 +82,7 @@ export function Watchlist180() {
   );
 }
 
-export function Watchlist190() {
+function Watchlist190() {
   const { filter, setFilter, selected, rows, choose } = useWatchlist();
   return (
     <Panel title="Watchlist" anchor="watchlist-panel">
@@ -112,7 +112,7 @@ export function Watchlist190() {
   );
 }
 
-export function Watchlist200Beta() {
+function Watchlist200Beta() {
   const { filter, setFilter, selected, rows, choose } = useWatchlist();
   return (
     <Panel title="Watchlist" anchor="watchlist-panel" actions={<Badge tone="accent">Preview: price tiles</Badge>}>
@@ -135,7 +135,7 @@ export function Watchlist200Beta() {
   );
 }
 
-export function OrderTicket() {
+function OrderTicket() {
   const symbol = useSelectedSymbol("order-ticket");
   const [submitted, setSubmitted] = useState<string | null>(null);
   const entry = instrument(symbol)!;
@@ -182,7 +182,7 @@ export function OrderTicket() {
 }
 
 /** A deterministic price series for a symbol, so the chart is the same on every visit. */
-export function series(symbol: string, points = 32): number[] {
+function series(symbol: string, points = 32): number[] {
   const base = instrument(symbol)?.price ?? 100;
   let seed = [...symbol].reduce((total, char) => total * 31 + char.charCodeAt(0), 7) % 2147483648;
   const open = base * (1 - (instrument(symbol)?.change ?? 0) / 100);
@@ -231,7 +231,7 @@ const TRADES = [
   { id: "T-8815", symbol: "GLBX", side: "Sell", quantity: "900", price: "64.40", status: "Filled" },
 ] as const;
 
-export function TradeBlotter() {
+function TradeBlotter() {
   const approver = useProfile().persona === "Approver";
   const [allocated, setAllocated] = useState<readonly string[]>([]);
   const [exposure, setExposure] = useState("$1.42M");

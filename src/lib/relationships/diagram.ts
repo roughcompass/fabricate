@@ -35,18 +35,18 @@ export interface Signal {
   evidence: readonly string[];
 }
 
-export interface Arrow {
+interface Arrow {
   from: string;
   to: string;
   signals: Signal[];
 }
 
-export interface Badge {
+interface Badge {
   box: string;
   signals: Signal[];
 }
 
-export interface Stub {
+interface Stub {
   box: string;
   edgeId: string;
   type: string;

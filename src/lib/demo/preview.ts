@@ -12,7 +12,7 @@ export const DEVICES = {
 
 export type DeviceId = keyof typeof DEVICES;
 export type Orientation = "portrait" | "landscape";
-export type PreviewView = "preview" | "code";
+type PreviewView = "preview" | "code";
 
 export const DEVICE_IDS = Object.keys(DEVICES) as DeviceId[];
 export const ORIENTATION_LABELS: Record<Orientation, string> = { portrait: "Portrait", landscape: "Landscape" };

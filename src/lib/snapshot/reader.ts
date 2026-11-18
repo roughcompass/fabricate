@@ -3,8 +3,7 @@ import { PROTECTED_DIRECTORY } from "@/lib/config";
 import { GitError } from "@/lib/git/errors";
 import type { GitRunner } from "@/lib/git/runner";
 
-export type { BlobContent, Budgets, EntryType, ReadResult, SkipDiagnostic, SkipReason, TreeEntry } from "@repo-facts/contract";
-export { compareCodeUnits } from "@repo-facts/contract";
+export type { Budgets, SkipDiagnostic, TreeEntry } from "@repo-facts/contract";
 
 /**
  * Read-only access to one pinned commit, as a repo-facts `SourceReader`.

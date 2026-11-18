@@ -7,7 +7,7 @@ import { useBusSubscription, useCurrentRoute, useProfile as useRuntimeProfile, u
 import { ENVIRONMENT_LABELS } from "../shell-parts";
 import type { Planted, PortalApplication, PortalExperience, PortalProfile, PortalRoute, PortalRoutes } from "./types";
 
-export type { Planted, PortalApplication, PortalBanner, PortalExperience, PortalMenuEntry, PortalProfile, PortalRoute, PortalRoutes } from "./types";
+export type { Planted, PortalApplication, PortalExperience, PortalMenuEntry, PortalProfile, PortalRoute, PortalRoutes } from "./types";
 
 /*
  * `@deweb/portal` in the running portal (design decision 5): each call is the

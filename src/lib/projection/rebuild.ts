@@ -6,7 +6,7 @@ import { profileDocument } from "@/lib/profiles/profile-records";
 import { mapDocument } from "@/lib/relationships/map-records";
 import { projectMap, projectProfile } from "./project";
 
-export interface SkippedDocument {
+interface SkippedDocument {
   kind: "profile" | "map";
   publicId: string;
   reason: string;

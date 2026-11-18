@@ -3,7 +3,7 @@
  * Nothing here deploys anything: every host is on a reserved example domain.
  */
 
-export const DEMO_DOMAIN = "deweb.example";
+const DEMO_DOMAIN = "deweb.example";
 
 /** A template's reference deployment's simulated address, shown in preview mode's browser window. */
 export function referenceUrl(slug: string): string {

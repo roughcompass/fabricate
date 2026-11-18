@@ -15,10 +15,10 @@ export const ENVIRONMENTS = ["production", "sandbox", "dev"] as const;
 export type EnvironmentId = (typeof ENVIRONMENTS)[number];
 
 /** Accessibility rules an older version deliberately breaks, by automated-audit rule id. */
-export type PlantedRule = "label" | "color-contrast" | "button-name" | "image-alt";
+type PlantedRule = "label" | "color-contrast" | "button-name" | "image-alt";
 
 /** The portal shells: J.P. Morgan Access (left navigation) and J.P. Morgan Markets (two-row top navigation). */
-export type ShellKind = "access" | "markets";
+type ShellKind = "access" | "markets";
 
 export interface Brand {
   readonly id: BrandId;
@@ -35,7 +35,7 @@ export interface Provider {
   readonly label: string;
 }
 
-export interface MemberVersion {
+interface MemberVersion {
   readonly version: string;
   readonly prerelease?: boolean;
   /** What a viewer sees change in this version. */
@@ -45,7 +45,7 @@ export interface MemberVersion {
 }
 
 /** Where a member renders: as a route's owner, or in a slot on another route. */
-export type MemberRouting = { readonly kind: "shell" } | { readonly kind: "route"; readonly path: string } | { readonly kind: "slot"; readonly route: string; readonly slot: string };
+type MemberRouting = { readonly kind: "shell" } | { readonly kind: "route"; readonly path: string } | { readonly kind: "slot"; readonly route: string; readonly slot: string };
 
 export interface GroupMember {
   readonly id: string;

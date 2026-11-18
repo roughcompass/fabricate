@@ -44,11 +44,6 @@ export class IssueCollector {
   }
 }
 
-/** True when a SQLite error came from a RAISE(ABORT, ...) in a trigger. */
-export function isTriggerError(error: unknown): error is Error & { code: string } {
-  return error instanceof Error && (error as { code?: string }).code === "SQLITE_CONSTRAINT_TRIGGER";
-}
-
 export function isUniqueViolation(error: unknown): error is Error & { code: string } {
   const code = (error as { code?: string } | null)?.code;
   return error instanceof Error && (code === "SQLITE_CONSTRAINT_UNIQUE" || code === "SQLITE_CONSTRAINT_PRIMARYKEY");

@@ -28,7 +28,7 @@ export interface Attribution {
   readonly version: string;
 }
 
-export interface AuditNode extends Attribution {
+interface AuditNode extends Attribution {
   /** A selector that finds the element again, for outlines and scrolling. */
   readonly selector: string;
   readonly html: string;

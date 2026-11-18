@@ -1,8 +1,9 @@
 "use client";
 
-import { useLayoutEffect, useSyncExternalStore } from "react";
+import { useLayoutEffect } from "react";
 import { Icon, type IconName } from "./icon";
 import { type ToastAction, type ToastTone, useToast } from "./toast";
+import { useHydrated } from "./use-hydrated";
 import styles from "./flash-toast.module.css";
 
 export interface Outcome {
@@ -14,7 +15,6 @@ export interface Outcome {
   action?: Pick<ToastAction, "label" | "href">;
 }
 
-const subscribeNever = () => () => {};
 const ICONS: Record<ToastTone, IconName> = { success: "checkCircle", info: "info", warning: "alert", error: "xCircle" };
 
 /**
@@ -26,7 +26,7 @@ const ICONS: Record<ToastTone, IconName> = { success: "checkCircle", info: "info
  */
 export function FlashToast({ outcome, strip }: { outcome: Outcome; strip: readonly string[] }) {
   const { toast } = useToast();
-  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const hydrated = useHydrated();
 
   useLayoutEffect(() => {
     toast(outcome);

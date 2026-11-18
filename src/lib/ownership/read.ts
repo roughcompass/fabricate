@@ -32,7 +32,7 @@ export interface RepositoryRef {
   name: string;
 }
 
-export interface PortalInApplication {
+interface PortalInApplication {
   portal: LabelRef;
   provenance: Provenance;
   flagged: boolean;

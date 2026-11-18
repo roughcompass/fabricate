@@ -95,7 +95,7 @@ function useSelectedClient(): Client {
  * check descriptions use the deliberately faint token, and the complete
  * buttons are icons with no accessible name. Version 3.3.0 fixes all three.
  */
-export function KycChecklist320() {
+function KycChecklist320() {
   const current = useSelectedClient();
   const [done, setDone] = useState<readonly string[]>(CHECKS.filter((check) => check.done).map((check) => check.id));
   return (
@@ -158,7 +158,7 @@ const DOCUMENTS = [
 
 const DOC_TONES = { Received: "positive", "Awaiting review": "accent", Missing: "negative", Approved: "positive" } as const;
 
-export function DocumentReview() {
+function DocumentReview() {
   const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
   const [verified, setVerified] = useState(false);

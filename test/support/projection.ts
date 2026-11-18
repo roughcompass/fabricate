@@ -5,7 +5,7 @@ import { manifest } from "./profiles";
 export const PROJECTION_TABLES = ["dependency_facts", "graph_nodes", "graph_edges", "graph_edge_candidates", "evidence_index", "concept_classifications", "projection_coverage"] as const;
 
 /** An npm lockfile, version 3, that pins each dependency of +name+ to a version. */
-export function lockfile(name: string, versions: Record<string, string>): string {
+function lockfile(name: string, versions: Record<string, string>): string {
   const packages: Record<string, unknown> = { "": { name, version: "1.0.0", dependencies: Object.fromEntries(Object.keys(versions).map((dependency) => [dependency, `^${versions[dependency]}`])) } };
   for (const [dependency, version] of Object.entries(versions)) packages[`node_modules/${dependency}`] = { version };
   return manifest({ name, version: "1.0.0", lockfileVersion: 3, requires: true, packages });

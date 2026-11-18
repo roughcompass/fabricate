@@ -76,11 +76,11 @@ export function figureChanges(summary: FleetSummary, then: FiguresThen, share: (
   };
 }
 
-export const TREND_WEEKS = 8;
+const TREND_WEEKS = 8;
 
 /** The conclusions the trend charts, in stacking order. */
-export const TREND_CONCLUSIONS = ["gaps", "undetermined", "conforms", "not_applicable"] as const satisfies readonly ConclusionFilter[];
-export type TrendConclusion = (typeof TREND_CONCLUSIONS)[number];
+const TREND_CONCLUSIONS = ["gaps", "undetermined", "conforms", "not_applicable"] as const satisfies readonly ConclusionFilter[];
+type TrendConclusion = (typeof TREND_CONCLUSIONS)[number];
 
 export interface TrendWeek {
   /** The week's first day. */
@@ -108,7 +108,7 @@ export function assessmentTrend(db: Executor, now: Date = new Date(), weeks = TR
   return result;
 }
 
-export const ACTIVITY_LIMIT = 10;
+const ACTIVITY_LIMIT = 10;
 
 export type ActivityKind = "run_completed" | "run_failed";
 

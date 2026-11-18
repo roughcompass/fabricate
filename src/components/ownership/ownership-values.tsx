@@ -78,7 +78,7 @@ export function OwnershipValues({ link, chosen, application, hosts = [], console
 }
 
 /** A portal or Line of Business no ontology release has approved yet is labeled so. */
-export function pendingLabel(value: LabelRef): string {
+function pendingLabel(value: LabelRef): string {
   return value.conceptKey ? value.label : `${value.label} (pending review)`;
 }
 

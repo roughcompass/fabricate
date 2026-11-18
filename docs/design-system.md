@@ -230,6 +230,7 @@ Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: t
 | `ProgressBar` (`progress-bar.tsx`) | Finished work out of the total |
 | `Skeleton` (`skeleton.tsx`) | Placeholders, and the list, Repositories, detail, and form page skeletons |
 | `Icon` (`icon.tsx`) | Inline SVG icons on a 24px grid, drawn with the current text color. The gallery's Icons specimen shows every one |
+| `useHydrated` (`use-hydrated.ts`, client) | Whether a client component has hydrated: false in the server render and the first client render, so they match, then true. A control that works without JavaScript renders its fallback until then |
 
 ## Feedback
 

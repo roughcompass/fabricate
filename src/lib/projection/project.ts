@@ -236,7 +236,7 @@ function nodeLabel(node: JsonObject): string {
  * third-party; a repository's production of its own package and its
  * relationship to itself are kept out of diagrams; the rest is architecture.
  */
-export function edgeKind(edge: Pick<EdgeRow, "type" | "rule" | "fromNode" | "toNode">): EdgeKind {
+function edgeKind(edge: Pick<EdgeRow, "type" | "rule" | "fromNode" | "toNode">): EdgeKind {
   if (edge.type === "package_dependency" && edge.rule === "package.unresolved") return "third_party";
   if (edge.type === "package_production") return "own_package";
   if (edge.toNode !== null && edge.toNode !== undefined && edge.toNode === edge.fromNode) return "self";

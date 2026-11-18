@@ -1,6 +1,7 @@
-import type { CategoryDefinition, JsonObject, JsonValue } from "@repo-facts/contract";
+import type { CategoryDefinition, JsonObject } from "@repo-facts/contract";
 import { formatValue } from "@/components/results/value";
 import { checkKind, kindLabel } from "@/components/ui/status";
+import { isJsonObject } from "@/lib/json";
 import { type Attention, attention } from "./attention";
 import { type DependencyRow, type ScriptGroup, type ScriptRow, dependencyGroups, missingCell, scriptGroups } from "./joins";
 import { type Cell, type RowCells, layoutOf, rowCells } from "./layouts";
@@ -95,7 +96,7 @@ export interface CompactBlock {
   items: { definition: CategoryDefinition; value: NoValue }[];
 }
 
-export type Block = CategoryBlock | SharedBlock | CompactBlock;
+type Block = CategoryBlock | SharedBlock | CompactBlock;
 
 export interface ServiceSummary {
   key: string;
@@ -123,7 +124,6 @@ const DEPENDENCY_SOURCES = ["dependencies", "resolved_dependencies", "packages_c
 const SCRIPT_SOURCES = ["scripts", "verification_commands"];
 const SHARED = new Set([...DEPENDENCY_SOURCES, ...SCRIPT_SOURCES]);
 
-const isObject = (value: JsonValue | undefined): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
 const unique = <T>(values: T[]) => [...new Set(values)];
 
 /** Every evidence id a fact cites, its candidates' included. */
@@ -148,8 +148,8 @@ function differing(document: FactDocument, category: string, fact: Fact): string
 }
 
 function stepCell(fact: Fact): Cell {
-  const value = isObject(fact.value) ? fact.value : {};
-  const context = isObject(value.context) ? value.context : {};
+  const value = isJsonObject(fact.value) ? fact.value : {};
+  const context = isJsonObject(value.context) ? value.context : {};
   // Steps are numbered from 0 in the document, and from 1 for people.
   const step = typeof context.step === "string" && /^\d+$/.test(context.step) ? String(Number(context.step) + 1) : context.step;
   const where = typeof context.job === "string" ? `${context.job} · step ${String(step ?? "")}` : fact.key;
@@ -171,7 +171,7 @@ function categoryBlock(document: FactDocument, definition: CategoryDefinition, c
     stepsColumn: isCi ? "Steps" : null,
     rows: mergeIdentical(
       facts.map((fact): Row => {
-      const path = isObject(fact.value) && typeof fact.value.path === "string" ? fact.value.path : fact.key;
+      const path = isJsonObject(fact.value) && typeof fact.value.path === "string" ? fact.value.path : fact.key;
       const steps = isCi ? (ciSteps.get(path) ?? []) : [];
       return {
         id: fact.key,
@@ -179,7 +179,7 @@ function categoryBlock(document: FactDocument, definition: CategoryDefinition, c
         reasoning: fact.reasoning ?? null,
         cells: rowCells(layout, fact),
         steps: steps.map(stepCell),
-        checks: unique(steps.flatMap((step) => (isObject(step.value) && Array.isArray(step.value.kinds) ? step.value.kinds.map((kind) => checkKind(String(kind))) : []))),
+        checks: unique(steps.flatMap((step) => (isJsonObject(step.value) && Array.isArray(step.value.kinds) ? step.value.kinds.map((kind) => checkKind(String(kind))) : []))),
         held: [held(document, definition.id, fact), ...steps.map((step) => held(document, "verification_commands", step))],
         evidence: unique([...evidenceOf(fact), ...steps.flatMap(evidenceOf)]),
         occurrences: 1,
@@ -224,7 +224,7 @@ function dependencyBlock(document: FactDocument, definitions: Map<string, Catego
       ["resolved_dependencies", entry.resolved],
       ["packages_consumed", entry.consumed],
     ].filter((pair): pair is [string, Fact] => pair[1] !== null);
-    const field = entry.declared && isObject(entry.declared.value) && typeof entry.declared.value.field === "string" ? entry.declared.value.field : null;
+    const field = entry.declared && isJsonObject(entry.declared.value) && typeof entry.declared.value.field === "string" ? entry.declared.value.field : null;
     const declared = { absent: "Not declared in this manifest", unknown: "Not established for this package" };
     return {
       id: entry.id,
@@ -301,8 +301,8 @@ function scriptBlock(document: FactDocument, definitions: Map<string, CategoryDe
 }
 
 function endpointOf(service: JsonObject): ServiceSummary["endpoint"] {
-  const endpoint = isObject(service.endpoint) ? service.endpoint : {};
-  const value = isObject(endpoint.value) ? endpoint.value : {};
+  const endpoint = isJsonObject(service.endpoint) ? service.endpoint : {};
+  const value = isJsonObject(endpoint.value) ? endpoint.value : {};
   const known = endpoint.state === "observed" || endpoint.state === "inferred";
   if (!known || value.derivation === "unknown") return { text: "Unresolved endpoint", resolved: false, detail: typeof value.detail === "string" ? value.detail : null };
   if (typeof value.origin === "string") return { text: value.origin, resolved: true, detail: null };
@@ -312,7 +312,7 @@ function endpointOf(service: JsonObject): ServiceSummary["endpoint"] {
 }
 
 function serviceSummary(service: JsonObject): ServiceSummary {
-  const client = isObject(service.client) ? service.client : {};
+  const client = isJsonObject(service.client) ? service.client : {};
   const callSites = Array.isArray(service.call_sites) ? service.call_sites.map(String) : [];
   return {
     key: String(service.key),

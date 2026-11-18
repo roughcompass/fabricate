@@ -1,7 +1,7 @@
 import styles from "./bar-chart.module.css";
 
-export type BarTone = "error" | "warning" | "success" | "neutral";
-export type BarPattern = "solid" | "stripes" | "dots" | "lines";
+type BarTone = "error" | "warning" | "success" | "neutral";
+type BarPattern = "solid" | "stripes" | "dots" | "lines";
 
 export interface BarSeries {
   readonly id: string;

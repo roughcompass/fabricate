@@ -20,7 +20,7 @@ export interface GalleryTemplate {
  * filter group combine with OR, and groups and the search combine with AND.
  */
 
-export const SEARCH_LIMIT = 100;
+const SEARCH_LIMIT = 100;
 
 export interface GalleryQuery {
   readonly search: string;

@@ -16,7 +16,7 @@ import { COMMENT_LIMIT, normalizeDisplayName } from "./workspaces";
  * Markdown markers included; comment-format.ts styles them only for display.
  */
 
-export interface CommentRecord {
+interface CommentRecord {
   readonly id: string;
   readonly authorName: string;
   readonly body: string;

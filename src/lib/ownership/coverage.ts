@@ -12,7 +12,7 @@ import type { RepositoryOwnership } from "./read";
  * always agree.
  */
 
-export const OWNERSHIP_FILTERS = ["claimed", "unclaimed"] as const;
+const OWNERSHIP_FILTERS = ["claimed", "unclaimed"] as const;
 export type OwnershipFilter = (typeof OWNERSHIP_FILTERS)[number];
 
 export function isOwnershipFilter(value: unknown): value is OwnershipFilter {

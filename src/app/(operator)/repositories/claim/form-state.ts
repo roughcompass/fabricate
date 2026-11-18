@@ -13,4 +13,3 @@ export type ClaimAction = (previous: ClaimFormState, formData: FormData) => Prom
 /** The cookie that remembers the name or email a claimant entered, to fill it in next time. It isn't a credential. */
 export const CLAIMANT_COOKIE = "fabricate-claimant";
 
-export const empty = (values: ClaimFormValues = {}): ClaimFormState => ({ values, errors: {} });

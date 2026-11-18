@@ -44,7 +44,7 @@ function usePayeeSearch() {
  * use the deliberately faint token, and the pay buttons are icons with no
  * accessible name. Version 2.0.0 fixes all three.
  */
-export function PayeeList142() {
+function PayeeList142() {
   const { search, setSearch, selected, payees, choose } = usePayeeSearch();
   return (
     <Panel title="Payees" anchor="payee-panel">
@@ -68,7 +68,7 @@ export function PayeeList142() {
   );
 }
 
-export function PayeeList200() {
+function PayeeList200() {
   const { search, setSearch, selected, payees, choose } = usePayeeSearch();
   return (
     <Panel title="Payees" anchor="payee-panel">
@@ -96,7 +96,7 @@ export function PayeeList200() {
   );
 }
 
-export function PayeeList210Beta() {
+function PayeeList210Beta() {
   const { search, setSearch, selected, payees, choose } = usePayeeSearch();
   const ordered = [...payees].sort((left, right) => Number(right.favorite) - Number(left.favorite));
   return (
@@ -122,7 +122,7 @@ export function PayeeList210Beta() {
   );
 }
 
-export function TransferForm({ withReference }: { withReference: boolean }) {
+function TransferForm({ withReference }: { withReference: boolean }) {
   const [payee, setPayee] = useState(PAYEES[0]!.id);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
@@ -195,7 +195,7 @@ const ACTIVITY = [
 
 const TONES = { Settled: "positive", "Pending approval": "accent", Failed: "negative", Approved: "positive" } as const;
 
-export function PaymentActivity() {
+function PaymentActivity() {
   const approver = useProfile().persona === "Approver";
   const [approved, setApproved] = useState<readonly string[]>([]);
   const [recalculated, setRecalculated] = useState<number>(0);

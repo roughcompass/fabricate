@@ -37,7 +37,7 @@ type Counts = Record<Outcome, number>;
 const emptyCounts = (): Counts => ({ gap: 0, indeterminate: 0, meets: 0, not_applicable: 0 });
 
 /** Gaps first; then any uncertainty; conformance only when every applicable result meets. */
-export function conclusion(counts: Counts): Conclusion {
+function conclusion(counts: Counts): Conclusion {
   if (counts.gap > 0) return "gaps";
   if (counts.indeterminate > 0) return "undetermined";
   if (counts.meets > 0) return "conforms";

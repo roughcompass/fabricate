@@ -5,7 +5,7 @@
  * applies the same rules the server stores.
  */
 
-export const HINT_SEQUENCES = ["runtime"] as const;
+const HINT_SEQUENCES = ["runtime"] as const;
 export type HintSequence = (typeof HINT_SEQUENCES)[number];
 export type HintAction = "done" | "replay" | "off" | "on";
 

@@ -12,7 +12,7 @@ import { useRuntime } from "../../runtime/runtime-context";
 export type FieldErrors = Partial<Record<string, string[]>>;
 export type Outcome = { ok: true } | { ok: false; errors: FieldErrors };
 
-export interface NewThread {
+interface NewThread {
   route: string;
   member: string;
   memberVersion: string;
@@ -35,7 +35,7 @@ export interface Comments {
   setStatus(threadId: string, status: "open" | "resolved"): Promise<Outcome>;
 }
 
-export const CommentsContext = createContext<Comments | null>(null);
+const CommentsContext = createContext<Comments | null>(null);
 
 export function useComments(): Comments {
   const comments = use(CommentsContext);

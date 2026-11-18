@@ -83,7 +83,7 @@ export function routeHref(descriptor: RuntimeDescriptor, route: AppRoute, embedd
 }
 
 /** Preview mode frames the application with ?embed=1, which hides the toolbar and the hints (design.md, decision 19). */
-export const EMBED_PARAM = "embed";
+const EMBED_PARAM = "embed";
 
 export function useEmbedded(): boolean {
   return useSearchParams().get(EMBED_PARAM) === "1";

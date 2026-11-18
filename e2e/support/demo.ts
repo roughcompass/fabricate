@@ -12,7 +12,7 @@ const require = createRequire(import.meta.url);
 const AXE = require.resolve("axe-core/axe.min.js");
 
 /** The automated rules the toolbar's audit runs: WCAG 2 A and AA. */
-export const AUDIT_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+const AUDIT_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 export interface AuditViolation {
   id: string;

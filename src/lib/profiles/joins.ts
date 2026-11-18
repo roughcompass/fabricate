@@ -1,4 +1,5 @@
-import type { CategoryDefinition, JsonObject, JsonValue } from "@repo-facts/contract";
+import type { CategoryDefinition } from "@repo-facts/contract";
+import { isJsonObject } from "@/lib/json";
 import { type Fact, type FactDocument, type NoValue, categoryOf, noValue } from "./states";
 
 /**
@@ -39,8 +40,7 @@ export interface ScriptGroup {
   rows: ScriptRow[];
 }
 
-const isObject = (value: JsonValue | undefined): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
-const stringField = (fact: Fact, name: string): string | null => (isObject(fact.value) && typeof fact.value[name] === "string" ? (fact.value[name] as string) : null);
+const stringField = (fact: Fact, name: string): string | null => (isJsonObject(fact.value) && typeof fact.value[name] === "string" ? (fact.value[name] as string) : null);
 const facts = (document: FactDocument, id: string): Fact[] => categoryOf(document, id)?.facts ?? [];
 
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -98,7 +98,7 @@ export function scriptGroups(document: FactDocument): { groups: ScriptGroup[]; c
   const ciSteps = new Map<string, Fact[]>();
   for (const fact of facts(document, "verification_commands")) {
     const source = stringField(fact, "source");
-    const context = isObject(fact.value) && isObject(fact.value.context) ? fact.value.context : {};
+    const context = isJsonObject(fact.value) && isJsonObject(fact.value.context) ? fact.value.context : {};
     const script = typeof context.script === "string" ? context.script : null;
     const match = script !== null ? rows.get(`${source ?? ""}#${script}`) : undefined;
     if (match && !match.verification) match.verification = fact;

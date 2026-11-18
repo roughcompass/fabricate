@@ -1,4 +1,5 @@
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
+import { isJsonObject } from "@/lib/json";
 
 /** A fact or observation value in words: literals as written, configuration keys by name, and structures as labeled fields. */
 export function formatValue(value: JsonValue | undefined, depth = 0): string {
@@ -45,10 +46,9 @@ export function factText(state: string, value: JsonValue | undefined): string {
 // Counts split by scope, as the design-system facts report them: { app, stories, tests }.
 const SCOPES = ["app", "stories", "tests"] as const;
 
-const isObject = (value: JsonValue | undefined): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
 
 function isScoped(record: JsonObject): boolean {
-  return SCOPES.every((scope) => isObject(record[scope]));
+  return SCOPES.every((scope) => isJsonObject(record[scope]));
 }
 
 /** Any other fields first, then each scope that has a non-zero count, such as `app: sites 4, customized 2, mechanisms (class name 2)`. */
@@ -72,7 +72,7 @@ function scopeCounts(counts: JsonObject): string | null {
   const parts = ordered.flatMap(([key, item]) => {
     const label = key.replaceAll("_", " ");
     if (typeof item === "number") return item !== 0 || key.endsWith("_share") ? [`${label} ${item}`] : [];
-    if (isObject(item)) {
+    if (isJsonObject(item)) {
       const inner = scopeCounts(item);
       return inner ? [`${label} (${inner})`] : [];
     }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type Db, MIGRATIONS_FOLDER, migrateDatabase, openDatabase } from "@/lib/db/client";
 import { SALT_PATTERNS_INITIATIVE_ID } from "@/lib/initiatives/initiative-records";
-import { migrationFolderAt } from "../support/onboarding-v1";
+import { migrationFolderAt } from "../support/migrations";
 
 /*
  * Migration 0028 (converge-templates-and-prototypes, design decision 2):

@@ -1,14 +1,13 @@
 "use client";
 
-import { useActionState, useId, useRef, useState, useSyncExternalStore } from "react";
+import { useActionState, useId, useRef, useState } from "react";
 import { buttonProps } from "@/components/ui/button-content";
 import { countLabel } from "@/components/ui/count";
 import { Icon } from "@/components/ui/icon";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { useHydrated } from "@/components/ui/use-hydrated";
 import type { DeletionEffects } from "@/lib/catalog/catalog";
 import styles from "./settings.module.css";
-
-const subscribeNever = () => () => {};
 
 interface DeleteRepositoryProps {
   name: string;
@@ -25,7 +24,7 @@ interface DeleteRepositoryProps {
  * shows, so hydrating never flashes the fallback.
  */
 export function DeleteRepository({ name, effects, action }: DeleteRepositoryProps) {
-  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const hydrated = useHydrated();
   const [state, formAction] = useActionState(action, { error: null });
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);

@@ -2,6 +2,7 @@ import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { factText, formatValue } from "@/components/results/value";
 import { countLabel, formatBytes } from "@/components/ui/count";
 import { checkKind, ciSystem, dependencyKind, humanize, kindLabel, runtimeName } from "@/components/ui/status";
+import { isJsonObject } from "@/lib/json";
 import type { Fact } from "./states";
 
 /** A cell's content: text, set in the monospace face for identifiers, paths, and versions, with optional secondary text below. */
@@ -17,7 +18,7 @@ export interface Cell {
   secondary?: string;
 }
 
-export interface Column {
+interface Column {
   label: string;
   /** The cell for +fact+, or null when its value lacks the field this column shows. */
   cell: (fact: Fact) => Cell | null;
@@ -44,8 +45,7 @@ export interface Layout {
 /** One fact as a row: its cells, its whole value when the value doesn't fit the columns, or a conflict's candidates. */
 export type RowCells = { kind: "cells"; cells: (Cell | null)[] } | { kind: "whole"; text: string } | { kind: "candidates"; candidates: { text: string; evidence: string[] }[] };
 
-const isObject = (value: JsonValue | undefined): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
-const field = (fact: Fact, name: string): JsonValue | undefined => (isObject(fact.value) ? fact.value[name] : undefined);
+const field = (fact: Fact, name: string): JsonValue | undefined => (isJsonObject(fact.value) ? fact.value[name] : undefined);
 const text = (value: JsonValue | undefined): string | null => (typeof value === "string" && value !== "" ? value : typeof value === "number" ? String(value) : null);
 
 /** A column that shows one field of the value. */
@@ -102,7 +102,7 @@ const KIND_FIRST: Layout = {
       optional: true,
       breakable: true,
       cell: (fact) => {
-        if (!isObject(fact.value)) return null;
+        if (!isJsonObject(fact.value)) return null;
         const location = LOCATION_FIELDS.find((name) => text(field(fact, name)) !== null);
         const rest = Object.entries(fact.value).filter(([name]) => !KIND_FIELDS.includes(name) && name !== location);
         return rest.length ? { text: detailText(rest) } : null;
@@ -121,14 +121,18 @@ const KIND_FIRST: Layout = {
 
 const layout = (...columns: Column[]): Layout => ({ generic: false, columns });
 
+// Fields whose plain label would break the interface vocabulary, which never says "Source".
+const DETAIL_LABELS: Record<string, string> = { source: "Defined in" };
+
 /** A value's remaining fields in words, "Direction: send · Target origin: none", each long or nested value cut short; the evidence panel keeps the raw value. */
 function detailText(entries: [string, JsonValue][]): string {
   const DETAIL_LIMIT = 80;
   return entries
     .map(([name, value]) => {
       const text = formatValue(value);
-      // A camelCase field such as targetOrigin reads as "Target origin".
-      return `${humanize(name.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase())}: ${text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT - 1)}…` : text}`;
+      // A camelCase field such as targetOrigin reads as "Target origin"; a field the interface vocabulary names otherwise reads in its words.
+      const label = DETAIL_LABELS[name] ?? humanize(name.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase());
+      return `${label}: ${text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT - 1)}…` : text}`;
     })
     .join(" · ");
 }
@@ -141,7 +145,7 @@ function detailText(entries: [string, JsonValue][]): string {
 const number = (value: number) => value.toLocaleString("en-US");
 const scopeOf = (fact: Fact, scope: string): JsonObject => {
   const value = field(fact, scope);
-  return isObject(value) ? value : {};
+  return isJsonObject(value) ? value : {};
 };
 const count = (object: JsonObject, name: string): number => (typeof object[name] === "number" ? (object[name] as number) : 0);
 /** The non-zero counts as a phrase, each noun in its plural only when the count isn't one: "1 token · 12 raw values". */
@@ -198,7 +202,7 @@ const designSystems = layout(
       const ranges = new Map<string, Set<string>>();
       const manifests = new Set<string>();
       for (const entry of packages) {
-        if (!isObject(entry) || typeof entry.name !== "string") continue;
+        if (!isJsonObject(entry) || typeof entry.name !== "string") continue;
         if (!ranges.has(entry.name)) ranges.set(entry.name, new Set());
         if (typeof entry.range === "string") ranges.get(entry.name)!.add(entry.range);
         if (typeof entry.manifest === "string") manifests.add(entry.manifest);
@@ -259,8 +263,8 @@ const uiElements: Layout = {
           return shares ? { text: shares, secondary: "Adoption: elements that use it rather than an HTML equivalent" } : null;
         }
         if (kind === "component") {
-          const mechanisms = isObject(app.mechanisms) ? nonzero(Object.entries(app.mechanisms).map(([name, value]) => [typeof value === "number" ? value : 0, `by ${humanize(name).toLowerCase()}`])) : "";
-          const styles = isObject(app.styles) ? nonzero([[count(app.styles, "resolved"), "resolved"], [count(app.styles, "partial"), "partly resolved"], [count(app.styles, "unresolved"), "unresolved"]]) : "";
+          const mechanisms = isJsonObject(app.mechanisms) ? nonzero(Object.entries(app.mechanisms).map(([name, value]) => [typeof value === "number" ? value : 0, `by ${humanize(name).toLowerCase()}`])) : "";
+          const styles = isJsonObject(app.styles) ? nonzero([[count(app.styles, "resolved"), "resolved"], [count(app.styles, "partial"), "partly resolved"], [count(app.styles, "unresolved"), "unresolved"]]) : "";
           const text = nonzero([[count(app, "as_is"), "as is"], [count(app, "customized"), "customized"], [count(app, "unknown"), "unknown"]]);
           return text ? { text, secondary: [mechanisms && `Customized ${mechanisms}`, styles && `Styles ${styles}`].filter(Boolean).join(" · ") || undefined } : null;
         }
@@ -426,7 +430,7 @@ const LAYOUTS: Record<string, Layout> = {
       optional: true,
       cell: (fact) => {
         const specifiers = field(fact, "specifiers");
-        const first = isObject(specifiers) ? Object.values(specifiers).find((value) => typeof value === "string") : undefined;
+        const first = isJsonObject(specifiers) ? Object.values(specifiers).find((value) => typeof value === "string") : undefined;
         return typeof first === "string" ? { text: first, mono: true } : null;
       },
     },

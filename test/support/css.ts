@@ -105,7 +105,7 @@ export function themeTokens(globals: string): { light: Map<string, string>; dark
 }
 
 /** Splits a function's arguments on commas that are not inside parentheses. */
-export function splitTopLevel(value: string): string[] {
+function splitTopLevel(value: string): string[] {
   const parts: string[] = [];
   let depth = 0;
   let current = "";
@@ -122,7 +122,7 @@ export function splitTopLevel(value: string): string[] {
 }
 
 /** WCAG relative luminance of a #rrggbb color. */
-export function luminance(hex: string): number {
+function luminance(hex: string): number {
   const match = /^#([0-9a-f]{6})$/i.exec(hex.trim());
   if (!match) throw new Error(`Not a #rrggbb color: ${hex}`);
   const channel = (offset: number) => {

@@ -10,7 +10,7 @@ import type { Rating, VitalName } from "./timing";
  * interactions.
  */
 
-export interface Vital {
+interface Vital {
   readonly name: Exclude<VitalName, "INP">;
   readonly value: number;
   readonly rating: Rating;

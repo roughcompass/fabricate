@@ -1,7 +1,7 @@
 import { Icon, type IconName } from "./icon";
 import styles from "./alert.module.css";
 
-export type AlertTone = "info" | "success" | "warning" | "error";
+type AlertTone = "info" | "success" | "warning" | "error";
 
 const ICONS: Record<AlertTone, IconName> = { info: "info", success: "checkCircle", warning: "alert", error: "xCircle" };
 

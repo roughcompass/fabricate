@@ -121,7 +121,7 @@ export function requestFinalization(db: Executor, assessmentId: number): void {
   });
 }
 
-export type AggregateOutcome = "complete" | "complete_with_issues" | "failed" | "canceled";
+type AggregateOutcome = "complete" | "complete_with_issues" | "failed" | "canceled";
 
 /** Writes the Relationship Map once and records the aggregate outcome. Repeated calls change nothing. */
 export function finalizeAssessment(db: Executor, assessmentPublicId: string): Assessment {

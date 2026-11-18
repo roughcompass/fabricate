@@ -11,7 +11,7 @@
  * resolve ".." segments and re-encode paths instead of rejecting them.
  */
 
-export const CLONE_URL_SCHEMES = ["file", "https", "ssh"] as const;
+const CLONE_URL_SCHEMES = ["file", "https", "ssh"] as const;
 export type CloneUrlScheme = (typeof CLONE_URL_SCHEMES)[number];
 
 export type CloneUrlErrorCode =

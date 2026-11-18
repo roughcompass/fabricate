@@ -23,7 +23,7 @@ export interface RepositoryRelationship {
   to: string;
 }
 
-export interface GroupSummary {
+interface GroupSummary {
   key: string;
   label: string;
   repositories: number;
@@ -31,7 +31,7 @@ export interface GroupSummary {
   internal: number;
 }
 
-export interface GroupRelationship {
+interface GroupRelationship {
   from: string;
   to: string;
   /** Distinct repository relationships this one represents. */
