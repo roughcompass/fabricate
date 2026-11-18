@@ -24,7 +24,7 @@ const OUTPUT = path.join(root, "public", "prototype-runtime");
 const MANIFEST = path.join(root, "src", "lib", "prototypes", "runtime-manifest.json");
 const ENTRIES = path.join(root, "tmp", "prototype-runtime-entries");
 /** Sources outside the runtime directory that the in-frame `@deweb/portal` bundles; the hash covers them too. */
-const PORTAL_SOURCES = ["src/demo/runtime/bus.ts", "src/demo/runtime/members/planted.ts", "src/demo/runtime/portal/types.ts"].map((file) => path.join(root, file));
+const PORTAL_SOURCES = ["src/demo/runtime/bus.ts", "src/demo/runtime/portal/types.ts"].map((file) => path.join(root, file));
 /** The portal runtime interface (converge-templates-and-prototypes, design decision 5), built from the runtime's portal.ts rather than a package. */
 const PORTAL = { specifier: "@deweb/portal", name: "deweb-portal" };
 

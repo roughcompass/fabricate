@@ -27,7 +27,7 @@ export function validateMessage(message: string): string {
   return clean;
 }
 
-/** With +hero+, a hero script's refinement: it keeps the lineage, names the microfrontend, and allows the planted rules its message asks for. */
+/** With +hero+, a portal microfrontend's refinement: it keeps the lineage and names the microfrontend. */
 export async function startRefinement(db: PrototypesExecutor, workspaceId: string, prototypeId: string, baseVersionId: string, message: string, settings: PrototypesSettings = getConfig().prototypes, now = new Date(), hero: GenerationHero | null = null): Promise<string> {
   const clean = validateMessage(message);
   if (!generationConfigured(settings)) throw new GenerationUnavailableError();

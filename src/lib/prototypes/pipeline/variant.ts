@@ -10,7 +10,6 @@ import { RUNTIME } from "../render";
 import { recommendFixRecipes, registryRelease, saltRegistry } from "../salt/adapter";
 import { KIT_VERSION } from "../salt-kit";
 import { workspaceShell } from "../shell";
-import { plantedExemptions } from "../heroes/planted";
 import { templateVersionSnapshot } from "../templates";
 import { type Attempt, type Failure, type Provenance, type SampleData, type Stage, isPortalScope } from "../types";
 import { claimVariants } from "../workspace";
@@ -164,8 +163,7 @@ export async function attemptVariant(db: PrototypesExecutor, variantId: string, 
   const styles = submission.styles === undefined || submission.styles === null ? shown : submission.styles.trim() ? submission.styles : null;
   // A refinement keeps its lineage, and a template generation takes its template's, so a page started from a hero may keep importing @deweb/portal.
   const hero = ctx.base?.provenance?.hero ?? generation.template?.hero ?? generation.hero?.slug ?? null;
-  // A hero's planted version may break only its planted rules, which the run records as exemptions.
-  const run = await runGates({ code: submission.code, data: data.source, styles, portal: hero !== null }, { exemptions: plantedExemptions(generation.hero?.planted) });
+  const run = await runGates({ code: submission.code, data: data.source, styles, portal: hero !== null });
   const attempt: Attempt = { number, gates: run.results, passed: run.passed, at: new Date().toISOString(), lookups, signatures: run.signatures };
   const attempts = [...version.attempts, attempt];
   await db

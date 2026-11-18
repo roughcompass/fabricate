@@ -27,7 +27,6 @@
   .frame { position: absolute; top: 0; left: 0; border: 0; transform-origin: top left; }
 
   /* The Code tab: the file tree beside the selected file. */
-  .illustrative { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
   .code { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
   .tree { padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
   .treeList { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }

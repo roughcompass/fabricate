@@ -2,12 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { BRANDS } from "@/lib/demo/catalog";
-import { blockMainThread } from "../members/planted";
 import { useBusSubscription, useCurrentRoute, useProfile as useRuntimeProfile, usePublish as useRuntimePublish, useRouteHref, useRuntime } from "../runtime-context";
-import { ENVIRONMENT_LABELS } from "../shell-parts";
-import type { Planted, PortalApplication, PortalExperience, PortalProfile, PortalRoute, PortalRoutes } from "./types";
+import { ENVIRONMENT_LABELS } from "../portal-root";
+import type { PortalApplication, PortalExperience, PortalProfile, PortalRoute, PortalRoutes } from "./types";
 
-export type { Planted, PortalApplication, PortalBanner, PortalExperience, PortalMenuEntry, PortalProfile, PortalRoute, PortalRoutes } from "./types";
+export type { PortalApplication, PortalBanner, PortalExperience, PortalMenuEntry, PortalProfile, PortalRoute, PortalRoutes } from "./types";
 
 /*
  * `@deweb/portal` in the running portal (design decision 5): each call is the
@@ -63,4 +62,3 @@ export function useExperience(): PortalExperience {
   return useRuntime().descriptor.experience;
 }
 
-export const planted: Planted = { blockMainThread };

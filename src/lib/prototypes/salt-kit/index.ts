@@ -96,7 +96,6 @@ Besides React and Salt, import only this, and only what you use:
 - useProfile(): the signed-in user as { name, persona, region }. Show content that depends on the role by persona, such as Approver.
 - useRoute(): { current, routes }, each { path, label, href }. Link between routes with routeHref(route) as the href, and open them with useNavigate()(route) on click so the page doesn't reload; never build addresses yourself.
 - useApplication(): { name, portal, environment }: the application's name, the portal's name for its wordmark, and Production, Sandbox, Dev, or null.
-- planted.blockMainThread(ms): only where the instructions name the planted slow interaction.
 Use the member id you are given as \`member\`, exactly.
 
 ## Regions

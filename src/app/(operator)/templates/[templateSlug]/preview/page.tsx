@@ -16,7 +16,7 @@ import { acceptedTemplate } from "@/lib/demo/gallery-templates";
 import { parseFramePreview } from "@/lib/prototypes/preview-state";
 import { PrototypeTemplatePreview } from "./prototype-template-preview";
 import { DEVICES, DEVICE_IDS, ORIENTATION_LABELS, type PreviewState, frameSize, parsePreviewState, previewHref, scaffoldCommand, sizeLabel } from "@/lib/demo/preview";
-import { type TemplateFile, isIllustrative, templateFiles } from "@/lib/demo/template-files";
+import { type TemplateFile, templateFiles } from "@/lib/demo/template-files";
 import { DeviceFrame, FullScreenLink } from "./device-frame";
 import { LandscapeToggle } from "@/components/ui/landscape-toggle";
 import styles from "./preview.module.css";
@@ -173,19 +173,12 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
           address={referenceUrl(template.slug)}
         />
       ) : (
-        <>
-          {isIllustrative(template) && (
-            <p className={styles.illustrative} data-illustrative="">
-              These files are illustrative: generated from the catalog to show the template&apos;s shape, not real Salt.
-            </p>
-          )}
-          <div className={styles.code}>
-            <FileTree files={files} selected={file.path} hrefFor={(path) => previewHref(template.slug, { ...state, view: "code", file: path })} />
-            <div className={styles.source}>
-              <CodeBlock code={file.content.replace(/\n$/, "")} firstLine={1} label={file.path} />
-            </div>
+        <div className={styles.code}>
+          <FileTree files={files} selected={file.path} hrefFor={(path) => previewHref(template.slug, { ...state, view: "code", file: path })} />
+          <div className={styles.source}>
+            <CodeBlock code={file.content.replace(/\n$/, "")} firstLine={1} label={file.path} />
           </div>
-        </>
+        </div>
       )}
     </Page>
   );

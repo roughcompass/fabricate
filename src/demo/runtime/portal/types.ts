@@ -74,9 +74,3 @@ export interface PortalExperience {
   /** Whether the footer renders, its slots in order, and the copyright its primary slot shows. */
   readonly footer: { readonly shown: boolean; readonly slots: readonly string[]; readonly copyright: string };
 }
-
-/** Planted demo behavior: the deliberate defects the toolbar finds. */
-export interface Planted {
-  /** Occupies the main thread for +ms+ milliseconds: the one planted slow interaction. */
-  blockMainThread(ms: number): void;
-}

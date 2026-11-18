@@ -120,7 +120,6 @@ export interface GenerationTemplate {
 export interface GenerationHero {
   readonly slug: string;
   readonly member: string | null;
-  readonly planted?: readonly string[];
   /** The hand-written source this version ports to Salt, as the prompt shows it. */
   readonly reference?: string;
 }
@@ -151,9 +150,9 @@ export const generations = prototypesSchema.table(
     /** The attached template, which is variant 0; null otherwise. */
     template: jsonb("template").$type<GenerationTemplate>(),
     /**
-     * For hero generation: the hero template, by slug, whose lineage its
-     * versions start, the microfrontend it writes, or null for a shell, and
-     * the planted rules this version's defects may break.
+     * For a portal microfrontend or shell: the template, by slug, whose
+     * lineage its versions start, and the microfrontend it writes, or null
+     * for a shell.
      */
     hero: jsonb("hero").$type<GenerationHero>(),
     error: jsonb("error").$type<Failure>(),

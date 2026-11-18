@@ -27,14 +27,13 @@ function shell(id: string, name: string, owner: string, version: string, loadMs:
 }
 
 // Each hero satisfies one contract (portal-runtime spec): at least three child
-// members; one member with three versions, the oldest carrying planted defects
-// that the next version fixes, plus a prerelease; one slow member with a planted
-// interaction; a bus publisher and a different subscriber; and content that
-// changes for the Approver role. The default version of the planted member is
-// the defective one, so every audit story starts with something to find.
+// members; one member with three versions, including a prerelease, that differ
+// visibly; one member whose scripted load is the slowest; a bus publisher and a
+// different subscriber; and content that changes for the Approver role. Every
+// version is clean Salt; the reference deployment starts on the oldest stable
+// version of the three-version member, so a swap shows a visible change.
 
 export const PAYMENTS_APP: AppDefinition = {
-  kind: "hero",
   members: [
     SHELL_MEMBERS.payments,
     {
@@ -44,8 +43,8 @@ export const PAYMENTS_APP: AppDefinition = {
       owner: "Payments Experience",
       routing: { kind: "route", path: "payees" },
       versions: [
-        { version: "1.4.2", summary: "Compact table with inline search and icon actions", planted: ["label", "color-contrast", "button-name"] },
-        { version: "2.0.0", summary: "Accessible table with a labeled search and named actions" },
+        { version: "1.4.2", summary: "Compact table with inline search and named icon actions" },
+        { version: "2.0.0", summary: "Table with a labeled search and text actions" },
         { version: "2.1.0-beta.1", prerelease: true, summary: "Card layout with favorite payees pinned first" },
       ],
       defaultVersion: "1.4.2",
@@ -78,7 +77,6 @@ export const PAYMENTS_APP: AppDefinition = {
       defaultVersion: "2.3.0",
       loadMs: 1300,
       swapMs: 900,
-      slowInteraction: { label: "Recalculate totals", blockMs: 650 },
       roleDependent: true,
     },
   ],
@@ -98,7 +96,6 @@ export const PAYMENTS_APP: AppDefinition = {
 };
 
 export const GLOBAL_BANKING_APP: AppDefinition = {
-  kind: "hero",
   members: [
     SHELL_MEMBERS["global-banking"],
     {
@@ -123,8 +120,8 @@ export const GLOBAL_BANKING_APP: AppDefinition = {
       owner: "Onboarding Controls",
       routing: { kind: "slot", route: "clients", slot: "Sidebar" },
       versions: [
-        { version: "3.2.0", summary: "Dense checklist with icon-only actions", planted: ["label", "color-contrast", "button-name"] },
-        { version: "3.3.0", summary: "Labeled checklist with named actions" },
+        { version: "3.2.0", summary: "Dense checklist with named icon actions" },
+        { version: "3.3.0", summary: "Checklist with text actions and a reviewer note" },
         { version: "4.0.0-rc.1", prerelease: true, summary: "Grouped steps with a progress summary" },
       ],
       defaultVersion: "3.2.0",
@@ -142,7 +139,6 @@ export const GLOBAL_BANKING_APP: AppDefinition = {
       defaultVersion: "1.6.0",
       loadMs: 1250,
       swapMs: 850,
-      slowInteraction: { label: "Verify all documents", blockMs: 650 },
       roleDependent: true,
     },
   ],
@@ -162,7 +158,6 @@ export const GLOBAL_BANKING_APP: AppDefinition = {
 };
 
 export const MARKETS_APP: AppDefinition = {
-  kind: "hero",
   members: [
     SHELL_MEMBERS.markets,
     {
@@ -172,8 +167,8 @@ export const MARKETS_APP: AppDefinition = {
       owner: "Markets Experience",
       routing: { kind: "route", path: "watch" },
       versions: [
-        { version: "1.8.0", summary: "Dense price grid with icon actions", planted: ["label", "color-contrast", "button-name"] },
-        { version: "1.9.0", summary: "Labeled filter and named actions" },
+        { version: "1.8.0", summary: "Dense price grid with named icon actions" },
+        { version: "1.9.0", summary: "Adds a filter and text actions" },
         { version: "2.0.0-beta.2", prerelease: true, summary: "Price tiles with daily change bars" },
       ],
       defaultVersion: "1.8.0",
@@ -218,7 +213,6 @@ export const MARKETS_APP: AppDefinition = {
       defaultVersion: "3.5.0",
       loadMs: 1350,
       swapMs: 900,
-      slowInteraction: { label: "Recalculate exposure", blockMs: 650 },
       roleDependent: true,
     },
   ],
@@ -239,7 +233,6 @@ export const MARKETS_APP: AppDefinition = {
 };
 
 export const OPERATIONS_APP: AppDefinition = {
-  kind: "hero",
   members: [
     SHELL_MEMBERS.other,
     {
@@ -249,8 +242,8 @@ export const OPERATIONS_APP: AppDefinition = {
       owner: "Site Reliability",
       routing: { kind: "route", path: "incidents" },
       versions: [
-        { version: "6.0.0", summary: "Incident list with icon actions", planted: ["label", "color-contrast", "button-name"] },
-        { version: "6.1.0", summary: "Labeled filter and named actions" },
+        { version: "6.0.0", summary: "Incident list with named icon actions" },
+        { version: "6.1.0", summary: "Adds a severity filter and text actions" },
         { version: "7.0.0-alpha.3", prerelease: true, summary: "Timeline view grouped by severity" },
       ],
       defaultVersion: "6.0.0",
@@ -280,7 +273,6 @@ export const OPERATIONS_APP: AppDefinition = {
       defaultVersion: "1.2.0",
       loadMs: 1280,
       swapMs: 880,
-      slowInteraction: { label: "Check for conflicts", blockMs: 650 },
       roleDependent: true,
     },
   ],
@@ -298,51 +290,3 @@ export const OPERATIONS_APP: AppDefinition = {
     { path: "changes", label: "Changes", owner: "change-calendar", regions: [{ member: "change-calendar", area: "main" }] },
   ],
 };
-
-/** The shared application behind every non-hero template: an overview and an activity feed. */
-export function genericApp(brand: BrandId, owner: string): AppDefinition {
-  return {
-    kind: "generic",
-    members: [
-      SHELL_MEMBERS[brand],
-      {
-        id: "overview",
-        name: "Overview",
-        role: "child",
-        owner,
-        routing: { kind: "route", path: "overview" },
-        versions: [
-          { version: "1.0.0", summary: "Summary cards and a records table" },
-          { version: "1.1.0", summary: "Adds a trend panel" },
-        ],
-        defaultVersion: "1.0.0",
-        loadMs: 360,
-        swapMs: 380,
-        publishes: ["record:selected"],
-      },
-      {
-        id: "activity",
-        name: "Activity feed",
-        role: "child",
-        owner,
-        routing: { kind: "slot", route: "overview", slot: "Sidebar" },
-        versions: [{ version: "1.0.0", summary: "Recent activity" }],
-        defaultVersion: "1.0.0",
-        loadMs: 300,
-        swapMs: 320,
-        subscribes: ["record:selected"],
-      },
-    ],
-    routes: [
-      {
-        path: "overview",
-        label: "Overview",
-        owner: "overview",
-        regions: [
-          { member: "overview", area: "main" },
-          { member: "activity", area: "side" },
-        ],
-      },
-    ],
-  };
-}

@@ -32,7 +32,7 @@
     "check": "npm run typecheck && npm run lint && npm test",
     "prototypes:runtime": "node scripts/build-prototype-runtime.mjs",
     "prototypes:registry": "node scripts/build-salt-registry.mjs",
-    "heroes:generate": "tsx scripts/generate-heroes.ts"
+    "templates:build": "tsx scripts/build-templates.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "4.0.146",

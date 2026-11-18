@@ -29,12 +29,12 @@ export async function galleryTemplates(): Promise<GalleryTemplate[]> {
   return [...(await withHeroStandings(TEMPLATES)), ...accepted.map((template, index) => galleryCard(template, standings[index], templatesAvailable() ? recheckStatus(template) : undefined))];
 }
 
-/** Hero templates whose page is committed show "Meets selected Standards" or "Not evaluated", where Standards are; seeing one starts its Evaluation when it has none. */
+/** Built-in templates show "Meets selected Standards" or "Not evaluated", where Standards are; seeing one starts its Evaluation when it has none. */
 async function withHeroStandings(templates: readonly GalleryTemplate[]): Promise<GalleryTemplate[]> {
   if (!templatesAvailable()) return [...templates];
   return Promise.all(
     templates.map(async (template) => {
-      const hero = template.hero ? heroTemplate(template.slug) : null;
+      const hero = template.origin === "built-in" ? heroTemplate(template.slug) : null;
       return hero ? { ...template, standards: (await heroStanding(getDb(), hero, heroFiles(hero))).status } : template;
     }),
   );
@@ -93,15 +93,15 @@ export const MATCH_LIMIT = 3;
 /**
  * Up to three usable templates matching an intent, by the gallery's own
  * matcher (generation spec, "New prototype shows matching templates"; design
- * decision 9): hero templates whose page is committed, and templates accepted
- * from prototypes whose latest version isn't Broken. Illustrative built-ins
- * are never offered. Empty unless the gallery is available here.
+ * decision 9): built-in templates, and templates accepted from prototypes
+ * whose latest version isn't Broken. Empty unless the gallery is available
+ * here.
  */
 export async function matchingTemplates(intent: string): Promise<TemplateMatch[]> {
   if (!intent.trim() || !templatesAvailable() || !prototypesEnabled()) return [];
-  // Heroes whose page is committed, and accepted templates that aren't Broken; illustrative built-ins never.
+  // Built-in templates, and accepted templates that aren't Broken.
   const usable = (await galleryTemplates()).flatMap((template): GalleryTemplate[] => {
-    if (template.hero) {
+    if (template.origin === "built-in") {
       const hero = heroTemplate(template.slug);
       return hero ? [{ ...template, templateId: hero.id }] : [];
     }

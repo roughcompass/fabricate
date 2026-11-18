@@ -18,9 +18,6 @@ export type OriginId = (typeof ORIGIN_IDS)[number];
 export const ENVIRONMENTS = ["production", "sandbox", "dev"] as const;
 export type EnvironmentId = (typeof ENVIRONMENTS)[number];
 
-/** Accessibility rules an older version deliberately breaks, by automated-audit rule id. */
-export type PlantedRule = "label" | "color-contrast" | "button-name" | "image-alt";
-
 /** The portal shells: J.P. Morgan Access (left navigation) and J.P. Morgan Markets (two-row top navigation). */
 export type ShellKind = "access" | "markets";
 
@@ -44,8 +41,6 @@ export interface MemberVersion {
   readonly prerelease?: boolean;
   /** What a viewer sees change in this version. */
   readonly summary: string;
-  /** Planted defects: the audit must find these rules in this version, and only here. */
-  readonly planted?: readonly PlantedRule[];
 }
 
 /** Where a member renders: as a route's owner, or in a slot on another route. */
@@ -63,8 +58,6 @@ export interface GroupMember {
   readonly loadMs: number;
   /** Scripted duration when a version change reloads this member. */
   readonly swapMs: number;
-  /** Planted slow interaction: a handler that blocks the main thread. */
-  readonly slowInteraction?: { readonly label: string; readonly blockMs: number };
   readonly publishes?: readonly string[];
   readonly subscribes?: readonly string[];
   /** Renders differently for the Approver role. */
@@ -83,10 +76,8 @@ export interface AppRoute {
   readonly regions: readonly { readonly member: string; readonly area: RegionArea }[];
 }
 
-/** A template's microfrontends group and its routes. */
+/** A template's microfrontends group and its routes; every member version is committed Salt source under src/demo/runtime/generated/. */
 export interface AppDefinition {
-  /** Which runtime implementation renders the members: a hero's own, or the shared generic app. */
-  readonly kind: "hero" | "generic";
   readonly members: readonly GroupMember[];
   readonly routes: readonly AppRoute[];
 }
@@ -102,6 +93,7 @@ export interface Template {
   /** Shown for community templates. */
   readonly author?: string;
   readonly tags: readonly string[];
+  /** One of the four full hero templates, one per brand, built to tell the whole toolbar story; listed first in the gallery. */
   readonly hero: boolean;
   readonly version: string;
   readonly preview: { readonly src: string; readonly alt: string };

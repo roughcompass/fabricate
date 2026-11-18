@@ -18,7 +18,7 @@ import { HotSpotsOverlay } from "../toolbar/timing/hot-spots-overlay";
 import { TimingPanel } from "../toolbar/timing/timing-panel";
 import { TimingProvider } from "../toolbar/timing/timing-state";
 import { useEmbedded, useRuntime } from "./runtime-context";
-import { ENVIRONMENT_LABELS } from "./shell-parts";
+import { ENVIRONMENT_LABELS } from "./portal-root";
 
 /** The toolbar with the running application's tools, overlays, and guided hints; none while preview mode frames the application. */
 export function RuntimeToolbar() {

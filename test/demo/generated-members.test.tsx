@@ -9,7 +9,7 @@ import type { RuntimeDescriptor } from "@/demo/runtime/descriptor";
 import { createProfilesStore } from "@/demo/runtime/profiles";
 import { MEMBER_VERSIONS, withGenerated } from "@/demo/runtime/registry";
 import { type Runtime, RuntimeContext } from "@/demo/runtime/runtime-context";
-import { PortalRoot } from "@/demo/runtime/shell-parts";
+import { PortalRoot } from "@/demo/runtime/portal-root";
 import { createViewStore } from "@/demo/runtime/view-store";
 
 // converge-templates-and-prototypes, design decisions 6 and 11: generated members render in the runtime under Salt's provider.

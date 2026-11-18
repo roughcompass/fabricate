@@ -28,6 +28,8 @@ const RUNTIME_TOKENS = "src/demo/runtime/tokens.css";
  * interface or portal runtime tokens.
  */
 const PROTOTYPE_RUNTIME_DIR = "src/prototypes/runtime/";
+/** The templates' committed Salt source, whose CSS modules follow the same rules (template-quality spec, "Template CSS lives in token-only CSS modules"). */
+const TEMPLATE_SOURCE_DIR = "src/demo/runtime/generated/";
 const SALT_THEME_FILES = ["node_modules/@salt-ds/theme/index.css", "node_modules/@salt-ds/theme/css/theme-next.css"];
 
 /** Every stylesheet is migrated; this list must stay empty. */
@@ -80,7 +82,7 @@ const SALT_TOKENS = new Set(SALT_THEME_FILES.flatMap((file) => [...definedIn(fs.
 const RUNTIME_TOKEN_SET = fs.existsSync(path.join(ROOT, RUNTIME_TOKENS)) ? definedIn(fs.readFileSync(path.join(ROOT, RUNTIME_TOKENS), "utf8")) : new Set<string>();
 
 const isRuntime = (file: string) => file.startsWith(RUNTIME_DIR);
-const isPrototypeRuntime = (file: string) => file.startsWith(PROTOTYPE_RUNTIME_DIR);
+const isPrototypeRuntime = (file: string) => file.startsWith(PROTOTYPE_RUNTIME_DIR) || file.startsWith(TEMPLATE_SOURCE_DIR);
 
 function isTokenDefinition(file: string, declaration: Declaration): boolean {
   if (!declaration.property.startsWith("--")) return false;

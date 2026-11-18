@@ -38,8 +38,8 @@ export default async function TemplatePage({ params, searchParams }: { params: P
     return <PrototypeTemplateDetail template={accepted} notice={typeof notice === "string" ? notice : undefined} />;
   }
   const brand = BRANDS[template.brand];
-  // A hero's page, once the hero script's output is committed: Use template, Generate variations, and its Standards.
-  const hero = template.hero ? heroTemplate(template.slug) : null;
+  // The template's page, from its committed source: Use template, Generate variations, and its Standards.
+  const hero = heroTemplate(template.slug);
   const usable = hero !== null && prototypesEnabled();
   const standing = hero && templatesAvailable() ? await heroStanding(getDb(), hero, heroFiles(hero)) : null;
 
@@ -87,7 +87,6 @@ export default async function TemplatePage({ params, searchParams }: { params: P
               ["Version", template.version],
               ["Microfrontends", template.app.members.filter((member) => member.role === "child").map((member) => member.name).join(", ")],
               ["Tags", <TagList key="tags" values={template.tags} />],
-              ...(template.hero ? [] : ([["Code", <span key="code" data-illustrative="">Illustrative: its code is generated from the catalog, not real Salt.</span>]] as const)),
               ...(standing ? ([["Standards", <Status key="standards" state={standing.status} label={standing.status === "meets" ? "Meets selected Standards" : undefined} />]] as const) : []),
             ]}
           />

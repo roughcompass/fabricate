@@ -11,9 +11,7 @@
  * Every portal root carries data-demo-portal, data-shell, and data-theme. The
  * tokens are declared on that root so light-dark() resolves against the
  * running application's own theme, not the operator's. Text, links, and
- * controls meet WCAG contrast in both themes (test/demo/runtime-contrast.test.ts);
- * --rt-color-defect-faint is the one deliberate exception, planted for the
- * accessibility audit.
+ * controls meet WCAG contrast in both themes (test/demo/runtime-contrast.test.ts).
  */
 @layer runtime-tokens {
   [data-demo-portal] {
@@ -57,7 +55,6 @@
     --rt-color-accent: light-dark(#285a9c, #8ab4f0);
     --rt-color-on-accent: light-dark(#ffffff, #0d1b2e);
     --rt-color-highlight: light-dark(#eaf1fa, #1f2a38);
-    --rt-color-defect-faint: light-dark(#c5cad1, #3b4047);
   }
 
   /* J.P. Morgan Markets: two rows of top navigation and a dark title band; near-black bars in the dark theme. */
@@ -78,6 +75,5 @@
     --rt-color-accent: light-dark(#1d5299, #8fb6ee);
     --rt-color-on-accent: light-dark(#ffffff, #0a1830);
     --rt-color-highlight: light-dark(#e8eff8, #1c2735);
-    --rt-color-defect-faint: light-dark(#c8ccd2, #383c42);
   }
 }

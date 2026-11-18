@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { GateExemption, GateIssue, GateResult } from "../types";
+import type { GateIssue, GateResult } from "../types";
 import { buildGate } from "./build";
 import type { PrototypeSource } from "./common";
 import { saltOnlyGate } from "./salt-only";
@@ -12,7 +12,7 @@ import { typecheckGate } from "./typecheck";
  * every version"). They run in-process and never execute generated code.
  */
 
-export { ALLOWED_IMPORTS, PORTAL_MODULE, PROTOTYPE_GLOBAL, type PrototypeSource, portalAllowed } from "./common";
+export { ALLOWED_IMPORTS, PORTAL_MODULE, PROTOTYPE_GLOBAL, type PrototypeSource, STYLES_FILE, STYLES_MODULE, portalAllowed } from "./common";
 export { buildGate, type BuildOutput } from "./build";
 export { saltOnlyGate } from "./salt-only";
 export { saltUsageGate, type SaltUsageTools } from "./salt-usage";
@@ -26,30 +26,13 @@ export interface GateRun {
   readonly signatures: readonly string[];
 }
 
-/**
- * Moves each issue a planted defect may cause out of a result's issues, naming
- * the rule that allowed it, so a planted version passes on everything else
- * and only there.
- */
-export function exempt(result: GateResult, exemptions: readonly GateExemption[]): GateResult {
-  const allowed = (issue: GateIssue) => exemptions.find((exemption) => exemption.codes.includes(issue.code));
-  const exempted = result.issues.flatMap((issue) => {
-    const exemption = allowed(issue);
-    return exemption ? [{ rule: exemption.rule, issue }] : [];
-  });
-  if (exempted.length === 0) return result;
-  const issues = result.issues.filter((issue) => !allowed(issue));
-  return { ...result, issues, exempted, status: issues.length > 0 ? "failed" : "passed" };
-}
-
-/** Runs every gate, without stopping at the first failure, so a repair sees all of them. A planted version's exemptions apply to every gate. */
-export async function runGates(source: PrototypeSource, options: { readonly exemptions?: readonly GateExemption[] } = {}): Promise<GateRun> {
+/** Runs every gate, without stopping at the first failure, so a repair sees all of them. */
+export async function runGates(source: PrototypeSource): Promise<GateRun> {
   const saltOnly = saltOnlyGate(source);
   const typecheck = typecheckGate(source);
   const saltUsage = await saltUsageGate(source);
   const build = buildGate(source);
-  const exemptions = options.exemptions ?? [];
-  const results = [saltOnly, typecheck, saltUsage, build.result].map((entry) => exempt(entry, exemptions));
+  const results = [saltOnly, typecheck, saltUsage, build.result];
   return {
     results,
     passed: results.every((entry) => entry.status !== "failed"),

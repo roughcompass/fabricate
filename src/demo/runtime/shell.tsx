@@ -1,30 +1,23 @@
 "use client";
 
-import { AccessShell } from "./access-shell";
 import { GENERATED_SHELLS } from "./generated";
-import { MarketsShell } from "./markets-shell";
+import { PortalRoot } from "./portal-root";
 import { useRuntime } from "./runtime-context";
-import { PortalRoot } from "./shell-parts";
 
 /**
  * The portal shell for the application's brand: the default microfrontend of
  * every group (design.md, decision 20). Payments, Global Banking, and Other
  * render in the J.P. Morgan Access shell, Markets in the J.P. Morgan Markets shell,
  * unless the Portal the application is opened for chose a theme with the
- * other (add-portal-experience-editor, design decision 8).
- * A shell the hero script generated in Salt takes the place of the
- * hand-written one, inside the portal's root element, which identifies the
- * application to the toolbar (converge-templates-and-prototypes, design decision 6).
+ * other (add-portal-experience-editor, design decision 8). Both are committed
+ * Salt source, inside the portal's root element, which identifies the
+ * application to the toolbar (update-templates-salt-quality, design decision 8).
  */
 export function PortalShell({ children }: { children: React.ReactNode }) {
-  const kind = useRuntime().descriptor.shell;
-  const Generated = GENERATED_SHELLS[kind];
-  if (Generated) {
-    return (
-      <PortalRoot>
-        <Generated>{children}</Generated>
-      </PortalRoot>
-    );
-  }
-  return kind === "markets" ? <MarketsShell>{children}</MarketsShell> : <AccessShell>{children}</AccessShell>;
+  const Shell = GENERATED_SHELLS[useRuntime().descriptor.shell];
+  return (
+    <PortalRoot>
+      <Shell>{children}</Shell>
+    </PortalRoot>
+  );
 }

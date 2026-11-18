@@ -10,6 +10,7 @@ import { registryRelease } from "../salt/adapter";
 import { KIT_VERSION } from "../salt-kit";
 import { DEFAULT_SHELL } from "../seed/defaults";
 import type { SampleData } from "../types";
+import { dataDescription } from "./build";
 
 /**
  * A hero template's flattened page as a template (converge-templates-and-
@@ -38,20 +39,22 @@ export interface HeroTemplate {
   /** The hero's catalog version, such as 3.2.0. */
   readonly version: string;
   readonly code: string;
+  /** The page's CSS module, merged from its microfrontends', or null. */
+  readonly styles: string | null;
   readonly data: SampleData;
 }
 
-/** A hero whose page the hero script has committed, or null. */
+/** A built-in template whose page the template build has committed, or null. Every built-in template has one. */
 export function heroTemplate(slug: string): HeroTemplate | null {
   const template = templateBySlug(slug);
   const sources = GENERATED_SOURCES[slug];
-  if (!template?.hero || !sources?.page) return null;
-  return { id: heroTemplateId(slug), slug, title: template.title, version: template.version, code: sources.page, data: { description: `The records the ${template.title} hero shows.`, source: sources.data } };
+  if (!template || !sources?.page) return null;
+  return { id: heroTemplateId(slug), slug, title: template.title, version: template.version, code: sources.page, styles: sources.pageStyles, data: { description: dataDescription(template), source: sources.data } };
 }
 
 /** What a hero's page exports as a project, the same files its download and its template Assessment read. */
 export function heroExport(hero: HeroTemplate): ExportedVersion {
-  return { prototypeName: hero.title, number: 1, scope: "page", title: hero.title, navItem: null, code: hero.code, data: hero.data.source, personas: [], shell: DEFAULT_SHELL };
+  return { prototypeName: hero.title, number: 1, scope: "page", title: hero.title, navItem: null, code: hero.code, data: hero.data.source, styles: hero.styles, personas: [], shell: DEFAULT_SHELL };
 }
 
 export function heroFiles(hero: HeroTemplate): Record<string, string> {
@@ -78,7 +81,7 @@ export function heroSnapshot(slug: string): Promise<TemplateSnapshot | null> {
 async function compile(slug: string): Promise<TemplateSnapshot | null> {
   const hero = heroTemplate(slug);
   if (!hero) return null;
-  const run = await runGates({ code: hero.code, data: hero.data.source, portal: true });
+  const run = await runGates({ code: hero.code, data: hero.data.source, styles: hero.styles, portal: true });
   if (!run.passed || !run.compiled) return null;
   const release = registryRelease().release;
   const createdAt = new Date(0).toISOString();
@@ -87,6 +90,7 @@ async function compile(slug: string): Promise<TemplateSnapshot | null> {
     number: 1,
     prototypeName: hero.title,
     code: hero.code,
+    styles: hero.styles,
     sampleData: hero.data,
     compiled: run.compiled,
     runtimeHash: RUNTIME.hash,
@@ -94,9 +98,9 @@ async function compile(slug: string): Promise<TemplateSnapshot | null> {
     navItem: null,
     personas: [],
     provenance: {
-      model: "none: the hero template's page",
+      model: "none: the template's page",
       personas: [],
-      intent: `Start from the ${hero.title} hero template.`,
+      intent: `Start from the ${hero.title} template.`,
       message: null,
       scope: "page",
       direction: null,

@@ -1,5 +1,6 @@
 import { BRANDS } from "./brands";
-import { GLOBAL_BANKING_APP, MARKETS_APP, OPERATIONS_APP, PAYMENTS_APP, genericApp } from "./heroes";
+import { BULK_UPLOAD_APP, CARD_CONTROLS_APP, CREDIT_FACILITY_APP, DEAL_ROOM_APP, FEATURE_FLAG_APP, FX_RATES_APP, PAYMENT_TRACKER_APP, RELATIONSHIP_NOTES_APP, RELEASE_CALENDAR_APP, RESEARCH_HUB_APP, RISK_LIMITS_APP, TEAM_DIRECTORY_APP } from "./apps";
+import { GLOBAL_BANKING_APP, MARKETS_APP, OPERATIONS_APP, PAYMENTS_APP } from "./heroes";
 import type { AppDefinition, BrandId, ProviderId, Template } from "./types";
 
 interface TemplateInput {
@@ -11,28 +12,28 @@ interface TemplateInput {
   author?: string;
   tags: string[];
   version: string;
-  app?: AppDefinition;
+  app: AppDefinition;
+  /** One of the four full hero templates. */
+  hero?: boolean;
 }
 
 function template(input: TemplateInput): Template {
-  const owner = input.provider === "community" ? (input.author ?? "Community") : "DE Web Starter Kits";
   return {
     ...input,
     origin: "built-in",
-    hero: input.app !== undefined,
+    hero: input.hero === true,
     preview: {
       // Captured from the reference deployment by scripts/capture-template-previews.mjs.
       src: `/demo/previews/${input.slug}.jpg`,
       alt: `Preview of the ${input.title} template in the ${BRANDS[input.brand].portalName} portal`,
     },
-    app: input.app ?? genericApp(input.brand, owner),
   };
 }
 
 /**
  * Every template in the gallery: one hero per brand, built to tell the full
- * toolbar story, and lighter templates that deploy into the shared generic
- * application so the gallery feels like a marketplace.
+ * toolbar story, and twelve lighter templates, each its own Salt
+ * application, so the gallery feels like a marketplace.
  */
 export const TEMPLATES: readonly Template[] = [
   // Heroes
@@ -45,6 +46,7 @@ export const TEMPLATES: readonly Template[] = [
     tags: ["payees", "transfers", "approvals"],
     version: "3.2.0",
     app: PAYMENTS_APP,
+    hero: true,
   }),
   template({
     slug: "client-onboarding",
@@ -55,6 +57,7 @@ export const TEMPLATES: readonly Template[] = [
     tags: ["onboarding", "kyc", "documents"],
     version: "2.4.1",
     app: GLOBAL_BANKING_APP,
+    hero: true,
   }),
   template({
     slug: "market-watch",
@@ -65,6 +68,7 @@ export const TEMPLATES: readonly Template[] = [
     tags: ["watchlist", "charts", "orders"],
     version: "4.0.2",
     app: MARKETS_APP,
+    hero: true,
   }),
   template({
     slug: "operations-console",
@@ -75,6 +79,7 @@ export const TEMPLATES: readonly Template[] = [
     tags: ["incidents", "monitoring", "changes"],
     version: "1.7.0",
     app: OPERATIONS_APP,
+    hero: true,
   }),
 
   // Payments
@@ -87,6 +92,7 @@ export const TEMPLATES: readonly Template[] = [
     author: "Priya Natarajan",
     tags: ["cards", "limits", "controls"],
     version: "1.3.0",
+    app: CARD_CONTROLS_APP,
   }),
   template({
     slug: "payment-status-tracker",
@@ -96,6 +102,7 @@ export const TEMPLATES: readonly Template[] = [
     provider: "de-web",
     tags: ["tracking", "settlement", "alerts"],
     version: "2.0.0",
+    app: PAYMENT_TRACKER_APP,
   }),
   template({
     slug: "bulk-payments-upload",
@@ -106,6 +113,7 @@ export const TEMPLATES: readonly Template[] = [
     author: "Marco Bianchi",
     tags: ["files", "validation", "batches"],
     version: "0.9.4",
+    app: BULK_UPLOAD_APP,
   }),
 
   // Global Banking
@@ -117,6 +125,7 @@ export const TEMPLATES: readonly Template[] = [
     provider: "de-web",
     tags: ["credit", "lending", "covenants"],
     version: "1.5.2",
+    app: CREDIT_FACILITY_APP,
   }),
   template({
     slug: "relationship-notes",
@@ -127,6 +136,7 @@ export const TEMPLATES: readonly Template[] = [
     author: "Hannah Okafor",
     tags: ["clients", "notes", "follow-ups"],
     version: "1.1.0",
+    app: RELATIONSHIP_NOTES_APP,
   }),
   template({
     slug: "deal-room",
@@ -137,6 +147,7 @@ export const TEMPLATES: readonly Template[] = [
     author: "Tomás Herrera",
     tags: ["documents", "collaboration", "deals"],
     version: "2.2.0",
+    app: DEAL_ROOM_APP,
   }),
 
   // Markets
@@ -148,6 +159,7 @@ export const TEMPLATES: readonly Template[] = [
     provider: "de-web",
     tags: ["research", "publishing", "search"],
     version: "3.0.1",
+    app: RESEARCH_HUB_APP,
   }),
   template({
     slug: "fx-rates-board",
@@ -158,6 +170,7 @@ export const TEMPLATES: readonly Template[] = [
     author: "Kenji Watanabe",
     tags: ["fx", "prices", "streaming"],
     version: "1.0.3",
+    app: FX_RATES_APP,
   }),
   template({
     slug: "risk-limits-monitor",
@@ -167,6 +180,7 @@ export const TEMPLATES: readonly Template[] = [
     provider: "de-web",
     tags: ["risk", "limits", "alerts"],
     version: "2.6.0",
+    app: RISK_LIMITS_APP,
   }),
 
   // Other
@@ -179,6 +193,7 @@ export const TEMPLATES: readonly Template[] = [
     author: "Lena Fischer",
     tags: ["people", "search", "onboarding"],
     version: "1.4.0",
+    app: TEAM_DIRECTORY_APP,
   }),
   template({
     slug: "release-calendar",
@@ -188,6 +203,7 @@ export const TEMPLATES: readonly Template[] = [
     provider: "de-web",
     tags: ["releases", "planning", "calendar"],
     version: "2.1.0",
+    app: RELEASE_CALENDAR_APP,
   }),
   template({
     slug: "feature-flag-console",
@@ -198,8 +214,9 @@ export const TEMPLATES: readonly Template[] = [
     author: "Ravi Shah",
     tags: ["flags", "configuration", "rollout"],
     version: "1.2.5",
+    app: FEATURE_FLAG_APP,
   }),
 ];
 
-/** The hero templates, whose microfrontends are real Salt that hero generation writes. */
+/** The four full hero templates, one per brand. Every built-in template's microfrontends are committed Salt source. */
 export const HERO_SLUGS: readonly string[] = TEMPLATES.filter((template) => template.hero).map((template) => template.slug);

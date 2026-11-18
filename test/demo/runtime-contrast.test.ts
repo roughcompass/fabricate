@@ -96,10 +96,6 @@ describe("portal shell palettes", () => {
           .filter(Boolean);
         expect(failing).toEqual([]);
       });
-
-      it(`keeps the planted faint text below contrast in the ${shell} ${theme} theme`, () => {
-        expect(contrast(colors["--rt-color-defect-faint"]![theme], colors["--rt-color-panel"]![theme])).toBeLessThan(TEXT);
-      });
     }
   }
 

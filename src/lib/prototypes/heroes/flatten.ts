@@ -1,5 +1,6 @@
 import ts from "typescript";
 import type { AppDefinition, RegionArea } from "@/lib/demo/catalog";
+import { STYLES_MODULE } from "../gates/common";
 
 /**
  * Flattening a hero's main route into one page (converge-templates-and-
@@ -8,8 +9,11 @@ import type { AppDefinition, RegionArea } from "@/lib/demo/catalog";
  * single page module. Each member's top-level names are prefixed with the
  * member's own, so their helpers can't collide; its default export becomes a
  * local component; imports are merged; and the regions are laid out with
- * Salt's grid by area. The page keeps `./data` as its sample data, and is
- * what Use template, variant 0, and the hero's template Assessment use.
+ * Salt's responsive grid by area, in one column below the medium breakpoint.
+ * Each member's CSS module joins the page's one module with its classes
+ * prefixed the same way, `.selected` becoming `.PayeeList_selected`, and its
+ * reads of them renamed to match. The page keeps `./data` as its sample data,
+ * and is what Use template, variant 0, and the template's Assessment use.
  */
 
 export interface PageRegion {
@@ -22,6 +26,14 @@ export interface FlattenedPage {
   readonly route: string;
   readonly regions: readonly PageRegion[];
   readonly code: string;
+  /** The page's CSS module, merged from its members', or null when none has one. */
+  readonly styles: string | null;
+}
+
+/** A member version's source and its CSS module. */
+export interface MemberSource {
+  readonly code: string;
+  readonly styles: string | null;
 }
 
 const pascal = (id: string) => id.replace(/(^|-)([a-z0-9])/g, (_, __, letter: string) => letter.toUpperCase());
@@ -46,6 +58,8 @@ function declaredNames(statement: ts.Statement): ts.Identifier[] {
  * bindings, so a parameter or property with the same name is left alone.
  */
 function memberBlock(code: string, prefix: string, component: string, imports: Imports): string {
+  // The local name the member imports its CSS module as, whose reads become the page module's prefixed classes.
+  let stylesLocal: ts.Symbol | undefined;
   const fileName = "/member.tsx";
   const file = ts.createSourceFile(fileName, code, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX);
   const host = ts.createCompilerHost({});
@@ -70,8 +84,19 @@ function memberBlock(code: string, prefix: string, component: string, imports: I
     }
   }
 
+  for (const statement of source.statements) {
+    if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === STYLES_MODULE && statement.importClause?.name) stylesLocal = checker.getSymbolAtLocation(statement.importClause.name);
+  }
+
   const edits: { start: number; end: number; text: string }[] = [];
   const visit = (node: ts.Node) => {
+    if (stylesLocal && (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) && ts.isIdentifier(node.expression) && checker.getSymbolAtLocation(node.expression) === stylesLocal) {
+      const key = ts.isPropertyAccessExpression(node) ? node.name.text : ts.isStringLiteralLike(node.argumentExpression) ? node.argumentExpression.text : null;
+      if (key !== null) {
+        edits.push({ start: node.getStart(source), end: node.getEnd(), text: `styles[${JSON.stringify(`${prefix}_${key}`)}]` });
+        return;
+      }
+    }
     if (ts.isIdentifier(node)) {
       const symbol = checker.getSymbolAtLocation(node);
       const parent = node.parent;
@@ -85,6 +110,7 @@ function memberBlock(code: string, prefix: string, component: string, imports: I
   const kept: string[] = [];
   for (const statement of source.statements) {
     if (ts.isImportDeclaration(statement)) {
+      if (ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === STYLES_MODULE) continue;
       recordImport(statement, imports);
       continue;
     }
@@ -129,32 +155,41 @@ function importLines(imports: Imports): string[] {
 
 const SPAN: Record<RegionArea, (hasSide: boolean) => number> = { main: (hasSide) => (hasSide ? 2 : 3), side: () => 1, wide: () => 3 };
 
+/** A member's CSS module with every class prefixed, as the page's module holds it. */
+export function prefixedStyles(styles: string, prefix: string): string {
+  return styles.replace(/\.(-?[_a-zA-Z][\w-]*)/g, (_, name: string) => `.${prefix}_${name}`);
+}
+
 /**
  * The hero's main route as one page: each region's member at the version
  * +versionOf+ names, by area, from +sources+ (member, then version, then code).
  */
-export function flattenMainRoute(app: AppDefinition, title: string, versionOf: (member: string) => string, sourceOf: (member: string, version: string) => string): FlattenedPage {
+export function flattenMainRoute(app: AppDefinition, title: string, versionOf: (member: string) => string, sourceOf: (member: string, version: string) => MemberSource): FlattenedPage {
   const route = app.routes[0]!;
   const imports: Imports = { named: new Map([["@salt-ds/core", new Map([["GridItem", { local: "GridItem", typeOnly: false }], ["GridLayout", { local: "GridLayout", typeOnly: false }]])]]), defaults: new Map() };
   const regions = route.regions.map(({ member, area }) => ({ member, version: versionOf(member), area }));
-  const blocks = regions.map((region) => memberBlock(sourceOf(region.member, region.version), pascal(region.member), pascal(region.member), imports));
+  const sources = regions.map((region) => ({ region, source: sourceOf(region.member, region.version) }));
+  const blocks = sources.map(({ region, source }) => memberBlock(source.code, pascal(region.member), pascal(region.member), imports));
+  const modules = sources.filter(({ source }) => source.styles?.trim()).map(({ region, source }) => `/* ${region.member} ${region.version} */\n${prefixedStyles(source.styles!.trim(), pascal(region.member))}`);
+  const styles = modules.length ? `${modules.join("\n\n")}\n` : null;
   const hasSide = regions.some((region) => region.area === "side");
   const page = pascal(title.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase());
   const code = [
     `// ${title}: the ${route.label} route as one page, composed from its microfrontends at their conformant versions:`,
     ...regions.map((region) => `// ${region.member} ${region.version} (${region.area})`),
     ...importLines(imports),
+    ...(styles ? [`import styles from ${JSON.stringify(STYLES_MODULE)};`] : []),
     "",
     blocks.join("\n\n"),
     "",
     `export default function ${page}() {`,
     "  return (",
-    "    <GridLayout columns={3} gap={3}>",
-    ...regions.map((region) => `      <GridItem colSpan={${SPAN[region.area](hasSide)}}>\n        <${pascal(region.member)} />\n      </GridItem>`),
+    "    <GridLayout columns={{ xs: 1, md: 3 }} gap={3}>",
+    ...regions.map((region) => `      <GridItem colSpan={{ xs: 1, md: ${SPAN[region.area](hasSide)} }}>\n        <${pascal(region.member)} />\n      </GridItem>`),
     "    </GridLayout>",
     "  );",
     "}",
     "",
   ].join("\n");
-  return { route: route.path, regions, code };
+  return { route: route.path, regions, code, styles };
 }

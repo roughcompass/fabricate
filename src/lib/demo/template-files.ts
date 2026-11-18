@@ -1,23 +1,22 @@
 import { GENERATED_SOURCES } from "@/demo/runtime/generated/sources";
+import { STYLES_MODULE } from "@/lib/prototypes/gates";
 import { RUNTIME } from "@/lib/prototypes/render";
 import { BRANDS, type GroupMember, type Template, shellOf } from "./catalog";
 import { scaffoldCommand } from "./preview";
 
 /**
- * The files preview mode's Code tab shows (template-preview spec, design.md
- * decision 19). They are generated from the catalog, so they are the same on
- * every visit: a package.json, a microfrontends.json describing the group in
- * the shape of Vercel's microfrontends configuration, one source file per
- * child microfrontend at its default version, and a README. A hero's source
- * files are the real Salt its reference deployment renders, with its shared
- * data, once the hero script's output is committed; every other template's
- * are illustrative, generated from the catalog. Nothing here is ever built
- * or run.
+ * The files preview mode's Code tab shows (template-preview spec, "The Code
+ * tab shows each template's real files"): a package.json, a
+ * microfrontends.json describing the group in the shape of Vercel's
+ * microfrontends configuration, a README, the shared data, and each child
+ * microfrontend's real Salt source at its default version, the source its
+ * reference deployment renders, with its CSS module when it has one. They are
+ * the same on every visit.
  */
 
 export interface TemplateFile {
   readonly path: string;
-  readonly language: "json" | "tsx" | "markdown";
+  readonly language: "json" | "tsx" | "css" | "markdown";
   readonly content: string;
 }
 
@@ -34,18 +33,6 @@ function routePaths(member: GroupMember): string[] {
   }
 }
 
-function packageJson(template: Template): string {
-  const children = template.app.members.filter((member) => member.role === "child");
-  return json({
-    name: template.slug,
-    version: template.version,
-    private: true,
-    scripts: { dev: "deweb dev", build: "deweb build", test: "deweb test" },
-    dependencies: Object.fromEntries([shellOf(template.app), ...children].map((member) => [`@deweb/${member.id}`, member.defaultVersion])),
-    devDependencies: { "@deweb/cli": "4.2.0", "@deweb/microfrontends": "2.8.1" },
-  });
-}
-
 function microfrontendsJson(template: Template): string {
   const shell = shellOf(template.app);
   const applications: Record<string, unknown> = {
@@ -59,29 +46,6 @@ function microfrontendsJson(template: Template): string {
     };
   }
   return json({ $schema: "https://deweb.example/schemas/microfrontends.json", portal: BRANDS[template.brand].portalName, applications });
-}
-
-function componentName(member: GroupMember): string {
-  return member.id.replace(/(^|-)([a-z])/g, (_, __, letter: string) => letter.toUpperCase());
-}
-
-function sourceFile(template: Template, member: GroupMember): string {
-  const version = member.versions.find((entry) => entry.version === member.defaultVersion)!;
-  const name = componentName(member);
-  const where = member.routing.kind === "slot" ? `the ${member.routing.slot} slot on /${member.routing.route}` : member.routing.kind === "route" ? `/${member.routing.path}` : "every route";
-  const lines = [
-    `// ${member.name} ${member.defaultVersion}: ${version.summary}.`,
-    `// Owned by ${member.owner}; serves ${where} in the ${BRANDS[template.brand].portalName} portal.`,
-    `import { defineMicrofrontend, useSession${member.subscribes?.length ? ", useSubscription" : ""}${member.publishes?.length ? ", usePublish" : ""} } from "@deweb/microfrontends";`,
-    "",
-    `export function ${name}() {`,
-    "  const session = useSession();",
-  ];
-  for (const topic of member.publishes ?? []) lines.push(`  const publish = usePublish(${JSON.stringify(topic)});`);
-  for (const topic of member.subscribes ?? []) lines.push(`  useSubscription(${JSON.stringify(topic)}, (payload) => console.info(${JSON.stringify(topic)}, payload));`);
-  lines.push(`  return <section aria-label=${JSON.stringify(member.name)} data-theme={session.theme}>{/* ${version.summary} */}</section>;`, "}", "");
-  lines.push(`export default defineMicrofrontend({`, `  name: ${JSON.stringify(member.id)},`, `  version: ${JSON.stringify(member.defaultVersion)},`, `  component: ${name},`, "});", "");
-  return lines.join("\n");
 }
 
 function readme(template: Template): string {
@@ -111,18 +75,8 @@ function readme(template: Template): string {
   ].join("\n");
 }
 
-/** A hero's generated sources, when its reference deployment renders them. */
-function heroSources(template: Template) {
-  return template.hero ? (GENERATED_SOURCES[template.slug] ?? null) : null;
-}
-
-/** Whether a template's code is illustrative: every built-in template but a hero whose Salt source is committed (template-gallery spec, "Illustrative templates"). */
-export function isIllustrative(template: Template): boolean {
-  return heroSources(template) === null;
-}
-
-/** A hero's package.json: its microfrontends, React, the portal runtime interface, and the Salt packages its source imports, at the versions DE FabLab renders with. */
-function heroPackageJson(template: Template, sources: readonly string[]): string {
+/** A template's package.json: its microfrontends, React, the portal runtime interface, and the Salt packages its source imports, at the versions DE FabLab renders with. */
+function packageJson(template: Template, sources: readonly string[]): string {
   const children = template.app.members.filter((member) => member.role === "child");
   const packages = RUNTIME.packages as Record<string, string>;
   const salt = [...new Set(sources.flatMap((source) => [...source.matchAll(/from\s+["'](@salt-ds\/[a-z-]+)["']/g)].map((match) => match[1]!)))].sort();
@@ -142,24 +96,20 @@ function heroPackageJson(template: Template, sources: readonly string[]): string
   });
 }
 
-/** The template's files, in the order the Code tab lists them; the first is selected by default. */
+/** The template's files, in the order the Code tab lists them; the first is selected by default. A member's CSS module follows its source. */
 export function templateFiles(template: Template): TemplateFile[] {
-  const hero = heroSources(template);
+  const sources = GENERATED_SOURCES[template.slug];
   const children = template.app.members.filter((member) => member.role === "child");
-  if (hero) {
-    const sources = children.map((member) => hero.members[member.id]?.[member.defaultVersion] ?? "");
-    return [
-      { path: "package.json", language: "json", content: heroPackageJson(template, sources) },
-      { path: "microfrontends.json", language: "json", content: microfrontendsJson(template) },
-      { path: "README.md", language: "markdown", content: readme(template) },
-      { path: "src/data.ts", language: "tsx", content: hero.data },
-      ...children.map((member, index): TemplateFile => ({ path: `src/${member.id}.tsx`, language: "tsx", content: sources[index]! })),
-    ];
-  }
+  // A member file imports its CSS module by its own name, as a project with one file per microfrontend would.
+  const code = (member: GroupMember) => (sources?.members[member.id]?.[member.defaultVersion] ?? "").replaceAll(`"${STYLES_MODULE}"`, `"./${member.id}.module.css"`);
   return [
-    { path: "package.json", language: "json", content: packageJson(template) },
+    { path: "package.json", language: "json", content: packageJson(template, children.map(code)) },
     { path: "microfrontends.json", language: "json", content: microfrontendsJson(template) },
     { path: "README.md", language: "markdown", content: readme(template) },
-    ...template.app.members.filter((member) => member.role === "child").map((member): TemplateFile => ({ path: `apps/${member.id}/src/index.tsx`, language: "tsx", content: sourceFile(template, member) })),
+    { path: "src/data.ts", language: "tsx", content: sources?.data ?? "" },
+    ...children.flatMap((member): TemplateFile[] => {
+      const styles = sources?.memberStyles[member.id]?.[member.defaultVersion];
+      return [{ path: `src/${member.id}.tsx`, language: "tsx", content: code(member) }, ...(styles ? [{ path: `src/${member.id}.module.css`, language: "css" as const, content: styles }] : [])];
+    }),
   ];
 }

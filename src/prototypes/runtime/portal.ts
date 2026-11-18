@@ -1,10 +1,9 @@
 import { useEffect, useEffectEvent } from "react";
 import { createBus } from "@/demo/runtime/bus";
-import { blockMainThread } from "@/demo/runtime/members/planted";
-import type { Planted, PortalApplication, PortalExperience, PortalProfile, PortalRoute, PortalRoutes } from "@/demo/runtime/portal/types";
+import type { PortalApplication, PortalExperience, PortalProfile, PortalRoute, PortalRoutes } from "@/demo/runtime/portal/types";
 import { RENDER_CONFIG_ID, type RenderConfig } from "./protocol";
 
-export type { Planted, PortalApplication, PortalBanner, PortalExperience, PortalMenuEntry, PortalProfile, PortalRoute, PortalRoutes } from "@/demo/runtime/portal/types";
+export type { PortalApplication, PortalBanner, PortalExperience, PortalMenuEntry, PortalProfile, PortalRoute, PortalRoutes } from "@/demo/runtime/portal/types";
 
 /*
  * `@deweb/portal` inside the prototype frame (converge-templates-and-
@@ -76,4 +75,3 @@ export function useExperience(): PortalExperience {
   return EXPERIENCE;
 }
 
-export const planted: Planted = { blockMainThread };

@@ -82,14 +82,6 @@ export interface GateResult {
   readonly issues: readonly GateIssue[];
   readonly warnings: readonly GateIssue[];
   readonly durationMs: number;
-  /** Issues a planted defect was allowed to cause, each with the planted rule that allowed it (portal-runtime spec, "Hero source passes DE FabLab's gates"). */
-  readonly exempted?: readonly { readonly rule: string; readonly issue: GateIssue }[];
-}
-
-/** A planted rule, and the gate issue codes its defect may cause. */
-export interface GateExemption {
-  readonly rule: string;
-  readonly codes: readonly string[];
 }
 
 export interface Attempt {

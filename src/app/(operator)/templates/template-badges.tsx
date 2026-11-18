@@ -17,12 +17,6 @@ export function TemplateBadges({ template }: { template: GalleryTemplate }) {
   return (
     <>
       <Tag sans>{BRANDS[template.brand].label}</Tag>
-      {/* A built-in template other than a hero isn't real Salt (template-gallery spec, "Illustrative templates"). */}
-      {template.origin !== "prototypes" && !template.hero && (
-        <span className={styles.author} data-illustrative="">
-          Illustrative
-        </span>
-      )}
       {template.provider === "de-web" ? (
         <span className={styles.official}>
           <Icon name="checkCircle" size={14} />
