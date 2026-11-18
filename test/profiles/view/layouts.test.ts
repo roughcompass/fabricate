@@ -6,7 +6,7 @@ import type { Fact, FactDocument } from "@/lib/profiles/states";
 import { FACT_DOCUMENT_FIXTURES, analyzedFacts, factDocumentFixture } from "../../support/fact-documents";
 import { manifest } from "../../support/profiles";
 
-const KIND_FIRST = ["composition", "runtime_integrations", "access_signals", "egress_routes", "api_contracts", "test_substitutes"];
+const KIND_FIRST = ["composition", "runtime_integrations", "access_signals", "egress_routes", "test_substitutes"];
 
 describe("Profile category layouts", () => {
   const documents: [string, FactDocument][] = FACT_DOCUMENT_FIXTURES.map((name) => [name, factDocumentFixture(name) as unknown as FactDocument]);
@@ -122,5 +122,18 @@ describe("Profile category layouts", () => {
       expect(row.candidates.map((candidate) => candidate.text)).toEqual(expect.arrayContaining([expect.stringContaining("18"), expect.stringContaining(">=22")]));
       for (const candidate of row.candidates) expect(candidate.evidence.length).toBeGreaterThan(0);
     }
+  });
+
+  it("names each API contract and counts its operations, with a generated client's files as one row per directory", () => {
+    const fact = (key: string, value: Fact["value"]): Fact => ({ key, state: "observed", value, evidence: [], rule: "architecture.api-contract" });
+    const layout = layoutOf("api_contracts");
+    expect(rowCells(layout, fact("spec", { kind: "openapi", operations: 70, path: "specs/openapi.yaml", servers: [], title: "Directus", version: "3.0.1" }))).toEqual({
+      kind: "cells",
+      cells: [{ text: "Directus", secondary: "OpenAPI 3.0.1" }, { text: "70" }, { text: "specs/openapi.yaml", mono: true }],
+    });
+    expect(rowCells(layout, fact("ops", { definitions: 0, kind: "graphql_operations", operations: ["query FetchChannels"], path: "src/fetch.graphql" }))).toMatchObject({ kind: "cells", cells: [{ text: "query FetchChannels", secondary: "GraphQL operations" }, { text: "1" }, {}] });
+    const generated = (path: string) => rowCells(layout, fact(path, { contract: "openapi", generator: "@hey-api/openapi-ts", kind: "generated_schema", path }));
+    expect(generated("sdk/openapi/client.gen.ts")).toEqual(generated("sdk/openapi/types.gen.ts"));
+    expect(generated("sdk/openapi/client.gen.ts")).toEqual({ kind: "cells", cells: [{ text: "Generated OpenAPI client", secondary: "By @hey-api/openapi-ts" }, null, { text: "sdk/openapi/", mono: true }] });
   });
 });

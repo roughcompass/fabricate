@@ -32,52 +32,54 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
   return (
     <Section id={definition.id} level={3} title={definition.label} description={definition.description} actions={<Status state={block.heading.state} />}>
       <SearchLine heading={block.heading} />
-      <Panel flush>
-        <Table
-          label={definition.label}
-          head={
-            <>
-              {block.columns.map((column, index) => (
-                <Th key={column} align={block.numeric[index] ? "numeric" : undefined}>
-                  {column}
-                </Th>
-              ))}
-              {block.stepsColumn && <Th>{block.stepsColumn}</Th>}
-              <Th align="actions">Evidence</Th>
-            </>
-          }
-        >
-          {block.rows.map((row) => (
-            <tr key={row.id}>
-              <RowCellsView row={row} columns={block.columns} numeric={block.numeric} span={span} context={context} />
-              {block.stepsColumn && row.cells.kind === "cells" && (
-                <Td label={block.stepsColumn}>
-                  {row.steps.length ? (
-                    // The count and what the steps check, with the steps themselves one click away.
-                    <div className={styles.quiet}>
-                      <Disclosure variant="plain" summary={[countLabel(row.steps.length, "step"), row.checks.length ? `checks ${row.checks.join(", ").toLowerCase()}` : null].filter(Boolean).join(" · ")}>
-                        <ol className={styles.steps}>
-                          {row.steps.map((step, index) => (
-                            <li key={index} className={styles.step}>
-                              <span className={styles.stepCommand}>{step.text}</span>
-                              {step.secondary && <Secondary>{step.secondary}</Secondary>}
-                            </li>
-                          ))}
-                        </ol>
-                      </Disclosure>
-                    </div>
-                  ) : (
-                    <span className={styles.muted}>None</span>
-                  )}
+      <div className={styles.dataTable}>
+        <Panel flush>
+          <Table
+            label={definition.label}
+            head={
+              <>
+                {block.columns.map((column, index) => (
+                  <Th key={column} align={block.numeric[index] ? "numeric" : undefined}>
+                    {column}
+                  </Th>
+                ))}
+                {block.stepsColumn && <Th>{block.stepsColumn}</Th>}
+                <Th align="actions">Evidence</Th>
+              </>
+            }
+          >
+            {block.rows.map((row) => (
+              <tr key={row.id}>
+                <RowCellsView row={row} columns={block.columns} numeric={block.numeric} unit={block.unit} span={span} context={context} />
+                {block.stepsColumn && row.cells.kind === "cells" && (
+                  <Td label={block.stepsColumn}>
+                    {row.steps.length ? (
+                      // The count and what the steps check, with the steps themselves one click away.
+                      <div className={styles.quiet}>
+                        <Disclosure variant="plain" summary={[countLabel(row.steps.length, "step"), row.checks.length ? `checks ${row.checks.join(", ").toLowerCase()}` : null].filter(Boolean).join(" · ")}>
+                          <ol className={styles.steps}>
+                            {row.steps.map((step, index) => (
+                              <li key={index} className={styles.step}>
+                                <span className={styles.stepCommand}>{step.text}</span>
+                                {step.secondary && <Secondary>{step.secondary}</Secondary>}
+                              </li>
+                            ))}
+                          </ol>
+                        </Disclosure>
+                      </div>
+                    ) : (
+                      <span className={styles.muted}>None</span>
+                    )}
+                  </Td>
+                )}
+                <Td label="Evidence" align="actions">
+                  <RowDetails title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} held={row.held} evidence={row.evidence} context={context} reasoning={Boolean(row.reasoning && firstSentence(row.reasoning) !== row.reasoning)} />
                 </Td>
-              )}
-              <Td label="Evidence" align="actions">
-                <RowDetails title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} held={row.held} evidence={row.evidence} context={context} reasoning={Boolean(row.reasoning && firstSentence(row.reasoning) !== row.reasoning)} />
-              </Td>
-            </tr>
-          ))}
-        </Table>
-      </Panel>
+              </tr>
+            ))}
+          </Table>
+        </Panel>
+      </div>
       {pagination}
     </Section>
   );
@@ -89,7 +91,7 @@ function firstSentence(text: string): string {
   return end === -1 ? text : text.slice(0, end + 1);
 }
 
-function RowCellsView({ row, columns, numeric, span, context }: { row: Row; columns: readonly string[]; numeric: readonly boolean[]; span: number; context: EvidenceContext }) {
+function RowCellsView({ row, columns, numeric, unit, span, context }: { row: Row; columns: readonly string[]; numeric: readonly boolean[]; unit: string; span: number; context: EvidenceContext }) {
   const state = row.state && <Status state={row.state} size="sm" />;
   // A long reasoning shows its first sentence here and in full in the row's evidence panel.
   const reasoning = row.reasoning && <Secondary>{firstSentence(row.reasoning)}</Secondary>;
@@ -122,7 +124,7 @@ function RowCellsView({ row, columns, numeric, span, context }: { row: Row; colu
           {cell ? <CellView cell={cell} /> : null}
           {index === 0 && state}
           {index === 0 && reasoning}
-          {index === 0 && row.occurrences > 1 && <Secondary>{`${row.occurrences.toLocaleString("en-US")} occurrences`}</Secondary>}
+          {index === 0 && row.occurrences > 1 && <Secondary>{countLabel(row.occurrences, unit)}</Secondary>}
         </Td>
       ))}
     </>
@@ -336,7 +338,7 @@ export function SharedTable({ block, context, filters, pagination, level = 3 }: 
         </Disclosure>
       </div>
       {filters}
-      <div className={styles.anchoredTable}>
+      <div className={`${styles.anchoredTable} ${styles.dataTable}`}>
         <Panel flush>
           <Table
             label={title}

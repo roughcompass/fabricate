@@ -3,7 +3,14 @@
   /* Identifiers break only where a line would overflow, so a table keeps a package name on one line when it can. */
   .mono { font-family: var(--font-family-mono); font-size: var(--font-size-secondary); overflow-wrap: break-word; }
   /* In a table, a long path may break anywhere, so its column can narrow and the table never runs past its panel. */
-  :where(td) > .mono { overflow-wrap: anywhere; }
+  :where(td) .mono { overflow-wrap: anywhere; }
+  /*
+   * A Profile table never runs past its panel: any cell may break a long
+   * token, such as a module path, when it must, and a column of paths keeps a
+   * readable width rather than collapsing to a few characters.
+   */
+  .dataTable td, .dataTable td * { overflow-wrap: anywhere; }
+  .dataTable td:has(.mono:not(.nowrap)) { min-width: calc(var(--space-16) * 3); }
 
   /* Overview values: each a link to its category, wrapping as a row of items. */
   .values { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4); }

@@ -33,6 +33,8 @@ export interface Layout {
   generic: boolean;
   /** The order rows read best in, such as a summary first; facts keep the document's order otherwise. */
   sort?: (a: Fact, b: Fact) => number;
+  /** What a row that stands for several identical facts counts; "occurrence" unless the facts are, say, files. */
+  unit?: string;
 }
 
 /** One fact as a row: its cells, its whole value when the value doesn't fit the columns, or a conflict's candidates. */
@@ -267,6 +269,66 @@ const uiElements: Layout = {
   ],
 };
 
+// API contracts: what each contract is, how many operations it declares, and where it's committed.
+const CONTRACT_ORDER = ["openapi", "graphql_schema", "graphql_operations", "generated_schema"];
+const CONTRACT_NAMES: Record<string, string> = { openapi: "OpenAPI", graphql: "GraphQL" };
+const OPERATIONS_SHOWN = 3;
+const directoryOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/") + 1) : "Repository root");
+
+const apiContracts: Layout = {
+  generic: false,
+  unit: "file",
+  sort: (a, b) => CONTRACT_ORDER.indexOf(text(field(a, "kind")) ?? "") - CONTRACT_ORDER.indexOf(text(field(b, "kind")) ?? ""),
+  columns: [
+    {
+      label: "Contract",
+      cell: (fact) => {
+        const kind = text(field(fact, "kind"));
+        if (kind === "openapi") {
+          const servers = field(fact, "servers");
+          const version = text(field(fact, "version"));
+          return { text: text(field(fact, "title")) ?? "OpenAPI document", secondary: [version ? `OpenAPI ${version}` : "OpenAPI", Array.isArray(servers) && servers.length ? countLabel(servers.length, "server") : null].filter(Boolean).join(" · ") };
+        }
+        if (kind === "graphql_schema") {
+          const definitions = field(fact, "definitions");
+          return { text: "GraphQL schema", secondary: typeof definitions === "number" ? countLabel(definitions, "definition") : undefined };
+        }
+        if (kind === "graphql_operations") {
+          const operations = field(fact, "operations");
+          const names = Array.isArray(operations) ? operations.map(String) : [];
+          const shown = names.slice(0, OPERATIONS_SHOWN).join(", ");
+          return { text: names.length ? `${shown}${names.length > OPERATIONS_SHOWN ? `, and ${names.length - OPERATIONS_SHOWN} more` : ""}` : "GraphQL operations", secondary: "GraphQL operations" };
+        }
+        if (kind === "generated_schema") {
+          const contract = text(field(fact, "contract"));
+          return { text: `Generated ${CONTRACT_NAMES[contract ?? ""] ?? humanize(contract ?? "API")} client`, secondary: text(field(fact, "generator")) ? `By ${text(field(fact, "generator"))}` : undefined };
+        }
+        return null;
+      },
+    },
+    {
+      label: "Operations",
+      numeric: true,
+      optional: true,
+      cell: (fact) => {
+        const operations = field(fact, "operations");
+        if (typeof operations === "number") return { text: number(operations) };
+        return Array.isArray(operations) ? { text: number(operations.length) } : null;
+      },
+    },
+    {
+      label: "Location",
+      optional: true,
+      cell: (fact) => {
+        const path = text(field(fact, "path"));
+        if (path === null) return null;
+        // A generated client is many files; its directory names it, so its files share one row.
+        return text(field(fact, "kind")) === "generated_schema" ? { text: directoryOf(path), mono: true } : { text: path, mono: true };
+      },
+    },
+  ],
+};
+
 const STYLE_ORDER = ["summary", "declarations", "important", "internal-selector", "element-selector", "unknown-token", "token-aliases", "redefinition"];
 const DECLARATION_KINDS: [name: string, label: string, plural?: string][] = [
   ["token", "token", "tokens"],
@@ -381,14 +443,14 @@ const LAYOUTS: Record<string, Layout> = {
   runtime_integrations: KIND_FIRST,
   access_signals: KIND_FIRST,
   egress_routes: KIND_FIRST,
-  api_contracts: KIND_FIRST,
+  api_contracts: apiContracts,
   test_substitutes: KIND_FIRST,
   design_systems: designSystems,
   ui_elements: uiElements,
   style_values: styleValues,
   // The categories that share the Dependencies and Scripts tables, as the cells those tables take from them.
-  dependencies: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Kind", "field", { format: dependencyKind }), fieldColumn("Declared", "specifier", { mono: true }), manifestColumn),
-  resolved_dependencies: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Resolved", "version", { mono: true }), manifestColumn),
+  dependencies: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Kind", "field", { format: dependencyKind }), fieldColumn("Declared", "specifier", { mono: true, nowrap: true }), manifestColumn),
+  resolved_dependencies: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Resolved", "version", { mono: true, nowrap: true }), manifestColumn),
   packages_consumed: layout(fieldColumn("Package", "name", { mono: true }), booleanColumn("Internal", "internal", "Internal", "External")),
   scripts: layout(fieldColumn("Script", "name", { mono: true }), fieldColumn("Command", "command", { mono: true }), manifestColumn),
   verification_commands: layout(

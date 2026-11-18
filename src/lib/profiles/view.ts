@@ -58,6 +58,8 @@ export interface CategoryBlock {
   columns: string[];
   /** Each column's alignment: counts and sizes to the right. */
   numeric: boolean[];
+  /** What a merged row counts, such as "file" for a generated client's files. */
+  unit: string;
   /** The label of a column filled from another category, such as Steps. */
   stepsColumn: string | null;
   rows: Row[];
@@ -165,6 +167,7 @@ function categoryBlock(document: FactDocument, definition: CategoryDefinition, c
     heading: headingOf(document, definition),
     columns: layout.columns.map((column) => column.label),
     numeric: layout.columns.map((column) => Boolean(column.numeric)),
+    unit: layout.unit ?? "occurrence",
     stepsColumn: isCi ? "Steps" : null,
     rows: mergeIdentical(
       facts.map((fact): Row => {
