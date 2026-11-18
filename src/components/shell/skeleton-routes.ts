@@ -1,11 +1,13 @@
 /** Which page skeleton matches the page at a path; null for paths with none. */
-export type SkeletonKind = "home" | "list" | "detail" | "form" | "focused";
+export type SkeletonKind = "home" | "list" | "repositories" | "detail" | "form" | "focused";
 
 const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/$/, "home"],
   [/^\/(assessments|repositories|standards)\/new\/?$/, "form"],
   [/^\/(assessments|repositories|standards)\/[^/]+\/edit\/?$/, "form"],
-  [/^\/(assessments|repositories|standards)\/?$/, "list"],
+  // The Repositories list lays out its own toolbar and columns.
+  [/^\/repositories\/?$/, "repositories"],
+  [/^\/(assessments|standards)\/?$/, "list"],
   [/^\/repositories\/bulk\/?$/, "form"],
   [/^\/repositories\/[^/]+\/settings\/?$/, "form"],
   [/^\/repositories\/de-console\/?$/, "detail"],

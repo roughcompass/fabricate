@@ -8,7 +8,7 @@ describe("navigation skeletons", () => {
   it.each([
     ["/", "home"],
     ["/assessments", "list"],
-    ["/repositories", "list"],
+    ["/repositories", "repositories"],
     ["/repositories/bulk", "form"],
     ["/standards", "list"],
     ["/assessments/new", "form"],
