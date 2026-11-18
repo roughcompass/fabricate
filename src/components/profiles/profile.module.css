@@ -80,17 +80,27 @@
     background: var(--color-bg-elevated);
     box-shadow: var(--shadow-dialog);
     color: var(--color-text);
+    /* It opens from a right-aligned cell; its own content reads from the left. */
+    text-align: left;
     white-space: normal;
   }
   .sheetHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
   .sheetTitle { min-width: 0; font-family: var(--font-family-mono); font-weight: var(--font-weight-medium); overflow-wrap: anywhere; }
   .sheet .mono { overflow-wrap: anywhere; }
+  /* The panel opens from a table cell, whose links read as text; its locations lead to their evidence, so they read as links. */
+  .sheet :where(a) { color: var(--color-link); }
 
   /* One block per fact a row holds: its evidence, key, and raw value. */
-  .held { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
-  .held + .held { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border-subtle); }
-  .heldLabel { color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); letter-spacing: var(--letter-spacing-caps); text-transform: uppercase; }
-  .raw { margin: 0; font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* Each fact the row holds: its category, its locations, its key and rule, and its raw value, in that order. */
+  .held { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+  .held + .held { margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--color-border); }
+  .heldLabel { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .heldPart { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+  .heldPartLabel, .heldFacts dt { color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); line-height: var(--line-height-caption); }
+  /* Label and value side by side, labels in one narrow column. */
+  .heldFacts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-1) var(--space-4); align-items: baseline; margin: 0; }
+  .heldFacts dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+  .raw { max-height: calc(var(--space-16) * 5); margin: 0; padding: var(--space-3); overflow: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-subtle); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); white-space: pre; }
 
   .candidates { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding-left: var(--space-4); }
   /* A CI definition's steps, inside its row's disclosure: each command on its first line only, its job and step below. */

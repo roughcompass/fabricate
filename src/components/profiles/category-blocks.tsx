@@ -1,4 +1,4 @@
-import type { JsonObject } from "@repo-facts/contract";
+import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { useId } from "react";
 import { EvidenceList } from "@/components/results/evidence";
 import { NoValuePlaceholder } from "@/components/results/no-value";
@@ -162,38 +162,67 @@ function RowDetails({ title, held, evidence, context, reasoning = true }: { titl
           </button>
         </div>
         {repeated ? (
-          <div className={styles.held}>
-            <EvidenceList ids={[...evidence]} records={context.records} assessmentId={context.assessmentId} source={false} />
-            <span className={styles.secondary}>
-              {`${countLabel(held.length, "fact")} with this value: `}
-              <span className={styles.mono}>{held.slice(0, MERGED_KEYS).map((entry) => entry.fact.key).join(", ")}</span>
-              {held.length > MERGED_KEYS && `, and ${held.length - MERGED_KEYS} more`}
-            </span>
-            <pre className={styles.raw} aria-label={`Raw value of ${held[0]!.fact.key}`}>
-              {JSON.stringify(held[0]!.fact.value, null, 2)}
-            </pre>
-          </div>
-        ) : held.map((entry) => (
-          <div key={`${entry.category}:${entry.fact.key}`} className={styles.held}>
-            {held.length > 1 && <span className={styles.heldLabel}>{context.labels.get(entry.category) ?? entry.category}</span>}
-            <EvidenceList ids={entry.fact.evidence} records={context.records} assessmentId={context.assessmentId} source={false} />
-            <span className={styles.secondary}>
-              Fact <span className={styles.mono}>{entry.fact.key}</span>
-              {entry.rule && (
-                <>
-                  {" · rule "}
-                  <span className={styles.mono}>{entry.rule}</span>
-                </>
-              )}
-            </span>
-            {reasoning && entry.fact.reasoning && <span className={styles.secondary}>{entry.fact.reasoning}</span>}
-            <pre className={styles.raw} aria-label={`Raw value of ${entry.fact.key}`}>
-              {JSON.stringify(entry.fact.value, null, 2)}
-            </pre>
-          </div>
-        ))}
+          <section className={styles.held}>
+            <EvidenceBlock ids={[...evidence]} context={context} />
+            <dl className={styles.heldFacts}>
+              <dt>{held.length === 1 ? "Fact" : "Facts"}</dt>
+              <dd>
+                <span className={styles.mono}>{held.slice(0, MERGED_KEYS).map((entry) => entry.fact.key).join(", ")}</span>
+                {held.length > MERGED_KEYS && <span className={styles.muted}>{` and ${held.length - MERGED_KEYS} more, each with this value`}</span>}
+              </dd>
+            </dl>
+            <RawValue factKey={held[0]!.fact.key} value={held[0]!.fact.value} />
+          </section>
+        ) : (
+          held.map((entry) => (
+            <section key={`${entry.category}:${entry.fact.key}`} className={styles.held} aria-label={held.length > 1 ? (context.labels.get(entry.category) ?? entry.category) : undefined}>
+              {held.length > 1 && <h3 className={styles.heldLabel}>{context.labels.get(entry.category) ?? entry.category}</h3>}
+              <EvidenceBlock ids={entry.fact.evidence} context={context} />
+              <dl className={styles.heldFacts}>
+                <dt>Fact</dt>
+                <dd className={styles.mono}>{entry.fact.key}</dd>
+                {entry.rule && (
+                  <>
+                    <dt>Rule</dt>
+                    <dd className={styles.mono}>{entry.rule}</dd>
+                  </>
+                )}
+                {reasoning && entry.fact.reasoning && (
+                  <>
+                    <dt>Why</dt>
+                    <dd>{entry.fact.reasoning}</dd>
+                  </>
+                )}
+              </dl>
+              <RawValue factKey={entry.fact.key} value={entry.fact.value} />
+            </section>
+          ))
+        )}
       </div>
     </>
+  );
+}
+
+/** A fact's locations under a label, each a link to its evidence record. */
+function EvidenceBlock({ ids, context }: { ids: readonly string[]; context: EvidenceContext }) {
+  return (
+    <div className={styles.heldPart}>
+      <span className={styles.heldPartLabel}>{ids.length === 1 ? "Location" : `${ids.length.toLocaleString("en-US")} locations`}</span>
+      <EvidenceList ids={ids} records={context.records} assessmentId={context.assessmentId} source={false} />
+    </div>
+  );
+}
+
+/** A fact's value as the document stores it, one disclosure away, in a block that scrolls rather than widening the panel. */
+function RawValue({ factKey, value }: { factKey: string; value: JsonValue }) {
+  return (
+    <div className={styles.quiet}>
+      <Disclosure variant="plain" summary="Raw value">
+        <pre className={styles.raw} aria-label={`Raw value of ${factKey}`}>
+          {JSON.stringify(value, null, 2)}
+        </pre>
+      </Disclosure>
+    </div>
   );
 }
 
