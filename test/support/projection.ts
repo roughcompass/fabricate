@@ -14,7 +14,8 @@ function lockfile(name: string, versions: Record<string, string>): string {
 /** A repository that depends on +dependencies+, with each pinned in a lockfile. */
 export function pinnedRepository(name: string, dependencies: Record<string, string>) {
   return {
-    "package.json": manifest({ name, version: "1.0.0", private: true, dependencies: Object.fromEntries(Object.keys(dependencies).map((dependency) => [dependency, `^${dependencies[dependency]}`])) }),
+    // Published, as a package another repository depends on must be.
+    "package.json": manifest({ name, version: "1.0.0", dependencies: Object.fromEntries(Object.keys(dependencies).map((dependency) => [dependency, `^${dependencies[dependency]}`])) }),
     "package-lock.json": lockfile(name, dependencies),
   };
 }

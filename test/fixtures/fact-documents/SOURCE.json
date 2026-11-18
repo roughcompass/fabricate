@@ -1,7 +1,7 @@
 {
   "repository": "repo-facts",
-  "release": "0.5.0",
-  "commit": "2c117566a32e20a41188dfada669b552807502ba",
+  "release": "0.6.0",
+  "commit": "5d51ae24c1065dcad58e272754c2a9a463a9b39d",
   "files": {
     "federation-shell.json": "fixtures/federation-shell/expected.json",
     "npm-workspace.json": "fixtures/npm-workspace/expected.json",

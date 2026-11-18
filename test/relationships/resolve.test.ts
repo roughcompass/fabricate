@@ -84,8 +84,8 @@ describe("package relationships", () => {
       "client -package_production/resolved-> package:api-client",
       "monorepo -package_production/resolved-> package:@acme/api",
       "monorepo -package_production/resolved-> package:@acme/web",
-      "monorepo -package_production/resolved-> package:orders-monorepo",
     ]);
+    // orders-monorepo is private, so it's never published and no other repository can depend on it.
     // The monorepo's own use of @acme/api is an internal fact in its Profile, not a relationship.
     const consumed = (monorepo.profile!.document.fact_document as { categories: { packages_consumed: { facts: { key: string; value: { internal: boolean } }[] } } }).categories.packages_consumed.facts;
     expect(consumed.find((fact) => fact.key === "@acme/api")?.value.internal).toBe(true);

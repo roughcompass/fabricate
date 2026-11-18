@@ -16,8 +16,8 @@ import { EDGE_TYPES, NODE_KINDS, RESOLUTION_STATES } from "@/lib/relationships/s
 export const INPUT_SCHEMAS = ["repository_profile", "relationship_map"] as const;
 export type InputSchema = (typeof INPUT_SCHEMAS)[number];
 
-/** Input schema versions this release can evaluate. Profile version 2 extends version 1 with the design-system fields, and version 3 extends both with accessibility. */
-export const SUPPORTED_VERSIONS: Readonly<Record<InputSchema, readonly number[]>> = { repository_profile: [1, 2, 3], relationship_map: [1] };
+/** Input schema versions this release can evaluate. Profile version 2 extends version 1 with the design-system fields. */
+export const SUPPORTED_VERSIONS: Readonly<Record<InputSchema, readonly number[]>> = { repository_profile: [1, 2], relationship_map: [1] };
 
 /** Every Repository Profile version: the fields of version 1 are fields of every later version. */
 const PROFILE_VERSIONS = SUPPORTED_VERSIONS.repository_profile;
