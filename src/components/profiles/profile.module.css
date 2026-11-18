@@ -5,11 +5,12 @@
   /* In a table, a long path may break anywhere, so its column can narrow and the table never runs past its panel. */
   :where(td) .mono { overflow-wrap: anywhere; }
   /*
-   * A Profile table never runs past its panel: any cell may break a long
-   * token, such as a module path, when it must, and a column of paths keeps a
+   * A Profile table never runs past its panel: paths and free text, the cells
+   * that hold long unbroken tokens such as module paths, may break anywhere,
+   * while words elsewhere break only between them; a column of paths keeps a
    * readable width rather than collapsing to a few characters.
    */
-  .dataTable td, .dataTable td * { overflow-wrap: anywhere; }
+  .dataTable .breakable { overflow-wrap: anywhere; }
   .dataTable td:has(.mono:not(.nowrap)) { min-width: calc(var(--space-16) * 3); }
 
   /* Overview values: each a link to its category, wrapping as a row of items. */
@@ -107,6 +108,10 @@
   /* Label and value side by side, labels in one narrow column. */
   .heldFacts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-1) var(--space-4); align-items: baseline; margin: 0; }
   .heldFacts dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+  /* A reasoning's examples, one per line: the declaration as code, where it was found below. */
+  .examples { display: flex; flex-direction: column; gap: var(--space-2); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+  .examples > li { display: flex; flex-direction: column; min-width: 0; }
+  .exampleLocation { color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); overflow-wrap: anywhere; }
   .raw { max-height: calc(var(--space-16) * 5); margin: 0; padding: var(--space-3); overflow: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-subtle); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); white-space: pre; }
 
   .candidates { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding-left: var(--space-4); }

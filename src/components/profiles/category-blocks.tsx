@@ -11,6 +11,7 @@ import { Section } from "@/components/ui/section";
 import { Status } from "@/components/ui/status";
 import { Secondary, Table, Td, Th } from "@/components/ui/table";
 import type { Cell } from "@/lib/profiles/layouts";
+import { parseReasoning } from "@/lib/profiles/reasoning";
 import type { CategoryBlock, CompactBlock, Heading, HeldFact, Row, SharedBlock, SharedCell, SharedRow } from "@/lib/profiles/view";
 import styles from "./profile.module.css";
 
@@ -73,7 +74,7 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
                   </Td>
                 )}
                 <Td label="Evidence" align="actions">
-                  <RowDetails title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} held={row.held} evidence={row.evidence} context={context} reasoning={Boolean(row.reasoning && firstSentence(row.reasoning) !== row.reasoning)} />
+                  <RowDetails title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} held={row.held} evidence={row.evidence} context={context} reasoning={Boolean(row.reasoning && reasoningLead(row.reasoning) !== row.reasoning)} />
                 </Td>
               </tr>
             ))}
@@ -85,20 +86,42 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
   );
 }
 
-/** A reasoning's first sentence, or all of it when it's one sentence. */
-function firstSentence(text: string): string {
+/** A reasoning's statement without its examples, or its first sentence when it has none. */
+function reasoningLead(text: string): string {
+  const parsed = parseReasoning(text);
+  if (parsed) return parsed.lead;
   const end = text.search(/\.\s/);
   return end === -1 ? text : text.slice(0, end + 1);
 }
 
+/** A reasoning in full: its statement, then its examples one per line, each with where it was found. */
+function ReasoningView({ text }: { text: string }) {
+  const parsed = parseReasoning(text);
+  if (!parsed) return <>{text}</>;
+  return (
+    <>
+      {parsed.lead}
+      <ul className={styles.examples}>
+        {parsed.items.map((example, index) => (
+          <li key={index}>
+            <code className={styles.mono}>{example.text}</code>
+            {example.location && <span className={styles.exampleLocation}>{example.location}</span>}
+          </li>
+        ))}
+        {parsed.more > 0 && <li className={styles.muted}>{`and ${parsed.more} more`}</li>}
+      </ul>
+    </>
+  );
+}
+
 function RowCellsView({ row, columns, numeric, unit, span, context }: { row: Row; columns: readonly string[]; numeric: readonly boolean[]; unit: string; span: number; context: EvidenceContext }) {
   const state = row.state && <Status state={row.state} size="sm" />;
-  // A long reasoning shows its first sentence here and in full in the row's evidence panel.
-  const reasoning = row.reasoning && <Secondary>{firstSentence(row.reasoning)}</Secondary>;
+  // A long reasoning shows its statement here, and its examples in the row's evidence panel.
+  const reasoning = row.reasoning && <Secondary>{reasoningLead(row.reasoning)}</Secondary>;
   if (row.cells.kind === "whole") {
     return (
       <Td label="Value" span={span}>
-        {row.cells.text} {state}
+        <span className={styles.breakable}>{row.cells.text}</span> {state}
         {reasoning}
       </Td>
     );
@@ -134,7 +157,7 @@ function RowCellsView({ row, columns, numeric, unit, span, context }: { row: Row
 export function CellView({ cell }: { cell: Cell }) {
   return (
     <>
-      <span className={[cell.mono && styles.mono, cell.muted && styles.muted, cell.nowrap && styles.nowrap].filter(Boolean).join(" ") || undefined}>{cell.text}</span>
+      <span className={[cell.mono && styles.mono, cell.muted && styles.muted, cell.nowrap && styles.nowrap, cell.breakable && styles.breakable].filter(Boolean).join(" ") || undefined}>{cell.text}</span>
       {cell.secondary && <Secondary>{cell.secondary}</Secondary>}
     </>
   );
@@ -192,7 +215,9 @@ function RowDetails({ title, held, evidence, context, reasoning = true }: { titl
                 {reasoning && entry.fact.reasoning && (
                   <>
                     <dt>Why</dt>
-                    <dd>{entry.fact.reasoning}</dd>
+                    <dd>
+                      <ReasoningView text={entry.fact.reasoning} />
+                    </dd>
                   </>
                 )}
               </dl>
@@ -403,7 +428,7 @@ function SharedGroup({ kind, manifest, total, rows, columns, context }: { kind: 
 
 function SharedCellView({ cell }: { cell: SharedCell }) {
   if (cell.kind === "none") return <NoValuePlaceholder value={cell.value} />;
-  if (cell.kind === "whole") return <span>{cell.text}</span>;
+  if (cell.kind === "whole") return <span className={styles.breakable}>{cell.text}</span>;
   return (
     <>
       <CellView cell={cell.cell} />

@@ -10,6 +10,8 @@ export interface Cell {
   mono?: boolean;
   /** Kept on one line, for short values such as a version or a kind that would otherwise wrap in a narrow column. */
   nowrap?: boolean;
+  /** Free text that may hold long unbroken tokens, such as module paths, and may break anywhere so its column can narrow. */
+  breakable?: boolean;
   /** Set in the secondary color, as a value that repeats its neighbor is, so differences stand out. */
   muted?: boolean;
   secondary?: string;
@@ -25,6 +27,8 @@ export interface Column {
   numeric?: boolean;
   /** Short values kept on one line. */
   nowrap?: boolean;
+  /** Free text that may break anywhere. */
+  breakable?: boolean;
 }
 
 /** The columns a category's facts are shown in. A generic layout shows each fact's key and its value as text. */
@@ -96,6 +100,7 @@ const KIND_FIRST: Layout = {
     {
       label: "Detail",
       optional: true,
+      breakable: true,
       cell: (fact) => {
         if (!isObject(fact.value)) return null;
         const location = LOCATION_FIELDS.find((name) => text(field(fact, name)) !== null);
@@ -222,7 +227,8 @@ const uiElements: Layout = {
           const [system, component] = equivalent?.split(":") ?? [];
           return { text: `<${first}>`, mono: true, secondary: component ? `HTML element · ${systemName(system)} has ${component}` : "HTML element" };
         }
-        if (kind === "layout-only" && first) return { text: `<${first}>`, mono: true, secondary: "HTML container styled only for layout" };
+        // Its reasoning, shown below, says why it's listed, so its kind is enough here.
+        if (kind === "layout-only" && first) return { text: `<${first}>`, mono: true, secondary: "HTML container" };
         if (kind === "rendered" && first) {
           const components = field(fact, "components");
           return { text: `<${first}>`, mono: true, secondary: Array.isArray(components) && components.length ? `Rendered by ${components.map(String).join(", ")}` : "Rendered by a component" };
@@ -467,7 +473,7 @@ const LAYOUTS: Record<string, Layout> = {
   ),
 };
 
-const GENERIC: Layout = { generic: true, columns: [keyColumn("Fact", { mono: true }), { label: "Value", cell: (fact) => ({ text: formatValue(fact.value) }) }] };
+const GENERIC: Layout = { generic: true, columns: [keyColumn("Fact", { mono: true }), { label: "Value", breakable: true, cell: (fact) => ({ text: formatValue(fact.value) }) }] };
 
 /** The columns for a category's facts: its own, or the generic fact and value columns for the Interface and extension categories. */
 export function layoutOf(id: string): Layout {
@@ -484,7 +490,7 @@ export function rowCells(layout: Layout, fact: Fact): RowCells {
   if (fact.state === "unknown") return { kind: "whole", text: factText(fact.state, fact.value) };
   const cells = layout.columns.map((column) => {
     const cell = column.cell(fact);
-    return cell && column.nowrap ? { ...cell, nowrap: true } : cell;
+    return cell && (column.nowrap || column.breakable) ? { ...cell, ...(column.nowrap ? { nowrap: true } : {}), ...(column.breakable ? { breakable: true } : {}) } : cell;
   });
   if (layout.columns.some((column, index) => !column.optional && cells[index] === null)) return { kind: "whole", text: formatValue(fact.value) };
   return { kind: "cells", cells };
