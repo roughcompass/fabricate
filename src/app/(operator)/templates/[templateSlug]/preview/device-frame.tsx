@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, use, useEffect, useRef, useState } from "react";
 import { buttonProps } from "@/components/ui/button-content";
 import { Icon } from "@/components/ui/icon";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -9,17 +9,38 @@ import styles from "./preview.module.css";
 /** The browser window's border, left and right: 1px each. */
 const WINDOW_BORDER = 2;
 
+/** The scale the frame is shown at, which the frame measures and the size label in the control row reports. */
+const ScaleContext = createContext<{ scale: number; setScale(scale: number): void }>({ scale: 1, setScale: () => {} });
+
+export function PreviewScale({ children }: { children: React.ReactNode }) {
+  const [scale, setScale] = useState(1);
+  return <ScaleContext value={{ scale, setScale }}>{children}</ScaleContext>;
+}
+
+/** The device's size, and the scale when the frame is shown smaller than that, for the control row. */
+export function FrameSize({ label }: { label: string }) {
+  const { scale } = use(ScaleContext);
+  return (
+    <p className={styles.size}>
+      <span data-frame-size="">{label}</span>
+      {scale < 1 && <span className={styles.scale}>{`Shown at ${Math.round(scale * 100)}%`}</span>}
+    </p>
+  );
+}
+
 /**
  * The reference deployment, running in a frame at a device's size, inside a
  * browser window that shows its simulated address (design.md, decision 6).
  * The application inside lays out at the device's size, so its own
  * breakpoints apply; when the device is wider than the space inside the gray
  * container's padding, the window and the frame scale down together to fit.
- * The title bar keeps its height, and is decoration only.
+ * The title bar keeps its height, and is decoration only. `FrameSize`
+ * reports the scale.
  */
-export function DeviceFrame({ src, width, height, title, label, address }: { src: string; width: number; height: number; title: string; label: string; address: string }) {
+export function DeviceFrame({ src, width, height, title, address }: { src: string; width: number; height: number; title: string; address: string }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState<number | null>(null);
+  const { setScale } = use(ScaleContext);
 
   useEffect(() => {
     const element = viewport.current;
@@ -31,25 +52,20 @@ export function DeviceFrame({ src, width, height, title, label, address }: { src
 
   // The window's border sits outside the frame, so the frame fits in what the border leaves.
   const scale = available ? Math.min(1, (available - WINDOW_BORDER) / width) : 1;
+  useEffect(() => setScale(scale), [scale, setScale]);
   return (
-    <div className={styles.stage}>
-      <p className={styles.size}>
-        <span data-frame-size="">{label}</span>
-        {scale < 1 && <span className={styles.scale}>{`Shown at ${Math.round(scale * 100)}%`}</span>}
-      </p>
-      <div ref={viewport} className={styles.viewport} data-preview-container="">
-        <div className={styles.window} style={{ width: width * scale + WINDOW_BORDER }} data-browser-window="">
-          <div className={styles.titleBar} aria-hidden="true" data-title-bar="">
-            <span className={styles.dots}>
-              <span className={styles.dot} />
-              <span className={styles.dot} />
-              <span className={styles.dot} />
-            </span>
-            <span className={styles.address}>{address}</span>
-          </div>
-          <div className={styles.device} style={{ width: width * scale, height: height * scale }} data-device-frame="">
-            <iframe src={src} title={title} className={styles.frame} style={{ width, height, transform: `scale(${scale})` }} data-preview-frame="" />
-          </div>
+    <div ref={viewport} className={styles.viewport} data-preview-container="">
+      <div className={styles.window} style={{ width: width * scale + WINDOW_BORDER }} data-browser-window="">
+        <div className={styles.titleBar} aria-hidden="true" data-title-bar="">
+          <span className={styles.dots}>
+            <span className={styles.dot} />
+            <span className={styles.dot} />
+            <span className={styles.dot} />
+          </span>
+          <span className={styles.address}>{address}</span>
+        </div>
+        <div className={styles.device} style={{ width: width * scale, height: height * scale }} data-device-frame="">
+          <iframe src={src} title={title} className={styles.frame} style={{ width, height, transform: `scale(${scale})` }} data-preview-frame="" />
         </div>
       </div>
     </div>

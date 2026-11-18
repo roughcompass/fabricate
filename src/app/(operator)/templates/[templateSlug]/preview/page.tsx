@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CodeBlock } from "@/components/ui/code-block";
-import { CopyButton } from "@/components/ui/copy-button";
 import { Icon } from "@/components/ui/icon";
 import { ShellHeader } from "@/components/shell/shell-header";
 import { Page } from "@/components/ui/page";
@@ -11,9 +10,9 @@ import { ToggleGroup } from "@/components/ui/toggle-group";
 import { referenceId, startRoute, templateBySlug } from "@/lib/demo/catalog";
 import { referenceUrl } from "@/lib/demo/deployments";
 import { requireDemo } from "@/lib/demo/guard";
-import { DEVICES, DEVICE_IDS, ORIENTATION_LABELS, type PreviewState, frameSize, parsePreviewState, previewHref, scaffoldCommand, sizeLabel } from "@/lib/demo/preview";
+import { DEVICES, DEVICE_IDS, ORIENTATION_LABELS, type PreviewState, frameSize, parsePreviewState, previewHref, sizeLabel } from "@/lib/demo/preview";
 import { type TemplateFile, isIllustrative, templateFiles } from "@/lib/demo/template-files";
-import { DeviceFrame, FullScreenLink } from "./device-frame";
+import { DeviceFrame, FrameSize, FullScreenLink, PreviewScale } from "./device-frame";
 import { LandscapeToggle } from "@/components/ui/landscape-toggle";
 import styles from "./preview.module.css";
 
@@ -94,11 +93,10 @@ function FileTree({ files, selected, hrefFor }: { files: readonly TemplateFile[]
 /**
  * Preview mode (template-preview spec), modeled on shadcn blocks: a focused
  * page, with no sidebar or page header, whose header holds a back button to
- * the template. The scaffold command sits above the tabs;
- * the Preview tab shows the reference deployment in a browser window at a
- * device's size, with the device, Landscape, and full-screen controls as
- * icons, and the Code tab shows the template's files. Every choice lives in
- * the address.
+ * the template. The Preview tab shows the reference deployment in a browser
+ * window at a device's size, with the size and the device, Landscape, and
+ * full-screen controls on the tabs' row, and the Code tab shows the
+ * template's files. Every choice lives in the address.
  */
 export default async function PreviewPage({ params, searchParams }: { params: Promise<{ templateSlug: string }>; searchParams: Promise<Params> }) {
   requireDemo();
@@ -111,71 +109,67 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
   const size = frameSize(state.device, state.orientation);
   const reference = `/run/${referenceId(template.slug)}`;
   const route = startRoute(template.app);
-  const command = scaffoldCommand(template.slug);
   const action = `/templates/${template.slug}/preview`;
 
   return (
     <Page>
       <ShellHeader title={`Preview ${template.title}`} back={{ href: `/templates/${template.slug}`, label: `Back to ${template.title}` }} />
 
-      <div className={styles.commandRow}>
-        <div className={styles.command} data-scaffold-command="">
-          <code className={styles.commandText}>{command}</code>
-          <CopyButton value={command} label="Copy command" />
-        </div>
-      </div>
+      <div className={styles.workspace}>
+        <PreviewScale>
+          <div className={styles.controls}>
+            <Tabs label="Preview mode">
+              <TabLink href={previewHref(template.slug, { ...state, view: "preview" })} active={state.view === "preview"}>
+                Preview
+              </TabLink>
+              <TabLink href={previewHref(template.slug, { ...state, view: "code" })} active={state.view === "code"}>
+                Code
+              </TabLink>
+            </Tabs>
+            {state.view === "preview" && (
+              <div className={styles.previewControls}>
+                <FrameSize label={sizeLabel(state.device, state.orientation)} />
+                <ToggleGroup
+                  action={action}
+                  label="Device"
+                  name="device"
+                  selected={state.device}
+                  keep={keepFrom(state, "device")}
+                  iconOnly
+                  options={DEVICE_IDS.map((id) => ({ value: id, label: DEVICES[id].label, icon: DEVICE_ICONS[id] }))}
+                />
+                <LandscapeToggle action={action} orientation={state.orientation} keep={keepFrom(state, "orientation")} />
+                <FullScreenLink href={`${reference}/${route.path}`} prefix={reference} />
+              </div>
+            )}
+          </div>
 
-      <div className={styles.controls}>
-        <Tabs label="Preview mode">
-          <TabLink href={previewHref(template.slug, { ...state, view: "preview" })} active={state.view === "preview"}>
-            Preview
-          </TabLink>
-          <TabLink href={previewHref(template.slug, { ...state, view: "code" })} active={state.view === "code"}>
-            Code
-          </TabLink>
-        </Tabs>
-        {state.view === "preview" && (
-          <div className={styles.previewControls}>
-            <ToggleGroup
-              action={action}
-              label="Device"
-              name="device"
-              selected={state.device}
-              keep={keepFrom(state, "device")}
-              iconOnly
-              options={DEVICE_IDS.map((id) => ({ value: id, label: DEVICES[id].label, icon: DEVICE_ICONS[id] }))}
+          {state.view === "preview" ? (
+            <DeviceFrame
+              key={`${state.device}-${state.orientation}`}
+              src={`${reference}/${route.path}?embed=1`}
+              width={size.width}
+              height={size.height}
+              title={`${template.title} on ${DEVICES[state.device].label}, ${ORIENTATION_LABELS[state.orientation]}`}
+              address={referenceUrl(template.slug)}
             />
-            <LandscapeToggle action={action} orientation={state.orientation} keep={keepFrom(state, "orientation")} />
-            <FullScreenLink href={`${reference}/${route.path}`} prefix={reference} />
-          </div>
-        )}
-      </div>
-
-      {state.view === "preview" ? (
-        <DeviceFrame
-          key={`${state.device}-${state.orientation}`}
-          src={`${reference}/${route.path}?embed=1`}
-          width={size.width}
-          height={size.height}
-          title={`${template.title} on ${DEVICES[state.device].label}, ${ORIENTATION_LABELS[state.orientation]}`}
-          label={sizeLabel(state.device, state.orientation)}
-          address={referenceUrl(template.slug)}
-        />
-      ) : (
-        <>
-          {isIllustrative(template) && (
-            <p className={styles.illustrative} data-illustrative="">
-              These files are illustrative: generated from the catalog to show the template&apos;s shape, not real Salt.
-            </p>
+          ) : (
+            <>
+              {isIllustrative(template) && (
+                <p className={styles.illustrative} data-illustrative="">
+                  These files are illustrative: generated from the catalog to show the template&apos;s shape, not real Salt.
+                </p>
+              )}
+              <div className={styles.code}>
+                <FileTree files={files} selected={file.path} hrefFor={(path) => previewHref(template.slug, { ...state, view: "code", file: path })} />
+                <div className={styles.source}>
+                  <CodeBlock code={file.content.replace(/\n$/, "")} firstLine={1} label={file.path} />
+                </div>
+              </div>
+            </>
           )}
-          <div className={styles.code}>
-            <FileTree files={files} selected={file.path} hrefFor={(path) => previewHref(template.slug, { ...state, view: "code", file: path })} />
-            <div className={styles.source}>
-              <CodeBlock code={file.content.replace(/\n$/, "")} firstLine={1} label={file.path} />
-            </div>
-          </div>
-        </>
-      )}
+        </PreviewScale>
+      </div>
     </Page>
   );
 }

@@ -10,7 +10,6 @@ import { paths } from "./support/paths";
  */
 test("runs the presenter storyline from the Salt Patterns gallery to a reset", async ({ page, context, browser, baseURL, db }) => {
   test.setTimeout(180_000);
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
   // The Salt Patterns gallery, opened from the sidebar, narrowed to the Payments brand.
   await page.goto(paths.assessments);
@@ -31,8 +30,6 @@ test("runs the presenter storyline from the Salt Patterns gallery to a reset", a
   await page.getByRole("navigation", { name: "Preview mode" }).getByRole("link", { name: "Code" }).click();
   await page.getByRole("navigation", { name: "Files" }).getByRole("link", { name: "microfrontends.json" }).click();
   await expect(page.getByRole("figure", { name: "microfrontends.json" })).toContainText('"payee-list"');
-  await page.locator("[data-scaffold-command]").getByRole("button", { name: "Copy command" }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("npx @deweb/create-app@latest my-app --template payments-workspace");
 
   // Open the reference deployment full screen.
   await page.getByRole("navigation", { name: "Preview mode" }).getByRole("link", { name: "Preview" }).click();

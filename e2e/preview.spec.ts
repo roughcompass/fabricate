@@ -109,12 +109,14 @@ test("opens from Preview template in the same tab, on the Preview tab with the D
   await expect(page.getByRole("navigation", { name: "Preview mode" }).getByRole("link", { name: "Preview" })).toHaveAttribute("aria-current", "page");
   await expect(pressed(page, "Device")).toHaveAccessibleName("Desktop");
   await expect(landscape(page)).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("[data-scaffold-command]")).toContainText("npx @deweb/create-app@latest my-app --template market-watch");
+  await expect(page.getByText("npx @deweb/create-app")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Deploy template" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Open full screen/ })).toBeVisible();
-  // The command sits above the tabs.
-  const [command, tabs] = [(await page.locator("[data-scaffold-command]").boundingBox())!, (await page.getByRole("navigation", { name: "Preview mode" }).boundingBox())!];
-  expect(command.y + command.height).toBeLessThanOrEqual(tabs.y);
+  // The size sits on the tabs' row, and the gray container just below it.
+  const [size, tabs, container] = [(await page.locator("[data-frame-size]").boundingBox())!, (await page.getByRole("navigation", { name: "Preview mode" }).boundingBox())!, (await page.locator("[data-preview-container]").boundingBox())!];
+  expect(size.y).toBeLessThan(tabs.y + tabs.height);
+  expect(size.y + size.height).toBeGreaterThan(tabs.y);
+  expect(container.y - (tabs.y + tabs.height)).toBeLessThanOrEqual(16);
 
   await expect(frameElement(page)).toHaveAttribute("title", "Market watch on Desktop, Landscape");
   await expect(page.locator("[data-frame-size]")).toHaveText("1440 × 900");
@@ -201,14 +203,6 @@ test("reads the template's files, with microfrontends.json listing the group", a
   await expect(page.getByRole("figure", { name: "src/payee-list.tsx" })).toContainText('from "@salt-ds/core"');
 });
 
-test("copies the exact scaffold command", async ({ page, context, db: _db }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.goto("/templates/payments-workspace/preview");
-  await page.locator("[data-scaffold-command]").getByRole("button", { name: "Copy command" }).click();
-  await expect(page.locator("[data-scaffold-command]").getByRole("button", { name: "Copied" })).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("npx @deweb/create-app@latest my-app --template payments-workspace");
-});
-
 test("opens full screen in a new tab with the toolbar, at the route shown in the frame", async ({ page, context, db: _db }) => {
   const template = templateBySlug("client-onboarding")!;
   await page.goto("/templates/client-onboarding/preview");
@@ -281,13 +275,11 @@ test.describe("the icon controls", () => {
     }
   });
 
-  test("leaves the device, Landscape, and full-screen controls off the Code tab", async ({ page, db: _db }) => {
+  test("leaves the size and the device, Landscape, and full-screen controls off the Code tab", async ({ page, db: _db }) => {
     await page.goto("/templates/payments-workspace/preview");
     await page.getByRole("navigation", { name: "Preview mode" }).getByRole("link", { name: "Code" }).click();
     await expect(page.getByRole("navigation", { name: "Files" })).toBeVisible();
-    await expect(page.locator("[data-scaffold-command]")).toBeVisible();
-    const [command, tabs] = [(await page.locator("[data-scaffold-command]").boundingBox())!, (await page.getByRole("navigation", { name: "Preview mode" }).boundingBox())!];
-    expect(command.y + command.height).toBeLessThanOrEqual(tabs.y);
+    await expect(page.locator("[data-frame-size]")).toHaveCount(0);
     await expect(page.getByRole("group", { name: "Device" })).toHaveCount(0);
     await expect(landscape(page)).toHaveCount(0);
     await expect(page.getByRole("link", { name: /Open full screen/ })).toHaveCount(0);
@@ -335,7 +327,6 @@ test.describe("the browser window", () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
     for (const control of [
       page.locator("[data-shell-header]").getByRole("link", { name: "Back to Payments workspace" }),
-      page.getByRole("button", { name: "Copy command" }),
       page.getByRole("navigation", { name: "Preview mode" }).getByRole("link", { name: "Code" }),
       page.getByRole("group", { name: "Device" }).getByRole("button", { name: "Mobile" }),
       landscape(page),
