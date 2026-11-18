@@ -121,33 +121,35 @@ function UserMenu({ compact }: { compact: boolean }) {
   const label = `User menu for ${profile.name}`;
   const role = `${profile.persona} · ${profile.region}`;
   return (
-    <Overlay placement="bottom">
-      <OverlayTrigger>
-        <Button appearance="transparent" aria-label={label} data-demo-anchor="portal-session">
-          <Avatar name={profile.name} size={1} aria-hidden />
-          {!compact && (
-            <StackLayout gap={0} align="start">
-              <Text>{profile.name}</Text>
+    <FlexLayout align="center" data-demo-anchor="portal-session">
+      <Overlay placement="bottom">
+        <OverlayTrigger>
+          <Button appearance="transparent" aria-label={label}>
+            <Avatar name={profile.name} size={1} aria-hidden />
+            {!compact && (
+              <StackLayout gap={0} align="start">
+                <Text>{profile.name}</Text>
+                <Text styleAs="label" color="secondary">
+                  {role}
+                </Text>
+              </StackLayout>
+            )}
+            <ChevronDownIcon aria-hidden />
+          </Button>
+        </OverlayTrigger>
+        <OverlayPanel aria-label={label}>
+          <OverlayPanelContent>
+            <StackLayout gap={1}>
+              <Text styleAs="h4">{profile.name}</Text>
               <Text styleAs="label" color="secondary">
                 {role}
               </Text>
+              <Text>The profile comes from the session context. Change it in the toolbar&apos;s Session tool.</Text>
             </StackLayout>
-          )}
-          <ChevronDownIcon aria-hidden />
-        </Button>
-      </OverlayTrigger>
-      <OverlayPanel aria-label={label}>
-        <OverlayPanelContent>
-          <StackLayout gap={1}>
-            <Text styleAs="h4">{profile.name}</Text>
-            <Text styleAs="label" color="secondary">
-              {role}
-            </Text>
-            <Text>The profile comes from the session context. Change it in the toolbar&apos;s Session tool.</Text>
-          </StackLayout>
-        </OverlayPanelContent>
-      </OverlayPanel>
-    </Overlay>
+          </OverlayPanelContent>
+        </OverlayPanel>
+      </Overlay>
+    </FlexLayout>
   );
 }
 

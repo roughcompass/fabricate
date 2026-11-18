@@ -139,7 +139,7 @@ test("accepts version 1 as a Payments template, then updates it to version 2, th
   await expect(page.locator("[data-template-version='1']")).toContainText("Exception-first queue v1");
   await expect(page.locator("[data-template-version='1']")).toContainText("Anonymous visitor (unverified)");
   await expect(page.locator("[data-template-version='1']")).toContainText(`Salt ${SALT}`);
-  await expect(page.locator("[data-template-version='1']")).toContainText("Checks v1");
+  await expect(page.locator("[data-template-version='1']")).toContainText("Checks v2");
   await page.goBack();
   await waitForHydration(page);
 

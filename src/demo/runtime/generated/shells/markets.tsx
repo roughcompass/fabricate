@@ -334,26 +334,28 @@ export default function Shell({ children }: { children: ReactNode }) {
         );
       case "user-menu":
         return (
-          <Menu key="user">
-            <MenuTrigger>
-              <Button appearance="transparent" aria-label={compact ? `User menu for ${profile.name}` : undefined} data-demo-anchor="portal-session">
-                <Avatar name={profile.name} size={1} aria-hidden />
-                {!compact && (
-                  <StackLayout gap={0} align="start">
-                    <Text>{profile.name}</Text>
-                    <Text styleAs="label" color="secondary">
-                      {role}
-                    </Text>
-                  </StackLayout>
-                )}
-                <ChevronDownIcon aria-hidden />
-              </Button>
-            </MenuTrigger>
-            <MenuPanel aria-label={`User menu for ${profile.name}`}>
-              <InfoItem primary={profile.name} secondary={role} />
-              <InfoItem primary="The profile comes from the session context. Change it in the toolbar's Session tool." />
-            </MenuPanel>
-          </Menu>
+          <FlexLayout key="user" align="center" data-demo-anchor="portal-session">
+            <Menu>
+              <MenuTrigger>
+                <Button appearance="transparent" aria-label={compact ? `User menu for ${profile.name}` : undefined}>
+                  <Avatar name={profile.name} size={1} aria-hidden />
+                  {!compact && (
+                    <StackLayout gap={0} align="start">
+                      <Text>{profile.name}</Text>
+                      <Text styleAs="label" color="secondary">
+                        {role}
+                      </Text>
+                    </StackLayout>
+                  )}
+                  <ChevronDownIcon aria-hidden />
+                </Button>
+              </MenuTrigger>
+              <MenuPanel aria-label={`User menu for ${profile.name}`}>
+                <InfoItem primary={profile.name} secondary={role} />
+                <InfoItem primary="The profile comes from the session context. Change it in the toolbar's Session tool." />
+              </MenuPanel>
+            </Menu>
+          </FlexLayout>
         );
       default:
         return null;

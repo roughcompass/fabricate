@@ -305,6 +305,7 @@ test.describe("keyboard shortcuts", () => {
 test("keeps its controls on top of debug labels and audit outlines", async ({ page }) => {
   await openTool(page, "microfrontends");
   await page.getByRole("dialog", { name: "Microfrontends" }).getByLabel("Enable debug mode").check();
+  await injectUnlabeledField(page);
   await openTool(page, "accessibility");
   await page.getByRole("dialog", { name: "Accessibility" }).getByRole("button", { name: "Run audit" }).click();
   await expect(page.locator("[data-audit-outline]").first()).toBeVisible();
@@ -340,6 +341,7 @@ test.describe("nothing overlays the toolbar", () => {
     [
       "an audit",
       async (page) => {
+        await injectUnlabeledField(page);
         await openTool(page, "accessibility");
         await page.getByRole("dialog", { name: "Accessibility" }).getByRole("button", { name: "Run audit" }).click();
         await expect(page.locator("[data-audit-outline]").first()).toBeVisible();
@@ -389,7 +391,7 @@ test.describe("nothing overlays the toolbar", () => {
   test("passes an audit outline beneath the pill, whose buttons still respond", async ({ page }) => {
     // Dock the payee list, with a field the audit reports, under the pill.
     await injectUnlabeledField(page);
-    await page.addStyleTag({ content: '[data-demo-mfe="payee-list"] { position: fixed !important; top: calc(50% - 120px) !important; right: 0 !important; width: 320px !important; }' });
+    await page.addStyleTag({ content: '[data-demo-mfe="payee-list"] { position: fixed !important; top: calc(50% - 120px) !important; right: 0 !important; width: 320px !important; } [data-demo-anchor="injected-field"] { display: block; width: 100%; height: 240px; }' });
     await openTool(page, "accessibility");
     await page.getByRole("dialog", { name: "Accessibility" }).getByRole("button", { name: "Run audit" }).click();
     await expect(page.locator("[data-audit-outline]").first()).toBeVisible();
