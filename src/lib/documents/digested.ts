@@ -9,7 +9,9 @@ import { DOCUMENT_SCHEMAS, type DocumentKind } from "./schemas";
  *
  * Writes accept a value (serialized canonically) or already-serialized text,
  * which must be canonical. Reads recompute the SHA-256 digest before parsing,
- * so a document changed outside the application is never trusted.
+ * so a document changed outside the application is never trusted; the last
+ * document of each kind read stays parsed for a while, so reading it again
+ * costs only the digest.
  */
 
 export interface PreparedDocument {
@@ -43,14 +45,30 @@ export function prepareDocument(kind: DocumentKind, input: JsonValue | string): 
   return { text, digest: sha256(text), schemaVersion: (value as JsonObject).schema_version as number, value: freeze(value as JsonObject) };
 }
 
+/** How long the last document of each kind read stays parsed, so a page and the requests it makes read a large one once. */
+const KEPT_MS = 2 * 60_000;
+const kept = new Map<DocumentKind, { digest: string; value: JsonObject; timer: ReturnType<typeof setTimeout> }>();
+
 export function readDocument(kind: DocumentKind, stored: { document: string; digest: string }, label: string): JsonObject {
-  if (sha256(stored.document) !== stored.digest) throw new DocumentIntegrityError(`${label} failed digest verification`);
+  const digest = sha256(stored.document);
+  if (digest !== stored.digest) throw new DocumentIntegrityError(`${label} failed digest verification`);
+  // Text with the digest of the last document read is that document, already checked and parsed.
+  const last = kept.get(kind);
+  if (last?.digest === digest) {
+    last.timer.refresh();
+    return last.value;
+  }
   if (!isCanonical(stored.document)) throw new DocumentIntegrityError(`${label} is not canonical JSON`);
 
   const value = parseCanonical(stored.document);
   const problem = envelopeProblem(kind, value);
   if (problem) throw new DocumentIntegrityError(`${label}: ${problem}`);
-  return freeze(value as JsonObject);
+  const frozen = freeze(value as JsonObject);
+  if (last) clearTimeout(last.timer);
+  const timer = setTimeout(() => kept.delete(kind), KEPT_MS);
+  timer.unref?.();
+  kept.set(kind, { digest, value: frozen, timer });
+  return frozen;
 }
 
 function envelopeProblem(kind: DocumentKind, value: JsonValue): string | null {

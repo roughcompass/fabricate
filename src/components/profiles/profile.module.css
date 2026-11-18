@@ -92,6 +92,11 @@
     text-align: left;
     white-space: normal;
   }
+  /* While a panel loads, or when it couldn't. */
+  .sheetMessage { margin: 0; color: var(--color-text-secondary); }
+  /* Without JavaScript a panel can't load, so a row links to its first evidence record instead. Which one shows is the browser's call, so neither flashes while the page hydrates. */
+  @media (scripting: enabled) { .unscripted { display: none; } }
+  @media (scripting: none) { .scripted { display: none; } }
   .sheetHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
   .sheetTitle { min-width: 0; font-family: var(--font-family-mono); font-weight: var(--font-weight-medium); overflow-wrap: anywhere; }
   .sheet .mono { overflow-wrap: anywhere; }

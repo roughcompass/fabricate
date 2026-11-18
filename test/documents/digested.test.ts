@@ -47,6 +47,16 @@ describe("digested documents", () => {
     expect(() => readDocument("standard", { document: noncanonical, digest: sha256(noncanonical) }, "Release")).toThrow(/not canonical/);
   });
 
+  it("parses a document read again once, and still checks its digest every time", () => {
+    const text = '{"schema":"fabricate.standard","schema_version":1,"weight":2}';
+    const first = readDocument("standard", { document: text, digest: sha256(text) }, "Release");
+
+    expect(readDocument("standard", { document: text, digest: sha256(text) }, "Release")).toBe(first);
+    expect(() => readDocument("standard", { document: text.replace("2", "3"), digest: sha256(text) }, "Release")).toThrow(DocumentIntegrityError);
+    const other = text.replace("2", "3");
+    expect(readDocument("standard", { document: other, digest: sha256(other) }, "Release")).toMatchObject({ weight: 3 });
+  });
+
   describe("stored results", () => {
     let db: Db;
     let target: AssessmentTarget;

@@ -1,4 +1,5 @@
 import type { JsonObject } from "@repo-facts/contract";
+import { cache } from "react";
 import { NeedsAttention } from "@/components/profiles/attention";
 import { CategoryTable, EmptyCategory, type EvidenceContext, SharedTable } from "@/components/profiles/category-blocks";
 import { DependencyFilters } from "@/components/profiles/dependency-filters";
@@ -18,17 +19,17 @@ import { ShortValue, Tag } from "@/components/ui/tag";
 import type { Assessment } from "@/lib/assessments/assessment-records";
 import { type RepositoryProfile, profileDiagnostics, profileDocument } from "@/lib/profiles/profile-records";
 import { profileCommit } from "@/lib/profiles/schema";
-import { type FactDocument, categoryDefinitions } from "@/lib/profiles/states";
+import type { FactDocument } from "@/lib/profiles/states";
 import { type CategoryBlock, type DependencyFilters as Filters, type SharedBlock, filterDependencies, pageOfGroups, profileView } from "@/lib/profiles/view";
 import styles from "./profile-body.module.css";
 
-/** What a Profile is pinned to: a commit, or, for a template version, its files' content digest. */
-export function profilePin(profile: RepositoryProfile): { document: JsonObject; commit: string | null; pinned: string; pinnedLabel: string } {
+/** What a Profile is pinned to: a commit, or, for a template version, its files' content digest. A page's header and body share one read of the document. */
+export const profilePin = cache((profile: RepositoryProfile): { document: JsonObject; commit: string | null; pinned: string; pinnedLabel: string } => {
   const document = profileDocument(profile);
   // A template version's Profile describes its exported files, identified by their content digest, not a commit.
   const commit = profileCommit(document);
   return { document, commit, pinned: commit ?? String(document.content_digest), pinnedLabel: commit ? "commit" : "content digest" };
-}
+});
 
 export const PROFILE_DESCRIPTION = {
   commit: "Every fact comes from committed files at this commit, read as data. Nothing in the repository was run.",
@@ -54,7 +55,7 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
   const facts = document.fact_document as unknown as FactDocument;
   const diagnostics = profileDiagnostics(document);
   const view = profileView(facts, diagnostics);
-  const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, assessmentId: assessment.publicId, labels: new Map(categoryDefinitions(facts).map((definition) => [definition.id, definition.label])) };
+  const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, assessmentId: assessment.publicId, profileId: profile.publicId };
   const filters: Filters = { kind: queryValue(query.kind), manifest: queryValue(query.manifest), package: queryValue(query.package) };
 
   // Each long table pages on its own, in the address as `<category>_page`, keeping the rest of the query.
@@ -99,6 +100,19 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
         filters={filtered && <DependencyFilters block={block} filters={filters} action={`${base}#dependencies`} shown={filtered.shown} total={filtered.total} />}
         pagination={<Pagination label={`${block.kind === "dependencies" ? "Dependencies" : "Package scripts"} pages`} page={page} pages={pages} href={href} scrollToTop />}
       />
+    );
+  };
+
+  // A large repository skips tens of thousands of inputs, so its diagnostics page like any long table.
+  const diagnosticTable = (id: string, label: string, entries: readonly JsonObject[]) => {
+    const { page, pages, start, href } = paging(id, entries.length);
+    return (
+      <>
+        <Panel flush>
+          <DiagnosticTable label={label} diagnostics={entries.slice(start, start + PROFILE_PAGE_SIZE)} />
+        </Panel>
+        <Pagination label={`${label} pages`} page={page} pages={pages} href={href} scrollToTop />
+      </>
     );
   };
 
@@ -152,18 +166,14 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
         <Section title="Diagnostics">
           <Section id="diagnostics" level={3} title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent.">
             {diagnostics.skipped.length ? (
-              <Panel flush>
-                <DiagnosticTable label="Skipped inputs" diagnostics={diagnostics.skipped} />
-              </Panel>
+              diagnosticTable("diagnostics", "Skipped inputs", diagnostics.skipped)
             ) : (
               <p className={styles.muted}>Every input was read and understood.</p>
             )}
           </Section>
           {diagnostics.notes.length > 0 && (
             <Section id="other-diagnostics" level={3} title="Other diagnostics" description="Inconsistencies and unsupported constructs the detectors noted without skipping the input.">
-              <Panel flush>
-                <DiagnosticTable label="Other diagnostics" diagnostics={diagnostics.notes} />
-              </Panel>
+              {diagnosticTable("other-diagnostics", "Other diagnostics", diagnostics.notes)}
             </Section>
           )}
         </Section>

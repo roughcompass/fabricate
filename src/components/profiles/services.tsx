@@ -1,5 +1,5 @@
 import type { JsonObject } from "@repo-facts/contract";
-import { EvidenceList, evidenceLocation } from "@/components/results/evidence";
+import { EvidenceList } from "@/components/results/evidence";
 import { factText, formatValue } from "@/components/results/value";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -7,6 +7,7 @@ import { Section } from "@/components/ui/section";
 import { Status } from "@/components/ui/status";
 import { Secondary } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
+import { evidenceLocation } from "@/lib/profiles/evidence-locations";
 import type { ServiceSummary } from "@/lib/profiles/view";
 import type { EvidenceContext } from "./category-blocks";
 import styles from "./profile.module.css";

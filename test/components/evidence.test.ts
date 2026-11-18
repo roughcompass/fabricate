@@ -2,7 +2,8 @@ import type { JsonObject } from "@repo-facts/contract";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { EvidenceList, evidenceLocation } from "@/components/results/evidence";
+import { EvidenceList } from "@/components/results/evidence";
+import { evidenceLocation } from "@/lib/profiles/evidence-locations";
 
 const pointer = (value: string): JsonObject => ({ path: "package.json", location: { kind: "pointer", format: "json", pointer: value } });
 const RECORDS: JsonObject = {

@@ -2,7 +2,7 @@ import { type Evidence, type JsonObject, type ResolvedEvidence, redactCredential
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { evidenceLocation } from "@/components/results/evidence";
+import { evidenceLocation } from "@/lib/profiles/evidence-locations";
 import { Alert } from "@/components/ui/alert";
 import { CodeBlock } from "@/components/ui/code-block";
 import { DescriptionList } from "@/components/ui/description-list";

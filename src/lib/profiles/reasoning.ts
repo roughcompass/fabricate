@@ -64,3 +64,11 @@ export function parseReasoning(text: string): Reasoning | null {
   if (parts.length + (more ? 1 : 0) < 2) return null;
   return { lead: `${text.slice(0, colon).trim()}.`, items: parts.map(item), more };
 }
+
+/** A reasoning's statement without its examples, or its first sentence when it has none. */
+export function reasoningLead(text: string): string {
+  const parsed = parseReasoning(text);
+  if (parsed) return parsed.lead;
+  const end = text.search(/\.\s/);
+  return end === -1 ? text : text.slice(0, end + 1);
+}

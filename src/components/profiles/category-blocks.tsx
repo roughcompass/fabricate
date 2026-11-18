@@ -1,18 +1,16 @@
-import type { JsonObject, JsonValue } from "@repo-facts/contract";
-import { useId } from "react";
+import type { JsonObject } from "@repo-facts/contract";
 import { EvidenceList } from "@/components/results/evidence";
 import { NoValuePlaceholder } from "@/components/results/no-value";
-import { buttonProps } from "@/components/ui/button-content";
 import { countLabel } from "@/components/ui/count";
 import { Disclosure } from "@/components/ui/disclosure";
-import { Icon } from "@/components/ui/icon";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { Status, statusLabel } from "@/components/ui/status";
 import { Secondary, Table, Td, Th } from "@/components/ui/table";
 import type { Cell } from "@/lib/profiles/layouts";
-import { parseReasoning } from "@/lib/profiles/reasoning";
-import type { CategoryBlock, CompactBlock, Heading, HeldFact, Row, SharedBlock, SharedCell, SharedRow } from "@/lib/profiles/view";
+import { reasoningLead } from "@/lib/profiles/reasoning";
+import type { CategoryBlock, CompactBlock, Heading, Row, SharedBlock, SharedCell, SharedRow } from "@/lib/profiles/view";
+import { EvidencePanel } from "./evidence-panel";
 import styles from "./profile.module.css";
 
 /**
@@ -24,15 +22,18 @@ function inVocabulary(text: string): string {
   return text.replace(/\bSource-visible\b/g, "Visible in source").replace(/\bsource-visible\b/g, "visible in source");
 }
 
-/** How many fact keys a merged row's evidence panel names before counting the rest. */
-const MERGED_KEYS = 20;
-
 /** What a cell needs to link evidence: the records, and the Run they belong to. */
 export interface EvidenceContext {
   records: JsonObject;
   assessmentId: string;
-  /** Category labels by id, to name each fact a row holds. */
-  labels: ReadonlyMap<string, string>;
+  /** The Profile, whose rows' evidence panels load from it. */
+  profileId: string;
+}
+
+/** A row's evidence panel, which loads the row's facts and locations when it's opened. */
+function RowEvidence({ table, row, title, context }: { table: string; row: { id: string; evidence: readonly string[] }; title: string; context: EvidenceContext }) {
+  const url = `/api/profiles/${context.profileId}/evidence?${new URLSearchParams({ table, row: row.id })}`;
+  return <EvidencePanel url={url} title={title} count={row.evidence.length} first={row.evidence[0] ?? null} assessmentId={context.assessmentId} />;
 }
 
 /** A category with facts: its heading, its search and rule, and its facts in its own columns, a page at a time when there are many. */
@@ -83,7 +84,7 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
                   </Td>
                 )}
                 <Td label="Evidence" align="actions">
-                  <RowDetails title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} held={row.held} evidence={row.evidence} context={context} reasoning={Boolean(row.reasoning && reasoningLead(row.reasoning) !== row.reasoning)} />
+                  <RowEvidence table={definition.id} row={row} title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} context={context} />
                 </Td>
               </tr>
             ))}
@@ -92,34 +93,6 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
       </div>
       {pagination}
     </Section>
-  );
-}
-
-/** A reasoning's statement without its examples, or its first sentence when it has none. */
-function reasoningLead(text: string): string {
-  const parsed = parseReasoning(text);
-  if (parsed) return parsed.lead;
-  const end = text.search(/\.\s/);
-  return end === -1 ? text : text.slice(0, end + 1);
-}
-
-/** A reasoning in full: its statement, then its examples one per line, each with where it was found. */
-function ReasoningView({ text }: { text: string }) {
-  const parsed = parseReasoning(text);
-  if (!parsed) return <>{text}</>;
-  return (
-    <>
-      {parsed.lead}
-      <ul className={styles.examples}>
-        {parsed.items.map((example, index) => (
-          <li key={index}>
-            <code className={styles.mono}>{example.text}</code>
-            {example.location && <span className={styles.exampleLocation}>{example.location}</span>}
-          </li>
-        ))}
-        {parsed.more > 0 && <li className={styles.muted}>{`and ${parsed.more} more`}</li>}
-      </ul>
-    </>
   );
 }
 
@@ -169,96 +142,6 @@ function CellView({ cell }: { cell: Cell }) {
       <span className={[cell.mono && styles.mono, cell.muted && styles.muted, cell.nowrap && styles.nowrap, cell.breakable && styles.breakable].filter(Boolean).join(" ") || undefined}>{cell.text}</span>
       {cell.secondary && <Secondary>{cell.secondary}</Secondary>}
     </>
-  );
-}
-
-/**
- * A row's evidence as a count that opens a panel beside the page, wide enough
- * to read: each fact's locations, key, and raw value, and its rule when the
- * category has several. It's a native popover, so it opens and closes without
- * JavaScript, and Escape or a click outside closes it. A category row shows
- * its reasoning beside its value, so only a shared row's panel repeats it.
- */
-function RowDetails({ title, held, evidence, context, reasoning = true }: { title: string; held: readonly HeldFact[]; evidence: readonly string[]; context: EvidenceContext; reasoning?: boolean }) {
-  const id = `evidence-${useId().replace(/[^A-Za-z0-9_-]/g, "")}`;
-  // A row that stands for several facts of one category with the same value lists their locations once, then the facts' keys and the value they share.
-  const repeated = held.length > 1 && held.every((entry) => entry.category === held[0]!.category);
-  return (
-    <>
-      <button type="button" popoverTarget={id} className={styles.evidenceTrigger}>
-        {`Show ${countLabel(evidence.length, "location")}`}
-      </button>
-      <div id={id} popover="auto" role="dialog" aria-label={`Evidence for ${title}`} className={styles.sheet}>
-        <div className={styles.sheetHeader}>
-          <span className={styles.sheetTitle}>{title}</span>
-          <button type="button" popoverTarget={id} popoverTargetAction="hide" {...buttonProps("tertiary", "sm", true)} aria-label="Close evidence" title="Close evidence">
-            <Icon name="x" size={14} />
-          </button>
-        </div>
-        {repeated ? (
-          <section className={styles.held}>
-            <EvidenceBlock ids={[...evidence]} context={context} />
-            <dl className={styles.heldFacts}>
-              <dt>{held.length === 1 ? "Fact" : "Facts"}</dt>
-              <dd>
-                <span className={styles.mono}>{held.slice(0, MERGED_KEYS).map((entry) => entry.fact.key).join(", ")}</span>
-                {held.length > MERGED_KEYS && <span className={styles.muted}>{` and ${held.length - MERGED_KEYS} more, each with this value`}</span>}
-              </dd>
-            </dl>
-            <RawValue factKey={held[0]!.fact.key} value={held[0]!.fact.value} />
-          </section>
-        ) : (
-          held.map((entry) => (
-            <section key={`${entry.category}:${entry.fact.key}`} className={styles.held} aria-label={held.length > 1 ? (context.labels.get(entry.category) ?? entry.category) : undefined}>
-              {held.length > 1 && <h3 className={styles.heldLabel}>{context.labels.get(entry.category) ?? entry.category}</h3>}
-              <EvidenceBlock ids={entry.fact.evidence} context={context} />
-              <dl className={styles.heldFacts}>
-                <dt>Fact</dt>
-                <dd className={styles.mono}>{entry.fact.key}</dd>
-                {entry.rule && (
-                  <>
-                    <dt>Rule</dt>
-                    <dd className={styles.mono}>{entry.rule}</dd>
-                  </>
-                )}
-                {reasoning && entry.fact.reasoning && (
-                  <>
-                    <dt>Why</dt>
-                    <dd>
-                      <ReasoningView text={entry.fact.reasoning} />
-                    </dd>
-                  </>
-                )}
-              </dl>
-              <RawValue factKey={entry.fact.key} value={entry.fact.value} />
-            </section>
-          ))
-        )}
-      </div>
-    </>
-  );
-}
-
-/** A fact's locations under a label, each a link to its evidence record. */
-function EvidenceBlock({ ids, context }: { ids: readonly string[]; context: EvidenceContext }) {
-  return (
-    <div className={styles.heldPart}>
-      <span className={styles.heldPartLabel}>{ids.length === 1 ? "Location" : `${ids.length.toLocaleString("en-US")} locations`}</span>
-      <EvidenceList ids={ids} records={context.records} assessmentId={context.assessmentId} source={false} />
-    </div>
-  );
-}
-
-/** A fact's value as the document stores it, one disclosure away, in a block that scrolls rather than widening the panel. */
-function RawValue({ factKey, value }: { factKey: string; value: JsonValue }) {
-  return (
-    <div className={styles.quiet}>
-      <Disclosure variant="plain" summary="Raw value">
-        <pre className={styles.raw} aria-label={`Raw value of ${factKey}`}>
-          {JSON.stringify(value, null, 2)}
-        </pre>
-      </Disclosure>
-    </div>
   );
 }
 
@@ -428,7 +311,7 @@ function SharedGroup({ kind, manifest, total, rows, columns, context }: { kind: 
             </Td>
           ))}
           <Td label="Evidence" align="actions">
-            <RowDetails title={row.manifest ? `${row.name} · ${row.manifest}` : row.name} held={row.held} evidence={row.evidence} context={context} />
+            <RowEvidence table={kind} row={row} title={row.manifest ? `${row.name} · ${row.manifest}` : row.name} context={context} />
           </Td>
         </tr>
       ))}
