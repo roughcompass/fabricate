@@ -68,7 +68,7 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
                 </Td>
               )}
               <Td label="Evidence">
-                <RowDetails title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} held={row.held} evidence={row.evidence} context={context} reasoning={false} />
+                <RowDetails title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} held={row.held} evidence={row.evidence} context={context} reasoning={Boolean(row.reasoning && firstSentence(row.reasoning) !== row.reasoning)} />
               </Td>
             </tr>
           ))}
@@ -79,9 +79,16 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
   );
 }
 
+/** A reasoning's first sentence, or all of it when it's one sentence. */
+function firstSentence(text: string): string {
+  const end = text.search(/\.\s/);
+  return end === -1 ? text : text.slice(0, end + 1);
+}
+
 function RowCellsView({ row, columns, span, context }: { row: Row; columns: readonly string[]; span: number; context: EvidenceContext }) {
   const state = row.state && <Status state={row.state} size="sm" />;
-  const reasoning = row.reasoning && <Secondary>{row.reasoning}</Secondary>;
+  // A long reasoning shows its first sentence here and in full in the row's evidence panel.
+  const reasoning = row.reasoning && <Secondary>{firstSentence(row.reasoning)}</Secondary>;
   if (row.cells.kind === "whole") {
     return (
       <Td label="Value" span={span}>

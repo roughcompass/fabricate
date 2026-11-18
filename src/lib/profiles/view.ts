@@ -137,9 +137,10 @@ function held(document: FactDocument, category: string, fact: Fact): HeldFact {
   return { category, fact, rule: rules.length > 1 ? fact.rule : null };
 }
 
-/** A fact's state, when it differs from its category's. */
+/** A fact's state, when it differs from its category's. In a mixed category, observed is the norm, so only the others show. */
 function differing(document: FactDocument, category: string, fact: Fact): string | null {
-  return fact.state === categoryState(document, category) ? null : fact.state;
+  const state = categoryState(document, category);
+  return fact.state === state || (state === "mixed" && fact.state === "observed") ? null : fact.state;
 }
 
 function stepCell(fact: Fact): Cell {
@@ -154,7 +155,8 @@ function stepCell(fact: Fact): Cell {
 
 function categoryBlock(document: FactDocument, definition: CategoryDefinition, ciSteps: Map<string, Fact[]>): CategoryBlock {
   const layout = layoutOf(definition.id);
-  const facts = categoryOf(document, definition.id)?.facts ?? [];
+  const all = categoryOf(document, definition.id)?.facts ?? [];
+  const facts = layout.sort ? [...all].sort(layout.sort) : all;
   const isCi = definition.id === "ci_systems";
   return {
     kind: "category",

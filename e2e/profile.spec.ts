@@ -395,17 +395,17 @@ test("shows design-system usage in the Interface categories, with each scope's n
 
   await expect(page.getByRole("heading", { level: 2, name: "Interface" })).toBeVisible();
   await expect(detail(page.getByRole("region", { name: "Overview" }), "Design system")).toContainText("Salt");
+  // Each Interface category reads in its own columns, in words, never as one run of field names and values.
   const systems = category(page, "design_systems");
-  await expect(systems.getByRole("row").filter({ hasText: "salt" })).toContainText("theme stylesheet: true");
-  const button = category(page, "ui_elements").getByRole("row").filter({ hasText: "component:salt:Button" });
-  await expect(button).toContainText("package: @salt-ds/core · app: sites 2, as is 1, customized 1");
-  await expect(button).toContainText("stories: sites 1, customized 1, mechanisms (style 1)");
-  // Zero counts and empty scopes are left out of the value; the raw value in the row's evidence panel keeps them.
-  const value = button.getByRole("cell").nth(1);
-  await expect(value).not.toContainText("tests:");
-  await expect(value).not.toContainText(" 0,");
-  await expect(category(page, "ui_elements").getByRole("row").filter({ hasText: "intrinsic:button" })).toContainText("equivalent: salt:Button · group: equivalent · app: sites 1, unstyled 1");
-  await expect(category(page, "style_values").getByRole("row").filter({ hasText: "declarations:color" })).toContainText("app: raw 1");
+  await expect(systems.getByRole("row").filter({ hasText: "Salt" })).toContainText("Theme stylesheet imported");
+  await expect(systems).not.toContainText("theme stylesheet: true");
+  const button = category(page, "ui_elements").getByRole("row").filter({ hasText: "Salt component" }).filter({ hasText: "Button" });
+  await expect(button).toContainText("1 as is · 1 customized");
+  await expect(button).toContainText("1 in stories");
+  // Only the app counts toward a Standard, so tests and stories stand apart, and a scope with none says nothing.
+  await expect(button).not.toContainText("in tests");
+  await expect(category(page, "ui_elements").getByRole("row").filter({ hasText: "<button>" })).toContainText("Salt has Button");
+  await expect(category(page, "style_values").getByRole("row").filter({ hasText: "Color declarations" })).toContainText("1 raw value");
 });
 
 test("shows a version 1 Profile's facts unchanged, with the design-system categories not covered", async ({ page, db }) => {

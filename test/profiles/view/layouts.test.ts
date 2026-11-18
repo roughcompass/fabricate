@@ -36,11 +36,53 @@ describe("Profile category layouts", () => {
     }
   });
 
-  it("keeps the Interface categories and unknown ids on the generic fact and value columns", () => {
-    for (const id of ["design_systems", "ui_elements", "style_values", "web-doctor.entry_points"]) expect(layoutOf(id).generic, id).toBe(true);
+  it("keeps unknown ids on the generic fact and value columns", () => {
+    expect(layoutOf("web-doctor.entry_points").generic).toBe(true);
+    for (const id of ["design_systems", "ui_elements", "style_values"]) expect(layoutOf(id).generic, id).toBe(false);
+  });
+
+  it("describes a design system by its name, its setup, and its packages, never as one run of text", () => {
+    const fact: Fact = {
+      key: "salt",
+      state: "observed",
+      value: {
+        catalog: "salt",
+        catalog_version: "1.0.0",
+        imported: true,
+        name: "Salt",
+        provider: false,
+        theme_stylesheet: true,
+        packages: [
+          { field: "dependencies", manifest: "a/package.json", name: "@salt-ds/core", range: "1.74.0" },
+          { field: "dependencies", manifest: "b/package.json", name: "@salt-ds/core", range: "1.74.0" },
+          { field: "dependencies", manifest: "b/package.json", name: "@salt-ds/icons", range: "1.18.4" },
+        ],
+      },
+      evidence: [],
+      rule: "design-system.recognize",
+    };
+    expect(rowCells(layoutOf("design_systems"), fact)).toEqual({
+      kind: "cells",
+      cells: [
+        { text: "Salt", secondary: "Catalog salt 1.0.0" },
+        { text: "No provider rendered", secondary: "Theme stylesheet imported · Imported by source" },
+        { text: "@salt-ds/core 1.74.0 · @salt-ds/icons 1.18.4", secondary: "Declared in 2 manifests" },
+      ],
+    });
+  });
+
+  it("counts element and style uses in the app first, with stories and tests apart, and leads with the summary", () => {
     const salt = factDocumentFixture("salt-application") as unknown as FactDocument;
-    const fact = salt.categories.ui_elements!.facts[0]!;
-    expect(rowCells(layoutOf("ui_elements"), fact)).toMatchObject({ kind: "cells", cells: [{ text: fact.key, mono: true }, { text: expect.any(String) }] });
+    const elements = [...salt.categories.ui_elements!.facts].sort(layoutOf("ui_elements").sort);
+    expect(elements[0]!.key).toMatch(/^summary:/);
+    const button = salt.categories.ui_elements!.facts.find((fact) => fact.key.startsWith("component:"))!;
+    const cells = rowCells(layoutOf("ui_elements"), button);
+    expect(cells.kind === "cells" && cells.cells[0]).toMatchObject({ text: button.key.split(":")[2], secondary: expect.stringMatching(/component/) });
+    const styles = [...salt.categories.style_values!.facts].sort(layoutOf("style_values").sort);
+    expect(styles[0]!.key).toMatch(/^summary:/);
+    const selector = salt.categories.style_values!.facts.find((fact) => fact.key.startsWith("element-selector:"))!;
+    const row = rowCells(layoutOf("style_values"), selector);
+    expect(row.kind === "cells" && row.cells.slice(0, 2)).toMatchObject([{ text: `Global rules for <${selector.key.split(":")[1]}>` }, { text: expect.stringMatching(/^\d/) }]);
   });
 
   it("writes a value that lacks a required field out in full, in one cell", () => {

@@ -1,7 +1,7 @@
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { factText, formatValue } from "@/components/results/value";
-import { formatBytes } from "@/components/ui/count";
-import { checkKind, ciSystem, dependencyKind, kindLabel, runtimeName } from "@/components/ui/status";
+import { countLabel, formatBytes } from "@/components/ui/count";
+import { checkKind, ciSystem, dependencyKind, humanize, kindLabel, runtimeName } from "@/components/ui/status";
 import type { Fact } from "./states";
 
 /** A cell's content: text, set in the monospace face for identifiers and paths, with optional secondary text below. */
@@ -25,6 +25,8 @@ export interface Column {
 export interface Layout {
   columns: Column[];
   generic: boolean;
+  /** The order rows read best in, such as a summary first; facts keep the document's order otherwise. */
+  sort?: (a: Fact, b: Fact) => number;
 }
 
 /** One fact as a row: its cells, its whole value when the value doesn't fit the columns, or a conflict's candidates. */
@@ -102,6 +104,220 @@ const KIND_FIRST: Layout = {
 
 const layout = (...columns: Column[]): Layout => ({ generic: false, columns });
 
+// The Interface categories: what a design system is and how it's set up, how
+// elements use it, and how style values use its tokens. Their values count
+// sites per scope (app, stories, tests); only the app scope counts toward a
+// Standard, so it leads and the other scopes follow as a note.
+
+const number = (value: number) => value.toLocaleString("en-US");
+const scopeOf = (fact: Fact, scope: string): JsonObject => {
+  const value = field(fact, scope);
+  return isObject(value) ? value : {};
+};
+const count = (object: JsonObject, name: string): number => (typeof object[name] === "number" ? (object[name] as number) : 0);
+/** The non-zero counts as a phrase, each noun in its plural only when the count isn't one: "1 token · 12 raw values". */
+const nonzero = (parts: [value: number, label: string, plural?: string][]) => parts.filter(([value]) => value > 0).map(([value, label, plural]) => `${number(value)} ${value === 1 || !plural ? label : plural}`).join(" · ");
+const keyParts = (fact: Fact) => fact.key.split(":");
+// A catalog id, such as `salt`, as a design system's name.
+const systemName = (id: string | undefined) => (id ? humanize(id) : "Design system");
+
+/** Uses outside the app, such as in tests, which a Standard doesn't count. */
+const outsideApp = (names: string[]): Column => ({
+  label: "Outside the app",
+  optional: true,
+  cell: (fact) => {
+    const text = nonzero([
+      [names.reduce((sum, name) => sum + count(scopeOf(fact, "stories"), name), 0), "in stories"],
+      [names.reduce((sum, name) => sum + count(scopeOf(fact, "tests"), name), 0), "in tests"],
+    ]);
+    return text ? { text } : null;
+  },
+});
+
+const designSystems = layout(
+  {
+    label: "Design system",
+    cell: (fact) => {
+      const name = text(field(fact, "name"));
+      if (name === null) return null;
+      const catalog = [text(field(fact, "catalog")), text(field(fact, "catalog_version"))].filter(Boolean).join(" ");
+      return { text: name, secondary: catalog ? `Catalog ${catalog}` : undefined };
+    },
+  },
+  {
+    label: "Set up",
+    optional: true,
+    cell: (fact) => {
+      const checks: [string, string, string][] = [
+        ["theme_stylesheet", "Theme stylesheet imported", "No theme stylesheet imported"],
+        ["provider", "Provider rendered", "No provider rendered"],
+        ["imported", "Imported by source", "Not imported by source"],
+      ];
+      const known = checks.filter(([name]) => typeof field(fact, name) === "boolean");
+      if (!known.length) return null;
+      const missing = known.filter(([name]) => field(fact, name) !== true).map(([, , no]) => no);
+      const present = known.filter(([name]) => field(fact, name) === true).map(([, yes]) => yes);
+      return { text: missing.length ? missing.join(" · ") : present.join(" · "), secondary: missing.length && present.length ? present.join(" · ") : undefined };
+    },
+  },
+  {
+    label: "Packages",
+    optional: true,
+    cell: (fact) => {
+      const packages = field(fact, "packages");
+      if (!Array.isArray(packages) || !packages.length) return null;
+      const ranges = new Map<string, Set<string>>();
+      const manifests = new Set<string>();
+      for (const entry of packages) {
+        if (!isObject(entry) || typeof entry.name !== "string") continue;
+        if (!ranges.has(entry.name)) ranges.set(entry.name, new Set());
+        if (typeof entry.range === "string") ranges.get(entry.name)!.add(entry.range);
+        if (typeof entry.manifest === "string") manifests.add(entry.manifest);
+      }
+      const listed = [...ranges].map(([name, versions]) => [name, [...versions].join(" or ")].filter(Boolean).join(" "));
+      return { text: listed.join(" · "), secondary: manifests.size ? `Declared in ${countLabel(manifests.size, "manifest")}` : undefined };
+    },
+  },
+);
+
+const UI_ORDER = ["summary", "component", "wrapper", "library", "intrinsic", "rendered", "layout-only", "other"];
+const uiElements: Layout = {
+  generic: false,
+  sort: (a, b) => UI_ORDER.indexOf(keyParts(a)[0]!) - UI_ORDER.indexOf(keyParts(b)[0]!) || count(scopeOf(b, "app"), "sites") - count(scopeOf(a, "app"), "sites"),
+  columns: [
+    {
+      label: "Element",
+      cell: (fact) => {
+        const [kind, first, second] = keyParts(fact);
+        const pkg = text(field(fact, "package"));
+        if (kind === "summary") return { text: `All ${systemName(first)} use`, secondary: "Elements across the app" };
+        if (kind === "wrapper" && second) return { text: second, secondary: `Styled wrapper of a ${systemName(first)} component` };
+        if (kind === "component" && second) return { text: second, secondary: [`${systemName(first)} component`, pkg].filter(Boolean).join(" · ") };
+        if (kind === "intrinsic" && first) {
+          const equivalent = text(field(fact, "equivalent"));
+          const [system, component] = equivalent?.split(":") ?? [];
+          return { text: `<${first}>`, mono: true, secondary: component ? `HTML element · ${systemName(system)} has ${component}` : "HTML element" };
+        }
+        if (kind === "layout-only" && first) return { text: `<${first}>`, mono: true, secondary: "HTML container styled only for layout" };
+        if (kind === "rendered" && first) {
+          const components = field(fact, "components");
+          return { text: `<${first}>`, mono: true, secondary: Array.isArray(components) && components.length ? `Rendered by ${components.map(String).join(", ")}` : "Rendered by a component" };
+        }
+        if (kind === "library" && first) return { text: [first, ...keyParts(fact).slice(2)].join(":"), secondary: "Element from another UI library" };
+        if (kind === "other") return { text: "Other elements", secondary: "Elements no design system covers" };
+        return null;
+      },
+    },
+    {
+      label: "Uses in the app",
+      cell: (fact) => {
+        const app = scopeOf(fact, "app");
+        if (keyParts(fact)[0] === "summary") return typeof app.elements === "number" ? { text: `${number(count(app, "design_system"))} of ${number(count(app, "elements"))}` } : null;
+        if (typeof app.definitions === "number") return { text: countLabel(count(app, "definitions"), "definition") };
+        return typeof app.sites === "number" ? { text: number(count(app, "sites")) } : null;
+      },
+    },
+    {
+      label: "How",
+      optional: true,
+      cell: (fact) => {
+        const app = scopeOf(fact, "app");
+        const kind = keyParts(fact)[0];
+        if (kind === "summary") {
+          const shares = [typeof app.adoption_share === "number" ? `${app.adoption_share}% adoption` : null, typeof app.customized_share === "number" ? `${app.customized_share}% customized` : null].filter(Boolean).join(" · ");
+          return shares ? { text: shares, secondary: "Adoption: elements that use it rather than an HTML equivalent" } : null;
+        }
+        if (kind === "component") {
+          const mechanisms = isObject(app.mechanisms) ? nonzero(Object.entries(app.mechanisms).map(([name, value]) => [typeof value === "number" ? value : 0, `by ${humanize(name).toLowerCase()}`])) : "";
+          const styles = isObject(app.styles) ? nonzero([[count(app.styles, "resolved"), "resolved"], [count(app.styles, "partial"), "partly resolved"], [count(app.styles, "unresolved"), "unresolved"]]) : "";
+          const text = nonzero([[count(app, "as_is"), "as is"], [count(app, "customized"), "customized"], [count(app, "unknown"), "unknown"]]);
+          return text ? { text, secondary: [mechanisms && `Customized ${mechanisms}`, styles && `Styles ${styles}`].filter(Boolean).join(" · ") || undefined } : null;
+        }
+        if (kind === "intrinsic") {
+          const text = nonzero([[count(app, "unstyled"), "unstyled"], [count(app, "styled"), "styled"]]);
+          return text ? { text } : null;
+        }
+        return null;
+      },
+    },
+    outsideApp(["sites", "definitions"]),
+  ],
+};
+
+const STYLE_ORDER = ["summary", "declarations", "important", "internal-selector", "element-selector", "unknown-token", "token-aliases", "redefinition"];
+const DECLARATION_KINDS: [name: string, label: string, plural?: string][] = [
+  ["token", "token", "tokens"],
+  ["raw", "raw value", "raw values"],
+  ["other_custom_property", "other custom property", "other custom properties"],
+  ["neutral", "neutral"],
+  ["unresolved", "unresolved"],
+  ["unparsed", "unparsed"],
+];
+/** What a style finding comes to, under its name: a declaration family's values by kind, or a share's counts. */
+function styleDetail(fact: Fact): string | undefined {
+  const app = scopeOf(fact, "app");
+  const kind = keyParts(fact)[0];
+  if (kind === "summary") return typeof app.token_capable === "number" ? `${number(count(app, "tokenized"))} of ${number(count(app, "token_capable"))} token-capable declarations use a token or an alias` : undefined;
+  if (kind === "declarations") return nonzero(DECLARATION_KINDS.map(([name, label, plural]) => [count(app, name), label, plural])) || undefined;
+  if (kind === "token-aliases") return `In ${countLabel(count(app, "declarations"), "declaration")}`;
+  if (kind === "unknown-token") return "Unknown token";
+  if (kind === "redefinition") return "Redefined token";
+  return undefined;
+}
+
+const styleValues: Layout = {
+  generic: false,
+  sort: (a, b) => STYLE_ORDER.indexOf(keyParts(a)[0]!) - STYLE_ORDER.indexOf(keyParts(b)[0]!),
+  columns: [
+    {
+      label: "Finding",
+      cell: (fact) => {
+        const [kind, ...rest] = keyParts(fact);
+        const name = rest.join(":");
+        const secondary = styleDetail(fact);
+        if (kind === "summary") return { text: `${systemName(name)} token share`, secondary };
+        if (kind === "declarations") return { text: `${humanize(name)} declarations`, secondary };
+        if (kind === "important") return { text: "!important declarations" };
+        if (kind === "internal-selector") return { text: `Selectors into ${systemName(name)} internals` };
+        if (kind === "element-selector") return { text: `Global rules for <${name}>`, secondary: "A design system has a component for this element" };
+        if (kind === "unknown-token" || kind === "redefinition") return { text: name, mono: true, secondary };
+        if (kind === "token-aliases") return { text: `${humanize(name)} token aliases`, secondary };
+        return null;
+      },
+    },
+    {
+      label: "In the app",
+      cell: (fact) => {
+        const app = scopeOf(fact, "app");
+        const kind = keyParts(fact)[0];
+        if (kind === "summary") return typeof app.token_share === "number" ? { text: `${app.token_share}%` } : typeof app.token_capable === "number" ? { text: "No share" } : null;
+        if (kind === "declarations") return { text: number(DECLARATION_KINDS.reduce((sum, [name]) => sum + count(app, name), 0)) };
+        if (kind === "token-aliases") return typeof app.aliases === "number" ? { text: number(count(app, "aliases")) } : null;
+        return typeof app.count === "number" ? { text: number(count(app, "count")) } : null;
+      },
+    },
+    {
+      label: "Outside the app",
+      optional: true,
+      cell: (fact) => {
+        const kind = keyParts(fact)[0];
+        const total = (scope: string) => {
+          const object = scopeOf(fact, scope);
+          if (kind === "declarations") return DECLARATION_KINDS.reduce((sum, [name]) => sum + count(object, name), 0);
+          if (kind === "summary") return count(object, "token_capable");
+          if (kind === "token-aliases") return count(object, "aliases");
+          return count(object, "count");
+        };
+        const text = nonzero([
+          [total("stories"), "in stories"],
+          [total("tests"), "in tests"],
+        ]);
+        return text ? { text } : null;
+      },
+    },
+  ],
+};
+
 const LAYOUTS: Record<string, Layout> = {
   languages: layout(keyColumn("Language"), fieldColumn("Files", "files"), { label: "Size", cell: (fact) => (typeof field(fact, "bytes") === "number" ? { text: formatBytes(field(fact, "bytes") as number) } : null) }),
   submodules: layout(fieldColumn("Path", "path", { mono: true }), fieldColumn("Commit", "commit", { mono: true, format: (commit) => commit.slice(0, 12) })),
@@ -143,6 +359,9 @@ const LAYOUTS: Record<string, Layout> = {
   egress_routes: KIND_FIRST,
   api_contracts: KIND_FIRST,
   test_substitutes: KIND_FIRST,
+  design_systems: designSystems,
+  ui_elements: uiElements,
+  style_values: styleValues,
   // The categories that share the Dependencies and Scripts tables, as the cells those tables take from them.
   dependencies: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Kind", "field", { format: dependencyKind }), fieldColumn("Declared", "specifier", { mono: true }), manifestColumn),
   resolved_dependencies: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Resolved", "version", { mono: true }), manifestColumn),
