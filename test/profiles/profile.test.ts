@@ -41,18 +41,18 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
 
     expect(document).toMatchObject({
       schema: PROFILE_SCHEMA,
-      schema_version: 2,
+      schema_version: 3,
       source: { public_id: target.sourcePublicId, name: "app", clone_url: target.cloneUrl, git_ref: null },
       commit: snapshot.commitSha,
       detector_release: DETECTOR_RELEASE,
       detector_configuration_digest: assessment.configurationDigest,
     });
     // Profile version 2 embeds fact document version 2, with the design-system categories.
-    expect(document.fact_document).toMatchObject({ schema: "repo_facts.fact_document", schema_version: 2, commit: snapshot.commitSha, detector_release: DETECTOR_RELEASE });
-    expect(Object.keys(factDocument(document).categories!)).toEqual(expect.arrayContaining(["design_systems", "ui_elements", "style_values"]));
+    expect(document.fact_document).toMatchObject({ schema: "repo_facts.fact_document", schema_version: 3, commit: snapshot.commitSha, detector_release: DETECTOR_RELEASE });
+    expect(Object.keys(factDocument(document).categories!)).toEqual(expect.arrayContaining(["design_systems", "ui_elements", "style_values", "accessibility"]));
     expect(document.fact_document_digest).toBe(digestOf(document.fact_document).digest);
     expect(profileProblems(document)).toEqual([]);
-    expect(profile).toMatchObject({ detectorRelease: DETECTOR_RELEASE, schemaVersion: 2, sourceSnapshotId: snapshot.id, assessmentTargetId: target.id });
+    expect(profile).toMatchObject({ detectorRelease: DETECTOR_RELEASE, schemaVersion: 3, sourceSnapshotId: snapshot.id, assessmentTargetId: target.id });
     // Run identity and times stay on the record, so they cannot change the document.
     expect(dump(document)).not.toContain(assessment.publicId);
   });

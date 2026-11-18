@@ -268,6 +268,7 @@ export function runtimeName(runtime: string): string {
 const KINDS: Record<string, string> = {
   "import-map": "Import map",
   "module-federation": "Module Federation",
+  "native-federation": "Native Federation",
   "single-spa": "single-spa",
   iframe: "iframe",
   postMessage: "postMessage",

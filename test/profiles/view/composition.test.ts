@@ -47,7 +47,7 @@ const cellsOf = (value: Fact) => {
 describe("Profile composition", () => {
   it("reads a Module Federation container by its name, what it exposes, loads, and shares, never as one run of text", () => {
     const [unit, exposes, loads, shares] = cellsOf(fact("module-federation:chrome", container()));
-    expect(unit).toEqual({ text: "chrome", mono: true, secondary: "Module Federation · webpack" });
+    expect(unit).toEqual({ text: "chrome", mono: true, secondary: "Module Federation 1 · webpack" });
     expect(exposes).toEqual({ text: "2 modules", items: [{ text: "./DashboardFavorites", mono: true }, { text: "./SatelliteToken", mono: true }] });
     expect(loads).toEqual({ text: "None" });
     // Shared modules read by name with the settings that change how they load, and a count that says when code may add more.
@@ -62,11 +62,25 @@ describe("Profile composition", () => {
     expect(JSON.stringify(cellsOf(fact("module-federation:chrome", container())))).not.toMatch(/complete|properties|kind/);
   });
 
+  it("names each build's federation generation from the package and API its plugin came from, or from its rule before repo-facts 0.5.0", () => {
+    const unit = (overrides: Record<string, JsonValue>, rule = "architecture.module-federation.webpack") => cellsOf({ ...fact("module-federation:chrome", container(overrides)), rule })[0];
+    expect(unit({ package: "@rspack/core", api: "ModuleFederationPluginV1", plugin: "architecture.module-federation.rspack" }, "architecture.module-federation.rspack")).toMatchObject({ secondary: "Module Federation 1 · Rspack" });
+    expect(unit({ package: "@rspack/core", api: "ModuleFederationPlugin", plugin: "architecture.module-federation.rspack" }, "architecture.module-federation.rspack")).toMatchObject({ secondary: "Module Federation 1.5 · Rspack" });
+    expect(unit({ package: "@module-federation/vite", api: null, plugin: "architecture.module-federation.vite" }, "architecture.module-federation.vite")).toMatchObject({ secondary: "Module Federation 2 · Vite" });
+    expect(unit({ package: "@originjs/vite-plugin-federation", api: null, plugin: "architecture.module-federation.vite" }, "architecture.module-federation.vite")).toMatchObject({ secondary: "Module Federation 1 · Vite" });
+    // Before 0.5.0 the Vite rule matched plugins of both generations, so it names neither.
+    expect(unit({ plugin: "architecture.module-federation.vite" }, "architecture.module-federation.vite")).toMatchObject({ secondary: "Module Federation · Vite" });
+    expect(compositionSummary([{ ...fact("module-federation:a", container({ plugin: "architecture.module-federation.vite" })), rule: "architecture.module-federation.vite" }])[0]!.text).toBe("Module Federation");
+    const host = fact("native-federation:shell/src/main.ts:2", { mechanism: "native-federation", plugin: "architecture.native-federation.host", package: "@angular-architects/native-federation", api: null, name: { kind: "absent" }, remotes: [], exposes: [], shared: [], manifest: "federation.manifest.json" });
+    expect(cellsOf(host).slice(0, 3)).toEqual([{ text: "Host", mono: false, secondary: "Native Federation · ES modules" }, { text: "None" }, { text: "", items: [{ text: "federation.manifest.json", mono: true, secondary: "Remotes from this manifest" }] }]);
+    expect(compositionSummary([host])[0]!.text).toBe("Native Federation");
+  });
+
   it("names each remote by its alias, with its container and where its entry loads from", () => {
     const shell = factDocumentFixture("federation-shell") as unknown as FactDocument;
     const federation = shell.categories.composition!.facts.find((candidate) => candidate.key === "module-federation:mfShell")!;
     const [unit, exposes, loads, shares] = cellsOf(federation);
-    expect(unit).toMatchObject({ text: "mfShell", secondary: "Module Federation · webpack" });
+    expect(unit).toMatchObject({ text: "mfShell", secondary: "Module Federation 1 · webpack" });
     expect(exposes).toEqual({ text: "None" });
     expect(loads).toEqual({ text: "2 remotes", items: [{ text: "mfAdmin", mono: true, secondary: "http://127.0.0.1:9101/remoteEntry.js" }, { text: "mfBilling", mono: true, secondary: "The remote is loaded by code" }] });
     expect(shares).toEqual({ text: "2 packages", items: [{ text: "react", mono: true }, { text: "react-dom", mono: true }] });
@@ -94,7 +108,7 @@ describe("Profile composition", () => {
     expect(build!.evidence).toEqual(["ev_build"]);
     expect(cypress!.evidence).toEqual(["ev_cypress"]);
     // The first column names the fact, so it keeps its weight; Loads is None in both, so it reads as secondary; Exposes and Shares differ.
-    expect(build!.cells![0]).toEqual({ text: "chrome", mono: true, secondary: "Module Federation · webpack" });
+    expect(build!.cells![0]).toEqual({ text: "chrome", mono: true, secondary: "Module Federation 1 · webpack" });
     expect(build!.cells![2]).toEqual({ text: "None", muted: true });
     expect(build!.cells![1]).toMatchObject({ text: "2 modules" });
     expect(cypress!.cells![1]).toEqual({ text: "None" });
@@ -119,12 +133,12 @@ describe("Profile composition", () => {
   });
 
   it("summarizes each mechanism in a phrase for the overview, counting a conflict's candidates without picking one", () => {
-    expect(compositionSummary([conflicting])).toEqual([{ state: "conflicting", text: "Module Federation", secondary: "chrome · exposes 2 modules" }]);
+    expect(compositionSummary([conflicting])).toEqual([{ state: "conflicting", text: "Module Federation 1", secondary: "chrome · exposes 2 modules" }]);
     const host = fact("module-federation:root", container({ name: literal("root"), exposes: [], remotes: [{ alias: "shared", entry: computed("The remote is loaded by code"), federation_name: null }] }));
     const remote = fact("module-federation:shared", container({ name: literal("shared"), exposes: ["./footer", "./header"] }));
     const registration = (name: string) => fact(`single-spa:application:${name}`, { mechanism: "single-spa", role: "registration", application: literal(name) });
     expect(compositionSummary([host, remote, fact("single-spa:root-config", { mechanism: "single-spa", role: "root-config" }, "inferred"), registration("footer"), registration("header")])).toEqual([
-      { state: "observed", text: "Module Federation", secondary: "root, shared · exposes 2 modules · loads 1 remote" },
+      { state: "observed", text: "Module Federation 1", secondary: "root, shared · exposes 2 modules · loads 1 remote" },
       { state: "mixed", text: "single-spa", secondary: "root config · registers 2 applications" },
     ]);
     const maps = ["react", "react-dom"].map((specifier) => fact(`import-map:${specifier}`, { mechanism: "import-map", source: "index.html", specifier, url: `https://cdn.test/${specifier}.js` }));

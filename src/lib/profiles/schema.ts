@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CURRENT_VERSION, DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
 
 /**
- * Repository Profile document, version 2.
+ * Repository Profile document, version 3.
  *
  * A Profile is an envelope around the `repo_facts.fact_document` that the
  * pinned detector bundle produced for one snapshot. It records the source
@@ -17,12 +17,13 @@ import { CURRENT_VERSION, DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
  * produce identical Profile documents.
  *
  * Version 2 embeds fact document version 2 (repo-facts 0.2.0), which adds the
- * design-system categories. Version 1 Profiles, from repo-facts 0.1.0, are
- * kept as stored; version 2 extends version 1, so readers of version 1 read
- * either.
+ * design-system categories, and version 3 embeds fact document version 3
+ * (repo-facts 0.5.0), which adds accessibility. Version 1 and 2 Profiles are
+ * kept as stored; each version extends the ones before it, so a reader of an
+ * earlier version reads a later one.
  *
  * A template version's Profile (converge-templates-and-prototypes, design
- * decision 2) is version 2 with `template` and `content_digest`, the Git tree
+ * decision 2) is the current version with `template` and `content_digest`, the Git tree
  * id of its exported files, in place of `source` and `commit`: stored files
  * have no repository and no commit.
  */

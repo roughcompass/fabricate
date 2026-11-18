@@ -46,7 +46,7 @@ describe("The Profile overview", () => {
     expect(composition.stacked).toBe(true);
     expect(composition.values).toEqual([
       { state: "observed", text: "iframe", secondary: "1 embedded frame" },
-      { state: "observed", text: "Module Federation", secondary: "mfShell · loads 2 remotes" },
+      { state: "observed", text: "Module Federation 1", secondary: "mfShell · loads 2 remotes" },
     ]);
   });
 

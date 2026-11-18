@@ -27,14 +27,50 @@ interface Parts {
   shares: Entry[] | null;
 }
 
-// The rule that read a container names its bundler.
-const FEDERATION_PLUGINS: Record<string, string> = {
-  "architecture.module-federation.webpack": "Module Federation · webpack",
-  "architecture.module-federation.rspack": "Module Federation · Rspack",
-  "architecture.module-federation.enhanced": "Module Federation 2",
-  "architecture.module-federation.vite": "Module Federation · Vite",
-  "architecture.module-federation.vite-named": "Module Federation · Vite",
+/** A federated build's generation, such as Module Federation 1 or 2, and the bundler or framework its plugin is for. */
+interface Federation {
+  /** "1", "1.5", or "2" for Module Federation; null when the plugin doesn't say, such as the Next.js plugin, whose generation depends on its version. */
+  generation: string | null;
+  tool: string | null;
+}
+
+// The package a plugin or API came from (repo-facts 0.5.0 and later), and the class it constructs where a package has two generations.
+const FEDERATION_PACKAGES: Record<string, Federation | ((api: string | null) => Federation)> = {
+  webpack: { generation: "1", tool: "webpack" },
+  "@rspack/core": (api) => (api === "ModuleFederationPluginV1" ? { generation: "1", tool: "Rspack" } : { generation: "1.5", tool: "Rspack" }),
+  "@module-federation/enhanced": { generation: "2", tool: null },
+  "@module-federation/enhanced/webpack": { generation: "2", tool: "webpack" },
+  "@module-federation/enhanced/rspack": { generation: "2", tool: "Rspack" },
+  "@module-federation/rspack": { generation: "2", tool: "Rspack" },
+  "@module-federation/vite": { generation: "2", tool: "Vite" },
+  "@originjs/vite-plugin-federation": { generation: "1", tool: "Vite" },
+  "@module-federation/nextjs-mf": { generation: null, tool: "Next.js" },
+  "@module-federation/rsbuild-plugin": { generation: "2", tool: "Rsbuild" },
+  "@module-federation/modern-js": { generation: "2", tool: "Modern.js" },
+  "@module-federation/runtime": { generation: "2", tool: "runtime API" },
+  "@module-federation/enhanced/runtime": { generation: "2", tool: "runtime API" },
 };
+// Before repo-facts 0.5.0 a fact named only its rule, and two rules each matched plugins of two generations.
+const FEDERATION_RULES: Record<string, Federation> = {
+  "architecture.module-federation.webpack": { generation: "1", tool: "webpack" },
+  "architecture.module-federation.rspack": { generation: null, tool: "Rspack" },
+  "architecture.module-federation.enhanced": { generation: "2", tool: null },
+  "architecture.module-federation.vite": { generation: null, tool: "Vite" },
+  "architecture.module-federation.vite-named": { generation: "2", tool: "Vite" },
+};
+
+function federationOf(value: JsonObject, rule: string): Federation {
+  const known = typeof value.package === "string" ? FEDERATION_PACKAGES[value.package] : undefined;
+  if (typeof known === "function") return known(typeof value.api === "string" ? value.api : null);
+  return known ?? FEDERATION_RULES[rule] ?? FEDERATION_RULES[String(value.plugin)] ?? { generation: null, tool: null };
+}
+
+/** A federated build's mechanism in words: "Module Federation 2 · Vite", "Native Federation". */
+function federationLabel(value: JsonObject, rule: string): string {
+  if (value.mechanism === "native-federation") return "Native Federation · ES modules";
+  const { generation, tool } = federationOf(value, rule);
+  return [generation ? `Module Federation ${generation}` : "Module Federation", tool].filter(Boolean).join(" · ");
+}
 
 const SINGLE_SPA_ROLES: Record<string, string> = { "root-config": "Root config", application: "Application", registration: "Registration" };
 
@@ -93,9 +129,10 @@ function shared(value: JsonValue): Entry[] {
 function federation(value: JsonObject, rule: string): Parts {
   const name = captured(value.name);
   return {
-    unit: { text: name ?? "Unnamed container", mono: name !== null, secondary: FEDERATION_PLUGINS[rule] ?? FEDERATION_PLUGINS[String(value.plugin)] ?? kindLabel("module-federation") },
+    unit: { text: name ?? (typeof value.manifest === "string" ? "Host" : "Unnamed container"), mono: name !== null, secondary: federationLabel(value, rule) },
     exposes: asList(value.exposes).map(entry),
-    loads: asList(value.remotes).map(remote),
+    // A Native Federation host may load its remotes from a manifest instead of naming them.
+    loads: typeof value.manifest === "string" ? [{ text: value.manifest, mono: true, secondary: "Remotes from this manifest" }] : asList(value.remotes).map(remote),
     shares: asList(value.shared).flatMap(shared),
   };
 }
@@ -118,6 +155,7 @@ function partsOf(value: JsonValue, rule: string): Parts | null {
   if (!isJsonObject(value) || typeof value.mechanism !== "string") return null;
   switch (value.mechanism) {
     case "module-federation":
+    case "native-federation":
       return federation(value, rule);
     case "single-spa":
       return singleSpa(value);
@@ -185,7 +223,7 @@ function distinctNames(fact: Fact, list: (parts: Parts) => Entry[] | null): numb
 
 /** What a mechanism's facts amount to, in a phrase: "chrome · exposes 12 modules". */
 function summaryText(mechanism: string, facts: Fact[]): string {
-  if (mechanism === "module-federation") {
+  if (mechanism === "module-federation" || mechanism === "native-federation") {
     // A container's candidates share its name, which its fact's key is made from.
     const names = [...new Set(facts.flatMap((fact) => allParts(fact).slice(0, 1)).filter((parts) => parts.unit.mono).map((parts) => parts.unit.text))];
     const exposes = facts.reduce((sum, fact) => sum + distinctNames(fact, (parts) => parts.exposes), 0);
@@ -222,5 +260,14 @@ export function compositionSummary(facts: Fact[]): OverviewValue[] {
     if (mechanism) groups.set(mechanism, [...(groups.get(mechanism) ?? []), fact]);
     else others.push({ state: fact.state, text: factText(fact.state, fact.value) });
   }
-  return [...[...groups].map(([mechanism, group]) => ({ state: summaryState(group), text: kindLabel(mechanism), secondary: summaryText(mechanism, group) || undefined })), ...others];
+  return [...[...groups].map(([mechanism, group]) => ({ state: summaryState(group), text: mechanismText(mechanism, group), secondary: summaryText(mechanism, group) || undefined })), ...others];
+}
+
+/** A mechanism by name, with the Module Federation generations its builds use: "Module Federation 1", "Module Federation 1 and 2". */
+function mechanismText(mechanism: string, facts: Fact[]): string {
+  if (mechanism !== "module-federation") return kindLabel(mechanism);
+  const generations = [...new Set(facts.flatMap((fact) => valuesOf(fact)).flatMap(({ value, rule }) => (isJsonObject(value) ? [federationOf(value, rule).generation] : [])))];
+  const known = generations.filter((generation): generation is string => generation !== null).sort();
+  // A build whose generation isn't known leaves the mechanism unqualified, so the summary never claims more than its facts.
+  return known.length && known.length === generations.length ? `Module Federation ${known.join(" and ")}` : kindLabel(mechanism);
 }

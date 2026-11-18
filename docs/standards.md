@@ -68,11 +68,11 @@ Each selector reads one typed value in a scope. A Control's expressions start in
 
 Each repository selector also names the Profile fact category it reads, such as `ci_systems` for `repository.ci_systems` (`category` in `src/lib/standards/registry.ts`). A Finding's link to its Profile opens that category, and a registry test requires every repository selector to name a category the installed contract defines.
 
-### Repository Profile, versions 1 and 2
+### Repository Profile, versions 1 to 3
 
-Profile version 2 embeds the fact document version 2 that repo-facts 0.2.0 introduced, with the design-system categories. Runs from detector release 0.2.0 or later record version 2, and Runs from 0.1.0 keep version 1.
+Profile version 2 embeds the fact document version 2 that repo-facts 0.2.0 introduced, with the design-system categories. Runs from detector release 0.2.0 to 0.4.0 record version 2, and Runs from 0.1.0 keep version 1. Profile version 3 embeds fact document version 3 from repo-facts 0.5.0, which adds the accessibility category; Runs from 0.5.0 or later record it. Version 3 extends version 2 the same way version 2 extends version 1, so a Release that declares version 1 or 2 evaluates version 3 Runs too.
 
-Version 2 *extends* version 1: every version 1 field below reads the same from a version 2 Profile. So a Release that declares version 1 also evaluates version 2 Runs, without being republished. The design-system fields exist only in version 2, so a Control that reads one must declare `repository_profile: [2]`. A Release that declares only version 2 refuses a version 1 Run as incompatible. New drafts declare version 2, the current version.
+Version 2 *extends* version 1: every version 1 field below reads the same from a version 2 Profile. So a Release that declares version 1 also evaluates version 2 Runs, without being republished. The design-system fields exist only in version 2, so a Control that reads one must declare `repository_profile: [2]`. A Release that declares only version 2 refuses a version 1 Run as incompatible. New drafts declare version 3, the current version.
 
 Scope `repository`, versions 1 and 2:
 

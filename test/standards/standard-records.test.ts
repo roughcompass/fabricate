@@ -72,7 +72,7 @@ describe("standard records", () => {
     expect(isPublicId(first.publicId, "rel")).toBe(true);
     expect(first.digest).toBe(sha256(first.document));
     // New drafts declare the current Profile version.
-    expect(first.profileSchemaVersions).toBe("[2]");
+    expect(first.profileSchemaVersions).toBe("[3]");
     expect(releasesOf(db, standard.id).map((release) => release.version)).toEqual([2, 1]);
     expect(releaseLabel(standard, second)).toBe("Versioned v2");
   });
