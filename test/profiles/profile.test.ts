@@ -83,7 +83,7 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
   });
 
   it("reports categories whose inputs were skipped as unknown, not absent", async () => {
-    snapshots = SnapshotFixture.create("profile", { analysis: { maxBlobBytes: 64 } });
+    snapshots = SnapshotFixture.create("profile", { analysis: { maxBlobBytes: 64, maxLockfileBytes: 64 } });
     const { document } = await analyzed({ ...APP, "package-lock.json": `{ "lockfileVersion": 3, "packages": { "": { "name": "orders-ui" } }, "padding": "${"x".repeat(200)}" }\n` });
     const facts = factDocument(document);
 

@@ -32,6 +32,8 @@ const settingsSchema = z.strictObject({
   gitCredentialHelper: z.string().trim().min(1).nullable(),
   analysis: z.strictObject({
     maxBlobBytes: positiveInteger,
+    // Lockfiles are often larger than any source file, so they have their own per-file limit.
+    maxLockfileBytes: positiveInteger,
     maxFiles: positiveInteger,
     maxTotalBytes: positiveInteger,
   }),
@@ -75,6 +77,7 @@ export const ENV_KEYS = {
   repositoryStorage: "FABRICATE_REPOSITORY_STORAGE",
   gitCredentialHelper: "FABRICATE_GIT_CREDENTIAL_HELPER",
   maxBlobBytes: "FABRICATE_MAX_BLOB_BYTES",
+  maxLockfileBytes: "FABRICATE_MAX_LOCKFILE_BYTES",
   maxFiles: "FABRICATE_MAX_FILES",
   maxTotalBytes: "FABRICATE_MAX_TOTAL_BYTES",
   demoEnabled: "FABRICATE_DEMO",
@@ -96,6 +99,7 @@ export interface DeConsoleSettings {
 
 export interface AnalysisBudgets {
   readonly maxBlobBytes: number;
+  readonly maxLockfileBytes: number;
   readonly maxFiles: number;
   readonly maxTotalBytes: number;
 }
@@ -291,6 +295,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [result, "repositoryStorage", text(ENV_KEYS.repositoryStorage)],
     [result, "gitCredentialHelper", text(ENV_KEYS.gitCredentialHelper)],
     [analysis, "maxBlobBytes", integer(ENV_KEYS.maxBlobBytes)],
+    [analysis, "maxLockfileBytes", integer(ENV_KEYS.maxLockfileBytes)],
     [analysis, "maxFiles", integer(ENV_KEYS.maxFiles)],
     [analysis, "maxTotalBytes", integer(ENV_KEYS.maxTotalBytes)],
     [demo, "enabled", boolean(ENV_KEYS.demoEnabled)],

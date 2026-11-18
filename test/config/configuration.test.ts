@@ -13,7 +13,7 @@ const shared: Settings = {
   database: "storage/fabricate.sqlite3",
   repositoryStorage: "storage/repositories",
   gitCredentialHelper: null,
-  analysis: { maxBlobBytes: 1024, maxFiles: 10, maxTotalBytes: 4096 },
+  analysis: { maxBlobBytes: 1024, maxLockfileBytes: 2048, maxFiles: 10, maxTotalBytes: 4096 },
   demo: { enabled: false },
   deConsole: { source: null, refreshMinutes: 60 },
   profiling: { checkMinutes: 60 },
@@ -42,7 +42,7 @@ describe("configuration", () => {
     expect(config.allowedRoots).toEqual([path.join(workspace, "fleet")]);
     expect(config.workerConcurrency).toBe(1);
     expect(config.database).toBe(path.join(appRoot, "storage/fabricate.sqlite3"));
-    expect(config.analysis).toEqual({ maxBlobBytes: 1024, maxFiles: 10, maxTotalBytes: 4096 });
+    expect(config.analysis).toEqual({ maxBlobBytes: 1024, maxLockfileBytes: 2048, maxFiles: 10, maxTotalBytes: 4096 });
   });
 
   it("always denies fleet-kit, even when no denied roots are configured", () => {

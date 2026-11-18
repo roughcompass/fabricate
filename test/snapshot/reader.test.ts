@@ -9,7 +9,7 @@ import { acquire, acquisitionConfig, registerLocalSource } from "../support/acqu
 import { createTestDb } from "../support/db";
 import { GitFixture, type Repo } from "../support/git-fixture";
 
-const GENEROUS: Budgets = { maxBlobBytes: 1_048_576, maxFiles: 1_000, maxTotalBytes: 10_485_760 };
+const GENEROUS: Budgets = { maxBlobBytes: 1_048_576, maxLockfileBytes: 1_048_576, maxFiles: 1_000, maxTotalBytes: 10_485_760 };
 
 describe("SnapshotReader", () => {
   let fixture: GitFixture;
@@ -175,6 +175,14 @@ describe("SnapshotReader", () => {
       expect(await reader.read("over-limit.txt")).toMatchObject({ ok: false, skip: { reason: "blob_too_large", detail: "101 bytes exceeds the 100-byte limit per file" } });
     });
 
+    it("holds lockfiles to their own per-file limit rather than the per-blob one", async () => {
+      work.write("package-lock.json", `{"x":"${"x".repeat(140)}"}`).write("notes.txt", "x".repeat(150));
+      const reader = await snapshotReader({ ...GENEROUS, maxBlobBytes: 100, maxLockfileBytes: 200 });
+
+      expect(await reader.read("package-lock.json")).toMatchObject({ ok: true });
+      expect(await reader.read("notes.txt")).toMatchObject({ ok: false, skip: { reason: "blob_too_large" } });
+    });
+
     it("stops at the file-count budget", async () => {
       for (const name of ["a", "b", "c", "d"]) work.write(`${name}.txt`, `${name}\n`);
       const reader = await snapshotReader({ ...GENEROUS, maxFiles: 3 });
@@ -203,7 +211,7 @@ describe("SnapshotReader", () => {
     it("produces identical diagnostics for identical reads", async () => {
       for (const name of ["a", "b", "c"]) work.write(`${name}.txt`, "x".repeat(50));
       work.write("big.bin", Buffer.alloc(300, 0));
-      const budgets = { maxBlobBytes: 200, maxFiles: 10, maxTotalBytes: 120 };
+      const budgets = { maxBlobBytes: 200, maxLockfileBytes: 200, maxFiles: 10, maxTotalBytes: 120 };
 
       work.commit();
       const source = registerLocalSource(db, config, "orders", work.path);

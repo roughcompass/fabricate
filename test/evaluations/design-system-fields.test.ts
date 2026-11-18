@@ -60,11 +60,12 @@ describe("design-system fields", () => {
     expect(trace.result).toBe("unknown");
   });
 
-  it("leave a count unknown, naming the skipped input, when the style values search skipped an SCSS file", async () => {
-    const document = await facts({ ...SALT_APP, "src/theme.scss": "$accent: red;\n" });
+  it("leave a count unknown, naming the skipped input, when the style values search skipped a Sass file", async () => {
+    // Indented Sass is the one stylesheet syntax the detector can't read; SCSS and Less it parses.
+    const document = await facts({ ...SALT_APP, "src/theme.sass": "$accent: red\n" });
     const reading = read(document, "repository.unknown_token_count");
     expect(reading.known).toBe(false);
-    expect(reading.reason).toContain("src/theme.scss");
+    expect(reading.reason).toContain("src/theme.sass");
     expect(evaluate({ op: "compare", selector: "repository.unknown_token_count", comparator: "eq", value: 0 }, repositoryContext(document)).result).toBe("unknown");
   });
 

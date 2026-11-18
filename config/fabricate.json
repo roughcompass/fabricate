@@ -10,6 +10,7 @@
     "gitCredentialHelper": null,
     "analysis": {
       "maxBlobBytes": 1048576,
+      "maxLockfileBytes": 33554432,
       "maxFiles": 4000,
       "maxTotalBytes": 67108864
     },

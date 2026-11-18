@@ -64,6 +64,7 @@ Environment variables override the file:
 | `repositoryStorage` | `FABRICATE_REPOSITORY_STORAGE` | `storage/repositories` |
 | `gitCredentialHelper` | `FABRICATE_GIT_CREDENTIAL_HELPER` | none |
 | `analysis.maxBlobBytes` | `FABRICATE_MAX_BLOB_BYTES` | 1048576 |
+| `analysis.maxLockfileBytes` | `FABRICATE_MAX_LOCKFILE_BYTES` | 33554432 |
 | `analysis.maxFiles` | `FABRICATE_MAX_FILES` | 4000 |
 | `analysis.maxTotalBytes` | `FABRICATE_MAX_TOTAL_BYTES` | 67108864 |
 | `demo.enabled` | `FABRICATE_DEMO` | `false`; `true` in development and test |
