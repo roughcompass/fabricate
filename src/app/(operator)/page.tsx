@@ -11,9 +11,11 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
+import { Status } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
+import { profilingActivity } from "@/lib/profiling/versions";
 import { BarChart, type BarSeries } from "@/components/ui/bar-chart";
 import { ATTENTION_PAGE_SIZE, type AttentionItem, attentionItems } from "@/lib/home/attention";
 import { type ActivityKind, WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity } from "@/lib/home/dashboard";
@@ -32,12 +34,13 @@ function requestTime(): number {
 }
 
 /**
- * Home (home spec), laid out as a dashboard: the fleet's figures, each
- * opening a list filtered to exactly what it counts, with its change over the
- * last seven days; the Assessment trend beside the recent activity; the
- * problems that need someone; and quick actions. Every visitor sees the same
- * page. Where Assessments aren't available, the root address
- * opens wherever links to Home lead instead.
+ * Home (home spec), read in the order a person acts: the actions that start
+ * work, in the header; what needs someone, first; then where the fleet
+ * stands, as four cards that each open the list they count, with the share
+ * they cover and their change over the last seven days; then the Assessment
+ * trend beside the latest finished Runs. Every visitor sees the same page.
+ * Where Assessments aren't available, the root address opens wherever links
+ * to Home lead instead.
  */
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const config = getConfig();
@@ -47,6 +50,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const query = await searchParams;
   const db = getDb();
   const summary = fleetSummary(db);
+  const profiling = profilingActivity(db);
   const items = attentionItems(db, config);
   const pages = Math.max(1, Math.ceil(items.length / ATTENTION_PAGE_SIZE));
   const requested = Number.parseInt(param(query, "page") ?? "1", 10);
@@ -56,53 +60,98 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const then = figuresAt(db, new Date(requestTime() - WEEK_MS));
   const changes = figureChanges(summary, then, claimedShare);
   const trend = assessmentTrend(db);
-  const activity = recentActivity(db);
+  const activity = recentActivity(db).slice(0, ACTIVITY_SHOWN);
 
   return (
     <Page>
-      <PageHeader title="Home" description="Where the fleet's Repositories and Assessments stand, what changed, and what needs someone's attention." />
+      <PageHeader
+        title="Home"
+        description="What needs attention, where the fleet's Repositories and Assessments stand, and what changed this week."
+        primaryAction={
+          <ButtonLink href="/assessments/new" variant="primary" icon="plus">
+            New Assessment
+          </ButtonLink>
+        }
+        secondaryActions={[{ href: "/repositories/bulk", label: "Add Repositories", icon: "layers" }]}
+      />
 
-      <div className={styles.row} data-columns="2">
-        <Panel title="Repositories" description="Every Repository, and whether each has a SEAL application.">
-          {summary.repositories.empty ? (
-            <EmptyState
-              title="No Repositories yet"
-              icon="git"
-              action={
+      <div id="needs-attention" className={styles.attention}>
+        <Panel title="Needs attention" description={items.length > 0 ? countLabel(items.length, "problem") : undefined} flush={shown.length > 0}>
+          {shown.length > 0 ? (
+            <Table
+              label="Needs attention"
+              head={
                 <>
-                  <ButtonLink href="/repositories/bulk" variant="secondary" icon="layers">
-                    Add Repositories
-                  </ButtonLink>
-                  <ButtonLink href="/repositories/new" variant="secondary" icon="plus">
-                    New Repository
-                  </ButtonLink>
+                  <Th>Problem</Th>
+                  <Th>Record</Th>
+                  <Th>Since</Th>
                 </>
               }
             >
-              Register Git repositories to claim and assess them.
-            </EmptyState>
+              {shown.map((item) => (
+                <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : "evaluation" in item ? item.evaluation.publicId : item.kind}`} item={item} refreshMinutes={config.deConsole.refreshMinutes} />
+              ))}
+            </Table>
           ) : (
-            <Figures label="Repositories" figures={repositoryStats(summary.repositories, changes)} />
+            // Nothing to do takes one line, so it never pushes the figures down.
+            <div className={styles.clear}>
+              <Status state="clear" label="Nothing needs attention" />
+              <span className={styles.muted}>{"Home checks each Assessment's latest Run and Evaluation, and the DE Console import."}</span>
+            </div>
           )}
         </Panel>
+        <Pagination label="Needs attention pages" page={page} pages={pages} href={(number) => (number === 1 ? "/#needs-attention" : `/?page=${number}#needs-attention`)} />
+      </div>
 
-        <Panel title="Assessments" description="By the conclusion of each Assessment's latest completed Evaluation.">
-          {summary.assessments.empty ? (
-            <EmptyState
-              title="No Assessments yet"
-              icon="checklist"
-              action={
-                <ButtonLink href="/assessments/new" variant="secondary" icon="plus">
-                  New Assessment
-                </ButtonLink>
-              }
-            >
-              An Assessment scopes Repositories for Runs and evaluates them against Standard Releases.
-            </EmptyState>
+      <div className={styles.overview}>
+        <section className={styles.group} data-group="repositories" aria-label="Repositories">
+          {summary.repositories.empty ? (
+            <Panel title="Repositories" description="Every Repository, profiled in the background, and whether each has a SEAL application.">
+              <EmptyState
+                title="No Repositories yet"
+                icon="git"
+                action={
+                  <>
+                    <ButtonLink href="/repositories/bulk" variant="secondary" icon="layers">
+                      Add Repositories
+                    </ButtonLink>
+                    <ButtonLink href="/repositories/new" variant="secondary" icon="plus">
+                      New Repository
+                    </ButtonLink>
+                  </>
+                }
+              >
+                Register Git repositories to profile, claim, and assess them.
+              </EmptyState>
+            </Panel>
           ) : (
-            <Figures label="Assessments" figures={assessmentStats(summary.assessments, changes)} />
+            <dl className={styles.cards} aria-label="Repositories">
+              <RepositoryCards repositories={summary.repositories} profiling={profiling.profiling + profiling.queued} changes={changes} />
+            </dl>
           )}
-        </Panel>
+        </section>
+
+        <section className={styles.group} data-group="assessments" aria-label="Assessments">
+          {summary.assessments.empty ? (
+            <Panel title="Assessments" description="By the conclusion of each Assessment's latest completed Evaluation.">
+              <EmptyState
+                title="No Assessments yet"
+                icon="checklist"
+                action={
+                  <ButtonLink href="/assessments/new" variant="secondary" icon="plus">
+                    New Assessment
+                  </ButtonLink>
+                }
+              >
+                An Assessment scopes Repositories for Runs and evaluates them against Standard Releases.
+              </EmptyState>
+            </Panel>
+          ) : (
+            <dl className={`${styles.cards} ${styles.single}`} aria-label="Assessments">
+              <AssessmentCard assessments={summary.assessments} changes={changes} />
+            </dl>
+          )}
+        </section>
       </div>
 
       <div className={styles.row} data-columns="2">
@@ -123,7 +172,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               {activity.map((item) => (
                 <li key={`${item.kind}-${item.record.href}-${item.at.getTime()}`} data-activity={item.kind}>
                   <span className={styles.activityWhat}>
-                    {ACTIVITY_LABELS[item.kind]} <Link href={item.record.href}>{item.record.name}</Link>
+                    <Status state={item.kind === "run_failed" ? "failed" : "complete"} size="sm" label="" />
+                    <span className="visually-hidden">{ACTIVITY_LABELS[item.kind]} </span>
+                    <Link href={item.record.href}>{item.record.name}</Link>
                   </span>
                   <span className={styles.muted}>
                     <RelativeTime value={item.at} />
@@ -136,44 +187,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           )}
         </Panel>
       </div>
-
-      <div id="needs-attention" className={styles.attention}>
-        <Panel title="Needs attention" description={items.length > 0 ? countLabel(items.length, "problem") : undefined} flush>
-          {shown.length > 0 ? (
-            <Table
-              label="Needs attention"
-              head={
-                <>
-                  <Th>Problem</Th>
-                  <Th>Record</Th>
-                  <Th>Since</Th>
-                </>
-              }
-            >
-              {shown.map((item) => (
-                <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : "evaluation" in item ? item.evaluation.publicId : item.kind}`} item={item} refreshMinutes={config.deConsole.refreshMinutes} />
-              ))}
-            </Table>
-          ) : (
-            <EmptyState title="Nothing needs attention">{"Home checks each Assessment's latest Run and Evaluation, and the DE Console import."}</EmptyState>
-          )}
-        </Panel>
-        <Pagination label="Needs attention pages" page={page} pages={pages} href={(number) => (number === 1 ? "/#needs-attention" : `/?page=${number}#needs-attention`)} />
-      </div>
-
-      <Panel title="Quick actions">
-        <div className={styles.actions} role="group" aria-label="Quick actions">
-          <ButtonLink href="/assessments/new" variant="secondary" icon="checklist">
-            New Assessment
-          </ButtonLink>
-          <ButtonLink href="/repositories/bulk" variant="secondary" icon="layers">
-            Add Repositories
-          </ButtonLink>
-        </div>
-      </Panel>
     </Page>
   );
 }
+
+/** How many finished Runs Recent activity lists, so it stands about as tall as the trend beside it. */
+const ACTIVITY_SHOWN = 6;
 
 const TREND_SERIES: BarSeries[] = [
   { id: "gaps", label: "Gaps found", tone: "error", pattern: "stripes" },
@@ -182,6 +201,7 @@ const TREND_SERIES: BarSeries[] = [
   { id: "not_applicable", label: "Not applicable", tone: "neutral", pattern: "lines" },
 ];
 
+// Read before each activity's name by assistive technology; the status dot shows it.
 const ACTIVITY_LABELS: Record<ActivityKind, string> = {
   run_completed: "Run finished:",
   run_failed: "Run failed:",
@@ -190,57 +210,114 @@ const ACTIVITY_LABELS: Record<ActivityKind, string> = {
 /** A week's first day, as the chart labels it: "Oct 12". */
 const weekLabel = (start: Date) => start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-interface Figure {
-  label: string;
-  value: string;
-  /** Its change over the last seven days, in words. */
-  change: string;
-  /** A short line under the value, such as a share. */
-  hint?: string;
-  href: string;
-}
+const figure = (value: number) => value.toLocaleString("en-US");
+const percent = (part: number, whole: number) => (whole === 0 ? 0 : Math.round((part / whole) * 100));
 
-/** A group's figures, two per row, each linking to the list it counts, with its share and its change this week. */
-function Figures({ label, figures }: { label: string; figures: readonly Figure[] }) {
+/** A week's change, set apart by direction so it reads at a glance, and stated in words so it never relies on color. */
+function Change({ change }: { change: string }) {
   return (
-    <dl className={styles.figures} aria-label={label}>
-      {figures.map((entry) => (
-        <div key={entry.label} className={styles.figure} data-figure={entry.label}>
-          <dt className={styles.figureLabel}>{entry.label}</dt>
-          <dd className={styles.figureValue}>
-            <Link href={entry.href}>{entry.value}</Link>
-          </dd>
-          {entry.hint && <dd className={styles.muted}>{entry.hint}</dd>}
-          <dd className={styles.change} data-change={entry.change.startsWith("+") ? "up" : entry.change.startsWith("−") ? "down" : "none"}>
-            {entry.change}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <dd className={styles.change} data-change={change.startsWith("+") ? "up" : change.startsWith("−") ? "down" : "none"}>
+      {change}
+    </dd>
   );
 }
 
-const figure = (value: number) => value.toLocaleString("en-US");
-
-function repositoryStats(repositories: FleetSummary["repositories"], changes: Record<string, string>): Figure[] {
-  const share = claimedShare(repositories);
-  return [
-    { label: "Repositories", value: figure(repositories.total), change: changes.repositories!, href: repositoriesHref() },
-    { label: "Claimed", value: figure(repositories.claimed), hint: share === null ? undefined : `${share}% of all`, change: changes.claimed!, href: repositoriesHref({ ownership: "claimed" }) },
-    { label: "Unclaimed", value: figure(repositories.unclaimed), change: changes.unclaimed!, href: repositoriesHref({ ownership: "unclaimed" }) },
-  ];
+/** A share as a bar, with its percentage in words for assistive technology. */
+function Meter({ value, max, label }: { value: number; max: number; label: string }) {
+  return (
+    <dd className={styles.meter} role="img" aria-label={`${label}: ${percent(value, max)}%`}>
+      <span className={styles.meterFill} style={{ inlineSize: `${percent(value, max)}%` }} />
+    </dd>
+  );
 }
 
-function assessmentStats(assessments: FleetSummary["assessments"], changes: Record<string, string>): Figure[] {
-  const { byConclusion } = assessments;
-  return [
-    { label: "Assessments", value: figure(assessments.total), change: changes.assessments!, href: assessmentsHref() },
-    { label: "Gaps found", value: figure(byConclusion.gaps), change: changes.gaps!, href: assessmentsHref({ conclusion: "gaps" }) },
-    { label: "Undetermined", value: figure(byConclusion.undetermined), change: changes.undetermined!, href: assessmentsHref({ conclusion: "undetermined" }) },
-    { label: "Conforms", value: figure(byConclusion.conforms), change: changes.conforms!, href: assessmentsHref({ conclusion: "conforms" }) },
-    ...(byConclusion.not_applicable > 0 ? [{ label: "Not applicable", value: figure(byConclusion.not_applicable), change: changes.not_applicable!, href: assessmentsHref({ conclusion: "not_applicable" }) }] : []),
-    { label: "Not evaluated", value: figure(byConclusion.none), change: changes.none!, href: assessmentsHref({ conclusion: "none" }) },
-  ];
+/**
+ * The Repositories cards: how many there are, how many are profiled and
+ * claimed, each with its share of all as a bar. Each count opens the list it
+ * counts; Unclaimed is the link under Claimed.
+ */
+function RepositoryCards({ repositories, profiling, changes }: { repositories: FleetSummary["repositories"]; profiling: number; changes: Record<string, string> }) {
+  const { total, claimed, unclaimed, profiled } = repositories;
+  return (
+    <>
+      <div className={styles.card} data-figure="Repositories">
+        <dt className={styles.cardLabel}>Repositories</dt>
+        <dd className={styles.cardValue}>
+          <Link href={repositoriesHref()}>{figure(total)}</Link>
+        </dd>
+        <dd className={styles.muted}>In the catalog</dd>
+        <Change change={changes.repositories!} />
+      </div>
+      <div className={styles.card} data-figure="Profiled">
+        <dt className={styles.cardLabel}>Profiled</dt>
+        {/* A count, not a link: the Repositories list can't be filtered to the profiled ones. */}
+        <dd className={styles.cardValue}>
+          {figure(profiled)}
+          <span className={styles.cardOf}>{`of ${figure(total)}`}</span>
+        </dd>
+        <Meter value={profiled} max={total} label="Profiled" />
+        <dd className={styles.muted}>{profiling > 0 ? `${figure(profiling)} profiling or queued now` : profiled === total ? "Every Repository has a profile" : "Each is profiled in the background"}</dd>
+      </div>
+      <div className={styles.card} data-figure="Claimed">
+        <dt className={styles.cardLabel}>Claimed</dt>
+        <dd className={styles.cardValue}>
+          <Link href={repositoriesHref({ ownership: "claimed" })}>{figure(claimed)}</Link>
+          <span className={styles.cardOf}>{`of ${figure(total)} · ${percent(claimed, total)}% of all`}</span>
+        </dd>
+        <Meter value={claimed} max={total} label="Claimed" />
+        <dd className={styles.muted} data-figure="Unclaimed">
+          <Link href={repositoriesHref({ ownership: "unclaimed" })}>{`${figure(unclaimed)} unclaimed`}</Link>
+        </dd>
+        <Change change={changes.claimed!} />
+      </div>
+    </>
+  );
+}
+
+const CONCLUSIONS: { id: "gaps" | "undetermined" | "conforms" | "not_applicable" | "none"; label: string; tone: string }[] = [
+  { id: "gaps", label: "Gaps found", tone: "error" },
+  { id: "undetermined", label: "Undetermined", tone: "warning" },
+  { id: "conforms", label: "Conforms", tone: "success" },
+  { id: "not_applicable", label: "Not applicable", tone: "neutral" },
+  { id: "none", label: "Not evaluated", tone: "none" },
+];
+
+/**
+ * The Assessments card: how many there are, then the conclusion of each one's
+ * latest completed Evaluation, as one bar split by conclusion and a legend
+ * whose entries open the list's matching tab. Not applicable shows only above
+ * zero.
+ */
+function AssessmentCard({ assessments, changes }: { assessments: FleetSummary["assessments"]; changes: Record<string, string> }) {
+  const { total, byConclusion } = assessments;
+  const shown = CONCLUSIONS.filter((conclusion) => conclusion.id !== "not_applicable" || byConclusion.not_applicable > 0);
+  return (
+    <div className={styles.card} data-figure="Assessments">
+      <dt className={styles.cardLabel}>Assessments</dt>
+      <dd className={styles.cardValue}>
+        <Link href={assessmentsHref()}>{figure(total)}</Link>
+      </dd>
+      <Change change={changes.assessments!} />
+      <dd className={styles.split} role="img" aria-label={shown.map((conclusion) => `${conclusion.label} ${byConclusion[conclusion.id]}`).join(", ")}>
+        {shown.map((conclusion) => byConclusion[conclusion.id] > 0 && <span key={conclusion.id} data-tone={conclusion.tone} style={{ flexGrow: byConclusion[conclusion.id] }} />)}
+      </dd>
+      <dd className={styles.legendWrap}>
+        <dl className={styles.legend} aria-label="By conclusion">
+          {shown.map((conclusion) => (
+            <div key={conclusion.id} data-figure={conclusion.label}>
+              <dt>
+                <span className={styles.swatch} data-tone={conclusion.tone} aria-hidden="true" />
+                {conclusion.label}
+              </dt>
+              <dd>
+                <Link href={assessmentsHref({ conclusion: conclusion.id })}>{figure(byConclusion[conclusion.id])}</Link>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </dd>
+    </div>
+  );
 }
 
 /** One problem: what it is, linked to the page that shows it; the record it concerns; and when it began. */

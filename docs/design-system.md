@@ -333,14 +333,13 @@ A detail page leads with an overview under its header, as a `StatGroup` or a `De
 
 ### Home
 
-Home, at `/`, is a dashboard. The primary menu shows with Home current, and the page header has a description but no breadcrumbs and no primary action. Its rows, from `home.module.css`, sit side by side at equal heights and stack on a narrow column:
+Home, at `/`, is a dashboard read in the order a person acts. The primary menu shows with Home current, and the page header has a description, New Assessment as its primary action, and Add Repositories as a secondary one. Its parts, from `home.module.css`:
 
-- **Two figure panels:** Repositories and Assessments. Each figure links through `src/lib/web/list-filters.ts` to a list filtered to exactly what it counts, and states its change over the last seven days in words.
-- **The Assessment trend beside Recent activity.** The trend is a `BarChart` of eight weeks of completed Evaluations by conclusion. Recent activity lists the latest finished Runs.
-- **Needs attention, full width.** A `Panel` holding a `Table` of Problem, Record, and Since, newest first, twenty to a `Pagination` page.
-- **Quick actions:** New Assessment and Add Repositories, both secondary.
+- **Needs attention, first and full width.** A `Panel` holding a `Table` of Problem, Record, and Since, newest first, twenty to a `Pagination` page. With nothing to show it's one line: a Nothing to review status, "Nothing needs attention", and what Home checks, with no action.
+- **Four figure cards, one row.** Repositories, Profiled, and Claimed, then Assessments. A card shows its count, what it's out of with a bar where it's a share, and its change over the last seven days in words. Claimed links to the unclaimed ones under its bar. The Assessments card splits its count by conclusion in one bar and a legend. Every count but Profiled links through `src/lib/web/list-filters.ts` to a list filtered to exactly what it counts; the Repositories list can't filter to the profiled ones, so Profiled is a count. Two cards to a row on a narrow column, and an odd last card takes the whole row.
+- **The Assessment trend beside Recent activity, at equal heights.** The trend is a `BarChart` of eight weeks of completed Evaluations by conclusion. Recent activity lists the six latest finished Runs, each with its outcome as a status dot.
 
-A group with no records shows an `EmptyState` in its panel with the actions that create them. With nothing to show, Needs attention's `EmptyState` names what Home checks and has no action. Everything comes from `src/lib/home/` in a fixed number of queries, whatever the size of the fleet.
+A group with no records shows an `EmptyState` in a panel with the actions that create them. Everything comes from `src/lib/home/` in a fixed number of queries, whatever the size of the fleet.
 
 ### Forms
 

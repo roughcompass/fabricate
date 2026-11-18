@@ -2,30 +2,66 @@
   /* Home's rows of panels (home spec, "Home is laid out as a dashboard"): side by side at equal heights, stacked on a narrow content column. */
   .row { display: grid; gap: var(--space-4); align-items: stretch; }
   .row[data-columns="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @container content (max-width: 1023px) {
-    .row[data-columns="2"] { grid-template-columns: minmax(0, 1fr); }
-  }
 
-  /* A group's figures, two per row. */
-  .figures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-3); margin: 0; }
-  .figure { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .figure dd { margin: 0; }
-  .figureLabel { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
-  .figureValue { font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); line-height: var(--line-height-display); font-variant-numeric: tabular-nums; }
-  .figureValue a { color: inherit; text-decoration-line: none; }
-  .figureValue a:hover { text-decoration-line: underline; }
+  /* Where the fleet stands: three Repositories cards and the Assessments card, four across. */
+  .overview { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
+  .group { display: flex; min-width: 0; }
+  .group > * { flex: 1; }
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); margin: 0; }
+  .cards.single { grid-template-columns: minmax(0, 1fr); }
+
+  /* One figure as a card on the surface: its label, its count, how much of the whole it is, and its change this week. */
+  .card { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
+  .card dd { margin: 0; }
+  .cardLabel { color: var(--color-text-secondary); font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); }
+  .cardValue { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); line-height: var(--line-height-display); font-variant-numeric: tabular-nums; }
+  .cardValue a { color: inherit; text-decoration-line: none; }
+  .cardValue a:hover { text-decoration-line: underline; }
+  .cardOf { color: var(--color-text-secondary); font-size: var(--font-size-secondary); font-weight: var(--font-weight-regular); line-height: var(--line-height-secondary); }
+
+  /* A share of the whole as a thin bar. */
+  .meter { position: relative; height: var(--space-2); overflow: hidden; border-radius: var(--radius-full); background: var(--color-bg-muted); }
+  .meterFill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--color-progress); }
+
+  /* The Assessments by conclusion: one bar split in the conclusions' tones, and a legend whose counts open each tab. */
+  .split { display: flex; gap: 2px; height: var(--space-2); overflow: hidden; border-radius: var(--radius-full); background: var(--color-bg-muted); }
+  .split > span, .swatch { --_tone: var(--color-neutral); background: var(--_tone); }
+  .split > span[data-tone="error"], .swatch[data-tone="error"] { --_tone: var(--color-error); }
+  .split > span[data-tone="warning"], .swatch[data-tone="warning"] { --_tone: var(--color-warning); }
+  .split > span[data-tone="success"], .swatch[data-tone="success"] { --_tone: var(--color-success); }
+  .split > span[data-tone="none"], .swatch[data-tone="none"] { --_tone: var(--color-border-strong, var(--color-border)); }
+  .legendWrap { margin-top: var(--space-1); }
+  .legend { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; }
+  .legend > div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .legend dt { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-text-secondary); }
+  .legend dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: var(--font-weight-medium); }
+  .swatch { flex: none; width: var(--size-dot); height: var(--size-dot); border-radius: var(--radius-full); }
+
   .change { color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+  .change[data-change="up"] { color: var(--color-success); }
+  .change[data-change="down"] { color: var(--color-error); }
   .muted { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
 
-  /* Recent activity: one row per entry. */
+  /* Nothing needs attention: one line, its state first. */
+  .clear { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
+
+  /* Recent activity: one row per finished Run, its outcome as a dot before its name. */
   .activity { margin: 0; padding: 0; list-style: none; }
   .activity li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
   .activity li:last-child { border-bottom: 0; }
-  .activityWhat { min-width: 0; overflow-wrap: anywhere; }
+  .activityWhat { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; overflow-wrap: anywhere; }
 
-  /* Needs attention keeps its pagination under its panel, and stretches with its row. */
+  /* Needs attention keeps its pagination under its panel. */
   .attention { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
-  .attention > :first-child { flex: 1 1 auto; }
 
-  .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  @container content (max-width: 1023px) {
+    .row[data-columns="2"], .overview { grid-template-columns: minmax(0, 1fr); }
+  }
+  /* Two figures per row on a narrow column. */
+  @container content (max-width: 767px) {
+    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* An odd last card takes the whole row rather than leaving a gap beside it. */
+    .cards > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .cards.single { grid-template-columns: minmax(0, 1fr); }
+  }
 }

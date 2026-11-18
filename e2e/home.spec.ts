@@ -64,9 +64,11 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
   await page.goto(paths.home);
   const figures: { group: string; label: string; value: number; href: string }[] = [];
   for (const group of ["Repositories", "Assessments"]) {
-    for (const stat of await page.locator(`dl[aria-label="${group}"] > div`).all()) {
-      const link = stat.locator("dd a");
-      figures.push({ group, label: (await stat.locator("dt").textContent())!, value: Number((await link.textContent())!.replaceAll(",", "")), href: (await link.getAttribute("href"))! });
+    // Each figure's count is the first link in it; Profiled is a count without a list, so it has none.
+    for (const stat of await page.locator(`dl[aria-label="${group}"] [data-figure]`).all()) {
+      const link = stat.locator("a").first();
+      if (!(await link.count())) continue;
+      figures.push({ group, label: (await stat.getAttribute("data-figure"))!, value: Number((await link.textContent())!.replace(/[^\d]/g, "")), href: (await link.getAttribute("href"))! });
     }
   }
   expect(figures.map(({ label, value }) => [label, value])).toEqual([
@@ -250,23 +252,33 @@ test.describe("reaching Home on a narrow viewport", () => {
 test.describe("the dashboard", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("Wide layout: the Repositories and Assessments panels side by side, then the trend and activity, each row at equal heights, then Needs attention and Quick actions at full width (Wide layout)", async ({ page, db }) => {
+  test("Wide layout: Needs attention first at full width, then the Repositories and Assessments figures side by side, then the trend and activity at equal heights (Wide layout)", async ({ page, db }) => {
     claim(db, buildSource(db));
-    assessment(db, "Checkout platform migration", "complete", "gaps");
+    assessment(db, "Checkout platform migration", "failed");
     await page.goto(paths.home);
     const panel = (name: string) => page.getByRole("main").getByRole("region", { name, exact: true });
     const boxes = async (names: string[]) => Promise.all(names.map(async (name) => (await panel(name).boundingBox())!));
-    for (const row of [["Repositories", "Assessments"], ["Assessment trend", "Recent activity"]]) {
-      const shown = await boxes(row);
-      expect(new Set(shown.map((box) => Math.round(box.y))).size, row.join(", ")).toBe(1);
-      expect(new Set(shown.map((box) => Math.round(box.height))).size, row.join(", ")).toBe(1);
-    }
-    const [figures, trend, attentionBox, actions] = await boxes(["Repositories", "Assessment trend", "Needs attention", "Quick actions"]);
-    expect(figures!.y).toBeLessThan(trend!.y);
-    expect(trend!.y).toBeLessThan(attentionBox!.y);
-    expect(attentionBox!.y).toBeLessThan(actions!.y);
-    expect(Math.round(attentionBox!.width)).toBe(Math.round(actions!.width));
-    expect(attentionBox!.width).toBeGreaterThan(figures!.width * 1.5);
+    const [attentionBox, repositories, assessments, trend, activity] = await boxes(["Needs attention", "Repositories", "Assessments", "Assessment trend", "Recent activity"]);
+    expect(attentionBox!.y).toBeLessThan(repositories!.y);
+    expect(Math.round(repositories!.y)).toBe(Math.round(assessments!.y));
+    expect(Math.round(repositories!.height)).toBe(Math.round(assessments!.height));
+    expect(repositories!.y).toBeLessThan(trend!.y);
+    expect(Math.round(trend!.y)).toBe(Math.round(activity!.y));
+    expect(Math.round(trend!.height)).toBe(Math.round(activity!.height));
+    expect(attentionBox!.width).toBeGreaterThan(repositories!.width);
+    // The three Repositories figures sit in one row.
+    const cards = await page.locator('dl[aria-label="Repositories"] > [data-figure]').all();
+    expect(new Set(await Promise.all(cards.map(async (card) => Math.round((await card.boundingBox())!.y)))).size).toBe(1);
+  });
+
+  test("Profiled: how many Repositories have a profile, out of all, with what's profiling now", async ({ page, db }) => {
+    buildSource(db, { name: "payee-hub" });
+    buildSource(db, { name: "ledger" });
+    await page.goto(paths.home);
+    const profiled = page.locator('dl[aria-label="Repositories"] [data-figure="Profiled"]');
+    await expect(profiled).toContainText("0");
+    await expect(profiled).toContainText("of 2");
+    await expect(profiled.getByRole("img", { name: "Profiled: 0%" })).toBeVisible();
   });
 
   test("Repositories added this week: each figure states its change over seven days in words (No change)", async ({ page, db }) => {
@@ -303,11 +315,11 @@ test.describe("the dashboard", () => {
     await expect(page).toHaveURL(new RegExp(`${paths.run(run.publicId)}$`));
   });
 
-  test("Quick actions: New Assessment and Add Repositories", async ({ page, db: _db }) => {
+  test("Actions in the header: New Assessment and Add Repositories", async ({ page, db }) => {
+    claim(db, buildSource(db));
     await page.goto(paths.home);
-    const actions = page.getByRole("group", { name: "Quick actions" });
-    await expect(actions.getByRole("link")).toHaveText(["New Assessment", "Add Repositories"]);
-    await actions.getByRole("link", { name: "New Assessment" }).click();
+    await expect(page.getByRole("main").getByRole("link", { name: "Add Repositories" }).first()).toHaveAttribute("href", "/repositories/bulk");
+    await page.getByRole("main").getByRole("link", { name: "New Assessment" }).first().click();
     await expect(page).toHaveURL(/\/assessments\/new$/);
   });
 });

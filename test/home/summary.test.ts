@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { deleteSource } from "@/lib/catalog/catalog";
 import { claimedShare, fleetSummary } from "@/lib/home/summary";
 import { claimInitiative } from "@/lib/initiatives/initiative-records";
+import { findVersion, queueProfile } from "@/lib/profiling/versions";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, claim, driveEvaluation, driveRun } from "../support/home";
@@ -15,6 +17,15 @@ describe("fleet summary", () => {
     expect(repositories).toMatchObject({ empty: false, total: 212, claimed: 130, unclaimed: 82 });
     expect(claimedShare(repositories)).toBe(61);
     expect(claimedShare({ total: 0, claimed: 0 })).toBeNull();
+  });
+
+  it("counts the Repositories with a finished profile version, not one only queued or deleted", () => {
+    const db = createTestDb();
+    const [profiled, queued, deleted] = [buildSource(db, { name: "profiled" }), buildSource(db, { name: "queued" }), buildSource(db, { name: "deleted" })];
+    for (const source of [profiled, queued, deleted]) queueProfile(db, source, "imported");
+    for (const source of [profiled, deleted]) driveRun(db, findVersion(db, source.id, 1)!.assessment, "complete");
+    deleteSource(db, deleted.publicId, "deleted");
+    expect(fleetSummary(db).repositories).toMatchObject({ total: 2, profiled: 1 });
   });
 
   it("counts the operator's Assessments by conclusion and hides Not applicable at zero (Not applicable hidden at zero)", () => {
