@@ -2,6 +2,8 @@
 
 DE FabLab assesses independently managed Git repositories without running their code. It records evidence-backed facts about each repository and the relationships between repositories. It then compares those facts with published engineering Standards and reports every difference as a Finding.
 
+DE FabLab is the working name of the Frontend Registry, CIB's registry of frontend applications. [docs/architecture.md](docs/architecture.md) describes its parts (the Frontend Registry, Surveyor, the Reference Catalog, and the Catalog Builder), what each owns, and what's left to build.
+
 DE FabLab implements the OpenSpec change `repository-assessment-foundation`: the repository catalog, Assessments and their static Runs, Repository Profiles, Relationship Maps, the Standard Library, Evaluations, and the review screens for each. The safety rules below are requirements of that change. The end-to-end suites in `test/safety/` and `test/integration/` verify them against hostile and unavailable-service repositories.
 
 ## Requirements
