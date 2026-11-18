@@ -77,7 +77,7 @@ async function firstPrompt(db: PrototypesExecutor, { generation, variant, data, 
   const shell = await workspaceShell(db, generation.workspaceId);
   // A direction of a template generation varies from the template, so it sees the template's code.
   const snapshot = generation.template ? await templateVersionSnapshot(db, generation.template.templateVersionId) : null;
-  const template = generation.template && snapshot ? { title: generation.template.title, code: snapshot.code } : null;
+  const template = generation.template && snapshot ? { title: generation.template.title, code: snapshot.code, styles: snapshot.styles ?? null } : null;
   const input = { intent: generation.intent, scope: generation.scope, personas: generation.personas, direction: variant.direction ?? base?.provenance?.direction ?? null, data, shell, template, member: generation.hero?.member ?? null, reference: generation.hero?.reference ?? null };
   if (generation.kind !== "refine" || !base) return writePrompt(input);
   const notes = await db
@@ -91,7 +91,7 @@ async function firstPrompt(db: PrototypesExecutor, { generation, variant, data, 
   return refinePrompt({
     ...input,
     message: generation.message ?? "",
-    base: { number: base.number ?? 0, code: base.code },
+    base: { number: base.number ?? 0, code: base.code, styles: base.styles },
     feedback: given.filter((entry) => entry.text).map((entry) => ({ kind: entry.kind, text: entry.text!, rating: entry.rating })),
     notes: notes.map((note) => ({ id: note.id, text: note.text ?? "", component: note.element?.component ?? "element", elementText: note.element?.text ?? "" })),
     violations: base.audit?.violations ?? [],
@@ -137,7 +137,7 @@ export async function attemptVariant(db: PrototypesExecutor, variantId: string, 
   let prompt = await firstPrompt(db, ctx);
   if (previous) {
     const recipes = (recommendFixRecipes(registry, version.code, release).fixes as { recommended_fix?: string }[] | undefined)?.flatMap((fix) => (fix.recommended_fix ? [fix.recommended_fix] : [])) ?? [];
-    prompt = `${prompt}\n\n${repairPrompt(version.code, previous.gates, recipes)}`;
+    prompt = `${prompt}\n\n${repairPrompt(version.code, previous.gates, recipes, version.styles)}`;
   }
 
   let written;
@@ -159,15 +159,18 @@ export async function attemptVariant(db: PrototypesExecutor, variantId: string, 
 
   await setStage(db, variantId, "checking");
   const { submission, lookups } = written;
+  // The CSS module the model was shown: the last attempt's, the base version's, or the attached template's. It stays unless the submission changes it, and an empty one removes it.
+  const shown = previous ? version.styles : ctx.base ? ctx.base.styles : generation.template ? ((await templateVersionSnapshot(db, generation.template.templateVersionId))?.styles ?? null) : null;
+  const styles = submission.styles === undefined || submission.styles === null ? shown : submission.styles.trim() ? submission.styles : null;
   // A refinement keeps its lineage, and a template generation takes its template's, so a page started from a hero may keep importing @deweb/portal.
   const hero = ctx.base?.provenance?.hero ?? generation.template?.hero ?? generation.hero?.slug ?? null;
   // A hero's planted version may break only its planted rules, which the run records as exemptions.
-  const run = await runGates({ code: submission.code, data: data.source, portal: hero !== null }, { exemptions: plantedExemptions(generation.hero?.planted) });
+  const run = await runGates({ code: submission.code, data: data.source, styles, portal: hero !== null }, { exemptions: plantedExemptions(generation.hero?.planted) });
   const attempt: Attempt = { number, gates: run.results, passed: run.passed, at: new Date().toISOString(), lookups, signatures: run.signatures };
   const attempts = [...version.attempts, attempt];
   await db
     .update(versions)
-    .set({ attempts, firstPass: version.firstPass ?? [...run.results], code: submission.code, title: submission.title, navItem: generation.scope === "page" ? submission.navItem : null, summary: submission.summary, addressedNotes: submission.addressedNotes })
+    .set({ attempts, firstPass: version.firstPass ?? [...run.results], code: submission.code, styles, title: submission.title, navItem: generation.scope === "page" ? submission.navItem : null, summary: submission.summary, addressedNotes: submission.addressedNotes })
     .where(eq(versions.id, version.id));
 
   if (!run.passed) {
@@ -228,9 +231,10 @@ async function templateVariant(db: PrototypesExecutor, { variant, generation, ve
   const portal = template.hero !== null;
   let used = data;
   let dataNote: string | null = null;
-  let run = await runGates({ code: snapshot.code, data: data.source, portal });
+  const styles = snapshot.styles ?? null;
+  let run = await runGates({ code: snapshot.code, data: data.source, styles, portal });
   if (!run.passed && snapshot.sampleData) {
-    const own = await runGates({ code: snapshot.code, data: snapshot.sampleData.source, portal });
+    const own = await runGates({ code: snapshot.code, data: snapshot.sampleData.source, styles, portal });
     if (own.passed) {
       const failed = run.results.filter((result) => result.status === "failed").map((result) => result.gate);
       dataNote = `This generation's sample data doesn't fit the template (it fails the ${failed.join(" and ")} ${failed.length === 1 ? "check" : "checks"}), so variant 0 shows the template with its own data.`;
@@ -241,7 +245,7 @@ async function templateVariant(db: PrototypesExecutor, { variant, generation, ve
   const attempt: Attempt = { number: 1, gates: run.results, passed: run.passed, at: new Date().toISOString(), signatures: run.signatures };
   await db
     .update(versions)
-    .set({ attempts: [attempt], firstPass: [...run.results], code: snapshot.code, sampleData: used, title: snapshot.title, navItem: snapshot.navItem, summary: `The template ${template.title} v${template.templateVersion}, unchanged.`, addressedNotes: [] })
+    .set({ attempts: [attempt], firstPass: [...run.results], code: snapshot.code, styles, sampleData: used, title: snapshot.title, navItem: snapshot.navItem, summary: `The template ${template.title} v${template.templateVersion}, unchanged.`, addressedNotes: [] })
     .where(eq(versions.id, version.id));
   if (!run.passed) {
     await failVariant(db, variant.id, { kind: "checks", message: `The template ${template.title} v${template.templateVersion} no longer passes its checks.`, issues: run.results.filter((result) => result.status === "failed").flatMap((result) => result.issues) });

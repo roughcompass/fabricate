@@ -45,7 +45,7 @@ const nextConfig: NextConfig = {
   // published packages with their provenance. The worker bundle loads the same copy.
   // Prototypes' PGlite loads its WebAssembly Postgres and data files from its
   // package directory, so it is loaded from node_modules too.
-  serverExternalPackages: ["better-sqlite3", "@electric-sql/pglite", ...REPO_FACTS_PACKAGES],
+  serverExternalPackages: ["better-sqlite3", "@electric-sql/pglite", "lightningcss", ...REPO_FACTS_PACKAGES],
   outputFileTracingRoot: root,
   turbopack: { root },
   poweredByHeader: false,

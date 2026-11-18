@@ -80,7 +80,7 @@ describe("template re-checks", () => {
       expect(await connection.db.select().from(templateRechecks)).toHaveLength(1);
       // A claim that never finished is taken over once it times out.
       const later = new Date(Date.now() + RECHECK_TIMEOUT_MS + 1_000);
-      const [retaken, again] = await Promise.all([claimRecheck(connection.db, versionId, RUNTIME.hash, "1.73.0", later), claimRecheck(connection.db, versionId, RUNTIME.hash, "1.73.0", later)]);
+      const [retaken, again] = await Promise.all([claimRecheck(connection.db, versionId, RUNTIME.hash, RUNTIME.packages["@salt-ds/core"]!, later), claimRecheck(connection.db, versionId, RUNTIME.hash, RUNTIME.packages["@salt-ds/core"]!, later)]);
       expect([retaken, again].filter(Boolean)).toEqual([first ?? second]);
     });
 
@@ -93,7 +93,7 @@ describe("template re-checks", () => {
       expect(claimed).toEqual(started);
       expect(await runRecheck(connection.db, claimed[0]!)).toBe("unchanged");
       const [recheck] = await connection.db.select().from(templateRechecks);
-      expect(recheck).toMatchObject({ runtimeHash: RUNTIME.hash, saltRelease: "1.73.0", status: "unchanged" });
+      expect(recheck).toMatchObject({ runtimeHash: RUNTIME.hash, saltRelease: RUNTIME.packages["@salt-ds/core"], status: "unchanged" });
       expect(recheck!.compiled).toContain("__fabricatePrototype");
       expect(recheck!.gates?.map((result) => result.gate).sort()).toEqual(["build", "salt-only", "salt-usage", "typecheck"]);
       const [after] = await connection.db.select().from(templateVersions).where(eq(templateVersions.id, versionId));

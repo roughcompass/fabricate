@@ -5,7 +5,7 @@ import { portalAllowed, saltOnlyGate, typecheckGate } from "@/lib/prototypes/gat
 
 const DATA = `export const payees = [{ id: "northwind", name: "Northwind Supplies" }];\n`;
 const PORTAL_PAGE = `import { Button, StackLayout, Text } from "@salt-ds/core";
-import { planted, routeHref, useBus, useProfile, usePublish, useRoute } from "@deweb/portal";
+import { routeHref, useBus, useProfile, usePublish, useRoute } from "@deweb/portal";
 import { useState } from "react";
 import { payees } from "./data";
 
@@ -19,7 +19,7 @@ export default function Payments() {
     <StackLayout gap={2}>
       <Text>{\`\${current.label} for \${profile.name}, \${profile.persona}\`}</Text>
       {routes.map((route) => <Text key={route.path}>{routeHref(route)}</Text>)}
-      <Button onClick={() => { planted.blockMainThread(10); publish("payee:selected", payees[0]); }}>Pay</Button>
+      <Button onClick={() => publish("payee:selected", payees[0])}>Pay</Button>
       <Text>{selected}</Text>
     </StackLayout>
   );
@@ -41,7 +41,7 @@ describe("@deweb/portal in the gates", () => {
   });
 
   it("never allows it in the sample data module, even for a hero lineage", () => {
-    const data = `import { planted } from "@deweb/portal";\nplanted.blockMainThread(1);\nexport const payees = [];\n`;
+    const data = `import { useBus } from "@deweb/portal";\nexport const subscribe = useBus;\nexport const payees = [];\n`;
     expect(importIssues(true, `import { Text } from "@salt-ds/core";\nexport default function Page() { return <Text>Hi</Text>; }\n`, data)).toEqual([expect.objectContaining({ symbol: "@deweb/portal" })]);
   });
 

@@ -83,7 +83,7 @@ export async function runRecheck(db: PrototypesExecutor, recheckId: string, now 
   if (!row || row.recheck.status) return row?.recheck.status ?? null;
   const { snapshot } = row.version;
   try {
-    const run = await runGates({ code: snapshot.code, data: snapshot.sampleData?.source ?? "", portal: portalAllowed(snapshot.provenance) });
+    const run = await runGates({ code: snapshot.code, data: snapshot.sampleData?.source ?? "", styles: snapshot.styles ?? null, portal: portalAllowed(snapshot.provenance) });
     const status = classifyRecheck(snapshot.gates, run.results);
     const standards = await assessForStandards(db, row.version);
     await db.update(templateRechecks).set({ status, gates: [...run.results], compiled: run.compiled, standards, finishedAt: now() }).where(eq(templateRechecks.id, recheckId));

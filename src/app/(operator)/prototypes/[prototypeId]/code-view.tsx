@@ -11,12 +11,13 @@ export interface CodeFile {
   readonly note?: string;
 }
 
-/** A version's files: the generated source, its sample data, and, for a page, the shell's source (sharing-and-export spec, "The code of a version can be read and copied"). */
-export function codeFiles(code: string, data: string, scope: Scope): CodeFile[] {
+/** A version's files: the generated source, its sample data, its CSS module when it has one, and, for a page, the shell's source (sharing-and-export spec, "The code of a version can be read and copied"). */
+export function codeFiles(code: string, data: string, scope: Scope, styles: string | null = null): CodeFile[] {
   const files: CodeFile[] = [
     { path: "Prototype.tsx", content: code, note: "Generated, then checked by DE FabLab." },
     { path: "data.ts", content: data, note: "The generation's fictional sample data, shared by its variants." },
   ];
+  if (styles?.trim()) files.push({ path: "Prototype.module.css", content: styles, note: "Its CSS module, for what Salt has no property for; it uses only Salt's tokens." });
   if (scope === "page") {
     const shell = shellSource();
     files.push({ path: "PageShell.tsx", content: shell.tsx, note: "The common page shell: the header, navigation, and footer come from here, not from the generated code." }, { path: "PageShell.css", content: shell.css, note: "The shell's styles, which use only Salt's tokens." });

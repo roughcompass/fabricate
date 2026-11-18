@@ -5,8 +5,12 @@ import type { GateIssue, GateName, GateResult } from "../types";
 export interface PrototypeSource {
   readonly code: string;
   readonly data: string;
+  /** The version's CSS module, which the component may import as ./Prototype.module.css, or null when it has none. */
+  readonly styles?: string | null;
   /** Whether the version's lineage starts from a hero template, so its component may import `@deweb/portal`. */
   readonly portal?: boolean;
+  /** Whether the code is a portal shell, which may also render the logo as an image. */
+  readonly shell?: boolean;
 }
 
 /** The portal runtime interface, which only hero lineages may import (design decision 5 of converge-templates-and-prototypes). */
@@ -32,6 +36,9 @@ export const PROTOTYPE_GLOBAL = "__fabricatePrototype";
 
 export const PROTOTYPE_FILE = "Prototype.tsx";
 export const DATA_FILE = "data.ts";
+/** A version's optional CSS module, and the specifier its component imports it by. */
+export const STYLES_FILE = "Prototype.module.css";
+export const STYLES_MODULE = "./Prototype.module.css";
 
 export function parse(fileName: string, text: string): ts.SourceFile {
   return ts.createSourceFile(fileName, text, ts.ScriptTarget.ES2022, true, fileName.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);

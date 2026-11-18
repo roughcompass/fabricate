@@ -20,7 +20,7 @@ import { claimSlot } from "./workspace";
 type Version = typeof versions.$inferSelect;
 
 /** What a copy takes from its source version. */
-export type CopySource = Pick<Version, "scope" | "title" | "navItem" | "summary" | "code" | "sampleData" | "compiled" | "runtimeHash" | "attempts" | "firstPass" | "gatesPassed" | "audit" | "fit" | "fitAverage"> & { readonly provenance: Provenance };
+export type CopySource = Pick<Version, "scope" | "title" | "navItem" | "summary" | "code" | "styles" | "sampleData" | "compiled" | "runtimeHash" | "attempts" | "firstPass" | "gatesPassed" | "audit" | "fit" | "fitAverage"> & { readonly provenance: Provenance };
 
 /** Inserts a new prototype at version 1 copied from `source`, recording where it came from. Returns the prototype's id. */
 export async function copyIntoPrototype(
@@ -46,6 +46,7 @@ export async function copyIntoPrototype(
     navItem: source.navItem,
     summary: source.summary,
     code: source.code,
+    styles: source.styles,
     sampleData: source.sampleData,
     compiled: source.compiled,
     runtimeHash: source.runtimeHash,
@@ -94,6 +95,7 @@ export function fromSnapshot(snapshot: TemplateSnapshot): CopySource {
     navItem: snapshot.navItem,
     summary: "",
     code: snapshot.code,
+    styles: snapshot.styles ?? null,
     sampleData: snapshot.sampleData ?? null,
     compiled: snapshot.compiled,
     runtimeHash: snapshot.runtimeHash,

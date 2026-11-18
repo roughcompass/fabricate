@@ -36,4 +36,9 @@ describe("typecheck gate", () => {
     const code = `import { Card } from "@mui/material";\nexport default function Page() { return <Card />; }\n`;
     expect(typecheckGate({ code, data: "export {};" }).issues).toMatchObject([{ code: "TS2307", line: 1 }]);
   });
+  it("types a CSS module by its classes, so a missing class fails (A missing class)", () => {
+    const code = `import { Text } from "@salt-ds/core";\nimport styles from "./Prototype.module.css";\nexport default function Row() { return <Text className={styles.selcted}>Row</Text>; }\n`;
+    expect(typecheckGate({ code, data: "export {};\n", styles: ".selected { background: var(--salt-selectable-background-selected); }\n" }).issues).toMatchObject([{ code: "TS2551", line: 3, message: expect.stringContaining("selcted") }]);
+    expect(typecheckGate({ code: code.replace("selcted", "selected"), data: "export {};\n", styles: ".selected { background: var(--salt-selectable-background-selected); }\n" }).issues).toEqual([]);
+  });
 });

@@ -55,7 +55,7 @@ export async function reviewVersion(db: PrototypesExecutor, versionId: string, s
       const { output } = await generateText({
         model,
         output: Output.object({ schema: reviewSchema }),
-        prompt: reviewPrompt({ intent, scope, personas, direction, code: version.code, data: version.sampleData?.source ?? "" }),
+        prompt: reviewPrompt({ intent, scope, personas, direction, code: version.code, data: version.sampleData?.source ?? "", styles: version.styles }),
         providerOptions: gatewayOptions(settings),
         timeout: REVIEW_TIMEOUT_MS,
       });

@@ -1,6 +1,8 @@
 import ts from "typescript";
 import type { GateIssue, GateResult } from "../types";
-import { ALLOWED_IMPORTS, DATA_FILE, DATA_MODULE, PORTAL_MODULE, PROTOTYPE_FILE, type PrototypeSource, inFile, moduleName, parse, position, result } from "./common";
+import { ALLOWED_IMPORTS, DATA_FILE, DATA_MODULE, PORTAL_MODULE, PROTOTYPE_FILE, type PrototypeSource, STYLES_FILE, STYLES_MODULE, inFile, moduleName, parse, position, result } from "./common";
+import { checkCssModule } from "./css-module";
+import { paintProblem } from "./style-values";
 
 /**
  * The Salt-only gate (design.md, decision 7; quality-checks spec, "Generated
@@ -10,9 +12,9 @@ import { ALLOWED_IMPORTS, DATA_FILE, DATA_MODULE, PORTAL_MODULE, PROTOTYPE_FILE,
 
 export type SaltOnlyRule =
   | "import"
-  | "style-value"
+  | "inline-style"
+  | "raw-element"
   | "literal-color"
-  | "literal-length"
   | "class-name"
   | "style-element"
   | "inner-html"
@@ -29,7 +31,6 @@ const PROVIDERS = new Set(["SaltProvider", "SaltProviderNext", "UNSTABLE_SaltPro
 const FORBIDDEN_ELEMENTS = new Set(["style", "link", "script", "iframe", "object", "embed"]);
 const ASSET_ATTRIBUTES = new Set(["src", "href", "srcSet", "srcset", "poster", "xlinkHref", "xlink:href"]);
 const AG_THEME_CLASS = /^ag-theme-salt(-[a-z0-9]+)*$/;
-const SALT_VAR = /^var\(\s*--salt-[a-z0-9-]+\s*(,\s*var\(\s*--salt-[a-z0-9-]+\s*\)\s*)?\)$/i;
 const EXTERNAL_URL = /^(https?:|\/\/)/i;
 
 type ApiRule = "network" | "storage" | "window-open" | "eval";
@@ -61,40 +62,50 @@ const API_MESSAGES: Record<ApiRule, (symbol: string) => string> = {
   eval: (symbol) => `Prototypes may not evaluate or load code at run time; remove ${symbol}.`,
 };
 
-/** Unitless CSS properties, where a number is a count or a ratio rather than a size. */
-const UNITLESS = new Set(["flex", "flexGrow", "flexShrink", "opacity", "zIndex", "order", "gridRow", "gridColumn", "gridRowStart", "gridRowEnd", "gridColumnStart", "gridColumnEnd", "columnCount", "aspectRatio"]);
-
-/** Typography comes from Salt's Text and its tokens, never from literal values (quality-checks spec, "Generated code uses Salt exclusively"). */
-const TYPOGRAPHY = new Set(["font", "fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing"]);
-
-/** A CSS keyword or several, such as "flex", "right", or "space-between": neither a color, a size, nor a font. */
-const KEYWORDS = /^[a-z]+(-[a-z]+)*( [a-z]+(-[a-z]+)*)*$/i;
-
-/** calc() over Salt tokens and plain numbers, as Salt's own examples size things: calc(var(--salt-size-base) * 2). */
-const TOKEN_CALC = /^calc\([\s\d.+\-*/()]*\)$/;
-
-const NAMED_COLORS = new Set(
-  (
-    "black white red green blue yellow orange purple pink brown gray grey navy teal silver gold maroon olive lime aqua cyan magenta fuchsia indigo violet " +
-    "coral salmon crimson tomato turquoise beige ivory khaki lavender tan plum orchid chocolate firebrick darkred darkblue darkgreen darkgray darkgrey " +
-    "darkorange lightgray lightgrey lightblue lightgreen lightyellow whitesmoke gainsboro slategray slategrey steelblue royalblue skyblue dodgerblue " +
-    "midnightblue forestgreen seagreen goldenrod rebeccapurple transparent currentcolor"
-  ).split(" "),
-);
-const HEX_COLOR = /#[0-9a-f]{3,8}\b/i;
-const COLOR_FUNCTION = /\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/i;
-const LENGTH = /(^|[^\w.-])-?(\d+\.?\d*|\.\d+)(px|rem|em|%|vh|vw|vmin|vmax|dvh|dvw|svh|svw|lvh|lvw|ch|ex|pt|pc|cm|mm|in|fr)(?![\w-])/i;
+/**
+ * Lowercase elements generated code may render (quality-checks spec,
+ * "Generated markup uses Salt components"): a form around Salt form fields,
+ * and SVG drawing elements for a chart Salt doesn't provide. A portal shell
+ * may also render its logo as an image. Everything else is a Salt component.
+ */
+const SANCTIONED_ELEMENTS = new Set(["form", "svg", "g", "path", "line", "polyline", "polygon", "rect", "circle", "ellipse", "text", "tspan", "title", "desc", "defs", "linearGradient", "stop", "clipPath"]);
+const SHELL_ELEMENTS = new Set(["img"]);
+/** The elements a Salt layout may render through `as`: landmarks, lists, and articles. */
+const LAYOUT_ELEMENTS = new Set(["nav", "header", "main", "footer", "section", "aside", "ul", "ol", "li", "article"]);
+/** SVG attributes that set a color, whose values must be Salt tokens or color-free keywords. */
+const PAINT_ATTRIBUTES = new Set(["fill", "stroke", "stopColor", "stop-color", "color", "floodColor", "lightingColor"]);
 
 export function saltOnlyGate(source: PrototypeSource): GateResult {
   const started = performance.now();
   const issues: GateIssue[] = [];
-  checkFile(parse(PROTOTYPE_FILE, source.code), true, issues, source.portal === true);
-  checkFile(parse(DATA_FILE, source.data), false, issues, false);
-  return result("salt-only", started, issues);
+  const warnings: GateIssue[] = [];
+  const styles = source.styles?.trim() ? checkCssModule(source.styles) : null;
+  if (styles) {
+    issues.push(...styles.issues);
+    warnings.push(...styles.warnings);
+  }
+  const read = checkFile(parse(PROTOTYPE_FILE, source.code), true, issues, { portal: source.portal === true, shell: source.shell === true, styles: styles !== null });
+  checkFile(parse(DATA_FILE, source.data), false, issues, { portal: false, shell: false, styles: false });
+  if (styles && styles.issues.length === 0) {
+    for (const name of styles.classes) if (!read.has(name)) warnings.push({ code: "salt-only/unused-class", message: `${STYLES_FILE} defines .${name}, which ${PROTOTYPE_FILE} never uses; remove it.`, symbol: name });
+  }
+  return result("salt-only", started, issues, warnings);
 }
 
-function checkFile(file: ts.SourceFile, isComponent: boolean, issues: GateIssue[], portal: boolean): void {
+interface FileOptions {
+  readonly portal: boolean;
+  readonly shell: boolean;
+  /** Whether the version has a CSS module the component may import. */
+  readonly styles: boolean;
+}
+
+/** Checks one file, and returns the classes the component reads from its CSS module. */
+function checkFile(file: ts.SourceFile, isComponent: boolean, issues: GateIssue[], options: FileOptions): Set<string> {
+  const { portal, shell } = options;
   const local = declaredNames(file);
+  const read = new Set<string>();
+  /** The local names the CSS module is imported as. */
+  const stylesNames = new Set<string>();
   const defaults: ts.Node[] = [];
   const add = (node: ts.Node, rule: SaltOnlyRule, message: (line: number) => string, symbol?: string) => {
     const at = position(file, node.getStart(file));
@@ -103,6 +114,10 @@ function checkFile(file: ts.SourceFile, isComponent: boolean, issues: GateIssue[
 
   const checkSpecifier = (node: ts.Node, specifier: string | null, typeOnly: boolean) => {
     if (specifier === null) return;
+    if (specifier === STYLES_MODULE) {
+      if (!isComponent || !options.styles) add(node, "import", () => (isComponent ? `"${STYLES_MODULE}" is imported, but this version has no CSS module.` : `The sample data module may not import "${STYLES_MODULE}".`), specifier);
+      return;
+    }
     if (specifier === PORTAL_MODULE && !(portal && isComponent)) {
       add(node, "import", () => `"${PORTAL_MODULE}" is only for pages that start from a hero template; use React state and the sample data in ./data instead.`, specifier);
     } else if (specifier === PORTAL_MODULE) {
@@ -127,14 +142,48 @@ function checkFile(file: ts.SourceFile, isComponent: boolean, issues: GateIssue[
     if (rule) add(node, rule, () => API_MESSAGES[rule](joined), joined);
   };
 
+  /** Whether a className expression reads only the CSS module's classes and AG Grid's Salt theme classes. */
+  const allowedClass = (expression: ts.Expression | undefined): boolean => {
+    const value = unwrap(expression);
+    if (!value) return false;
+    if (ts.isStringLiteralLike(value)) return value.text.trim() === "" || value.text.trim().split(/\s+/).every((entry) => AG_THEME_CLASS.test(entry));
+    if (value.kind === ts.SyntaxKind.UndefinedKeyword || value.kind === ts.SyntaxKind.NullKeyword || (ts.isIdentifier(value) && value.text === "undefined")) return true;
+    if ((ts.isPropertyAccessExpression(value) || ts.isElementAccessExpression(value)) && ts.isIdentifier(value.expression) && stylesNames.has(value.expression.text)) {
+      const key = ts.isPropertyAccessExpression(value) ? value.name.text : ts.isStringLiteralLike(value.argumentExpression) ? value.argumentExpression.text : null;
+      if (key === null) return false;
+      read.add(key);
+      return true;
+    }
+    if (ts.isConditionalExpression(value)) return allowedClass(value.whenTrue) && allowedClass(value.whenFalse);
+    if (ts.isTemplateExpression(value)) return value.templateSpans.every((span) => allowedClass(span.expression)) && [value.head.text, ...value.templateSpans.map((span) => span.literal.text)].every((part) => part.trim() === "");
+    // [styles.a, selected && styles.b].filter(Boolean).join(" ")
+    if (ts.isCallExpression(value) && ts.isPropertyAccessExpression(value.expression) && value.expression.name.text === "join") {
+      const filtered = unwrap(value.expression.expression);
+      const list = filtered && ts.isCallExpression(filtered) && ts.isPropertyAccessExpression(filtered.expression) && filtered.expression.name.text === "filter" ? unwrap(filtered.expression.expression) : filtered;
+      return !!list && ts.isArrayLiteralExpression(list) && list.elements.every((element) => (ts.isBinaryExpression(element) && element.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ? allowedClass(element.right) : allowedClass(element)));
+    }
+    return false;
+  };
+
   const checkAttribute = (attribute: ts.JsxAttribute) => {
     const name = attributeName(attribute);
-    if (name === "style") return checkStyle(attribute);
+    if (name === "style") return add(attribute, "inline-style", (line) => `Line ${line} sets style; use a Salt component's properties or a layout's gap and padding, and put anything else in ${STYLES_FILE}.`, "style");
     if (name === "className" || name === "class") {
-      const value = stringValue(attribute.initializer)?.trim();
-      if (!value || !value.split(/\s+/).every((entry) => AG_THEME_CLASS.test(entry))) {
-        add(attribute, "class-name", (line) => `Line ${line} sets ${name}; only AG Grid's Salt theme classes, such as ag-theme-salt, may be used. Style with Salt components, their properties, and tokens.`, "className");
+      const expression = attribute.initializer && ts.isJsxExpression(attribute.initializer) ? attribute.initializer.expression : attribute.initializer && ts.isStringLiteral(attribute.initializer) ? attribute.initializer : undefined;
+      if (!allowedClass(expression)) {
+        add(attribute, "class-name", (line) => `Line ${line} sets ${name} to something other than a class of ${STYLES_FILE} or AG Grid's Salt theme; use styles.<class> from the CSS module.`, "className");
       }
+      return;
+    }
+    if (name === "as") {
+      const value = stringValue(attribute.initializer);
+      if (value !== null && /^[a-z]/.test(value) && !LAYOUT_ELEMENTS.has(value)) add(attribute, "raw-element", (line) => `Line ${line} renders a Salt layout as <${value}>; a layout may render only landmarks, lists, and articles (${[...LAYOUT_ELEMENTS].join(", ")}).`, value);
+      return;
+    }
+    const element = attribute.parent.parent;
+    if (PAINT_ATTRIBUTES.has(name) && /^[a-z]/.test(element.tagName.getText(file))) {
+      const value = stringValue(attribute.initializer);
+      if (value !== null && paintProblem(value)) add(attribute, "literal-color", (line) => `Line ${line} sets ${name} to ${value}; use a Salt color token such as var(--salt-content-primary-foreground), or currentColor.`, name);
       return;
     }
     if (name === "dangerouslySetInnerHTML") return add(attribute, "inner-html", (line) => `Line ${line} uses dangerouslySetInnerHTML; render content with Salt components instead.`, name);
@@ -144,30 +193,18 @@ function checkFile(file: ts.SourceFile, isComponent: boolean, issues: GateIssue[
     }
   };
 
-  const checkStyle = (attribute: ts.JsxAttribute) => {
-    const expression = attribute.initializer && ts.isJsxExpression(attribute.initializer) ? unwrap(attribute.initializer.expression) : undefined;
-    if (!expression || !ts.isObjectLiteralExpression(expression)) {
-      return add(attribute, "style-value", (line) => `Line ${line} sets style to something other than an object of Salt tokens; style values may only be Salt design tokens, var(--salt-*), or 0.`, "style");
-    }
-    for (const property of expression.properties) {
-      if (!ts.isPropertyAssignment(property)) {
-        const symbol = ts.isShorthandPropertyAssignment(property) ? `style.${property.name.text}` : "style";
-        add(property, "style-value", (line) => `Line ${line} sets ${symbol} from ${shown(property.getText(file))}; style values may only be Salt design tokens, var(--salt-*), or 0.`, symbol);
-        continue;
-      }
-      const name = propertyName(property.name, file);
-      const problem = styleProblem(name, property.initializer, file);
-      if (problem) add(property, problem.rule, (line) => `Line ${line} sets ${name} to ${problem.value}; ${STYLE_ADVICE[problem.rule]}`, `style.${name}`);
-    }
-  };
-
   const visit = (node: ts.Node): void => {
     if (ts.isTypeNode(node) || ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) return;
 
     if (ts.isImportDeclaration(node)) {
       const clause = node.importClause;
       const typeOnly = !!clause && (clause.isTypeOnly || (!clause.name && !!clause.namedBindings && ts.isNamedImports(clause.namedBindings) && clause.namedBindings.elements.every((element) => element.isTypeOnly)));
-      checkSpecifier(node.moduleSpecifier, moduleName(node.moduleSpecifier), typeOnly);
+      const specifier = moduleName(node.moduleSpecifier);
+      checkSpecifier(node.moduleSpecifier, specifier, typeOnly);
+      if (specifier === STYLES_MODULE && isComponent && options.styles) {
+        if (clause?.name) stylesNames.add(clause.name.text);
+        if (!clause?.name || clause.namedBindings) add(node, "import", () => `Import the CSS module only as a default import: import styles from "${STYLES_MODULE}".`, STYLES_MODULE);
+      }
       if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
         for (const element of clause.namedBindings.elements) {
           const imported = (element.propertyName ?? element.name).text;
@@ -191,6 +228,9 @@ function checkFile(file: ts.SourceFile, isComponent: boolean, issues: GateIssue[
       const tag = node.tagName.getText(file);
       const last = tag.split(".").pop()!;
       if (/^[a-z]/.test(tag) && FORBIDDEN_ELEMENTS.has(tag)) add(node, "style-element", (line) => `Line ${line} renders <${tag}>; prototypes may not add stylesheets, scripts, or embedded documents.`, tag);
+      else if (/^[a-z]/.test(tag) && !SANCTIONED_ELEMENTS.has(tag) && !(shell && SHELL_ELEMENTS.has(tag))) {
+        add(node, "raw-element", (line) => `Line ${line} renders <${tag}>; use a Salt component, or a Salt layout such as StackLayout or FlexLayout (with as="${LAYOUT_ELEMENTS.has(tag) ? tag : "section"}" for a landmark or list).`, tag);
+      }
       if (PROVIDERS.has(last)) add(node, "provider", () => providerMessage(last), last);
     } else if (ts.isPropertyAssignment(node) && propertyName(node.name, file) === "dangerouslySetInnerHTML") {
       add(node, "inner-html", (line) => `Line ${line} uses dangerouslySetInnerHTML; render content with Salt components instead.`, "dangerouslySetInnerHTML");
@@ -232,43 +272,7 @@ function checkFile(file: ts.SourceFile, isComponent: boolean, issues: GateIssue[
   if (isComponent && defaults.length > 1) {
     for (const node of defaults.slice(1)) add(node, "default-export", () => `${PROTOTYPE_FILE} must have exactly one default export, the prototype component; it has ${defaults.length}.`);
   }
-}
-
-const STYLE_ADVICE = {
-  "literal-color": "use a Salt color token such as var(--salt-content-primary-foreground).",
-  "literal-length": "use a Salt spacing or size token such as var(--salt-spacing-100).",
-  "style-value": "style values may only be Salt design tokens, var(--salt-*), calc() of them, CSS keywords such as \"flex\", or 0; set typography with Salt's Text.",
-} as const;
-
-type StyleRule = keyof typeof STYLE_ADVICE;
-
-/** Why a style property's value is not a Salt token, or null when it is one. */
-function styleProblem(property: string, initializer: ts.Expression, file: ts.SourceFile): { rule: StyleRule; value: string } | null {
-  const value = unwrap(initializer)!;
-  const number = ts.isNumericLiteral(value) ? value : ts.isPrefixUnaryExpression(value) && ts.isNumericLiteral(value.operand) ? value.operand : null;
-  if (number) {
-    if (Number(number.text) === 0 || UNITLESS.has(property)) return null;
-    return { rule: TYPOGRAPHY.has(property) ? "style-value" : "literal-length", value: value.getText(file) };
-  }
-  if (!ts.isStringLiteralLike(value)) return { rule: "style-value", value: shown(value.getText(file)) };
-  const text = value.text.trim();
-  if (text === "0" || SALT_VAR.test(text)) return null;
-  const bare = withoutVars(text);
-  if (HEX_COLOR.test(bare) || COLOR_FUNCTION.test(bare) || (bare.match(/[a-z]+/gi) ?? []).some((word) => NAMED_COLORS.has(word.toLowerCase()))) return { rule: "literal-color", value: shown(text) };
-  if (LENGTH.test(bare)) return { rule: "literal-length", value: shown(text) };
-  if (TYPOGRAPHY.has(property)) return { rule: "style-value", value: shown(JSON.stringify(text)) };
-  if (KEYWORDS.test(text) || (text.includes("var(--salt-") && TOKEN_CALC.test(bare))) return null;
-  return { rule: "style-value", value: shown(JSON.stringify(text)) };
-}
-
-/** The text without custom property names, so a token such as --salt-color-red-500 is not read as a literal, while a fallback still is. */
-function withoutVars(text: string): string {
-  return text.replace(/var\(\s*--[\w-]+\s*,?/g, " ");
-}
-
-function shown(text: string): string {
-  const flat = text.replace(/\s+/g, " ");
-  return flat.length > 60 ? `${flat.slice(0, 57)}...` : flat;
+  return read;
 }
 
 function providerMessage(name: string): string {

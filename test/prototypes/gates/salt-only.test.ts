@@ -48,73 +48,110 @@ describe("Salt-only gate", () => {
     ]);
   });
 
-  it("fails a literal color in a style and names the line (Literal color)", () => {
-    const code = page(`<StackLayout>\n      <Text style={{ color: "#31373d" }}>Urgent</Text>\n      <Text style={{ background: "rgba(0, 0, 0, 0.5)", borderColor: "red" }}>Late</Text>\n    </StackLayout>`);
-    const result = check(code);
+  it("fails any inline style, even of Salt tokens (Inline style)", () => {
+    const result = check(page(`<StackLayout>\n      <Text style={{ color: "var(--salt-content-primary-foreground)" }}>Urgent</Text>\n      <Text style={styles}>Late</Text>\n    </StackLayout>`, { before: "  const styles = {};" }));
     expect(result.status).toBe("failed");
     expect(result.issues[0]).toEqual({
-      code: "salt-only/literal-color",
-      message: "Line 8 sets color to #31373d; use a Salt color token such as var(--salt-content-primary-foreground).",
+      code: "salt-only/inline-style",
+      message: "Line 8 sets style; use a Salt component's properties or a layout's gap and padding, and put anything else in Prototype.module.css.",
       line: 8,
-      column: 22,
-      symbol: "style.color",
+      column: 13,
+      symbol: "style",
     });
-    expect(result.issues.slice(1).map((issue) => [issue.code, issue.symbol])).toEqual([
-      ["salt-only/literal-color", "style.background"],
-      ["salt-only/literal-color", "style.borderColor"],
-    ]);
+    expect(result.issues.map((issue) => issue.code)).toEqual(["salt-only/inline-style", "salt-only/inline-style"]);
   });
 
-  it("fails literal lengths in a style, including bare numbers", () => {
-    const result = check(page(`<StackLayout style={{ padding: "12px", marginTop: 8, width: "50%", gap: "1.5rem var(--salt-spacing-100)" }} />`));
+  it("fails raw elements, naming each, but allows a form and SVG drawing elements (A raw element)", () => {
+    const result = check(page(`<StackLayout>\n      <div>One</div>\n      <strong>Two</strong>\n      <ul><li>Three</li></ul>\n    </StackLayout>`));
     expect(result.issues.map((issue) => [issue.code, issue.symbol])).toEqual([
-      ["salt-only/literal-length", "style.padding"],
-      ["salt-only/literal-length", "style.marginTop"],
-      ["salt-only/literal-length", "style.width"],
-      ["salt-only/literal-length", "style.gap"],
+      ["salt-only/raw-element", "div"],
+      ["salt-only/raw-element", "strong"],
+      ["salt-only/raw-element", "ul"],
+      ["salt-only/raw-element", "li"],
     ]);
-    expect(result.issues[0]!.message).toBe("Line 7 sets padding to 12px; use a Salt spacing or size token such as var(--salt-spacing-100).");
+    expect(result.issues[0]!.message).toBe(`Line 8 renders <div>; use a Salt component, or a Salt layout such as StackLayout or FlexLayout (with as="section" for a landmark or list).`);
+    const chart = `<form onSubmit={(event) => event.preventDefault()}>\n      <svg viewBox="0 0 10 10" role="img" aria-label="Trend"><title>Trend</title><g><path d="M0 0L10 10" stroke="var(--salt-content-primary-foreground)" fill="none" /><rect width="1" height="1" fill="currentColor" /></g></svg>\n    </form>`;
+    expect(codes(page(chart))).toEqual([]);
   });
 
-  it("fails any other style value, and a style that isn't an object of tokens", () => {
-    const result = check(
-      page(`<StackLayout>\n      <Text style={{ padding: spacing, margin: \`\${spacing}\`, display: "flex", ...extra, flexGrow: 1 }} />\n      <Text style={styles} />\n    </StackLayout>`, {
-        before: `  const spacing = "var(--salt-spacing-100)";\n  const extra = {};\n  const styles = {};`,
-      }),
-    );
-    expect(result.issues.map((issue) => [issue.code, issue.symbol])).toEqual([
-      ["salt-only/style-value", "style.padding"],
-      ["salt-only/style-value", "style.margin"],
-      ["salt-only/style-value", "style"],
-      ["salt-only/style-value", "style"],
-    ]);
+  it("allows an image only in a portal shell", () => {
+    const logo = page(`<img src="/brand/jpmorgan-logo.svg" alt="J.P. Morgan" />`);
+    expect(codes(logo)).toEqual(["salt-only/raw-element"]);
+    expect(saltOnlyGate({ code: logo, data: DATA, shell: true }).issues).toEqual([]);
   });
 
-  it("allows CSS keywords, unitless counts, and calc() over Salt tokens, but not literal typography", () => {
-    const allowed = `{ display: "flex", textAlign: "right", justifyContent: "space-between", whiteSpace: "nowrap", flexGrow: 1, opacity: 0.6, width: "calc(var(--salt-size-base) * 4)", borderStyle: "var(--salt-borderStyle-solid)" }`;
-    expect(codes(page(`<StackLayout style={${allowed}} />`))).toEqual([]);
-    const result = check(page(`<StackLayout style={{ fontWeight: 700, fontFamily: "Arial", lineHeight: 1.4, width: "calc(var(--salt-size-base) + 4px)" }} />`));
-    expect(result.issues.map((issue) => [issue.code, issue.symbol])).toEqual([
-      ["salt-only/style-value", "style.fontWeight"],
-      ["salt-only/style-value", "style.fontFamily"],
-      ["salt-only/style-value", "style.lineHeight"],
-      ["salt-only/literal-length", "style.width"],
-    ]);
+  it("lets a Salt layout render landmarks and lists through as, and nothing else (A list through a Salt layout)", () => {
+    expect(codes(page(`<StackLayout as="ul">\n      <FlexLayout as="li">One</FlexLayout>\n    </StackLayout>`, { imports: `import { FlexLayout, StackLayout } from "@salt-ds/core";` }))).toEqual([]);
+    expect(codes(page(`<StackLayout as="nav" aria-label="Sections" />`))).toEqual([]);
+    expect(check(page(`<StackLayout as="div" />`)).issues).toMatchObject([{ code: "salt-only/raw-element", symbol: "div" }]);
   });
 
-  it("allows Salt tokens, a Salt token fallback, and zero in styles", () => {
-    const style = `{ padding: "var(--salt-spacing-100)", color: "var(--salt-content-primary-foreground, var(--salt-color-gray-900))", margin: 0, borderWidth: "0", gap: "var( --salt-spacing-200 )" }`;
-    expect(codes(page(`<StackLayout style={${style}} />`))).toEqual([]);
-    expect(codes(page(`<StackLayout style={{ color: "var(--brand-color)" }} />`))).toEqual(["salt-only/style-value"]);
-    expect(codes(page(`<StackLayout style={{ color: "var(--salt-a, red)" }} />`))).toEqual(["salt-only/literal-color"]);
+  it("fails a literal color in an SVG paint attribute, but not Salt's own color props", () => {
+    expect(check(page(`<svg><path d="M0 0" stroke="#31373d" /></svg>`)).issues).toMatchObject([{ code: "salt-only/literal-color", symbol: "stroke" }]);
+    expect(codes(page(`<Text color="secondary">Late</Text>`))).toEqual([]);
   });
 
-  it("fails className, except AG Grid's Salt theme classes", () => {
-    expect(check(page(`<div className="card shadow" />`)).issues).toMatchObject([{ code: "salt-only/class-name", line: 7, symbol: "className" }]);
-    expect(codes(page(`<div className={"ag-theme-salt-compact"} />`, { before: "" }))).toEqual([]);
-    expect(codes(page(`<div className="ag-theme-salt ag-theme-salt-light" />`))).toEqual([]);
-    expect(codes(page(`<div className="ag-theme-salt card" />`))).toEqual(["salt-only/class-name"]);
-    expect(codes(page(`<div className={classes} />`, { before: `  const classes = "ag-theme-salt";` }))).toEqual(["salt-only/class-name"]);
+  it("fails className, except its CSS module's classes and AG Grid's Salt theme classes", () => {
+    expect(check(page(`<StackLayout className="card shadow" />`)).issues).toMatchObject([{ code: "salt-only/class-name", line: 7, symbol: "className" }]);
+    expect(codes(page(`<StackLayout className={"ag-theme-salt-compact"} />`))).toEqual([]);
+    expect(codes(page(`<StackLayout className="ag-theme-salt ag-theme-salt-light" />`))).toEqual([]);
+    expect(codes(page(`<StackLayout className="ag-theme-salt card" />`))).toEqual(["salt-only/class-name"]);
+    expect(codes(page(`<StackLayout className={classes} />`, { before: `  const classes = "ag-theme-salt";` }))).toEqual(["salt-only/class-name"]);
+  });
+
+  describe("a CSS module", () => {
+    const MODULE = `.row { background: var(--salt-selectable-background-selected); }\n.figure { font-variant-numeric: tabular-nums; }\n`;
+    const withModule = (jsx: string, before = "") => page(jsx, { imports: `import { StackLayout, Text } from "@salt-ds/core";\nimport styles from "./Prototype.module.css";`, before });
+
+    it("may be imported by default and read through className, plainly or conditionally", () => {
+      const code = withModule(`<StackLayout className={selected ? styles.row : undefined}>\n      <Text className={[styles.figure, selected && styles.row].filter(Boolean).join(" ")}>1</Text>\n    </StackLayout>`, "  const selected = true;");
+      expect(saltOnlyGate({ code, data: DATA, styles: MODULE })).toMatchObject({ status: "passed", issues: [], warnings: [] });
+    });
+
+    it("warns about a class the component never reads", () => {
+      const code = withModule(`<StackLayout className={styles.row} />`);
+      expect(saltOnlyGate({ code, data: DATA, styles: MODULE }).warnings).toMatchObject([{ code: "salt-only/unused-class", symbol: "figure" }]);
+    });
+
+    it("fails the import when the version has no module, and a named import of it", () => {
+      expect(codes(withModule(`<StackLayout className={styles.row} />`))).toEqual(["salt-only/import", "salt-only/class-name"]);
+      const named = page(`<StackLayout />`, { imports: `import { StackLayout } from "@salt-ds/core";\nimport { row } from "./Prototype.module.css";` });
+      expect(saltOnlyGate({ code: named, data: DATA, styles: MODULE }).issues.map((issue) => issue.code)).toEqual(["salt-only/import"]);
+    });
+
+    it("fails element, id, and global selectors, other at-rules, and imports (An element selector)", () => {
+      const css = `@import "x.css";\ntable td { color: var(--salt-content-primary-foreground); }\n#total { color: var(--salt-content-primary-foreground); }\n:global(.x) { color: var(--salt-content-primary-foreground); }\n@keyframes spin { from { opacity: 0; } }\n.ok[aria-selected="true"] { color: var(--salt-content-primary-foreground); }\n`;
+      const result = saltOnlyGate({ code: withModule(`<StackLayout className={styles.ok} />`), data: DATA, styles: css });
+      expect(result.issues.map((issue) => [issue.code, issue.symbol])).toEqual(
+        expect.arrayContaining([
+          ["salt-only/css-selector", "the table element"],
+          ["salt-only/css-selector", "the #total id"],
+          ["salt-only/css-selector", ":global()"],
+          ["salt-only/css-at-rule", "@keyframes"],
+          ["salt-only/css-import", "@import"],
+        ]),
+      );
+      expect(result.issues.find((issue) => issue.symbol === "the table element")!.message).toBe("Prototype.module.css: Line 2 uses the table element; select only by class, pseudo-class, and aria- or data- attributes.");
+    });
+
+    it("fails literal colors, lengths, and typography, custom properties, !important, and URLs (Literal color)", () => {
+      const css = `.a {\n  color: #b0b0b0;\n  padding: 4px var(--salt-spacing-100);\n  font-size: 12px;\n  --brand: var(--salt-color-blue-500);\n  width: var(--salt-size-base) !important;\n  background: url(/x.png);\n}\n`;
+      const result = saltOnlyGate({ code: withModule(`<StackLayout className={styles.a} />`), data: DATA, styles: css });
+      expect(result.issues.map((issue) => [issue.code, issue.line])).toEqual([
+        ["salt-only/literal-color", 2],
+        ["salt-only/literal-length", 3],
+        ["salt-only/style-value", 4],
+        ["salt-only/css-custom-property", 5],
+        ["salt-only/css-important", 6],
+        ["salt-only/css-import", 7],
+      ]);
+      expect(result.issues[0]!.message).toBe("Prototype.module.css: Line 2 sets color to #b0b0b0; use a Salt color token such as var(--salt-content-primary-foreground).");
+    });
+
+    it("allows tokens, calc() and grid functions over them, keywords, relative units, unitless counts, and media queries", () => {
+      const css = `.grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(calc(var(--salt-size-base) * 8), 1fr));\n  gap: var(--salt-spacing-100) var(--salt-spacing-200);\n  width: 100%;\n  flex: 1 1 0;\n  font-weight: var(--salt-text-fontWeight-strong);\n  list-style: none;\n  margin: 0;\n}\n@media (min-width: 600px) { .grid:hover { color: var(--salt-content-primary-foreground); } }\n`;
+      expect(saltOnlyGate({ code: withModule(`<StackLayout className={styles.grid} />`), data: DATA, styles: css }).issues).toEqual([]);
+    });
   });
 
   it("fails <style>, <link>, <script>, <iframe>, <object>, and <embed>", () => {
@@ -124,7 +161,7 @@ describe("Salt-only gate", () => {
   });
 
   it("fails dangerouslySetInnerHTML", () => {
-    const result = check(page(`<div dangerouslySetInnerHTML={{ __html: "<b>Release</b>" }} />`));
+    const result = check(page(`<StackLayout dangerouslySetInnerHTML={{ __html: "<b>Release</b>" }} />`));
     expect(result.issues).toMatchObject([{ code: "salt-only/inner-html", line: 7, symbol: "dangerouslySetInnerHTML" }]);
   });
 
@@ -214,7 +251,8 @@ describe("Salt-only gate", () => {
   });
 
   it("fails assets loaded from outside DE FabLab", () => {
-    const result = check(page(`<StackLayout>\n      <img alt="" src="https://cdn.example.com/logo.png" />\n      <a href="//example.com">x</a>\n      <img alt="" src="/logo.png" />\n    </StackLayout>`));
+    const code = page(`<StackLayout>\n      <img alt="" src="https://cdn.example.com/logo.png" />\n      <Link href="//example.com">x</Link>\n      <img alt="" src="/logo.png" />\n    </StackLayout>`, { imports: `import { Link, StackLayout } from "@salt-ds/core";` });
+    const result = saltOnlyGate({ code, data: DATA, shell: true });
     expect(result.issues.map((issue) => [issue.code, issue.symbol, issue.line])).toEqual([
       ["salt-only/external-asset", "src", 8],
       ["salt-only/external-asset", "href", 9],

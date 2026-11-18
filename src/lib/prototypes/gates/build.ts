@@ -1,16 +1,21 @@
 import ts from "typescript";
 import type { GateIssue, GateResult } from "../types";
-import { DATA_FILE, DATA_MODULE, PROTOTYPE_FILE, PROTOTYPE_GLOBAL, type PrototypeSource, diagnosticIssue, moduleName, result } from "./common";
+import { DATA_FILE, DATA_MODULE, PROTOTYPE_FILE, PROTOTYPE_GLOBAL, type PrototypeSource, STYLES_FILE, STYLES_MODULE, diagnosticIssue, moduleName, result } from "./common";
+import { type CompiledCss, compileCssModule } from "./css-module";
 
 /**
  * The build gate (design.md, decisions 7 and 8): `ts.transpileModule` with
  * react-jsx and a transformer, producing one browser module. The sample data
- * is inlined ahead of the component, the component registers itself on
+ * is inlined ahead of the component, a CSS module is compiled to scoped
+ * classes whose stylesheet the frame inserts from `globalThis.__fabricateCss`,
+ * the component registers itself on
  * `globalThis.__fabricatePrototype` instead of being exported, and package
  * imports stay bare for the frame's import map. Nothing here runs the code.
  */
 
 export const DATA_GLOBAL = "__fabricateData";
+/** The global holding a version's compiled CSS module, which the frame inserts as a nonce-carrying <style> before rendering. */
+export const CSS_GLOBAL = "__fabricateCss";
 
 export interface BuildOutput {
   readonly result: GateResult;
@@ -24,7 +29,15 @@ export function buildGate(source: PrototypeSource): BuildOutput {
   let registrations = 0;
   let data: string | null = null;
   let component: string | null = null;
+  let css: CompiledCss | null = null;
   try {
+    if (source.styles?.trim()) {
+      try {
+        css = compileCssModule(source.styles);
+      } catch (error) {
+        issues.push({ code: "build/css", message: `${STYLES_FILE} doesn't compile: ${error instanceof Error ? error.message : String(error)}` });
+      }
+    }
     const dataOutput = ts.transpileModule(source.data, {
       fileName: DATA_FILE,
       reportDiagnostics: true,
@@ -37,7 +50,7 @@ export function buildGate(source: PrototypeSource): BuildOutput {
       fileName: PROTOTYPE_FILE,
       reportDiagnostics: true,
       compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, isolatedModules: true },
-      transformers: { before: [registerDefaultExport(() => registrations++)] },
+      transformers: { before: [registerDefaultExport(() => registrations++, css?.classes ?? {})] },
     });
     issues.push(...(componentOutput.diagnostics ?? []).map((diagnostic) => diagnosticIssue(diagnostic)));
     component = componentOutput.outputText;
@@ -47,15 +60,17 @@ export function buildGate(source: PrototypeSource): BuildOutput {
   if (component !== null && registrations === 0) {
     issues.push({ code: "build/no-component", message: `${PROTOTYPE_FILE} has no default export to register as the prototype component.` });
   }
-  const compiled = issues.length === 0 && data !== null && component !== null ? `const ${DATA_GLOBAL} = {};\n(function (exports) {\n${data}\n})(${DATA_GLOBAL});\n${component}` : null;
+  const stylesheet = css ? `globalThis.${CSS_GLOBAL} = ${JSON.stringify(css.css)};\n` : "";
+  const compiled = issues.length === 0 && data !== null && component !== null ? `${stylesheet}const ${DATA_GLOBAL} = {};\n(function (exports) {\n${data}\n})(${DATA_GLOBAL});\n${component}` : null;
   return { result: result("build", started, issues), compiled };
 }
 
 /**
- * Replaces imports from "./data" with reads of the inlined data, turns the
- * default export into the registration, and drops every other export.
+ * Replaces imports from "./data" with reads of the inlined data, the CSS
+ * module's import with its class map, turns the default export into the
+ * registration, and drops every other export.
  */
-function registerDefaultExport(registered: () => void): ts.TransformerFactory<ts.SourceFile> {
+function registerDefaultExport(registered: () => void, classes: Readonly<Record<string, string>>): ts.TransformerFactory<ts.SourceFile> {
   return (context) => (file) => {
     const { factory } = context;
     const register = (expression: ts.Expression) => {
@@ -71,6 +86,10 @@ function registerDefaultExport(registered: () => void): ts.TransformerFactory<ts
     for (const statement of file.statements) {
       if (ts.isImportDeclaration(statement) && moduleName(statement.moduleSpecifier) === DATA_MODULE) {
         statements.push(...dataBindings(factory, statement));
+      } else if (ts.isImportDeclaration(statement) && moduleName(statement.moduleSpecifier) === STYLES_MODULE) {
+        const name = statement.importClause?.name;
+        const map = factory.createObjectLiteralExpression(Object.entries(classes).map(([local, scoped]) => factory.createPropertyAssignment(factory.createStringLiteral(local), factory.createStringLiteral(scoped))));
+        if (name) statements.push(factory.createVariableStatement(undefined, factory.createVariableDeclarationList([factory.createVariableDeclaration(factory.createIdentifier(name.text), undefined, undefined, map)], ts.NodeFlags.Const)));
       } else if (ts.isExportAssignment(statement)) {
         if (!statement.isExportEquals) statements.push(register(statement.expression));
       } else if (ts.isExportDeclaration(statement)) {

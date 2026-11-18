@@ -111,7 +111,7 @@ const recompiled = new Map<string, string | null>();
 function compiledFor(seed: WorkspaceSeed, version: WorkspaceSeed["versions"][number]): { compiled: string | null; runtimeHash: string | null } {
   if (!version.compiled || seed.runtimeHash === RUNTIME.hash) return { compiled: version.compiled, runtimeHash: version.runtimeHash };
   const key = `${RUNTIME.hash}:${version.id}`;
-  if (!recompiled.has(key)) recompiled.set(key, buildGate({ code: version.code, data: version.sampleData?.source ?? "export {};\n" }).compiled);
+  if (!recompiled.has(key)) recompiled.set(key, buildGate({ code: version.code, data: version.sampleData?.source ?? "export {};\n", styles: version.styles ?? null }).compiled);
   return { compiled: recompiled.get(key) ?? null, runtimeHash: RUNTIME.hash };
 }
 

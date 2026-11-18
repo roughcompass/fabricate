@@ -18,6 +18,7 @@ const ATTEMPT_TIMEOUT_MS = 240_000;
 
 const submission = z.object({
   code: z.string().min(20).max(60_000).describe("The complete Prototype.tsx file."),
+  styles: z.string().max(20_000).nullish().describe("The complete Prototype.module.css, only when Salt has no property for what you need, written with Salt tokens. Omit it to keep the current module, or send an empty string to remove it."),
   title: z.string().min(1).max(120).describe("The page or component title."),
   navItem: z.string().max(80).nullish().describe("For a page: the shell navigation item it belongs to, exactly as listed. Null for a component."),
   summary: z.string().min(1).max(400).describe("One sentence on what you built or changed."),

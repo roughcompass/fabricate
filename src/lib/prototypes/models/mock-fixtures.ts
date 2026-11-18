@@ -163,16 +163,14 @@ export default function Shell({ children }: { children: ReactNode }) {
         <Text styleAs="h2">{application.portal}</Text>
         <Text>{profile.name}</Text>
       </FlexLayout>
-      <nav aria-label={\`\${application.portal} navigation\`}>
-        <FlexLayout gap={2}>
-          {routes.map((route) => (
-            <Link key={route.path} href={routeHref(route)} aria-current={route.path === current.path ? "page" : undefined}>
-              {route.label}
-            </Link>
-          ))}
-        </FlexLayout>
-      </nav>
-      <main>{children}</main>
+      <FlexLayout as="nav" gap={2} aria-label={\`\${application.portal} navigation\`}>
+        {routes.map((route) => (
+          <Link key={route.path} href={routeHref(route)} aria-current={route.path === current.path ? "page" : undefined}>
+            {route.label}
+          </Link>
+        ))}
+      </FlexLayout>
+      <StackLayout as="main">{children}</StackLayout>
     </StackLayout>
   );
 }

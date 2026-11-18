@@ -8,7 +8,7 @@ function isPending(payment: Payment): boolean {
 export default function UrgentPayments() {
   const pending = payments.filter(isPending).length;
   return (
-    <StackLayout gap={2} style={{ padding: "var(--salt-spacing-300)" }}>
+    <StackLayout gap={2} padding={3}>
       <FlexLayout align="center" gap={1}>
         <H2>Urgent payments</H2>
         <Badge value={pending} aria-label={`${pending} payments need action`} />
@@ -32,7 +32,7 @@ export default function UrgentPayments() {
               <TD textAlign="right">{payment.amount}</TD>
               <TD>{payment.cutOff}</TD>
               <TD>
-                <FlexLayout align="center" gap={1} style={{ color: "var(--salt-content-primary-foreground)" }}>
+                <FlexLayout align="center" gap={1}>
                   <StatusIndicator status={payment.status} />
                   <Text>{payment.statusLabel}</Text>
                 </FlexLayout>

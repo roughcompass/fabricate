@@ -85,7 +85,7 @@ export interface WriteInput {
   readonly data: SampleData;
   readonly shell: ShellConfig;
   /** The attached template, as a reference this direction varies from. */
-  readonly template?: { readonly title: string; readonly code: string } | null;
+  readonly template?: { readonly title: string; readonly code: string; readonly styles?: string | null } | null;
   /** For hero generation: the microfrontend's id, which it uses on the bus. */
   readonly member?: string | null;
   /** For hero generation: the hand-written source this version ports to Salt. */
@@ -101,6 +101,11 @@ function referenceLines(input: Pick<WriteInput, "reference">): string {
   ].join("\n");
 }
 
+/** A version's CSS module, shown after its code when it has one, so the model keeps or changes it on purpose. */
+function stylesLines(whose: string, styles: string | null | undefined): string {
+  return styles?.trim() ? `${whose} CSS module (./Prototype.module.css). Keep it unless your change needs it to change; submit styles only to change it, and an empty string to remove it:\n\`\`\`css\n${styles}\n\`\`\`` : "";
+}
+
 /** The first attempt for a generated variant. */
 export function writePrompt(input: WriteInput): string {
   return [
@@ -114,6 +119,7 @@ export function writePrompt(input: WriteInput): string {
     `Sample data (./data), ${input.data.description}:\n\`\`\`ts\n${input.data.source}\n\`\`\``,
     referenceLines(input),
     input.template ? `Reference: the template ${input.template.title}, which is variant 0 of this generation. Start from it and change what the direction says; don't return it unchanged.\n\`\`\`tsx\n${input.template.code}\n\`\`\`` : "",
+    input.template ? stylesLines("The template's", input.template.styles) : "",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -121,7 +127,7 @@ export function writePrompt(input: WriteInput): string {
 
 export interface RefineInput extends WriteInput {
   readonly message: string;
-  readonly base: { readonly number: number; readonly code: string };
+  readonly base: { readonly number: number; readonly code: string; readonly styles?: string | null };
   readonly feedback: readonly { readonly kind: string; readonly text: string; readonly rating: number | null }[];
   readonly notes: readonly { readonly id: string; readonly text: string; readonly component: string; readonly elementText: string }[];
   readonly violations: readonly AuditViolation[];
@@ -148,13 +154,14 @@ export function refinePrompt(input: RefineInput): string {
     input.renderError ? `Version ${input.base.number} threw while rendering: ${input.renderError.message}. Fix the cause.` : "",
     `Sample data (./data):\n\`\`\`ts\n${input.data.source}\n\`\`\``,
     `Version ${input.base.number}'s code:\n\`\`\`tsx\n${input.base.code}\n\`\`\``,
+    stylesLines(`Version ${input.base.number}'s`, input.base.styles),
   ]
     .filter(Boolean)
     .join("\n\n");
 }
 
 /** A repair (quality-checks spec, "Failed gates are repaired automatically"): the gate results, with Salt's fix recipes. */
-export function repairPrompt(code: string, results: readonly GateResult[], recipes: readonly string[]): string {
+export function repairPrompt(code: string, results: readonly GateResult[], recipes: readonly string[], styles: string | null = null): string {
   const failures = results
     .filter((result) => result.status === "failed")
     .flatMap((result) => result.issues.map((issue) => `- ${result.gate}${issue.line ? ` line ${issue.line}` : ""}: ${issue.message}${issue.fix ? ` Fix: ${issue.fix}` : ""}`));
@@ -163,6 +170,7 @@ export function repairPrompt(code: string, results: readonly GateResult[], recip
     failures.join("\n"),
     recipes.length > 0 ? `Salt's fix recipes:\n${recipes.map((recipe) => `- ${recipe}`).join("\n")}` : "",
     `Your code:\n\`\`\`tsx\n${code}\n\`\`\``,
+    stylesLines("Your", styles),
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -175,6 +183,7 @@ export interface ReviewInput {
   readonly direction: Direction | null;
   readonly code: string;
   readonly data: string;
+  readonly styles?: string | null;
 }
 
 /** The persona-fit review (quality-checks spec; design.md, decision 10). */
@@ -194,6 +203,7 @@ export function reviewPrompt(input: ReviewInput): string {
     ].join("\n"),
     `Sample data:\n\`\`\`ts\n${input.data}\n\`\`\``,
     `Code:\n\`\`\`tsx\n${input.code}\n\`\`\``,
+    input.styles?.trim() ? `CSS module:\n\`\`\`css\n${input.styles}\n\`\`\`` : "",
   ]
     .filter(Boolean)
     .join("\n\n");

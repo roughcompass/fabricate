@@ -29,7 +29,7 @@ describe("running the gates", () => {
     ]);
     expect(run.passed).toBe(false);
     expect(run.compiled).not.toBeNull();
-    expect(run.signatures).toEqual(["salt-only:salt-only/literal-color:style.color", "typecheck:TS2322:Button.size"]);
+    expect(run.signatures).toEqual(["salt-only:salt-only/inline-style:style", "typecheck:TS2322:Button.size"]);
   });
 
   it("gives the same failure signatures for the same failing code, run twice", async () => {

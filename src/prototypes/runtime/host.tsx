@@ -7,7 +7,7 @@ import { Component, type ComponentType, type ErrorInfo, type ReactNode, StrictMo
 import { createRoot } from "react-dom/client";
 import type { AuditViolation, Impact } from "@/lib/prototypes/types";
 import { describeElement, findByLocator, nearestComponent } from "./inspector";
-import { type FrameMessage, PAGE_MESSAGE_TYPES, PROTOTYPE_GLOBAL, type PageMessage, RENDER_CONFIG_ID, type RenderConfig, envelope, readMessage } from "./protocol";
+import { CSS_GLOBAL, type FrameMessage, PAGE_MESSAGE_TYPES, PROTOTYPE_GLOBAL, type PageMessage, RENDER_CONFIG_ID, type RenderConfig, envelope, readMessage } from "./protocol";
 import { PageShell } from "./shell/page-shell";
 import "./host.css";
 
@@ -303,6 +303,15 @@ window.addEventListener("resize", () => layoutPins());
 const container = document.getElementById("prototype-root");
 if (container && config) {
   if (config.title) document.title = config.title;
+  // The version's CSS module, compiled by the build gate, as a stylesheet the frame's CSP admits by its nonce.
+  const stylesheet = (globalThis as Record<string, unknown>)[CSS_GLOBAL];
+  if (typeof stylesheet === "string" && stylesheet) {
+    const style = document.createElement("style");
+    style.nonce = config.styleNonce;
+    style.dataset.prototypeStyles = "";
+    style.textContent = stylesheet;
+    document.head.append(style);
+  }
   if (registered) {
     createRoot(container).render(
       <StrictMode>

@@ -80,7 +80,7 @@ export default async function VariantPage({ params, searchParams }: { params: Pa
     const search = new URLSearchParams(entries).toString();
     return `${base}/variants/${id}${search ? `?${search}` : ""}`;
   };
-  const files = codeFiles(version.code, version.sampleData?.source ?? "", version.scope);
+  const files = codeFiles(version.code, version.sampleData?.source ?? "", version.scope, version.styles);
   const summary = checkSummary(version);
   const kept = prototypeId ? { id: prototypeId, name: title } : undefined;
 

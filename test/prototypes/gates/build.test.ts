@@ -100,4 +100,14 @@ describe("build gate", () => {
     expect(result.issues).toEqual([{ code: "build/no-component", message: "Prototype.tsx has no default export to register as the prototype component." }]);
     expect(compiled).toBeNull();
   });
+  it("compiles a CSS module to scoped classes the component reads, with the stylesheet for the frame", async () => {
+    const code = `import { Text } from "@salt-ds/core";\nimport styles from "./Prototype.module.css";\nexport default function Figure() { return <Text className={styles.figure}>12</Text>; }\n`;
+    const { result, compiled } = buildGate({ code, data: "export {};\n", styles: ".figure { font-variant-numeric: tabular-nums; }\n" });
+    expect(result.status).toBe("passed");
+    expect(compiled).not.toContain("Prototype.module.css");
+    expect(compiled).toMatch(/^globalThis\.__fabricateCss = ".p-figure-[\w-]+\{font-variant-numeric:tabular-nums\}";/);
+    const component = await execute(compiled!);
+    expect(renderToStaticMarkup(createElement(component as ComponentType))).toMatch(/class="[^"]*p-figure-[\w-]+/);
+    delete (globalThis as Record<string, unknown>).__fabricateCss;
+  });
 });

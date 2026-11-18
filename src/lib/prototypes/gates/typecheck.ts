@@ -2,6 +2,7 @@ import path from "node:path";
 import ts from "typescript";
 import type { GateResult } from "../types";
 import { DATA_FILE, PROTOTYPE_FILE, type PrototypeSource, diagnosticIssue, result } from "./common";
+import { checkCssModule } from "./css-module";
 
 /**
  * The typecheck gate (design.md, decision 7): an in-memory TypeScript program
@@ -15,6 +16,8 @@ const CHECK_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), ".prototype
 const PROTOTYPE_PATH = `${CHECK_DIR}/${PROTOTYPE_FILE}`;
 const DATA_PATH = `${CHECK_DIR}/${DATA_FILE}`;
 const PORTAL_PATH = `${CHECK_DIR}/deweb-portal.d.ts`;
+/** The CSS module's declaration, which `allowArbitraryExtensions` resolves `./Prototype.module.css` to. */
+const STYLES_PATH = `${CHECK_DIR}/Prototype.module.d.css.ts`;
 
 /** `@deweb/portal`'s types, in step with src/demo/runtime/portal/types.ts; only hero lineages see them. */
 export const PORTAL_DECLARATIONS = `declare module "@deweb/portal" {
@@ -36,7 +39,6 @@ export const PORTAL_DECLARATIONS = `declare module "@deweb/portal" {
     readonly menu: readonly PortalMenuEntry[];
     readonly footer: { readonly shown: boolean; readonly slots: readonly string[]; readonly copyright: string };
   }
-  export interface Planted { blockMainThread(ms: number): void }
   export function useBus(topic: string, member: string, handler: (payload: unknown) => void): void;
   export function usePublish(member: string): (topic: string, payload: unknown) => void;
   export function useProfile(): PortalProfile;
@@ -45,7 +47,6 @@ export const PORTAL_DECLARATIONS = `declare module "@deweb/portal" {
   export function useNavigate(): (route: PortalRoute) => void;
   export function useApplication(): PortalApplication;
   export function useExperience(): PortalExperience;
-  export const planted: Planted;
 }
 `;
 
@@ -62,6 +63,7 @@ export const TYPECHECK_OPTIONS: ts.CompilerOptions = {
   esModuleInterop: true,
   isolatedModules: true,
   noUncheckedIndexedAccess: false,
+  allowArbitraryExtensions: true,
 };
 
 interface Cache {
@@ -80,6 +82,7 @@ export function typecheckGate(source: PrototypeSource): GateResult {
     [PROTOTYPE_PATH, source.code],
     [DATA_PATH, source.data],
     ...(source.portal ? ([[PORTAL_PATH, PORTAL_DECLARATIONS]] as const) : []),
+    ...(source.styles?.trim() ? ([[STYLES_PATH, stylesDeclaration(source.styles)]] as const) : []),
   ]);
   const program = ts.createProgram({ rootNames: [...virtual.keys()], options: TYPECHECK_OPTIONS, host: createHost(virtual), oldProgram: cache.previous });
   cache.previous = program;
@@ -88,6 +91,12 @@ export function typecheckGate(source: PrototypeSource): GateResult {
     return [...program.getSyntacticDiagnostics(file), ...program.getSemanticDiagnostics(file)].map((diagnostic) => diagnosticIssue(diagnostic, symbolAt));
   });
   return result("typecheck", started, issues);
+}
+
+/** The CSS module's classes as a typed default export, so reading a class it doesn't define fails like a missing property. */
+export function stylesDeclaration(styles: string): string {
+  const classes = checkCssModule(styles).classes;
+  return `declare const styles: {\n${classes.map((name) => `  readonly ${JSON.stringify(name)}: string;\n`).join("")}};\nexport default styles;\n`;
 }
 
 function createHost(virtual: ReadonlyMap<string, string>): ts.CompilerHost {

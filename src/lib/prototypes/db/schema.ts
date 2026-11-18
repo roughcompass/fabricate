@@ -222,6 +222,8 @@ export const versions = prototypesSchema.table(
     /** What changed, in the generator's words. */
     summary: text("summary").notNull().default(""),
     code: text("code").notNull().default(""),
+    /** The version's CSS module, which the code imports as ./Prototype.module.css, or null when it has none. */
+    styles: text("styles"),
     /** The sample data module the code imports as ./data: the generation's, or the base version's for a refinement. */
     sampleData: jsonb("sample_data").$type<SampleData>(),
     compiled: text("compiled"),
@@ -332,6 +334,8 @@ export interface TemplateSnapshot {
   readonly number: number;
   readonly prototypeName: string;
   readonly code: string;
+  /** The version's CSS module; absent in snapshots taken before modules existed. */
+  readonly styles?: string | null;
   /** The sample data module the code imports as ./data; Use template needs it. */
   readonly sampleData: SampleData | null;
   readonly compiled: string;

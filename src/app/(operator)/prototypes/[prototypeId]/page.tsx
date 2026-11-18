@@ -146,7 +146,7 @@ export default async function PrototypePage({ params, searchParams }: { params: 
   const gates = version.attempts.at(-1)?.gates ?? [];
   const highlightIndex = Number.parseInt(param(query, "highlight") ?? "", 10);
   const highlight = Number.isInteger(highlightIndex) ? version.audit?.violations[highlightIndex]?.targets : undefined;
-  const files = codeFiles(version.code, version.sampleData?.source ?? "", version.scope);
+  const files = codeFiles(version.code, version.sampleData?.source ?? "", version.scope, version.styles);
   const parent = versions.find((entry) => entry.id === version.provenance?.parentVersionId);
   // Compare the version shown with the one it was built on, the one before it, or the version its fork came from.
   const compareWith = parent?.number ?? (version.number > 1 ? version.number - 1 : versions[0]?.provenance?.forkedFrom ? "origin" : null);

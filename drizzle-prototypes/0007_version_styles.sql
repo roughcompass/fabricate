@@ -1,0 +1,1 @@
+ALTER TABLE "prototypes"."versions" ADD COLUMN "styles" text;

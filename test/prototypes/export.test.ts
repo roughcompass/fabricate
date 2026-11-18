@@ -51,6 +51,13 @@ describe("project export", () => {
     expect(files["src/main.tsx"]).toContain(`className="surface"`);
   });
 
+  it("writes the CSS module beside the component when the version has one, and names it in the README (Downloading a version with a CSS module)", () => {
+    expect(projectFiles(PAGE)["src/Prototype.module.css"]).toBeUndefined();
+    const files = projectFiles({ ...PAGE, styles: ".figure { font-variant-numeric: tabular-nums; }\n" });
+    expect(files["src/Prototype.module.css"]).toBe(".figure { font-variant-numeric: tabular-nums; }\n");
+    expect(files["README.md"]).toContain("`src/Prototype.module.css`");
+  });
+
   it("zips the project into one folder", () => {
     const entries = unzipSync(projectArchive(PAGE));
     expect(Object.keys(entries).every((name) => name.startsWith("exception-first-queue-v4/"))).toBe(true);

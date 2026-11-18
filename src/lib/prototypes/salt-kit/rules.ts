@@ -17,7 +17,8 @@ Import only from these modules. Anything else fails the checks.
 - "@salt-ds/lab": pre-release components. Use one only when nothing stable fits; it shows as a warning.
 - "ag-grid-react" and "ag-grid-community": Salt's data grid, for large or editable data. The frame loads Salt's grid theme and registers AG Grid's modules. Prefer Salt's Table for fewer than 50 rows.
 - "./data": the generation's sample data. Import it; never copy or redefine it.
-Never import CSS, fonts, images, other libraries, or "@salt-ds/date-adapters".`;
+- "./Prototype.module.css": your own CSS module, only as a default import, \`import styles from "./Prototype.module.css"\`, and only when you submit one (see Styling).
+Never import other CSS, fonts, images, other libraries, or "@salt-ds/date-adapters".`;
 
 export const PROVIDER = `# Provider contract
 The frame renders your component inside SaltProviderNext with the JPM Brand theme, the mode and density the viewer chooses, and Salt's LocalizationProvider with the date-fns adapter. Never render SaltProvider, SaltProviderNext, LocalizationProvider, or CSPProvider yourself. Don't set the mode or density.`;
@@ -30,9 +31,13 @@ export const DATA = `# Sample data contract
 Every name, account, and figure is fictional and realistic for a financial institution. The generation's sample data module is in ./data; import from it so every variant shows the same data. Format amounts with ISO currency codes, such as USD 1,250,000.00; dates as 16 Oct 2026; times with their zone, such as 14:30 ET; account numbers masked, such as ••••4821. Derive what you need with plain TypeScript; never fetch it.`;
 
 export const STYLE = `# Styling
-Style with Salt components, their props, and Salt's layout components: StackLayout, FlexLayout, FlowLayout, GridLayout with GridItem, BorderLayout with BorderItem, SplitLayout, and ParentChildLayout. Spacing comes from their gap and padding props, which take Salt's spacing scale (1, 2, 3).
+Style with Salt components, their props, and Salt's layout components: StackLayout, FlexLayout, FlowLayout, GridLayout with GridItem, BorderLayout with BorderItem, SplitLayout, and ParentChildLayout. Spacing comes from their gap and padding props, which take Salt's spacing scale (1, 2, 3): 3 between regions, 2 within one.
 Set text with Text, H1 to H4, Display1 to Display4, and Label, using their styleAs, color, and variant props. Never set font families, sizes, weights, or line heights yourself.
-The style prop may only hold Salt design tokens, var(--salt-*), calc() over them, plain CSS keywords such as "flex" or "right", or 0. Never use literal colors, pixel or rem sizes, className, <style>, or dangerouslySetInnerHTML. Use recommend_tokens to find a token.`;
+Use Salt's props before anything else: TH and TD take textAlign="right" for figures, THead takes sticky, FlexItem takes shrink and grow, layouts take align and justify.
+Never set the style prop. Only when Salt has no prop for what you need, such as tabular figures or a selected row's tint, write a CSS module and submit it as styles: class rules only, selected by class, pseudo-class, or aria- and data- attributes, with values that are Salt tokens, var(--salt-*), calc() over them, CSS keywords, % or fr, or 0. Apply its classes with className={styles.name}. Never use literal colors, pixel or rem sizes, @import, url(), !important, <style>, or dangerouslySetInnerHTML. Use recommend_tokens to find a token.`;
+
+export const MARKUP = `# Markup
+Render only Salt components and layouts. Never write <div>, <span>, <p>, <ul>, <li>, <strong>, <button>, <a>, <input>, <table>, or any other HTML element yourself: Salt has a component for each. For landmarks and lists, render a Salt layout through its as prop, such as <StackLayout as="ul"> with <FlexLayout as="li"> items, or <StackLayout as="section">; as may only be nav, header, main, footer, section, aside, ul, ol, li, or article. Two elements are allowed as they are: <form>, around Salt form fields so Enter submits, and SVG drawing elements (<svg>, <path>, <rect>, and the like) for a chart Salt doesn't provide, colored with Salt tokens or currentColor.`;
 
 export const BEHAVIOR = `# Behavior
 The prototype runs in a sandbox with no network. Never call fetch, XMLHttpRequest, WebSocket, EventSource, or navigator.sendBeacon; never use localStorage, sessionStorage, indexedDB, cookies, window.open, eval, or Function; never load external images or assets. Keep state in React. Make interactions work: selecting rows, opening dialogs, switching tabs, and filtering should all respond.`;
@@ -49,6 +54,6 @@ export const VERIFY = `# Verify, don't guess
 If something can't be verified from Salt's sources, don't use it. Look components, patterns, tokens, and examples up with the Salt tools before you write, and prefer a Salt pattern or composition recipe when one fits. The tools don't list props: DE FabLab typechecks your code against Salt's real types, so use props you have seen in Salt's examples, and leave out any you are unsure of.`;
 
 export const OUTPUT = `# Output
-Export exactly one component, as the default export, named after what it shows. Then call submit_prototype once with the complete file as code, the page title, the shell navigation item (page scope), a one-sentence summary of what you built or changed, and, for a refinement, what you did about each open note. Don't include explanations outside the tool call.`;
+Export exactly one component, as the default export, named after what it shows. Then call submit_prototype once with the complete file as code, your CSS module as styles only when you need one, the page title, the shell navigation item (page scope), a one-sentence summary of what you built or changed, and, for a refinement, what you did about each open note. Don't include explanations outside the tool call.`;
 
-export const RULES = [ROLE, PACKAGES, PROVIDER, SHELL, DATA, STYLE, BEHAVIOR, ACCESSIBILITY, VERIFY, OUTPUT];
+export const RULES = [ROLE, PACKAGES, PROVIDER, SHELL, DATA, STYLE, MARKUP, BEHAVIOR, ACCESSIBILITY, VERIFY, OUTPUT];

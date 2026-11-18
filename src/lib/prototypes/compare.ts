@@ -104,6 +104,6 @@ export async function loadComparison(db: PrototypesExecutor, workspaceId: string
   let a = sides.find((side) => side.key === aKey) ?? fallbackA;
   let b = sides.find((side) => side.key === bKey) ?? latest;
   if (a.key === b.key) [a, b] = a.key === latest.key ? [fallbackA, latest] : [a, latest];
-  const diffs = [diffFile("Prototype.tsx", a.version.code, b.version.code), diffFile("data.ts", a.version.sampleData?.source ?? "", b.version.sampleData?.source ?? "")];
+  const diffs = [diffFile("Prototype.tsx", a.version.code, b.version.code), diffFile("data.ts", a.version.sampleData?.source ?? "", b.version.sampleData?.source ?? ""), ...(a.version.styles || b.version.styles ? [diffFile("Prototype.module.css", a.version.styles ?? "", b.version.styles ?? "")] : [])];
   return { prototype, choices: sides.map((side) => ({ value: side.key, label: side.label })), a, b, diffs, review: await latestReview(db, workspaceId, a.version.id, b.version.id) };
 }

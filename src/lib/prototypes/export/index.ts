@@ -25,6 +25,8 @@ export interface ExportedVersion {
   readonly navItem: string | null;
   readonly code: string;
   readonly data: string;
+  /** The version's CSS module, written as src/Prototype.module.css when present. */
+  readonly styles?: string | null;
   readonly personas: readonly PersonaCopy[];
   readonly shell: ShellConfig;
 }
@@ -114,6 +116,7 @@ export function projectFiles(version: ExportedVersion): Record<string, string> {
     "src/data.ts": version.data,
     "README.md": readme(version, name),
   };
+  if (version.styles?.trim()) files["src/Prototype.module.css"] = version.styles;
   if (version.scope === "page") {
     const shell = shellSource();
     files["src/PageShell.tsx"] = shell.tsx;
@@ -142,6 +145,7 @@ function readme(version: ExportedVersion, name: string): string {
     "",
     "- `src/Prototype.tsx`: the generated code, as DE FabLab checked it.",
     "- `src/data.ts`: its fictional sample data.",
+    ...(version.styles?.trim() ? ["- `src/Prototype.module.css`: its CSS module, which uses only Salt's tokens."] : []),
     ...(version.scope === "page" ? ["- `src/PageShell.tsx` and `src/shell.json`: the common page shell, which provides the header, navigation, and footer. The generated code is only the page body."] : []),
     "- `src/main.tsx`: renders it under Salt's provider with the JPM Brand theme.",
     "",

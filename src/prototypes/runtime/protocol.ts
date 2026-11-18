@@ -27,6 +27,9 @@ export const RENDER_CONFIG_ID = "fabricate-render-config";
 /** The global a compiled version registers its component on. */
 export const PROTOTYPE_GLOBAL = "__fabricatePrototype";
 
+/** The global a compiled version sets to its CSS module's stylesheet, in step with CSS_GLOBAL in gates/build.ts. */
+export const CSS_GLOBAL = "__fabricateCss";
+
 const TAG = "fabricate-prototype";
 
 export interface Rect {

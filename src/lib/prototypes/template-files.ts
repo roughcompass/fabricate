@@ -30,6 +30,7 @@ export async function exportedPrototypeVersion(db: PrototypesExecutor, versionId
     navItem: version.navItem,
     code: version.code,
     data: version.sampleData?.source ?? "export {};\n",
+    styles: version.styles,
     personas: version.provenance?.personas ?? [],
     shell: await workspaceShell(db, version.workspaceId),
   };
@@ -48,6 +49,7 @@ export async function exportedTemplateVersion(db: PrototypesExecutor, templateVe
     navItem: snapshot.navItem,
     code: snapshot.code,
     data: snapshot.sampleData?.source ?? "export {};\n",
+    styles: snapshot.styles ?? null,
     personas: snapshot.personas,
     shell,
   };
