@@ -1,5 +1,5 @@
 import { expect, test } from "./support/fixtures";
-import runtime from "../src/lib/prototypes/runtime-manifest.json";
+import runtime from "../src/lib/prototypes/runtime-manifest.json" with { type: "json" };
 import { fixturePrototype, keepOne, previewFrame, refineEach, waitForAudit, waitForFrame } from "./support/prototypes";
 import { waitForHydration } from "./support/shell";
 

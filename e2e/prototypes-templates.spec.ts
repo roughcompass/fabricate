@@ -1,5 +1,5 @@
 import { expect, test } from "./support/fixtures";
-import runtime from "../src/lib/prototypes/runtime-manifest.json";
+import runtime from "../src/lib/prototypes/runtime-manifest.json" with { type: "json" };
 import { acceptTemplate, keepOne, previewFrame, waitForFrame } from "./support/prototypes";
 
 /** The Salt release DE FabLab renders and checks with. */
