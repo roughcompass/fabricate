@@ -29,10 +29,10 @@ export interface MenuGroup {
 /** Home (home spec): the first entry of the primary menu. */
 export const HOME = { id: "home", label: "Home", href: "/", icon: "home", match: [/^\/$/] } as const satisfies NavItem;
 
-/** Assessments' pages, each list with its create and import pages and its records. */
+/** Assessments' pages, Repositories first since everything starts from them, each list with its create and import pages and its records. */
 const ASSESSMENT_ITEMS: readonly NavItem[] = [
-  { id: "all-assessments", label: "All Assessments", href: "/assessments", icon: "checklist", match: [/^\/assessments(\/.*)?$/, /^\/(runs|evaluations|profiles)\/[^/]+(\/.*)?$/] },
   { id: "repositories", label: "Repositories", href: "/repositories", icon: "git", match: [/^\/repositories(\/.*)?$/] },
+  { id: "all-assessments", label: "All Assessments", href: "/assessments", icon: "checklist", match: [/^\/assessments(\/.*)?$/, /^\/(runs|evaluations|profiles)\/[^/]+(\/.*)?$/] },
   { id: "standards", label: "Standards", href: "/standards", icon: "target", match: [/^\/standards(\/.*)?$/] },
 ];
 

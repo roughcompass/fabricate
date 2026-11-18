@@ -61,6 +61,9 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   rejected: ["Rejected", "error"],
   // Service Dependency boundaries.
   characterized: ["Boundary characterized", "success"],
+  // A part of a page that lists what to look at, such as a Profile's Needs attention and Skipped inputs.
+  to_review: ["To review", "warning"],
+  clear: ["Nothing to review", "success"],
   incomplete: ["Boundary incomplete", "warning"],
   // How each step of a Finding's trace was read.
   holds: ["Holds", "success"],

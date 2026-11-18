@@ -92,7 +92,7 @@ describe("primary menu", () => {
   it("lists Home, then the Assessments and Templates groups under their headings (Full menu)", () => {
     expect(shape(ALL)).toEqual([
       [null, ["Home"]],
-      ["Assessments", ["All Assessments", "Repositories", "Standards"]],
+      ["Assessments", ["Repositories", "All Assessments", "Standards"]],
       ["Templates", ["Salt Patterns"]],
     ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
@@ -102,7 +102,7 @@ describe("primary menu", () => {
   it("has no Templates group while the demo is disabled, and leaves its pages outside the menu (Demo disabled)", () => {
     expect(shape(BASE)).toEqual([
       [null, ["Home"]],
-      ["Assessments", ["All Assessments", "Repositories", "Standards"]],
+      ["Assessments", ["Repositories", "All Assessments", "Standards"]],
     ]);
     for (const route of ["/templates", "/templates/payments-hub/preview"]) expect(locate(route, BASE), route).toBeNull();
   });

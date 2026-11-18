@@ -30,8 +30,8 @@ describe("primary menu", () => {
   it("leads with Home, marked current on Home (Home current)", () => {
     expect(primaryMenu("/")).toEqual([
       { label: "Home", current: "page" },
-      { label: "All Assessments", current: null },
       { label: "Repositories", current: null },
+      { label: "All Assessments", current: null },
       { label: "Standards", current: null },
     ]);
   });

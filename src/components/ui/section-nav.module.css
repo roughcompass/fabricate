@@ -23,8 +23,6 @@
     &:hover { background: var(--color-bg-muted); color: var(--color-text); }
     &[aria-current="location"] { background: var(--color-bg-muted); color: var(--color-text); font-weight: var(--font-weight-medium); }
   }
-  /* A section that belongs to the one above it, indented by one dot and gap. */
-  .link[data-depth="1"] { padding-left: calc(var(--space-2) * 2 + var(--size-dot)); }
   .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .dot {

@@ -37,9 +37,9 @@ test.describe("on a wide viewport", () => {
   test("Full menu: Home, then the Assessments and Templates groups under headings and dividers", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
-    await expect(nav.getByRole("link")).toHaveText(["Home", "All Assessments", "Repositories", "Standards", "Salt Patterns"]);
+    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Salt Patterns"]);
     await expect(nav.locator("hr")).toHaveCount(2);
-    await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["All Assessments", "Repositories", "Standards"]);
+    await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["Repositories", "All Assessments", "Standards"]);
     await expect(nav.getByRole("list", { name: "Templates" }).getByRole("link")).toHaveText(["Salt Patterns"]);
     // Every item has one icon.
     for (const link of await nav.getByRole("link").all()) await expect(link.locator("svg")).toHaveCount(1);
@@ -419,7 +419,7 @@ test.describe("on a narrow viewport", () => {
       await page.goto(paths.repositories);
       expect((await openNavigation(page).boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await openNavigation(page).click();
-      for (const item of ["All Assessments", "Repositories", "Standards"]) {
+      for (const item of ["Repositories", "All Assessments", "Standards"]) {
         expect((await primary(page).getByRole("link", { name: item, exact: true }).boundingBox())!.height, item).toBeGreaterThanOrEqual(44);
       }
       await expectNoHorizontalOverflow(page);

@@ -82,7 +82,8 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
     const { page, pages, start, href } = paging("services", view.services.length);
     return <ServiceDependencies key="services" level={level} services={view.services.slice(start, start + PROFILE_PAGE_SIZE)} total={view.services.length} context={context} pagination={<Pagination label="Service Dependency pages" page={page} pages={pages} href={href} scrollToTop />} />;
   };
-  const servicesItem = { id: "services", label: `Service Dependencies (${view.services.length})` };
+  // Every menu entry shows a state: the Service Dependencies' is whether each one's boundary is characterized.
+  const servicesItem = { id: "services", label: `Service Dependencies (${view.services.length})`, state: !view.services.length ? "absent" : view.services.every((service) => service.characterized) ? "characterized" : "incomplete" };
 
   const shared = (block: SharedBlock, level: 2 | 3 = 3) => {
     const filtered = block.kind === "dependencies" ? filterDependencies(block, filters) : null;
@@ -110,8 +111,8 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
           {
             label: "Summary",
             items: [
-              { id: "overview", label: "Overview" },
-              { id: "attention", label: view.attention.items.length ? `Needs attention (${view.attention.items.length})` : "Needs attention" },
+              { id: "overview", label: "Overview", state: view.attention.items.length ? "complete_with_issues" : "complete" },
+              { id: "attention", label: view.attention.items.length ? `Needs attention (${view.attention.items.length})` : "Needs attention", state: view.attention.items.length ? "to_review" : "clear" },
             ],
           },
           // Service Dependencies lead the Services group, where the page shows them.
@@ -120,8 +121,8 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
           {
             label: "Diagnostics",
             items: [
-              { id: "diagnostics", label: `Skipped inputs (${diagnostics.skipped.length})` },
-              ...(diagnostics.notes.length ? [{ id: "other-diagnostics", label: `Other diagnostics (${diagnostics.notes.length})` }] : []),
+              { id: "diagnostics", label: `Skipped inputs (${diagnostics.skipped.length})`, state: diagnostics.skipped.length ? "to_review" : "clear" },
+              ...(diagnostics.notes.length ? [{ id: "other-diagnostics", label: `Other diagnostics (${diagnostics.notes.length})`, state: "to_review" }] : []),
             ],
           },
         ]}

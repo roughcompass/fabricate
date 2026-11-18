@@ -113,8 +113,8 @@ export interface ProfileView {
   overview: OverviewRow[];
   attention: Attention;
   groups: { label: string; blocks: Block[] }[];
-  /** Navigation entries: each category with its state, by group; a category shown in another's shared table sits under it. */
-  navigation: { label: string; items: { id: string; label: string; state: string; depth?: 1 }[] }[];
+  /** Navigation entries: each category with its state, by group. */
+  navigation: { label: string; items: { id: string; label: string; state: string }[] }[];
   services: ServiceSummary[];
   diagnostics: { skipped: JsonObject[]; notes: JsonObject[] };
 }
@@ -388,12 +388,7 @@ export function profileView(document: FactDocument, diagnostics: { skipped: Json
     groups,
     navigation: unique(definitions.map((definition) => definition.group)).map((group) => ({
       label: group,
-      items: definitions
-        .filter((definition) => definition.group === group)
-        .map((definition) => {
-          const nested = (dependenciesShared && DEPENDENCY_SOURCES.indexOf(definition.id) > 0) || (scriptsShared && SCRIPT_SOURCES.indexOf(definition.id) > 0);
-          return { id: definition.id, label: definition.label, state: categoryState(document, definition.id), ...(nested ? { depth: 1 as const } : {}) };
-        }),
+      items: definitions.filter((definition) => definition.group === group).map((definition) => ({ id: definition.id, label: definition.label, state: categoryState(document, definition.id) })),
     })),
     services: (document.service_dependencies ?? []).map(serviceSummary),
     diagnostics,

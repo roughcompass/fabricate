@@ -7,8 +7,7 @@ import styles from "./section-nav.module.css";
 
 export interface NavGroup {
   label: string;
-  /** +depth+ 1 indents a section that belongs to the one above it. */
-  items: readonly { id: string; label: string; state?: string; depth?: 1 }[];
+  items: readonly { id: string; label: string; state?: string }[];
 }
 
 /**
@@ -51,7 +50,7 @@ export function SectionNav({ label, groups, jumpLabel = "Jump to a section" }: {
           <ol className={styles.items}>
             {group.items.map((item) => (
               <li key={item.id}>
-                <a href={`#${item.id}`} className={styles.link} data-depth={item.depth} aria-current={current === item.id ? "location" : undefined} onClick={() => setCurrent(item.id)}>
+                <a href={`#${item.id}`} className={styles.link} aria-current={current === item.id ? "location" : undefined} onClick={() => setCurrent(item.id)}>
                   {item.state ? <span className={styles.dot} data-tone={statusOf(item.state).tone satisfies Tone} data-indicator={statusOf(item.state).indicator} aria-hidden="true" /> : stated && <span className={styles.dot} data-empty="" aria-hidden="true" />}
                   <span className={styles.label}>{item.label}</span>
                   {item.state && <span className="visually-hidden">{`, ${statusOf(item.state).label}`}</span>}
