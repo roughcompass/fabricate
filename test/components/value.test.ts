@@ -35,6 +35,17 @@ describe("per-scope count values", () => {
     expect(formatValue({ app: { as_is: 1, customized: 1, sites: 2 }, stories: { sites: 0 }, tests: { sites: 0 } })).toBe("app: sites 2, as is 1, customized 1");
   });
 
+  it("writes a captured object or array by its properties and items, never by how it was captured", () => {
+    const literal = (value: string | boolean) => ({ kind: "literal", value });
+    const react = { kind: "object", complete: true, properties: { react: { kind: "object", complete: true, properties: { singleton: literal(true), requiredVersion: literal("^18.3.1") } } } };
+    expect(formatValue(react)).toBe("react: (singleton: true; requiredVersion: ^18.3.1)");
+    // Nested deeper than a field's own value, a structure is cut short, as any other is; the evidence panel keeps it whole.
+    expect(formatValue({ shared: [react, { kind: "unresolved", reason: "computed", detail: "The value is computed at runtime" }] })).toBe("shared: (react: …), unresolved: The value is computed at runtime");
+    expect(formatValue({ kind: "array", complete: false, items: [literal("a"), literal("b")] })).toBe("a, b, and more not resolved statically");
+    expect(formatValue({ kind: "object", complete: false, properties: {} })).toBe("not resolved statically");
+    expect(formatValue({ kind: "object", complete: true, properties: {} })).toBe("none");
+  });
+
   it("says so when no scope has a count, and leaves other objects as they were", () => {
     expect(formatValue({ app: { count: 0 }, stories: { count: 0 }, tests: { count: 0 } })).toBe("no counts in any scope");
     expect(formatValue({ name: "@acme/ui", internal: true })).toBe("name: @acme/ui; internal: true");

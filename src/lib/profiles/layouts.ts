@@ -3,6 +3,7 @@ import { factText, formatValue } from "@/components/results/value";
 import { countLabel, formatBytes } from "@/components/ui/count";
 import { checkKind, ciSystem, dependencyKind, humanize, kindLabel, runtimeName } from "@/components/ui/status";
 import { isJsonObject } from "@/lib/json";
+import { COMPOSITION } from "./composition";
 import type { Fact } from "./states";
 
 /** A cell's content: text, set in the monospace face for identifiers, paths, and versions, with optional secondary text below. */
@@ -15,6 +16,15 @@ export interface Cell {
   breakable?: boolean;
   /** Set in the secondary color, as a value that repeats its neighbor is, so differences stand out. */
   muted?: boolean;
+  secondary?: string;
+  /** Entries listed one per line under the text, such as a container's exposed modules under their count; a list without a count has empty text. */
+  items?: CellItem[];
+}
+
+/** One entry of a cell's list, with optional secondary text beside it. */
+export interface CellItem {
+  text: string;
+  mono?: boolean;
   secondary?: string;
 }
 
@@ -30,6 +40,8 @@ interface Column {
   nowrap?: boolean;
   /** Free text that may break anywhere. */
   breakable?: boolean;
+  /** A column left out of a category's table when none of its rows fills it, such as Shares for a repository without Module Federation. */
+  sparse?: boolean;
 }
 
 /** The columns a category's facts are shown in. A generic layout shows each fact's key and its value as text. */
@@ -42,8 +54,15 @@ export interface Layout {
   unit?: string;
 }
 
+/** A conflicting fact's candidate: its value as text, its evidence, and its cells when the value fits the columns. */
+export interface CandidateCells {
+  text: string;
+  evidence: string[];
+  cells?: (Cell | null)[];
+}
+
 /** One fact as a row: its cells, its whole value when the value doesn't fit the columns, or a conflict's candidates. */
-export type RowCells = { kind: "cells"; cells: (Cell | null)[] } | { kind: "whole"; text: string } | { kind: "candidates"; candidates: { text: string; evidence: string[] }[] };
+export type RowCells = { kind: "cells"; cells: (Cell | null)[] } | { kind: "whole"; text: string } | { kind: "candidates"; candidates: CandidateCells[] };
 
 const field = (fact: Fact, name: string): JsonValue | undefined => (isJsonObject(fact.value) ? fact.value[name] : undefined);
 const text = (value: JsonValue | undefined): string | null => (typeof value === "string" && value !== "" ? value : typeof value === "number" ? String(value) : null);
@@ -449,7 +468,7 @@ const LAYOUTS: Record<string, Layout> = {
       },
     },
   ),
-  composition: KIND_FIRST,
+  composition: COMPOSITION,
   runtime_integrations: KIND_FIRST,
   access_signals: KIND_FIRST,
   egress_routes: KIND_FIRST,
@@ -490,7 +509,7 @@ export function layoutOf(id: string): Layout {
  * is written out in full, so no fact is ever dropped.
  */
 export function rowCells(layout: Layout, fact: Fact): RowCells {
-  if (fact.state === "conflicting") return { kind: "candidates", candidates: (fact.candidates ?? []).map((candidate) => ({ text: formatValue(candidate.value), evidence: candidate.evidence })) };
+  if (fact.state === "conflicting") return { kind: "candidates", candidates: candidateCells(layout, fact) };
   if (fact.state === "unknown") return { kind: "whole", text: factText(fact.state, fact.value) };
   const cells = layout.columns.map((column) => {
     const cell = column.cell(fact);
@@ -498,4 +517,22 @@ export function rowCells(layout: Layout, fact: Fact): RowCells {
   });
   if (layout.columns.some((column, index) => !column.optional && cells[index] === null)) return { kind: "whole", text: formatValue(fact.value) };
   return { kind: "cells", cells };
+}
+
+/**
+ * A conflict's candidates, each in the layout's columns when every one fits
+ * them, so they read side by side. A cell every candidate shares reads as
+ * secondary, so what they disagree on stands out; the first column names the
+ * fact, so it keeps its weight.
+ */
+function candidateCells(layout: Layout, fact: Fact): CandidateCells[] {
+  const candidates = (fact.candidates ?? []).map((candidate) => ({ candidate, row: rowCells(layout, { ...fact, state: "observed", value: candidate.value, rule: candidate.rule, candidates: undefined }) }));
+  const fits = !layout.generic && candidates.length > 0 && candidates.every(({ row }) => row.kind === "cells");
+  const cellsOf = (row: RowCells) => (row.kind === "cells" ? row.cells : []);
+  const shared = (index: number) => candidates.every(({ row }) => JSON.stringify(cellsOf(row)[index]) === JSON.stringify(cellsOf(candidates[0]!.row)[index]));
+  return candidates.map(({ candidate, row }) => ({
+    text: formatValue(candidate.value),
+    evidence: candidate.evidence,
+    ...(fits ? { cells: cellsOf(row).map((cell, index) => (cell && index > 0 && candidates.length > 1 && shared(index) ? { ...cell, muted: true } : cell)) } : {}),
+  }));
 }

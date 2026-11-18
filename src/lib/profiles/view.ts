@@ -4,7 +4,7 @@ import { checkKind, kindLabel } from "@/components/ui/status";
 import { isJsonObject } from "@/lib/json";
 import { type Attention, attention } from "./attention";
 import { type DependencyRow, type ScriptGroup, type ScriptRow, dependencyGroups, missingCell, scriptGroups } from "./joins";
-import { type Cell, type RowCells, layoutOf, rowCells } from "./layouts";
+import { type Cell, type Layout, type RowCells, layoutOf, rowCells } from "./layouts";
 import { type OverviewRow, overview } from "./overview";
 import { type Fact, type FactDocument, type NoValue, type Search, categoryDefinitions, categoryOf, categoryState, noValue } from "./states";
 
@@ -162,7 +162,7 @@ function categoryBlock(document: FactDocument, definition: CategoryDefinition, c
   const all = categoryOf(document, definition.id)?.facts ?? [];
   const facts = layout.sort ? [...all].sort(layout.sort) : all;
   const isCi = definition.id === "ci_systems";
-  return {
+  return withoutEmptyColumns(layout, {
     kind: "category",
     heading: headingOf(document, definition),
     columns: layout.columns.map((column) => column.label),
@@ -186,7 +186,21 @@ function categoryBlock(document: FactDocument, definition: CategoryDefinition, c
       };
       }),
     ),
+  });
+}
+
+/** +block+ without the sparse columns of its layout that none of its rows, or their candidates, fills. */
+function withoutEmptyColumns(layout: Layout, block: CategoryBlock): CategoryBlock {
+  const filled = (row: Row, index: number) => (row.cells.kind === "cells" ? row.cells.cells[index] !== null : row.cells.kind === "candidates" && row.cells.candidates.some((candidate) => Boolean(candidate.cells?.[index])));
+  const keep = layout.columns.map((column, index) => !column.sparse || block.rows.some((row) => filled(row, index)));
+  if (keep.every(Boolean)) return block;
+  const pick = <T>(values: T[]) => values.filter((_, index) => keep[index]);
+  const cellsOf = (cells: RowCells): RowCells => {
+    if (cells.kind === "cells") return { kind: "cells", cells: pick(cells.cells) };
+    if (cells.kind === "candidates") return { kind: "candidates", candidates: cells.candidates.map((candidate) => (candidate.cells ? { ...candidate, cells: pick(candidate.cells) } : candidate)) };
+    return cells;
   };
+  return { ...block, columns: pick(block.columns), numeric: pick(block.numeric), rows: block.rows.map((row) => ({ ...row, cells: cellsOf(row.cells) })) };
 }
 
 /**

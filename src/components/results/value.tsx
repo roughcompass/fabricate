@@ -20,6 +20,19 @@ export function formatValue(value: JsonValue | undefined, depth = 0): string {
       return `unresolved: ${String(record.detail ?? record.reason ?? "not determined statically")}`;
     case "absent":
       return "none";
+    // An array or object literal as the detectors capture it: its items or properties, and whether code adds more.
+    case "array":
+      if (Array.isArray(record.items)) return incomplete(record, formatValue(record.items, depth));
+      break;
+    case "object":
+      if (isJsonObject(record.properties)) {
+        if (depth > 2) return "…";
+        // Property names are as written, such as a package name or a camelCase option.
+        const fields = Object.entries(record.properties).map(([key, item]) => `${key}: ${formatValue(item, depth + 1)}`);
+        const text = incomplete(record, fields.length ? fields.join("; ") : "none");
+        return depth > 0 && fields.length ? `(${text})` : text;
+      }
+      break;
   }
   if (isScoped(record)) return formatScoped(record);
   const keys = Object.keys(record).sort().join(",");
@@ -31,6 +44,12 @@ export function formatValue(value: JsonValue | undefined, depth = 0): string {
     .map(([key, item]) => `${key.replaceAll("_", " ")}: ${formatValue(item, depth + 1)}`)
     .join("; ");
   return depth > 0 ? `(${fields})` : fields;
+}
+
+/** A captured array's or object's text, saying so when code may add entries that weren't resolved. */
+function incomplete(record: JsonObject, text: string): string {
+  if (record.complete !== false) return text;
+  return text === "none" ? "not resolved statically" : `${text}, and more not resolved statically`;
 }
 
 /** A fact's value by its state: an unknown fact states why it is unknown, and an absent one that nothing was found. */

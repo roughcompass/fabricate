@@ -1,4 +1,5 @@
 import type { JsonObject } from "@repo-facts/contract";
+import { Fragment } from "react";
 import { EvidenceList } from "@/components/results/evidence";
 import { NoValuePlaceholder } from "@/components/results/no-value";
 import { countLabel } from "@/components/ui/count";
@@ -7,7 +8,7 @@ import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { Status, statusLabel } from "@/components/ui/status";
 import { Secondary, Table, Td, Th } from "@/components/ui/table";
-import type { Cell } from "@/lib/profiles/layouts";
+import type { CandidateCells, Cell, CellItem } from "@/lib/profiles/layouts";
 import { reasoningLead } from "@/lib/profiles/reasoning";
 import type { CategoryBlock, CompactBlock, Heading, Row, SharedBlock, SharedCell, SharedRow } from "@/lib/profiles/view";
 import { EvidencePanel } from "./evidence-panel";
@@ -59,35 +60,39 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
               </>
             }
           >
-            {block.rows.map((row) => (
-              <tr key={row.id}>
-                <RowCellsView row={row} columns={block.columns} numeric={block.numeric} unit={block.unit} span={span} context={context} />
-                {block.stepsColumn && row.cells.kind === "cells" && (
-                  <Td label={block.stepsColumn}>
-                    {row.steps.length ? (
-                      // The count and what the steps check, with the steps themselves one click away.
-                      <div className={styles.quiet}>
-                        <Disclosure variant="plain" summary={[countLabel(row.steps.length, "step"), row.checks.length ? `checks ${row.checks.join(", ").toLowerCase()}` : null].filter(Boolean).join(" · ")}>
-                          <ol className={styles.steps}>
-                            {row.steps.map((step, index) => (
-                              <li key={index} className={styles.step}>
-                                <span className={styles.stepCommand}>{step.text}</span>
-                                {step.secondary && <Secondary>{step.secondary}</Secondary>}
-                              </li>
-                            ))}
-                          </ol>
-                        </Disclosure>
-                      </div>
-                    ) : (
-                      <span className={styles.muted}>None</span>
-                    )}
+            {block.rows.map((row) =>
+              row.cells.kind === "candidates" && row.cells.candidates.every((candidate) => candidate.cells) ? (
+                <CandidateRows key={row.id} table={definition.id} row={row} candidates={row.cells.candidates} block={block} span={span} context={context} />
+              ) : (
+                <tr key={row.id}>
+                  <RowCellsView row={row} columns={block.columns} numeric={block.numeric} unit={block.unit} span={span} context={context} />
+                  {block.stepsColumn && row.cells.kind === "cells" && (
+                    <Td label={block.stepsColumn}>
+                      {row.steps.length ? (
+                        // The count and what the steps check, with the steps themselves one click away.
+                        <div className={styles.quiet}>
+                          <Disclosure variant="plain" summary={[countLabel(row.steps.length, "step"), row.checks.length ? `checks ${row.checks.join(", ").toLowerCase()}` : null].filter(Boolean).join(" · ")}>
+                            <ol className={styles.steps}>
+                              {row.steps.map((step, index) => (
+                                <li key={index} className={styles.step}>
+                                  <span className={styles.stepCommand}>{step.text}</span>
+                                  {step.secondary && <Secondary>{step.secondary}</Secondary>}
+                                </li>
+                              ))}
+                            </ol>
+                          </Disclosure>
+                        </div>
+                      ) : (
+                        <span className={styles.muted}>None</span>
+                      )}
+                    </Td>
+                  )}
+                  <Td label="Evidence" align="actions">
+                    <RowEvidence table={definition.id} row={row} title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} context={context} />
                   </Td>
-                )}
-                <Td label="Evidence" align="actions">
-                  <RowEvidence table={definition.id} row={row} title={row.cells.kind === "cells" ? (row.cells.cells[0]?.text ?? row.id) : row.id} context={context} />
-                </Td>
-              </tr>
-            ))}
+                </tr>
+              ),
+            )}
           </Table>
         </Panel>
       </div>
@@ -136,12 +141,93 @@ function RowCellsView({ row, columns, numeric, unit, span, context }: { row: Row
   );
 }
 
-function CellView({ cell }: { cell: Cell }) {
+/**
+ * A conflict whose candidates fit the category's columns: a group row with
+ * its state and its evidence, then one row per candidate in the columns, each
+ * with its own location, so the candidates compare side by side.
+ */
+function CandidateRows({ table, row, candidates, block, span, context }: { table: string; row: Row; candidates: readonly CandidateCells[]; block: CategoryBlock; span: number; context: EvidenceContext }) {
   return (
     <>
-      <span className={[cell.mono && styles.mono, cell.muted && styles.muted, cell.nowrap && styles.nowrap, cell.breakable && styles.breakable].filter(Boolean).join(" ") || undefined}>{cell.text}</span>
-      {cell.secondary && <Secondary>{cell.secondary}</Secondary>}
+      <tr className={styles.groupRow}>
+        <Td span={span}>
+          <Status state="conflicting" size="sm">
+            <span>{statusLabel("conflicting")}</span>
+            <span className={styles.count}>{`${countLabel(candidates.length, "candidate")} disagree`}</span>
+          </Status>
+        </Td>
+        <Td label="Evidence" align="actions">
+          <RowEvidence table={table} row={row} title={candidates[0]?.cells?.[0]?.text ?? row.id} context={context} />
+        </Td>
+      </tr>
+      {candidates.map((candidate, index) => (
+        <tr key={index}>
+          {candidate.cells!.map((cell, column) => (
+            <Td key={block.columns[column]} label={block.columns[column]} align={block.numeric[column] ? "numeric" : undefined}>
+              {cell ? <CellView cell={cell} /> : null}
+              {column === 0 && (
+                <div className={styles.candidateLocation}>
+                  <EvidenceList ids={candidate.evidence} records={context.records} assessmentId={context.assessmentId} source={false} />
+                </div>
+              )}
+            </Td>
+          ))}
+          {/* The group row holds the evidence; these cells keep the columns, unlabeled, so a stacked row doesn't name an empty one. */}
+          {block.stepsColumn && <Td />}
+          <Td align="actions" />
+        </tr>
+      ))}
     </>
+  );
+}
+
+/** How many of a cell's entries show before the rest move into a disclosure; one more never hides alone. */
+const ITEMS_SHOWN = 5;
+
+function CellView({ cell }: { cell: Cell }) {
+  const items = cell.items ?? [];
+  const shown = items.length > ITEMS_SHOWN + 1 ? items.slice(0, ITEMS_SHOWN) : items;
+  const rest = items.slice(shown.length);
+  return (
+    <>
+      {cell.text && <span className={[cell.mono && styles.mono, cell.muted && styles.muted, cell.nowrap && styles.nowrap, cell.breakable && styles.breakable].filter(Boolean).join(" ") || undefined}>{cell.text}</span>}
+      {cell.secondary && <Secondary>{cell.secondary}</Secondary>}
+      {shown.length > 0 && <CellItems items={shown} muted={cell.muted} />}
+      {rest.length > 0 && (
+        <div className={styles.quiet}>
+          <Disclosure variant="plain" summary={`${rest.length} more`}>
+            <CellItems items={rest} muted={cell.muted} />
+          </Disclosure>
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * A cell's entries, one per line, each with its secondary text beside it. A
+ * name such as a module path breaks after a slash rather than anywhere, so a
+ * column of them keeps a readable width without a minimum of its own.
+ */
+function CellItems({ items, muted }: { items: readonly CellItem[]; muted?: boolean }) {
+  return (
+    <ul className={muted ? `${styles.items} ${styles.muted}` : styles.items}>
+      {items.map((item, index) => (
+        <li key={index}>
+          <span className={item.mono ? styles.itemName : undefined}>
+            {item.mono
+              ? item.text.split(/(?<=\/)/).map((part, at) => (
+                  <Fragment key={at}>
+                    {at > 0 && <wbr />}
+                    {part}
+                  </Fragment>
+                ))
+              : item.text}
+          </span>
+          {item.secondary && <span className={styles.itemSecondary}>{item.secondary}</span>}
+        </li>
+      ))}
+    </ul>
   );
 }
 

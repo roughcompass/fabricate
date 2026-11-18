@@ -1,8 +1,9 @@
 import type { CategoryDefinition, JsonValue } from "@repo-facts/contract";
 import { factText, formatValue } from "@/components/results/value";
 import { countLabel } from "@/components/ui/count";
-import { ciSystem, kindLabel, runtimeName } from "@/components/ui/status";
+import { ciSystem, runtimeName } from "@/components/ui/status";
 import { isJsonObject } from "@/lib/json";
+import { compositionSummary } from "./composition";
 import { dependencyGroups } from "./joins";
 import { type Fact, type FactDocument, type NoValue, categoryDefinitions, categoryOf, noValue, partial } from "./states";
 
@@ -54,7 +55,9 @@ function valueOf(fact: Fact, describe: (fact: Fact) => OverviewValue | null): Ov
 interface RowDefinition {
   label: string;
   categories: string[];
-  describe: (fact: Fact, category: string, document: FactDocument) => OverviewValue | null;
+  describe?: (fact: Fact, category: string, document: FactDocument) => OverviewValue | null;
+  /** The row's values from all of a category's facts at once, in place of one value per fact. */
+  summarize?: (facts: Fact[]) => OverviewValue[];
   /** How many values to show before "+N more". */
   limit?: number;
   order?: (facts: Fact[]) => Fact[];
@@ -125,14 +128,8 @@ const ROWS: RowDefinition[] = [
     categories: ["runtime_requirements"],
     describe: (fact) => (field(fact, "range") === null ? null : { state: fact.state, text: `${runtimeName(fact.key)} ${field(fact, "range")}` }),
   },
-  {
-    label: "Composition",
-    categories: ["composition"],
-    describe: (fact) => {
-      const mechanism = field(fact, "mechanism");
-      return mechanism === null ? null : { state: fact.state, text: kindLabel(mechanism) };
-    },
-  },
+  // One value per mechanism, such as "Module Federation · chrome · exposes 12 modules", one per line.
+  { label: "Composition", categories: ["composition"], stacked: true, summarize: compositionSummary },
   { label: "Design system", categories: ["design_systems"], describe: (fact) => (field(fact, "name") === null ? null : { state: fact.state, text: field(fact, "name")! }) },
 ];
 
@@ -157,10 +154,12 @@ export function overview(document: FactDocument): OverviewRow[] {
         continue;
       }
       // A fact on the conflicting side of a runtime names its runtime.
-      const described = (row.order ? row.order(facts) : facts).map((fact) => {
-        const value = valueOf(fact, (candidate) => row.describe(candidate, id, document));
-        return id === "runtime_requirements" && fact.state !== "observed" && fact.state !== "inferred" ? { ...value, text: `${runtimeName(fact.key)}: ${value.text}` } : value;
-      });
+      const described = row.summarize
+        ? row.summarize(facts)
+        : (row.order ? row.order(facts) : facts).map((fact) => {
+            const value = valueOf(fact, (candidate) => row.describe?.(candidate, id, document) ?? null);
+            return id === "runtime_requirements" && fact.state !== "observed" && fact.state !== "inferred" ? { ...value, text: `${runtimeName(fact.key)}: ${value.text}` } : value;
+          });
       values.push(...distinct(described));
       summary ??= row.summary?.(facts, document) ?? null;
     }

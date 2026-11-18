@@ -41,6 +41,15 @@ describe("The Profile overview", () => {
     expect(row(overview(storefront), "Composition")).toMatchObject({ values: [], placeholders: [{ value: { state: "unknown", reason: expect.stringContaining("cannot prove there is none") } }] });
   });
 
+  it("shows one composition value per mechanism, one per line, with what it exposes and loads", () => {
+    const composition = row(overview(factDocumentFixture("federation-shell") as unknown as FactDocument), "Composition");
+    expect(composition.stacked).toBe(true);
+    expect(composition.values).toEqual([
+      { state: "observed", text: "iframe", secondary: "1 embedded frame" },
+      { state: "observed", text: "Module Federation", secondary: "mfShell · loads 2 remotes" },
+    ]);
+  });
+
   it("shows both candidates of a conflicting Node requirement, never one of them", () => {
     expect(row(overview(storefront), "Runtime").values).toContainEqual({ state: "conflicting", text: "Node.js: 18 or >=22" });
   });

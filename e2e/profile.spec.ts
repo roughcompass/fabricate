@@ -85,10 +85,11 @@ test("explains observed, inferred, unknown, conflicting, negative, and skipped-i
 
   const runtime = category(page, "runtime_requirements");
   await expect(runtime.getByText("Conflicting").first()).toBeVisible();
-  const candidates = runtime.getByRole("list", { name: "Candidates" }).locator(":scope > li");
-  await expect(candidates).toHaveCount(2);
-  await expect(candidates.filter({ hasText: "declared: 18" }).getByRole("link", { name: ".nvmrc:1" })).toBeVisible();
-  await expect(candidates.filter({ hasText: "declared: >=20" }).getByRole("link", { name: "package.json /engines/node" })).toBeVisible();
+  // A conflict's candidates read in the category's columns, one row each with its own location.
+  await expect(runtime.getByRole("row").filter({ hasText: "2 candidates disagree" })).toBeVisible();
+  const candidate = (location: string) => runtime.getByRole("row").filter({ has: page.getByRole("link", { name: location, exact: true }) });
+  await expect(candidate(".nvmrc:1")).toContainText("18");
+  await expect(candidate("package.json /engines/node")).toContainText(">=20");
 
   // A parse failure makes CI unknown and names the input, never "none detected".
   const ci = category(page, "ci_systems");
