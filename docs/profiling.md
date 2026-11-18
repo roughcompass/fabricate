@@ -6,7 +6,7 @@ Every enabled Repository is profiled in the background, without anyone starting 
 
 | Trigger | Shown as | When |
 |---|---|---|
-| `imported` | Imported | A Repository is added by Import Repositories. |
+| `imported` | Added in bulk | A Repository is added with Add in bulk. |
 | `added` | Added | A Repository is added with New Repository. |
 | `edited` | Edited | A Repository's clone URL or reference changes. A new name alone doesn't queue a version. |
 | `manual` | Re-profiled | Someone chooses Re-profile on the Repository's page, its Versions page, or its row in the list. |
@@ -32,13 +32,13 @@ A version that failed before its commit was known, for example because the remot
 
 Each version is a Run of one system-owned Assessment, **Repository profiling** (`ini_repoprofiling000`), whose launch names the one Repository it profiles. The Run uses the Repository's configured reference, or its default branch when none is set. It is pinned to a commit and analyzed like any other Run, and its Profile, Relationship Map, and evidence are kept like any other.
 
-Profiling is background work. Its jobs run only when no job that people started is waiting, so importing 500 Repositories, or a detector upgrade that re-profiles every one, never delays someone's Assessment. With the default three worker slots, expect a large import to take a while to profile fully.
+Profiling is background work. Its jobs run only when no job that people started is waiting, so adding 500 Repositories in bulk, or a detector upgrade that re-profiles every one, never delays someone's Assessment. With the default three worker slots, expect a large batch to take a while to profile fully.
 
 `profile_versions` numbers the versions per Repository and records each one's trigger and, for a scheduled `commit` version, the commit the check saw. Versions are never changed or deleted.
 
 ## Where versions appear
 
-- **Repositories list.** A Profile column shows each Repository's current version and when it was profiled, plus the newest version's state while it's queued, running, or failed. The name opens the Repository's page. The row menu has Re-profile and Edit.
+- **Repositories list.** A Profile column leads with "Profiling version N", with a pulsing indicator, or "Version N queued" while a version is in progress, then the current version and when it was profiled, and marks a newest version that failed. While anything is profiling or queued, a line above the table counts both, and the list refreshes itself as versions start and finish. The name opens the Repository's page. The row menu has Re-profile and Edit.
 - **A Repository's page** (`/repositories/<src_ id>`). Its current version as the Profile view, with every section and the section menu. A notice says when a newer version is queued or running, and the page refreshes when that version finishes. Another notice says when the newest version failed and why. Re-profile, Versions, Relationship Map, and Edit sit in the header.
 - **Versions** (`/repositories/<src_ id>/versions`). Every version, newest first: why it was queued, its state, the commit it profiled, its detector release, and when it was queued.
 - **A version** (`/repositories/<src_ id>/versions/<number>`). That version's Profile, or why it has none.

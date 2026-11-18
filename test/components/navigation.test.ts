@@ -44,7 +44,7 @@ const EXPECTED: Record<string, string | null> = {
   "/profiles/[profileId]": "all-assessments",
   "/repositories": "repositories",
   "/repositories/new": "repositories",
-  "/repositories/import": "repositories",
+  "/repositories/bulk": "repositories",
   "/repositories/[sourceId]": "repositories",
   "/repositories/[sourceId]/edit": "repositories",
   "/repositories/[sourceId]/versions": "repositories",
@@ -141,7 +141,7 @@ describe("primary menu", () => {
   it("marks each create or import page as its list's item (Create page)", () => {
     expect(current("/assessments/new", ALL)).toBe("all-assessments");
     expect(current("/repositories/new", ALL)).toBe("repositories");
-    expect(current("/repositories/import/", ALL)).toBe("repositories");
+    expect(current("/repositories/bulk/", ALL)).toBe("repositories");
     expect(current("/standards/new", ALL)).toBe("standards");
     expect(current("/prototypes/new", ALL)).toBe("prototypes");
   });

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ProgressPoller } from "@/components/progress-poller";
 import { ButtonLink } from "@/components/ui/button";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -21,7 +22,7 @@ import { getDb } from "@/lib/db/client";
 import { isOwnershipFilter, ownershipFilterOf } from "@/lib/ownership/coverage";
 import { type RepositoryOwnership, repositoryOwnership } from "@/lib/ownership/read";
 import { applicationLabel } from "@/lib/ownership/records";
-import { type ProfileSummary, ACTIVE_STATES, profileSummaries } from "@/lib/profiling/versions";
+import { type ProfileSummary, ACTIVE_STATES, profileSummaries, profilingActivity } from "@/lib/profiling/versions";
 import { repositoriesHref } from "@/lib/web/list-filters";
 import { repositoryHref, versionHref } from "@/lib/web/repository-paths";
 import { reprofileSource, setSourceEnabled } from "./actions";
@@ -48,6 +49,8 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
   const sources = status ? matching.filter((source) => source.enabled === FILTERS[status]) : matching;
   const counts = assessmentCounts(db);
   const profiles = profileSummaries(db);
+  const activity = profilingActivity(db);
+  const busy = activity.profiling + activity.queued > 0;
   const enabledCount = matching.filter((source) => source.enabled).length;
   const href = (next: keyof typeof FILTERS | null, query = search) => repositoriesHref({ status: next, ownership, q: query });
   const create = (
@@ -62,11 +65,11 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
         title="Repositories"
         description="Git repositories available to Assessments, each profiled in the background whenever it changes. Edits and disabling apply to Runs started afterward."
         secondaryActions={[
-          { href: "/repositories/import", label: "Import Repositories", icon: "folder" },
+          { href: "/repositories/bulk", label: "Add in bulk", icon: "layers" },
           { href: "/repositories/claim", label: "Claim a Repository", icon: "user" },
         ]}
         primaryAction={create}
-        alerts={<OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"), param(query, "failed"))} />}
+        alerts={<OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"))} />}
       />
 
       <Tabs
@@ -99,6 +102,17 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
           Disabled
         </TabLink>
       </Tabs>
+
+      {busy && (
+        <>
+          {/* Refreshes the list as each version starts and finishes. */}
+          <ProgressPoller url="/api/repositories/profiling" version={activity.version} intervalMs={3_000} />
+          <p className={styles.activity} role="status" data-profiling-activity="">
+            {activity.profiling > 0 && <Status state="analyzing" label={`Profiling ${countLabel(activity.profiling, "Repository", "Repositories")}`} />}
+            {activity.queued > 0 && <Status state="queued" label={`${activity.queued} queued`} />}
+          </p>
+        </>
+      )}
 
       <Panel flush>
         {sources.length > 0 ? (
@@ -177,14 +191,14 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
             icon="git"
             action={
               <>
-                <ButtonLink href="/repositories/import" icon="folder">
-                  Import Repositories
+                <ButtonLink href="/repositories/bulk" icon="layers">
+                  Add in bulk
                 </ButtonLink>
                 {create}
               </>
             }
           >
-            Register file://, https://, or ssh:// Git repositories, or import the working trees inside an allowed local directory.
+            Register file://, https://, or ssh:// Git repositories one at a time, or paste many clone URLs at once.
           </EmptyState>
         )}
       </Panel>
@@ -209,39 +223,59 @@ function SealApplication({ ownership }: { ownership: RepositoryOwnership | undef
 }
 
 /**
- * A Repository's profile in the list: its current version, linked, with when
- * it was profiled; and the newest version's state when that one is queued,
- * running, or failed.
+ * A Repository's profile in the list. While a version is being profiled or
+ * waits its turn, that leads, with a pulsing indicator for profiling; the
+ * current version, linked, and when it was profiled follow. A newest
+ * version that failed is marked under the current one.
  */
 function ProfileCell({ sourcePublicId, summary, enabled }: { sourcePublicId: string; summary: ProfileSummary | undefined; enabled: boolean }) {
   if (!summary) return <Secondary>{enabled ? "Queued" : "Not profiled"}</Secondary>;
   const { latest, current } = summary;
   const pending = (ACTIVE_STATES as readonly string[]).includes(latest.state);
-  const newest = latest.version !== current?.version;
+  const failed = !pending && latest.version !== current?.version;
+  // The current version and when it was profiled, each on its own row.
+  const currentRows = current && (
+    <>
+      <Link href={versionHref(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link>
+      <Secondary>
+        <RelativeTime value={current.profiledAt} />
+      </Secondary>
+    </>
+  );
+  if (pending) {
+    return (
+      <span data-profiling={latest.state === "queued" ? "queued" : "profiling"}>
+        <Status state={latest.state} label={latest.state === "queued" ? `Version ${latest.version} queued` : `Profiling version ${latest.version}`} />
+        {current && (
+          <>
+            <Secondary>
+              <Link href={versionHref(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link>
+            </Secondary>
+            <Secondary>
+              <RelativeTime value={current.profiledAt} />
+            </Secondary>
+          </>
+        )}
+      </span>
+    );
+  }
+  if (!current) {
+    return (
+      <Link href={versionHref(sourcePublicId, latest.version)}>
+        <Status state="failed" label={`Version ${latest.version} failed`} />
+      </Link>
+    );
+  }
   return (
     <>
-      {current ? (
-        <>
-          <Link href={versionHref(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link>
-          <Secondary>
-            <RelativeTime value={current.profiledAt} />
-          </Secondary>
-        </>
-      ) : (
-        !pending && <Secondary>Not profiled</Secondary>
+      {currentRows}
+      {failed && (
+        <Secondary>
+          <Link href={versionHref(sourcePublicId, latest.version)}>
+            <Status state="failed" label={`Version ${latest.version} failed`} size="sm" />
+          </Link>
+        </Secondary>
       )}
-      {newest &&
-        (pending ? (
-          <Secondary>
-            <Status state={latest.state} label={`Version ${latest.version} ${latest.state === "queued" ? "queued" : "profiling"}`} size="sm" />
-          </Secondary>
-        ) : (
-          <Secondary>
-            <Link href={versionHref(sourcePublicId, latest.version)}>
-              <Status state="failed" label={`Version ${latest.version} failed`} size="sm" />
-            </Link>
-          </Secondary>
-        ))}
     </>
   );
 }

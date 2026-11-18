@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { targetsOf } from "@/lib/assessments/assessment-records";
 import { launchAssessment } from "@/lib/assessments/launcher";
+import { transitionAssessment } from "@/lib/assessments/transitions";
 import { ScopeResolutionError } from "@/lib/assessments/scope-resolver";
 import { disableSource, editSource, enableSource, registerSource } from "@/lib/catalog/catalog";
 import { type RepositorySource, getSource } from "@/lib/catalog/source-records";
@@ -11,7 +12,7 @@ import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { JOB_PRIORITIES, jobs, profileVersions } from "@/lib/db/schema";
 import { PROFILING_INITIATIVE_ID, listInitiatives, profilingInitiative, updateReleaseSelections } from "@/lib/initiatives/initiative-records";
-import { currentVersion, findVersion, profileSummaries, queueProfile, versionCount, versionOfAssessment, versionsOf } from "@/lib/profiling/versions";
+import { currentVersion, findVersion, profileSummaries, profilingActivity, queueProfile, versionCount, versionOfAssessment, versionsOf } from "@/lib/profiling/versions";
 import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { GitFixture } from "../support/git-fixture";
@@ -102,6 +103,23 @@ describe("profile versions", () => {
     expect(summaries.size).toBe(2);
     expect(summaries.get(orders.id)).toMatchObject({ latest: { version: 2, state: "queued" }, current: { version: 1 } });
     expect(summaries.get(ledger.id)).toMatchObject({ latest: { version: 1, state: "queued" }, current: null });
+  });
+
+  it("counts what is being profiled and what waits, and changes its version as each one moves", async () => {
+    const ledger = buildSource(db, { name: "ledger" });
+    expect(profilingActivity(db)).toMatchObject({ profiling: 0, queued: 0 });
+    queueProfile(db, orders, "imported");
+    queueProfile(db, ledger, "imported");
+    const waiting = profilingActivity(db);
+    expect(waiting).toMatchObject({ profiling: 0, queued: 2 });
+
+    transitionAssessment(db, findVersion(db, orders.id, 1)!.assessment, "acquiring");
+    const started = profilingActivity(db);
+    expect(started).toMatchObject({ profiling: 1, queued: 1 });
+    expect(started.version).not.toBe(waiting.version);
+
+    await finish(db, ledger, 1);
+    expect(profilingActivity(db)).toMatchObject({ profiling: 1, queued: 0 });
   });
 
   it("keeps versions as recorded, and only for a Repository profiling Run of their repository", () => {

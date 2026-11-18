@@ -70,8 +70,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               icon="git"
               action={
                 <>
-                  <ButtonLink href="/repositories/import" variant="secondary" icon="folder">
-                    Import Repositories
+                  <ButtonLink href="/repositories/bulk" variant="secondary" icon="layers">
+                    Add Repositories
                   </ButtonLink>
                   <ButtonLink href="/repositories/new" variant="secondary" icon="plus">
                     New Repository
@@ -166,8 +166,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <ButtonLink href="/assessments/new" variant="secondary" icon="checklist">
             New Assessment
           </ButtonLink>
-          <ButtonLink href="/repositories/import" variant="secondary" icon="folder">
-            Import Repositories
+          <ButtonLink href="/repositories/bulk" variant="secondary" icon="layers">
+            Add Repositories
           </ButtonLink>
         </div>
       </Panel>

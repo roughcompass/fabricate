@@ -13,7 +13,7 @@ export const paths = {
   assessmentEdit: (initiativeId: string) => `/assessments/${initiativeId}/edit`,
   repositories: "/repositories",
   newRepository: "/repositories/new",
-  importRepositories: "/repositories/import",
+  bulkRepositories: "/repositories/bulk",
   repositoryEdit: (sourceId: string) => `/repositories/${sourceId}/edit`,
   run: (assessmentId: string) => `/runs/${assessmentId}`,
   runMap: (assessmentId: string) => `/runs/${assessmentId}/map`,

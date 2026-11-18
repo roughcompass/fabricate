@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, ValidationError } from "@/lib/db/errors";
-import { assessmentTargets, assessments, initiatives } from "@/lib/db/schema";
+import { type ProfileTrigger, assessmentTargets, assessments, initiatives } from "@/lib/db/schema";
 import { CloneUrl, InvalidCloneUrl } from "./clone-url";
 import { repositoryNameFromUrl } from "./repository-name";
 import { BoundaryViolation, SourceBoundary } from "./source-boundary";
@@ -46,12 +46,12 @@ export function resolveCloneUrl(input: string, boundary = new SourceBoundary()):
   return { cloneUrl: resolved.toString(), canonicalUrl: resolved.canonical };
 }
 
-export function registerSource(db: Executor, submitted: SourceForm, boundary?: SourceBoundary): RepositorySource {
+export function registerSource(db: Executor, submitted: SourceForm, boundary?: SourceBoundary, trigger: Extract<ProfileTrigger, "added" | "imported"> = "added"): RepositorySource {
   const form = named(submitted);
   const url = resolveOrReject(form, boundary);
   return immediate(db, (tx) => {
     const source = insertSource(tx, { name: form.name, gitRef: form.gitRef, ...url });
-    queueProfile(tx, source, "added");
+    queueProfile(tx, source, trigger);
     return source;
   });
 }

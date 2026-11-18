@@ -1,6 +1,9 @@
 import type { Page } from "@playwright/test";
 import { buildAssessment, buildSource } from "../test/support/builders";
 import { claim } from "../test/support/home";
+import { transitionAssessment } from "../src/lib/assessments/transitions";
+import { listSources } from "../src/lib/catalog/source-records";
+import { versionsOf } from "../src/lib/profiling/versions";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 
@@ -84,6 +87,31 @@ test("asks for the clone URL first and names the Repository after its owner and 
   await expect(name).toHaveValue("vickykatoch-helios");
   await page.getByRole("button", { name: "Create Repository" }).click();
   await expect(toasts(page).getByText("vickykatoch-helios was added.")).toBeVisible();
+});
+
+test("adds Repositories in bulk, keeps the refused lines to fix, and shows what is being profiled", async ({ page, db }) => {
+  await page.goto(paths.repositories);
+  await page.getByRole("link", { name: "Add in bulk" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Add Repositories" })).toBeVisible();
+
+  await page.getByLabel("Clone URLs").fill(["https://github.com/vickykatoch/helios.git", "git@github.com:acme/scp.git", "https://github.com/openmrs/openmrs-esm-core.git main"].join("\n"));
+  await page.getByRole("button", { name: "Add Repositories" }).click();
+  await expect(page.getByText("Added 2 of 3 Repositories")).toBeVisible();
+  await expect(page.getByRole("table", { name: "Lines that couldn't be added" })).toContainText("scp-style shorthand");
+  await expect(page.getByLabel("Clone URLs")).toHaveValue("git@github.com:acme/scp.git");
+
+  await page.getByLabel("Clone URLs").fill("ssh://git@github.com/acme/scp.git");
+  await page.getByRole("button", { name: "Add Repositories" }).click();
+  await expect(toasts(page).getByText("Added 1 Repository.")).toBeVisible();
+  await expect(page.getByRole("row", { name: /vickykatoch-helios/ })).toContainText("Version 1 queued");
+  await expect(page.locator("[data-profiling-activity]")).toHaveText(/3 queued/);
+
+  // A version the worker has started shows as profiling, with a pulsing indicator.
+  const helios = listSources(db).find((source) => source.name === "vickykatoch-helios")!;
+  transitionAssessment(db, versionsOf(db, helios.id)[0]!.assessment, "acquiring");
+  await page.reload();
+  await expect(page.getByRole("row", { name: /vickykatoch-helios/ }).locator("[data-profiling=profiling]")).toContainText("Profiling version 1");
+  await expect(page.locator("[data-profiling-activity]")).toHaveText(/Profiling 1 Repository.*2 queued/);
 });
 
 test("keeps Assessment history visible for a disabled Source", async ({ page, db }) => {

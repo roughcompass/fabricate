@@ -8,7 +8,7 @@ import { type Assessment, getAssessment, snapshotOf, targetsOf } from "@/lib/ass
 import { launchAssessment } from "@/lib/assessments/launcher";
 import { requestCancellation } from "@/lib/assessments/transitions";
 import { disableSource } from "@/lib/catalog/catalog";
-import { confirmImport, previewImport } from "@/lib/catalog/directory-import";
+import { addRepositories } from "@/lib/catalog/bulk-add";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, listSources } from "@/lib/catalog/source-records";
 import type { FabricateConfig } from "@/lib/config";
@@ -107,15 +107,11 @@ describe("Multi-repository Assessment scenario", () => {
     fs.rmSync(config.repositoryStorage, { recursive: true, force: true });
   });
 
-  it("imports the fleet directory into the catalog, refusing what is outside the allowed root", () => {
+  it("adds the fleet's repositories in bulk, refusing what is outside the allowed root", () => {
     const boundary = new SourceBoundary(config);
-    const preview = previewImport(db, fleet, boundary);
-    expect(preview.candidates.filter((candidate) => candidate.status === "importable").map((candidate) => candidate.name)).toEqual(["archive", "billing", "client", "ui", "web"]);
-    expect(preview.candidates.find((candidate) => candidate.name === "zz-outside-link")).toMatchObject({ status: "rejected" });
-    expect(() => previewImport(db, outside, boundary)).toThrow();
-
-    const result = confirmImport(db, fleet, preview.candidates.map((candidate) => candidate.path), boundary);
-    expect(result.failed).toEqual([]);
+    const urls = ["archive", "billing", "client", "ui", "web", "zz-outside-link"].map((name) => `file://${fleet}/${name}`);
+    const result = addRepositories(db, [...urls, `file://${outside}`].join("\n"), boundary);
+    expect(result.failed.map((failure) => failure.line)).toEqual([6, 7]);
     sources = Object.fromEntries(listSources(db).map((source) => [source.name, source]));
     expect(Object.keys(sources).sort()).toEqual(["archive", "billing", "client", "ui", "web"]);
     for (const source of Object.values(sources)) expect(source.cloneUrl.startsWith(`file://${fleet}/`)).toBe(true);

@@ -4,7 +4,7 @@ import { assessments } from "./assessments";
 import { repositorySources } from "./catalog";
 import { createdAt, id, sqlList } from "./columns";
 
-/** Why a profile version was queued (docs/profiling.md). */
+/** Why a profile version was queued (docs/profiling.md). `imported` is a Repository added in bulk. */
 export const PROFILE_TRIGGERS = ["imported", "added", "edited", "manual", "initial", "commit", "detector"] as const;
 export type ProfileTrigger = (typeof PROFILE_TRIGGERS)[number];
 

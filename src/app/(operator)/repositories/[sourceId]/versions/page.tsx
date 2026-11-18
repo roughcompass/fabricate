@@ -46,7 +46,7 @@ export default async function VersionsPage({ params, searchParams }: { params: P
           { href: repositoryHref(source.publicId), label: source.name },
         ]}
         title="Versions"
-        description={`${countLabel(total, "profile version")} of ${source.name}. A version is queued when the repository is added, imported, edited, or re-profiled, when its reference has new commits, and when the detector changes.`}
+        description={`${countLabel(total, "profile version")} of ${source.name}. A version is queued when the repository is added, edited, or re-profiled, when its reference has new commits, and when the detector changes.`}
         primaryAction={<ReprofileForm source={source} />}
       />
       <Panel flush>

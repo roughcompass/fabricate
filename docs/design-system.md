@@ -344,7 +344,7 @@ Home, at `/`, is a dashboard. The primary menu shows with Home current, and the 
 - **Two figure panels:** Repositories and Assessments. Each figure links through `src/lib/web/list-filters.ts` to a list filtered to exactly what it counts, and states its change over the last seven days in words.
 - **The Assessment trend beside Recent activity.** The trend is a `BarChart` of eight weeks of completed Evaluations by conclusion. Recent activity lists the latest finished Runs.
 - **Needs attention, full width.** A `Panel` holding a `Table` of Problem, Record, and Since, newest first, twenty to a `Pagination` page.
-- **Quick actions:** New Assessment and Import Repositories, both secondary.
+- **Quick actions:** New Assessment and Add Repositories, both secondary.
 
 A group with no records shows an `EmptyState` in its panel with the actions that create them. With nothing to show, Needs attention's `EmptyState` names what Home checks and has no action. Everything comes from `src/lib/home/` in a fixed number of queries, whatever the size of the fleet.
 

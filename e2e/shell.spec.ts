@@ -77,13 +77,13 @@ test.describe("on a wide viewport", () => {
     await expectCurrent(page, "Repositories");
   });
 
-  test("The create and import pages that left the menu are offered on their list pages", async ({ page, db }) => {
+  test("The create pages that left the menu are offered on their list pages", async ({ page, db }) => {
     buildSource(db);
     await page.goto(paths.assessments);
     await expect(page.locator("[data-page-header]").getByRole("link", { name: "New Assessment" })).toBeVisible();
     await page.goto(paths.repositories);
     await expect(page.locator("[data-page-header]").getByRole("link", { name: "New Repository" })).toBeVisible();
-    await expect(page.locator("[data-page-header]").getByRole("link", { name: "Import Repositories" })).toBeVisible();
+    await expect(page.locator("[data-page-header]").getByRole("link", { name: "Add in bulk" })).toBeVisible();
     await page.goto("/standards");
     await expect(page.locator("[data-page-header]").getByRole("link", { name: "New Standard" })).toBeVisible();
     await page.goto("/prototypes");

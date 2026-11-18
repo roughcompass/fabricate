@@ -22,7 +22,7 @@ export type ProfileVersionRow = typeof profileVersions.$inferSelect;
 export const ACTIVE_STATES = ["queued", "acquiring", "analyzing", "finalizing"] as const;
 
 export const TRIGGER_LABELS: Record<ProfileTrigger, string> = {
-  imported: "Imported",
+  imported: "Added in bulk",
   added: "Added",
   edited: "Edited",
   manual: "Re-profiled",
@@ -204,4 +204,28 @@ export function findVersion(db: Executor, sourceId: number, version: number): Pr
   if (!Number.isInteger(version) || version < 1 || version > total) return undefined;
   // Versions are numbered from 1 without gaps, so the newest-first offset of version n is total - n.
   return versionsOf(db, sourceId, 1, total - version)[0];
+}
+
+export interface ProfilingActivity {
+  /** Repositories whose newest version is being profiled now. */
+  readonly profiling: number;
+  /** Repositories whose newest version waits its turn. */
+  readonly queued: number;
+  /** Changes whenever a version starts, advances, or finishes, so a page can refresh. */
+  readonly version: string;
+}
+
+/** What is being profiled now, in one query, for the Repositories list and its status endpoint. */
+export function profilingActivity(db: Executor): ProfilingActivity {
+  const rows = db.all<{ source_id: number; version: number; state: Assessment["state"] }>(sql`
+    select v.repository_source_id as source_id, v.version, a.state
+    from ${profileVersions} v
+    join assessments a on a.id = v.assessment_id
+    where a.state in ('queued', 'acquiring', 'analyzing', 'finalizing')
+    order by v.repository_source_id, v.version`);
+  return {
+    profiling: rows.filter((row) => row.state !== "queued").length,
+    queued: rows.filter((row) => row.state === "queued").length,
+    version: crypto.createHash("sha256").update(JSON.stringify(rows)).digest("hex").slice(0, 16),
+  };
 }

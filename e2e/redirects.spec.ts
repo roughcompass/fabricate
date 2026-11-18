@@ -24,7 +24,7 @@ const REDIRECTS: [from: string, to: string][] = [
   [`/assessments/${ASSESSMENT}/evidence/ev_0123456789abcdef01234567`, `/runs/${ASSESSMENT}/evidence/ev_0123456789abcdef01234567`],
   ["/sources", "/repositories"],
   ["/sources/new", "/repositories/new"],
-  ["/sources/import?directory=%2Fsrv", "/repositories/import?directory=%2Fsrv"],
+  ["/sources/bulk?from=sources", "/repositories/bulk?from=sources"],
   [`/sources/${SOURCE}/edit`, `/repositories/${SOURCE}/edit`],
 ];
 

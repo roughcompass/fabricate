@@ -58,12 +58,10 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
   const run = () => drainJobs(db, jobHandlers(db, config));
 
   await test.step("register only file:// sources under fleet/", async () => {
-    await page.goto(paths.importRepositories);
-    await page.getByLabel("Absolute path").fill(FLEET_ROOT);
-    await page.getByRole("button", { name: "Preview" }).click();
-    for (const name of REPOSITORIES) await expect(page.getByRole("checkbox", { name: `Import ${name}` })).toBeChecked();
-    await page.getByRole("button", { name: `Add ${REPOSITORIES.length} Repositories` }).click();
-    // Exact, so the import page's own "Import Repositories" heading doesn't satisfy it before the import commits.
+    await page.goto(paths.bulkRepositories);
+    await page.getByLabel("Clone URLs").fill(REPOSITORIES.map((name) => `file://${FLEET_ROOT}/${name}`).join("\n"));
+    await page.getByRole("button", { name: "Add Repositories" }).click();
+    // Exact, so the bulk page's own "Add Repositories" heading doesn't satisfy it before the Repositories are added.
     await expect(page.getByRole("heading", { level: 1, name: "Repositories", exact: true })).toBeVisible();
     const sources = listSources(db);
     expect(sources.map((source) => source.name).sort()).toEqual(REPOSITORIES);

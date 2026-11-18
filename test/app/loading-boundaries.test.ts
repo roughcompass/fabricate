@@ -9,7 +9,7 @@ describe("navigation skeletons", () => {
     ["/", "home"],
     ["/assessments", "list"],
     ["/repositories", "list"],
-    ["/repositories/import", "list"],
+    ["/repositories/bulk", "form"],
     ["/standards", "list"],
     ["/assessments/new", "form"],
     ["/assessments/ini_abc/edit", "form"],

@@ -102,7 +102,7 @@ export function RepositoryView({
         ]}
         alerts={
           <>
-            <OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), source.publicId, undefined, undefined)} />
+            <OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), source.publicId)} />
             {pending && pending.version !== shown?.version && (
               <Alert tone="info" title={`Version ${pending.version} is ${pending.assessment.state === "queued" ? "queued" : "being profiled"}`}>
                 {`${TRIGGER_LABELS[pending.trigger]}. This page shows it once it's profiled.`}

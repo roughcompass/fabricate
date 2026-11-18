@@ -6,7 +6,7 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/(assessments|repositories|standards)\/new\/?$/, "form"],
   [/^\/(assessments|repositories|standards)\/[^/]+\/edit\/?$/, "form"],
   [/^\/(assessments|repositories|standards)\/?$/, "list"],
-  [/^\/repositories\/import\/?$/, "list"],
+  [/^\/repositories\/bulk\/?$/, "form"],
   [/^\/repositories\/de-console\/?$/, "detail"],
   // A Repository's page, its versions, and each version.
   [/^\/repositories\/src_[^/]+(\/versions(\/[^/]+)?)?\/?$/, "detail"],

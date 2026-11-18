@@ -44,7 +44,7 @@ test("Opening the root address: Home opens without a redirect, titled Home, with
 test("Fresh installation: each group shows its empty state and actions, and nothing needs attention", async ({ page, db: _db }) => {
   await page.goto(paths.home);
   await expect(page.getByText("No Repositories yet")).toBeVisible();
-  await expect(page.getByRole("main").getByRole("link", { name: "Import Repositories" }).first()).toHaveAttribute("href", "/repositories/import");
+  await expect(page.getByRole("main").getByRole("link", { name: "Add Repositories" }).first()).toHaveAttribute("href", "/repositories/bulk");
   await expect(page.getByRole("link", { name: "New Repository" }).last()).toHaveAttribute("href", "/repositories/new");
   await expect(page.getByText("No Assessments yet")).toBeVisible();
   await expect(page.getByRole("main").getByRole("link", { name: "New Assessment" }).first()).toHaveAttribute("href", "/assessments/new");
@@ -304,10 +304,10 @@ test.describe("the dashboard", () => {
     await expect(page).toHaveURL(new RegExp(`${paths.run(run.publicId)}$`));
   });
 
-  test("Quick actions: New Assessment and Import Repositories", async ({ page, db: _db }) => {
+  test("Quick actions: New Assessment and Add Repositories", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const actions = page.getByRole("group", { name: "Quick actions" });
-    await expect(actions.getByRole("link")).toHaveText(["New Assessment", "Import Repositories"]);
+    await expect(actions.getByRole("link")).toHaveText(["New Assessment", "Add Repositories"]);
     await actions.getByRole("link", { name: "New Assessment" }).click();
     await expect(page).toHaveURL(/\/assessments\/new$/);
   });

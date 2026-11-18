@@ -1003,7 +1003,7 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                 alerts={false}
                 headingLevel={3}
                 title="Repositories"
-                secondaryActions={[{ href: "#page-header", label: "Import Repositories", icon: "folder" }]}
+                secondaryActions={[{ href: "#page-header", label: "Add in bulk", icon: "layers" }]}
                 primaryAction={
                   <Button variant="primary" icon="plus">
                     New Repository

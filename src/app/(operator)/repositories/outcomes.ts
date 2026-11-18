@@ -9,17 +9,10 @@ import { versionsOf } from "@/lib/profiling/versions";
  * only a code, a Source ID, and counts; the text is built here from the
  * records, so a crafted link cannot inject text. An unknown code shows nothing.
  */
-export function sourceOutcome(db: Executor, code: string | undefined, sourcePublicId: string | undefined, count: string | undefined, failed: string | undefined): Outcome | undefined {
-  if (code === "imported" || code === "import-partial") {
+export function sourceOutcome(db: Executor, code: string | undefined, sourcePublicId: string | undefined, count?: string): Outcome | undefined {
+  if (code === "bulk-added") {
     const created = Number.parseInt(count ?? "0", 10) || 0;
-    const failures = Number.parseInt(failed ?? "0", 10) || 0;
-    if (failures === 0) return { id: `imported:${created}`, tone: "success", title: `Added ${countLabel(created, "Repository", "Repositories")}.` };
-    return {
-      id: `import-partial:${created}:${failures}`,
-      tone: "warning",
-      title: `Added ${created} of ${countLabel(created + failures, "selected Repository", "selected Repositories")}.`,
-      description: `${countLabel(failures, "candidate")} could not be added. Preview the directory again to see why.`,
-    };
+    return { id: `bulk-added:${created}`, tone: "success", title: `Added ${countLabel(created, "Repository", "Repositories")}.`, description: "Each is profiled in the background." };
   }
 
   const source = sourcePublicId ? findSource(db, sourcePublicId) : undefined;

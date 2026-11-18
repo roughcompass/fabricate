@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { LAUNCH_TOKEN } from "@/lib/assessments/assessment-records";
+import { addRepositories } from "@/lib/catalog/bulk-add";
 import { disableSource, editSource, enableSource, registerSource, type SourceForm } from "@/lib/catalog/catalog";
 import { getSource } from "@/lib/catalog/source-records";
 import { CloneUrl } from "@/lib/catalog/clone-url";
@@ -11,6 +12,7 @@ import { isPublicId } from "@/lib/db/ids";
 import { queueProfile } from "@/lib/profiling/versions";
 import { repositoryHref } from "@/lib/web/repository-paths";
 import { errorsFrom, integer, text } from "@/lib/web/form-data";
+import type { BulkFormState } from "./bulk/bulk-state";
 import type { SourceFormState } from "./source-form-state";
 
 function readForm(formData: FormData): SourceForm {
@@ -84,4 +86,26 @@ export async function reprofileSource(formData: FormData): Promise<void> {
   const result = queueProfile(getDb(), getSource(getDb(), publicId), "manual", { launchToken: LAUNCH_TOKEN.test(token) ? token : undefined });
   const notice = result.status === "queued" ? "reprofiled" : result.status === "active" ? "profiling" : "profile-disabled";
   redirect(text(formData, "from", 10) === "list" ? `/repositories?notice=${notice}&source=${publicId}` : `${repositoryHref(publicId)}?notice=${notice}`);
+}
+
+/**
+ * Adds every pasted clone URL it can. When all are added, opens the list
+ * with a count; otherwise keeps only the refused lines in the form, each
+ * with why.
+ */
+export async function addRepositoriesInBulk(previous: BulkFormState, formData: FormData): Promise<BulkFormState> {
+  const urls = text(formData, "urls", 200_000);
+  const submission = (previous.submission ?? 0) + 1;
+  let added: number;
+  let failed: BulkFormState["failed"];
+  try {
+    const result = addRepositories(getDb(), urls);
+    added = result.created.length;
+    failed = result.failed;
+  } catch (error) {
+    if (error instanceof ValidationError) return { values: { urls }, errors: errorsFrom(error), added: 0, failed: [], submission };
+    throw error;
+  }
+  if (failed.length === 0) redirect(`/repositories?notice=bulk-added&count=${added}`);
+  return { values: { urls: failed.map((failure) => failure.text).join("\n") }, errors: {}, added, failed, submission };
 }
