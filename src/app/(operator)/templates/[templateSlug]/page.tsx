@@ -10,38 +10,20 @@ import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TagList } from "@/components/ui/tag";
 import { BRANDS, PROVIDERS, routingLabel, templateBySlug } from "@/lib/demo/catalog";
 import { requireDemo } from "@/lib/demo/guard";
-import { acceptedTemplate } from "@/lib/demo/gallery-templates";
-import { Status } from "@/components/ui/status";
-import { SubmitButton } from "@/components/ui/submit-button";
-import { getDb } from "@/lib/db/client";
-import { heroStanding } from "@/lib/prototypes/conformance";
-import { prototypesEnabled, templatesAvailable } from "@/lib/prototypes/guard";
-import { heroFiles, heroTemplate } from "@/lib/prototypes/heroes/use";
-import { startFromHeroAction } from "./actions";
-import { PrototypeTemplateDetail, StandardsSection } from "./prototype-template";
 import styles from "../templates.module.css";
 
 export async function generateMetadata({ params }: { params: Promise<{ templateSlug: string }> }): Promise<Metadata> {
   const { templateSlug } = await params;
-  const title = templateBySlug(templateSlug)?.title ?? (await acceptedTemplate(templateSlug))?.latest.title;
+  const title = templateBySlug(templateSlug)?.title;
   return { title: title ? `${title} · Salt Patterns` : "Template not found" };
 }
 
-export default async function TemplatePage({ params, searchParams }: { params: Promise<{ templateSlug: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function TemplatePage({ params }: { params: Promise<{ templateSlug: string }> }) {
   requireDemo();
   const { templateSlug } = await params;
   const template = templateBySlug(templateSlug);
-  if (!template) {
-    const accepted = await acceptedTemplate(templateSlug);
-    if (!accepted) notFound();
-    const notice = (await searchParams)?.notice;
-    return <PrototypeTemplateDetail template={accepted} notice={typeof notice === "string" ? notice : undefined} />;
-  }
+  if (!template) notFound();
   const brand = BRANDS[template.brand];
-  // A hero's page, once the hero script's output is committed: Use template, Generate variations, and its Standards.
-  const hero = template.hero ? heroTemplate(template.slug) : null;
-  const usable = hero !== null && prototypesEnabled();
-  const standing = hero && templatesAvailable() ? await heroStanding(getDb(), hero, heroFiles(hero)) : null;
 
   return (
     <Page>
@@ -50,25 +32,9 @@ export default async function TemplatePage({ params, searchParams }: { params: P
         title={template.title}
         description={template.description}
         extraActions={
-          <>
-            <ButtonLink href={`/templates/${template.slug}/preview`} icon="eye">
-              Preview template
-            </ButtonLink>
-            {/* A hero is real Salt: while Prototypes is enabled, its main route can start a prototype as one page. */}
-            {usable && (
-              <>
-                <form action={startFromHeroAction}>
-                  <input type="hidden" name="slug" value={template.slug} />
-                  <SubmitButton icon="plus" variant="secondary" pendingLabel="Starting">
-                    Use template
-                  </SubmitButton>
-                </form>
-                <ButtonLink href={`/prototypes/new?${new URLSearchParams({ template: hero!.id })}`} icon="sparkle">
-                  Generate variations
-                </ButtonLink>
-              </>
-            )}
-          </>
+          <ButtonLink href={`/templates/${template.slug}/preview`} icon="eye">
+            Preview template
+          </ButtonLink>
         }
       />
 
@@ -83,7 +49,6 @@ export default async function TemplatePage({ params, searchParams }: { params: P
               ["Microfrontends", template.app.members.filter((member) => member.role === "child").map((member) => member.name).join(", ")],
               ["Tags", <TagList key="tags" values={template.tags} />],
               ...(template.hero ? [] : ([["Code", <span key="code" data-illustrative="">Illustrative: its code is generated from the catalog, not real Salt.</span>]] as const)),
-              ...(standing ? ([["Standards", <Status key="standards" state={standing.status} label={standing.status === "meets" ? "Meets selected Standards" : undefined} />]] as const) : []),
             ]}
           />
         </div>
@@ -91,8 +56,6 @@ export default async function TemplatePage({ params, searchParams }: { params: P
           <Image src={template.preview.src} alt={template.preview.alt} fill unoptimized sizes="(max-width: 767px) 100vw, 800px" className={styles.previewImage} />
         </figure>
       </div>
-
-      {standing && <StandardsSection standing={standing} hero />}
 
       <Section title="Microfrontends" description={`Each application from this template is a microfrontends group in the ${brand.portalName} portal.`}>
         <Panel flush>

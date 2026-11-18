@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ConfigurationError, type Settings, describePrototypesDatabase, loadConfig, withOverrides } from "@/lib/config";
+import { ConfigurationError, type Settings, loadConfig, withOverrides } from "@/lib/config";
 
 const shared: Settings = {
   allowedRoots: [],
@@ -17,17 +17,6 @@ const shared: Settings = {
   demo: { enabled: false },
   deConsole: { source: null, refreshMinutes: 60 },
   profiling: { checkMinutes: 60 },
-  profile: "full",
-  prototypes: {
-    enabled: false,
-    database: "storage/prototypes-pglite",
-    models: { generate: "anthropic/claude-opus-5.5", plan: "anthropic/claude-sonnet-5.5", review: "google/gemini-3.1-pro-preview", learn: "anthropic/claude-sonnet-5.5" },
-    dailyVariantLimit: 500,
-    repairAttempts: 3,
-    zeroDataRetention: true,
-    runner: "workflow",
-    examples: true,
-  },
 };
 
 describe("configuration", () => {
@@ -183,92 +172,6 @@ describe("configuration", () => {
       const enabled = load({ shared: { ...shared, demo: { enabled: true } } });
       expect(withOverrides(enabled, { workerConcurrency: 1 }).demoEnabled).toBe(true);
       expect(withOverrides(enabled, { demo: { enabled: false } }).demoEnabled).toBe(false);
-    });
-  });
-
-  describe("profile and Prototypes settings", () => {
-    const committed = (environment: "development" | "test" | "production", env: Record<string, string> = {}) => loadConfig({ appRoot: process.cwd(), environment, env });
-
-    it("turns Prototypes on in development and test, and off in production, by default", () => {
-      expect(committed("development").prototypes.enabled).toBe(true);
-      expect(committed("test").prototypes.enabled).toBe(true);
-      expect(committed("production").prototypes.enabled).toBe(false);
-      for (const environment of ["development", "test", "production"] as const) expect(committed(environment).profile).toBe("full");
-    });
-
-    it("keeps the design's defaults for models, limits, retention, and the runner", () => {
-      const { prototypes } = committed("production");
-      expect(prototypes.models).toEqual({ generate: "anthropic/claude-opus-5.5", plan: "anthropic/claude-sonnet-5.5", review: "google/gemini-3.1-pro-preview", learn: "anthropic/claude-sonnet-5.5" });
-      expect(prototypes).toMatchObject({ dailyVariantLimit: 500, repairAttempts: 3, zeroDataRetention: true, runner: "workflow", examples: true });
-      expect(committed("test").prototypes.examples).toBe(false);
-      expect(prototypes.database).toEqual({ kind: "pglite", dataDir: path.join(process.cwd(), "storage/prototypes-pglite") });
-      expect(committed("test").prototypes.database).toEqual({ kind: "pglite", dataDir: path.join(process.cwd(), "tmp/test/prototypes-pglite") });
-    });
-
-    it("lets an environment section set one Prototypes field and keep the rest", () => {
-      const config = load({ shared, test: { prototypes: { enabled: true, models: { review: "anthropic/claude-sonnet-5.5" } } } });
-      expect(config.prototypes.enabled).toBe(true);
-      expect(config.prototypes.models).toEqual({ ...shared.prototypes.models, review: "anthropic/claude-sonnet-5.5" });
-      expect(config.prototypes.dailyVariantLimit).toBe(500);
-    });
-
-    it("applies every environment override", () => {
-      const config = load({ shared }, {
-        FABRICATE_PROFILE: "hosted",
-        FABRICATE_PROTOTYPES: "true",
-        FABRICATE_PROTOTYPES_DATABASE: "postgres://fablab:secret@db.example.test/prototypes",
-        FABRICATE_PROTOTYPES_MODEL_GENERATE: "mock",
-        FABRICATE_PROTOTYPES_MODEL_PLAN: "mock",
-        FABRICATE_PROTOTYPES_MODEL_REVIEW: "mock",
-        FABRICATE_PROTOTYPES_MODEL_LEARN: "mock",
-        FABRICATE_PROTOTYPES_DAILY_LIMIT: "5",
-        FABRICATE_PROTOTYPES_ZDR: "false",
-        FABRICATE_PROTOTYPES_RUNNER: "inline",
-        FABRICATE_PROTOTYPES_EXAMPLES: "false",
-      });
-      expect(config.profile).toBe("hosted");
-      expect(config.prototypes).toEqual({
-        enabled: true,
-        database: { kind: "postgres", url: "postgres://fablab:secret@db.example.test/prototypes" },
-        models: { generate: "mock", plan: "mock", review: "mock", learn: "mock" },
-        dailyVariantLimit: 5,
-        repairAttempts: 3,
-        zeroDataRetention: false,
-        runner: "inline",
-        examples: false,
-      });
-    });
-
-    it("lets the override enable Prototypes in production", () => {
-      expect(committed("production", { FABRICATE_PROTOTYPES: "1" }).prototypes.enabled).toBe(true);
-      expect(committed("development", { FABRICATE_PROTOTYPES: "0" }).prototypes.enabled).toBe(false);
-    });
-
-    it("falls back to DATABASE_URL, and prefers FABRICATE_PROTOTYPES_DATABASE over it", () => {
-      expect(load({ shared }, { DATABASE_URL: "postgresql://neon.example.test/main" }).prototypes.database).toEqual({ kind: "postgres", url: "postgresql://neon.example.test/main" });
-      expect(load({ shared }, { DATABASE_URL: "postgresql://neon.example.test/main", FABRICATE_PROTOTYPES_DATABASE: "tmp/local-pglite" }).prototypes.database).toEqual({ kind: "pglite", dataDir: path.join(appRoot, "tmp/local-pglite") });
-    });
-
-    it("prints a Postgres URL without its password", () => {
-      const config = load({ shared }, { FABRICATE_PROTOTYPES_DATABASE: "postgres://fablab:secret@db.example.test/prototypes" });
-      expect(describePrototypesDatabase(config.prototypes.database)).toBe("Postgres at postgres://fablab:****@db.example.test/prototypes");
-    });
-
-    it.each([
-      ["FABRICATE_PROFILE", "cloud", /FABRICATE_PROFILE must be full or hosted/],
-      ["FABRICATE_PROTOTYPES", "yes", /FABRICATE_PROTOTYPES must be true, false, 1, or 0/],
-      ["FABRICATE_PROTOTYPES_RUNNER", "queue", /FABRICATE_PROTOTYPES_RUNNER must be workflow or inline/],
-      ["FABRICATE_PROTOTYPES_DAILY_LIMIT", "many", /FABRICATE_PROTOTYPES_DAILY_LIMIT must be a positive integer/],
-      ["FABRICATE_PROTOTYPES_MODEL_GENERATE", "Opus please", /provider\/model id or mock/],
-      ["FABRICATE_PROTOTYPES_DATABASE", "mysql://db.example.test/prototypes", /PGlite directory or a postgres:\/\/ URL/],
-    ])("rejects %s=%s", (key, value, message) => {
-      expect(() => load({ shared }, { [key]: value })).toThrow(message);
-    });
-
-    it("keeps Prototypes settings through overrides of other settings", () => {
-      const enabled = load({ shared, test: { prototypes: { enabled: true } } });
-      expect(withOverrides(enabled, { workerConcurrency: 1 }).prototypes.enabled).toBe(true);
-      expect(withOverrides(enabled, { prototypes: { models: { generate: "mock" } } }).prototypes.models).toEqual({ ...shared.prototypes.models, generate: "mock" });
     });
   });
 

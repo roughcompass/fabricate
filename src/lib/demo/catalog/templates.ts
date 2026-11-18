@@ -18,7 +18,6 @@ function template(input: TemplateInput): Template {
   const owner = input.provider === "community" ? (input.author ?? "Community") : "DE Web Starter Kits";
   return {
     ...input,
-    origin: "built-in",
     hero: input.app !== undefined,
     preview: {
       // Captured from the reference deployment by scripts/capture-template-previews.mjs.

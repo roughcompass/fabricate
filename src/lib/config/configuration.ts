@@ -21,21 +21,6 @@ export class ConfigurationError extends Error {
 const positiveInteger = z.int().positive();
 const pathSetting = z.string().trim().min(1, "path settings must not be blank");
 
-const modelsSchema = z.strictObject({ generate: modelSetting(), plan: modelSetting(), review: modelSetting(), learn: modelSetting() });
-
-const prototypesSchema = z.strictObject({
-  enabled: z.boolean(),
-  database: pathSetting,
-  models: modelsSchema,
-  dailyVariantLimit: positiveInteger,
-  repairAttempts: z.int().min(0).max(5),
-  zeroDataRetention: z.boolean(),
-  // Steps run in a Vercel Workflow, or in-process after the response when the Workflow setup isn't available.
-  runner: z.enum(["workflow", "inline"]),
-  // Whether a new workspace starts with the seeded example prototypes; tests turn it off to start empty.
-  examples: z.boolean(),
-});
-
 const settingsSchema = z.strictObject({
   allowedRoots: z.array(pathSetting),
   deniedRoots: z.array(pathSetting),
@@ -67,31 +52,15 @@ const settingsSchema = z.strictObject({
   profiling: z.strictObject({
     checkMinutes: positiveInteger,
   }),
-  // Where DE FabLab runs: `full` everywhere it has Git and SQLite, `hosted`
-  // on a platform without them, where only Prototypes is shown.
-  profile: z.enum(["full", "hosted"]),
-  // Prototypes (prototypes/availability spec): off by default, on in
-  // development and test. Its data lives in its own Postgres store, a PGlite
-  // directory locally or a Postgres URL on Vercel.
-  prototypes: prototypesSchema,
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
 
-/** An AI Gateway model id such as `anthropic/claude-opus-5.5`, or `mock` for the scripted test model. */
-function modelSetting() {
-  return z.string().trim().regex(/^(mock|[a-z0-9-]+\/[a-z0-9.\-_]+)$/, "models must be a provider/model id or mock");
-}
-
-// An environment section replaces whole settings, except Prototypes, whose
-// fields it can set one at a time.
-const sectionSchema = settingsSchema.partial().extend({ prototypes: prototypesSchema.partial().extend({ models: modelsSchema.partial().optional() }).optional() });
-
 const fileSchema = z.strictObject({
   shared: settingsSchema,
-  development: sectionSchema.optional(),
-  test: sectionSchema.optional(),
-  production: sectionSchema.optional(),
+  development: settingsSchema.partial().optional(),
+  test: settingsSchema.partial().optional(),
+  production: settingsSchema.partial().optional(),
 });
 
 export type Environment = "development" | "test" | "production";
@@ -112,29 +81,7 @@ export const ENV_KEYS = {
   deConsoleSource: "FABRICATE_DE_CONSOLE_SOURCE",
   deConsoleRefreshMinutes: "FABRICATE_DE_CONSOLE_REFRESH_MINUTES",
   profilingCheckMinutes: "FABRICATE_PROFILING_CHECK_MINUTES",
-  profile: "FABRICATE_PROFILE",
-  prototypesEnabled: "FABRICATE_PROTOTYPES",
-  prototypesDatabase: "FABRICATE_PROTOTYPES_DATABASE",
-  prototypesModelGenerate: "FABRICATE_PROTOTYPES_MODEL_GENERATE",
-  prototypesModelPlan: "FABRICATE_PROTOTYPES_MODEL_PLAN",
-  prototypesModelReview: "FABRICATE_PROTOTYPES_MODEL_REVIEW",
-  prototypesModelLearn: "FABRICATE_PROTOTYPES_MODEL_LEARN",
-  prototypesDailyLimit: "FABRICATE_PROTOTYPES_DAILY_LIMIT",
-  prototypesZeroDataRetention: "FABRICATE_PROTOTYPES_ZDR",
-  prototypesRunner: "FABRICATE_PROTOTYPES_RUNNER",
-  prototypesExamples: "FABRICATE_PROTOTYPES_EXAMPLES",
 } as const;
-
-/** The Postgres URL Prototypes falls back to when FABRICATE_PROTOTYPES_DATABASE isn't set, as the Neon integration names it. */
-export const DATABASE_URL = "DATABASE_URL";
-
-/**
- * The AI Gateway credentials (prototypes/availability spec, "Generation needs
- * a configured model credential"): an API key, or the OIDC token Vercel gives
- * a deployment and `vercel env pull` writes locally. Read from the
- * environment when a model is called, never stored in the configuration.
- */
-export const GATEWAY_CREDENTIALS = ["AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN"] as const;
 
 /** The DE Console service identity's token. Read from the environment when a request is made, and never stored in the configuration. */
 export const DE_CONSOLE_TOKEN = "FABRICATE_DE_CONSOLE_TOKEN";
@@ -145,25 +92,6 @@ export interface DeConsoleSettings {
   /** Null when no DE Console source is configured. */
   readonly source: DeConsoleSource | null;
   readonly refreshMinutes: number;
-}
-
-/** Where Prototypes keeps its data: an in-process PGlite directory, or a Postgres server. */
-export type PrototypesDatabase = { readonly kind: "pglite"; readonly dataDir: string } | { readonly kind: "postgres"; readonly url: string };
-
-export type Profile = "full" | "hosted";
-
-export interface PrototypesSettings {
-  /** Whether Prototypes' pages, render frames, share links, and endpoints exist. */
-  readonly enabled: boolean;
-  readonly database: PrototypesDatabase;
-  /** AI Gateway model ids per step, or `mock`. */
-  readonly models: { readonly generate: string; readonly plan: string; readonly review: string; readonly learn: string };
-  readonly dailyVariantLimit: number;
-  readonly repairAttempts: number;
-  readonly zeroDataRetention: boolean;
-  readonly runner: "workflow" | "inline";
-  /** Whether a new workspace starts with the seeded example prototypes, lessons, and progress. */
-  readonly examples: boolean;
 }
 
 export interface AnalysisBudgets {
@@ -191,9 +119,6 @@ export interface FabricateConfig {
   readonly demoEnabled: boolean;
   readonly deConsole: DeConsoleSettings;
   readonly profiling: { readonly checkMinutes: number };
-  /** `hosted` shows only Prototypes and skips the Git and SQLite startup checks. */
-  readonly profile: Profile;
-  readonly prototypes: PrototypesSettings;
   /** The settings this configuration was built from, before mandatory additions. */
   readonly settings: Settings;
 }
@@ -219,9 +144,7 @@ export function loadConfig(options: LoadOptions = {}): FabricateConfig {
   const env = options.env ?? process.env;
   const environment = options.environment ?? currentEnvironment(env);
   const file = parse(fileSchema, options.file ?? readConfigFile(appRoot), "config/fabricate.json");
-  const section = file[environment];
-  const prototypes = { ...file.shared.prototypes, ...section?.prototypes, models: { ...file.shared.prototypes.models, ...section?.prototypes?.models } };
-  const settings = applyEnvironment({ ...file.shared, ...section, prototypes }, env);
+  const settings = applyEnvironment({ ...file.shared, ...file[environment] }, env);
   return buildConfig(settings, { appRoot, environment });
 }
 
@@ -231,11 +154,10 @@ export function loadConfig(options: LoadOptions = {}): FabricateConfig {
  */
 export function withOverrides(
   config: FabricateConfig,
-  overrides: Partial<Omit<Settings, "analysis" | "deConsole" | "profiling" | "prototypes">> & {
+  overrides: Partial<Omit<Settings, "analysis" | "deConsole" | "profiling">> & {
     analysis?: Partial<Settings["analysis"]>;
     deConsole?: Partial<Settings["deConsole"]>;
     profiling?: Partial<Settings["profiling"]>;
-    prototypes?: Partial<Omit<Settings["prototypes"], "models">> & { models?: Partial<Settings["prototypes"]["models"]> };
   },
 ): FabricateConfig {
   const settings = {
@@ -245,7 +167,6 @@ export function withOverrides(
     demo: { ...config.settings.demo, ...overrides.demo },
     deConsole: { ...config.settings.deConsole, ...overrides.deConsole },
     profiling: { ...config.settings.profiling, ...overrides.profiling },
-    prototypes: { ...config.settings.prototypes, ...overrides.prototypes, models: { ...config.settings.prototypes.models, ...overrides.prototypes?.models } },
   };
   return buildConfig(settings, { appRoot: config.appRoot, environment: config.environment });
 }
@@ -300,40 +221,8 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
     demoEnabled: settings.demo.enabled,
     deConsole: { source: deConsoleSource(settings.deConsole.source, resolve, mandatory), refreshMinutes: settings.deConsole.refreshMinutes },
     profiling: { checkMinutes: settings.profiling.checkMinutes },
-    profile: settings.profile,
-    prototypes: {
-      enabled: settings.prototypes.enabled,
-      database: prototypesDatabase(settings.prototypes.database, resolve),
-      models: { ...settings.prototypes.models },
-      dailyVariantLimit: settings.prototypes.dailyVariantLimit,
-      repairAttempts: settings.prototypes.repairAttempts,
-      zeroDataRetention: settings.prototypes.zeroDataRetention,
-      runner: settings.prototypes.runner,
-      examples: settings.prototypes.examples,
-    },
     settings,
   });
-}
-
-/** A `postgres://` or `postgresql://` URL names a server; anything else is a PGlite directory, resolved from the app root. */
-function prototypesDatabase(value: string, resolve: (value: string) => string): PrototypesDatabase {
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(value)) return { kind: "pglite", dataDir: resolve(value) };
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new ConfigurationError("The Prototypes database is not a valid URL");
-  }
-  if (url.protocol !== "postgres:" && url.protocol !== "postgresql:") throw new ConfigurationError("The Prototypes database must be a PGlite directory or a postgres:// URL");
-  return { kind: "postgres", url: value };
-}
-
-/** A Postgres URL with its password replaced, for printing. */
-export function describePrototypesDatabase(database: PrototypesDatabase): string {
-  if (database.kind === "pglite") return `PGlite at ${database.dataDir}`;
-  const url = new URL(database.url);
-  if (url.password) url.password = "****";
-  return `Postgres at ${url.toString()}`;
 }
 
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]"]);
@@ -391,13 +280,6 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   const demo: Record<string, unknown> = { ...(settings.demo as Record<string, unknown>) };
   const deConsole: Record<string, unknown> = { ...(settings.deConsole as Record<string, unknown>) };
   const profiling: Record<string, unknown> = { ...(settings.profiling as Record<string, unknown>) };
-  const prototypes: Record<string, unknown> = { ...(settings.prototypes as Record<string, unknown>) };
-  const models: Record<string, unknown> = { ...(prototypes.models as Record<string, unknown>) };
-  const oneOf = (key: string, values: readonly string[]) => {
-    const value = text(key);
-    if (value === undefined || values.includes(value)) return value;
-    throw new ConfigurationError(`${key} must be ${values.join(" or ")} (got ${JSON.stringify(value)})`);
-  };
 
   const assignments: [Record<string, unknown>, string, unknown][] = [
     [result, "allowedRoots", list(ENV_KEYS.allowedRoots)],
@@ -415,24 +297,12 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [deConsole, "source", text(ENV_KEYS.deConsoleSource)],
     [deConsole, "refreshMinutes", integer(ENV_KEYS.deConsoleRefreshMinutes)],
     [profiling, "checkMinutes", integer(ENV_KEYS.profilingCheckMinutes)],
-    [result, "profile", oneOf(ENV_KEYS.profile, ["full", "hosted"])],
-    [prototypes, "enabled", boolean(ENV_KEYS.prototypesEnabled)],
-    [prototypes, "database", text(ENV_KEYS.prototypesDatabase) ?? text(DATABASE_URL)],
-    [models, "generate", text(ENV_KEYS.prototypesModelGenerate)],
-    [models, "plan", text(ENV_KEYS.prototypesModelPlan)],
-    [models, "review", text(ENV_KEYS.prototypesModelReview)],
-    [models, "learn", text(ENV_KEYS.prototypesModelLearn)],
-    [prototypes, "dailyVariantLimit", integer(ENV_KEYS.prototypesDailyLimit)],
-    [prototypes, "zeroDataRetention", boolean(ENV_KEYS.prototypesZeroDataRetention)],
-    [prototypes, "runner", oneOf(ENV_KEYS.prototypesRunner, ["workflow", "inline"])],
-    [prototypes, "examples", boolean(ENV_KEYS.prototypesExamples)],
   ];
   for (const [target, key, value] of assignments) if (value !== undefined) target[key] = value;
   result.analysis = analysis;
   if (Object.keys(demo).length > 0) result.demo = demo;
   if (Object.keys(deConsole).length > 0) result.deConsole = deConsole;
   if (Object.keys(profiling).length > 0) result.profiling = profiling;
-  if (Object.keys(prototypes).length > 0) result.prototypes = Object.keys(models).length > 0 ? { ...prototypes, models } : prototypes;
   return result;
 }
 

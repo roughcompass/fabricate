@@ -1,1 +1,0 @@
-ALTER TABLE "prototypes"."generations" ADD COLUMN "hero" jsonb;

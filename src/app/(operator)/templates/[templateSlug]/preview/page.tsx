@@ -11,9 +11,6 @@ import { ToggleGroup } from "@/components/ui/toggle-group";
 import { referenceId, startRoute, templateBySlug } from "@/lib/demo/catalog";
 import { referenceUrl } from "@/lib/demo/deployments";
 import { requireDemo } from "@/lib/demo/guard";
-import { acceptedTemplate } from "@/lib/demo/gallery-templates";
-import { parseFramePreview } from "@/lib/prototypes/preview-state";
-import { PrototypeTemplatePreview } from "./prototype-template-preview";
 import { DEVICES, DEVICE_IDS, ORIENTATION_LABELS, type PreviewState, frameSize, parsePreviewState, previewHref, scaffoldCommand, sizeLabel } from "@/lib/demo/preview";
 import { type TemplateFile, isIllustrative, templateFiles } from "@/lib/demo/template-files";
 import { DeviceFrame, FullScreenLink } from "./device-frame";
@@ -26,7 +23,7 @@ const DEVICE_ICONS = { mobile: "smartphone", tablet: "tablet", desktop: "monitor
 
 export async function generateMetadata({ params }: { params: Promise<{ templateSlug: string }> }): Promise<Metadata> {
   const { templateSlug } = await params;
-  const title = templateBySlug(templateSlug)?.title ?? (await acceptedTemplate(templateSlug))?.latest.title;
+  const title = templateBySlug(templateSlug)?.title;
   return { title: title ? `Preview ${title}` : "Template not found" };
 }
 
@@ -107,11 +104,7 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
   requireDemo();
   const { templateSlug } = await params;
   const template = templateBySlug(templateSlug);
-  if (!template) {
-    const accepted = await acceptedTemplate(templateSlug);
-    if (!accepted) notFound();
-    return <PrototypeTemplatePreview template={accepted} state={parseFramePreview(await searchParams)} />;
-  }
+  if (!template) notFound();
   const state = parsePreviewState(await searchParams);
   const files = templateFiles(template);
   const file = files.find((entry) => entry.path === state.file) ?? files[0]!;

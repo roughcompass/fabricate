@@ -36,7 +36,6 @@ npm test            # unit and integration tests (Vitest)
 npm run test:e2e    # browser tests (Playwright), against a dev server on port 3100
 npm run test:visual # screenshots of every product surface, for design review
 npm run test:fleet  # the synthetic fleet, assessed and evaluated through the product
-npm run test:hosted # Prototypes in the hosted profile, with no Git on PATH and no SQLite
 npm run typecheck
 npm run lint
 npm run build       # Next.js standalone server, dist/worker.cjs, dist/migrate.cjs, and dist/projection-rebuild.cjs
@@ -45,8 +44,6 @@ npm run build       # Next.js standalone server, dist/worker.cjs, dist/migrate.c
 `npm run test:visual` seeds a representative Assessment, checks each product surface for horizontal overflow and overlapping content at 1280 and 375 pixels wide, and writes full-page screenshots to `verification/screenshots/`. The committed screenshots are the output of the last design review.
 
 `npm run test:fleet` needs the harness `fleet/` repositories next to this directory, or `FLEET_ROOT` set to their location. It starts its own server on port 3200 with `fleet/` as the only allowed root and a throwaway database and repository store in `tmp/fleet-run/`. It then imports the fleet, runs a baseline Assessment, authors two Standards in the editor, and runs an Evaluation. It never reads `fleet-kit/`.
-
-`npm run test:hosted` starts its own server on port 3300 in the hosted profile, as DE FabLab runs on Vercel: only Prototypes, a PATH holding only Node's directory and `/bin`, and a SQLite path that doesn't exist. It checks that Prototypes serves and every other section answers not found.
 
 The lint rules forbid `eval`, the `Function` constructor, the `vm` module, computed `import()`, `require()`, and regular expressions built from data. Only `src/lib/git/runner.ts` may import `child_process`. A test in `test/lint/` keeps these rules in force.
 
@@ -73,24 +70,12 @@ Environment variables override the file:
 | `deConsole.source` | `FABRICATE_DE_CONSOLE_SOURCE` | none; an export file or `https://` endpoint, see [docs/ownership.md](docs/ownership.md#the-de-console-import) |
 | `deConsole.refreshMinutes` | `FABRICATE_DE_CONSOLE_REFRESH_MINUTES` | 60 |
 | `profiling.checkMinutes` | `FABRICATE_PROFILING_CHECK_MINUTES` | 60; how often the worker checks every Repository for new commits and a new detector, see [docs/profiling.md](docs/profiling.md) |
-| `profile` | `FABRICATE_PROFILE` | `full`; `hosted` shows only Prototypes, see [docs/prototypes.md](docs/prototypes.md) |
-| `prototypes.enabled` | `FABRICATE_PROTOTYPES` | `false`; `true` in development and test |
-| `prototypes.database` | `FABRICATE_PROTOTYPES_DATABASE`, then `DATABASE_URL` | `storage/prototypes-pglite`; a PGlite directory or a `postgres://` URL |
-| `prototypes.models.generate` | `FABRICATE_PROTOTYPES_MODEL_GENERATE` | `anthropic/claude-opus-5.5` |
-| `prototypes.models.plan` | `FABRICATE_PROTOTYPES_MODEL_PLAN` | `anthropic/claude-sonnet-5.5` |
-| `prototypes.models.review` | `FABRICATE_PROTOTYPES_MODEL_REVIEW` | `google/gemini-3.1-pro-preview` |
-| `prototypes.models.learn` | `FABRICATE_PROTOTYPES_MODEL_LEARN` | `anthropic/claude-sonnet-5.5` |
-| `prototypes.dailyVariantLimit` | `FABRICATE_PROTOTYPES_DAILY_LIMIT` | 500 |
-| `prototypes.repairAttempts` | none | 3 |
-| `prototypes.zeroDataRetention` | `FABRICATE_PROTOTYPES_ZDR` | `true` |
-| `prototypes.runner` | `FABRICATE_PROTOTYPES_RUNNER` | `workflow`; `inline` runs the same steps in the web server |
-| `prototypes.examples` | `FABRICATE_PROTOTYPES_EXAMPLES` | `true`; `false` in test, so a new workspace starts without the seeded example prototypes |
 
-The DE Console endpoint's read-only token comes only from `FABRICATE_DE_CONSOLE_TOKEN`, never from the file. Prototypes reaches AI Gateway with `AI_GATEWAY_API_KEY`, or with the `VERCEL_OIDC_TOKEN` that Vercel gives a deployment and `vercel env pull` writes to `.env.local`; neither is ever read from the file. Each `prototypes.models` setting also accepts `mock`, the scripted model the tests use. List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_DEMO` and `FABRICATE_PROTOTYPES` accept `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+The DE Console endpoint's read-only token comes only from `FABRICATE_DE_CONSOLE_TOKEN`, never from the file. List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_DEMO` accepts `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
 
 ### Template demo
 
-The template demo is an interactive demonstration of starting an application from a template, inside DE FabLab. Its deployments are simulated: each template has one reference deployment that runs inside DE FabLab, and the demo never builds or deploys code, runs a repository's commands, or contacts Bitbucket or any other service. When `demo.enabled` is on, the sidebar adds Salt Patterns to its Salt Patterns & Prototypes group. When it is off, every demo page, running application, share link, and demo endpoint answers not found, and no other part of DE FabLab changes.
+The template demo is an interactive demonstration of starting an application from a template, inside DE FabLab. Its deployments are simulated: each template has one reference deployment that runs inside DE FabLab, and the demo never builds or deploys code, runs a repository's commands, or contacts Bitbucket or any other service. When `demo.enabled` is on, the sidebar adds Salt Patterns under a Templates heading. When it is off, every demo page, running application, share link, and demo endpoint answers not found, and no other part of DE FabLab changes.
 
 To run the demo locally, start the web server with the switch on, then open Salt Patterns:
 

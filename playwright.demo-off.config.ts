@@ -18,7 +18,7 @@ export default defineConfig({
   use: { baseURL, trace: "retain-on-failure", screenshot: "only-on-failure", reducedMotion: "reduce" },
   projects: [{ name: "chrome", use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1280, height: 900 } } }],
   webServer: {
-    command: `rm -rf "${E2E_ROOT}" && mkdir -p "${E2E_SOURCES}" && npm run db:migrate && npm run prototypes:migrate && npm run prototypes:runtime && npx next dev --port ${E2E_PORT} --hostname 127.0.0.1`,
+    command: `rm -rf "${E2E_ROOT}" && mkdir -p "${E2E_SOURCES}" && npm run db:migrate && npx next dev --port ${E2E_PORT} --hostname 127.0.0.1`,
     env: { ...E2E_ENV, FABRICATE_DEMO: "false" },
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,

@@ -5,7 +5,6 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ButtonLink, Button } from "@/components/ui/button";
 import { buttonProps } from "@/components/ui/button-content";
 import { CodeBlock } from "@/components/ui/code-block";
-import { CodeDiff } from "@/components/ui/code-diff";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CopyButton } from "@/components/ui/copy-button";
 import { DescriptionList } from "@/components/ui/description-list";
@@ -34,19 +33,11 @@ import { TabLink, Tabs } from "@/components/ui/tabs";
 import { BarChart } from "@/components/ui/bar-chart";
 import { ShortValue, Tag, TagList } from "@/components/ui/tag";
 import { Tooltip } from "@/components/ui/tooltip";
-import { ChecksPanel } from "@/components/ui/checks-panel";
-import { Composer } from "@/components/ui/composer";
-import { PrototypeFrame } from "@/components/ui/prototype-frame";
-import { ThreadView } from "@/components/ui/thread-view";
-import { PreviewControls } from "@/components/prototypes/preview-controls";
-import { DEFAULT_PREVIEW } from "@/lib/prototypes/preview-state";
-import { SAMPLE_EVIDENCE } from "./prototype-samples";
 import { Diagram } from "@/components/relationships/diagram";
 import { type DiagramEdge, diagramModel } from "@/lib/relationships/diagram";
 import type { DiagramData } from "@/lib/relationships/levels";
-import { composerDemo, confirmDemo, noopDemo, validateDemo } from "./actions";
+import { confirmDemo, noopDemo, validateDemo } from "./actions";
 import { AlertDemo, FocusDemo, IndeterminateCheckbox, InjectedError, ToastDemo } from "./demos";
-import { diffFile } from "@/lib/prototypes/diff";
 import { Row, Specimen } from "./specimen";
 import styles from "./design-system.module.css";
 
@@ -539,23 +530,6 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
         />
 
         <Specimen
-          id="code-diff"
-          title="Code diff"
-          description="The line differences between two versions of a file, each changed region with three lines of context and both versions' line numbers."
-          render={() => (
-            <CodeDiff
-              before="v2"
-              after="v4"
-              diff={diffFile(
-                "Prototype.tsx",
-                '<StackLayout gap={2}>\n  <H1>Exception-first queue</H1>\n  <Text color="secondary">{cutOffNote}</Text>\n  <Text>Group by cut-off time</Text>\n  <Table zebra>\n',
-                '<StackLayout gap={2}>\n  <H1>Exception-first queue</H1>\n  <Text color="secondary">{cutOffNote}</Text>\n  <Text>Show the total per group</Text>\n  <Text>Totals: USD 4,210,000.00</Text>\n  <Table zebra>\n',
-              )}
-            />
-          )}
-        />
-
-        <Specimen
           id="table"
           title="Table"
           description="A quiet header, a linked primary cell, row actions in a menu that keeps rows one height, and stacked rows on narrow screens."
@@ -739,46 +713,6 @@ export default async function DesignSystemPage({ searchParams }: { searchParams:
                   { href: "#tabs", label: "Run #1" },
                 ]}
               />
-            </>
-          )}
-        />
-
-
-        <Specimen
-          id="prototype-preview"
-          title="Prototype preview"
-          description="A prototype version in a frame sandboxed to scripts only, at a device's width and scaled to fit, with the preview's Mode, Density, and Device controls and Open in new tab. This is a fixed sample page."
-          single
-          render={() => (
-            <>
-              <PreviewControls action="/design-system" state={DEFAULT_PREVIEW} frameBase="/prototypes/render/sample" />
-              <PrototypeFrame src="/prototypes/render/sample" width={1280} height={800} title="Sample prototype" label="Desktop · 1280 × 800" />
-            </>
-          )}
-        />
-
-        <Specimen
-          id="checks-panel"
-          title="Checks panel"
-          description="A version's evidence: each gate, the repairs and first-pass result, warnings, the automated accessibility audit, and the advisory persona-fit review."
-          render={() => <ChecksPanel {...SAMPLE_EVIDENCE} />}
-        />
-
-        <Specimen
-          id="thread"
-          title="Thread and composer"
-          description="A prototype's messages, each with its stage, summary, and the version it produced, then the composer, which says why sending is unavailable while a refinement runs."
-          render={(theme) => (
-            <>
-              <ThreadView
-                current={2}
-                items={[
-                  { id: `${theme}-1`, kind: "generated", text: "Review and release today's urgent payments before cut-off", stage: null, summary: "Exception-first queue: payments that need action lead.", failure: null, version: { number: 1, href: "#thread" } },
-                  { id: `${theme}-2`, kind: "refined", text: "Group by cut-off time and show the total per group", stage: null, summary: "Grouped the payments by cut-off with a total for each.", failure: null, version: { number: 2, href: "#thread" } },
-                  { id: `${theme}-3`, kind: "refined", text: "Add a confirm step for amounts over USD 1m", stage: "writing", summary: null, failure: null, version: null },
-                ]}
-              />
-              <Composer action={composerDemo} label="Ask for a change" unavailable={theme === "dark" ? "A refinement is running. Send the next message when it finishes." : null} maxLength={2000} />
             </>
           )}
         />

@@ -23,9 +23,7 @@
 .DS_Store
 /.vercel
 
-# Built by scripts/build-prototype-runtime.mjs before dev and build
+# Local output of the removed Prototypes feature
 /public/prototype-runtime
-
-# Vercel Workflow's local world
 /.workflow-data
 /.swc

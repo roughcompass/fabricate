@@ -51,8 +51,9 @@ const restrictedSyntax = [
 
 const config = [
   {
-    // src/demo/runtime/generated/ is the hero script's committed output, checked by DE FabLab's gates and test/lint/generated-heroes.test.ts.
-    ignores: ["src/demo/runtime/generated/**", ".next/**", ".next-*/**", "dist/**", "public/prototype-runtime/**", ".workflow-data/**", ".swc/**", ".vercel/**", "src/app/.well-known/workflow/**", "node_modules/**", "storage/**", "tmp/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
+    // src/demo/runtime/generated/ is the heroes' committed generated code, checked by test/lint/generated-heroes.test.ts.
+    // public/prototype-runtime/ and .workflow-data/ are local output the removed Prototypes left behind; .gitignore keeps them out of Git.
+    ignores: ["src/demo/runtime/generated/**", ".next/**", ".next-*/**", "dist/**", "public/prototype-runtime/**", ".workflow-data/**", ".swc/**", ".vercel/**", "node_modules/**", "storage/**", "tmp/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
   },
   ...nextVitals,
   ...nextTypeScript,

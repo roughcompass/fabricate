@@ -2,7 +2,7 @@
  * The portal runtime interface, imported as `@deweb/portal`
  * (converge-templates-and-prototypes, design decision 5): what a hero's
  * microfrontends and shells may use besides React and Salt. The running
- * portal and the prototype frame each implement it.
+ * portal implements it.
  */
 
 /** Who is using the application. */

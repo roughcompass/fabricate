@@ -7,8 +7,8 @@ const baseURL = `http://127.0.0.1:${E2E_PORT}`;
 // test resets the data through a route that exists only when FABRICATE_E2E=1.
 export default defineConfig({
   testDir: "e2e",
-  // The synthetic-fleet, hosted-profile, and demo-off runs have their own configurations (npm run test:fleet, test:hosted, and test:demo-off).
-  testIgnore: ["fleet/**", "hosted/**", "demo-off/**"],
+  // The synthetic-fleet and demo-off runs have their own configurations (npm run test:fleet and test:demo-off).
+  testIgnore: ["fleet/**", "demo-off/**"],
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   // A throwaway database, repository store, and allowed source root.
   webServer: {
-    command: `rm -rf "${E2E_ROOT}" && mkdir -p "${E2E_SOURCES}" && npm run db:migrate && npm run prototypes:migrate && npm run prototypes:runtime && npx next dev --port ${E2E_PORT} --hostname 127.0.0.1`,
+    command: `rm -rf "${E2E_ROOT}" && mkdir -p "${E2E_SOURCES}" && npm run db:migrate && npx next dev --port ${E2E_PORT} --hostname 127.0.0.1`,
     env: E2E_ENV,
     url: `${baseURL}/api/health`,
     reuseExistingServer: !process.env.CI,

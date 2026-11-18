@@ -12,10 +12,9 @@ const withClass = <T extends { className: string }>(props: T, extra: string | un
 
 /**
  * The Landscape toggle: one icon button, pressed while the device is on its
- * side, that turns it the other way (template-demo design.md, decision 5). Template
- * preview and the prototype preview share it. Like the device
- * choice it is a GET form, so it works without JavaScript, and with
- * JavaScript it navigates in place.
+ * side, that turns it the other way (template-demo design.md, decision 5), in
+ * template preview. Like the device choice it is a GET form, so it works
+ * without JavaScript, and with JavaScript it navigates in place.
  */
 export function LandscapeToggle({ action, orientation, keep }: { action: string; orientation: Orientation; keep: Record<string, string> }) {
   const router = useRouter();

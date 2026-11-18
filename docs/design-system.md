@@ -184,7 +184,7 @@ Sizes are `sm` (28px) for table rows, filter bars, and toolbars; `md` (36px) eve
 | `FormSection` | A titled group of fields |
 | `FormFooter` | Cancel, then the primary action, right-aligned; stacked and full width on narrow screens, including inside a `Panel` footer |
 | `FormAlert` | One error not tied to a field, such as a concurrent edit, at the top of the form |
-| `FormNote` | A statement that holds whatever the visitor enters, such as how many generations are left today: an icon, a title, and a sentence, recessed on `--color-bg-subtle` with no border, after any `FormAlert` and before the first field. It has no tone and no live role, so it is never an alert. The Prototypes composer and the claim form use it |
+| `FormNote` | A statement that holds whatever the visitor enters, such as a value another system owns: an icon, a title, and a sentence, recessed on `--color-bg-subtle` with no border, after any `FormAlert` and before the first field. It has no tone and no live role, so it is never an alert. The claim form uses it |
 
 Mark optional fields with `optional`; required fields carry no marker. Check boxes and radios are one drawn control: 16px, a strong boundary, the accent when selected. Only a check box shows the indeterminate state: every radio in a group with nothing chosen also matches `:indeterminate`, and stays empty.
 
@@ -215,17 +215,12 @@ Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: t
 | `EmptyState` (`empty-state.tsx`) | A title, one sentence, and the action that fills the area, inside the panel or list it replaces; one that stands on its own sits in a flush `Panel` |
 | `Disclosure` (`disclosure.tsx`) | A native `<details>`: `panel` for grouped results, `plain` for secondary details. On narrow screens the `aside` moves below a label that needs the room |
 | `CodeBlock` (`code-block.tsx`) | Cited lines with numbers and a copy control; long lines wrap |
-| `CodeDiff` (`code-diff.tsx`) | The line differences between two versions of a file: added and removed counts, then each changed region with three lines of context, both versions' line numbers, and added and removed lines named for assistive technology as well as marked and tinted |
 | `Table` (`table.tsx`) | A quiet header, a linked primary cell, `RowActions` that keep rows one height, `EmptyRow`, and stacked rows on narrow screens; `scroll` for many numeric columns, which also stacks on narrow screens. Give every cell a `label`, since stacked rows show it |
 | `BarChart` (`bar-chart.tsx`) | A stacked bar chart drawn as SVG on the server, such as Home's Assessment trend: one bar per group, stacked by series, with each bar's total above it and its label below. Every series has a tone and a pattern (solid, stripes, dots, or lines), so bars read without color, and a legend names them. A visually hidden table holds the same figures. Give each chart on a page its own `id` |
 | `Tabs` (`tabs.tsx`) | Views of one page, with count badges. On narrow screens the tabs keep one line and scroll sideways on their own (`data-scroll-x`), under the aside |
 | `Pagination` (`pagination.tsx`) | Links between the pages of a long list: the position, Previous and Next, the first and last pages, and the current page with its neighbours. The page lives in the address, as `page`, so it works without JavaScript and every page can be shared |
 | `ToggleGroup` (`toggle-group.tsx`, client) | Mutually exclusive choices as a row of buttons, the chosen one pressed (`aria-pressed`), such as preview mode's Mobile, Tablet, and Desktop. The choice lives in the URL: each button submits a GET form, so it works without JavaScript, and navigates in place with it |
-| `PrototypeFrame` (`prototype-frame.tsx`, client) | A prototype version's preview: the version runs in a frame sandboxed to scripts only, at a device's width, scaled down to fit. The page and the frame exchange only the runtime's typed messages (`src/prototypes/runtime/protocol.ts`), checked against the frame's own window, to turn comment mode on, place pins, outline audit findings, run the accessibility audit, and capture an image |
-| `LandscapeToggle` (`landscape-toggle.tsx`, client) | The Landscape control for a device preview: one icon button, pressed while a phone or tablet is on its side, that turns it the other way. It is a GET form, so it works without JavaScript, and navigates in place with it. Template preview and the prototype preview share it |
-| `ChecksPanel` (`checks-panel.tsx`) | A prototype version's evidence: each gate's result with its issues, the repairs and the first-pass result, warnings, the automated accessibility audit with a Show in preview link per violation, and the persona-fit review, labeled as an advisory AI review naming its model, with a score row per criterion and intent-specific check |
-| `ThreadView` (`thread-view.tsx`) | A prototype's thread: each message, what started it (generated, refined, forked, or from a template), its stage while it runs, the generator's summary, and a chip for the version it produced, the version shown marked current |
-| `Composer` (`composer.tsx`, client) | A message box with Send, for asking for a change. While sending is unavailable, such as when a refinement is already running, it says why and Send is disabled, so a message never fails after submission |
+| `LandscapeToggle` (`landscape-toggle.tsx`, client) | The Landscape control for a device preview: one icon button, pressed while a phone or tablet is on its side, that turns it the other way. It is a GET form, so it works without JavaScript, and navigates in place with it. Template preview uses it |
 | `Breadcrumbs` (`breadcrumbs.tsx`) | A record's linked ancestors |
 | `FilterBar` (`filter-bar.tsx`, client) | Compact filters above their results, two per row on a phone; applies on change, or with Apply without JavaScript |
 | `FilterRail` (`filter-rail.tsx`, client) | Check box filters beside their results: a heading (`title`, "Filter templates" in the gallery) with a Clear action while any filter or search is active, then one collapsible group per filter whose heading shows how many of its options are checked. Each option is a tinted row with how many results it would match; a checked row takes the selection tint. On narrow screens the rail becomes a Filters disclosure with the active count above the results. Applies on change, or with Apply without JavaScript. Only the template gallery uses it; every other filterable view uses `FilterBar` |
@@ -274,18 +269,15 @@ Every page follows one of a few patterns, built from `Page` and `PageHeader` (`p
 
 - First, Home, with no heading.
 - **Assessments:** All Assessments, Repositories, and Standards.
-- **Salt Patterns & Prototypes:** Salt Patterns while the template demo is enabled, then Prototypes, Personas, Lessons, and Page shell while Prototypes is enabled.
-- In the hosted profile it lists Prototypes' pages alone, and links to Home lead to the Prototypes list.
+- **Templates:** Salt Patterns, while the template demo is enabled.
 - Every item has an icon, and every page is listed inline.
-- `locate()` takes a `NavFlags` with both switches and the profile; pages build it with `navFlags()`.
+- `locate()` takes a `NavFlags` with the demo switch; pages build it with `navFlags()`.
 
 Every page marks one item current, and a record's pages mark the item for their list:
 
 - A Run, an Evaluation, or a Profile marks All Assessments.
 - A Repository's Settings, New Repository, and the imports mark Repositories.
 - A template preview marks Salt Patterns.
-- A prototype's variants and compare pages mark Prototypes.
-- A persona form marks Personas.
 
 The create and import pages aren't in the menu; their list pages offer them. `locate()` resolves a path to its group and item. Its patterns never overlap, and a unit test checks every operator route against it. A page outside every item, such as this gallery, shows the primary menu with nothing current. The product mark in the sidebar opens Home. The current item takes `--color-bg-selected` and the medium weight, and is exposed as `aria-current`.
 

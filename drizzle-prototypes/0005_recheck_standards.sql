@@ -1,1 +1,0 @@
-ALTER TABLE "prototypes"."template_rechecks" ADD COLUMN "standards" jsonb;

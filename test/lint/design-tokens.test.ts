@@ -21,15 +21,6 @@ const GLOBALS = "src/app/globals.css";
 const RUNTIME_DIR = "src/demo/runtime/";
 const RUNTIME_TOKENS = "src/demo/runtime/tokens.css";
 
-/**
- * The prototype runtime renders Salt content, its page shell and render host
- * (operator-interface/design-system spec): its stylesheets use only the
- * tokens Salt publishes, read here from @salt-ds/theme's own CSS, and never
- * interface or portal runtime tokens.
- */
-const PROTOTYPE_RUNTIME_DIR = "src/prototypes/runtime/";
-const SALT_THEME_FILES = ["node_modules/@salt-ds/theme/index.css", "node_modules/@salt-ds/theme/css/theme-next.css"];
-
 /** Every stylesheet is migrated; this list must stay empty. */
 const NOT_YET_MIGRATED = new Set<string>([]);
 
@@ -76,11 +67,9 @@ function definedIn(source: string): Set<string> {
 }
 
 const GLOBAL_TOKENS = definedIn(fs.readFileSync(path.join(ROOT, GLOBALS), "utf8"));
-const SALT_TOKENS = new Set(SALT_THEME_FILES.flatMap((file) => [...definedIn(fs.readFileSync(path.join(ROOT, file), "utf8"))].filter((name) => name.startsWith("--salt-"))));
 const RUNTIME_TOKEN_SET = fs.existsSync(path.join(ROOT, RUNTIME_TOKENS)) ? definedIn(fs.readFileSync(path.join(ROOT, RUNTIME_TOKENS), "utf8")) : new Set<string>();
 
 const isRuntime = (file: string) => file.startsWith(RUNTIME_DIR);
-const isPrototypeRuntime = (file: string) => file.startsWith(PROTOTYPE_RUNTIME_DIR);
 
 function isTokenDefinition(file: string, declaration: Declaration): boolean {
   if (!declaration.property.startsWith("--")) return false;
@@ -124,7 +113,7 @@ const VIEWPORT_QUERY_FILES = new Set([
   "src/components/ui/flash-toast.module.css",
   "src/components/ui/confirm-dialog.module.css",
 ]);
-const viewportQueryAllowed = (file: string) => VIEWPORT_QUERY_FILES.has(file) || file.startsWith("src/components/toolbar/") || file.startsWith("src/demo/") || isPrototypeRuntime(file);
+const viewportQueryAllowed = (file: string) => VIEWPORT_QUERY_FILES.has(file) || file.startsWith("src/components/toolbar/") || file.startsWith("src/demo/");
 const WIDTH_QUERY = /^@media\b.*\b(min|max)-width\b/;
 
 function importantAllowed(file: string, declaration: Declaration): boolean {
@@ -133,9 +122,8 @@ function importantAllowed(file: string, declaration: Declaration): boolean {
 }
 
 /** Every violation in one stylesheet, as "file:line property: reason". */
-export function violations(file: string, source: string, runtimeTokens: ReadonlySet<string> = RUNTIME_TOKEN_SET, saltTokens: ReadonlySet<string> = SALT_TOKENS): string[] {
+export function violations(file: string, source: string, runtimeTokens: ReadonlySet<string> = RUNTIME_TOKEN_SET): string[] {
   const local = definedIn(source);
-  if (isPrototypeRuntime(file)) return prototypeRuntimeViolations(file, source, local, saltTokens);
   const problems: string[] = [];
   const report = (declaration: Declaration, reason: string) => problems.push(`${file}:${declaration.line} ${declaration.property}: ${reason}`);
   // The demo toolbar's tools (src/demo/toolbar/) are operator interface, like shared components.
@@ -210,34 +198,6 @@ export function violations(file: string, source: string, runtimeTokens: Readonly
   return problems;
 }
 
-/**
- * A prototype runtime stylesheet's problems: a reference to anything but a
- * Salt token or its own private token, literal colors, lengths off Salt's
- * scale, and !important. Salt's tokens carry no type in their names, so
- * types aren't checked; Salt's own component styles set the pattern.
- */
-function prototypeRuntimeViolations(file: string, source: string, local: ReadonlySet<string>, saltTokens: ReadonlySet<string>): string[] {
-  const problems: string[] = [];
-  const report = (declaration: Declaration, reason: string) => problems.push(`${file}:${declaration.line} ${declaration.property}: ${reason}`);
-  for (const declaration of scanCss(source)) {
-    const { property, value } = declaration;
-    // The scanner reads property names in lower case, and Salt's tokens are camelCase.
-    for (const [, name] of value.matchAll(/var\(\s*(--[\w-]+)/g)) {
-      if (saltTokens.has(name!.toLowerCase()) || (local.has(name!.toLowerCase()) && name!.startsWith("--_"))) continue;
-      report(declaration, GLOBAL_TOKENS.has(name!) || RUNTIME_TOKEN_SET.has(name!) ? `uses ${name}, which is not a Salt token` : `references undefined token ${name}`);
-    }
-    if (declaration.important) report(declaration, "uses !important");
-    if (property.startsWith("--")) continue;
-    if (LITERAL_COLOR.test(value)) report(declaration, `uses a literal color in "${value}"`);
-    const named = value.toLowerCase().split(/[^a-z]+/).find((word) => NAMED_COLORS.has(word));
-    if (named && !/^(content|grid-area|grid-template-areas|font-family|transition(-property)?|animation(-name)?)$/.test(property)) report(declaration, `uses the named color "${named}"`);
-    for (const [length] of value.matchAll(LENGTH)) {
-      if (!ALLOWED_LENGTH.test(length)) report(declaration, `uses the literal length ${length}`);
-    }
-  }
-  return problems;
-}
-
 describe("design token check", () => {
   const check = (css: string, file = "src/components/ui/example.module.css") => violations(file, css);
 
@@ -280,31 +240,6 @@ describe("design token check", () => {
   it("rejects rules outside the stylesheet's cascade layer", () => {
     expect(check(".a { color: var(--color-text); }")).toContainEqual(expect.stringContaining("outside @layer components"));
     expect(check(".a { color: var(--color-text); }", "src/app/example/page.module.css")).toContainEqual(expect.stringContaining("outside @layer pages"));
-  });
-
-  describe("prototype runtime stylesheets", () => {
-    const SALT = new Set(["--salt-spacing-200", "--salt-container-primary-background", "--salt-borderstyle-solid"]);
-    const shell = (css: string) => violations("src/prototypes/runtime/shell/page-shell.css", css, RUNTIME_TOKEN_SET, SALT);
-
-    it("rejects an interface spacing token in the page shell (Prototype runtime uses an interface token)", () => {
-      expect(shell(".pageShell-footer { padding: var(--space-2); }")).toContainEqual(expect.stringContaining("uses --space-2, which is not a Salt token"));
-    });
-
-    it("accepts a Salt spacing token in the page shell (Prototype runtime uses a Salt token)", () => {
-      expect(shell(".pageShell-footer { padding: var(--salt-spacing-200); }")).toEqual([]);
-    });
-
-    it("rejects literal values and tokens Salt doesn't define", () => {
-      expect(shell(".pageShell { color: #31373d; }")).toContainEqual(expect.stringContaining("literal color"));
-      expect(shell(".pageShell { padding: 12px; }")).toContainEqual(expect.stringContaining("literal length 12px"));
-      expect(shell(".pageShell { gap: var(--salt-spacing-imaginary); }")).toContainEqual(expect.stringContaining("undefined token --salt-spacing-imaginary"));
-    });
-
-    it("reads Salt's tokens from the installed theme, whatever their case", () => {
-      expect(SALT_TOKENS.size).toBeGreaterThan(1000);
-      expect(SALT_TOKENS).toContain("--salt-spacing-200");
-      expect(shell(".pageShell { border-style: var(--salt-borderStyle-solid); }")).toEqual([]);
-    });
   });
 
   describe("portal runtime stylesheets", () => {

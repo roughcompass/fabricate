@@ -1,5 +1,5 @@
 // Prints the effective safety configuration: `npm run config`.
-import { DE_CONSOLE_TOKEN, GATEWAY_CREDENTIALS, describePrototypesDatabase, getConfig } from ".";
+import { DE_CONSOLE_TOKEN, getConfig } from ".";
 
 const config = getConfig();
 const list = (values: readonly string[]) => (values.length ? values.join(", ") : "(none)");
@@ -13,14 +13,6 @@ console.log(`Git timeout:        ${config.gitTimeoutSeconds}s (lock wait ${confi
 console.log(`Credential helper:  ${config.gitCredentialHelper ?? "(none)"}`);
 console.log(`Worker concurrency: ${config.workerConcurrency}`);
 console.log(`Template demo:      ${config.demoEnabled ? "enabled" : "disabled"}`);
-console.log(`Profile:            ${config.profile}`);
-const prototypes = config.prototypes;
-console.log(`Prototypes:         ${prototypes.enabled ? "enabled" : "disabled"}, ${describePrototypesDatabase(prototypes.database)}`);
-console.log(`Prototype models:   generate ${prototypes.models.generate}, plan ${prototypes.models.plan}, review ${prototypes.models.review}, learn ${prototypes.models.learn}`);
-// Credentials are reported only as set or not set.
-const credential = GATEWAY_CREDENTIALS.find((key) => process.env[key]);
-console.log(`Prototype limits:   ${prototypes.dailyVariantLimit} variants a day, ${prototypes.repairAttempts} repairs, zero data retention ${prototypes.zeroDataRetention ? "on" : "off"}, ${prototypes.runner} runner, seeded examples ${prototypes.examples ? "on" : "off"}`);
-console.log(`AI Gateway:         ${credential ? `${credential} set` : "no credential set"}`);
 const deConsole = config.deConsole.source;
 // The token is reported only as set or not set.
 console.log(

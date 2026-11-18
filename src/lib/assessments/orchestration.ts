@@ -6,22 +6,17 @@ import { ASSESSMENT_MACHINE, TARGET_MACHINE, isTerminal } from "@/lib/db/state-m
 import { redact } from "@/lib/git/redact";
 import { enqueue } from "@/lib/jobs/queue";
 import { NonRetryableError } from "@/lib/jobs/worker";
-import { analyzeSnapshot, analyzeStoredFiles } from "@/lib/profiles/analyze";
+import { analyzeSnapshot } from "@/lib/profiles/analyze";
 import { profilesOf } from "@/lib/profiles/profile-records";
 import { finalizeRelationshipMap } from "@/lib/relationships/finalize";
-import { treeObjectId } from "@/lib/snapshot/stored-files";
-import { type Assessment, type AssessmentTarget, getAssessment, getTarget, recordStoredFilesSnapshot, snapshotOf, storedFilesOf, targetsOf } from "./assessment-records";
+import { type Assessment, type AssessmentTarget, getAssessment, getTarget, snapshotOf, targetsOf } from "./assessment-records";
 import { COORDINATE_ASSESSMENT, priorityOfRun } from "./launcher";
-import { evaluateTemplateRun } from "./template-evaluation";
 import { assessmentById } from "./lookups";
 import { advanceAssessment, transitionAssessment, transitionTarget } from "./transitions";
 
 /**
  * Assessment orchestration: a coordinator, one acquire-and-analyze job per
- * target, and a finalizer job. A template target is not acquired: its
- * snapshot is the version's exported files, stored with it when the Run
- * started and checked against its content digest, and analysis reads them in
- * memory, with no Git command.
+ * target, and a finalizer job.
  *
  * Each target job catches and normalizes its own failures, so one source never
  * blocks another or erases a completed Profile. The last target to reach a
@@ -80,24 +75,9 @@ export async function processTarget(db: Executor, targetPublicId: string, option
     if (!snapshot) {
       if (target.state === "pending") target = transitionTarget(db, target, "acquiring");
       advanceAssessment(db, target.assessmentId, "acquiring");
-      if (target.kind === "template") {
-        const files = storedFilesOf(db, target);
-        snapshot = recordStoredFilesSnapshot(db, target, {
-          treeSha: treeObjectId(files),
-          resolvedRef: target.templateVersionPublicId ?? target.prototypeVersionPublicId!,
-          acquisitionMetadata: {
-            template_public_id: target.templatePublicId,
-            template_version_public_id: target.templateVersionPublicId,
-            template_version_number: target.templateVersionNumber,
-            prototype_version_public_id: target.prototypeVersionPublicId,
-            files: Object.keys(files).length,
-          },
-        });
-      } else {
-        const outcome = await acquireTarget(db, target, { config, ...(options.signal && { signal: options.signal }), holder: options.holder ?? `${os.hostname()}:${process.pid}:${target.publicId}` });
-        if (!outcome.ok) return outcome.target;
-        snapshot = outcome.snapshot;
-      }
+      const outcome = await acquireTarget(db, target, { config, ...(options.signal && { signal: options.signal }), holder: options.holder ?? `${os.hostname()}:${process.pid}:${target.publicId}` });
+      if (!outcome.ok) return outcome.target;
+      snapshot = outcome.snapshot;
       target = getTarget(db, targetPublicId);
     }
 
@@ -112,8 +92,7 @@ export async function processTarget(db: Executor, targetPublicId: string, option
       ...(options.signal && { signal: options.signal }),
       checkpoint: () => checkCancellation(db, target.assessmentId),
     };
-    if (target.kind === "template") await analyzeStoredFiles(db, { ...analysis, files: storedFilesOf(db, target) });
-    else await analyzeSnapshot(db, analysis);
+    await analyzeSnapshot(db, analysis);
     target = transitionTarget(db, getTarget(db, targetPublicId), "complete");
     return target;
   } catch (error) {
@@ -157,9 +136,6 @@ export function finalizeAssessment(db: Executor, assessmentPublicId: string): As
     finalizeRelationshipMap(tx, assessment);
     const outcome: AggregateOutcome = assessment.cancelRequestedAt ? "canceled" : profiles === targets.length ? "complete" : profiles > 0 ? "complete_with_issues" : "failed";
     const failures = targets.filter((target) => target.state === "failed").map((target) => `${target.sourceName}: ${target.failureCode}`);
-    const finished = transitionAssessment(tx, assessment, outcome, outcome === "failed" ? { failureReason: failures.length ? `No repository could be assessed (${failures.join("; ")})` : "No repository could be assessed" } : {});
-    // A Salt Patterns Run is evaluated in the transaction it finishes in, so it never finishes unevaluated.
-    evaluateTemplateRun(tx, finished);
-    return finished;
+    return transitionAssessment(tx, assessment, outcome, outcome === "failed" ? { failureReason: failures.length ? `No repository could be assessed (${failures.join("; ")})` : "No repository could be assessed" } : {});
   });
 }

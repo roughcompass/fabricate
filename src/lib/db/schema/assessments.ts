@@ -165,11 +165,10 @@ export const sourceSnapshots = sqliteTable(
 
 /**
  * A template target's exported files, written with the target when the Run
- * starts (converge-templates-and-prototypes, design decision 2). The web
- * process builds them from the Prototypes database; the worker analyzes them
- * from here, so it never opens that database, and their evidence stays
- * resolvable after the prototype is gone. `files` is canonical JSON of path
- * to UTF-8 content; `digest` is their Git tree id, the target's content digest.
+ * started (converge-templates-and-prototypes, design decision 2). Only the
+ * removed Prototypes started such Runs; their rows stay so earlier evidence
+ * stays resolvable. `files` is canonical JSON of path to UTF-8 content;
+ * `digest` is their Git tree id, the target's content digest.
  */
 export const storedFileSets = sqliteTable(
   "stored_file_sets",

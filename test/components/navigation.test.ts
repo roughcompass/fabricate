@@ -9,10 +9,7 @@ import { HOME, NO_OPTIONAL_AREAS, type NavFlags, SALT_PATTERNS, homeLink, locate
 const OPERATOR = path.resolve("src/app/(operator)");
 
 const BASE = NO_OPTIONAL_AREAS;
-const DEMO: NavFlags = { demo: true, prototypes: false, hosted: false };
-const PROTOTYPES: NavFlags = { demo: false, prototypes: true, hosted: false };
-const ALL: NavFlags = { demo: true, prototypes: true, hosted: false };
-const HOSTED: NavFlags = { demo: true, prototypes: true, hosted: true };
+const ALL: NavFlags = { demo: true };
 
 /** Every operator page, as its route template ("/standards/[standardId]/draft"). */
 function routes(directory = OPERATOR): string[] {
@@ -64,20 +61,6 @@ const EXPECTED: Record<string, string | null> = {
   "/templates": "salt-patterns",
   "/templates/[templateSlug]": "salt-patterns",
   "/templates/[templateSlug]/preview": "salt-patterns",
-  "/prototypes": "prototypes",
-  "/prototypes/new": "prototypes",
-  "/prototypes/[prototypeId]": "prototypes",
-  "/prototypes/[prototypeId]/accept": "prototypes",
-  "/prototypes/[prototypeId]/compare": "prototypes",
-  "/prototypes/generations/[generationId]": "prototypes",
-  "/prototypes/generations/[generationId]/variants/[variantId]": "prototypes",
-  "/prototypes/personas": "personas",
-  "/prototypes/personas/new": "personas",
-  "/prototypes/personas/[personaId]": "personas",
-  "/prototypes/lessons": "lessons",
-  "/prototypes/shell": "page-shell",
-  "/prototypes/templates/[templateSlug]/preview": "prototypes",
-  "/p/[token]": null,
   "/design-system": null,
   "/design-system/error-demo": null,
 };
@@ -106,36 +89,22 @@ describe("primary menu", () => {
     for (const [route, expected] of Object.entries(EXPECTED)) expect(current(sample(route), ALL), route).toEqual(expected);
   });
 
-  it("lists Home, then the Assessments and Salt Patterns & Prototypes groups under their headings (Full menu)", () => {
+  it("lists Home, then the Assessments and Templates groups under their headings (Full menu)", () => {
     expect(shape(ALL)).toEqual([
       [null, ["Home"]],
       ["Assessments", ["All Assessments", "Repositories", "Standards"]],
-      ["Salt Patterns & Prototypes", ["Salt Patterns", "Prototypes", "Personas", "Lessons", "Page shell"]],
+      ["Templates", ["Salt Patterns"]],
     ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
     for (const item of menuItems(visibleGroups(ALL))) expect(item.icon, item.id).toBeTruthy();
   });
 
-  it("lists only Salt Patterns in the last group while Prototypes is disabled (Prototypes disabled)", () => {
-    expect(shape(DEMO)[2]).toEqual(["Salt Patterns & Prototypes", ["Salt Patterns"]]);
-  });
-
-  it("has no Salt Patterns & Prototypes group while the demo and Prototypes are disabled, and leaves their pages outside the menu (Demo disabled)", () => {
+  it("has no Templates group while the demo is disabled, and leaves its pages outside the menu (Demo disabled)", () => {
     expect(shape(BASE)).toEqual([
       [null, ["Home"]],
       ["Assessments", ["All Assessments", "Repositories", "Standards"]],
     ]);
-    for (const route of ["/templates", "/templates/payments-hub/preview", "/prototypes", "/prototypes/personas"]) expect(locate(route, BASE), route).toBeNull();
-  });
-
-  it("shows Prototypes' pages but not Salt Patterns while only Prototypes is enabled", () => {
-    expect(shape(PROTOTYPES)[2]).toEqual(["Salt Patterns & Prototypes", ["Prototypes", "Personas", "Lessons", "Page shell"]]);
-  });
-
-  it("shows only Prototypes' pages in the hosted profile, without Home (Hosted profile)", () => {
-    expect(shape(HOSTED)).toEqual([["Salt Patterns & Prototypes", ["Prototypes", "Personas", "Lessons", "Page shell"]]]);
-    for (const route of ["/", "/assessments", "/repositories"]) expect(locate(route, HOSTED), route).toBeNull();
-    expect(visibleGroups({ ...HOSTED, prototypes: false })).toEqual([]);
+    for (const route of ["/templates", "/templates/payments-hub/preview"]) expect(locate(route, BASE), route).toBeNull();
   });
 
   it("marks each create or import page as its list's item (Create page)", () => {
@@ -143,16 +112,14 @@ describe("primary menu", () => {
     expect(current("/repositories/new", ALL)).toBe("repositories");
     expect(current("/repositories/bulk/", ALL)).toBe("repositories");
     expect(current("/standards/new", ALL)).toBe("standards");
-    expect(current("/prototypes/new", ALL)).toBe("prototypes");
   });
 
-  it("marks nothing on the removed Applications and Portals addresses", () => {
-    for (const path of ["/applications", "/portals", "/portals/ptl_0123456789abcdef/editor/frame-zones", "/runtime-configuration"]) expect(current(path, ALL), path).toBeNull();
+  it("marks nothing on the removed Applications, Portals, and Prototypes addresses", () => {
+    for (const path of ["/applications", "/portals", "/portals/ptl_0123456789abcdef/editor/frame-zones", "/runtime-configuration", "/prototypes", "/prototypes/personas"]) expect(current(path, ALL), path).toBeNull();
   });
 
   it("leads links to Home while Assessments is shown, and to the menu's first page otherwise (Profile without Assessments)", () => {
-    for (const flags of [BASE, DEMO, PROTOTYPES, ALL]) expect(homeLink(visibleGroups(flags))).toEqual({ href: "/", label: "Home" });
-    expect(homeLink(visibleGroups(HOSTED))).toEqual({ href: "/prototypes", label: "Prototypes" });
-    expect(homeLink([{ id: "build", heading: "Salt Patterns & Prototypes", items: [SALT_PATTERNS] }])).toEqual({ href: "/templates", label: "Salt Patterns" });
+    for (const flags of [BASE, ALL]) expect(homeLink(visibleGroups(flags))).toEqual({ href: "/", label: "Home" });
+    expect(homeLink([{ id: "build", heading: "Templates", items: [SALT_PATTERNS] }])).toEqual({ href: "/templates", label: "Salt Patterns" });
   });
 });

@@ -8,9 +8,8 @@ import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
 
 // operator-interface/page-patterns spec: the application shell, and the
-// primary menu: Home, then the Assessments and Salt Patterns & Prototypes
-// groups under headings and dividers. The narrow-viewport drawer has its own
-// cases below.
+// primary menu: Home, then the Assessments and Templates groups under
+// headings and dividers. The narrow-viewport drawer has its own cases below.
 
 const primary = (page: Page) => page.getByRole("navigation", { name: "Primary" });
 
@@ -35,13 +34,13 @@ test.describe("on a wide viewport", () => {
     await expectCurrent(page, "All Assessments");
   });
 
-  test("Full menu: Home, then the Assessments and Salt Patterns & Prototypes groups under headings and dividers", async ({ page, db: _db }) => {
+  test("Full menu: Home, then the Assessments and Templates groups under headings and dividers", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
-    await expect(nav.getByRole("link")).toHaveText(["Home", "All Assessments", "Repositories", "Standards", "Salt Patterns", "Prototypes", "Personas", "Lessons", "Page shell"]);
+    await expect(nav.getByRole("link")).toHaveText(["Home", "All Assessments", "Repositories", "Standards", "Salt Patterns"]);
     await expect(nav.locator("hr")).toHaveCount(2);
     await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["All Assessments", "Repositories", "Standards"]);
-    await expect(nav.getByRole("list", { name: "Salt Patterns & Prototypes" }).getByRole("link")).toHaveText(["Salt Patterns", "Prototypes", "Personas", "Lessons", "Page shell"]);
+    await expect(nav.getByRole("list", { name: "Templates" }).getByRole("link")).toHaveText(["Salt Patterns"]);
     // Every item has one icon.
     for (const link of await nav.getByRole("link").all()) await expect(link.locator("svg")).toHaveCount(1);
     await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
@@ -86,13 +85,6 @@ test.describe("on a wide viewport", () => {
     await expect(page.locator("[data-page-header]").getByRole("link", { name: "Add in bulk" })).toBeVisible();
     await page.goto("/standards");
     await expect(page.locator("[data-page-header]").getByRole("link", { name: "New Standard" })).toBeVisible();
-    await page.goto("/prototypes");
-    await expect(page.locator("[data-page-header]").getByRole("link", { name: /^New prototype/ })).toBeVisible();
-  });
-
-  test("Persona form: a persona's page marks Personas", async ({ page, db: _db }) => {
-    await page.goto("/prototypes/personas/new");
-    await expectCurrent(page, "Personas");
   });
 
   test("Page outside every item: the gallery shows the primary menu with nothing current", async ({ page, db: _db }) => {

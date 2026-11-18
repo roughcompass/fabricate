@@ -36,7 +36,7 @@ describe("application shell", () => {
     expect(groups.map((group) => [group.heading ?? null, group.items[0]!.href])).toEqual([
       [null, "/"],
       ["Assessments", "/assessments"],
-      ["Salt Patterns & Prototypes", "/templates"],
+      ["Templates", "/templates"],
     ]);
   });
 

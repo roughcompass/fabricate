@@ -22,34 +22,16 @@
     },
     "profiling": {
       "checkMinutes": 60
-    },
-    "profile": "full",
-    "prototypes": {
-      "enabled": false,
-      "database": "storage/prototypes-pglite",
-      "models": {
-        "generate": "anthropic/claude-opus-5.5",
-        "plan": "anthropic/claude-sonnet-5.5",
-        "review": "google/gemini-3.1-pro-preview",
-        "learn": "anthropic/claude-sonnet-5.5"
-      },
-      "dailyVariantLimit": 500,
-      "repairAttempts": 3,
-      "zeroDataRetention": true,
-      "runner": "workflow",
-      "examples": true
     }
   },
   "development": {
     "allowedRoots": ["../fleet"],
-    "demo": { "enabled": true },
-    "prototypes": { "enabled": true }
+    "demo": { "enabled": true }
   },
   "test": {
     "database": "tmp/test/fabricate.sqlite3",
     "repositoryStorage": "tmp/test/repositories",
-    "demo": { "enabled": true },
-    "prototypes": { "enabled": true, "database": "tmp/test/prototypes-pglite", "examples": false }
+    "demo": { "enabled": true }
   },
   "production": {}
 }

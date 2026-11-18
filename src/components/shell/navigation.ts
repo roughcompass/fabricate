@@ -16,9 +16,9 @@ export interface NavItem {
 }
 
 /**
- * A run of the primary menu: the first has no heading; Assessments and Salt
- * Patterns & Prototypes each have a heading, and a divider sets every group
- * after the first apart.
+ * A run of the primary menu: the first has no heading; Assessments and
+ * Templates each have a heading, and a divider sets every group after the
+ * first apart.
  */
 export interface MenuGroup {
   readonly id: "main" | "assessments" | "build";
@@ -38,35 +38,21 @@ const ASSESSMENT_ITEMS: readonly NavItem[] = [
 
 export const SALT_PATTERNS = { id: "salt-patterns", label: "Salt Patterns", href: "/templates", icon: "sparkle", match: [/^\/templates(\/.*)?$/] } as const satisfies NavItem;
 
-/** Prototypes' pages: the list with its composer and records, then the library. */
-const PROTOTYPE_ITEMS: readonly NavItem[] = [
-  { id: "prototypes", label: "Prototypes", href: "/prototypes", icon: "flask", match: [/^\/prototypes\/?$/, /^\/prototypes\/(?!(personas|lessons|shell)(\/|$))[^/]+(\/.*)?$/] },
-  { id: "personas", label: "Personas", href: "/prototypes/personas", icon: "user", match: [/^\/prototypes\/personas(\/.*)?$/] },
-  { id: "lessons", label: "Lessons", href: "/prototypes/lessons", icon: "message", match: [/^\/prototypes\/lessons\/?$/] },
-  { id: "page-shell", label: "Page shell", href: "/prototypes/shell", icon: "columns", match: [/^\/prototypes\/shell\/?$/] },
-];
-
 /** Which optional areas exist in this configuration. Pages read it from the configuration; client error pages, which can't, use NO_OPTIONAL_AREAS. */
 export interface NavFlags {
   /** The template demo: Salt Patterns. */
   readonly demo: boolean;
-  readonly prototypes: boolean;
-  /** The hosted profile shows only Prototypes. */
-  readonly hosted: boolean;
 }
 
-export const NO_OPTIONAL_AREAS: NavFlags = { demo: false, prototypes: false, hosted: false };
+export const NO_OPTIONAL_AREAS: NavFlags = { demo: false };
 
 /**
  * The primary menu's groups (page-patterns spec, "The primary menu groups
  * areas under headings and dividers"): Home; Assessments; then Salt
- * Patterns while the demo is enabled and Prototypes' pages while it is
- * enabled. The hosted profile shows only Prototypes' pages.
+ * Patterns, under Templates, while the demo is enabled.
  */
 export function visibleGroups(flags: NavFlags): readonly MenuGroup[] {
-  const build: MenuGroup = { id: "build", heading: "Salt Patterns & Prototypes", items: [...(flags.demo && !flags.hosted ? [SALT_PATTERNS] : []), ...(flags.prototypes ? PROTOTYPE_ITEMS : [])] };
-  if (flags.hosted) return build.items.length ? [build] : [];
-  return [{ id: "main", items: [HOME] }, { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS }, ...(build.items.length ? [build] : [])];
+  return [{ id: "main", items: [HOME] }, { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS }, ...(flags.demo ? [{ id: "build", heading: "Templates", items: [SALT_PATTERNS] } as const] : [])];
 }
 
 /** Every item of the menu, in order. */

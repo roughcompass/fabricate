@@ -51,10 +51,6 @@
     ".next-check/dev/types/**/*.ts",
     ".next-webpack-check/types/**/*.ts",
     ".next-webpack-check/dev/types/**/*.ts",
-    ".next-proto/types/**/*.ts",
-    ".next-proto/dev/types/**/*.ts",
-    ".next-hosted/types/**/*.ts",
-    ".next-hosted/dev/types/**/*.ts",
     ".next-dryrun/types/**/*.ts",
     ".next-dryrun/dev/types/**/*.ts",
     ".next-aps-build/types/**/*.ts",
@@ -64,7 +60,9 @@
     ".next-e2e-aps/types/**/*.ts",
     ".next-e2e-aps/dev/types/**/*.ts",
     ".next-e2e-demo-off/types/**/*.ts",
-    ".next-e2e-demo-off/dev/types/**/*.ts"
+    ".next-e2e-demo-off/dev/types/**/*.ts",
+    ".next-verify/types/**/*.ts",
+    ".next-verify/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

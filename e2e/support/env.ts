@@ -16,14 +16,4 @@ export const E2E_ENV = {
   FABRICATE_REPOSITORY_STORAGE: path.join(E2E_ROOT, "repositories"),
   FABRICATE_ALLOWED_ROOTS: E2E_SOURCES,
   FABRICATE_DE_CONSOLE_SOURCE: E2E_DE_CONSOLE,
-  FABRICATE_PROTOTYPES_DATABASE: path.join(E2E_ROOT, "prototypes-pglite"),
-  // Browser tests generate with the scripted model, so they never call a model service.
-  FABRICATE_PROTOTYPES_MODEL_GENERATE: "mock",
-  FABRICATE_PROTOTYPES_MODEL_PLAN: "mock",
-  FABRICATE_PROTOTYPES_MODEL_REVIEW: "mock",
-  FABRICATE_PROTOTYPES_MODEL_LEARN: "mock",
-  // New workspaces start empty; tests of the seeded examples turn them on through the settings route.
-  FABRICATE_PROTOTYPES_EXAMPLES: "false",
-  // The tests check the limit with a small allowance.
-  FABRICATE_PROTOTYPES_DAILY_LIMIT: "30",
 };

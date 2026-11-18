@@ -45,23 +45,6 @@ export interface ProfileInput {
   factDocument: FactDocument;
 }
 
-/** The template version a template Profile describes. A first acceptance is assessed before its template exists. */
-export interface ProfileTemplate {
-  public_id: string | null;
-  name: string;
-  version_public_id: string | null;
-  version_number: number | null;
-  prototype_version_public_id: string;
-}
-
-export interface TemplateProfileInput {
-  template: ProfileTemplate;
-  contentDigest: string;
-  detectorRelease: string;
-  configurationDigest: string;
-  factDocument: FactDocument;
-}
-
 export function buildProfile(input: ProfileInput): JsonObject {
   const factDocument = input.factDocument as unknown as JsonObject;
   return {
@@ -69,27 +52,6 @@ export function buildProfile(input: ProfileInput): JsonObject {
     schema_version: PROFILE_SCHEMA_VERSION,
     source: { public_id: input.source.public_id, name: input.source.name, clone_url: input.source.clone_url, git_ref: input.source.git_ref },
     commit: input.commit,
-    detector_release: input.detectorRelease,
-    detector_configuration_digest: input.configurationDigest,
-    fact_document: factDocument,
-    fact_document_digest: digestOf(factDocument).digest,
-  };
-}
-
-export function buildTemplateProfile(input: TemplateProfileInput): JsonObject {
-  const factDocument = input.factDocument as unknown as JsonObject;
-  const { template } = input;
-  return {
-    schema: PROFILE_SCHEMA,
-    schema_version: PROFILE_SCHEMA_VERSION,
-    template: {
-      public_id: template.public_id,
-      name: template.name,
-      version_public_id: template.version_public_id,
-      version_number: template.version_number,
-      prototype_version_public_id: template.prototype_version_public_id,
-    },
-    content_digest: input.contentDigest,
     detector_release: input.detectorRelease,
     detector_configuration_digest: input.configurationDigest,
     fact_document: factDocument,

@@ -26,7 +26,7 @@ import change_calendar_1_2_0 from "./operations-console/change-calendar/1.2.0";
 import shell_access from "./shells/access";
 import shell_markets from "./shells/markets";
 
-/** Written by `npm run heroes:generate` (scripts/generate-heroes.ts): every generated microfrontend version, by member and version. */
+/** Generated once by the former hero script, and committed: every generated microfrontend version, by member and version. */
 export const GENERATED_MEMBERS: Readonly<Record<string, Readonly<Record<string, ComponentType>>>> = {
   "payee-list": { "2.0.0": payee_list_2_0_0, "1.4.2": payee_list_1_4_2, "2.1.0-beta.1": payee_list_2_1_0_beta_1 },
   "transfer-form": { "3.1.0": transfer_form_3_1_0, "3.0.1": transfer_form_3_0_1 },

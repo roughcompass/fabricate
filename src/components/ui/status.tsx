@@ -84,29 +84,6 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   succeeded: ["Succeeded", "success"],
   duplicate_in_export: ["Listed twice in the export", "warning"],
   several_applications: ["Matches several applications", "warning"],
-  // Prototypes: a variant's stages, its checks, keeping, lessons, notes, and acceptance as a template.
-  planning: ["Planning", "progress"],
-  writing: ["Writing", "progress"],
-  checking: ["Checking", "progress"],
-  repairing: ["Repairing", "progress"],
-  rendering: ["Rendering", "progress"],
-  reviewing: ["Reviewing", "progress"],
-  checks_passed: ["Checks passed", "success"],
-  checks_failed: ["Checks failed", "error"],
-  kept: ["Kept", "success"],
-  discarded: ["Discarded", "neutral"],
-  accepted: ["Accepted", "success"],
-  proposed: ["Proposed", "progress"],
-  turned_off: ["Turned off", "neutral"],
-  open: ["Open", "warning"],
-  addressed: ["Addressed", "success"],
-  undecided: ["Undecided", "warning"],
-  // Template re-checks after a Salt upgrade.
-  recheck_unchanged: ["Unchanged", "success"],
-  recheck_fixed: ["Fixed", "success"],
-  recheck_regressed: ["Regressed", "warning"],
-  recheck_broken: ["Broken", "error"],
-  rechecking: ["Re-checking", "progress"],
 };
 
 /** A readable label for a value without a mapping: underscores become spaces, first letter capitalized. */

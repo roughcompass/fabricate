@@ -7,7 +7,7 @@ Everything in the demo is simulated. See [What is simulated](#what-is-simulated)
 ## Before you present
 
 1. Start DE FabLab with the demo on: `FABRICATE_DEMO=true npm run dev`, or use the hosted demo.
-2. Open **Salt Patterns** in the sidebar. The gallery, "Salt Patterns", opens. The demo adds **Salt Patterns** to the sidebar's Salt Patterns & Prototypes group.
+2. Open **Salt Patterns** in the sidebar. The gallery, "Salt Patterns", opens. The demo adds **Salt Patterns** to the sidebar, under a Templates heading.
 3. If you rehearsed in this browser, reset the demo first: in the gallery's header, open **More actions** (⋯), choose **Reset demo**, and confirm.
 4. Turn guided hints off, so they do not appear during the talk. Open any running application, for example a reference deployment from preview mode's **Open full screen**. Open the toolbar menu, choose **Settings**, and clear **Show guided hints**. The choice applies to your whole workspace.
 5. Create a session profile for someone your audience knows, such as their head of payments. In the running application, press **P** to open **Session**, select **New profile**, and enter their name, the **Approver** persona, and their region. The profile is saved in your workspace and offered in every application, so you can sign it in during beat 10.

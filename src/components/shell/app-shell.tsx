@@ -24,9 +24,8 @@ const DEFAULT_SIDEBAR: SidebarPreferences = { width: SIDEBAR_WIDTH.default, hidd
  * 1024px the sidebar is a drawer instead. The sidebar's width and hidden
  * state come from the operator's cookies, so the first paint already has
  * them. Salt Patterns appears in the navigation only while the template demo
- * is enabled, Prototypes only while it is enabled, and the hosted profile
- * shows Prototypes alone. The product mark opens Home, or wherever links to
- * Home lead in this configuration.
+ * is enabled. The product mark opens Home, or wherever links to Home lead in
+ * this configuration.
  */
 export function AppShell({ theme, nav = NO_OPTIONAL_AREAS, sidebar = DEFAULT_SIDEBAR, children }: { theme: Theme; nav?: NavFlags; sidebar?: SidebarPreferences; children: React.ReactNode }) {
   return (
