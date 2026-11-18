@@ -3,6 +3,7 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, ValidationError } from "@/lib/db/errors";
 import { assessmentTargets, assessments, initiatives } from "@/lib/db/schema";
 import { CloneUrl, InvalidCloneUrl } from "./clone-url";
+import { repositoryNameFromUrl } from "./repository-name";
 import { BoundaryViolation, SourceBoundary } from "./source-boundary";
 import { queueProfile, versionsOf } from "@/lib/profiling/versions";
 import { type RepositorySource, getSource, insertSource, setSourceEnabled, sourceFieldIssues, updateSource } from "./source-records";
@@ -19,9 +20,15 @@ import { type RepositorySource, getSource, insertSource, setSourceEnabled, sourc
  */
 
 export interface SourceForm {
+  /** Blank for the clone URL's owner and repository, such as vickykatoch-helios. */
   name: string;
   cloneUrl: string;
   gitRef: string;
+}
+
+/** +form+ with a blank name replaced by its clone URL's owner and repository. */
+function named(form: SourceForm): SourceForm {
+  return form.name.trim() ? form : { ...form, name: repositoryNameFromUrl(form.cloneUrl) };
 }
 
 interface ResolvedUrl {
@@ -39,7 +46,8 @@ export function resolveCloneUrl(input: string, boundary = new SourceBoundary()):
   return { cloneUrl: resolved.toString(), canonicalUrl: resolved.canonical };
 }
 
-export function registerSource(db: Executor, form: SourceForm, boundary?: SourceBoundary): RepositorySource {
+export function registerSource(db: Executor, submitted: SourceForm, boundary?: SourceBoundary): RepositorySource {
+  const form = named(submitted);
   const url = resolveOrReject(form, boundary);
   return immediate(db, (tx) => {
     const source = insertSource(tx, { name: form.name, gitRef: form.gitRef, ...url });
@@ -48,7 +56,8 @@ export function registerSource(db: Executor, form: SourceForm, boundary?: Source
   });
 }
 
-export function editSource(db: Executor, publicId: string, lockVersion: number, form: SourceForm, boundary?: SourceBoundary): RepositorySource {
+export function editSource(db: Executor, publicId: string, lockVersion: number, submitted: SourceForm, boundary?: SourceBoundary): RepositorySource {
+  const form = named(submitted);
   const url = resolveOrReject(form, boundary);
   return immediate(db, (tx) => {
     const before = getSource(tx, publicId);

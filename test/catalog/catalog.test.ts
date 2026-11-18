@@ -39,7 +39,7 @@ describe("catalog service", () => {
   });
 
   it("reports URL and field problems together and writes nothing", () => {
-    const error = captureValidation(() => registerSource(db, { name: " ", cloneUrl: "git@github.com:acme/orders.git", gitRef: "bad..ref" }, boundary));
+    const error = captureValidation(() => registerSource(db, { name: "x".repeat(101), cloneUrl: "git@github.com:acme/orders.git", gitRef: "bad..ref" }, boundary));
 
     expect(error.issues.map((issue) => issue.field)).toEqual(["cloneUrl", "name", "gitRef"]);
     expect(error.messagesFor("cloneUrl")[0]).toMatch(/scp-style shorthand/);
@@ -57,6 +57,18 @@ describe("catalog service", () => {
     const error = captureValidation(() => registerSource(db, { name: "copy", cloneUrl: "https://git.example.com/acme/orders/", gitRef: "" }, boundary));
 
     expect(error.messagesFor("cloneUrl")).toEqual([`This clone URL is already registered as orders (${existing.publicId})`]);
+  });
+
+  it("names a Repository after its clone URL when the name is left blank, and keeps a name someone gave", () => {
+    const named = registerSource(db, { name: "  ", cloneUrl: "https://github.com/vickykatoch/helios.git", gitRef: "" }, boundary);
+    expect(named.name).toBe("vickykatoch-helios");
+    const kept = registerSource(db, { name: "Helios", cloneUrl: "https://github.com/vickykatoch/helios-docs.git", gitRef: "" }, boundary);
+    expect(kept.name).toBe("Helios");
+    expect(editSource(db, named.publicId, named.lockVersion, { name: "", cloneUrl: "https://github.com/vickykatoch/helios.git", gitRef: "main" }, boundary).name).toBe("vickykatoch-helios");
+  });
+
+  it("asks for a name only when the clone URL names no repository either", () => {
+    expect(() => registerSource(db, { name: "", cloneUrl: "https://github.com/", gitRef: "" }, boundary)).toThrow(/Enter a name/);
   });
 
   it("edits a source with optimistic locking", () => {

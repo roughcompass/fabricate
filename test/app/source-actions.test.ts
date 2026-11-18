@@ -35,7 +35,8 @@ describe("source Server Actions", () => {
   it("returns field errors without persisting or echoing a secret", async () => {
     const state = await createSource(blank, form({ name: "", cloneUrl: "https://user:hunter2@git.example.com/acme/app.git", gitRef: "" }));
 
-    expect(state.errors.name).toEqual(["Enter a name"]);
+    // A blank name follows the clone URL, so only the URL is refused.
+    expect(state.errors.name).toBeUndefined();
     expect(state.errors.cloneUrl?.[0]).toMatch(/cannot contain a username, password, or access token/);
     expect(JSON.stringify(state)).not.toContain("hunter2");
     expect(listSources(db)).toEqual([]);

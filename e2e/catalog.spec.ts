@@ -64,6 +64,28 @@ test("adds, edits, disables, and re-enables a Source with validation feedback", 
   await expect(toasts(page).getByText("orders is enabled for future Runs.")).toBeVisible();
 });
 
+test("asks for the clone URL first and names the Repository after its owner and repository until a name is typed", async ({ page, db: _db }) => {
+  await page.goto(`${paths.repositories}/new`);
+  const fields = page.locator("form input:not([type=hidden])");
+  await expect(fields.nth(0)).toHaveAccessibleName(/Clone URL/);
+  await expect(fields.nth(1)).toHaveAccessibleName(/Name/);
+
+  const url = page.getByLabel("Clone URL");
+  const name = page.getByLabel("Name");
+  await url.fill("https://github.com/vickykatoch/helios.git");
+  await expect(name).toHaveValue("vickykatoch-helios");
+
+  await name.fill("Helios");
+  await url.fill("https://github.com/vickykatoch/helios-docs.git");
+  await expect(name).toHaveValue("Helios");
+
+  await name.fill("");
+  await url.fill("https://github.com/vickykatoch/helios.git");
+  await expect(name).toHaveValue("vickykatoch-helios");
+  await page.getByRole("button", { name: "Create Repository" }).click();
+  await expect(toasts(page).getByText("vickykatoch-helios was added.")).toBeVisible();
+});
+
 test("keeps Assessment history visible for a disabled Source", async ({ page, db }) => {
   const source = buildSource(db, { name: "legacy-ui" });
   buildAssessment(db, { sources: [source] });
