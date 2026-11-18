@@ -5,7 +5,7 @@ import type { Attention, AttentionItem } from "@/lib/profiles/attention";
 import styles from "./profile.module.css";
 
 // The indicator each kind of item shows: its category state, or none for the input counts.
-const ITEM_STATES: Record<AttentionItem["kind"], string | null> = { conflicting: "conflicting", unknown: "unknown", not_covered: "not_covered", skipped: null, diagnostics: null };
+const ITEM_STATES: Record<AttentionItem["kind"], string | null> = { conflicting: "conflicting", unknown: "unknown", partial: "partial", not_covered: "not_covered", skipped: null, diagnostics: null };
 
 /** Everything the Profile couldn't establish, in one checklist, after the counts of categories by state. */
 export function NeedsAttention({ attention }: { attention: Attention }) {

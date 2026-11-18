@@ -1,9 +1,9 @@
 import type { JsonObject } from "@repo-facts/contract";
 import { countLabel } from "@/components/ui/count";
-import { type FactDocument, categoryDefinitions, categoryOf, categoryState, noValue } from "./states";
+import { type FactDocument, categoryDefinitions, categoryOf, categoryState, noValue, partial } from "./states";
 
 export interface AttentionItem {
-  kind: "conflicting" | "unknown" | "not_covered" | "skipped" | "diagnostics";
+  kind: "conflicting" | "unknown" | "partial" | "not_covered" | "skipped" | "diagnostics";
   label: string;
   reason: string;
   /** The section the item opens. */
@@ -23,8 +23,9 @@ export const NOTHING_NEEDS_ATTENTION = "Nothing needs attention: no category is 
 
 /**
  * Everything the Profile couldn't establish, in one place: conflicting
- * categories, unknown categories with their reasons, categories the
- * detector release doesn't cover, skipped inputs, and other diagnostics.
+ * categories, unknown categories with their reasons, partial categories,
+ * whose facts came from only some of their inputs, categories the detector
+ * release doesn't cover, skipped inputs, and other diagnostics.
  */
 export function attention(document: FactDocument, diagnostics: { skipped: readonly JsonObject[]; notes: readonly JsonObject[] }): Attention {
   const definitions = categoryDefinitions(document);
@@ -42,6 +43,10 @@ export function attention(document: FactDocument, diagnostics: { skipped: readon
   }
   for (const definition of definitions) {
     if (categoryState(document, definition.id) === "unknown") items.push({ kind: "unknown", label: definition.label, reason: noValue(document, definition).reason, href: `#${definition.id}` });
+  }
+  for (const definition of definitions) {
+    const reason = partial(document, definition.id);
+    if (reason) items.push({ kind: "partial", label: definition.label, reason, href: `#${definition.id}` });
   }
   const uncovered = definitions.filter((definition) => categoryState(document, definition.id) === "not_covered");
   if (uncovered.length) {

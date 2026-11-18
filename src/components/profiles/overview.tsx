@@ -39,6 +39,11 @@ function OverviewValues({ row }: { row: OverviewRow }) {
           <NoValuePlaceholder value={placeholder.value} />
         </Linked>
       ))}
+      {row.partial && (
+        <Linked href={href}>
+          <Status state="partial" size="sm" label="Partial: some inputs weren't read" />
+        </Linked>
+      )}
     </span>
   );
 }

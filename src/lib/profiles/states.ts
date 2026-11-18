@@ -72,6 +72,20 @@ export function categoryState(document: FactDocument, id: string): string {
 }
 
 /**
+ * Why a category with facts may hold more than it shows: the relevant inputs
+ * its search couldn't read or understand, such as files past a read budget.
+ * Null when it has no facts (`noValue` says why) or every input was read.
+ */
+export function partial(document: FactDocument, id: string): string | null {
+  const category = categoryOf(document, id);
+  if (!category?.facts.length || !category.search.skipped.length) return null;
+  const { skipped } = category.search;
+  const named = skipped.slice(0, 3).join(", ");
+  const rest = skipped.length > 3 ? `, and ${skipped.length - 3} more in Skipped inputs` : "";
+  return `Found from what was read, but ${countLabel(skipped.length, "relevant input")} could not be read or understood, so there may be more: ${named}${rest}`;
+}
+
+/**
  * Why a category has no value, in a short clause that follows its state's
  * label: what its search covered, what it skipped, or that the detector
  * release didn't report it.

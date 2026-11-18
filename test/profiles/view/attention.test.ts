@@ -1,6 +1,7 @@
 import { SHARED_CATEGORIES } from "@repo-facts/contract";
 import { beforeAll, describe, expect, it } from "vitest";
 import { NOTHING_NEEDS_ATTENTION, attention } from "@/lib/profiles/attention";
+import { overview } from "@/lib/profiles/overview";
 import type { FactDocument } from "@/lib/profiles/states";
 import { profileDiagnostics } from "@/lib/profiles/profile-records";
 import { analyzedFacts, asRelease010 } from "../../support/fact-documents";
@@ -33,6 +34,22 @@ describe("The Profile's needs-attention list", () => {
     expect(items).toContainEqual({ kind: "skipped", label: "1 skipped input", reason: expect.any(String), href: "#diagnostics" });
     const noted = attention(orders, { skipped: [], notes: [{ path: "a" }, { path: "b" }] }).items;
     expect(noted).toContainEqual({ kind: "diagnostics", label: "2 other diagnostics", reason: expect.any(String), href: "#other-diagnostics" });
+  });
+
+  it("lists a category with facts but unread inputs as partial, and marks its overview row", () => {
+    const dependencies = orders.categories.dependencies!;
+    const budgeted: FactDocument = { ...orders, categories: { ...orders.categories, dependencies: { ...dependencies, search: { ...dependencies.search, complete: false, skipped: ["a/package.json", "b/package.json", "c/package.json", "d/package.json"] } } } };
+    expect(attention(budgeted, diagnosticsOf(budgeted)).items).toContainEqual({
+      kind: "partial",
+      label: "Dependencies",
+      reason: "Found from what was read, but 4 relevant inputs could not be read or understood, so there may be more: a/package.json, b/package.json, c/package.json, and 1 more in Skipped inputs",
+      href: "#dependencies",
+    });
+    expect(attention(orders, diagnosticsOf(orders)).items.some((item) => item.kind === "partial")).toBe(false);
+    expect(overview(budgeted).find((row) => row.label === "Packages")!.partial).toBe(false);
+    const packages = budgeted.categories.package_identity!;
+    const partialPackages: FactDocument = { ...budgeted, categories: { ...budgeted.categories, package_identity: { ...packages, search: { ...packages.search, skipped: ["a/package.json"] } } } };
+    expect(overview(partialPackages).find((row) => row.label === "Packages")!.partial).toBe(true);
   });
 
   it("lists the categories a detector release doesn't cover on one line", () => {

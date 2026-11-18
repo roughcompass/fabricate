@@ -3,7 +3,7 @@ import { factText, formatValue } from "@/components/results/value";
 import { countLabel } from "@/components/ui/count";
 import { ciSystem, kindLabel, runtimeName } from "@/components/ui/status";
 import { dependencyGroups } from "./joins";
-import { type Fact, type FactDocument, type NoValue, categoryDefinitions, categoryOf, noValue } from "./states";
+import { type Fact, type FactDocument, type NoValue, categoryDefinitions, categoryOf, noValue, partial } from "./states";
 
 /** One value in the overview, with the state of the fact it comes from. Scope values come from the inventory and carry no state. */
 export interface OverviewValue {
@@ -30,6 +30,8 @@ export interface OverviewRow {
   stacked: boolean;
   /** A line of counts above the values, such as how many packages are published. */
   summary: string | null;
+  /** Set when a category's values came from only some of its inputs, so there may be more. */
+  partial: boolean;
 }
 
 const isObject = (value: JsonValue | undefined): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -145,7 +147,9 @@ export function overview(document: FactDocument): OverviewRow[] {
     const values: OverviewValue[] = [];
     const placeholders: OverviewPlaceholder[] = [];
     let summary: string | null = null;
+    let incomplete = false;
     for (const id of row.categories) {
+      incomplete ||= partial(document, id) !== null;
       const definition = definitions.get(id) as CategoryDefinition;
       const facts = categoryOf(document, id)?.facts ?? [];
       if (!facts.length) {
@@ -161,7 +165,7 @@ export function overview(document: FactDocument): OverviewRow[] {
       summary ??= row.summary?.(facts, document) ?? null;
     }
     const shown = row.limit ? values.slice(0, row.limit) : values;
-    return { label: row.label, category: row.categories[0]!, values: shown, placeholders, more: values.length - shown.length, stacked: row.stacked ?? false, summary };
+    return { label: row.label, category: row.categories[0]!, values: shown, placeholders, more: values.length - shown.length, stacked: row.stacked ?? false, summary, partial: incomplete };
   });
   return [...rows, scope(document)];
 }
@@ -176,5 +180,5 @@ function scope(document: FactDocument): OverviewRow {
     { state: null, text: countLabel(categoryOf(document, "scripts")?.facts.length ?? 0, "script") },
     { state: null, text: countLabel(document.service_dependencies?.length ?? 0, "Service Dependency", "Service Dependencies") },
   ];
-  return { label: "Scope", category: null, values, placeholders: [], more: 0, stacked: false, summary: null };
+  return { label: "Scope", category: null, values, placeholders: [], more: 0, stacked: false, summary: null, partial: false };
 }

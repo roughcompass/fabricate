@@ -233,7 +233,7 @@ const INPUTS_SHOWN = 100;
 function searchSummary(heading: Heading): string | null {
   const { search } = heading;
   if (!search) return null;
-  const outcome = search.skipped.length ? `${countLabel(search.skipped.length, "input")} skipped` : search.complete ? "complete" : "incomplete";
+  const outcome = search.skipped.length ? `${countLabel(search.skipped.length, "input")} skipped${heading.facts ? ", so this is partial" : ""}` : search.complete ? "complete" : "incomplete";
   return search.surface.length ? `Searched ${countLabel(search.surface.length, "input")} · ${outcome}` : `Search ${outcome}`;
 }
 
