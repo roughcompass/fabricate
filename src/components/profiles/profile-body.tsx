@@ -143,7 +143,7 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
       />
 
       <div className={styles.content}>
-        <ProfileOverview rows={view.overview} />
+        <ProfileOverview rows={view.overview} scope={view.scope} />
         <NeedsAttention attention={view.attention} />
 
         {view.groups.map((group) => {

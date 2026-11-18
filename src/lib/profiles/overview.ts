@@ -7,9 +7,9 @@ import { compositionSummary } from "./composition";
 import { dependencyGroups } from "./joins";
 import { type Fact, type FactDocument, type NoValue, categoryDefinitions, categoryOf, noValue, partial } from "./states";
 
-/** One value in the overview, with the state of the fact it comes from. Scope values come from the inventory and carry no state. */
+/** One value in the overview, with the state of the fact it comes from. */
 export interface OverviewValue {
-  state: string | null;
+  state: string;
   text: string;
   secondary?: string;
 }
@@ -22,8 +22,8 @@ interface OverviewPlaceholder {
 
 export interface OverviewRow {
   label: string;
-  /** The category the row links to, or null for Scope. */
-  category: string | null;
+  /** The category the row links to. */
+  category: string;
   values: OverviewValue[];
   placeholders: OverviewPlaceholder[];
   /** Values left out after the first few, such as further languages. */
@@ -166,18 +166,32 @@ export function overview(document: FactDocument): OverviewRow[] {
     const shown = row.limit ? values.slice(0, row.limit) : values;
     return { label: row.label, category: row.categories[0]!, values: shown, placeholders, more: values.length - shown.length, stacked: row.stacked ?? false, summary, partial: incomplete };
   });
-  return [...rows, scope(document)];
+  return rows;
 }
 
-/** How much of the commit was read, and how much the Profile found. Files no detector opened are neither read nor skipped. */
-function scope(document: FactDocument): OverviewRow {
+/** A key figure of a Profile's scope, linked to the section that lists what it counts when there is one. */
+export interface ScopeFigure {
+  label: string;
+  value: string;
+  hint?: string;
+  href?: string;
+}
+
+const figure = (count: number) => count.toLocaleString("en-US");
+
+/**
+ * How much of the commit was read, and how much the Profile found, as key
+ * figures. Each count links to the section that lists it; files read has no
+ * such list, so it isn't a link. Files no detector opened are neither read
+ * nor skipped.
+ */
+export function scopeFigures(document: FactDocument): ScopeFigure[] {
   const inventory = document.inventory ?? {};
   const dependencies = dependencyGroups(document).reduce((sum, group) => sum + group.rows.filter((row) => row.declared).length, 0);
-  const values: OverviewValue[] = [
-    ...(typeof inventory.files === "number" ? [{ state: null, text: `${(inventory.files_read ?? 0).toLocaleString("en-US")} of ${countLabel(inventory.files, "file")} read` }] : []),
-    { state: null, text: countLabel(dependencies, "dependency", "dependencies") },
-    { state: null, text: countLabel(categoryOf(document, "scripts")?.facts.length ?? 0, "script") },
-    { state: null, text: countLabel(document.service_dependencies?.length ?? 0, "Service Dependency", "Service Dependencies") },
+  return [
+    ...(typeof inventory.files === "number" ? [{ label: "Files read", value: figure(inventory.files_read ?? 0), hint: `of ${countLabel(inventory.files, "file")}` }] : []),
+    { label: "Dependencies", value: figure(dependencies), href: "#dependencies" },
+    { label: "Scripts", value: figure(categoryOf(document, "scripts")?.facts.length ?? 0), href: "#scripts" },
+    { label: "Service Dependencies", value: figure(document.service_dependencies?.length ?? 0), href: "#services" },
   ];
-  return { label: "Scope", category: null, values, placeholders: [], more: 0, stacked: false, summary: null, partial: false };
 }

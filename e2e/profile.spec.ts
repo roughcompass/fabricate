@@ -52,7 +52,12 @@ test("leads with an overview of what the repository is, then what needs attentio
   expect((await page.locator("main").getByRole("heading", { level: 2 }).allTextContents()).slice(0, 3)).toEqual(["Overview", "Needs attention", "Inventory"]);
 
   const overview = page.getByRole("region", { name: "Overview" });
-  expect(await overview.locator("dt").allTextContents()).toEqual(["Packages", "Languages", "Framework", "Build", "Tests", "Tooling", "Runtime", "Composition", "Design system", "Scope"]);
+  expect(await overview.locator("dl:not([aria-label='Scope']) dt").allTextContents()).toEqual(["Packages", "Languages", "Framework", "Build", "Tests", "Tooling", "Runtime", "Composition", "Design system"]);
+  // The scope's counts are links to the sections that list them; files read lists nothing, so it isn't one.
+  const scope = overview.locator("dl[aria-label='Scope']");
+  await expect(scope.locator("dt")).toHaveText(["Files read", "Dependencies", "Scripts", "Service Dependencies"]);
+  await expect(scope.getByRole("link")).toHaveCount(3);
+  await expect(scope.locator("div").filter({ has: page.locator("dt", { hasText: /^Dependencies$/ }) }).getByRole("link")).toHaveAttribute("href", "#dependencies");
   await expect(detail(overview, "Framework")).toContainText("React 19.1.0");
   await expect(detail(overview, "Framework").getByRole("link")).toHaveAttribute("href", "#frameworks");
   await expect(detail(overview, "Build")).toContainText("Vite");

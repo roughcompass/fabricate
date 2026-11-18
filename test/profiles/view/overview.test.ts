@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { type OverviewRow, overview } from "@/lib/profiles/overview";
+import { type OverviewRow, overview, scopeFigures } from "@/lib/profiles/overview";
 import type { FactDocument } from "@/lib/profiles/states";
 import { analyzedFacts, asRelease010, factDocumentFixture } from "../../support/fact-documents";
 import { manifest } from "../../support/profiles";
@@ -22,7 +22,7 @@ describe("The Profile overview", () => {
 
   it("always shows the same rows, in order", () => {
     const rows = overview(storefront);
-    expect(rows.map((candidate) => candidate.label)).toEqual(["Packages", "Languages", "Framework", "Build", "Tests", "Tooling", "Runtime", "Composition", "Design system", "Scope"]);
+    expect(rows.map((candidate) => candidate.label)).toEqual(["Packages", "Languages", "Framework", "Build", "Tests", "Tooling", "Runtime", "Composition", "Design system"]);
     expect(overview(factDocumentFixture("salt-application") as unknown as FactDocument).map((candidate) => candidate.label)).toEqual(rows.map((candidate) => candidate.label));
   });
 
@@ -63,12 +63,16 @@ describe("The Profile overview", () => {
     expect(row(overview(storefront), "Packages").values).toContainEqual({ state: "observed", text: "{{PACKAGE_NAME}} 0.1.0", secondary: "private · template/" });
   });
 
-  it("states how many files were read, and never calls the others skipped", () => {
-    const scope = row(overview({ ...storefront, inventory: { files: 111, files_read: 98 } }), "Scope");
-    expect(scope.category).toBeNull();
-    expect(scope.values[0]).toEqual({ state: null, text: "98 of 111 files read" });
-    expect(scope.values.map((value) => value.text).join(" ")).not.toMatch(/skipped/i);
-    expect(texts([scope], "Scope").slice(1)).toEqual(["4 dependencies", "0 scripts", "1 Service Dependency"]);
+  it("states how many files were read, and never calls the others skipped, beside counts that link to their sections", () => {
+    const scope = scopeFigures({ ...storefront, inventory: { files: 111, files_read: 98 } });
+    // Files read lists nothing, so it isn't a link; each count opens the section that lists what it counts.
+    expect(scope).toEqual([
+      { label: "Files read", value: "98", hint: "of 111 files" },
+      { label: "Dependencies", value: "4", href: "#dependencies" },
+      { label: "Scripts", value: "0", href: "#scripts" },
+      { label: "Service Dependencies", value: "1", href: "#services" },
+    ]);
+    expect(JSON.stringify(scope)).not.toMatch(/skipped/i);
   });
 
   it("shows the first three languages by file count, and how many more there are", () => {

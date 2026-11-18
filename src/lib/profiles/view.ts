@@ -5,7 +5,7 @@ import { isJsonObject } from "@/lib/json";
 import { type Attention, attention } from "./attention";
 import { type DependencyRow, type ScriptGroup, type ScriptRow, dependencyGroups, missingCell, scriptGroups } from "./joins";
 import { type Cell, type Layout, type RowCells, layoutOf, rowCells } from "./layouts";
-import { type OverviewRow, overview } from "./overview";
+import { type OverviewRow, type ScopeFigure, overview, scopeFigures } from "./overview";
 import { type Fact, type FactDocument, type NoValue, type Search, categoryDefinitions, categoryOf, categoryState, noValue } from "./states";
 
 /**
@@ -111,6 +111,8 @@ export interface ServiceSummary {
 
 export interface ProfileView {
   overview: OverviewRow[];
+  /** How much of the commit was read, and how much the Profile found. */
+  scope: ScopeFigure[];
   attention: Attention;
   groups: { label: string; blocks: Block[] }[];
   /** Navigation entries: each category with its state, by group. */
@@ -398,6 +400,7 @@ export function profileView(document: FactDocument, diagnostics: { skipped: Json
 
   return {
     overview: overview(document),
+    scope: scopeFigures(document),
     attention: attention(document, diagnostics),
     groups,
     navigation: unique(definitions.map((definition) => definition.group)).map((group) => ({
