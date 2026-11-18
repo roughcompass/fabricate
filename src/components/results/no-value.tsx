@@ -1,4 +1,4 @@
-import { Status } from "@/components/ui/status";
+import { Status, statusLabel } from "@/components/ui/status";
 import type { NoValue } from "@/lib/profiles/states";
 import styles from "./results.module.css";
 
@@ -7,10 +7,11 @@ import styles from "./results.module.css";
  * then why. Never a dash or "No data", which can't tell unknown from none detected.
  */
 export function NoValuePlaceholder({ value }: { value: NoValue }) {
+  // One Status holds the label and the reason, so a reason that wraps lines up with the label, not under the indicator.
   return (
-    <span className={styles.noValue}>
-      <Status state={value.state} size="sm" />
+    <Status state={value.state} size="sm">
+      <span>{statusLabel(value.state)}</span>
       <span className={styles.muted}>{value.reason}</span>
-    </span>
+    </Status>
   );
 }

@@ -8,7 +8,7 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { Icon } from "@/components/ui/icon";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
-import { Status } from "@/components/ui/status";
+import { Status, statusLabel } from "@/components/ui/status";
 import { Secondary, Table, Td, Th } from "@/components/ui/table";
 import type { Cell } from "@/lib/profiles/layouts";
 import { parseReasoning } from "@/lib/profiles/reasoning";
@@ -346,10 +346,11 @@ export function SharedTable({ block, context, filters, pagination, level = 3 }: 
         <ul className={styles.notes} aria-label={`Not shown in ${title}`}>
           {empty.map((source) => (
             <li key={source.definition.id} id={anchorOf(source.definition.id)}>
-              <Status state={source.state} size="sm" />
-              <span>
-                <span className={styles.sourceLabel}>{`${source.definition.label} aren't shown.`}</span> <span className={styles.attentionReason}>{source.reason}</span>
-              </span>
+              <Status state={source.state} size="sm">
+                <span>{statusLabel(source.state)}</span>
+                <span className={styles.sourceLabel}>{`${source.definition.label} aren't shown.`}</span>
+                <span className={styles.attentionReason}>{source.reason}</span>
+              </Status>
             </li>
           ))}
         </ul>
