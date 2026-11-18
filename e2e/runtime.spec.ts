@@ -115,7 +115,8 @@ test.describe("portal shells", () => {
     await navigation.getByRole("button", { name: "Collapse" }).click();
     await expect(navigation.getByRole("button", { name: "Expand menu" })).toBeVisible();
     await expect(navigation.getByRole("button", { name: "Home" })).toBeVisible();
-    expect((await menu.boundingBox())!.width).toBeLessThan(wide / 2);
+    // The rail settles once Salt's navigation has laid it out.
+    await expect.poll(async () => (await menu.boundingBox())!.width).toBeLessThan(wide / 2);
     await navigation.getByRole("button", { name: "Expand menu" }).click();
     await expect(navigation.getByRole("link", { name: "Activity" })).toBeVisible();
   });

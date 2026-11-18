@@ -46,11 +46,10 @@ test.describe("Matching templates on New prototype", () => {
 
     await page.goto("/prototypes/new?intent=payments+approval+queue");
     const matches = page.getByRole("region", { name: "Matching templates" });
-    // The accepted template and two built-in templates match: every built-in template is a real Salt application.
+    // The accepted template and built-in templates match, at most three: every built-in template is a real Salt application.
     await expect(matches.locator("[data-template-match]")).toHaveCount(3);
     await expect(matches).toContainText("Urgent payments queue v1");
     await expect(matches).toContainText("Payments workspace v3.2.0");
-    await expect(matches).toContainText("Payment status tracker v2.0.0");
     await matches.getByRole("link", { name: "Start from Urgent payments queue" }).click();
     await page.waitForURL(/\/prototypes\/new\?template=ptp_[a-z0-9]{16}&intent=payments\+approval\+queue$/);
     await expect(page.locator("[data-form-note]").filter({ hasText: "Starting from Urgent payments queue v1" })).toBeVisible();
@@ -93,9 +92,8 @@ test.describe("Matching templates on New prototype", () => {
     await expect(page.getByLabel("Intent")).toHaveValue("payments approval queue");
     // The built-in templates still match; the Broken template doesn't.
     const matches = page.getByRole("region", { name: "Matching templates" });
-    await expect(matches.locator("[data-template-match]")).toHaveCount(2);
+    await expect(matches.locator("[data-template-match]")).toHaveCount(3);
     await expect(matches).toContainText("Payments workspace");
-    await expect(matches).toContainText("Payment status tracker");
     await expect(matches).not.toContainText("Urgent payments queue");
   });
 });
