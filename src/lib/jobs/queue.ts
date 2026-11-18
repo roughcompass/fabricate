@@ -1,6 +1,6 @@
-import { and, asc, eq, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lte, or, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
-import { jobs } from "@/lib/db/schema";
+import { JOB_PRIORITIES, jobs } from "@/lib/db/schema";
 import { type JsonObject, dump, parseCanonical } from "@repo-facts/contract";
 import { redact } from "@/lib/git/redact";
 
@@ -11,7 +11,8 @@ import { redact } from "@/lib/git/redact";
  * visible only when the records it depends on commit, and disappears if they
  * roll back. Workers claim jobs under a lease inside an immediate
  * transaction; a job whose lease expires is claimable again. A repeated
- * idempotency key never creates a second job.
+ * idempotency key never creates a second job. Background jobs are claimed
+ * only when no normal job is runnable.
  */
 
 export type Job = typeof jobs.$inferSelect;
@@ -25,6 +26,8 @@ export interface EnqueueOptions {
   idempotencyKey: string;
   runAfter?: Date;
   maxAttempts?: number;
+  /** JOB_PRIORITIES.normal unless given. */
+  priority?: number;
 }
 
 /** Adds a job unless one with the same idempotency key exists; returns the job either way. */
@@ -37,6 +40,7 @@ export function enqueue(db: Executor, options: EnqueueOptions): Job {
       payload: dump(options.payload),
       idempotencyKey: options.idempotencyKey,
       maxAttempts: options.maxAttempts ?? 3,
+      priority: options.priority ?? JOB_PRIORITIES.normal,
       runAfter: options.runAfter ?? now,
       createdAt: now,
       updatedAt: now,
@@ -58,8 +62,8 @@ export interface ClaimOptions {
 }
 
 /**
- * Claims the oldest runnable job: a queued job whose time has come, or a
- * running job whose lease expired. A job that has used every attempt is
+ * Claims the oldest runnable job of the highest priority: a queued job whose
+ * time has come, or a running job whose lease expired. A job that has used every attempt is
  * failed instead of claimed.
  */
 export function claimNext(db: Executor, options: ClaimOptions): Job | undefined {
@@ -72,7 +76,7 @@ export function claimNext(db: Executor, options: ClaimOptions): Job | undefined 
         .select()
         .from(jobs)
         .where(or(and(eq(jobs.state, "queued"), lte(jobs.runAfter, now)), and(eq(jobs.state, "running"), lte(jobs.leaseExpiresAt, now))))
-        .orderBy(asc(jobs.runAfter), asc(jobs.id))
+        .orderBy(desc(jobs.priority), asc(jobs.runAfter), asc(jobs.id))
         .limit(1)
         .get();
       if (!candidate) return undefined;

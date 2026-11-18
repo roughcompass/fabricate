@@ -1,4 +1,4 @@
-import { not } from "drizzle-orm";
+import { and, not } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { transitionAssessment } from "@/lib/assessments/transitions";
 import { type RepositorySource, listSources } from "@/lib/catalog/source-records";
@@ -271,8 +271,8 @@ describe("claims", () => {
     it("creates the repository's system-owned initiative and starts a Run of its default branch (First claim)", () => {
       const { started } = completeClaim(db, orders.publicId, { ...ana, ...fullClaim, launchToken: "4a6e3b0c-6a43-4e0f-9a59-9a2d0f2a8e11" });
 
-      // Besides the Salt Patterns initiative the migration seeds.
-      const created = db.select().from(initiatives).where(not(initiatives.systemOwned)).all();
+      // Besides the Salt Patterns and Repository profiling initiatives the migrations seed.
+      const created = db.select().from(initiatives).where(and(not(initiatives.systemOwned), not(initiatives.profiling))).all();
       expect(created).toHaveLength(1);
       expect(created[0]).toMatchObject({ claimRepositorySourceId: orders.id, selectionMode: "explicit", name: "Claim: orders" });
       expect(db.select().from(initiativeTargets).all().map((target) => target.repositorySourceId)).toEqual([orders.id]);
@@ -299,7 +299,7 @@ describe("claims", () => {
 
       expect(second.id).not.toBe(first.id);
       expect(second.initiativeId).toBe(first.initiativeId);
-      expect(db.select().from(initiatives).where(not(initiatives.systemOwned)).all()).toHaveLength(1);
+      expect(db.select().from(initiatives).where(and(not(initiatives.systemOwned), not(initiatives.profiling))).all()).toHaveLength(1);
     });
 
     it("starts no Run for a repository with a complete one", async () => {

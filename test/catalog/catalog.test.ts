@@ -1,6 +1,7 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { assessmentCounts, disableSource, editSource, enableSource, registerSource } from "@/lib/catalog/catalog";
+import { versionsOf } from "@/lib/profiling/versions";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { getSource, listSources } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
@@ -72,6 +73,8 @@ describe("catalog service", () => {
     disableSource(db, source.publicId);
     expect(getSource(db, source.publicId).enabled).toBe(false);
     expect(targetsOf(db, assessment.id)[0]).toMatchObject({ sourceName: "orders", gitRef: "main" });
+    // Its profile version's Run is shown apart, so it isn't counted.
+    expect(versionsOf(db, source.id)).toHaveLength(1);
     expect(assessmentCounts(db).get(source.id)).toBe(1);
 
     enableSource(db, source.publicId);

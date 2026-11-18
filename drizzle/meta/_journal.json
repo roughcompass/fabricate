@@ -267,6 +267,13 @@
       "when": 1794961450892,
       "tag": "0037_demo_applications_removed",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1794965110524,
+      "tag": "0038_repository_profiling",
+      "breakpoints": true
     }
   ]
 }

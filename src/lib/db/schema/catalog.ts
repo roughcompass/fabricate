@@ -56,6 +56,12 @@ export const initiatives = sqliteTable(
      * design decision 2). Operators choose its Releases, nothing else.
      */
     systemOwned: integer("system_owned", { mode: "boolean" }).notNull().default(false),
+    /**
+     * Set on the Repository profiling initiative, which DE FabLab owns. Each
+     * of its Runs profiles one repository, which the launch names, and is
+     * that repository's next profile version (docs/profiling.md).
+     */
+    profiling: integer("profiling", { mode: "boolean" }).notNull().default(false),
     lockVersion: lockVersion(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -67,6 +73,7 @@ export const initiatives = sqliteTable(
     check("initiatives_objective", sql`length(${t.objective}) <= 2000`),
     check("initiatives_selection_mode", sql.raw(`selection_mode IN (${sqlList(SELECTION_MODES)})`)),
     check("initiatives_system_owned", sql`${t.systemOwned} IN (0, 1)`),
+    check("initiatives_profiling", sql`${t.profiling} IN (0, 1) AND NOT (${t.profiling} = 1 AND (${t.systemOwned} = 1 OR ${t.claimRepositorySourceId} IS NOT NULL))`),
   ],
 );
 

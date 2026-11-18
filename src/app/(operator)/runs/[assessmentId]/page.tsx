@@ -27,6 +27,7 @@ import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { profileDiagnostics, profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
 import type { MapDocument } from "@/lib/relationships/schema";
+import { runContext } from "@/lib/web/run-context";
 import { cancelAssessment } from "../actions";
 import { assessmentOutcome } from "../outcomes";
 
@@ -34,12 +35,14 @@ const load = cache((publicId: string) => {
   const db = getDb();
   const assessment = findAssessment(db, publicId);
   if (!assessment) return undefined;
-  return { assessment, initiative: initiativeById(db, assessment.initiativeId), number: assessmentNumber(db, assessment) };
+  const initiative = initiativeById(db, assessment.initiativeId);
+  const number = assessmentNumber(db, assessment);
+  return { assessment, initiative, number, context: runContext(db, assessment, initiative, number) };
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ assessmentId: string }> }): Promise<Metadata> {
   const found = load((await params).assessmentId);
-  return { title: found ? `Run #${found.number} · ${found.initiative.name}` : "Run not found" };
+  return { title: found ? `${found.context.name} · ${found.context.owner}` : "Run not found" };
 }
 
 const FINISHED = new Set(["complete", "failed", "canceled"]);
@@ -49,8 +52,8 @@ export default async function AssessmentPage({ params, searchParams }: { params:
   const db = getDb();
   const found = load(assessmentId);
   if (!found) notFound();
-  const { assessment, initiative, number } = found;
-  const name = `Run #${number}`;
+  const { assessment, initiative, context } = found;
+  const { name } = context;
 
   const targets = targetsOf(db, assessment.id);
   const profiles = new Map(profilesOf(db, assessment.id).map(({ profile, target }) => [target.id, profile]));
@@ -72,10 +75,7 @@ export default async function AssessmentPage({ params, searchParams }: { params:
     <Page>
       {!status.terminal && <ProgressPoller url={`/api/runs/${assessment.publicId}/status`} version={status.version} />}
       <PageHeader
-        breadcrumbs={[
-          { href: "/assessments", label: "Assessments" },
-          { href: `/assessments/${initiative.publicId}`, label: initiative.name },
-        ]}
+        breadcrumbs={context.parents}
         title={name}
         status={<Status state={shownState} />}
         meta={[
@@ -133,7 +133,8 @@ export default async function AssessmentPage({ params, searchParams }: { params:
               ? { label: "Relationship Map", value: coverage.complete ? "Complete" : "Partial", hint: <Link href={`/runs/${assessment.publicId}/map`}>Review the Relationship Map</Link> }
               : { label: "Relationship Map", value: "—", hint: terminal ? "Not available" : "Written when every repository finishes" },
             { label: "Coverage gaps", value: coverage ? coverage.gaps.length : "—" },
-            { label: "Evaluations", value: evaluations.length, hint: evaluations.length ? undefined : terminal ? "Start one from the Assessment" : "Available once finished" },
+            // A profile version is never evaluated, so its Run doesn't offer one.
+            ...(initiative.profiling ? [] : [{ label: "Evaluations", value: evaluations.length, hint: evaluations.length ? undefined : terminal ? "Start one from the Assessment" : "Available once finished" }]),
           ]}
         />
       </Section>

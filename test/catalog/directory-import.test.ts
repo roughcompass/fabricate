@@ -6,6 +6,7 @@ import { BoundaryViolation, SourceBoundary } from "@/lib/catalog/source-boundary
 import { insertSource, listSources } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
+import { versionsOf } from "@/lib/profiling/versions";
 import { createTestDb } from "../support/db";
 import { GitFixture } from "../support/git-fixture";
 
@@ -58,6 +59,12 @@ describe("directory import", () => {
 
     expect(result.created.map((source) => source.name)).toEqual(["orders"]);
     expect(listSources(db).map((source) => [source.name, source.cloneUrl])).toEqual([["orders", `file://${path.join(fleet, "orders")}`]]);
+  });
+
+  it("queues each imported repository's first profile version", () => {
+    const result = confirmImport(db, fleet, [path.join(fleet, "orders"), path.join(fleet, "billing")], boundary);
+
+    for (const source of result.created) expect(versionsOf(db, source.id).map((version) => [version.version, version.trigger, version.assessment.state])).toEqual([[1, "imported", "queued"]]);
   });
 
   it("does not add an already registered candidate a second time", () => {

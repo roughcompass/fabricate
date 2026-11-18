@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
 import { type JsonObject, type MemoryFile, digestOf } from "@repo-facts/contract";
-import { type Assessment, createAssessment, getAssessment, recordSnapshot } from "@/lib/assessments/assessment-records";
+import { type Assessment, type AssessmentTarget, createAssessment, getAssessment, recordSnapshot } from "@/lib/assessments/assessment-records";
 import { requestCancellation, transitionAssessment, transitionTarget } from "@/lib/assessments/transitions";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { getConfig } from "@/lib/config";
@@ -35,6 +35,18 @@ export async function seedAssessment(db: Db, initiative: Initiative, sources: re
     relationshipSchemaVersion: 1,
     sources,
   });
+  return completeRun(db, assessment, targets, sources, outcomes, options);
+}
+
+/** Drives the queued Run +assessment+ to its end: each target, in +sources+ order, profiled from its files, failed, or canceled; then the map and outcome. */
+export async function completeRun(
+  db: Db,
+  assessment: Assessment,
+  targets: readonly AssessmentTarget[],
+  sources: readonly Pick<RepositorySource, "publicId">[],
+  outcomes: readonly Outcome[],
+  options: { cancel?: boolean; profileVersion1?: boolean } = {},
+): Promise<Assessment> {
   if (options.cancel) requestCancellation(db, assessment.id);
   for (const [index, outcome] of outcomes.entries()) {
     const target = targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!;

@@ -20,6 +20,7 @@ import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import type { FactDocument } from "@/lib/profiles/states";
 import { openSnapshot } from "@/lib/snapshot/open";
 import { openStoredFiles } from "@/lib/snapshot/stored-files";
+import { runContext } from "@/lib/web/run-context";
 
 const REFUSALS: Record<string, string> = {
   commit_mismatch: "The stored snapshot is at a different commit than the evidence names.",
@@ -44,7 +45,8 @@ const load = cache((assessmentId: string, evidenceId: string) => {
   if (!owner) return undefined;
   // The Profile breadcrumb returns to the section that cites this evidence.
   const section = evidenceSection(owner.facts as unknown as FactDocument, evidenceId);
-  return { assessment, owner, section, initiative: initiativeById(db, assessment.initiativeId), number: assessmentNumber(db, assessment) };
+  const initiative = initiativeById(db, assessment.initiativeId);
+  return { assessment, owner, section, context: runContext(db, assessment, initiative, assessmentNumber(db, assessment)) };
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ assessmentId: string; evidenceId: string }> }): Promise<Metadata> {
@@ -71,7 +73,7 @@ export default async function EvidencePage({ params }: { params: Promise<{ asses
   const db = getDb();
   const found = load(assessmentId, evidenceId);
   if (!found) notFound();
-  const { assessment, owner, section, initiative, number } = found;
+  const { assessment, owner, section, context } = found;
   const record = owner.record as unknown as Evidence;
   const snapshot = snapshotOf(db, owner.target.id)!;
   const resolved = await resolve(owner.target, snapshot, record);
@@ -82,9 +84,8 @@ export default async function EvidencePage({ params }: { params: Promise<{ asses
     <Page>
       <PageHeader
         breadcrumbs={[
-          { href: "/assessments", label: "Assessments" },
-          { href: `/assessments/${initiative.publicId}`, label: initiative.name },
-          { href: `/runs/${assessment.publicId}`, label: `Run #${number}` },
+          ...context.parents,
+          { href: `/runs/${assessment.publicId}`, label: context.name },
           { href: `/profiles/${owner.profile.publicId}${section ? `#${section}` : ""}`, label: owner.target.sourceName },
         ]}
         title={evidenceLocation(owner.record as JsonObject)}

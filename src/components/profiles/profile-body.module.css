@@ -1,4 +1,4 @@
-@layer pages {
+@layer components {
   .layout { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-10); align-items: start; }
   .content { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
 

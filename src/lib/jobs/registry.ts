@@ -4,6 +4,7 @@ import { type Executor, getDb } from "@/lib/db/client";
 import { FINALIZE_EVALUATION, finalizeEvaluation, runEvaluationRelease } from "@/lib/evaluations/jobs";
 import { EVALUATE_RELEASE } from "@/lib/evaluations/start";
 import { READ_DE_CONSOLE, runScheduledDeConsoleRead } from "@/lib/ownership/de-console-schedule";
+import { CHECK_PROFILES, runScheduledProfileCheck } from "@/lib/profiling/check";
 import type { HandlerRegistry } from "./worker";
 
 /** Every job kind the worker runs, bound to +db+ and +config+. */
@@ -15,5 +16,6 @@ export function jobHandlers(db: Executor = getDb(), config: FabricateConfig = ge
     [EVALUATE_RELEASE]: async (payload) => void (await runEvaluationRelease(db, { evaluation: String(payload.evaluation), position: Number(payload.position) })),
     [FINALIZE_EVALUATION]: (payload) => void finalizeEvaluation(db, String(payload.evaluation)),
     [READ_DE_CONSOLE]: (_payload, context) => runScheduledDeConsoleRead(db, config, { signal: context.signal }),
+    [CHECK_PROFILES]: async (_payload, context) => void (await runScheduledProfileCheck(db, config, { signal: context.signal, log: (message) => console.log(`[worker] ${message}`) })),
   };
 }

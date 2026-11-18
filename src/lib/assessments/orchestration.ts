@@ -11,7 +11,7 @@ import { profilesOf } from "@/lib/profiles/profile-records";
 import { finalizeRelationshipMap } from "@/lib/relationships/finalize";
 import { treeObjectId } from "@/lib/snapshot/stored-files";
 import { type Assessment, type AssessmentTarget, getAssessment, getTarget, recordStoredFilesSnapshot, snapshotOf, storedFilesOf, targetsOf } from "./assessment-records";
-import { COORDINATE_ASSESSMENT } from "./launcher";
+import { COORDINATE_ASSESSMENT, priorityOfRun } from "./launcher";
 import { evaluateTemplateRun } from "./template-evaluation";
 import { assessmentById } from "./lookups";
 import { advanceAssessment, transitionAssessment, transitionTarget } from "./transitions";
@@ -54,7 +54,8 @@ export function coordinateAssessment(db: Executor, assessmentPublicId: string): 
       // Canceled before any work started: no target is acquired.
       for (const target of targets) if (!isTerminal(TARGET_MACHINE, target.state)) transitionTarget(tx, target, "canceled");
     } else {
-      for (const target of targets) enqueue(tx, { kind: PROCESS_TARGET, payload: { target: target.publicId }, idempotencyKey: `${PROCESS_TARGET}:${target.publicId}` });
+      const priority = priorityOfRun(tx, assessment);
+      for (const target of targets) enqueue(tx, { kind: PROCESS_TARGET, payload: { target: target.publicId }, idempotencyKey: `${PROCESS_TARGET}:${target.publicId}`, priority });
     }
     requestFinalization(tx, assessment.id);
   });
@@ -137,7 +138,7 @@ export function requestFinalization(db: Executor, assessmentId: number): void {
     if (assessment.state === "finalizing" || isTerminal(ASSESSMENT_MACHINE, assessment.state)) return;
     if (targetsOf(tx, assessmentId).some((target) => !isTerminal(TARGET_MACHINE, target.state))) return;
     transitionAssessment(tx, assessment, "finalizing");
-    enqueue(tx, { kind: FINALIZE_ASSESSMENT, payload: { assessment: assessment.publicId }, idempotencyKey: `${FINALIZE_ASSESSMENT}:${assessment.publicId}` });
+    enqueue(tx, { kind: FINALIZE_ASSESSMENT, payload: { assessment: assessment.publicId }, idempotencyKey: `${FINALIZE_ASSESSMENT}:${assessment.publicId}`, priority: priorityOfRun(tx, assessment) });
   });
 }
 

@@ -62,6 +62,11 @@ const settingsSchema = z.strictObject({
     source: z.string().trim().min(1).nullable(),
     refreshMinutes: positiveInteger,
   }),
+  // How often the worker checks every enabled repository's reference for new
+  // commits, and the detector for a new release, to queue profile versions.
+  profiling: z.strictObject({
+    checkMinutes: positiveInteger,
+  }),
   // Where DE FabLab runs: `full` everywhere it has Git and SQLite, `hosted`
   // on a platform without them, where only Prototypes is shown.
   profile: z.enum(["full", "hosted"]),
@@ -106,6 +111,7 @@ export const ENV_KEYS = {
   demoEnabled: "FABRICATE_DEMO",
   deConsoleSource: "FABRICATE_DE_CONSOLE_SOURCE",
   deConsoleRefreshMinutes: "FABRICATE_DE_CONSOLE_REFRESH_MINUTES",
+  profilingCheckMinutes: "FABRICATE_PROFILING_CHECK_MINUTES",
   profile: "FABRICATE_PROFILE",
   prototypesEnabled: "FABRICATE_PROTOTYPES",
   prototypesDatabase: "FABRICATE_PROTOTYPES_DATABASE",
@@ -184,6 +190,7 @@ export interface FabricateConfig {
   /** Whether the template demo's pages, running applications, and endpoints exist. */
   readonly demoEnabled: boolean;
   readonly deConsole: DeConsoleSettings;
+  readonly profiling: { readonly checkMinutes: number };
   /** `hosted` shows only Prototypes and skips the Git and SQLite startup checks. */
   readonly profile: Profile;
   readonly prototypes: PrototypesSettings;
@@ -224,9 +231,10 @@ export function loadConfig(options: LoadOptions = {}): FabricateConfig {
  */
 export function withOverrides(
   config: FabricateConfig,
-  overrides: Partial<Omit<Settings, "analysis" | "deConsole" | "prototypes">> & {
+  overrides: Partial<Omit<Settings, "analysis" | "deConsole" | "profiling" | "prototypes">> & {
     analysis?: Partial<Settings["analysis"]>;
     deConsole?: Partial<Settings["deConsole"]>;
+    profiling?: Partial<Settings["profiling"]>;
     prototypes?: Partial<Omit<Settings["prototypes"], "models">> & { models?: Partial<Settings["prototypes"]["models"]> };
   },
 ): FabricateConfig {
@@ -236,6 +244,7 @@ export function withOverrides(
     analysis: { ...config.settings.analysis, ...overrides.analysis },
     demo: { ...config.settings.demo, ...overrides.demo },
     deConsole: { ...config.settings.deConsole, ...overrides.deConsole },
+    profiling: { ...config.settings.profiling, ...overrides.profiling },
     prototypes: { ...config.settings.prototypes, ...overrides.prototypes, models: { ...config.settings.prototypes.models, ...overrides.prototypes?.models } },
   };
   return buildConfig(settings, { appRoot: config.appRoot, environment: config.environment });
@@ -290,6 +299,7 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
     analysis: { ...settings.analysis },
     demoEnabled: settings.demo.enabled,
     deConsole: { source: deConsoleSource(settings.deConsole.source, resolve, mandatory), refreshMinutes: settings.deConsole.refreshMinutes },
+    profiling: { checkMinutes: settings.profiling.checkMinutes },
     profile: settings.profile,
     prototypes: {
       enabled: settings.prototypes.enabled,
@@ -380,6 +390,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   };
   const demo: Record<string, unknown> = { ...(settings.demo as Record<string, unknown>) };
   const deConsole: Record<string, unknown> = { ...(settings.deConsole as Record<string, unknown>) };
+  const profiling: Record<string, unknown> = { ...(settings.profiling as Record<string, unknown>) };
   const prototypes: Record<string, unknown> = { ...(settings.prototypes as Record<string, unknown>) };
   const models: Record<string, unknown> = { ...(prototypes.models as Record<string, unknown>) };
   const oneOf = (key: string, values: readonly string[]) => {
@@ -403,6 +414,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [demo, "enabled", boolean(ENV_KEYS.demoEnabled)],
     [deConsole, "source", text(ENV_KEYS.deConsoleSource)],
     [deConsole, "refreshMinutes", integer(ENV_KEYS.deConsoleRefreshMinutes)],
+    [profiling, "checkMinutes", integer(ENV_KEYS.profilingCheckMinutes)],
     [result, "profile", oneOf(ENV_KEYS.profile, ["full", "hosted"])],
     [prototypes, "enabled", boolean(ENV_KEYS.prototypesEnabled)],
     [prototypes, "database", text(ENV_KEYS.prototypesDatabase) ?? text(DATABASE_URL)],
@@ -419,6 +431,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   result.analysis = analysis;
   if (Object.keys(demo).length > 0) result.demo = demo;
   if (Object.keys(deConsole).length > 0) result.deConsole = deConsole;
+  if (Object.keys(profiling).length > 0) result.profiling = profiling;
   if (Object.keys(prototypes).length > 0) result.prototypes = Object.keys(models).length > 0 ? { ...prototypes, models } : prototypes;
   return result;
 }

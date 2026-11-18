@@ -45,7 +45,7 @@ export function figuresAt(db: Executor, cutoff: Date): FiguresThen {
     select json_extract(l.summary, '$.combined.conclusion') as conclusion
     from initiatives i
     left join latest l on l.initiative_id = i.id and l.recency = 1
-    where i.claim_repository_source_id is null and i.system_owned = 0 and i.created_at <= ${at}`);
+    where i.claim_repository_source_id is null and i.system_owned = 0 and i.profiling = 0 and i.created_at <= ${at}`);
   const byConclusion = Object.fromEntries(CONCLUSION_FILTERS.map((filter) => [filter, 0])) as Record<ConclusionFilter, number>;
   for (const { conclusion } of conclusions) byConclusion[isConclusionFilter(conclusion) ? conclusion : "none"]++;
   const enabled = repositories?.enabled ?? 0;
@@ -99,7 +99,7 @@ export function assessmentTrend(db: Executor, now: Date = new Date(), weeks = TR
     from evaluations e
     join initiatives i on i.id = e.initiative_id
     where e.state = 'complete' and coalesce(e.finished_at, e.created_at) > ${start} and coalesce(e.finished_at, e.created_at) <= ${end}
-      and i.claim_repository_source_id is null and i.system_owned = 0
+      and i.claim_repository_source_id is null and i.system_owned = 0 and i.profiling = 0
     group by week, conclusion`);
   const result: TrendWeek[] = Array.from({ length: weeks }, (_, index) => ({ start: new Date(start + index * WEEK_MS), counts: { gaps: 0, undetermined: 0, conforms: 0, not_applicable: 0 } }));
   for (const row of rows) {
@@ -125,7 +125,7 @@ export function recentActivity(db: Executor, limit = ACTIVITY_LIMIT): ActivityIt
   const rows = db.all<{ kind: ActivityKind; at: number; name: string; href: string }>(sql`
     select case r.state when 'failed' then 'run_failed' else 'run_completed' end as kind, r.finished_at as at, i.name as name, '/runs/' || r.public_id as href
     from assessments r join initiatives i on i.id = r.initiative_id
-    where r.finished_at is not null and r.state in ('complete', 'complete_with_issues', 'failed') and i.claim_repository_source_id is null and i.system_owned = 0
+    where r.finished_at is not null and r.state in ('complete', 'complete_with_issues', 'failed') and i.claim_repository_source_id is null and i.system_owned = 0 and i.profiling = 0
     order by at desc, r.id desc
     limit ${limit}`);
   return rows.map((row) => ({ kind: row.kind, at: new Date(row.at), record: { name: row.name, href: row.href } }));

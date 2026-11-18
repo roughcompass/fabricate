@@ -26,6 +26,7 @@ const deConsole = config.deConsole.source;
 console.log(
   `DE Console:         ${deConsole ? `${deConsole.kind === "file" ? deConsole.path : deConsole.url}, every ${config.deConsole.refreshMinutes} minutes${deConsole.kind === "url" ? `, token ${process.env[DE_CONSOLE_TOKEN] ? "set" : "not set"}` : ""}` : "(none)"}`,
 );
+console.log(`Profiling check:    every ${config.profiling.checkMinutes} minutes`);
 console.log(
   `Analysis budgets:   ${Object.entries(config.analysis)
     .map(([key, value]) => `${key}=${value}`)

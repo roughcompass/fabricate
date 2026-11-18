@@ -88,9 +88,23 @@ export function claimInitiative(db: Executor, source: RepositorySource): Initiat
   });
 }
 
-/** Whether the system created +initiative+: for a claim, or the Salt Patterns initiative. */
-export function isSystemOwned(initiative: Pick<Initiative, "claimRepositorySourceId" | "systemOwned">): boolean {
-  return initiative.claimRepositorySourceId !== null || initiative.systemOwned;
+/** Whether the system created +initiative+: for a claim, the Salt Patterns initiative, or the Repository profiling initiative. */
+export function isSystemOwned(initiative: Pick<Initiative, "claimRepositorySourceId" | "systemOwned" | "profiling">): boolean {
+  return initiative.claimRepositorySourceId !== null || initiative.systemOwned || initiative.profiling;
+}
+
+/**
+ * The Repository profiling initiative, which migration 0038 seeds: DE FabLab
+ * owns it, and each of its Runs profiles one repository as that repository's
+ * next profile version (docs/profiling.md). It has no Releases and no page of
+ * its own; its Runs are shown under Repositories.
+ */
+export const PROFILING_INITIATIVE_ID = "ini_repoprofiling000";
+
+export const PROFILING_FIXED = "DE FabLab owns Repository profiling: its name, objective, scope, and Releases can't change";
+
+export function profilingInitiative(db: Executor): Initiative {
+  return getInitiative(db, PROFILING_INITIATIVE_ID);
 }
 
 export const SALT_PATTERNS_FIXED = "DE FabLab owns Salt Patterns: its name, objective, and template targets can't change, but you can choose its Releases";
@@ -109,6 +123,7 @@ export function saltPatternsInitiative(db: Executor): Initiative {
 /** A claim's initiative keeps its one repository, though its name and Releases can change; Salt Patterns changes only its Releases. */
 function refuseScopeChange(db: Executor, initiative: Initiative, input: Required<InitiativeInput>): void {
   if (initiative.systemOwned) throw new ValidationError([{ field: "base", message: SALT_PATTERNS_FIXED }]);
+  if (initiative.profiling) throw new ValidationError([{ field: "base", message: PROFILING_FIXED }]);
   if (initiative.claimRepositorySourceId === null) return;
   const own = selectedSources(db, initiative.id).map((source) => source.publicId);
   if (input.selectionMode !== "explicit" || input.sourcePublicIds.length !== 1 || input.sourcePublicIds[0] !== own[0]) {
@@ -149,6 +164,7 @@ export function updateInitiative(db: Executor, publicId: string, expectedLockVer
 export function updateReleaseSelections(db: Executor, publicId: string, expectedLockVersion: number, standardReleasePublicIds: readonly string[]): Initiative {
   return immediate(db, (tx) => {
     const current = getInitiative(tx, publicId);
+    if (current.profiling) throw new ValidationError([{ field: "base", message: PROFILING_FIXED }]);
     if (current.lockVersion !== expectedLockVersion) throw new StaleRecordError(`${current.name} was changed by someone else`);
     // Validated as a scope that selects no sources, so only the Releases are checked.
     const { releases } = validate(tx, normalize({ name: current.name, objective: current.objective, selectionMode: "all_enabled", standardReleasePublicIds }), new Set());
@@ -168,7 +184,7 @@ export function updateReleaseSelections(db: Executor, publicId: string, expected
 export function deleteInitiative(db: Executor, publicId: string): void {
   immediate(db, (tx) => {
     const initiative = getInitiative(tx, publicId);
-    if (initiative.systemOwned) throw new ValidationError([{ field: "base", message: `${initiative.name} is owned by DE FabLab and is retained` }]);
+    if (initiative.systemOwned || initiative.profiling) throw new ValidationError([{ field: "base", message: `${initiative.name} is owned by DE FabLab and is retained` }]);
     if (isSystemOwned(initiative)) throw new ValidationError([{ field: "base", message: `${initiative.name} was created for a claimed Repository and is retained` }]);
     const assessed = tx.select({ id: assessments.id }).from(assessments).where(eq(assessments.initiativeId, initiative.id)).limit(1).get();
     if (assessed) {
@@ -196,10 +212,11 @@ export function initiativeById(db: Executor, id: number): Initiative {
 
 /**
  * Initiatives operators created, or with +systemOwned+, those the system
- * created for claims. Neither includes the Salt Patterns initiative.
+ * created for claims. Neither includes the Salt Patterns or Repository
+ * profiling initiative.
  */
 export function listInitiatives(db: Executor, options: { systemOwned?: boolean } = {}): Initiative[] {
-  const owner = and(options.systemOwned ? isNotNull(initiatives.claimRepositorySourceId) : isNull(initiatives.claimRepositorySourceId), not(initiatives.systemOwned));
+  const owner = and(options.systemOwned ? isNotNull(initiatives.claimRepositorySourceId) : isNull(initiatives.claimRepositorySourceId), not(initiatives.systemOwned), not(initiatives.profiling));
   return db.select().from(initiatives).where(owner).orderBy(sql`lower(${initiatives.name})`, asc(initiatives.publicId)).all();
 }
 

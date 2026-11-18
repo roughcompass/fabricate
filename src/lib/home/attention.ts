@@ -35,7 +35,12 @@ export function attentionItems(db: Executor, config: Pick<FabricateConfig, "deCo
   return items.sort((a, b) => b.since.getTime() - a.since.getTime());
 }
 
-/** Each Assessment's latest Run, when it failed or couldn't assess every Repository. Runs are numbered by id within their Assessment, as the Run pages number them. */
+/**
+ * Each Assessment's latest Run, when it failed or couldn't assess every
+ * Repository. Runs are numbered by id within their Assessment, as the Run
+ * pages number them. Repository profiling Runs are left out: the
+ * Repositories list shows a failed profile version on its repository.
+ */
 function runProblems(db: Executor): AttentionItem[] {
   const rows = db.all<{ public_id: string; state: "failed" | "complete_with_issues"; number: number; since: number; assessment_public_id: string; name: string; unassessed: number }>(sql`
     with numbered as (
@@ -48,7 +53,7 @@ function runProblems(db: Executor): AttentionItem[] {
       (select count(*) from assessment_targets t where t.assessment_id = n.id and t.state = 'failed') as unassessed
     from numbered n
     join initiatives i on i.id = n.initiative_id
-    where n.recency = 1 and n.state in ('failed', 'complete_with_issues')`);
+    where n.recency = 1 and n.state in ('failed', 'complete_with_issues') and i.profiling = 0`);
   return rows.map((row): AttentionItem => {
     const common = { since: new Date(row.since), assessment: { publicId: row.assessment_public_id, name: row.name }, run: { publicId: row.public_id, number: row.number } };
     return row.state === "failed" ? { kind: "run_failed", ...common } : { kind: "run_with_issues", ...common, unassessed: row.unassessed };

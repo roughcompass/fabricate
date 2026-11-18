@@ -43,7 +43,14 @@ test("adds, edits, disables, and re-enables a Source with validation feedback", 
   await expect(page.locator("#source-clone-url-error")).toContainText("already registered as orders (src_");
   await page.getByRole("link", { name: "Cancel" }).click();
 
+  // A new Repository is queued for its first profile version, and its name opens its page.
+  await expect(page.getByRole("row", { name: /orders/ })).toContainText("Version 1 queued");
   await page.getByRole("link", { name: "orders", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "orders" })).toBeVisible();
+  await expect(page.getByText("Not profiled yet")).toBeVisible();
+  await page.getByRole("button", { name: "Re-profile" }).click();
+  await expect(toasts(page).getByText("orders is already being profiled.")).toBeVisible();
+  await page.getByRole("link", { name: "Edit" }).click();
   await page.getByLabel("Reference").fill("release");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(toasts(page).getByText("Running and past Runs keep the configuration they started with.")).toBeVisible();

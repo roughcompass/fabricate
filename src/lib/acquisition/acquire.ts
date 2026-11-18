@@ -110,8 +110,8 @@ export async function acquireTarget(db: Executor, target: AssessmentTarget, opti
   }
 }
 
-/** The URL and transport Git uses for a target, resolving local paths through the boundary. */
-function gitSource(target: SourceTarget, boundary: SourceBoundary): { url: string; protocol: Protocol } {
+/** The URL and transport Git uses for a source, resolving local paths through the boundary. */
+export function gitSource(target: Pick<SourceTarget, "cloneUrl">, boundary: SourceBoundary): { url: string; protocol: Protocol } {
   const url = CloneUrl.parse(target.cloneUrl);
   if (!url.isFile) return { url: url.toString(), protocol: url.protocol };
   const location = boundary.check(url.localPath!);

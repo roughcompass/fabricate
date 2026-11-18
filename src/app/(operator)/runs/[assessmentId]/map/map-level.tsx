@@ -29,12 +29,11 @@ export function pageParam(query: Query, name: string): number {
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
 
-/** The breadcrumbs from the Assessments list to the Run's map. */
+/** The breadcrumbs from the Assessments list, or for a profile version the Repositories list, to the Run's map. */
 export function runCrumbs(run: LoadedRun, withMap: boolean): PathStep[] {
   return [
-    { href: "/assessments", label: "Assessments" },
-    { href: `/assessments/${run.initiative.publicId}`, label: run.initiative.name },
-    { href: `/runs/${run.assessment.publicId}`, label: `Run #${run.number}` },
+    ...run.context.parents,
+    { href: `/runs/${run.assessment.publicId}`, label: run.context.name },
     ...(withMap ? [{ href: `/runs/${run.assessment.publicId}/map`, label: "Relationship Map" }] : []),
   ];
 }

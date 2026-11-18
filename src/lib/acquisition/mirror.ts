@@ -57,30 +57,7 @@ export class Mirror {
   /** Decides what the configured reference names on the remote. */
   async resolve(url: string, protocol: Protocol, gitRef: string | null, signal?: AbortSignal): Promise<ResolvedRef> {
     if (gitRef && FULL_SHA.test(gitRef)) return { kind: "commit", name: gitRef };
-
-    const advertised = parseLsRemote(await this.runner.lsRemote(url, protocol, signal));
-    if (!gitRef) {
-      const head = advertised.symrefs.get("HEAD");
-      if (!head || !advertised.refs.has(head)) throw new AcquisitionError("invalid_ref", "The source has no default branch; it may be empty");
-      return { kind: "default_branch", name: head };
-    }
-
-    if (gitRef.startsWith("refs/heads/") || gitRef.startsWith("refs/tags/")) {
-      if (!advertised.refs.has(gitRef)) throw new AcquisitionError("invalid_ref", `The source has no ${gitRef}`);
-      return { kind: gitRef.startsWith("refs/heads/") ? "branch" : "tag", name: gitRef };
-    }
-
-    const branch = `refs/heads/${gitRef}`;
-    const tag = `refs/tags/${gitRef}`;
-    const hasBranch = advertised.refs.has(branch);
-    const hasTag = advertised.refs.has(tag);
-    if (hasBranch && hasTag) {
-      throw new AcquisitionError("ambiguous_ref", `${gitRef} names both a branch and a tag; configure refs/heads/${gitRef} or refs/tags/${gitRef}`);
-    }
-    if (hasBranch) return { kind: "branch", name: branch };
-    if (hasTag) return { kind: "tag", name: tag };
-    if (/^[0-9a-f]{7,39}$/.test(gitRef)) throw new AcquisitionError("invalid_ref", `${gitRef} is not a branch or tag; configure a full 40-character commit SHA`);
-    throw new AcquisitionError("invalid_ref", `The source has no branch or tag named ${gitRef}`);
+    return resolveAdvertised(parseLsRemote(await this.runner.lsRemote(url, protocol, signal)), gitRef);
   }
 
   /**
@@ -136,13 +113,16 @@ export class Mirror {
   }
 }
 
-interface Advertisement {
+export interface Advertisement {
   refs: Map<string, string>;
+  /** The commit an annotated tag points at, by the tag's ref. */
+  peeled: Map<string, string>;
   symrefs: Map<string, string>;
 }
 
 export function parseLsRemote(output: string): Advertisement {
   const refs = new Map<string, string>();
+  const peeled = new Map<string, string>();
   const symrefs = new Map<string, string>();
   for (const line of output.split("\n")) {
     const symref = /^ref: (\S+)\t(\S+)$/.exec(line);
@@ -151,7 +131,43 @@ export function parseLsRemote(output: string): Advertisement {
       continue;
     }
     const ref = /^([0-9a-f]{40})\t(\S+)$/.exec(line);
-    if (ref && !ref[2]!.endsWith("^{}")) refs.set(ref[2]!, ref[1]!);
+    if (!ref) continue;
+    const [, sha, name] = ref as unknown as [string, string, string];
+    if (name.endsWith("^{}")) peeled.set(name.slice(0, -3), sha);
+    else refs.set(name, sha);
   }
-  return { refs, symrefs };
+  return { refs, peeled, symrefs };
+}
+
+/** What +gitRef+ names among the advertised refs: the default branch when it's null, else a branch or tag. */
+export function resolveAdvertised(advertised: Advertisement, gitRef: string | null): ResolvedRef {
+  if (gitRef && FULL_SHA.test(gitRef)) return { kind: "commit", name: gitRef };
+  if (!gitRef) {
+    const head = advertised.symrefs.get("HEAD");
+    if (!head || !advertised.refs.has(head)) throw new AcquisitionError("invalid_ref", "The source has no default branch; it may be empty");
+    return { kind: "default_branch", name: head };
+  }
+
+  if (gitRef.startsWith("refs/heads/") || gitRef.startsWith("refs/tags/")) {
+    if (!advertised.refs.has(gitRef)) throw new AcquisitionError("invalid_ref", `The source has no ${gitRef}`);
+    return { kind: gitRef.startsWith("refs/heads/") ? "branch" : "tag", name: gitRef };
+  }
+
+  const branch = `refs/heads/${gitRef}`;
+  const tag = `refs/tags/${gitRef}`;
+  const hasBranch = advertised.refs.has(branch);
+  const hasTag = advertised.refs.has(tag);
+  if (hasBranch && hasTag) {
+    throw new AcquisitionError("ambiguous_ref", `${gitRef} names both a branch and a tag; configure refs/heads/${gitRef} or refs/tags/${gitRef}`);
+  }
+  if (hasBranch) return { kind: "branch", name: branch };
+  if (hasTag) return { kind: "tag", name: tag };
+  if (/^[0-9a-f]{7,39}$/.test(gitRef)) throw new AcquisitionError("invalid_ref", `${gitRef} is not a branch or tag; configure a full 40-character commit SHA`);
+  throw new AcquisitionError("invalid_ref", `The source has no branch or tag named ${gitRef}`);
+}
+
+/** The commit +resolved+ names: an annotated tag's target, otherwise the advertised object. */
+export function advertisedCommit(advertised: Advertisement, resolved: ResolvedRef): string {
+  if (resolved.kind === "commit") return resolved.name;
+  return advertised.peeled.get(resolved.name) ?? advertised.refs.get(resolved.name)!;
 }

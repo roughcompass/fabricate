@@ -1,11 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { LAUNCH_TOKEN } from "@/lib/assessments/assessment-records";
 import { disableSource, editSource, enableSource, registerSource, type SourceForm } from "@/lib/catalog/catalog";
+import { getSource } from "@/lib/catalog/source-records";
 import { CloneUrl } from "@/lib/catalog/clone-url";
 import { getDb } from "@/lib/db/client";
 import { NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
+import { queueProfile } from "@/lib/profiling/versions";
+import { repositoryHref } from "@/lib/web/repository-paths";
 import { errorsFrom, integer, text } from "@/lib/web/form-data";
 import type { SourceFormState } from "./source-form-state";
 
@@ -65,4 +69,19 @@ export async function setSourceEnabled(formData: FormData): Promise<void> {
     throw error;
   }
   redirect(`/repositories?notice=${enabled ? "enabled" : "disabled"}&source=${publicId}`);
+}
+
+/**
+ * Queues a new profile version of a Repository, unless one is queued or
+ * running. The page's launch token makes a repeated submission name the
+ * version it already queued. Returns to the Repository's page, or to the
+ * list when it was chosen there.
+ */
+export async function reprofileSource(formData: FormData): Promise<void> {
+  const publicId = text(formData, "publicId", 40);
+  if (!isPublicId(publicId, "src")) throw new NotFoundError("Unknown repository source");
+  const token = text(formData, "launchToken", 40);
+  const result = queueProfile(getDb(), getSource(getDb(), publicId), "manual", { launchToken: LAUNCH_TOKEN.test(token) ? token : undefined });
+  const notice = result.status === "queued" ? "reprofiled" : result.status === "active" ? "profiling" : "profile-disabled";
+  redirect(text(formData, "from", 10) === "list" ? `/repositories?notice=${notice}&source=${publicId}` : `${repositoryHref(publicId)}?notice=${notice}`);
 }

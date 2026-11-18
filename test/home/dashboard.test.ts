@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity, weekChange } from "@/lib/home/dashboard";
 import { claimedShare, fleetSummary } from "@/lib/home/summary";
+import type { Assessment } from "@/lib/assessments/assessment-records";
+import { getConfig } from "@/lib/config";
+import { attentionItems } from "@/lib/home/attention";
 import { claimInitiative } from "@/lib/initiatives/initiative-records";
+import { queueProfile } from "@/lib/profiling/versions";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
@@ -67,7 +71,7 @@ describe("Assessment trend", () => {
 });
 
 describe("recent activity", () => {
-  it("leads with the newest finished Run, linking to it, and leaves claims' Runs out", () => {
+  it("leads with the newest finished Run, linking to it, and leaves claims' Runs and profile versions out", () => {
     const db = createTestDb();
     const source = buildSource(db);
     const orders = buildInitiative(db, { name: "Orders review", sources: [source] });
@@ -75,8 +79,12 @@ describe("recent activity", () => {
     backdate(db, "assessments", "finished_at", older.id, 1);
     const failed = driveRun(db, buildAssessment(db, { initiative: orders }).assessment, "failed");
     driveRun(db, buildAssessment(db, { initiative: claimInitiative(db, source) }).assessment, "complete");
+    const version = queueProfile(db, source, "imported") as { version: { assessment: Assessment } };
+    driveRun(db, version.version.assessment, "failed");
 
     const activity = recentActivity(db);
+    expect(attentionItems(db, getConfig()).map((item) => item.kind)).toEqual(["run_failed"]);
+    expect(fleetSummary(db).assessments.total).toBe(1);
     expect(activity.map((item) => item.kind)).toEqual(["run_failed", "run_completed"]);
     expect(activity[0]).toMatchObject({ record: { name: "Orders review", href: `/runs/${failed.publicId}` } });
   });

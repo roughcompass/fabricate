@@ -4,7 +4,7 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type Db, immediate, migrateDatabase, openDatabase } from "@/lib/db/client";
-import { jobs } from "@/lib/db/schema";
+import { JOB_PRIORITIES, jobs } from "@/lib/db/schema";
 import { claimNext, enqueue, fail, jobCounts, renewLease, succeed } from "@/lib/jobs/queue";
 import { NonRetryableError, Worker, drainJobs, runJob } from "@/lib/jobs/worker";
 import { createTestDb, rawRun } from "../support/db";
@@ -70,6 +70,17 @@ describe("job queue", () => {
     expect(claimNext(db, { workerId: "w", now: at(10) })?.idempotencyKey).toBe("test.work:second");
     expect(claimNext(db, { workerId: "w", now: at(10) })).toBeUndefined();
     expect(claimNext(db, { workerId: "w", now: at(5_000) })?.idempotencyKey).toBe("test.work:later");
+  });
+
+  it("claims background jobs only when no normal job is due, however long they have waited", () => {
+    enqueue(db, job("profile", { runAfter: at(0), priority: JOB_PRIORITIES.background }));
+    enqueue(db, job("assessment", { runAfter: at(500) }));
+    enqueue(db, job("scheduled", { runAfter: at(5_000) }));
+
+    expect(claimNext(db, { workerId: "w", now: at(1_000) })?.idempotencyKey).toBe("test.work:assessment");
+    expect(claimNext(db, { workerId: "w", now: at(1_000) })?.idempotencyKey).toBe("test.work:profile");
+    expect(claimNext(db, { workerId: "w", now: at(1_000) })).toBeUndefined();
+    expect(reload(db, 1).priority).toBe(JOB_PRIORITIES.background);
   });
 
   it("resumes a job whose lease expired and ignores the stale worker", () => {

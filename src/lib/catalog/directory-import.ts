@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Executor } from "@/lib/db/client";
+import { type Executor, immediate } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
+import { queueProfile } from "@/lib/profiling/versions";
 import { CloneUrl } from "./clone-url";
 import { BoundaryViolation, SourceBoundary } from "./source-boundary";
 import { type RepositorySource, findEnabledSourceByCanonicalUrl, insertSource } from "./source-records";
@@ -59,7 +60,14 @@ export function confirmImport(db: Executor, directory: string, selectedPaths: re
     if (candidate.status !== "importable" || !selected.has(candidate.path)) continue;
     const url = CloneUrl.parse(candidate.cloneUrl!);
     try {
-      result.created.push(insertSource(db, { name: candidate.name, cloneUrl: url.toString(), canonicalUrl: url.canonical }));
+      result.created.push(
+        immediate(db, (tx) => {
+          const source = insertSource(tx, { name: candidate.name, cloneUrl: url.toString(), canonicalUrl: url.canonical });
+          // Each imported repository is queued for its first profile (docs/profiling.md).
+          queueProfile(tx, source, "imported");
+          return source;
+        }),
+      );
     } catch (error) {
       if (!(error instanceof ValidationError)) throw error;
       result.failed.push({ candidate, message: error.issues.map((issue) => issue.message).join(" ") });

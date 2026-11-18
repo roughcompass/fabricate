@@ -8,6 +8,8 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/(assessments|repositories|standards)\/?$/, "list"],
   [/^\/repositories\/import\/?$/, "list"],
   [/^\/repositories\/de-console\/?$/, "detail"],
+  // A Repository's page, its versions, and each version.
+  [/^\/repositories\/src_[^/]+(\/versions(\/[^/]+)?)?\/?$/, "detail"],
   [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "detail"],
   // The template demo's operator pages; running applications have no skeleton.
   // Preview mode is a focused page: its skeleton hides the sidebar as soon as the navigation starts.

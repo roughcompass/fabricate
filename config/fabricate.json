@@ -20,6 +20,9 @@
       "source": null,
       "refreshMinutes": 60
     },
+    "profiling": {
+      "checkMinutes": 60
+    },
     "profile": "full",
     "prototypes": {
       "enabled": false,

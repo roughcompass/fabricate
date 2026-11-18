@@ -11,6 +11,7 @@ import { Panel } from "@/components/ui/panel";
 import { Status, humanize } from "@/components/ui/status";
 import { SearchField } from "@/components/ui/search-field";
 import { Select } from "@/components/ui/form";
+import { RelativeTime } from "@/components/ui/relative-time";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { Tag } from "@/components/ui/tag";
@@ -20,8 +21,10 @@ import { getDb } from "@/lib/db/client";
 import { isOwnershipFilter, ownershipFilterOf } from "@/lib/ownership/coverage";
 import { type RepositoryOwnership, repositoryOwnership } from "@/lib/ownership/read";
 import { applicationLabel } from "@/lib/ownership/records";
+import { type ProfileSummary, ACTIVE_STATES, profileSummaries } from "@/lib/profiling/versions";
 import { repositoriesHref } from "@/lib/web/list-filters";
-import { setSourceEnabled } from "./actions";
+import { repositoryHref, versionHref } from "@/lib/web/repository-paths";
+import { reprofileSource, setSourceEnabled } from "./actions";
 import styles from "./list.module.css";
 import { sourceOutcome } from "./outcomes";
 
@@ -44,6 +47,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
   const matching = ownership ? searched.filter((source) => ownershipFilterOf(owned.get(source.id)) === ownership) : searched;
   const sources = status ? matching.filter((source) => source.enabled === FILTERS[status]) : matching;
   const counts = assessmentCounts(db);
+  const profiles = profileSummaries(db);
   const enabledCount = matching.filter((source) => source.enabled).length;
   const href = (next: keyof typeof FILTERS | null, query = search) => repositoriesHref({ status: next, ownership, q: query });
   const create = (
@@ -56,7 +60,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
     <Page>
       <PageHeader
         title="Repositories"
-        description="Git repositories available to Assessments. Edits and disabling apply to Runs started afterward."
+        description="Git repositories available to Assessments, each profiled in the background whenever it changes. Edits and disabling apply to Runs started afterward."
         secondaryActions={[
           { href: "/repositories/import", label: "Import Repositories", icon: "folder" },
           { href: "/repositories/claim", label: "Claim a Repository", icon: "user" },
@@ -106,6 +110,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                 <Th>Reference</Th>
                 <Th>SEAL application</Th>
                 <Th>Status</Th>
+                <Th>Profile</Th>
                 <Th align="numeric">Runs</Th>
                 <Th align="actions" hidden>
                   Actions
@@ -117,7 +122,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
               <tr key={source.publicId} id={source.publicId}>
                 <Td label="Name">
                   <Primary>
-                    <Link href={`/repositories/${source.publicId}/edit`}>{source.name}</Link>
+                    <Link href={repositoryHref(source.publicId)}>{source.name}</Link>
                   </Primary>
                   <Secondary>
                     <span className={styles.cloneUrl}>
@@ -134,12 +139,20 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                 <Td label="Status">
                   <Status state={source.enabled ? "enabled" : "disabled"} />
                 </Td>
+                <Td label="Profile">
+                  <ProfileCell sourcePublicId={source.publicId} summary={profiles.get(source.id)} enabled={source.enabled} />
+                </Td>
                 <Td label="Runs" align="numeric">
                   {countLabel(counts.get(source.id) ?? 0, "Run")}
                 </Td>
                 <Td align="actions">
                   <RowActions>
                     <Menu label={`Actions for ${source.name}`}>
+                      {source.enabled && (
+                        <MenuAction action={reprofileSource} fields={{ publicId: source.publicId, from: "list" }} icon="refresh">
+                          Re-profile
+                        </MenuAction>
+                      )}
                       <MenuItem href={`/repositories/${source.publicId}/edit`} icon="edit">
                         Edit
                       </MenuItem>
@@ -191,6 +204,44 @@ function SealApplication({ ownership }: { ownership: RepositoryOwnership | undef
           <Status state="conflicting" label="In conflict" size="sm" />
         </Secondary>
       )}
+    </>
+  );
+}
+
+/**
+ * A Repository's profile in the list: its current version, linked, with when
+ * it was profiled; and the newest version's state when that one is queued,
+ * running, or failed.
+ */
+function ProfileCell({ sourcePublicId, summary, enabled }: { sourcePublicId: string; summary: ProfileSummary | undefined; enabled: boolean }) {
+  if (!summary) return <Secondary>{enabled ? "Queued" : "Not profiled"}</Secondary>;
+  const { latest, current } = summary;
+  const pending = (ACTIVE_STATES as readonly string[]).includes(latest.state);
+  const newest = latest.version !== current?.version;
+  return (
+    <>
+      {current ? (
+        <>
+          <Link href={versionHref(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link>
+          <Secondary>
+            <RelativeTime value={current.profiledAt} />
+          </Secondary>
+        </>
+      ) : (
+        !pending && <Secondary>Not profiled</Secondary>
+      )}
+      {newest &&
+        (pending ? (
+          <Secondary>
+            <Status state={latest.state} label={`Version ${latest.version} ${latest.state === "queued" ? "queued" : "profiling"}`} size="sm" />
+          </Secondary>
+        ) : (
+          <Secondary>
+            <Link href={versionHref(sourcePublicId, latest.version)}>
+              <Status state="failed" label={`Version ${latest.version} failed`} size="sm" />
+            </Link>
+          </Secondary>
+        ))}
     </>
   );
 }

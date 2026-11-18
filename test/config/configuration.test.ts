@@ -16,6 +16,7 @@ const shared: Settings = {
   analysis: { maxBlobBytes: 1024, maxFiles: 10, maxTotalBytes: 4096 },
   demo: { enabled: false },
   deConsole: { source: null, refreshMinutes: 60 },
+  profiling: { checkMinutes: 60 },
   profile: "full",
   prototypes: {
     enabled: false,

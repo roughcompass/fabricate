@@ -26,8 +26,8 @@ export interface LatestConclusion {
 /**
  * The latest completed Evaluation's conclusion for every Assessment the
  * operator created, or for every Assessment created for a claim, by the
- * model Initiative's id. The Salt Patterns initiative's template
- * Assessments are neither. One query, whatever the number of Assessments.
+ * model Initiative's id. The Salt Patterns and Repository profiling
+ * initiatives are neither. One query, whatever the number of Assessments.
  */
 export function latestConclusions(db: Executor, options: { systemOwned?: boolean } = {}): Map<number, LatestConclusion> {
   const systemOwned = options.systemOwned ?? false;
@@ -46,7 +46,7 @@ export function latestConclusions(db: Executor, options: { systemOwned?: boolean
       json_extract(l.summary, '$.combined.conclusion') as conclusion
     from initiatives i
     left join latest l on l.initiative_id = i.id and l.recency = 1
-    where (i.claim_repository_source_id is not null) = ${systemOwned ? 1 : 0} and i.system_owned = 0`);
+    where (i.claim_repository_source_id is not null) = ${systemOwned ? 1 : 0} and i.system_owned = 0 and i.profiling = 0`);
   return new Map(
     rows.map((row) => [
       row.initiative_id,

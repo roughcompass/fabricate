@@ -133,7 +133,7 @@ describe("migration 0028: template targets", () => {
       },
     ]);
     expect(db.$client.prepare("select * from source_snapshots").all()).toEqual(snapshotBefore);
-    expect(db.$client.prepare("select * from initiatives where public_id = 'ini_fleet00000000000'").get()).toEqual({ ...initiativeBefore, system_owned: 0 });
+    expect(db.$client.prepare("select * from initiatives where public_id = 'ini_fleet00000000000'").get()).toEqual({ ...initiativeBefore, system_owned: 0, profiling: 0 });
     expect(db.$client.prepare("select count(*) as n from initiative_targets").get()).toEqual({ n: 1 });
     // The carried-over target still obeys its rules.
     expect(() => db.$client.prepare("update assessment_targets set clone_url = 'https://elsewhere.example/x.git'").run()).toThrow(/scope snapshot cannot change/);

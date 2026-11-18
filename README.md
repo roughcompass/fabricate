@@ -72,6 +72,7 @@ Environment variables override the file:
 | `demo.enabled` | `FABRICATE_DEMO` | `false`; `true` in development and test |
 | `deConsole.source` | `FABRICATE_DE_CONSOLE_SOURCE` | none; an export file or `https://` endpoint, see [docs/ownership.md](docs/ownership.md#the-de-console-import) |
 | `deConsole.refreshMinutes` | `FABRICATE_DE_CONSOLE_REFRESH_MINUTES` | 60 |
+| `profiling.checkMinutes` | `FABRICATE_PROFILING_CHECK_MINUTES` | 60; how often the worker checks every Repository for new commits and a new detector, see [docs/profiling.md](docs/profiling.md) |
 | `profile` | `FABRICATE_PROFILE` | `full`; `hosted` shows only Prototypes, see [docs/prototypes.md](docs/prototypes.md) |
 | `prototypes.enabled` | `FABRICATE_PROTOTYPES` | `false`; `true` in development and test |
 | `prototypes.database` | `FABRICATE_PROTOTYPES_DATABASE`, then `DATABASE_URL` | `storage/prototypes-pglite`; a PGlite directory or a `postgres://` URL |
@@ -166,6 +167,7 @@ The interface names three records differently from the code, which keeps the mod
 | Assessment | A long-lived objective that selects repositories, either all enabled Repositories or an explicit subset, and optionally published Standard Releases |
 | Run | One run over an Assessment's repositories, frozen when it starts, that pins each repository to a commit and analyzes it |
 | Repository Profile | The immutable, evidence-backed facts about one repository at one commit. Each fact is observed, inferred, unknown, or conflicting. |
+| Profile version | One numbered profiling of a Repository, queued in the background when it changes. Its page shows the newest version that has a Profile. See [docs/profiling.md](docs/profiling.md). |
 | Service Dependency | An outbound service call found in a Profile, with its endpoint, operations, access signals, and contract and substitute evidence |
 | Relationship Map | The directional package, composition, iframe, runtime-contract, and service-call relationships found across one Run's Profiles |
 | Standard | A named description of desired engineering state, made of Controls and edited as a draft |
@@ -181,7 +183,7 @@ The interface names three records differently from the code, which keeps the mod
 | Home | `/` |
 | Assessments | `/assessments`, `/assessments/new`, and `/assessments/<ini_ id>` with its `/edit` page |
 | Runs | `/runs/<asm_ id>`, with its `/map` and `/evidence/<id>` pages |
-| Repositories | `/repositories`, `/repositories/new`, `/repositories/import`, `/repositories/de-console`, and `/repositories/<src_ id>/edit` |
+| Repositories | `/repositories`, `/repositories/new`, `/repositories/import`, `/repositories/de-console`, and `/repositories/<src_ id>` with its `/edit`, `/versions`, and `/versions/<number>` pages |
 | Evaluations and Profiles | `/evaluations/<id>` and `/profiles/<id>`, unchanged |
 
 `/` opens Home: the fleet's figures, each linked to the list it counts, and the problems that need attention. Addresses from before the rename, under `/initiatives`, `/sources`, and `/assessments/<asm_ id>`, redirect permanently to the new ones (`next.config.ts`).
