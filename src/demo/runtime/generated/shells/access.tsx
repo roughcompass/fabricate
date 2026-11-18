@@ -118,7 +118,9 @@ function UserMenu({ compact }: { compact: boolean }) {
     <div data-demo-anchor="portal-session">
       <Overlay placement="bottom">
         <OverlayTrigger>
-          <Button appearance="transparent" aria-label={label}>
+          {/* Named by its visible text after "User menu for", so the name contains what it shows (WCAG 2.5.3). */}
+          <Button appearance="transparent">
+            <span className="visually-hidden">{compact ? label : "User menu for"}</span>
             <Avatar name={profile.name} size={1} aria-hidden />
             {!compact && (
               <StackLayout gap={0} align="start">

@@ -103,7 +103,7 @@ function IncidentFeed() {
                         sentiment={isSelected ? "accented" : "neutral"}
                         onClick={() => choose(incident)}
                         data-demo-anchor={`focus-${incident.id}`}
-                        aria-label={`Show health for ${incident.id}`}
+                        aria-label={`Focus ${incident.id}, show its health`}
                       >
                         <WarningIcon aria-hidden />
                         Focus

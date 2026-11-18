@@ -129,7 +129,7 @@ export function ToolbarMenu({ context, commentCount, highlight, onClose }: { con
                   key={item.id}
                   id={optionId(item)}
                   role="option"
-                  aria-label={item.id === "comments" && commentCount > 0 ? `${item.name}, ${commentCount} open` : item.name}
+                  // Named by its visible text, so its name contains what it shows (WCAG 2.5.3); its key is announced from aria-keyshortcuts, not read as text.
                   aria-keyshortcuts={item.key ? keyLabel(item.key) : undefined}
                   aria-selected={current?.id === item.id}
                   className={styles.item}
@@ -140,7 +140,11 @@ export function ToolbarMenu({ context, commentCount, highlight, onClose }: { con
                   <Icon name={item.icon} size={16} />
                   <span className={styles.itemName}>{item.name}</span>
                   {item.id === "comments" && commentCount > 0 && <span className={styles.itemCount}>{`${commentCount} open`}</span>}
-                  {item.key && <kbd className={styles.keyChip}>{keyLabel(item.key)}</kbd>}
+                  {item.key && (
+                    <kbd className={styles.keyChip} aria-hidden="true">
+                      {keyLabel(item.key)}
+                    </kbd>
+                  )}
                 </div>
               ))}
             </div>

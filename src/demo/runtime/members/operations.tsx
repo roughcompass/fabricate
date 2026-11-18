@@ -92,7 +92,7 @@ function IncidentFeed({ timeline }: { timeline: boolean }) {
             </Td>
             <Td>{incident.region}</Td>
             <Td>
-              <Button variant="ghost" onClick={() => choose(incident)} anchor={`focus-${incident.id}`} aria-label={`Show health for ${incident.id}`}>
+              <Button variant="ghost" onClick={() => choose(incident)} anchor={`focus-${incident.id}`} aria-label={`Focus ${incident.id}, show its health`}>
                 <Icon name="alert" />
                 Focus
               </Button>

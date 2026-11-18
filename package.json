@@ -37,7 +37,7 @@
     "@salt-ds/core": "1.75.0",
     "@salt-ds/icons": "1.19.0",
     "@salt-ds/theme": "1.48.0",
-    "axe-core": "4.13.0",
+    "axe-core": "4.14.1",
     "better-sqlite3": "13.2.0",
     "drizzle-orm": "0.45.4",
     "geist": "1.9.2",

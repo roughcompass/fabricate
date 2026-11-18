@@ -82,7 +82,7 @@ export async function openTool(page: Page, id: string) {
   const item = itemById(id);
   if (!item) throw new Error(`No toolbar item ${id}`);
   const menu = await openToolbarMenu(page);
-  await menu.getByRole("option", { name: new RegExp(`^${item.name}(,|$)`) }).click();
+  await menu.getByRole("option", { name: new RegExp(`^${item.name}( |,|$)`) }).click();
   await expect(menuDialog(page)).toBeHidden();
 }
 
