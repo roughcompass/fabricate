@@ -14,7 +14,7 @@ describe("navigation skeletons", () => {
     ["/assessments/new", "form"],
     ["/assessments/ini_abc/edit", "form"],
     ["/repositories/new", "form"],
-    ["/repositories/src_abc/edit", "form"],
+    ["/repositories/src_abc/settings", "form"],
     ["/repositories/de-console", "detail"],
     ["/standards/new", "form"],
     ["/standards/std_abc/edit", "form"],

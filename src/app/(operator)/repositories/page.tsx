@@ -23,7 +23,7 @@ import { type RepositoryOwnership, repositoryOwnership } from "@/lib/ownership/r
 import { applicationLabel } from "@/lib/ownership/records";
 import { type ProfileSummary, ACTIVE_STATES, profileSummaries, profilingActivity } from "@/lib/profiling/versions";
 import { repositoriesHref } from "@/lib/web/list-filters";
-import { repositoryHref, versionHref } from "@/lib/web/repository-paths";
+import { repositoryHref, settingsHref, versionHref } from "@/lib/web/repository-paths";
 import { reprofileSource } from "./actions";
 import styles from "./list.module.css";
 import { sourceOutcome } from "./outcomes";
@@ -102,7 +102,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
               <>
                 <Th>Name</Th>
                 <Th>Reference</Th>
-                <Th>SEAL application</Th>
+                <Th>SEAL</Th>
                 <Th>Profile</Th>
                 <Th align="numeric">Runs</Th>
                 <Th align="actions" hidden>
@@ -126,7 +126,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                   </Secondary>
                 </Td>
                 <Td label="Reference">{source.gitRef ? <Tag>{source.gitRef}</Tag> : <Secondary>{humanize(sourceReferenceLabel(source))}</Secondary>}</Td>
-                <Td label="SEAL application">
+                <Td label="SEAL">
                   <SealApplication ownership={owned.get(source.id)} />
                 </Td>
                 <Td label="Profile">
@@ -141,8 +141,8 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                       <MenuAction action={reprofileSource} fields={{ publicId: source.publicId, from: "list" }} icon="refresh">
                         Re-profile
                       </MenuAction>
-                      <MenuItem href={`/repositories/${source.publicId}/edit`} icon="edit">
-                        Edit
+                      <MenuItem href={settingsHref(source.publicId)} icon="settings">
+                        Settings
                       </MenuItem>
                     </Menu>
                   </RowActions>
@@ -215,7 +215,8 @@ function ProfileCell({ sourcePublicId, summary }: { sourcePublicId: string; summ
     return (
       <span data-profiling={latest.state === "queued" ? "queued" : "profiling"}>
         <Status state={latest.state} label={latest.state === "queued" ? `Version ${latest.version} queued` : `Profiling version ${latest.version}`} />
-        {current && (
+        {/* A version writes its Profile just before its Run finishes; until then it's shown once, as profiling. */}
+        {current && current.version !== latest.version && (
           <>
             <Secondary>
               <Link href={versionHref(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link>

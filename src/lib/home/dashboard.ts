@@ -34,7 +34,7 @@ export function figuresAt(db: Executor, cutoff: Date): FiguresThen {
           )
       ) then 1 else 0 end) as claimed
     from repository_sources s
-    where s.created_at <= ${at}`);
+    where s.created_at <= ${at} and (s.deleted_at is null or s.deleted_at > ${at})`);
   const conclusions = db.all<{ conclusion: string | null }>(sql`
     with latest as (
       select e.initiative_id, e.summary, row_number() over (partition by e.initiative_id order by e.id desc) as recency

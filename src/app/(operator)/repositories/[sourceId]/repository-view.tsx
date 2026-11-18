@@ -17,7 +17,7 @@ import { getDb } from "@/lib/db/client";
 import { getProfile } from "@/lib/profiles/profile-records";
 import { type ProfileVersion, TRIGGER_LABELS, isActive } from "@/lib/profiling/versions";
 import { repositoryFocusHref } from "@/lib/relationships/map-view";
-import { repositoryHref, versionHref, versionsHref } from "@/lib/web/repository-paths";
+import { repositoryHref, settingsHref, versionHref, versionsHref } from "@/lib/web/repository-paths";
 import { reprofileSource } from "../actions";
 import { sourceOutcome } from "../outcomes";
 import styles from "@/components/profiles/profile-body.module.css";
@@ -97,7 +97,7 @@ export function RepositoryView({
         secondaryActions={[
           { href: versionsHref(source.publicId), label: `Versions (${count})`, icon: "history" },
           ...(mapHref ? [{ href: mapHref, label: "Relationship Map", icon: "network" as const }] : []),
-          { href: `/repositories/${source.publicId}/edit`, label: "Edit", icon: "edit" },
+          { href: settingsHref(source.publicId), label: "Settings", icon: "settings" },
         ]}
         alerts={
           <>

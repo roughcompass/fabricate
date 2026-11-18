@@ -1,0 +1,52 @@
+@layer pages {
+  /* GitHub's settings layout: the section menu beside the sections. */
+  .layout { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-10); align-items: start; }
+  .content { display: flex; flex-direction: column; gap: var(--space-10); min-width: 0; max-width: var(--size-content); }
+  @container content (max-width: 1023px) {
+    .layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
+  }
+
+  .section { display: flex; flex-direction: column; gap: var(--space-4); }
+  /* A section's heading sits on a rule, as GitHub's do. */
+  .heading { padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); font-size: var(--font-size-heading); line-height: var(--line-height-heading); }
+  .muted { margin: 0; color: var(--color-text-secondary); }
+
+  /* The Danger Zone: a box with an error border, one row per irreversible action. */
+  .dangerZone { border: 1px solid var(--color-error-border); border-radius: var(--radius-lg); }
+  .dangerRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); padding: var(--space-4); }
+  .dangerRow + .dangerRow { border-top: 1px solid var(--color-border); }
+  .dangerTitle { margin: 0; font-weight: var(--font-weight-semibold); }
+  /* A neutral button whose text says it destroys, filled in red only on hover, as GitHub's are. */
+  .dangerButton { color: var(--color-error); }
+  .dangerButton:hover { border-color: var(--color-danger); background: var(--color-danger); color: var(--color-on-danger); }
+
+  .dialog {
+    width: min(var(--size-dialog), calc(100vw - 2 * var(--space-4)));
+    max-width: none;
+    margin: auto;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-dialog);
+    color: var(--color-text);
+    &::backdrop { background: var(--color-overlay); }
+  }
+  .dialogHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); background: var(--color-bg-subtle); border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+  .dialogTitle { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .dialogRepository { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); padding: var(--space-6) var(--space-4) var(--space-4); text-align: center; overflow-wrap: anywhere; }
+  .dialogStep { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); border-top: 1px solid var(--color-border); }
+  .wide { width: 100%; justify-content: center; }
+
+  .warning { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-error-border); border-radius: var(--radius-md); background: var(--color-error-bg); color: var(--color-error); font-weight: var(--font-weight-medium); }
+  .effects { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding-left: var(--space-5); }
+
+  .confirm { display: flex; flex-direction: column; gap: var(--space-2); }
+  .confirm > button { width: 100%; justify-content: center; }
+  .confirmLabel { font-weight: var(--font-weight-medium); overflow-wrap: anywhere; }
+  .confirmInput { width: 100%; min-height: var(--size-control-md); padding: 0 var(--space-3); border: 1px solid var(--color-border-strong, var(--color-border)); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text); font: inherit; }
+  .confirmInput:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -1px; }
+  .confirmError { margin: 0; color: var(--color-error); }
+  /* Before JavaScript runs, the last step stands on the page, under the action's description. */
+  .inlineConfirm { flex-basis: 100%; }
+}

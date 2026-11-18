@@ -282,7 +282,7 @@ Every page follows one of a few patterns, built from `Page` and `PageHeader` (`p
 Every page marks one item current, and a record's pages mark the item for their list:
 
 - A Run, an Evaluation, or a Profile marks All Assessments.
-- A Repository's edit page, New Repository, and the imports mark Repositories.
+- A Repository's Settings, New Repository, and the imports mark Repositories.
 - A template preview marks Salt Patterns.
 - A prototype's variants and compare pages mark Prototypes.
 - A persona form marks Personas.
@@ -331,7 +331,7 @@ Public IDs appear only in a page's Details area, with a copy control. Each detai
 
 ### Lists
 
-A list page is a header and a `Panel` holding a `Table`. The primary cell links to the record; row actions are `sm` controls in `RowActions`, usually a `Menu`. Filter tabs show counts. An empty list shows an `EmptyState` in the list area with the action that fills it. The Repositories list adds a search that works without JavaScript, an Ownership filter (Claimed or Unclaimed), and a SEAL application column that marks a value in conflict. The Assessments list has tabs for the conclusion of each Assessment's latest completed Evaluation, with Not evaluated for none, and a Conclusion column linked to that Evaluation. Both lists build their addresses with `src/lib/web/list-filters.ts`, which Home's figures use too, so a figure and the list it opens can't disagree. The tabs and filters sit on the canvas above the white table. The template gallery is the one list that is not a table: it shows templates as a grid of white `MediaCard`s on the canvas, with the same empty state and search rules; with no match, its empty state sits in a flush `Panel`.
+A list page is a header and a `Panel` holding a `Table`. The primary cell links to the record; row actions are `sm` controls in `RowActions`, usually a `Menu`. Filter tabs show counts. An empty list shows an `EmptyState` in the list area with the action that fills it. The Repositories list adds a search that works without JavaScript, an Ownership filter (Claimed or Unclaimed), and a SEAL column that marks a value in conflict. The Assessments list has tabs for the conclusion of each Assessment's latest completed Evaluation, with Not evaluated for none, and a Conclusion column linked to that Evaluation. Both lists build their addresses with `src/lib/web/list-filters.ts`, which Home's figures use too, so a figure and the list it opens can't disagree. The tabs and filters sit on the canvas above the white table. The template gallery is the one list that is not a table: it shows templates as a grid of white `MediaCard`s on the canvas, with the same empty state and search rules; with no match, its empty state sits in a flush `Panel`.
 
 ### Detail pages
 
@@ -350,7 +350,7 @@ A group with no records shows an `EmptyState` in its panel with the actions that
 
 ### Forms
 
-Create and edit forms use `Page width="form"` and one `Panel` whose footer holds Cancel and the primary action. A fact about every submission, such as how many generations are left today, goes in a `FormNote` at the top of the form, not in a page alert or the page description. Submit labels read "Create <noun>" for new records and "Save changes" for edits; the draft editor uses "Save draft". A record's destructive action sits in a separate danger `Panel` after the form, confirmed with `ConfirmDialog`.
+Create and edit forms use `Page width="form"` and one `Panel` whose footer holds Cancel and the primary action. A fact about every submission, such as how many generations are left today, goes in a `FormNote` at the top of the form, not in a page alert or the page description. Submit labels read "Create <noun>" for new records and "Save changes" for edits; the draft editor uses "Save draft". A record's destructive action sits in a separate danger `Panel` after the form, confirmed with `ConfirmDialog`. A Repository's Settings follows GitHub's settings layout instead: a `SectionNav` beside General, whose plain form has no Panel or Cancel, and a Danger Zone outlined in the error border, whose delete is confirmed in three steps that end in typing the repository's name (docs/profiling.md).
 
 ### Filters
 

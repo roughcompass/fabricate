@@ -64,7 +64,7 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["02-initiative-edit", paths.assessmentEdit(initiative.publicId)],
     ["03-sources", paths.repositories],
     ["03-source-new", paths.newRepository],
-    ["03-source-edit", paths.repositoryEdit(sources[0]!.publicId)],
+    ["03-source-settings", paths.repositorySettings(sources[0]!.publicId)],
     ["03-source-bulk", paths.bulkRepositories],
     ["03-source", `/repositories/${sources[0]!.publicId}`],
     ["03-source-versions", `/repositories/${sources[0]!.publicId}/versions`],

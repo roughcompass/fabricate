@@ -3,14 +3,14 @@
 import { redirect } from "next/navigation";
 import { LAUNCH_TOKEN } from "@/lib/assessments/assessment-records";
 import { addRepositories } from "@/lib/catalog/bulk-add";
-import { editSource, registerSource, type SourceForm } from "@/lib/catalog/catalog";
+import { deleteSource, editSource, registerSource, type SourceForm } from "@/lib/catalog/catalog";
 import { getSource } from "@/lib/catalog/source-records";
 import { CloneUrl } from "@/lib/catalog/clone-url";
 import { getDb } from "@/lib/db/client";
 import { NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
 import { queueProfile } from "@/lib/profiling/versions";
-import { repositoryHref } from "@/lib/web/repository-paths";
+import { repositoryHref, settingsHref } from "@/lib/web/repository-paths";
 import { errorsFrom, integer, text } from "@/lib/web/form-data";
 import type { BulkFormState } from "./bulk/bulk-state";
 import type { SourceFormState } from "./source-form-state";
@@ -55,7 +55,7 @@ export async function updateSource(publicId: string, previous: SourceFormState, 
     }
     throw error;
   }
-  redirect(`/repositories?notice=updated&source=${publicId}`);
+  redirect(`${settingsHref(publicId)}?notice=updated`);
 }
 
 /**
@@ -93,4 +93,19 @@ export async function addRepositoriesInBulk(previous: BulkFormState, formData: F
   }
   if (failed.length === 0) redirect(`/repositories?notice=bulk-added&count=${added}`);
   return { values: { urls: failed.map((failure) => failure.text).join("\n") }, errors: {}, added, failed, submission };
+}
+
+/**
+ * Deletes a Repository once the typed confirmation is its name exactly, and
+ * opens the list. A confirmation that doesn't match deletes nothing.
+ */
+export async function deleteRepository(publicId: string, _previous: { error: string | null }, formData: FormData): Promise<{ error: string | null }> {
+  if (!isPublicId(publicId, "src")) throw new NotFoundError("Unknown repository source");
+  try {
+    deleteSource(getDb(), publicId, text(formData, "confirmation", 200));
+  } catch (error) {
+    if (error instanceof ValidationError) return { error: error.issues.map((issue) => issue.message).join(" ") };
+    throw error;
+  }
+  redirect(`/repositories?notice=deleted&source=${publicId}`);
 }

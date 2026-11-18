@@ -183,7 +183,7 @@ The interface names three records differently from the code, which keeps the mod
 | Home | `/` |
 | Assessments | `/assessments`, `/assessments/new`, and `/assessments/<ini_ id>` with its `/edit` page |
 | Runs | `/runs/<asm_ id>`, with its `/map` and `/evidence/<id>` pages |
-| Repositories | `/repositories`, `/repositories/new`, `/repositories/bulk`, `/repositories/de-console`, and `/repositories/<src_ id>` with its `/edit`, `/versions`, and `/versions/<number>` pages |
+| Repositories | `/repositories`, `/repositories/new`, `/repositories/bulk`, `/repositories/de-console`, and `/repositories/<src_ id>` with its `/settings`, `/versions`, and `/versions/<number>` pages |
 | Evaluations and Profiles | `/evaluations/<id>` and `/profiles/<id>`, unchanged |
 
 `/` opens Home: the fleet's figures, each linked to the list it counts, and the problems that need attention. Addresses from before the rename, under `/initiatives`, `/sources`, and `/assessments/<asm_ id>`, redirect permanently to the new ones (`next.config.ts`).

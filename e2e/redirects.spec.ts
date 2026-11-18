@@ -26,6 +26,7 @@ const REDIRECTS: [from: string, to: string][] = [
   ["/sources/new", "/repositories/new"],
   ["/sources/bulk?from=sources", "/repositories/bulk?from=sources"],
   [`/sources/${SOURCE}/edit`, `/repositories/${SOURCE}/edit`],
+  [`/repositories/${SOURCE}/edit`, `/repositories/${SOURCE}/settings`],
 ];
 
 for (const [from, to] of REDIRECTS) {

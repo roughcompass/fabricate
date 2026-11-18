@@ -42,7 +42,8 @@ export function repositoryCounts(db: Executor): RepositoryCounts {
         where a.subject_repository_source_id = s.id and a.attribute = 'application'
           and not exists (select 1 from ownership_supersessions x where x.superseded_id = a.id)
       ) then 1 else 0 end) as claimed
-    from repository_sources s`);
+    from repository_sources s
+    where s.deleted_at is null`);
   const total = row?.total ?? 0;
   const claimed = row?.claimed ?? 0;
   return { total, claimed, unclaimed: total - claimed };

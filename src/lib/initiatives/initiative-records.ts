@@ -267,7 +267,7 @@ function validate(db: Executor, input: Required<InitiativeInput>): Selections {
   let sources: RepositorySource[] = [];
   if (input.selectionMode === "explicit") {
     const ids = input.sourcePublicIds;
-    const found = ids.length ? db.select().from(repositorySources).where(inArray(repositorySources.publicId, [...ids])).all() : [];
+    const found = ids.length ? db.select().from(repositorySources).where(and(inArray(repositorySources.publicId, [...ids]), isNull(repositorySources.deletedAt))).all() : [];
     const byPublicId = new Map(found.map((source) => [source.publicId, source]));
     for (const publicId of ids) {
       const source = byPublicId.get(publicId);

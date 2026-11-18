@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, isNull, sql } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Executor } from "@/lib/db/client";
 import { initiativeTargets, repositorySources } from "@/lib/db/schema";
@@ -36,7 +36,7 @@ export function resolveScope(db: Executor, initiative: Initiative): RepositorySo
 }
 
 function allSources(db: Executor): RepositorySource[] {
-  const sources = db.select().from(repositorySources).orderBy(...byCatalogOrder).all();
+  const sources = db.select().from(repositorySources).where(isNull(repositorySources.deletedAt)).orderBy(...byCatalogOrder).all();
   if (sources.length === 0) {
     throw new ScopeResolutionError([{ sourcePublicId: null, sourceName: null, message: "The scope is empty: the catalog has no Repositories. Add one before starting an assessment." }]);
   }
@@ -66,6 +66,8 @@ function explicitSources(db: Executor, initiative: Initiative): RepositorySource
         sourceName: null,
         message: `A selected repository source (catalog record ${selection.repositorySourceId}) no longer exists. Edit the initiative's scope to remove it.`,
       });
+    } else if (source.deletedAt) {
+      problems.push({ sourcePublicId: source.publicId, sourceName: source.name, message: `${source.name} (${source.publicId}) was deleted. Edit the initiative's scope to remove it.` });
     }
   }
   if (problems.length) throw new ScopeResolutionError(problems);

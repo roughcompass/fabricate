@@ -1,11 +1,12 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, ValidationError } from "@/lib/db/errors";
-import { type ProfileTrigger, assessmentTargets, assessments, initiatives } from "@/lib/db/schema";
+import { requestCancellation } from "@/lib/assessments/transitions";
+import { type ProfileTrigger, assessmentTargets, assessments, initiativeTargets, initiatives, repositorySources } from "@/lib/db/schema";
 import { CloneUrl, InvalidCloneUrl } from "./clone-url";
 import { repositoryNameFromUrl } from "./repository-name";
 import { BoundaryViolation, SourceBoundary } from "./source-boundary";
-import { queueProfile } from "@/lib/profiling/versions";
+import { isActive, queueProfile, versionCount, versionsOf } from "@/lib/profiling/versions";
 import { type RepositorySource, getSource, insertSource, sourceFieldIssues, updateSource } from "./source-records";
 
 /**
@@ -63,6 +64,52 @@ export function editSource(db: Executor, publicId: string, lockVersion: number, 
     const source = updateSource(tx, publicId, lockVersion, { name: form.name, gitRef: form.gitRef, ...url });
     if (source.canonicalUrl !== before.canonicalUrl || source.gitRef !== before.gitRef) queueProfile(tx, source, "edited");
     return source;
+  });
+}
+
+export interface DeletionEffects {
+  /** Its profile versions, which go with it. */
+  readonly versions: number;
+  /** Assessments that select it, which stop selecting it. */
+  readonly assessments: readonly string[];
+  /** Runs of Assessments that included it, whose results stay. */
+  readonly runs: number;
+}
+
+/** What deleting +source+ changes, for the confirmation to state. */
+export function deletionEffects(db: Executor, source: RepositorySource): DeletionEffects {
+  const selecting = db
+    .select({ name: initiatives.name })
+    .from(initiativeTargets)
+    .innerJoin(initiatives, eq(initiatives.id, initiativeTargets.initiativeId))
+    .where(and(eq(initiativeTargets.repositorySourceId, source.id), isNull(initiatives.claimRepositorySourceId)))
+    .orderBy(sql`lower(${initiatives.name})`)
+    .all();
+  return { versions: versionCount(db, source.id), assessments: selecting.map((row) => row.name), runs: assessmentCounts(db).get(source.id) ?? 0 };
+}
+
+/**
+ * Deletes +source+ from the catalog, permanently, once +confirmation+ is its
+ * name exactly. It leaves every list, scope, profiling check, and claim, and
+ * its clone URL is free to register again. A profile version in progress is
+ * canceled, and Assessments that select it stop selecting it; the Assessment
+ * created for its claim keeps it, so its history reads true. Past Runs keep
+ * their results, which name it as they assessed it.
+ */
+export function deleteSource(db: Executor, publicId: string, confirmation: string): RepositorySource {
+  return immediate(db, (tx) => {
+    const source = getSource(tx, publicId);
+    if (confirmation.trim() !== source.name) throw new ValidationError([{ field: "confirmation", message: `Type ${source.name} to confirm` }]);
+    for (const version of versionsOf(tx, source.id).filter(isActive)) requestCancellation(tx, version.assessment.id);
+    const operatorInitiatives = tx.select({ id: initiatives.id }).from(initiatives).where(isNull(initiatives.claimRepositorySourceId));
+    tx.delete(initiativeTargets).where(and(eq(initiativeTargets.repositorySourceId, source.id), inArray(initiativeTargets.initiativeId, operatorInitiatives))).run();
+    const now = new Date();
+    return tx
+      .update(repositorySources)
+      .set({ deletedAt: now, updatedAt: now, lockVersion: source.lockVersion + 1 })
+      .where(eq(repositorySources.id, source.id))
+      .returning()
+      .get();
   });
 }
 

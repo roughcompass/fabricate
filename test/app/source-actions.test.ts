@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createSource, reprofileSource, updateSource } from "@/app/(operator)/repositories/actions";
-import { getSource, insertSource, listSources } from "@/lib/catalog/source-records";
+import { createSource, deleteRepository, reprofileSource, updateSource } from "@/app/(operator)/repositories/actions";
+import { sourceOutcome } from "@/app/(operator)/repositories/outcomes";
+import { findSource, getSource, insertSource, listSources } from "@/lib/catalog/source-records";
 import { type Db, setDb } from "@/lib/db/client";
 import { createTestDb } from "../support/db";
 import { redirectOf } from "../support/next";
@@ -51,10 +52,22 @@ describe("source Server Actions", () => {
     const source = insertSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", canonicalUrl: "https://git.example.com/acme/orders" });
     const fields = { name: "orders-ui", cloneUrl: source.cloneUrl, gitRef: "", lockVersion: 0 };
 
-    expect(await redirectOf(updateSource(source.publicId, blank, form(fields)))).toBe(`/repositories?notice=updated&source=${source.publicId}`);
+    expect(await redirectOf(updateSource(source.publicId, blank, form(fields)))).toBe(`/repositories/${source.publicId}/settings?notice=updated`);
     const stale = await updateSource(source.publicId, blank, form({ ...fields, name: "stale" }));
     expect(stale.errors.base?.[0]).toMatch(/changed by someone else/);
     expect(getSource(db, source.publicId).name).toBe("orders-ui");
+  });
+
+  it("deletes a source only when its name is typed, then returns to the catalog", async () => {
+    const source = insertSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", canonicalUrl: "https://git.example.com/acme/orders" });
+
+    expect(await deleteRepository(source.publicId, { error: null }, form({ confirmation: "order" }))).toEqual({ error: "Type orders to confirm" });
+    expect(findSource(db, source.publicId)).toBeDefined();
+    expect(await redirectOf(deleteRepository(source.publicId, { error: null }, form({ confirmation: "orders" })))).toBe(`/repositories?notice=deleted&source=${source.publicId}`);
+    expect(findSource(db, source.publicId)).toBeUndefined();
+    expect(sourceOutcome(db, "deleted", source.publicId)).toMatchObject({ title: "orders was deleted." });
+    expect(sourceOutcome(db, "updated", source.publicId)).toBeUndefined();
+    await expect(deleteRepository("../../etc", { error: null }, form({ confirmation: "orders" }))).rejects.toThrow(/Unknown repository source/);
   });
 
   it("rejects a malformed source id when re-profiling", async () => {

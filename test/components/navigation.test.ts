@@ -46,7 +46,7 @@ const EXPECTED: Record<string, string | null> = {
   "/repositories/new": "repositories",
   "/repositories/bulk": "repositories",
   "/repositories/[sourceId]": "repositories",
-  "/repositories/[sourceId]/edit": "repositories",
+  "/repositories/[sourceId]/settings": "repositories",
   "/repositories/[sourceId]/versions": "repositories",
   "/repositories/[sourceId]/versions/[version]": "repositories",
   "/repositories/de-console": "repositories",

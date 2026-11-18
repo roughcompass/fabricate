@@ -5,6 +5,11 @@ export function repositoryHref(sourcePublicId: string): string {
   return `/repositories/${sourcePublicId}`;
 }
 
+/** The Repository's settings: its clone URL, name, and reference, and deleting it. */
+export function settingsHref(sourcePublicId: string): string {
+  return `/repositories/${sourcePublicId}/settings`;
+}
+
 /** Every profile version of the Repository, newest first. */
 export function versionsHref(sourcePublicId: string, page = 1): string {
   return `/repositories/${sourcePublicId}/versions${page > 1 ? `?page=${page}` : ""}`;

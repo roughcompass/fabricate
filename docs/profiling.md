@@ -38,9 +38,23 @@ Profiling is background work. Its jobs run only when no job that people started 
 
 ## Where versions appear
 
-- **Repositories list.** A Profile column leads with "Profiling version N", with a pulsing indicator, or "Version N queued" while a version is in progress, then the current version and when it was profiled, and marks a newest version that failed. While anything is profiling or queued, a line above the table counts both, and the list refreshes itself as versions start and finish. The name opens the Repository's page. The row menu has Re-profile and Edit.
-- **A Repository's page** (`/repositories/<src_ id>`). Its current version as the Profile view, with every section and the section menu. A notice says when a newer version is queued or running, and the page refreshes when that version finishes. Another notice says when the newest version failed and why. Re-profile, Versions, Relationship Map, and Edit sit in the header.
+- **Repositories list.** A Profile column leads with "Profiling version N", with a pulsing indicator, or "Version N queued" while a version is in progress, then the current version and when it was profiled, and marks a newest version that failed. While anything is profiling or queued, a line above the table counts both, and the list refreshes itself as versions start and finish. The name opens the Repository's page. The row menu has Re-profile and Settings.
+- **A Repository's page** (`/repositories/<src_ id>`). Its current version as the Profile view, with every section and the section menu. A notice says when a newer version is queued or running, and the page refreshes when that version finishes. Another notice says when the newest version failed and why. Re-profile, Versions, Relationship Map, and Settings sit in the header.
 - **Versions** (`/repositories/<src_ id>/versions`). Every version, newest first: why it was queued, its state, the commit it profiled, its detector release, and when it was queued.
 - **A version** (`/repositories/<src_ id>/versions/<number>`). That version's Profile, or why it has none.
+- **Settings** (`/repositories/<src_ id>/settings`, formerly `/edit`, which redirects). Laid out like GitHub's repository settings: General holds the name, clone URL, and reference, and saving stays on the page. The Danger Zone deletes the Repository.
 
 The Repository profiling Assessment stays out of Assessments, Home's figures, recent activity, and Needs attention, and its Runs aren't counted in a Repository's Runs. A version's Run page, map, and evidence pages lead back through Repositories, the Repository, and the version. `/profiles/<id>` for a version's Profile redirects to the version's page. Profiles from other Runs keep their own pages under their Assessments.
+
+## Deleting a Repository
+
+Deleting is confirmed the way GitHub confirms it: a dialog asks whether you want to delete the repository, then lists what deleting changes and asks you to say you read it, then asks you to type the repository's name, which alone enables the button. The server checks the name again. Without JavaScript, the name field and button stand on the page.
+
+A deleted Repository is gone for good, but its row stays as a tombstone (`repository_sources.deleted_at`, migration 0040), because past Runs, their results, profiles, and ownership claims point at it and are kept. Deleting:
+
+- removes it from the Repositories list, its pages (which return 404), Home's figures from then on, ownership coverage, and the scheduled profiling check;
+- cancels a profile version in progress;
+- removes it from the selected Repositories of every Assessment; Assessments of all Repositories leave it out from the next Run. The Assessment created for its claim keeps it and can't start a Run;
+- frees its clone URL, so the same repository can be added again as a new Repository with no history.
+
+A trigger refuses any change to a deleted row, so it can't be edited or restored.

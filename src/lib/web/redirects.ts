@@ -27,4 +27,7 @@ export const VOCABULARY_REDIRECTS: Redirect[] = [
   permanent("/sources/:rest*", "/repositories/:rest*"),
 ];
 
-export const LEGACY_REDIRECTS: Redirect[] = [...VOCABULARY_REDIRECTS];
+/** A Repository's Edit page became its Settings. */
+export const SETTINGS_REDIRECTS: Redirect[] = [permanent("/repositories/:id(src_[a-z0-9]{16})/edit", "/repositories/:id/settings")];
+
+export const LEGACY_REDIRECTS: Redirect[] = [...VOCABULARY_REDIRECTS, ...SETTINGS_REDIRECTS];

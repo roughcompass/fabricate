@@ -53,13 +53,45 @@ test("adds and edits a Source with validation feedback", async ({ page, db: _db 
   await expect(page.getByText("Not profiled yet")).toBeVisible();
   await page.getByRole("button", { name: "Re-profile" }).click();
   await expect(toasts(page).getByText("orders is already being profiled.")).toBeVisible();
-  await page.getByRole("link", { name: "Edit" }).click();
+  await page.getByRole("link", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
   await page.getByLabel("Reference").fill("release");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(toasts(page).getByText("Running and past Runs keep the configuration they started with.")).toBeVisible();
+  await page.goto(paths.repositories);
   await expect(page.getByRole("row", { name: /orders/ })).toContainText("release");
 
-  await expect(await rowMenu(page, "orders")).not.toContainText("Disable");
+  const menu = await rowMenu(page, "orders");
+  await expect(menu.getByRole("link", { name: "Settings" })).toBeVisible();
+  await expect(menu).not.toContainText("Disable");
+});
+
+test("deletes a Repository only after its effects are read and its name is typed", async ({ page, db }) => {
+  const orders = buildSource(db, { name: "orders" });
+  buildSource(db, { name: "billing" });
+
+  await page.goto(`/repositories/${orders.publicId}/settings`);
+  const zone = page.locator("#danger-zone");
+  await expect(zone).toContainText("Once you delete a repository, there is no going back. Please be certain.");
+  await zone.getByRole("button", { name: "Delete this repository" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Delete orders" });
+  await dialog.getByRole("button", { name: "I want to delete this repository" }).click();
+  await expect(dialog).toContainText("Unexpected bad things will happen if you don't read this!");
+  await dialog.getByRole("button", { name: "I have read and understand these effects" }).click();
+
+  const remove = dialog.getByRole("button", { name: "Delete this repository" });
+  await expect(remove).toBeDisabled();
+  await dialog.getByLabel(/To confirm, type/).fill("order");
+  await expect(remove).toBeDisabled();
+  await dialog.getByLabel(/To confirm, type/).fill("orders");
+  await expect(remove).toBeEnabled();
+  await remove.click();
+
+  await expect(toasts(page).getByText("orders was deleted.")).toBeVisible();
+  await expect(page.getByRole("row", { name: /orders/ })).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /billing/ })).toHaveCount(1);
+  expect((await page.goto(`/repositories/${orders.publicId}`))!.status()).toBe(404);
 });
 
 test("asks for the clone URL first and names the Repository after its owner and repository until a name is typed", async ({ page, db: _db }) => {

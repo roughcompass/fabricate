@@ -1,6 +1,6 @@
 import { countLabel } from "@/components/ui/count";
 import type { Outcome } from "@/components/ui/outcome-toast";
-import { findSource } from "@/lib/catalog/source-records";
+import { findSource, findSourceIncludingDeleted } from "@/lib/catalog/source-records";
 import type { Executor } from "@/lib/db/client";
 import { versionsOf } from "@/lib/profiling/versions";
 
@@ -15,10 +15,12 @@ export function sourceOutcome(db: Executor, code: string | undefined, sourcePubl
     return { id: `bulk-added:${created}`, tone: "success", title: `Added ${countLabel(created, "Repository", "Repositories")}.`, description: "Each is profiled in the background." };
   }
 
-  const source = sourcePublicId ? findSource(db, sourcePublicId) : undefined;
+  const source = sourcePublicId ? (code === "deleted" ? findSourceIncludingDeleted : findSource)(db, sourcePublicId) : undefined;
   if (!code || !source) return undefined;
   const id = `${code}:${source.publicId}`;
   switch (code) {
+    case "deleted":
+      return { id, tone: "success", title: `${source.name} was deleted.`, description: "Its past Run results stay with the Runs." };
     case "added":
       return { id, tone: "success", title: `${source.name} was added.` };
     case "updated":

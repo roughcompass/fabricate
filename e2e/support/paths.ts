@@ -14,7 +14,7 @@ export const paths = {
   repositories: "/repositories",
   newRepository: "/repositories/new",
   bulkRepositories: "/repositories/bulk",
-  repositoryEdit: (sourceId: string) => `/repositories/${sourceId}/edit`,
+  repositorySettings: (sourceId: string) => `/repositories/${sourceId}/settings`,
   run: (assessmentId: string) => `/runs/${assessmentId}`,
   runMap: (assessmentId: string) => `/runs/${assessmentId}/map`,
   evidence: (assessmentId: string, evidenceId: string) => `/runs/${assessmentId}/evidence/${evidenceId}`,

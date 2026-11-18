@@ -1,14 +1,15 @@
 import { sql } from "drizzle-orm";
 import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { createdAt, id, lockVersion, publicId, sqlList, updatedAt } from "./columns";
+import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
 
 export const SELECTION_MODES = ["all", "explicit"] as const;
 export type SelectionMode = (typeof SELECTION_MODES)[number];
 
 /**
- * A clonable Git repository in the catalog, one per canonical clone URL.
- * Sources are never deleted, and historical assessment targets keep their
- * own copy of what they assessed.
+ * A clonable Git repository in the catalog, one per canonical clone URL among
+ * those not deleted. Deleting one is permanent and leaves the catalog, but the
+ * row stays as a tombstone: historical assessment targets and profiles keep
+ * pointing at it and keep their own copy of what they assessed.
  */
 export const repositorySources = sqliteTable(
   "repository_sources",
@@ -19,12 +20,14 @@ export const repositorySources = sqliteTable(
     cloneUrl: text("clone_url").notNull(),
     canonicalUrl: text("canonical_url").notNull(),
     gitRef: text("git_ref"),
+    /** When it was deleted from the catalog; null while it's in it. */
+    deletedAt: timestamp("deleted_at"),
     lockVersion: lockVersion(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
-    uniqueIndex("repository_sources_canonical_url").on(t.canonicalUrl),
+    uniqueIndex("repository_sources_canonical_url").on(t.canonicalUrl).where(sql`${t.deletedAt} IS NULL`),
     check("repository_sources_public_id", sql`${t.publicId} GLOB 'src_*'`),
     check("repository_sources_name", sql`length(trim(${t.name})) BETWEEN 1 AND 100`),
     check("repository_sources_urls", sql`length(${t.cloneUrl}) > 0 AND length(${t.canonicalUrl}) > 0`),

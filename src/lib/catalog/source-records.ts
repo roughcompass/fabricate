@@ -1,4 +1,4 @@
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, IssueCollector, NotFoundError, StaleRecordError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
@@ -7,7 +7,8 @@ import { repositorySources } from "@/lib/db/schema";
 /**
  * Persistence for repository sources. Callers supply an already parsed and
  * canonicalized clone URL (see clone-url.ts); this layer enforces record rules,
- * the one-entry-per-canonical-URL rule, and optimistic locking.
+ * the one-entry-per-canonical-URL rule, and optimistic locking. A deleted
+ * Repository is left out of every lookup here unless one asks for it.
  */
 
 export type RepositorySource = typeof repositorySources.$inferSelect;
@@ -60,6 +61,11 @@ export function updateSource(db: Executor, publicId: string, expectedLockVersion
 }
 
 export function findSource(db: Executor, publicId: string): RepositorySource | undefined {
+  return db.select().from(repositorySources).where(and(eq(repositorySources.publicId, publicId), isNull(repositorySources.deletedAt))).get();
+}
+
+/** A Repository by public ID, deleted or not, for history and for saying what was deleted. */
+export function findSourceIncludingDeleted(db: Executor, publicId: string): RepositorySource | undefined {
   return db.select().from(repositorySources).where(eq(repositorySources.publicId, publicId)).get();
 }
 
@@ -70,11 +76,11 @@ export function getSource(db: Executor, publicId: string): RepositorySource {
 }
 
 export function listSources(db: Executor): RepositorySource[] {
-  return db.select().from(repositorySources).orderBy(sql`lower(${repositorySources.name})`, asc(repositorySources.publicId)).all();
+  return db.select().from(repositorySources).where(isNull(repositorySources.deletedAt)).orderBy(sql`lower(${repositorySources.name})`, asc(repositorySources.publicId)).all();
 }
 
 export function findSourceByCanonicalUrl(db: Executor, canonicalUrl: string, excludingId?: number): RepositorySource | undefined {
-  const conditions = [eq(repositorySources.canonicalUrl, canonicalUrl)];
+  const conditions = [eq(repositorySources.canonicalUrl, canonicalUrl), isNull(repositorySources.deletedAt)];
   if (excludingId !== undefined) conditions.push(ne(repositorySources.id, excludingId));
   return db.select().from(repositorySources).where(and(...conditions)).get();
 }
