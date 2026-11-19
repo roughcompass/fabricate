@@ -565,3 +565,17 @@ test("A Profile for an agent: the Repository's details link its current Profile 
   expect(response.status()).toBe(200);
   expect(response.headers().digest).toContain(shown);
 });
+
+// design-system spec, "Status and values are presented through one registry".
+test("Observed facts aren't judgments: the Design system view shows raw values and overrides as Observed, neutral, with no green beside them", async ({ page, db }) => {
+  const repository = buildRepository(db, { name: "salt-orders" });
+  const files = { ...SALT_APP, "src/app.css": ".wide { inline-size: 100%; color: #0a6 !important; background: #fff }\n.narrow { color: #123 !important }\n" };
+  const run = await seedRun(db, buildAssessment(db, { name: "Salt adherence", repositories: [repository] }), [repository], [files]);
+  await open(page, profilesOf(db, run.id)[0]!.profile.publicId, "design-system");
+  const styles = category(page, "style_values");
+  await expect(styles.locator('[data-state="observed"]').first()).toBeVisible();
+  for (const observed of await page.locator("main").locator('[data-state="observed"]').all()) {
+    await expect(observed.locator("xpath=preceding-sibling::*[@data-tone][1]")).toHaveAttribute("data-tone", "neutral");
+  }
+  await expect(styles.locator('[data-tone="success"]')).toHaveCount(0);
+});

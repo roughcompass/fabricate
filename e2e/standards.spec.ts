@@ -250,3 +250,14 @@ test("Standard draft: the title names the draft, its status counts the saved dra
   await page.getByRole("button", { name: "Add Control" }).first().click();
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveAttribute("data-variant", "primary");
 });
+
+// design-system spec, "Status and values are presented through one registry".
+test("Unpublished draft: a never-published draft with no issues is neutral, not green", async ({ page, db }) => {
+  const { draft } = createStandard(db, { name: "Engineering baseline", purpose: "Shared expectations" });
+  saveDraft(db, draft, draft.lockVersion, sampleStandard());
+  await page.goto("/standards");
+  const row = page.getByRole("row", { name: /Engineering baseline/ });
+  await expect(row.locator('[data-state="draft_ready"]')).toHaveText("Ready to publish");
+  await expect(row.locator('[data-tone]').first()).toHaveAttribute("data-tone", "neutral");
+  await expect(row.locator('[data-tone="success"]')).toHaveCount(0);
+});

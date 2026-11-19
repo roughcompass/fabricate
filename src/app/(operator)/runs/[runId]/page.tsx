@@ -116,9 +116,10 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
           label="Run results"
           stats={[
             { label: "Repository Profiles", value: `${profiles.size}/${targets.length}` },
-            map && coverage
-              ? { label: "Relationship Map", value: coverage.complete ? "Complete" : "Partial", hint: <Link href={routes.runMap(run.publicId)}>Review the Relationship Map</Link> }
-              : { label: "Relationship Map", value: "—", hint: terminal ? "Not available" : "Written when every repository finishes" },
+            // Its completeness is a status, not a figure; and a map with nothing in it isn't offered.
+            map && coverage && profiles.size > 0
+              ? { label: "Relationship Map", value: <Status state={coverage.complete ? "complete" : "partial"} label={coverage.complete ? "Complete" : "Partial"} />, status: true, hint: <Link href={routes.runMap(run.publicId)}>Review the Relationship Map</Link> }
+              : { label: "Relationship Map", value: "—", hint: terminal ? "Nothing was mapped" : "Written when every repository finishes" },
             { label: "Coverage gaps", value: coverage ? coverage.gaps.length : "—" },
             { label: "Evaluations", value: evaluations.length, hint: evaluations.length ? undefined : terminal ? "Start one from the Assessment" : "Available once finished" },
           ]}

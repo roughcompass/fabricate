@@ -13,6 +13,8 @@
   /* Two cells fit side by side on a phone; six fit in one row at content width. */
   .stat { display: flex; flex: 1 1 var(--size-label); flex-direction: column; gap: var(--space-1); min-width: 0; padding: var(--space-4) var(--space-5); background: var(--color-bg); }
   .label { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  /* A status in place of a figure, as a Relationship Map's completeness: at the body size, on the figures' line. */
+  .statusValue { display: flex; align-items: center; min-height: var(--space-10); margin: 0; }
   .value {
     font-size: var(--font-size-display);
     font-weight: var(--font-weight-semibold);
