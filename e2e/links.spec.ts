@@ -7,16 +7,18 @@ import { useTheme } from "./support/shell";
 /**
  * The link check (operator-interface/page-patterns spec, "Every link opens the
  * page it names"), the interface vocabulary (content standard), and the
- * primary-action rule (design-system spec). It crawls every operator page from
- * each section's landing page, with JavaScript disabled, so it checks what the
- * server renders on first paint.
+ * primary-action rule (design-system spec). It crawls every operator page, and
+ * the product site's marketing page and docs, from each section's landing
+ * page, with JavaScript disabled, so it checks what the server renders on
+ * first paint.
  */
 
 // The server-rendered page, as a visitor without JavaScript sees it first.
 test.use({ javaScriptEnabled: false, viewport: { width: 1440, height: 900 } });
 
 // The component gallery exists only in development and test builds (design-system spec).
-const START = [paths.home, paths.assessments, "/templates", ...(process.env.E2E_PRODUCTION ? [] : ["/design-system"])];
+// The product site's two sections, the marketing page and the docs, are crawled with the operator pages.
+const START = [paths.home, paths.assessments, "/templates", "/about", "/docs", ...(process.env.E2E_PRODUCTION ? [] : ["/design-system"])];
 /** Model terms the interface never shows as record names (content standard, "Vocabulary"). */
 const MODEL_TERMS = [/\bInitiatives?\b/, /\bSources?\b/, /\bAssessment #\d/];
 /** Old product names the interface never shows, in any case (content standard, "Product names"). Code elements are exempt. */

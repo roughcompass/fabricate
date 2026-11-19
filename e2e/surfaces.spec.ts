@@ -80,6 +80,7 @@ async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sources
     ["10-bitbucket-tokens", "/admin/bitbucket-tokens"],
     ["10-bitbucket-token-new", "/admin/bitbucket-tokens/new"],
     ["10-unknown-address", "/no-such-page"],
+    ["14-about", "/about"],
     ["14-docs", "/docs/get-started/add-your-repository"],
     ["14-docs-surveyor", "/docs/reference/fact-document"],
     ["14-docs-not-found", "/docs/get-started/nowhere"],

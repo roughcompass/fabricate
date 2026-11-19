@@ -6,8 +6,8 @@ Adoption Analytics totals what every registered repository's current Profile say
 
 ## Open your design system
 
-1. Open [Adoption](/adoption). It lists the design systems and packages the Frontend Registry tracks.
-2. Choose **Salt** to open [Salt's adoption page](/adoption/design-systems/salt).
+1. Open **Adoption**. It lists the design systems and packages the Frontend Registry tracks.
+2. Choose **Salt** to open Salt's adoption page.
 
 ## What the page shows
 

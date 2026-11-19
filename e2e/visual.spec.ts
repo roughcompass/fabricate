@@ -5,6 +5,11 @@ import { openTool, setView, waitForRegions } from "./support/demo";
 import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
 import { useTheme } from "./support/shell";
+import { storeEntry } from "../src/lib/catalog/entries";
+import { buildRepository } from "../test/support/builders";
+import { saltEntry } from "../test/support/catalog";
+import { manifest } from "../test/support/profiles";
+import { seedSurvey } from "../test/support/scenarios";
 
 /**
  * Captures every product surface at desktop and mobile width, in the light and
@@ -83,6 +88,48 @@ test("captures the shell's sidebar states in both themes", async ({ page, db: _d
   }
   expect(fs.readdirSync(output)).toHaveLength(3 * THEMES.length);
 });
+
+/**
+ * Captures the marketing page's hero picture (product-site spec, "Hero"): a
+ * real Profile, surveyed from seeded data against the Salt entry, open at its
+ * Design system view, with one fact's evidence shown, in both themes. The
+ * page serves the captures from public/site/, so they always show the
+ * current release. Run alone with
+ * `CAPTURE_SCREENSHOTS=1 npx playwright test e2e/visual.spec.ts -g "marketing page"`.
+ */
+test("captures the marketing page's Profile picture in both themes", async ({ page, db, baseURL }) => {
+  storeEntry(db, saltEntry());
+  const repository = buildRepository(db, { name: "payments-ui" });
+  await seedSurvey(db, repository, { files: HERO_APP });
+  const output = path.resolve("public/site");
+  fs.mkdirSync(output, { recursive: true });
+  for (const theme of THEMES) {
+    await useTheme(page.context(), theme, baseURL!);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.context().addCookies([{ name: "frontend-registry-sidebar", value: "hidden", url: baseURL! }]);
+    await page.goto(`/repositories/${repository.publicId}?tab=design-system`);
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    const components = page.getByRole("row").filter({ hasText: "Salt component" }).filter({ hasText: "Button" }).first();
+    await components.getByRole("button", { name: /^Show \d+ locations?$/ }).click();
+    await expect(page.getByRole("link", { name: "src/Payments.tsx:5" })).toBeVisible();
+    // The page's header and the design systems it uses, beside the evidence.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await page.screenshot({ path: path.join(output, `profile-${theme}.jpg`), type: "jpeg", quality: 80 });
+    await page.context().clearCookies({ name: "frontend-registry-sidebar" });
+  }
+  expect(fs.readdirSync(output).sort()).toEqual(["profile-dark.jpg", "profile-light.jpg"]);
+});
+
+/** A Salt application for the hero's Profile: its theme and provider, components with props, a raw element, and a story. */
+const HERO_APP = {
+  "package.json": manifest({ name: "payments-ui", version: "2.4.0", dependencies: { "@salt-ds/core": "1.75.0", "@salt-ds/theme": "1.48.0", react: "19.3.1", "react-dom": "19.3.1" } }),
+  "src/main.tsx": 'import "@salt-ds/theme/index.css";\nimport { SaltProvider } from "@salt-ds/core";\nimport { Payments } from "./Payments";\nexport const Root = () => <SaltProvider mode="light"><Payments /></SaltProvider>;\n',
+  "src/Payments.tsx":
+    'import { Button, StackLayout, Text } from "@salt-ds/core";\nexport const Payments = () => (\n  <StackLayout gap={2}>\n    <Text>Pending payments</Text>\n    <Button appearance="solid" sentiment="accented">Approve</Button>\n    <Button appearance="bordered">Hold</Button>\n    <button className="link">Export</button>\n  </StackLayout>\n);\n',
+  "src/payments.css": ".link { padding: var(--salt-spacing-100); color: #0a6; }\n",
+  "src/Payments.stories.tsx": 'import { Button } from "@salt-ds/core";\nexport const Approve = () => <Button appearance="solid">Approve</Button>;\n',
+};
 
 /**
  * Captures each portal shell of the template demo, with its hero application,
