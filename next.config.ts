@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
   turbopack: { root },
   poweredByHeader: false,
   reactStrictMode: true,
+  // A repository preview's root is /previews/<id>/, with its slash, so its page's
+  // relative references and a router based at that path resolve inside it.
+  // src/proxy.ts removes a trailing slash from every other path, as Next.js
+  // would; links never end in one (runPath in src/lib/demo/catalog).
+  skipTrailingSlashRedirect: true,
   // Addresses the product no longer serves open the pages that replaced them (src/lib/web/redirects.ts).
   redirects() {
     return Promise.resolve(LEGACY_REDIRECTS);

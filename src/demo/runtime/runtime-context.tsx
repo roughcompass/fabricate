@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { createContext, use, useEffect, useEffectEvent, useMemo, useSyncExternalStore } from "react";
-import { type AppDefinition, type AppRoute, type Profile, type Template, routeByPath, startRoute } from "@/lib/demo/catalog";
+import { type AppDefinition, type AppRoute, type Profile, type Template, routeByPath, runPath, startRoute } from "@/lib/demo/catalog";
 import { type MemberRouting, resolveRouting } from "@/lib/demo/routing";
 import type { Bus } from "./bus";
 import type { RuntimeDescriptor } from "./descriptor";
@@ -79,7 +79,7 @@ export function routeHref(descriptor: RuntimeDescriptor, route: AppRoute, embedd
   const query = new URLSearchParams();
   if (embedded) query.set(EMBED_PARAM, "1");
   const search = query.toString();
-  return `/run/${descriptor.applicationId}/${route.path}${search ? `?${search}` : ""}`;
+  return `${runPath(descriptor.applicationId, route.path)}${search ? `?${search}` : ""}`;
 }
 
 /** Preview mode frames the application with ?embed=1, which hides the toolbar and the hints (design.md, decision 19). */

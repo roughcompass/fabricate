@@ -8,9 +8,11 @@ import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { claimInitiative, getInitiative, selectedSources } from "@/lib/initiatives/initiative-records";
 import { repositoryCounts } from "@/lib/ownership/coverage";
+import { deletePreview } from "@/lib/previews/lifecycle";
 import { versionsOf } from "@/lib/profiling/versions";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
+import { queuedPreview } from "../support/previews";
 
 describe("deleting a Repository", () => {
   let db: Db;
@@ -30,7 +32,17 @@ describe("deleting a Repository", () => {
     buildInitiative(db, { name: "Checkout", sources: [orders] });
     buildAssessment(db, { sources: [orders] });
 
-    expect(deletionEffects(db, orders)).toEqual({ versions: 1, assessments: ["Checkout"], runs: 1 });
+    expect(deletionEffects(db, orders)).toEqual({ versions: 1, assessments: ["Checkout"], runs: 1, previews: 0 });
+  });
+
+  it("counts its undeleted previews, which are deleted with it", async () => {
+    const orders = buildSource(db, { name: "orders" });
+    queuedPreview(db, orders);
+    const deleted = queuedPreview(db, orders);
+    queuedPreview(db, buildSource(db, { name: "billing" }));
+    await deletePreview(db, deleted.publicId);
+
+    expect(deletionEffects(db, orders).previews).toBe(1);
   });
 
   it("leaves the catalog, scopes, and counts, cancels a version in progress, and keeps its history", () => {

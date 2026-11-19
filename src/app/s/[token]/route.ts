@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db/client";
-import { referenceId, routeByPath, startRoute, templateBySlug } from "@/lib/demo/catalog";
+import { referenceId, routeByPath, runPath, startRoute, templateBySlug } from "@/lib/demo/catalog";
 import { demoUnavailable } from "@/lib/demo/guard";
 import { shareCookieName } from "@/lib/demo/runtime-view";
 import { findShare } from "@/lib/demo/shares";
@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
 
   const route = routeByPath(template.app, share.state.route) ?? startRoute(template.app);
   // A relative Location keeps the browser on the host it used, where its cookies are.
-  const response = new NextResponse(null, { status: 303, headers: { Location: `/run/${applicationId}/${route.path}` } });
+  const response = new NextResponse(null, { status: 303, headers: { Location: runPath(applicationId, route.path) } });
   response.cookies.set({
     name: shareCookieName(applicationId),
     value: token,

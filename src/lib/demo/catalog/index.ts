@@ -37,6 +37,16 @@ export function routeByPath(app: AppDefinition, path: string): AppRoute | undefi
   return app.routes.find((route) => route.path === path);
 }
 
+/**
+ * The address of the route +routePath+ in the running application
+ * +applicationId+: `/run/<id>/<path>`, or `/run/<id>` for a route at the
+ * application's root. It never ends in a slash, which the request proxy
+ * would redirect away (next.config.ts, src/proxy.ts).
+ */
+export function runPath(applicationId: string, routePath: string): string {
+  return routePath ? `/run/${applicationId}/${routePath}` : `/run/${applicationId}`;
+}
+
 /** Where a member renders, for operators: "Route /payees", "Slot Sidebar on /payees", or "All routes". */
 export function routingLabel(member: GroupMember): string {
   switch (member.routing.kind) {

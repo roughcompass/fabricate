@@ -7,6 +7,9 @@ import { CloneUrl, InvalidCloneUrl } from "./clone-url";
 import { repositoryNameFromUrl } from "./repository-name";
 import { BoundaryViolation, SourceBoundary } from "./source-boundary";
 import { isActive, queueProfile, versionCount, versionsOf } from "@/lib/profiling/versions";
+import { getConfig } from "@/lib/config";
+import { deleteRepositoryPreviews, discardPreviewFiles } from "@/lib/previews/lifecycle";
+import { previewCount } from "@/lib/previews/views";
 import { type RepositorySource, getSource, insertSource, sourceFieldIssues, updateSource } from "./source-records";
 
 /**
@@ -74,6 +77,8 @@ export interface DeletionEffects {
   readonly assessments: readonly string[];
   /** Runs of Assessments that included it, whose results stay. */
   readonly runs: number;
+  /** Its previews, which are deleted with their files (docs/previews.md). */
+  readonly previews: number;
 }
 
 /** What deleting +source+ changes, for the confirmation to state. */
@@ -85,7 +90,7 @@ export function deletionEffects(db: Executor, source: RepositorySource): Deletio
     .where(and(eq(initiativeTargets.repositorySourceId, source.id), isNull(initiatives.claimRepositorySourceId)))
     .orderBy(sql`lower(${initiatives.name})`)
     .all();
-  return { versions: versionCount(db, source.id), assessments: selecting.map((row) => row.name), runs: assessmentCounts(db).get(source.id) ?? 0 };
+  return { versions: versionCount(db, source.id), assessments: selecting.map((row) => row.name), runs: assessmentCounts(db).get(source.id) ?? 0, previews: previewCount(db, source) };
 }
 
 /**
@@ -94,23 +99,30 @@ export function deletionEffects(db: Executor, source: RepositorySource): Deletio
  * its clone URL is free to register again. A profile version in progress is
  * canceled, and Assessments that select it stop selecting it; the Assessment
  * created for its claim keeps it, so its history reads true. Past Runs keep
- * their results, which name it as they assessed it.
+ * their results, which name it as they assessed it. Its previews are deleted
+ * with it, and their files removed (docs/previews.md).
  */
 export function deleteSource(db: Executor, publicId: string, confirmation: string): RepositorySource {
-  return immediate(db, (tx) => {
+  const { deleted, previews } = immediate(db, (tx) => {
     const source = getSource(tx, publicId);
     if (confirmation.trim() !== source.name) throw new ValidationError([{ field: "confirmation", message: `Type ${source.name} to confirm` }]);
     for (const version of versionsOf(tx, source.id).filter(isActive)) requestCancellation(tx, version.assessment.id);
     const operatorInitiatives = tx.select({ id: initiatives.id }).from(initiatives).where(isNull(initiatives.claimRepositorySourceId));
     tx.delete(initiativeTargets).where(and(eq(initiativeTargets.repositorySourceId, source.id), inArray(initiativeTargets.initiativeId, operatorInitiatives))).run();
     const now = new Date();
-    return tx
-      .update(repositorySources)
-      .set({ deletedAt: now, updatedAt: now, lockVersion: source.lockVersion + 1 })
-      .where(eq(repositorySources.id, source.id))
-      .returning()
-      .get();
+    return {
+      previews: deleteRepositoryPreviews(tx, source.id),
+      deleted: tx
+        .update(repositorySources)
+        .set({ deletedAt: now, updatedAt: now, lockVersion: source.lockVersion + 1 })
+        .where(eq(repositorySources.id, source.id))
+        .returning()
+        .get(),
+    };
   });
+  // The previews stopped serving with the commit; their directories move aside now and are removed in the background.
+  void discardPreviewFiles(getConfig(), previews);
+  return deleted;
 }
 
 /** How many Runs of Assessments included each source, keyed by source row id. Profile versions, which the list shows apart, aren't counted. */
