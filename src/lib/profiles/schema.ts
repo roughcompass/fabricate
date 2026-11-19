@@ -1,13 +1,14 @@
 import { type FactDocument, type JsonObject, digestOf, factDocumentProblems } from "@repo-facts/contract";
 import { z } from "zod";
 import { CURRENT_VERSION, DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /**
  * Repository Profile document, version 2.
  *
  * A Profile is an envelope around the `repo_facts.fact_document` that the
  * pinned detector bundle produced for one snapshot. It records the source
- * identity, commit, detector release, and detector configuration digest, and
+ * identity, commit, Surveyor release, and detector configuration digest, and
  * embeds the fact document unchanged, with its own digest. The fact document
  * carries every fact, evidence record, search, diagnostic, and Service
  * Dependency under the repo-facts contract.
@@ -82,6 +83,6 @@ export function profileProblems(document: JsonObject): string[] {
   const problems = factDocumentProblems(factDocument).map((problem) => `fact_document: ${problem}`);
   if (digestOf(factDocument).digest !== document.fact_document_digest) problems.push("fact_document_digest does not match the embedded fact document");
   if (factDocument.commit !== document.commit) problems.push("The fact document must describe the Profile's commit");
-  if (factDocument.detector_release !== document.detector_release) problems.push("The fact document must record the Profile's detector release");
+  if (factDocument.detector_release !== document.detector_release) problems.push(`The fact document must record the Profile's ${SURVEYOR_RELEASE_LABEL}`);
   return problems;
 }

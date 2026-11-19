@@ -5,15 +5,15 @@
  * reset leaves earlier state unread.
  */
 
-const PREFIX = "fabricate-demo";
+import { DEMO_STORAGE_PREFIX, readDemoItem } from "@/lib/web/demo-storage";
 
 export function storageKey(viewKey: string, name: string): string {
-  return `${PREFIX}:${viewKey}:${name}`;
+  return `${DEMO_STORAGE_PREFIX}:${viewKey}:${name}`;
 }
 
 export function readStored<T>(viewKey: string, name: string, parse: (value: unknown) => T | null): T | null {
   try {
-    const raw = window.localStorage.getItem(storageKey(viewKey, name));
+    const raw = readDemoItem(window.localStorage, storageKey(viewKey, name));
     return raw === null ? null : parse(JSON.parse(raw));
   } catch {
     return null;

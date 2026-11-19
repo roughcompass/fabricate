@@ -74,7 +74,7 @@ describe("assessment records", () => {
     expect(() => createAssessment(db, input)).toThrow(/UNIQUE constraint failed: assessments.launch_token/);
   });
 
-  it("requires a scope, a detector release, and a UUID launch token", () => {
+  it("requires a scope, a Surveyor release, and a UUID launch token", () => {
     const error = (() => {
       try {
         createAssessment(db, { initiative: buildInitiative(db), launchToken: "again", detectorRelease: " ", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [] });

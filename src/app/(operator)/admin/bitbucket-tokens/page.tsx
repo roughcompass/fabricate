@@ -10,13 +10,14 @@ import { RelativeTime } from "@/components/ui/relative-time";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { listBitbucketTokens } from "@/lib/admin/bitbucket-tokens";
 import { getDb } from "@/lib/db/client";
+import { PRODUCT } from "@/lib/product";
 import { deleteToken } from "./actions";
 import { TOKEN_OUTCOME_PARAMS, tokenOutcome } from "./outcomes";
 import { NEW_BITBUCKET_TOKEN_HREF } from "./paths";
 
 export const metadata: Metadata = { title: "Bitbucket tokens" };
 
-/** Admin: the Bitbucket Server access tokens DE FabLab may use, each shown by its owner, server, and last four characters. */
+/** Admin: the Bitbucket Server access tokens the Frontend Registry may use, each shown by its owner, server, and last four characters. */
 export default async function BitbucketTokensPage({ searchParams }: PageProps<"/admin/bitbucket-tokens">) {
   const query = await searchParams;
   const db = getDb();
@@ -78,7 +79,7 @@ export default async function BitbucketTokensPage({ searchParams }: PageProps<"/
                       confirmLabel="Delete token"
                       tone="danger"
                     >
-                      <p>DE FabLab stops using it at once. Deleting it here doesn&apos;t revoke it in Bitbucket.</p>
+                      <p>{`The ${PRODUCT.name} stops using it at once. Deleting it here doesn't revoke it in Bitbucket.`}</p>
                     </ConfirmDialog>
                   </RowActions>
                 </Td>
@@ -87,7 +88,7 @@ export default async function BitbucketTokensPage({ searchParams }: PageProps<"/
           </Table>
         ) : (
           <EmptyState title="No Bitbucket tokens yet" icon="lock" action={add}>
-            Add an access token for each Bitbucket Server whose repositories DE FabLab should read.
+            {`Add an access token for each Bitbucket Server whose repositories the ${PRODUCT.name} should read.`}
           </EmptyState>
         )}
       </Panel>

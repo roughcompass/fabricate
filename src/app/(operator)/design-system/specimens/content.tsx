@@ -14,6 +14,7 @@ import { ShortValue, Tag, TagList } from "@/components/ui/tag";
 import { Row, Specimen } from "../specimen";
 import styles from "../design-system.module.css";
 import { DIGEST, HOUR, ago } from "./samples";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /** Status, tags, sections, description lists, and stat groups. */
 export function StatusSpecimens() {
@@ -117,7 +118,7 @@ export function StatusSpecimens() {
               layout="columns"
               items={[
                 ["Scope", "6 Repositories"],
-                ["Detector release", <Tag key="release">0.1.0</Tag>],
+                [SURVEYOR_RELEASE_LABEL, <Tag key="release">0.1.0</Tag>],
                 ["Started", <RelativeTime key="started" value={ago(2 * HOUR)} />],
               ]}
             />
@@ -215,7 +216,7 @@ export function ContentSpecimens() {
               <p>Six Findings, one per repository.</p>
             </Disclosure>
             <Disclosure summary="Details" variant="plain">
-              <p>Detector release, digests, and IDs.</p>
+              <p>{`${SURVEYOR_RELEASE_LABEL}, digests, and IDs.`}</p>
             </Disclosure>
           </>
         )}

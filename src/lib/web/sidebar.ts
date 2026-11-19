@@ -3,8 +3,8 @@
  * the chosen width and hidden state on first paint. The cookies are not
  * httpOnly: the browser writes the width while the operator resizes.
  */
-export const SIDEBAR_WIDTH_COOKIE = "fabricate-sidebar-width";
-export const SIDEBAR_HIDDEN_COOKIE = "fabricate-sidebar";
+export const SIDEBAR_WIDTH_COOKIE = "frontend-registry-sidebar-width";
+export const SIDEBAR_HIDDEN_COOKIE = "frontend-registry-sidebar";
 export const SIDEBAR_HIDDEN = "hidden";
 
 /** Pixel widths, mirroring --size-sidebar, --size-sidebar-min, and --size-sidebar-max in globals.css. */

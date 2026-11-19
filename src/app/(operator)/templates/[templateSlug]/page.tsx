@@ -48,7 +48,7 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[te
               ["Version", template.version],
               ["Microfrontends", template.app.members.filter((member) => member.role === "child").map((member) => member.name).join(", ")],
               ["Tags", <TagList key="tags" values={template.tags} />],
-              ...(template.hero ? [] : ([["Code", <span key="code" data-illustrative="">Illustrative: its code is generated from the catalog, not real Salt.</span>]] as const)),
+              ...(template.hero ? [] : ([["Code", <span key="code" data-illustrative="">Illustrative: its code is generated from the template&apos;s description, not real Salt.</span>]] as const)),
             ]}
           />
         </div>

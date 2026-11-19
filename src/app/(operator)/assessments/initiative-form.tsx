@@ -65,7 +65,7 @@ export function InitiativeForm({ action, initial, lockVersion, sourceCount, sour
                 errors={state.errors.selectionMode}
                 onChange={(event) => setMode(event.currentTarget.value as typeof mode)}
                 choices={[
-                  { value: "all", label: "All Repositories", description: `Every Repository in the catalog when a Run starts (${sourceCount} now).` },
+                  { value: "all", label: "All Repositories", description: `Every Repository registered when a Run starts (${sourceCount} now).` },
                   { value: "explicit", label: "Selected Repositories", description: "Exactly the Repositories chosen below." },
                 ]}
               />

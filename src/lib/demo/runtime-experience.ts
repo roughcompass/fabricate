@@ -9,7 +9,7 @@ import { BRANDS, type BrandId } from "./catalog";
 
 const LOGO = { light: "/brand/jpmorgan-logo.svg", dark: "/brand/jpmorgan-logo-dark.svg", alt: "J.P. Morgan" } as const;
 
-/** The portal's favicon: never DE FabLab's. */
+/** The portal's favicon: never the Frontend Registry's. */
 const FAVICON = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#1b2a3a"/><text x="32" y="45" font-family="Georgia,serif" font-size="40" font-weight="700" fill="#fff" text-anchor="middle">J</text></svg>')}`;
 
 export interface RuntimeExperience {

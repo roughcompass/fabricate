@@ -8,6 +8,7 @@ import { type RefKind, assessmentTargets, assessments } from "@/lib/db/schema";
 import { type JsonObject, digestOf } from "@repo-facts/contract";
 import type { Initiative } from "@/lib/initiatives/initiative-records";
 import { transitionTarget } from "./transitions";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /**
  * Persistence for Assessments, their immutable scope snapshot, and the
@@ -37,7 +38,7 @@ export interface NewAssessment {
 export function createAssessment(db: Executor, input: NewAssessment): { assessment: Assessment; targets: AssessmentTarget[] } {
   const issues = new IssueCollector();
   if (!LAUNCH_TOKEN.test(input.launchToken)) issues.add("launchToken", "Launch token must be a lowercase UUID");
-  if (!input.detectorRelease.trim()) issues.add("detectorRelease", "Detector release is required");
+  if (!input.detectorRelease.trim()) issues.add("detectorRelease", `${SURVEYOR_RELEASE_LABEL} is required`);
   if (input.sources.length === 0) issues.add("sources", "An assessment needs at least one target");
   issues.throwIfAny();
 

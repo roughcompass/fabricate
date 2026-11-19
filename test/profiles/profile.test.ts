@@ -153,7 +153,7 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
     expect(getSurvey(snapshots.db, survey.publicId).state).toBe("running");
   });
 
-  it("keeps reading a stored version 1 Profile, from detector release 0.1.0, unchanged", async () => {
+  it("keeps reading a stored version 1 Profile, from Surveyor release 0.1.0, unchanged", async () => {
     snapshots = SnapshotFixture.create("profile");
     const { survey } = await snapshots.acquireFiles(APP);
 
@@ -173,7 +173,7 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
 
     expect(profileProblems({ ...document, fact_document_digest: "0".repeat(64) })).toEqual(["fact_document_digest does not match the embedded fact document"]);
     expect(profileProblems({ ...document, commit: "1".repeat(40) })).toEqual(["The fact document must describe the Profile's commit"]);
-    expect(profileProblems({ ...document, detector_release: "9.9.9" })).toEqual(["The fact document must record the Profile's detector release"]);
+    expect(profileProblems({ ...document, detector_release: "9.9.9" })).toEqual(["The fact document must record the Profile's Surveyor release"]);
     expect(profileProblems({ ...document, extra: true })).toEqual([expect.stringContaining("extra")]);
   });
 

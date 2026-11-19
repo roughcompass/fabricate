@@ -1,6 +1,7 @@
 import { type CategoryDefinition, type JsonObject, type JsonValue, SHARED_CATEGORIES } from "@repo-facts/contract";
 import { countLabel } from "@/components/ui/count";
 import { humanize } from "@/components/ui/status";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /** A candidate value of a conflicting fact, with its own evidence. */
 interface Candidate {
@@ -92,7 +93,7 @@ export function partial(document: FactDocument, id: string): string | null {
  */
 export function noValue(document: FactDocument, definition: CategoryDefinition): NoValue {
   const category = categoryOf(document, definition.id);
-  if (!category) return { state: "not_covered", reason: `Detector release ${document.detector_release} doesn't report this category` };
+  if (!category) return { state: "not_covered", reason: `${SURVEYOR_RELEASE_LABEL} ${document.detector_release} doesn't report this category` };
   const { search } = category;
   if (category.state === "absent") {
     return { state: "absent", reason: search.surface.length ? `After a complete search of ${countLabel(search.surface.length, "input")}` : "No input this category reads exists in this commit" };

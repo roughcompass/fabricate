@@ -235,7 +235,7 @@ export function selectReleases(db: Db, initiative: Initiative, releases: readonl
 }
 
 /**
- * A Profile as detector release 0.1.0 stored it: a version 1 envelope around
+ * A Profile as Surveyor release 0.1.0 stored it: a version 1 envelope around
  * fact document version 1, without the design-system categories. Historical
  * Profiles are kept as written, so nothing validates them against the newer
  * contract.

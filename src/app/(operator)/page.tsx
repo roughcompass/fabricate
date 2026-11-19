@@ -12,6 +12,7 @@ import { toneClass } from "@/components/ui/indicator";
 import { StateIndicator, Status, statusLabel, statusOf } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { getDb } from "@/lib/db/client";
+import { browserTitle } from "@/lib/product";
 import { profilingActivity } from "@/lib/profiling/versions";
 import { BarChart, type BarSeries } from "@/components/ui/bar-chart";
 import { ATTENTION_PAGE_SIZE, type AttentionItem, attentionItems } from "@/lib/home/attention";
@@ -24,7 +25,7 @@ import { formatShortDate } from "@/components/ui/time";
 import { CONCLUSION_FILTERS, conclusionState } from "@/lib/evaluations/conclusions";
 
 // The root layout's title template applies only to child segments, and this page shares the root segment.
-export const metadata: Metadata = { title: { absolute: "Home · DE FabLab" } };
+export const metadata: Metadata = { title: { absolute: browserTitle("Home") } };
 
 /** The time this request renders, which each figure's change over the week is measured from. */
 function requestTime(): number {
@@ -231,7 +232,7 @@ function RepositoryCards({ repositories, profiling, changes }: { repositories: F
         <dd className={styles.cardValue}>
           <Link href={repositoriesHref()}>{formatNumber(total)}</Link>
         </dd>
-        <dd className={styles.muted}>In the catalog</dd>
+        <dd className={styles.muted}>Registered</dd>
         <Change change={changes.repositories!} />
       </div>
       <div className={styles.card} data-figure="Profiled">

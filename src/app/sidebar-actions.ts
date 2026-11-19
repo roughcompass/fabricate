@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { text } from "@/lib/web/form-data";
+import { legacyCookieName } from "@/lib/web/preference-cookies";
 import { SIDEBAR_HIDDEN, SIDEBAR_HIDDEN_COOKIE } from "@/lib/web/sidebar";
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
@@ -15,5 +16,5 @@ const ONE_YEAR = 60 * 60 * 24 * 365;
 export async function setSidebarVisibility(formData: FormData): Promise<void> {
   const jar = await cookies();
   if (text(formData, "sidebar", 10) === SIDEBAR_HIDDEN) jar.set(SIDEBAR_HIDDEN_COOKIE, SIDEBAR_HIDDEN, { path: "/", maxAge: ONE_YEAR, sameSite: "lax" });
-  else jar.delete(SIDEBAR_HIDDEN_COOKIE);
+  else for (const name of [SIDEBAR_HIDDEN_COOKIE, legacyCookieName(SIDEBAR_HIDDEN_COOKIE)]) if (name) jar.delete(name);
 }

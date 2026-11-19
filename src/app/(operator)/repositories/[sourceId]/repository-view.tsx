@@ -23,6 +23,7 @@ import { PREVIEW_OUTCOME_PARAMS, previewOutcome, sourceOutcome } from "../outcom
 import { PreviewsSection } from "./previews-section";
 import styles from "@/components/profiles/profile-body.module.css";
 import { routes } from "@/lib/web/routes";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /** Re-profile: surveys the configured reference again, unless its Profile is already up to date. */
 export function ReprofileForm({ source, variant = "primary" }: { source: RepositorySource; variant?: "primary" | "secondary" }) {
@@ -151,7 +152,7 @@ export function RepositoryView({
                   </Link>
                 }
               >
-                {`Version ${newer.version} is the newest. This one keeps its original facts, evidence, and detector release.`}
+                {`Version ${newer.version} is the newest. This one keeps its original facts, evidence, and ${SURVEYOR_RELEASE_LABEL}.`}
               </Alert>
             )}
           </>

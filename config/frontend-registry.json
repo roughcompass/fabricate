@@ -36,7 +36,7 @@
     "demo": { "enabled": true }
   },
   "test": {
-    "database": "tmp/test/fabricate.sqlite3",
+    "database": "tmp/test/frontend-registry.sqlite3",
     "repositoryStorage": "tmp/test/repositories",
     "demo": { "enabled": true }
   },

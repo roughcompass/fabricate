@@ -510,6 +510,6 @@ test("shows a version 1 Profile's facts unchanged, with the design-system catego
   await open(page, profile.publicId);
   const designSystem = detail(page.getByRole("region", { name: "Design system" }), "Design system");
   await expect(designSystem).toContainText("Not covered");
-  await expect(designSystem).toContainText(/Detector release \S+ doesn't report this category/);
+  await expect(designSystem).toContainText(/Surveyor release \S+ doesn't report this category/);
   await expect(page.getByRole("list", { name: "Needs attention" }).getByRole("listitem").filter({ hasText: "Design systems, UI elements, Style values" })).toContainText("Not covered");
 });

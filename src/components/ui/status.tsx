@@ -41,7 +41,7 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   conflicting: ["Conflicting", "warning"],
   unknown: ["Unknown", "neutral", "ring"],
   absent: ["None detected", "neutral"],
-  // A category that the Profile's detector release didn't define.
+  // A category that the Profile's Surveyor release didn't define.
   not_covered: ["Not covered", "neutral", "dash"],
   // A category with facts whose search couldn't read every relevant input, so it may hold more.
   partial: ["Partial", "neutral", "ring"],

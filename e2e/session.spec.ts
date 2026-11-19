@@ -168,7 +168,7 @@ test("opens Session with the P key, with focus inside", async ({ page }) => {
 test("shows the visitor's profile in the shell with its persona and region", async ({ page, db }) => {
   const priya = createProfile(db, await workspaceId(page, db), { name: "Priya Shah", persona: "Approver", region: "Mumbai" });
   const key = await page.locator("[data-demo-view-key]").getAttribute("data-demo-view-key");
-  await page.evaluate(([storageKey, value]) => window.localStorage.setItem(storageKey!, value!), [`fabricate-demo:${key}:view`, JSON.stringify({ theme: "light", profileId: priya.id, overrides: {} })]);
+  await page.evaluate(([storageKey, value]) => window.localStorage.setItem(storageKey!, value!), [`frontend-registry-demo:${key}:view`, JSON.stringify({ theme: "light", profileId: priya.id, overrides: {} })]);
   await page.reload();
   await waitForRegions(page);
   // The descriptor carries the visitor's profiles, so the profile shows once the stored view applies, without a fetch.

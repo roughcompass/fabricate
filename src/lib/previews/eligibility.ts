@@ -7,6 +7,7 @@ import { type EvidenceLocation, evidenceLocations } from "@/lib/profiles/evidenc
 import type { Category, Fact, FactDocument } from "@/lib/profiles/states";
 import { PAGE_FILE, type PageRead } from "./pages";
 import { list } from "./wording";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /**
  * Which packages of one commit can be previewed (design decision 3), decided
@@ -257,7 +258,7 @@ function nodeCondition(repository: Repository, directory: string, installRoot: s
   };
   const relevant = (input: string) => applicable(input) && declaresNode(input);
   const fail = (reason: string, facts: DecidingFact[]) => ({ condition: { condition: "node" as const, passed: false, reason, facts }, plan: null });
-  if (!category) return fail(`Its Node requirement couldn't be decided: detector release ${repository.document.detector_release} doesn't report runtime requirements.`, [repository.categoryFact("runtime_requirements")]);
+  if (!category) return fail(`Its Node requirement couldn't be decided: ${SURVEYOR_RELEASE_LABEL} ${repository.document.detector_release} doesn't report runtime requirements.`, [repository.categoryFact("runtime_requirements")]);
 
   const skipped = category.search.skipped.filter(relevant);
   const missingAnalysis = !category.search.complete || skipped.length > 0;
@@ -460,7 +461,7 @@ class Repository {
   /** Why +category+ can't be trusted for the inputs +relevant+ selects, or null when its search covered them. */
   unknownReason(id: string, relevant: (input: string) => boolean): string | null {
     const category: Category | undefined = categoryOf(this.document, id);
-    if (!category) return `detector release ${this.document.detector_release} doesn't report it`;
+    if (!category) return `${SURVEYOR_RELEASE_LABEL} ${this.document.detector_release} doesn't report it`;
     const skipped = category.search.skipped.filter(relevant);
     if (skipped.length) return `${paths(skipped)} could not be read or understood`;
     if (!category.search.complete) return "its search was incomplete";
@@ -476,7 +477,7 @@ class Repository {
 
   private decideMembership(directory: string): Membership {
     const category = categoryOf(this.document, "workspaces");
-    if (!category) return { root: null, unknown: `detector release ${this.document.detector_release} doesn't report workspaces`, facts: [this.categoryFact("workspaces")] };
+    if (!category) return { root: null, unknown: `${SURVEYOR_RELEASE_LABEL} ${this.document.detector_release} doesn't report workspaces`, facts: [this.categoryFact("workspaces")] };
     const fact = category.facts.find((candidate) => candidate.key === directory);
     if (!fact) {
       // A workspace declaration in an enclosing directory that couldn't be read might include it.

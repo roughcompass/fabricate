@@ -26,11 +26,11 @@ test.describe("on a wide viewport", () => {
 
   test("renders the shell with a skip link and the primary menu with the page's item current", async ({ page, db: _db }) => {
     await page.goto(paths.assessments);
-    await expect(page).toHaveTitle("Assessments · DE FabLab");
+    await expect(page).toHaveTitle("Assessments · Frontend Registry");
     await expect(page.getByRole("link", { name: "Skip to content" })).toBeAttached();
-    await expect(page.getByRole("link", { name: "DE FabLab home" })).toHaveAttribute("href", paths.home);
+    await expect(page.getByRole("link", { name: "Frontend Registry home" })).toHaveAttribute("href", paths.home);
     // Shell on a wide viewport: the product mark beside the product name.
-    await expect(page.locator("#sidebar").getByRole("link", { name: "DE FabLab home" })).toHaveText("DE FabLab");
+    await expect(page.locator("#sidebar").getByRole("link", { name: "Frontend Registry home" })).toHaveText("Frontend Registry");
     await expect(page.getByRole("button", { name: "Dark theme" })).toBeVisible();
     await expectCurrent(page, "All Assessments");
   });
@@ -97,7 +97,7 @@ test.describe("on a wide viewport", () => {
   test("Product mark opens Home from a Run", async ({ page, db }) => {
     const { assessment } = await seedResults(db);
     await page.goto(paths.run(assessment.publicId));
-    await page.getByRole("link", { name: "DE FabLab home" }).click();
+    await page.getByRole("link", { name: "Frontend Registry home" }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Home");
   });
@@ -213,7 +213,7 @@ test.describe("an adjustable sidebar", () => {
   const hideSidebar = (page: Page) => sidebar(page).getByRole("button", { name: "Hide sidebar" });
 
   test("Hiding and showing: the sidebar stays hidden across pages and comes back at its width", async ({ page, db: _db, baseURL }) => {
-    await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "320", url: baseURL! }]);
+    await page.context().addCookies([{ name: "frontend-registry-sidebar-width", value: "320", url: baseURL! }]);
     await page.goto(paths.repositories);
     await expect.poll(async () => (await sidebar(page).boundingBox())?.width).toBe(320);
     await hideSidebar(page).click();
@@ -280,7 +280,7 @@ test.describe("an adjustable sidebar", () => {
   });
 
   test("Restoring the default width with a double-click", async ({ page, db: _db, baseURL }) => {
-    await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "360", url: baseURL! }]);
+    await page.context().addCookies([{ name: "frontend-registry-sidebar-width", value: "360", url: baseURL! }]);
     await page.goto(paths.repositories);
     expect(await sidebarWidth(page)).toBe(360);
     await resizer(page).dblclick();
@@ -288,7 +288,7 @@ test.describe("an adjustable sidebar", () => {
   });
 
   test("Out-of-range stored width renders at the maximum", async ({ page, db: _db, baseURL }) => {
-    await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "9999", url: baseURL! }]);
+    await page.context().addCookies([{ name: "frontend-registry-sidebar-width", value: "9999", url: baseURL! }]);
     await page.goto(paths.repositories);
     expect(await sidebarWidth(page)).toBe(400);
     await expect(resizer(page)).toHaveAttribute("aria-valuenow", "400");
@@ -316,7 +316,7 @@ test.describe("a wide sidebar on a laptop", () => {
 
   test("Wide sidebar on a laptop: no page overflows beside a 400px sidebar", async ({ page, db, sourcesDir, baseURL }) => {
     test.setTimeout(120_000);
-    await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "400", url: baseURL! }]);
+    await page.context().addCookies([{ name: "frontend-registry-sidebar-width", value: "400", url: baseURL! }]);
     const surfaces = new Map(await seedOperatorSurfaces(db, sourcesDir));
     const pages: [string, string][] = [
       ["Evaluation", surfaces.get("08-evaluation")!],
@@ -353,7 +353,7 @@ test.describe("an outcome toast beside a wide sidebar", () => {
 
   async function setUp(page: Page, db: Parameters<typeof buildSource>[0], baseURL: string) {
     const sources = Array.from({ length: 40 }, (_, index) => buildSource(db, { name: `source-${String(index).padStart(2, "0")}` }));
-    await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "400", url: baseURL }]);
+    await page.context().addCookies([{ name: "frontend-registry-sidebar-width", value: "400", url: baseURL }]);
     return sources[0]!;
   }
 

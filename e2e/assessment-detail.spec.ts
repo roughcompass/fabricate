@@ -31,7 +31,7 @@ for (const viewport of [
     await page.goto(paths.run(complete.publicId));
     await expect(pageHeader(page)).toContainText("Complete");
     await expect(page.getByRole("heading", { level: 1, name: "Run #1" })).toBeVisible();
-    await expect(page).toHaveTitle("Run #1 · Fleet assessment · DE FabLab");
+    await expect(page).toHaveTitle("Run #1 · Fleet assessment · Frontend Registry");
     // The status says it; no alert restates it.
     await expect(page.locator("#page-alerts")).toBeEmpty();
     await expect(scope(page).getByRole("row").filter({ hasText: "Complete" })).toHaveCount(2);

@@ -18,13 +18,13 @@ export const E2E_PREVIEW_SOURCES = path.join(E2E_SOURCES, "previews");
 export const E2E_PREVIEW_REMOTES = ["orders-web", "portal"].map((name) => path.join(E2E_PREVIEW_SOURCES, name));
 
 export const E2E_ENV = {
-  FABRICATE_E2E: "1",
-  FABRICATE_NEXT_DIST_DIR: process.env.E2E_NEXT_DIST_DIR ?? ".next-e2e",
-  FABRICATE_DATABASE: E2E_DATABASE,
-  FABRICATE_REPOSITORY_STORAGE: path.join(E2E_ROOT, "repositories"),
-  FABRICATE_ALLOWED_ROOTS: E2E_SOURCES,
-  FABRICATE_PREVIEWS: E2E_PREVIEWS ? "1" : "0",
-  FABRICATE_PREVIEWS_STORAGE: path.join(E2E_ROOT, "previews"),
-  FABRICATE_PREVIEWS_TRUSTED_SOURCES: E2E_PREVIEW_REMOTES.map((remote) => `file://${remote}`).join(" "),
-  FABRICATE_PREVIEWS_NODE_VERSIONS: `${process.versions.node}=${path.dirname(process.execPath)}`,
+  FRONTEND_REGISTRY_E2E: "1",
+  FRONTEND_REGISTRY_NEXT_DIST_DIR: process.env.E2E_NEXT_DIST_DIR ?? ".next-e2e",
+  FRONTEND_REGISTRY_DATABASE: E2E_DATABASE,
+  FRONTEND_REGISTRY_REPOSITORY_STORAGE: path.join(E2E_ROOT, "repositories"),
+  FRONTEND_REGISTRY_ALLOWED_ROOTS: E2E_SOURCES,
+  FRONTEND_REGISTRY_PREVIEWS: E2E_PREVIEWS ? "1" : "0",
+  FRONTEND_REGISTRY_PREVIEWS_STORAGE: path.join(E2E_ROOT, "previews"),
+  FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES: E2E_PREVIEW_REMOTES.map((remote) => `file://${remote}`).join(" "),
+  FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS: `${process.versions.node}=${path.dirname(process.execPath)}`,
 };

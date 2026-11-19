@@ -65,11 +65,11 @@ test("captures the shell's sidebar states in both themes", async ({ page, db: _d
     await useTheme(page.context(), theme, baseURL!);
 
     await page.setViewportSize(VIEWPORTS[0]!);
-    await page.context().addCookies([{ name: "fabricate-sidebar", value: "hidden", url: baseURL! }]);
+    await page.context().addCookies([{ name: "frontend-registry-sidebar", value: "hidden", url: baseURL! }]);
     await page.goto(paths.assessments);
     await expect(page.locator("#sidebar")).toBeHidden();
     await capture("sidebar-hidden-desktop", theme);
-    await page.context().clearCookies({ name: "fabricate-sidebar" });
+    await page.context().clearCookies({ name: "frontend-registry-sidebar" });
 
     await page.goto(paths.home);
     await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Salt Patterns", exact: true })).toBeVisible();

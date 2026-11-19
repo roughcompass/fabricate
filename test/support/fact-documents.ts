@@ -19,7 +19,7 @@ export async function analyzedFacts(files: Readonly<Record<string, MemoryFile>>,
   return document.fact_document as unknown as FactDocument;
 }
 
-/** +document+ as detector release 0.1.0 produced it: without the Interface categories, which that release didn't define. */
+/** +document+ as Surveyor release 0.1.0 produced it: without the Interface categories, which that release didn't define. */
 export function asRelease010(document: FactDocument): FactDocument {
   const categories = { ...document.categories };
   for (const id of ["design_systems", "ui_elements", "style_values"]) delete categories[id];

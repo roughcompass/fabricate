@@ -10,7 +10,7 @@ const rail = (page: Page) => page.getByRole("form", { name: "Filter templates" }
 
 test("Opening the gallery: titled Salt Patterns, with the search, the filter rail, and every template", async ({ page, db: _db }) => {
   await page.goto("/templates");
-  await expect(page).toHaveTitle("Salt Patterns · DE FabLab");
+  await expect(page).toHaveTitle("Salt Patterns · Frontend Registry");
   await expect(page.getByRole("heading", { level: 1, name: "Salt Patterns" })).toBeVisible();
   await expect(page.getByText("Jumpstart your app development process with pre-built solutions from DE Web and our community.")).toBeVisible();
   await expectCurrentItem(page, "Salt Patterns");
@@ -237,7 +237,7 @@ test.describe("without JavaScript", () => {
 test.describe("template detail", () => {
   test("names the brand, the provider, and each microfrontend, with no Deploy template", async ({ page, db: _db }) => {
     await page.goto("/templates/market-watch");
-    await expect(page).toHaveTitle("Market watch · Salt Patterns · DE FabLab");
+    await expect(page).toHaveTitle("Market watch · Salt Patterns · Frontend Registry");
     await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Salt Patterns" })).toHaveAttribute("href", "/templates");
     await expect(page.getByRole("heading", { level: 1, name: "Market watch" })).toBeVisible();
     await expect(page.getByRole("img", { name: /Preview of the Market watch template/ })).toBeVisible();

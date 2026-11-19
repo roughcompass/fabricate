@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { DEMO_STORAGE_PREFIX, readDemoItem } from "@/lib/web/demo-storage";
 
 /**
  * The visitor's toolbar preferences, kept in the browser across every running
@@ -16,7 +17,7 @@ export interface ToolbarPrefs {
   readonly shortcuts: boolean;
 }
 
-const KEY = "fabricate-demo:toolbar";
+const KEY = `${DEMO_STORAGE_PREFIX}:toolbar`;
 const DEFAULTS: ToolbarPrefs = { collapsed: false, zoneIndicator: false, debug: false, shortcuts: true };
 
 const listeners = new Set<() => void>();
@@ -25,7 +26,7 @@ let current: ToolbarPrefs | null = null;
 function read(): ToolbarPrefs {
   if (current) return current;
   try {
-    const raw = JSON.parse(window.localStorage.getItem(KEY) ?? "{}") as Partial<Record<keyof ToolbarPrefs, unknown>>;
+    const raw = JSON.parse(readDemoItem(window.localStorage, KEY) ?? "{}") as Partial<Record<keyof ToolbarPrefs, unknown>>;
     current = {
       collapsed: raw.collapsed === true,
       zoneIndicator: raw.zoneIndicator === true,

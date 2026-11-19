@@ -11,7 +11,7 @@ import { LEGACY_REDIRECTS } from "@/lib/web/redirects";
 
 /** Where +address+ is sent, or null when no redirect applies. */
 function redirectOf(address: string): string | null {
-  const url = new URL(address, "http://fablab.test");
+  const url = new URL(address, "http://frontend-registry.test");
   const query = Object.fromEntries(url.searchParams);
   for (const redirect of LEGACY_REDIRECTS) {
     const params = getPathMatch(redirect.source, { removeUnnamedParams: true, strict: true })(url.pathname);

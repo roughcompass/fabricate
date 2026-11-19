@@ -69,12 +69,12 @@ describe("preview build processes", () => {
   });
 
   it("gives the process only the environment it was handed", async () => {
-    process.env.FABRICATE_TEST_SECRET = "fabricate-secret";
+    process.env.FRONTEND_REGISTRY_TEST_SECRET = "fabricate-secret";
     process.env.GIT_ASKPASS = "/usr/local/bin/askpass";
     try {
       await runCommand(node("console.log(JSON.stringify(Object.keys(process.env)))", { env: { PATH: "/usr/bin:/bin", CI: "1" } }));
     } finally {
-      delete process.env.FABRICATE_TEST_SECRET;
+      delete process.env.FRONTEND_REGISTRY_TEST_SECRET;
       delete process.env.GIT_ASKPASS;
     }
     // macOS adds __CF_USER_TEXT_ENCODING to every process; nothing else comes from the parent.

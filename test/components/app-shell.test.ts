@@ -41,9 +41,9 @@ describe("application shell", () => {
     ]);
   });
 
-  it("names the product DE FabLab and links its mark to Home (Product mark opens Home)", () => {
+  it("names the product Frontend Registry and links its mark to Home (Product mark opens Home)", () => {
     for (const demo of [false, true]) {
-      const brand = elements(AppShell({ theme: "system", nav: { ...NO_OPTIONAL_AREAS, demo }, children: null })).find((element) => element.props["aria-label"] === "DE FabLab home")!;
+      const brand = elements(AppShell({ theme: "system", nav: { ...NO_OPTIONAL_AREAS, demo }, children: null })).find((element) => element.props["aria-label"] === "Frontend Registry home")!;
       expect(brand.props.href).toBe("/");
     }
   });

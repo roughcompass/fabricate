@@ -4,11 +4,11 @@ import { getDb, migrateDatabase, setDb } from "@/lib/db/client";
 
 /**
  * Support for browser tests. These operations exist only when the server is
- * started with FABRICATE_E2E=1 outside production; otherwise their routes
+ * started with FRONTEND_REGISTRY_E2E=1 outside production; otherwise their routes
  * answer 404, so a deployed server can never reset its data.
  */
 export function e2eRoutesEnabled(): boolean {
-  return process.env.FABRICATE_E2E === "1" && process.env.NODE_ENV !== "production" && getConfig().environment !== "production";
+  return process.env.FRONTEND_REGISTRY_E2E === "1" && process.env.NODE_ENV !== "production" && getConfig().environment !== "production";
 }
 
 /** Replaces the database, repository storage, and preview storage with empty, migrated ones. */

@@ -36,7 +36,7 @@ const ASSESSMENT_ITEMS: readonly NavItem[] = [
   { id: "standards", label: "Standards", href: "/standards", icon: "target", match: [/^\/standards(\/.*)?$/] },
 ];
 
-/** Admin: settings DE FabLab keeps for every operator, such as Bitbucket Server tokens. */
+/** Admin: settings the Frontend Registry keeps for every operator, such as Bitbucket Server tokens. */
 const ADMIN_ITEMS: readonly NavItem[] = [{ id: "bitbucket-tokens", label: "Bitbucket tokens", href: "/admin/bitbucket-tokens", icon: "lock", match: [/^\/admin(\/.*)?$/] }];
 
 export const SALT_PATTERNS = { id: "salt-patterns", label: "Salt Patterns", href: "/templates", icon: "sparkle", match: [/^\/templates(\/.*)?$/] } as const satisfies NavItem;

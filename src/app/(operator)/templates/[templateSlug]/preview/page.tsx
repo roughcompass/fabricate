@@ -129,7 +129,7 @@ export default async function PreviewPage({ params, searchParams }: PageProps<"/
             <>
               {isIllustrative(template) && (
                 <p className={styles.illustrative} data-illustrative="">
-                  These files are illustrative: generated from the catalog to show the template&apos;s shape, not real Salt.
+                  These files are illustrative: generated from the template&apos;s description to show its shape, not real Salt.
                 </p>
               )}
               <div className={styles.code}>

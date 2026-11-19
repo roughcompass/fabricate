@@ -121,7 +121,7 @@ export function isIllustrative(template: Template): boolean {
   return heroSources(template) === null;
 }
 
-/** A hero's package.json: its microfrontends, React, the portal runtime interface, and the Salt packages its source imports, at the versions DE FabLab renders with. */
+/** A hero's package.json: its microfrontends, React, the portal runtime interface, and the Salt packages its source imports, at the versions the Frontend Registry renders with. */
 function heroPackageJson(template: Template, sources: readonly string[]): string {
   const children = template.app.members.filter((member) => member.role === "child");
   const packages: Readonly<Record<string, string>> = fabricatePackage.dependencies;

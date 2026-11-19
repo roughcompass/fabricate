@@ -4,7 +4,7 @@
  * the form states the same limit the server applies.
  */
 
-/** The most lines one submission adds: the largest fleet DE FabLab plans for. */
+/** The most lines one submission adds: the largest fleet the Frontend Registry plans for. */
 export const BULK_LIMIT = 500;
 
 export interface BulkLine {

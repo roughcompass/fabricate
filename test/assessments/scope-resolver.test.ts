@@ -61,14 +61,14 @@ describe("scope resolution", () => {
   });
 
   it("reports an empty scope of all Repositories", () => {
-    expect(problemsOf(() => resolveScope(db, buildInitiative(db)))[0]?.message).toMatch(/The scope is empty: the catalog has no Repositories/);
+    expect(problemsOf(() => resolveScope(db, buildInitiative(db)))[0]?.message).toMatch(/The scope is empty: there are no Repositories/);
   });
 
   it("reports an explicit scope with no selections", () => {
     const initiative = buildInitiative(db, { sources: [buildSource(db)] });
     rawRun(db, "delete from initiative_targets where initiative_id = ?", initiative.id);
 
-    expect(problemsOf(() => resolveScope(db, getInitiative(db, initiative.publicId)))[0]?.message).toMatch(/selects no repository sources/);
+    expect(problemsOf(() => resolveScope(db, getInitiative(db, initiative.publicId)))[0]?.message).toMatch(/selects no Repositories/);
   });
 
   it("reports a selected source that no longer exists", () => {
@@ -80,6 +80,6 @@ describe("scope resolution", () => {
 
     const problems = problemsOf(() => resolveScope(db, initiative));
     expect(problems).toHaveLength(1);
-    expect(problems[0]?.message).toMatch(new RegExp(`catalog record ${removed.id}\\) no longer exists`));
+    expect(problems[0]?.message).toMatch(new RegExp(`record ${removed.id}\\) no longer exists`));
   });
 });

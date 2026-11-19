@@ -33,7 +33,7 @@ test("Opening the root address: Home opens without a redirect, titled Home, with
   const response = await page.goto(paths.home);
   expect(response?.request().redirectedFrom()).toBeNull();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page).toHaveTitle("Home · DE FabLab");
+  await expect(page).toHaveTitle("Home · Frontend Registry");
   await expect(title(page)).toHaveText("Home");
   await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toHaveCount(0);
   await expectClosedMenu(page);
@@ -148,7 +148,7 @@ test.describe("reaching Home", () => {
     const { assessment: run } = await seedResults(db);
     await page.goto(paths.run(run.publicId));
     await expect(primary(page).getByRole("link", { name: "All Assessments" })).toBeVisible();
-    await page.getByRole("link", { name: "DE FabLab home" }).click();
+    await page.getByRole("link", { name: "Frontend Registry home" }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(title(page)).toHaveText("Home");
     await expectClosedMenu(page);
@@ -163,7 +163,7 @@ test.describe("reaching Home", () => {
 
   test("the product mark on Home keeps Home with the menu closed", async ({ page, db: _db }) => {
     await page.goto(paths.home);
-    await page.getByRole("link", { name: "DE FabLab home" }).click();
+    await page.getByRole("link", { name: "Frontend Registry home" }).click();
     await expect(page).toHaveURL(/\/$/);
     await expectClosedMenu(page);
   });
@@ -173,7 +173,7 @@ test.describe("reaching Home", () => {
 
     test("the product mark and the Home item open Home with the menu closed", async ({ page, db: _db }) => {
       await page.goto(paths.repositories);
-      await page.getByRole("link", { name: "DE FabLab home" }).click();
+      await page.getByRole("link", { name: "Frontend Registry home" }).click();
       await expect(page).toHaveURL(/\/$/);
       await expectClosedMenu(page);
 
@@ -202,14 +202,14 @@ test.describe("reaching Home on a narrow viewport", () => {
   test("the product mark closes the drawer, from another page and on Home itself", async ({ page, db: _db }) => {
     await page.goto(paths.repositories);
     await openNavigation(page).click();
-    await page.getByRole("link", { name: "DE FabLab home" }).click();
+    await page.getByRole("link", { name: "Frontend Registry home" }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator("#sidebar")).toBeHidden();
 
     // Already on Home, the address doesn't change, and the drawer still closes.
     await openNavigation(page).click();
     await expect(page.locator("#sidebar")).toBeVisible();
-    await page.getByRole("link", { name: "DE FabLab home" }).click();
+    await page.getByRole("link", { name: "Frontend Registry home" }).click();
     await expect(page.locator("#sidebar")).toBeHidden();
     await expect(title(page)).toHaveText("Home");
   });

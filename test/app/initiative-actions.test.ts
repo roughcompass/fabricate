@@ -83,11 +83,11 @@ describe("initiative Server Actions", () => {
   });
 
   it("returns an actionable problem when the scope can't be resolved, and starts nothing", async () => {
-    // An Assessment of all Repositories, while the catalog has none.
+    // An Assessment of all Repositories, while there are none.
     const initiative = buildInitiative(app.db);
 
     const state = await startAssessment(initiative.publicId, { problems: [] }, formData({ launchToken: crypto.randomUUID() }));
-    expect(state.problems).toEqual(["The scope is empty: the catalog has no Repositories. Add one before starting an assessment."]);
+    expect(state.problems).toEqual(["The scope is empty: there are no Repositories. Add one before starting a Run."]);
     expect(listAssessments(app.db, initiative.id)).toEqual([]);
     expect(app.db.select().from(jobs).all()).toEqual([]);
   });

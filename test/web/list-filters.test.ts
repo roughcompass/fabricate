@@ -4,7 +4,7 @@ import { assessmentsHref, repositoriesHref } from "@/lib/web/list-filters";
 
 // page-patterns spec: the lists filter what Home counts, through one set of addresses.
 
-const query = (href: string) => new URL(href, "http://fablab.test").searchParams;
+const query = (href: string) => new URL(href, "http://frontend-registry.test").searchParams;
 
 describe("list filter addresses", () => {
   it("builds the Repositories list's address with its search", () => {

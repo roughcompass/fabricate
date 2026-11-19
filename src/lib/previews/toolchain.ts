@@ -130,7 +130,7 @@ export interface EnvironmentOptions {
  * is passed: PATH, a per-build HOME and TMPDIR, CI=1, corepack's and the
  * package manager's cache locations, and, for the build step only, the
  * base-path variables and NODE_ENV=production. Nothing comes from the
- * worker's environment, so FABRICATE_*, GIT_*, VERCEL_*, AI_*, npm_config_*,
+ * worker's environment, so FRONTEND_REGISTRY_*, GIT_*, VERCEL_*, AI_*, npm_config_*,
  * and every other variable stay behind.
  */
 export function buildEnvironment(options: EnvironmentOptions): Record<string, string> {

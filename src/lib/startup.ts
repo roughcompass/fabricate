@@ -2,6 +2,7 @@ import { getConfig } from "./config";
 import { getDb, pendingMigrationCount } from "./db/client";
 import { describeCapability, verifyGit } from "./git/capability";
 import { GitRunner } from "./git/runner";
+import { PRODUCT } from "./product";
 
 /**
  * Checks shared by the web server (src/instrumentation.ts) and the worker.
@@ -15,7 +16,7 @@ export async function verifyStartup(processName: "server" | "worker"): Promise<v
   if (pending > 0) {
     throw new Error(
       `The database at ${config.database} has ${pending} pending migration(s). ` +
-        "Run `npm run db:migrate`, or `node dist/migrate.cjs` in the production image, before starting DE FabLab.",
+        `Run \`npm run db:migrate\`, or \`node dist/migrate.cjs\` in the production image, before starting the ${PRODUCT.name}.`,
     );
   }
 

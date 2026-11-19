@@ -38,7 +38,7 @@ export function resolveScope(db: Executor, initiative: Initiative): RepositorySo
 function allSources(db: Executor): RepositorySource[] {
   const sources = db.select().from(repositorySources).where(isNull(repositorySources.deletedAt)).orderBy(...byCatalogOrder).all();
   if (sources.length === 0) {
-    throw new ScopeResolutionError([{ sourcePublicId: null, sourceName: null, message: "The scope is empty: the catalog has no Repositories. Add one before starting an assessment." }]);
+    throw new ScopeResolutionError([{ sourcePublicId: null, sourceName: null, message: "The scope is empty: there are no Repositories. Add one before starting a Run." }]);
   }
   return sources;
 }
@@ -54,7 +54,7 @@ function explicitSources(db: Executor, initiative: Initiative): RepositorySource
 
   if (rows.length === 0) {
     throw new ScopeResolutionError([
-      { sourcePublicId: null, sourceName: null, message: "The scope is empty: this initiative's explicit scope selects no repository sources." },
+      { sourcePublicId: null, sourceName: null, message: "The scope is empty: this Assessment's explicit scope selects no Repositories." },
     ]);
   }
 
@@ -64,10 +64,10 @@ function explicitSources(db: Executor, initiative: Initiative): RepositorySource
       problems.push({
         sourcePublicId: null,
         sourceName: null,
-        message: `A selected repository source (catalog record ${selection.repositorySourceId}) no longer exists. Edit the initiative's scope to remove it.`,
+        message: `A selected Repository (record ${selection.repositorySourceId}) no longer exists. Edit the Assessment's scope to remove it.`,
       });
     } else if (source.deletedAt) {
-      problems.push({ sourcePublicId: source.publicId, sourceName: source.name, message: `${source.name} (${source.publicId}) was deleted. Edit the initiative's scope to remove it.` });
+      problems.push({ sourcePublicId: source.publicId, sourceName: source.name, message: `${source.name} (${source.publicId}) was deleted. Edit the Assessment's scope to remove it.` });
     }
   }
   if (problems.length) throw new ScopeResolutionError(problems);

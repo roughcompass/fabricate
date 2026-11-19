@@ -45,7 +45,7 @@ test.describe("portal shells", () => {
       const portal = page.locator("[data-demo-portal]");
       await expect(portal).toHaveAttribute("data-brand", template.brand);
       await expect(portal).toHaveAttribute("data-shell", hero.shell);
-      // The J.P. Morgan logo, served from DE FabLab, then the portal name; "J.P. Morgan" is never printed as text.
+      // The J.P. Morgan logo, served from the Frontend Registry, then the portal name; "J.P. Morgan" is never printed as text.
       await expect(home(page, hero.portal)).toBeVisible();
       await expect(home(page, hero.portal).getByRole("img", { name: "J.P. Morgan" })).toHaveAttribute("src", "/brand/jpmorgan-logo.svg");
       await expect(home(page, hero.portal)).toContainText(hero.name);

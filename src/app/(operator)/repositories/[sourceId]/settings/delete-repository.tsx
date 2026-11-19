@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { useHydrated } from "@/components/ui/use-hydrated";
 import type { DeletionEffects } from "@/lib/catalog/catalog";
+import { PRODUCT } from "@/lib/product";
 import styles from "./settings.module.css";
 
 interface DeleteRepositoryProps {
@@ -112,7 +113,7 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
             </div>
             <ul className={styles.effects}>
               <li>
-                This will permanently delete <strong>{name}</strong> from the catalog. It can&apos;t be restored, and its clone URL can be registered again only as a new Repository.
+                This will permanently delete <strong>{name}</strong> from the {PRODUCT.name}. It can&apos;t be restored, and its clone URL can be registered again only as a new Repository.
               </li>
               <li>{effects.versions ? `Its ${countLabel(effects.versions, "version")} will no longer be shown; a version in progress finishes.` : "It has no versions yet."}</li>
               <li>

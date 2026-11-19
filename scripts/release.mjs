@@ -1,6 +1,6 @@
 // Builds a production release from the committed sources, runnable with Node alone:
 //
-//   REPO_FACTS_NPM_REGISTRY=<registry> npm run release [-- <directory>]
+//   SURVEYOR_NPM_REGISTRY=<registry> npm run release [-- <directory>]
 //
 // The build runs in a clean copy of HEAD (`git archive`), never in this
 // working tree: Next's standalone tracing copies from the whole project
@@ -25,10 +25,16 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const target = path.resolve(root, process.argv[2] ?? "release");
-if (!process.env.REPO_FACTS_NPM_REGISTRY) throw new Error("Set REPO_FACTS_NPM_REGISTRY to the registry that serves the @repo-facts packages.");
+// For one release, the registry's old variable name still works, with a warning; .npmrc reads only the new one.
+const LEGACY_REGISTRY = "REPO_FACTS_NPM_REGISTRY";
+if (!process.env.SURVEYOR_NPM_REGISTRY && process.env[LEGACY_REGISTRY]) {
+  console.warn(`${LEGACY_REGISTRY} is deprecated and stops working in the next release. Set SURVEYOR_NPM_REGISTRY instead.`);
+  process.env.SURVEYOR_NPM_REGISTRY = process.env[LEGACY_REGISTRY];
+}
+if (!process.env.SURVEYOR_NPM_REGISTRY) throw new Error("Set SURVEYOR_NPM_REGISTRY to the registry that serves the @repo-facts packages.");
 
 // The clean copy builds into its own `.next`, whatever this shell points the build directory at.
-const { FABRICATE_NEXT_DIST_DIR: _distDir, ...inherited } = process.env;
+const { FRONTEND_REGISTRY_NEXT_DIST_DIR: _distDir, ...inherited } = process.env;
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: "inherit", env: { ...inherited, NEXT_TELEMETRY_DISABLED: "1" } });
 const dirty = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: root, encoding: "utf8" }).trim();
 if (dirty) console.warn("Uncommitted changes are left out of the release; it builds HEAD.");

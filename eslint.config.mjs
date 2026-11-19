@@ -170,7 +170,7 @@ const config = [
       "react-hooks/rules-of-hooks": "off",
       "no-restricted-syntax": [
         "error",
-        { selector: "Literal[value=/fabricate-theme/]", message: "Set the theme with useTheme from e2e/support/shell.ts." },
+        { selector: "Literal[value=/frontend-registry-theme/]", message: "Set the theme with useTheme from e2e/support/shell.ts." },
         { selector: "Literal[value=/data-page-header/]", message: "Find the page header with pageHeader from e2e/support/shell.ts." },
       ],
     },

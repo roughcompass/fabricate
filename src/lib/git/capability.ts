@@ -1,5 +1,6 @@
 import { GitError } from "./errors";
 import { GitRunner } from "./runner";
+import { PRODUCT } from "../product";
 
 /**
  * Startup check that the Git executable exists and supports the controls
@@ -31,7 +32,7 @@ export async function verifyGit(runner = new GitRunner()): Promise<GitCapability
     throw error;
   }
   if (!capability.supported) {
-    throw new GitError("git_unsupported", `Git ${capability.version} at ${capability.executable} is unsupported; DE FabLab requires ${MINIMUM_GIT_VERSION} or newer`);
+    throw new GitError("git_unsupported", `Git ${capability.version} at ${capability.executable} is unsupported; the ${PRODUCT.name} requires ${MINIMUM_GIT_VERSION} or newer`);
   }
   return capability;
 }

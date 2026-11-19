@@ -89,7 +89,7 @@ export function AccessShell({ children }: { children: React.ReactNode }) {
           <Icon name="menu" size={20} />
         </button>
         <Link href={routeHref(start)} className={styles.wordmark}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG from DE FabLab\'s own origin */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG from the Frontend Registry\'s own origin */}
           <img className={styles.logo} src="/brand/jpmorgan-logo.svg" alt="J.P. Morgan" />
           <span className={styles.wordmarkDivider} aria-hidden="true" />
           <span className={styles.wordmarkProduct}>Access</span>

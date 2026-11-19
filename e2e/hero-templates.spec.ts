@@ -11,7 +11,7 @@ test("labels a non-hero built-in Illustrative on its card, detail page, and Code
   await expect(card(page, "Payments workspace").locator("[data-illustrative]")).toHaveCount(0);
 
   await page.goto("/templates/corporate-card-controls");
-  await expect(page.locator("dl").first()).toContainText("Illustrative: its code is generated from the catalog, not real Salt.");
+  await expect(page.locator("dl").first()).toContainText("Illustrative: its code is generated from the template's description, not real Salt.");
   await page.goto("/templates/corporate-card-controls/preview?view=code");
   await expect(page.locator("[data-illustrative]")).toContainText("These files are illustrative");
 });

@@ -26,13 +26,13 @@ describe("GitRunner", () => {
   let config: FabricateConfig;
   let fake: RecordingGit;
   let gitDir: string;
-  const saved = { secret: process.env.FABRICATE_TEST_SECRET, proxy: process.env.HTTPS_PROXY, agent: process.env.SSH_AUTH_SOCK };
+  const saved = { secret: process.env.FRONTEND_REGISTRY_TEST_SECRET, proxy: process.env.HTTPS_PROXY, agent: process.env.SSH_AUTH_SOCK };
 
   beforeEach(() => {
     storage = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "runner-storage-")));
     config = withOverrides(getConfig(), { repositoryStorage: storage, gitCredentialHelper: "osxkeychain" });
     gitDir = path.join(storage, "src_aaaaaaaaaaaaaaaa.git");
-    process.env.FABRICATE_TEST_SECRET = "parent-process-secret";
+    process.env.FRONTEND_REGISTRY_TEST_SECRET = "parent-process-secret";
     process.env.HTTPS_PROXY = "http://proxy.example.com:3128";
     process.env.SSH_AUTH_SOCK = "/tmp/agent.sock";
   });
@@ -40,7 +40,7 @@ describe("GitRunner", () => {
   afterEach(() => {
     fake?.cleanup();
     fs.rmSync(storage, { recursive: true, force: true });
-    for (const [key, value] of [["FABRICATE_TEST_SECRET", saved.secret], ["HTTPS_PROXY", saved.proxy], ["SSH_AUTH_SOCK", saved.agent]] as const) {
+    for (const [key, value] of [["FRONTEND_REGISTRY_TEST_SECRET", saved.secret], ["HTTPS_PROXY", saved.proxy], ["SSH_AUTH_SOCK", saved.agent]] as const) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }

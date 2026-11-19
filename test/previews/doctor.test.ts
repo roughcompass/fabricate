@@ -73,7 +73,7 @@ describe("preview toolchain doctor", () => {
 
   it("runs corepack in a build's install environment, with caches under preview storage and a throwaway HOME", async () => {
     const bin = install("24.22.0");
-    const secret = "FABRICATE_SECRET_TOKEN";
+    const secret = "FRONTEND_REGISTRY_SECRET_TOKEN";
     process.env[secret] = "doctor-secret";
     try {
       await check(configWith({ "24.22.0": bin }), runner({ "node --version": { output: "v24.22.0\n" } }));
@@ -87,7 +87,7 @@ describe("preview toolchain doctor", () => {
     expect(pnpm.env.PATH!.split(":")[0]).toBe(bin);
     expect(pnpm.env.HOME).not.toBe(os.homedir());
     expect(pnpm.cwd).toBe(pnpm.env.HOME);
-    expect(Object.keys(pnpm.env).filter((key) => key.startsWith("FABRICATE_") || key === "NODE_ENV")).toEqual([]);
+    expect(Object.keys(pnpm.env).filter((key) => key.startsWith("FRONTEND_REGISTRY_") || key === "NODE_ENV")).toEqual([]);
     expect(calls.find((call) => call.args[0] === "yarn")!.env).toMatchObject({ YARN_CACHE_FOLDER: path.join(storage, ".cache", "yarn", "classic") });
     // The throwaway HOME is gone afterwards.
     expect(fs.existsSync(pnpm.env.HOME!)).toBe(false);

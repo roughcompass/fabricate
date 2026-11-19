@@ -59,7 +59,7 @@ describe("worker lock", () => {
     const other = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"]);
     fs.writeFileSync(file, `${other.pid}\n`);
     try {
-      const env = { ...process.env, FABRICATE_ENV: "test", FABRICATE_DATABASE: database, FABRICATE_REPOSITORY_STORAGE: path.join(directory, "repositories") };
+      const env = { ...process.env, FRONTEND_REGISTRY_ENV: "test", FRONTEND_REGISTRY_DATABASE: database, FRONTEND_REGISTRY_REPOSITORY_STORAGE: path.join(directory, "repositories") };
       const exit = await promisify(execFile)(process.execPath, ["--import", "tsx", "src/worker/main.ts"], { cwd: process.cwd(), env, timeout: 60_000 }).then(
         () => ({ code: 0, stderr: "" }),
         (error: { code: number; stderr: string }) => ({ code: error.code, stderr: error.stderr }),

@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ applicati
   const resolved = await resolve((await params).applicationId);
   if (!resolved) return { title: "Page not found" };
   const { template } = resolved.view;
-  // The portal's own favicon: never DE FabLab's.
+  // The portal's own favicon: never the Frontend Registry's.
   return { title: { absolute: `${template.title} · ${BRANDS[template.brand].portalName}` }, icons: { icon: [{ url: runtimeExperience(template.brand).favicon }] } };
 }
 

@@ -50,7 +50,7 @@ describe("configuration", () => {
   });
 
   it("cannot drop fleet-kit through an environment variable or an override", () => {
-    const fromEnv = load({ shared }, { FABRICATE_DENIED_ROOTS: path.join(workspace, "other") });
+    const fromEnv = load({ shared }, { FRONTEND_REGISTRY_DENIED_ROOTS: path.join(workspace, "other") });
     expect(fromEnv.deniedRoots).toEqual([path.join(workspace, "other"), fleetKit]);
 
     const overridden = withOverrides(fromEnv, { deniedRoots: [] });
@@ -83,11 +83,11 @@ describe("configuration", () => {
 
   it("applies typed environment overrides", () => {
     const config = load({ shared }, {
-      FABRICATE_ALLOWED_ROOTS: [path.join(workspace, "fleet"), path.join(workspace, "more")].join(path.delimiter),
-      FABRICATE_GIT_TIMEOUT: "30",
-      FABRICATE_WORKER_CONCURRENCY: "8",
-      FABRICATE_MAX_FILES: "99",
-      FABRICATE_GIT_CREDENTIAL_HELPER: "osxkeychain",
+      FRONTEND_REGISTRY_ALLOWED_ROOTS: [path.join(workspace, "fleet"), path.join(workspace, "more")].join(path.delimiter),
+      FRONTEND_REGISTRY_GIT_TIMEOUT: "30",
+      FRONTEND_REGISTRY_WORKER_CONCURRENCY: "8",
+      FRONTEND_REGISTRY_MAX_FILES: "99",
+      FRONTEND_REGISTRY_GIT_CREDENTIAL_HELPER: "osxkeychain",
     });
 
     expect(config.allowedRoots).toEqual([path.join(workspace, "fleet"), path.join(workspace, "more")]);
@@ -98,9 +98,9 @@ describe("configuration", () => {
   });
 
   it.each([
-    ["a non-numeric integer", { FABRICATE_GIT_TIMEOUT: "soon" }],
-    ["a negative integer", { FABRICATE_MAX_FILES: "-1" }],
-    ["zero", { FABRICATE_WORKER_CONCURRENCY: "0" }],
+    ["a non-numeric integer", { FRONTEND_REGISTRY_GIT_TIMEOUT: "soon" }],
+    ["a negative integer", { FRONTEND_REGISTRY_MAX_FILES: "-1" }],
+    ["zero", { FRONTEND_REGISTRY_WORKER_CONCURRENCY: "0" }],
   ])("rejects %s from the environment", (_label, env) => {
     expect(() => load({ shared }, env)).toThrow(ConfigurationError);
   });
@@ -128,6 +128,67 @@ describe("configuration", () => {
     }
   });
 
+  describe("names from before the rename, read for one release", () => {
+    const warnings: string[] = [];
+    const warn = (message: string) => warnings.push(message);
+    const withEnv = (env: Record<string, string>, environment?: "test") => loadConfig({ appRoot, environment, env, file: { shared }, warn });
+    const writeConfig = (name: string, settings: Partial<Settings>) => {
+      fs.mkdirSync(path.join(appRoot, "config"), { recursive: true });
+      fs.writeFileSync(path.join(appRoot, "config", name), JSON.stringify({ shared: { ...shared, ...settings } }));
+    };
+
+    beforeEach(() => {
+      warnings.length = 0;
+    });
+
+    it("reads FRONTEND_REGISTRY_* variables without a warning", () => {
+      expect(withEnv({ FRONTEND_REGISTRY_WORKER_CONCURRENCY: "7", FRONTEND_REGISTRY_ENV: "production" }, undefined)).toMatchObject({ workerConcurrency: 7, environment: "production" });
+      expect(warnings).toEqual([]);
+    });
+
+    it("reads an old FABRICATE_* variable when its new name is unset, and warns that it's deprecated", () => {
+      const config = withEnv({ FABRICATE_WORKER_CONCURRENCY: "6", FABRICATE_PREVIEWS: "true", FABRICATE_ENV: "production" }, undefined);
+
+      expect(config).toMatchObject({ workerConcurrency: 6, environment: "production", previews: { enabled: true } });
+      expect(warnings).toEqual([
+        "FABRICATE_ENV is deprecated and stops working in the next release. Set FRONTEND_REGISTRY_ENV instead.",
+        "FABRICATE_WORKER_CONCURRENCY is deprecated and stops working in the next release. Set FRONTEND_REGISTRY_WORKER_CONCURRENCY instead.",
+        "FABRICATE_PREVIEWS is deprecated and stops working in the next release. Set FRONTEND_REGISTRY_PREVIEWS instead.",
+      ]);
+    });
+
+    it("prefers the new name when both are set, and warns that the old one is ignored", () => {
+      expect(withEnv({ FRONTEND_REGISTRY_MAX_FILES: "12", FABRICATE_MAX_FILES: "99" }, "test").analysis.maxFiles).toBe(12);
+      expect(warnings).toEqual(["FABRICATE_MAX_FILES is ignored because FRONTEND_REGISTRY_MAX_FILES is set. Remove FABRICATE_MAX_FILES."]);
+    });
+
+    it("reads config/frontend-registry.json", () => {
+      writeConfig("frontend-registry.json", { workerConcurrency: 5 });
+
+      expect(loadConfig({ appRoot, environment: "test", env: {}, warn }).workerConcurrency).toBe(5);
+      expect(warnings).toEqual([]);
+    });
+
+    it("falls back to config/fabricate.json when config/frontend-registry.json is missing, with a warning", () => {
+      writeConfig("fabricate.json", { workerConcurrency: 4 });
+
+      expect(loadConfig({ appRoot, environment: "test", env: {}, warn }).workerConcurrency).toBe(4);
+      expect(warnings).toEqual(["config/fabricate.json is deprecated and stops being read in the next release. Rename it to config/frontend-registry.json."]);
+    });
+
+    it("reads only config/frontend-registry.json when both files exist", () => {
+      writeConfig("frontend-registry.json", { workerConcurrency: 5 });
+      writeConfig("fabricate.json", { workerConcurrency: 4 });
+
+      expect(loadConfig({ appRoot, environment: "test", env: {}, warn }).workerConcurrency).toBe(5);
+      expect(warnings).toEqual([]);
+    });
+
+    it("names the new file when neither exists", () => {
+      expect(() => loadConfig({ appRoot, environment: "test", env: {}, warn })).toThrow(/Could not read .*config\/frontend-registry\.json/);
+    });
+  });
+
   describe("template demo switch", () => {
     it("is on in development and test, and off in production, by default", () => {
       const committed = (environment: "development" | "test" | "production") => loadConfig({ appRoot: process.cwd(), environment, env: {} }).demoEnabled;
@@ -143,22 +204,22 @@ describe("configuration", () => {
       ["1", true],
       ["false", false],
       ["0", false],
-    ])("accepts FABRICATE_DEMO=%s", (value, expected) => {
-      expect(load({ shared }, { FABRICATE_DEMO: value }).demoEnabled).toBe(expected);
-      expect(load({ shared: { ...shared, demo: { enabled: true } } }, { FABRICATE_DEMO: value }).demoEnabled).toBe(expected);
+    ])("accepts FRONTEND_REGISTRY_DEMO=%s", (value, expected) => {
+      expect(load({ shared }, { FRONTEND_REGISTRY_DEMO: value }).demoEnabled).toBe(expected);
+      expect(load({ shared: { ...shared, demo: { enabled: true } } }, { FRONTEND_REGISTRY_DEMO: value }).demoEnabled).toBe(expected);
     });
 
     it("lets the override enable the demo in production", () => {
-      const config = loadConfig({ appRoot: process.cwd(), environment: "production", env: { FABRICATE_DEMO: "true" } });
+      const config = loadConfig({ appRoot: process.cwd(), environment: "production", env: { FRONTEND_REGISTRY_DEMO: "true" } });
       expect(config.demoEnabled).toBe(true);
     });
 
     it("ignores a blank override", () => {
-      expect(load({ shared }, { FABRICATE_DEMO: " " }).demoEnabled).toBe(false);
+      expect(load({ shared }, { FRONTEND_REGISTRY_DEMO: " " }).demoEnabled).toBe(false);
     });
 
-    it.each([["yes"], ["on"], ["2"]])("rejects FABRICATE_DEMO=%s", (value) => {
-      expect(() => load({ shared }, { FABRICATE_DEMO: value })).toThrow(/FABRICATE_DEMO must be true, false, 1, or 0/);
+    it.each([["yes"], ["on"], ["2"]])("rejects FRONTEND_REGISTRY_DEMO=%s", (value) => {
+      expect(() => load({ shared }, { FRONTEND_REGISTRY_DEMO: value })).toThrow(/FRONTEND_REGISTRY_DEMO must be true, false, 1, or 0/);
     });
 
     it("rejects a missing, non-boolean, or extended demo setting", () => {
@@ -210,14 +271,14 @@ describe("configuration", () => {
 
     it("apply typed environment overrides", () => {
       const config = load({ shared }, {
-        FABRICATE_PREVIEWS: "true",
-        FABRICATE_PREVIEWS_TRUSTED_SOURCES: "https://git.example.com/acme/orders.git \n ssh://git@git.example.com/acme/admin.git",
-        FABRICATE_PREVIEWS_NODE_VERSIONS: ["22.11.0=/opt/node-22/bin", "20.18.1=/opt/node-20/bin"].join(path.delimiter),
-        FABRICATE_PREVIEWS_STORAGE: "/var/lib/fabricate/previews",
-        FABRICATE_PREVIEWS_CONCURRENCY: "2",
-        FABRICATE_PREVIEWS_TIMEOUT_MINUTES: "30",
-        FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES: "1000",
-        FABRICATE_PREVIEWS_MAX_STORAGE_BYTES: "5000",
+        FRONTEND_REGISTRY_PREVIEWS: "true",
+        FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES: "https://git.example.com/acme/orders.git \n ssh://git@git.example.com/acme/admin.git",
+        FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS: ["22.11.0=/opt/node-22/bin", "20.18.1=/opt/node-20/bin"].join(path.delimiter),
+        FRONTEND_REGISTRY_PREVIEWS_STORAGE: "/var/lib/fabricate/previews",
+        FRONTEND_REGISTRY_PREVIEWS_CONCURRENCY: "2",
+        FRONTEND_REGISTRY_PREVIEWS_TIMEOUT_MINUTES: "30",
+        FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES: "1000",
+        FRONTEND_REGISTRY_PREVIEWS_MAX_STORAGE_BYTES: "5000",
       });
 
       expect(config.previews).toEqual({
@@ -230,17 +291,17 @@ describe("configuration", () => {
         maxOutputBytes: 1000,
         maxStorageBytes: 5000,
       });
-      expect(load({ shared }, { FABRICATE_PREVIEWS: "0" }).previews.enabled).toBe(false);
-      expect(load({ shared }, { FABRICATE_PREVIEWS: " " }).previews.enabled).toBe(false);
+      expect(load({ shared }, { FRONTEND_REGISTRY_PREVIEWS: "0" }).previews.enabled).toBe(false);
+      expect(load({ shared }, { FRONTEND_REGISTRY_PREVIEWS: " " }).previews.enabled).toBe(false);
     });
 
     it.each([
-      ["a non-boolean switch", { FABRICATE_PREVIEWS: "yes" }, /FABRICATE_PREVIEWS must be true, false, 1, or 0/],
-      ["zero concurrency", { FABRICATE_PREVIEWS_CONCURRENCY: "0" }, ConfigurationError],
-      ["a fractional time limit", { FABRICATE_PREVIEWS_TIMEOUT_MINUTES: "1.5" }, /must be a positive integer/],
-      ["a negative output limit", { FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES: "-1" }, /must be a positive integer/],
-      ["a Node entry without a directory", { FABRICATE_PREVIEWS_NODE_VERSIONS: "22.11.0" }, /must be version=directory/],
-      ["a trusted source with credentials", { FABRICATE_PREVIEWS_TRUSTED_SOURCES: "https://user:secret@git.example.com/acme/orders.git" }, /not a valid clone URL/],
+      ["a non-boolean switch", { FRONTEND_REGISTRY_PREVIEWS: "yes" }, /FRONTEND_REGISTRY_PREVIEWS must be true, false, 1, or 0/],
+      ["zero concurrency", { FRONTEND_REGISTRY_PREVIEWS_CONCURRENCY: "0" }, ConfigurationError],
+      ["a fractional time limit", { FRONTEND_REGISTRY_PREVIEWS_TIMEOUT_MINUTES: "1.5" }, /must be a positive integer/],
+      ["a negative output limit", { FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES: "-1" }, /must be a positive integer/],
+      ["a Node entry without a directory", { FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS: "22.11.0" }, /must be version=directory/],
+      ["a trusted source with credentials", { FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES: "https://user:secret@git.example.com/acme/orders.git" }, /not a valid clone URL/],
     ])("reject %s from the environment", (_label, env, error) => {
       expect(() => load({ shared }, env)).toThrow(error);
     });
@@ -274,7 +335,7 @@ describe("npm run config", () => {
     const { execFileSync } = await import("node:child_process");
     const output = execFileSync("npx", ["tsx", "src/lib/config/print-cli.ts"], {
       encoding: "utf8",
-      env: { ...process.env, FABRICATE_ENV: "test", FABRICATE_PREVIEWS: "true", FABRICATE_PREVIEWS_TRUSTED_SOURCES: "https://git.example.com/acme/orders.git", FABRICATE_PREVIEWS_NODE_VERSIONS: "22.11.0=/opt/node-22/bin" },
+      env: { ...process.env, FRONTEND_REGISTRY_ENV: "test", FRONTEND_REGISTRY_PREVIEWS: "true", FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES: "https://git.example.com/acme/orders.git", FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS: "22.11.0=/opt/node-22/bin" },
     });
     expect(output).toContain("Previews:           enabled");
     expect(output).toContain("Preview sources:    https://git.example.com/acme/orders");

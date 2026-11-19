@@ -9,7 +9,7 @@ const REPO_FACTS_PACKAGES = ["@repo-facts/architecture", "@repo-facts/bundle", "
 const nextConfig: NextConfig = {
   // Browser tests build into their own directory, so they can run beside a
   // developer's `npm run dev` without sharing its dev-server lock or output.
-  distDir: process.env.FABRICATE_NEXT_DIST_DIR ?? ".next",
+  distDir: process.env.FRONTEND_REGISTRY_NEXT_DIST_DIR ?? ".next",
   // A release (`npm run release`) runs the standalone server with Node alone.
   output: "standalone",
   // Loaded from node_modules, never bundled: the native SQLite binding, and the

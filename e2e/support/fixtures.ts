@@ -58,7 +58,7 @@ export const test = base.extend<Fixtures & Options>({
     // share it, so they seed records that don't depend on an empty catalog.
     if (!process.env.E2E_PRODUCTION) {
       const response = await request.post("/api/test/reset");
-      expect(response.status(), "the e2e server must run with FABRICATE_E2E=1").toBe(200);
+      expect(response.status(), "the e2e server must run with FRONTEND_REGISTRY_E2E=1").toBe(200);
     }
     const db = openDatabase(E2E_DATABASE);
     if (!guidedHints) {

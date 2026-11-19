@@ -93,7 +93,7 @@ describe("Evaluation pipeline", () => {
       })();
       expectRefusal(selected.publicId, failedOnly.publicId, /is failed.*no Repository Profile/);
 
-      // A Release that reads only Profile v2 cannot evaluate an Assessment from detector release 0.1.0, with Profile v1.
+      // A Release that reads only Profile v2 cannot evaluate an Assessment from Surveyor release 0.1.0, with Profile v1.
       const v2Only = select(selected, [publishStandard(db, "Design system", [control({ key: "uses-pnpm", condition: manager("pnpm") })], { profileVersions: [2] })]);
       const v1 = createAssessment(db, { initiative: v2Only, launchToken: crypto.randomUUID(), detectorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [buildSource(db, { name: "earlier" })] }).assessment;
       expectRefusal(v2Only.publicId, v1.publicId, /supports Repository Profile v2, but the Assessment has v1/);

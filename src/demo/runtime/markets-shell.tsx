@@ -33,7 +33,7 @@ export function MarketsShell({ children }: { children: React.ReactNode }) {
             <MenuList title="Markets applications" items={[descriptor.applicationName, ...applications.filter((title) => title !== descriptor.applicationName)].map((title) => ({ primary: title, current: title === descriptor.applicationName, secondary: title === descriptor.applicationName ? "This application" : undefined }))} />
           </HeaderMenu>
           <Link href={routeHref(start)} className={styles.wordmark}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG from DE FabLab\'s own origin */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG from the Frontend Registry\'s own origin */}
             <img className={styles.logo} src="/brand/jpmorgan-logo.svg" alt="J.P. Morgan" />
             <span className={styles.wordmarkProduct}>Markets</span>
           </Link>
@@ -81,7 +81,7 @@ export function MarketsShell({ children }: { children: React.ReactNode }) {
 
       <footer className={styles.footer} data-demo-anchor="portal-footer" id="portal-footer">
         <div className={styles.footerRow}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG from DE FabLab\'s own origin */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- a fixed SVG from the Frontend Registry\'s own origin */}
           <img className={styles.logo} src="/brand/jpmorgan-logo.svg" alt="J.P. Morgan" />
           <ul className={styles.footerLinks} aria-label="Legal">
             {/* Illustrative entries: plain text, since the demo has no such pages (page-patterns spec, placeholder links). */}

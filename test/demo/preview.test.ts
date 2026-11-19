@@ -63,7 +63,7 @@ describe("template files", () => {
     expect(payeeList).toBe(GENERATED_SOURCES["payments-workspace"]!.members["payee-list"]!["1.4.2"]);
     expect(payeeList).toContain('from "@salt-ds/core"');
     const dependencies = JSON.parse(files[0]!.content).dependencies as Record<string, string>;
-    // At the version DE FabLab renders with, so the source runs as shown.
+    // At the version the Frontend Registry renders with, so the source runs as shown.
     expect(dependencies["@salt-ds/core"]).toBe(fabricatePackage.dependencies["@salt-ds/core"]);
     expect(dependencies["@deweb/portal"]).toBeDefined();
   });

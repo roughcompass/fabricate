@@ -9,6 +9,7 @@ import type { PackageProducer, RelatedRepository, RepositoryRelationships } from
 import { type Fact, type FactDocument, type NoValue, categoryDefinitions, categoryOf, categoryState, noValue } from "./states";
 import type { ProfileTabId } from "./tabs";
 import { routes } from "@/lib/web/routes";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /**
  * The Overview's answers, one panel per question a reader brings to a
@@ -48,7 +49,7 @@ function row(label: string, category: string, values: OverviewValue[], placehold
 function missing(document: FactDocument, label: string, category: string): OverviewRow {
   const definition = categoryDefinitions(document).find((candidate) => candidate.id === category);
   // A category the installed contract doesn't define is one this release can't report, either.
-  return row(label, category, [], [{ value: definition ? noValue(document, definition) : { state: "not_covered", reason: `Detector release ${document.detector_release} doesn't report this category` } }]);
+  return row(label, category, [], [{ value: definition ? noValue(document, definition) : { state: "not_covered", reason: `${SURVEYOR_RELEASE_LABEL} ${document.detector_release} doesn't report this category` } }]);
 }
 
 const pick = (rows: readonly OverviewRow[], label: string): OverviewRow[] => rows.filter((candidate) => candidate.label === label);

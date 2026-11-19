@@ -1,6 +1,7 @@
 import type { JsonObject } from "@repo-facts/contract";
 import { countLabel } from "@/components/ui/count";
 import { type FactDocument, categoryDefinitions, categoryOf, categoryState, noValue, partial } from "./states";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 export interface AttentionItem {
   kind: "conflicting" | "unknown" | "partial" | "not_covered" | "skipped" | "diagnostics";
@@ -51,7 +52,7 @@ export function attention(document: FactDocument, diagnostics: { skipped: readon
   }
   const uncovered = definitions.filter((definition) => categoryState(document, definition.id) === "not_covered");
   if (uncovered.length) {
-    items.push({ kind: "not_covered", label: uncovered.map((definition) => definition.label).join(", "), reason: `Detector release ${document.detector_release} doesn't report ${uncovered.length === 1 ? "this category" : "these categories"}`, section: uncovered[0]!.id });
+    items.push({ kind: "not_covered", label: uncovered.map((definition) => definition.label).join(", "), reason: `${SURVEYOR_RELEASE_LABEL} ${document.detector_release} doesn't report ${uncovered.length === 1 ? "this category" : "these categories"}`, section: uncovered[0]!.id });
   }
   if (diagnostics.skipped.length) items.push({ kind: "skipped", label: countLabel(diagnostics.skipped.length, "skipped input"), reason: "Facts they could affect are unknown, never absent", section: "diagnostics" });
   if (diagnostics.notes.length) items.push({ kind: "diagnostics", label: countLabel(diagnostics.notes.length, "other diagnostic"), reason: "Inconsistencies and unsupported constructs, noted without skipping the input", section: "other-diagnostics" });

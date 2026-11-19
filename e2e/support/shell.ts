@@ -32,5 +32,5 @@ export const toasts = (page: Page) => page.getByRole("region", { name: "Notifica
 
 /** Sets the theme cookie, so pages the context loads next render in +theme+. */
 export async function useTheme(context: BrowserContext, theme: "light" | "dark", baseURL: string): Promise<void> {
-  await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL }]);
+  await context.addCookies([{ name: "frontend-registry-theme", value: theme, url: baseURL }]);
 }

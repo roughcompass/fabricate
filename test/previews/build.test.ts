@@ -191,7 +191,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
         "packages/web/emit.json": JSON.stringify({ ...STANDALONE, info: "../../install-cwd.txt" }),
       };
       const preview = await previewOf(workspace, plan(), "packages/web");
-      const secrets = { FABRICATE_SECRET_TOKEN: "fabricate-secret", GIT_ASKPASS: "/usr/local/bin/askpass-secret", VERCEL_TOKEN: "vercel-secret", AI_GATEWAY_API_KEY: "ai-secret" };
+      const secrets = { FRONTEND_REGISTRY_SECRET_TOKEN: "fabricate-secret", GIT_ASKPASS: "/usr/local/bin/askpass-secret", VERCEL_TOKEN: "vercel-secret", AI_GATEWAY_API_KEY: "ai-secret" };
       Object.assign(process.env, secrets);
       try {
         // Through the worker's registered handler.
@@ -241,7 +241,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
 
     it("fails a Yarn build before installing when Yarn would read configuration from a directory above the extracted commit", async () => {
       // Like a development checkout's .npmrc above storage/previews, which Yarn 1 read, failing on the variable it names.
-      fs.writeFileSync(path.join(storage, ".npmrc"), "@repo-facts:registry=${REPO_FACTS_NPM_REGISTRY}\n");
+      fs.writeFileSync(path.join(storage, ".npmrc"), "@repo-facts:registry=${SURVEYOR_NPM_REGISTRY}\n");
       fs.writeFileSync(path.join(storage, ".yarnrc"), 'registry "http://127.0.0.1:4873/"\n');
       const preview = await previewOf({ ...app(STANDALONE), "yarn.lock": "" }, plan({ packageManager: { name: "yarn", version: "1.22.22", lockfile: "yarn.lock" } }));
 
@@ -256,7 +256,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
     });
 
     it("builds an npm package whatever configuration is above it, since npm reads only the install root's and its own HOME's", async () => {
-      fs.writeFileSync(path.join(storage, ".npmrc"), "@repo-facts:registry=${REPO_FACTS_NPM_REGISTRY}\n");
+      fs.writeFileSync(path.join(storage, ".npmrc"), "@repo-facts:registry=${SURVEYOR_NPM_REGISTRY}\n");
       const preview = await previewOf(app(STANDALONE), plan());
       expect(await build(preview)).toBe("published");
       expect(current(preview)).toMatchObject({ attemptState: "ready", attemptReason: null });

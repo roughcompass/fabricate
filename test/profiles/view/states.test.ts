@@ -19,10 +19,10 @@ describe("Profile category states and the reasons for no value", () => {
     });
   });
 
-  it("marks a category that the detector release didn't define as not covered, naming the release", () => {
+  it("marks a category that the Surveyor release didn't define as not covered, naming the release", () => {
     const earlier = asRelease010(orders);
     expect(categoryState(earlier, "design_systems")).toBe("not_covered");
-    expect(noValue(earlier, definition("design_systems"))).toEqual({ state: "not_covered", reason: "Detector release 0.1.0 doesn't report this category" });
+    expect(noValue(earlier, definition("design_systems"))).toEqual({ state: "not_covered", reason: "Surveyor release 0.1.0 doesn't report this category" });
     // A category the release did define keeps its own state.
     expect(categoryState(earlier, "languages")).toBe("observed");
   });
@@ -51,10 +51,10 @@ describe("Profile category states and the reasons for no value", () => {
   });
 
   it("shows a placeholder as its state's indicator and label, then the reason", () => {
-    const markup = renderToStaticMarkup(createElement(NoValuePlaceholder, { value: { state: "not_covered", reason: "Detector release 0.1.0 doesn't report this category" } }));
+    const markup = renderToStaticMarkup(createElement(NoValuePlaceholder, { value: { state: "not_covered", reason: "Surveyor release 0.1.0 doesn't report this category" } }));
     expect(markup).toContain('data-shape="dash"');
     expect(markup).toContain("Not covered");
-    expect(markup).toContain("Detector release 0.1.0");
+    expect(markup).toContain("Surveyor release 0.1.0");
     expect(markup).not.toMatch(/No data|>—</);
   });
 });

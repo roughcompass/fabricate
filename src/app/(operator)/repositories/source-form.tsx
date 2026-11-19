@@ -70,7 +70,7 @@ function SourceFields({ state, submitLabel, layout }: { state: SourceFormState; 
           setTyped(event.target.value.trim() !== "");
         }}
         errors={state.errors.name}
-        description="A display name, the clone URL's owner and repository unless you change it. The catalog identifies Repositories by their canonical clone URL, not by name."
+        description="A display name, the clone URL's owner and repository unless you change it. Repositories are identified by their canonical clone URL, not by name."
         maxLength={100}
       />
       <TextInput

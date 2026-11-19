@@ -54,8 +54,8 @@ describe("The Profile overview", () => {
     expect(row(overview(storefront), "Runtime").values).toContainEqual({ state: "conflicting", text: "Node.js: 18 or >=22" });
   });
 
-  it("shows the Design system row as not covered by detector release 0.1.0", () => {
-    expect(row(overview(asRelease010(storefront)), "Design system").placeholders).toEqual([{ value: { state: "not_covered", reason: "Detector release 0.1.0 doesn't report this category" } }]);
+  it("shows the Design system row as not covered by Surveyor release 0.1.0", () => {
+    expect(row(overview(asRelease010(storefront)), "Design system").placeholders).toEqual([{ value: { state: "not_covered", reason: "Surveyor release 0.1.0 doesn't report this category" } }]);
     expect(texts(overview(factDocumentFixture("salt-application") as unknown as FactDocument), "Design system")).toEqual(["Salt"]);
   });
 

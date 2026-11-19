@@ -52,10 +52,10 @@ describe("The Profile's needs-attention list", () => {
     expect(overview(partialPackages).find((row) => row.label === "Packages")!.partial).toBe(true);
   });
 
-  it("lists the categories a detector release doesn't cover on one line", () => {
+  it("lists the categories a Surveyor release doesn't cover on one line", () => {
     const earlier = asRelease010(orders);
     const uncovered = attention(earlier, diagnosticsOf(earlier)).items.filter((item) => item.kind === "not_covered");
-    expect(uncovered).toEqual([{ kind: "not_covered", label: "Design systems, UI elements, Style values", reason: "Detector release 0.1.0 doesn't report these categories", section: "design_systems" }]);
+    expect(uncovered).toEqual([{ kind: "not_covered", label: "Design systems, UI elements, Style values", reason: "Surveyor release 0.1.0 doesn't report these categories", section: "design_systems" }]);
     expect(attention(earlier, diagnosticsOf(earlier)).counts).toContainEqual({ state: "not_covered", count: 3 });
   });
 

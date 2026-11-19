@@ -6,6 +6,7 @@ import { statusVersion } from "@/lib/assessments/status";
 import { SURVEY_MACHINE, activeStates } from "@/lib/db/state-machines";
 import type { Survey } from "@/lib/surveys/records";
 import { type CurrentProfile, currentProfile, currentProfiles } from "./current";
+import { PRODUCT } from "@/lib/product";
 
 /*
  * A Repository's versions (unify-surveys, design decision 1): its surveys,
@@ -21,7 +22,7 @@ export const TRIGGER_LABELS: Record<SurveyTrigger, string> = {
   added: "Added",
   edited: "Edited",
   commit: "New commit",
-  recipe: "Surveyor upgrade",
+  recipe: `${PRODUCT.surveyor} upgrade`,
   manual: "Re-profiled",
   run: "Assessment Run",
   preview: "Preview",

@@ -1,5 +1,5 @@
 /** The operator's theme preference, kept in a cookie so the server renders it. */
-export const THEME_COOKIE = "fabricate-theme";
+export const THEME_COOKIE = "frontend-registry-theme";
 const THEMES = ["system", "light", "dark"] as const;
 export type Theme = (typeof THEMES)[number];
 

@@ -85,7 +85,7 @@ describe("preview toolchain", () => {
     });
 
     it("never takes anything from the worker's environment", () => {
-      process.env.FABRICATE_SECRET_TOKEN = "fabricate-secret";
+      process.env.FRONTEND_REGISTRY_SECRET_TOKEN = "fabricate-secret";
       process.env.GIT_ASKPASS = "/usr/local/bin/askpass";
       process.env.VERCEL_TOKEN = "vercel-secret";
       process.env.npm_config__authToken = "registry-secret";
@@ -94,7 +94,7 @@ describe("preview toolchain", () => {
         expect(Object.keys(env).filter((key) => /^(FABRICATE|GIT|VERCEL|AI)_/.test(key))).toEqual([]);
         expect(JSON.stringify(env)).not.toMatch(/secret|askpass/);
       } finally {
-        for (const key of ["FABRICATE_SECRET_TOKEN", "GIT_ASKPASS", "VERCEL_TOKEN", "npm_config__authToken"]) delete process.env[key];
+        for (const key of ["FRONTEND_REGISTRY_SECRET_TOKEN", "GIT_ASKPASS", "VERCEL_TOKEN", "npm_config__authToken"]) delete process.env[key];
       }
     });
 

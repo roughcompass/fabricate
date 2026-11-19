@@ -29,6 +29,7 @@ import { type ProfileTabId, isProfileTab, profileTabHref } from "@/lib/profiles/
 import { type CategoryBlock, type DependencyFilters as Filters, filterDependencies, pageOfGroups, profileView, type ProfileView, type SharedBlock, type TabView } from "@/lib/profiles/view";
 import styles from "./profile-body.module.css";
 import { pageNumber, pageQuery, param, withQuery } from "@/lib/web/query";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /** The commit a Profile is pinned to. A page's header and body share one read of the document. */
 export const profilePin = cache((profile: RepositoryProfile): { document: JsonObject; commit: string } => {
@@ -199,7 +200,7 @@ export function ProfileBody({ profile, query, base }: { profile: RepositoryProfi
                     surface
                     items={[
                       ["Commit", <Tag key="commit" copy label="commit">{commit}</Tag>],
-                      ["Detector release", <Tag key="release">{String(document.detector_release)}</Tag>],
+                      [SURVEYOR_RELEASE_LABEL, <Tag key="release">{String(document.detector_release)}</Tag>],
                       ["Profile digest", <ShortValue key="digest" value={profile.digest} label="digest" />],
                       ["Created", <RelativeTime key="created" value={profile.createdAt} />],
                       ["ID", <Tag key="id" copy label="ID">{profile.publicId}</Tag>],

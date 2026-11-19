@@ -3,13 +3,16 @@ import path from "node:path";
 import semver from "semver";
 import { z } from "zod";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
+import { LEGACY_NAMES } from "@/lib/legacy-names";
 
 /**
  * Typed, immutable safety and analysis configuration.
  *
- * Values come from config/fabricate.json (a `shared` section merged with the
- * section for the current environment) and then FABRICATE_* environment
- * variables. The harness workspace's fleet-kit/ tree is appended to the denied
+ * Values come from config/frontend-registry.json (a `shared` section merged
+ * with the section for the current environment) and then FRONTEND_REGISTRY_*
+ * environment variables. For one release, the old config/fabricate.json and
+ * FABRICATE_* names are still read, with a deprecation warning, where the new
+ * ones are missing. The harness workspace's fleet-kit/ tree is appended to the denied
  * roots unconditionally: no file setting, environment variable, or override
  * can remove it, and an allowed root inside it is a configuration error.
  */
@@ -40,7 +43,7 @@ const settingsSchema = z.strictObject({
     maxTotalBytes: positiveInteger,
   }),
   // The template demo: off by default, on in development and test, and
-  // turned on elsewhere with FABRICATE_DEMO=true.
+  // turned on elsewhere with FRONTEND_REGISTRY_DEMO=true.
   demo: z.strictObject({
     enabled: z.boolean(),
   }),
@@ -76,29 +79,37 @@ const fileSchema = z.strictObject({
 
 export type Environment = "development" | "test" | "production";
 
+/** The configuration file in config/. */
+export const CONFIG_FILE = "frontend-registry.json";
+
+const ENV_PREFIX = "FRONTEND_REGISTRY_";
+
+/** Selects the environment's section of the configuration file, before NODE_ENV. */
+export const ENVIRONMENT_VARIABLE = `${ENV_PREFIX}ENV`;
+
 export const ENV_KEYS = {
-  allowedRoots: "FABRICATE_ALLOWED_ROOTS",
-  deniedRoots: "FABRICATE_DENIED_ROOTS",
-  gitTimeoutSeconds: "FABRICATE_GIT_TIMEOUT",
-  gitLockTimeoutSeconds: "FABRICATE_GIT_LOCK_TIMEOUT",
-  workerConcurrency: "FABRICATE_WORKER_CONCURRENCY",
-  database: "FABRICATE_DATABASE",
-  repositoryStorage: "FABRICATE_REPOSITORY_STORAGE",
-  gitCredentialHelper: "FABRICATE_GIT_CREDENTIAL_HELPER",
-  maxBlobBytes: "FABRICATE_MAX_BLOB_BYTES",
-  maxLockfileBytes: "FABRICATE_MAX_LOCKFILE_BYTES",
-  maxFiles: "FABRICATE_MAX_FILES",
-  maxTotalBytes: "FABRICATE_MAX_TOTAL_BYTES",
-  demoEnabled: "FABRICATE_DEMO",
-  profilingCheckMinutes: "FABRICATE_PROFILING_CHECK_MINUTES",
-  previewsEnabled: "FABRICATE_PREVIEWS",
-  previewsTrustedSources: "FABRICATE_PREVIEWS_TRUSTED_SOURCES",
-  previewsNodeVersions: "FABRICATE_PREVIEWS_NODE_VERSIONS",
-  previewsStorage: "FABRICATE_PREVIEWS_STORAGE",
-  previewsConcurrency: "FABRICATE_PREVIEWS_CONCURRENCY",
-  previewsTimeoutMinutes: "FABRICATE_PREVIEWS_TIMEOUT_MINUTES",
-  previewsMaxOutputBytes: "FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES",
-  previewsMaxStorageBytes: "FABRICATE_PREVIEWS_MAX_STORAGE_BYTES",
+  allowedRoots: "FRONTEND_REGISTRY_ALLOWED_ROOTS",
+  deniedRoots: "FRONTEND_REGISTRY_DENIED_ROOTS",
+  gitTimeoutSeconds: "FRONTEND_REGISTRY_GIT_TIMEOUT",
+  gitLockTimeoutSeconds: "FRONTEND_REGISTRY_GIT_LOCK_TIMEOUT",
+  workerConcurrency: "FRONTEND_REGISTRY_WORKER_CONCURRENCY",
+  database: "FRONTEND_REGISTRY_DATABASE",
+  repositoryStorage: "FRONTEND_REGISTRY_REPOSITORY_STORAGE",
+  gitCredentialHelper: "FRONTEND_REGISTRY_GIT_CREDENTIAL_HELPER",
+  maxBlobBytes: "FRONTEND_REGISTRY_MAX_BLOB_BYTES",
+  maxLockfileBytes: "FRONTEND_REGISTRY_MAX_LOCKFILE_BYTES",
+  maxFiles: "FRONTEND_REGISTRY_MAX_FILES",
+  maxTotalBytes: "FRONTEND_REGISTRY_MAX_TOTAL_BYTES",
+  demoEnabled: "FRONTEND_REGISTRY_DEMO",
+  profilingCheckMinutes: "FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES",
+  previewsEnabled: "FRONTEND_REGISTRY_PREVIEWS",
+  previewsTrustedSources: "FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES",
+  previewsNodeVersions: "FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS",
+  previewsStorage: "FRONTEND_REGISTRY_PREVIEWS_STORAGE",
+  previewsConcurrency: "FRONTEND_REGISTRY_PREVIEWS_CONCURRENCY",
+  previewsTimeoutMinutes: "FRONTEND_REGISTRY_PREVIEWS_TIMEOUT_MINUTES",
+  previewsMaxOutputBytes: "FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES",
+  previewsMaxStorageBytes: "FRONTEND_REGISTRY_PREVIEWS_MAX_STORAGE_BYTES",
 } as const;
 
 export interface AnalysisBudgets {
@@ -150,12 +161,14 @@ export interface LoadOptions {
   appRoot?: string;
   environment?: Environment;
   env?: Readonly<Record<string, string | undefined>>;
-  /** Settings to use instead of reading config/fabricate.json. */
+  /** Settings to use instead of reading config/frontend-registry.json. */
   file?: unknown;
+  /** Where deprecation warnings go; the console by default. */
+  warn?: (message: string) => void;
 }
 
 export function currentEnvironment(env: Readonly<Record<string, string | undefined>> = process.env): Environment {
-  const value = env.FABRICATE_ENV ?? env.NODE_ENV ?? "development";
+  const value = env[ENVIRONMENT_VARIABLE] ?? env.NODE_ENV ?? "development";
   if (value === "development" || value === "test" || value === "production") return value;
   throw new ConfigurationError(`Unsupported environment ${JSON.stringify(value)}`);
 }
@@ -164,9 +177,11 @@ export function loadConfig(options: LoadOptions = {}): FabricateConfig {
   // Not traced: the image copies config/ and drizzle/ itself, and tracing from the
   // working directory would ship the whole project, tests included, in the server output.
   const appRoot = path.resolve(options.appRoot ?? /*turbopackIgnore: true*/ process.cwd());
-  const env = options.env ?? process.env;
+  const warn = options.warn ?? ((message: string) => console.warn(`[config] ${message}`));
+  const env = withLegacyNames(options.env ?? process.env, warn);
   const environment = options.environment ?? currentEnvironment(env);
-  const file = parse(fileSchema, options.file ?? readConfigFile(appRoot), "config/fabricate.json");
+  const { value, label } = options.file === undefined ? readConfigFile(appRoot, warn) : { value: options.file, label: `config/${CONFIG_FILE}` };
+  const file = parse(fileSchema, value, label);
   const settings = applyEnvironment({ ...file.shared, ...file[environment] }, env);
   return buildConfig(settings, { appRoot, environment });
 }
@@ -353,10 +368,36 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   return result;
 }
 
-function readConfigFile(appRoot: string): unknown {
-  const file = path.join(/*turbopackIgnore: true*/ appRoot, "config", "fabricate.json");
+/**
+ * The environment with each variable's old FABRICATE_* name read where its
+ * FRONTEND_REGISTRY_* name is unset, for one release, with a deprecation
+ * warning for every old name that's set.
+ */
+function withLegacyNames(env: Readonly<Record<string, string | undefined>>, warn: (message: string) => void): Readonly<Record<string, string | undefined>> {
+  const result: Record<string, string | undefined> = { ...env };
+  for (const name of [ENVIRONMENT_VARIABLE, ...Object.values(ENV_KEYS)]) {
+    const legacy = `${LEGACY_NAMES.envPrefix}${name.slice(ENV_PREFIX.length)}`;
+    if (env[legacy] === undefined) continue;
+    if (env[name] === undefined) {
+      result[name] = env[legacy];
+      warn(`${legacy} is deprecated and stops working in the next release. Set ${name} instead.`);
+    } else {
+      warn(`${legacy} is ignored because ${name} is set. Remove ${legacy}.`);
+    }
+  }
+  return result;
+}
+
+/** config/frontend-registry.json, or for one release the old config/fabricate.json when it's the only one. */
+function readConfigFile(appRoot: string, warn: (message: string) => void): { value: unknown; label: string } {
+  const directory = path.join(/*turbopackIgnore: true*/ appRoot, "config");
+  const current = path.join(/*turbopackIgnore: true*/ directory, CONFIG_FILE);
+  const legacy = path.join(/*turbopackIgnore: true*/ directory, LEGACY_NAMES.configFile);
+  const useLegacy = !fs.existsSync(/*turbopackIgnore: true*/ current) && fs.existsSync(/*turbopackIgnore: true*/ legacy);
+  const file = useLegacy ? legacy : current;
+  if (useLegacy) warn(`config/${LEGACY_NAMES.configFile} is deprecated and stops being read in the next release. Rename it to config/${CONFIG_FILE}.`);
   try {
-    return JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ file, "utf8"));
+    return { value: JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ file, "utf8")), label: `config/${path.basename(file)}` };
   } catch (error) {
     throw new ConfigurationError(`Could not read ${file}: ${(error as Error).message}`);
   }

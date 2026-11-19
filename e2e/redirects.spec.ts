@@ -48,6 +48,6 @@ test("Root address: opens Home without redirecting to the Assessments list", asy
   expect(response.headers().location).toBeUndefined();
   await page.goto(paths.home);
   await expect(page).toHaveURL(/\/$/);
-  await expect(page).toHaveTitle("Home · DE FabLab");
+  await expect(page).toHaveTitle("Home · Frontend Registry");
   await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Home");
 });

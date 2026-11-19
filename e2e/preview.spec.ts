@@ -30,7 +30,7 @@ const landscape = (page: Page) => page.getByRole("button", { name: "Landscape" }
 
 test.describe("the focused page", () => {
   test("hides a stored, shown sidebar from the first paint, with one heading hidden on screen", async ({ page, db: _db, baseURL }) => {
-    await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "320", url: baseURL! }]);
+    await page.context().addCookies([{ name: "frontend-registry-sidebar-width", value: "320", url: baseURL! }]);
     await page.setViewportSize({ width: 1440, height: 900 });
     // The server's first response already hides the sidebar.
     const html = await (await page.request.get("/templates/payments-workspace/preview")).text();
@@ -51,7 +51,7 @@ test.describe("the focused page", () => {
   });
 
   test("keeps the stored sidebar state, which the template page shows again", async ({ page, db: _db, baseURL }) => {
-    await page.context().addCookies([{ name: "fabricate-sidebar-width", value: "320", url: baseURL! }]);
+    await page.context().addCookies([{ name: "frontend-registry-sidebar-width", value: "320", url: baseURL! }]);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/templates/payments-workspace/preview");
     await expect(sidebar(page)).toBeHidden();
@@ -61,8 +61,8 @@ test.describe("the focused page", () => {
     await expect.poll(async () => (await sidebar(page).boundingBox())!.width).toBe(320);
     await expect(page.locator("[data-shell-header]").getByRole("button", { name: "Show sidebar" })).toBeHidden();
     const cookies = await page.context().cookies();
-    expect(cookies.find((cookie) => cookie.name === "fabricate-sidebar")).toBeUndefined();
-    expect(cookies.find((cookie) => cookie.name === "fabricate-sidebar-width")?.value).toBe("320");
+    expect(cookies.find((cookie) => cookie.name === "frontend-registry-sidebar")).toBeUndefined();
+    expect(cookies.find((cookie) => cookie.name === "frontend-registry-sidebar-width")?.value).toBe("320");
   });
 
   test("offers the back button in place of Open navigation on a narrow viewport", async ({ page, db: _db }) => {
@@ -101,7 +101,7 @@ test("opens from Preview template in the same tab, on the Preview tab with the D
   await page.goto("/templates/market-watch");
   await page.getByRole("link", { name: "Preview template" }).click();
   await expect(page).toHaveURL(/\/templates\/market-watch\/preview$/);
-  await expect(page).toHaveTitle("Preview Market watch · DE FabLab");
+  await expect(page).toHaveTitle("Preview Market watch · Frontend Registry");
   // A focused page: no breadcrumbs, description, or visible title.
   await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toHaveCount(0);
   await expect(pageHeader(page)).toHaveCount(0);

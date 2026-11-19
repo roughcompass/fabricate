@@ -30,7 +30,7 @@ export async function setView(page: Page, view: { theme?: "light" | "dark"; prof
   const key = await page.locator("[data-demo-view-key]").getAttribute("data-demo-view-key");
   await page.evaluate(
     ([storageKey, value]) => window.localStorage.setItem(storageKey!, value!),
-    [`fabricate-demo:${key}:view`, JSON.stringify({ theme: "light", profileId: "analyst", overrides: {}, ...view })],
+    [`frontend-registry-demo:${key}:view`, JSON.stringify({ theme: "light", profileId: "analyst", overrides: {}, ...view })],
   );
   await page.reload();
   await waitForRegions(page);

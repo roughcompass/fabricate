@@ -31,6 +31,7 @@ import { cancelAssessment } from "../actions";
 import { assessmentOutcome } from "../outcomes";
 import { routes } from "@/lib/web/routes";
 import { loadRun } from "./load";
+import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 export async function generateMetadata({ params }: PageProps<"/runs/[assessmentId]">): Promise<Metadata> {
   const found = loadRun((await params).assessmentId);
@@ -162,7 +163,7 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
       <Disclosure summary="Details" variant="plain">
         <DescriptionList surface
           items={[
-            ["Detector release", <Tag key="release">{assessment.detectorRelease}</Tag>],
+            [SURVEYOR_RELEASE_LABEL, <Tag key="release">{assessment.detectorRelease}</Tag>],
             ["Configuration digest", <ShortValue key="digest" value={assessment.configurationDigest} label="digest" />],
             ["Created", <RelativeTime key="created" value={assessment.createdAt} />],
             ["Started", <RelativeTime key="started" value={assessment.startedAt} />],

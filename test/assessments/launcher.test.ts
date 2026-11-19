@@ -38,7 +38,7 @@ describe("assessment launch", () => {
       ["billing", null],
       ["orders", "main"],
     ]);
-    // The pinned bundle's version is the detector release, and its configuration digest is the Assessment's.
+    // The pinned bundle's version is the Surveyor release, and its configuration digest is the Assessment's.
     const bundle = detectorConfiguration(getConfig().analysis);
     expect(assessment).toMatchObject({ state: "queued", detectorRelease: DETECTOR_RELEASE, configurationDigest: bundle.digest });
     expect(sha256(assessment.configuration)).toBe(bundle.digest);
@@ -64,7 +64,7 @@ describe("assessment launch", () => {
   });
 
   it("creates nothing and enqueues nothing when the scope cannot be resolved", () => {
-    // An Assessment of all Repositories, while the catalog has none.
+    // An Assessment of all Repositories, while there are none.
     const initiative = buildInitiative(db);
 
     let error: unknown;

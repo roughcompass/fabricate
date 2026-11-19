@@ -307,7 +307,7 @@ test("keeps its controls on top of debug labels and audit outlines", async ({ pa
 
 test.describe("nothing overlays the toolbar", () => {
   const setPrefs = async (page: Page, prefs: Record<string, boolean>) => {
-    await page.evaluate((value) => localStorage.setItem("fabricate-demo:toolbar", JSON.stringify(value)), prefs);
+    await page.evaluate((value) => localStorage.setItem("frontend-registry-demo:toolbar", JSON.stringify(value)), prefs);
     await page.reload();
     await waitForRegions(page);
   };

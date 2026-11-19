@@ -12,8 +12,8 @@ export const FLEET_DATABASE = path.join(FLEET_RUN, "fabricate.sqlite3");
 
 export const FLEET_ENV = {
   // Shares the browser-test build directory so tsconfig.json never gains another generated include.
-  FABRICATE_NEXT_DIST_DIR: ".next-e2e",
-  FABRICATE_DATABASE: FLEET_DATABASE,
-  FABRICATE_REPOSITORY_STORAGE: path.join(FLEET_RUN, "repositories"),
-  FABRICATE_ALLOWED_ROOTS: FLEET_ROOT,
+  FRONTEND_REGISTRY_NEXT_DIST_DIR: ".next-e2e",
+  FRONTEND_REGISTRY_DATABASE: FLEET_DATABASE,
+  FRONTEND_REGISTRY_REPOSITORY_STORAGE: path.join(FLEET_RUN, "repositories"),
+  FRONTEND_REGISTRY_ALLOWED_ROOTS: FLEET_ROOT,
 };

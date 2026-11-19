@@ -14,6 +14,7 @@ import { Severity, Status } from "@/components/ui/status";
 import { ShortValue, Tag } from "@/components/ui/tag";
 import { assessmentById } from "@/lib/assessments/lookups";
 import { getDb } from "@/lib/db/client";
+import { PRODUCT } from "@/lib/product";
 import { evaluationNumber, findEvaluation, findFinding, findingDocument } from "@/lib/evaluations/evaluation-records";
 import type { TraceNode } from "@/lib/evaluations/interpreter";
 import { initiativeById } from "@/lib/initiatives/initiative-records";
@@ -161,7 +162,7 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
       </Section>
 
       {guidance && (
-        <Section title="Diagnostic guidance" description="This guidance is diagnostic: DE FabLab does not act on it, or check that following it would change this Finding.">
+        <Section title="Diagnostic guidance" description={`This guidance is diagnostic: the ${PRODUCT.name} does not act on it, or check that following it would change this Finding.`}>
           <p>{String(guidance.text)}</p>
         </Section>
       )}

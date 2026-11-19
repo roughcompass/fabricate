@@ -51,7 +51,7 @@ export function FormSpecimens() {
               columns
               selected={["all"]}
               choices={[
-                { value: "all", label: "All Repositories", description: "Every Repository in the catalog when a Run starts." },
+                { value: "all", label: "All Repositories", description: "Every Repository registered when a Run starts." },
                 { value: "explicit", label: "Selected Repositories", description: "Exactly the Repositories chosen below." },
               ]}
             />

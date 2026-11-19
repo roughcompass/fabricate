@@ -12,6 +12,7 @@ import { Section } from "@/components/ui/section";
 import { Status } from "@/components/ui/status";
 import { Tag } from "@/components/ui/tag";
 import { getDb } from "@/lib/db/client";
+import { DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
 import { draftOf, releaseDocument } from "@/lib/standards/standard-records";
 import { reviseStandard } from "../../../actions";
 import { ControlList } from "../../../control-view";
@@ -77,7 +78,7 @@ export default async function ReleasePage({ params, searchParams }: PageProps<"/
           items={[
             ["Content digest", <Tag key="digest" copy label="digest">{release.digest}</Tag>],
             ["From draft version", release.draftLockVersion],
-            ["Document schema", `fabricate.standard v${release.documentSchemaVersion}`],
+            ["Format", <code key="format">{`${DOCUMENT_SCHEMAS.standard.name} v${release.documentSchemaVersion}`}</code>],
             ["ID", <Tag key="id" copy label="ID">{release.publicId}</Tag>],
           ]}
         />

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { WORKSPACE_COOKIE, WORKSPACE_COOKIE_MAX_AGE, isWorkspaceKey, newWorkspaceKey } from "@/lib/demo/workspace-key";
+import { preferenceCookieRenames } from "@/lib/web/preference-cookies";
 
 /**
  * Gives each template-demo visitor an anonymous workspace credential on their
@@ -7,6 +8,9 @@ import { WORKSPACE_COOKIE, WORKSPACE_COOKIE_MAX_AGE, isWorkspaceKey, newWorkspac
  * workspace row is created on the first write, and every demo page and
  * endpoint checks the demo switch itself, so a cookie issued while the demo is
  * disabled has no effect.
+ *
+ * It also moves preference cookies a browser still keeps under their names
+ * from before the rename to their new names (lib/web/preference-cookies.ts).
  *
  * It also removes a trailing slash with a 308, as Next.js does by default.
  * next.config.ts turns that default off so a repository preview's root,
@@ -23,25 +27,32 @@ export function proxy(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;
   // A plain URL, since a NextURL keeps the trailing slash it was parsed with.
   if (pathname.length > 1 && pathname.endsWith("/")) return NextResponse.redirect(new URL(`${pathname.replace(/\/+$/, "") || "/"}${search}`, request.url), 308);
-  if (!WORKSPACE_PATHS.test(pathname) || isWorkspaceKey(request.cookies.get(WORKSPACE_COOKIE)?.value)) return NextResponse.next();
+  const renames = preferenceCookieRenames(request.cookies);
+  const key = WORKSPACE_PATHS.test(pathname) && !isWorkspaceKey(request.cookies.get(WORKSPACE_COOKIE)?.value) ? newWorkspaceKey() : null;
+  if (key === null && renames.remove.length === 0) return NextResponse.next();
 
-  const key = newWorkspaceKey();
-  // Forward the new cookie on this request too, so the page being rendered
-  // already sees the workspace.
-  request.cookies.set(WORKSPACE_COOKIE, key);
+  // Forward the new cookies on this request too, so the page being rendered
+  // already sees them.
+  if (key !== null) request.cookies.set(WORKSPACE_COOKIE, key);
+  for (const cookie of renames.set) request.cookies.set(cookie.name, cookie.value);
+  for (const name of renames.remove) request.cookies.delete(name);
   const headers = new Headers(request.headers);
   headers.set("cookie", request.cookies.toString());
 
   const response = NextResponse.next({ request: { headers } });
-  response.cookies.set({
-    name: WORKSPACE_COOKIE,
-    value: key,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: request.nextUrl.protocol === "https:",
-    path: "/",
-    maxAge: WORKSPACE_COOKIE_MAX_AGE,
-  });
+  if (key !== null) {
+    response.cookies.set({
+      name: WORKSPACE_COOKIE,
+      value: key,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+      path: "/",
+      maxAge: WORKSPACE_COOKIE_MAX_AGE,
+    });
+  }
+  for (const cookie of renames.set) response.cookies.set(cookie);
+  for (const name of renames.remove) response.cookies.delete(name);
   return response;
 }
 

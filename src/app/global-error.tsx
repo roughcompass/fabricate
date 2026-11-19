@@ -5,6 +5,7 @@ import Link from "next/link";
 import { HOME } from "@/components/shell/navigation";
 import { SystemPage } from "@/components/shell/system-page";
 import { buttonProps } from "@/components/ui/button-content";
+import { PRODUCT, browserTitle } from "@/lib/product";
 
 /**
  * A failure in the root layout itself. It replaces the whole document, so it
@@ -15,7 +16,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
   return (
     <html lang="en">
       <body>
-        <title>Something went wrong · DE FabLab</title>
+        <title>{browserTitle("Something went wrong")}</title>
         <main>
           <SystemPage
             icon="alert"
@@ -31,7 +32,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
               </>
             }
           >
-            <p>DE FabLab could not be shown. If trying again does not work, the server log has the details.</p>
+            <p>{`The ${PRODUCT.name} could not be shown. If trying again does not work, the server log has the details.`}</p>
             {error.digest && <p>{`Reference ${error.digest}`}</p>}
           </SystemPage>
         </main>

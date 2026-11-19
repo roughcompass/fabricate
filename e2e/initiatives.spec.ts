@@ -28,7 +28,7 @@ test("creates an Initiative of all Repositories with two Releases, then narrows 
   await page.getByRole("button", { name: "Create Assessment" }).click();
 
   await expect(toast(page, "Modernize the fleet was created.")).toBeVisible();
-  await expect(page).toHaveTitle("Modernize the fleet · DE FabLab");
+  await expect(page).toHaveTitle("Modernize the fleet · Frontend Registry");
   await expect(overview(page)).toContainText("All Repositories (3 now)");
   await expect(overview(page)).toContainText("Frontend baseline v1");
   await expect(overview(page)).toContainText("Security baseline v1");
@@ -105,7 +105,7 @@ test("starts an Assessment once and lists it in the Initiative's history", async
 });
 
 test("explains a scope that blocks an Assessment, below the header", async ({ page, db }) => {
-  // An Assessment of all Repositories, while the catalog has none.
+  // An Assessment of all Repositories, while there are none.
   const initiative = buildInitiative(db);
 
   await page.goto(paths.assessment(initiative.publicId));
@@ -114,7 +114,7 @@ test("explains a scope that blocks an Assessment, below the header", async ({ pa
   const problems = page.locator("#page-alerts").getByRole("alert");
   await expect(problems).toContainText("scope could not be resolved");
   await expect(problems.getByRole("listitem")).toHaveCount(1);
-  await expect(problems).toContainText("the catalog has no Repositories");
+  await expect(problems).toContainText("there are no Repositories");
   await expect(page.locator("header").getByRole("alert")).toHaveCount(0);
   expect(listAssessments(db, initiative.id)).toEqual([]);
 });

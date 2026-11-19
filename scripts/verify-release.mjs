@@ -1,9 +1,10 @@
 // Verifies a release directory from `npm run release`:
 //
-//   REPO_FACTS_NPM_TOKEN=<token used for the install> node scripts/verify-release.mjs [release]
+//   SURVEYOR_NPM_TOKEN=<token used for the install> node scripts/verify-release.mjs [release]
 //
 // - No registry credential: no file holds the token, a literal npm
-//   `_authToken`, or a REPO_FACTS_NPM_TOKEN assignment.
+//   `_authToken`, or a SURVEYOR_NPM_TOKEN assignment (or one of the old
+//   REPO_FACTS_NPM_TOKEN, which is still read for one release).
 // - The detector release: the release's @repo-facts packages are exactly the
 //   versions package-lock.json pins, each with its release provenance.
 import fs from "node:fs";
@@ -12,7 +13,9 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const release = path.resolve(root, process.argv[2] ?? "release");
 if (!fs.existsSync(path.join(release, "server.js"))) throw new Error(`${release} is not a release; run \`npm run release\` first.`);
-const token = process.env.REPO_FACTS_NPM_TOKEN || null;
+const LEGACY_TOKEN = "REPO_FACTS_NPM_TOKEN";
+if (!process.env.SURVEYOR_NPM_TOKEN && process.env[LEGACY_TOKEN]) console.warn(`${LEGACY_TOKEN} is deprecated and stops working in the next release. Set SURVEYOR_NPM_TOKEN instead.`);
+const token = process.env.SURVEYOR_NPM_TOKEN || process.env[LEGACY_TOKEN] || null;
 const problems = [];
 
 // Every regular file, read in chunks that overlap so a match across a chunk boundary is still found, without following links.
@@ -22,7 +25,7 @@ let files = 0;
 const checks = (name) => [
   ...(token ? [[(text) => text.includes(token), `${name} contains the registry token`]] : []),
   [(text) => /_authToken\s*=\s*[^$\s]/.test(text), `${name} holds an npm _authToken`],
-  [(text) => /REPO_FACTS_NPM_TOKEN=[^\s"'`<]/.test(text), `${name} sets REPO_FACTS_NPM_TOKEN`],
+  [(text) => /(?:SURVEYOR|REPO_FACTS)_NPM_TOKEN=[^\s"'`<]/.test(text), `${name} sets the registry token`],
 ];
 const scanFile = (file) => {
   const name = path.relative(release, file);

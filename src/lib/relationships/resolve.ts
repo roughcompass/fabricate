@@ -299,8 +299,8 @@ class CatalogLabels {
     const basis = byUrl.length ? "observed" : "inferred";
     const nodes = matches.map((source) => this.map.node({ kind: "out_of_scope_source", source: { public_id: source.public_id, name: source.name, canonical_url: source.canonical_url } })).sort(compareCodeUnits);
     const how = byUrl.length ? `the declared Git URL ${url}` : `the name ${name}`;
-    if (nodes.length === 1) return { to: nodes[0]!, state: "out_of_scope", rule, basis, reason: `A catalog repository outside this Run's scope matches ${how}; it was not analyzed` };
-    return { to: null, candidates: nodes, state: "ambiguous", rule, basis, reason: `${nodes.length} catalog repositories outside this Run's scope match ${how}; none was analyzed` };
+    if (nodes.length === 1) return { to: nodes[0]!, state: "out_of_scope", rule, basis, reason: `A Repository outside this Run's scope matches ${how}; it was not analyzed` };
+    return { to: null, candidates: nodes, state: "ambiguous", rule, basis, reason: `${nodes.length} Repositories outside this Run's scope match ${how}; none was analyzed` };
   }
 }
 
