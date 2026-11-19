@@ -57,6 +57,7 @@ const EXPECTED: Record<string, string | null> = {
   "/applications": "applications",
   "/applications/new": "applications",
   "/applications/[slug]": "applications",
+  "/applications/[slug]/settings": "applications",
   "/applications/[slug]/preview": "applications",
   "/templates": "salt-patterns",
   "/templates/[templateSlug]": "salt-patterns",

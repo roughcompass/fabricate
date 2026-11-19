@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { type Repository, isValidGitRef } from "@/lib/repositories/repository-records";
+import { type Repository, findRepository, isValidGitRef } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, StaleRecordError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
@@ -7,6 +7,7 @@ import { generatePublicId } from "@/lib/db/ids";
 import { type BuildTrigger, applications, previewPreparations, repositories } from "@/lib/db/schema";
 import { updateLocked } from "@/lib/db/optimistic";
 import { PreviewAccessError, assertEnrolled, enrollRemote } from "@/lib/previews/access";
+import { recordConfiguredResolution } from "@/lib/surveys/records";
 import { type Condition, packageTraits } from "@/lib/previews/eligibility";
 import { type PreviewPreparation, openPreparation, preparationPackages, preparationRefusal, rebuildPreview, startPreview } from "@/lib/previews/records";
 import { requestScreenshot } from "@/lib/previews/screenshots";
@@ -271,4 +272,28 @@ export function qualifiedBranch(branch: string): string | null {
   const name = branch.trim().replace(/^refs\/heads\//, "");
   if (name === "" || name.startsWith("refs/") || !isValidGitRef(name) || /^[0-9a-f]{40}$/.test(name)) return null;
   return `refs/heads/${name}`;
+}
+
+/**
+ * Onboarding's eligibility check (applications/onboarding spec, "Onboarding
+ * refuses what can't be previewed"; design decision 10): pins the chosen
+ * branch's head and opens that commit's preparation, which decides from the
+ * commit's Profile, surveyed first when it has none, whether a package can be
+ * previewed. Deciding reads the commit statically, so it needs previews on but
+ * not an enrolled remote: the remote is enrolled when the operator confirms
+ * trust and creates the application. Throws RefResolutionError for a branch
+ * the remote doesn't have, and the acquisition errors when it can't be read.
+ * @public Onboarding uses this (add-applications task 5.3).
+ */
+export async function prepareBranch(db: Executor, repositoryPublicId: string, branch: string, options: RefOptions = {}): Promise<PreviewPreparation> {
+  const config = options.config ?? getConfig();
+  if (!config.previews.enabled) throw new PreviewAccessError("disabled", "Previews are turned off");
+  const repository = findRepository(db, repositoryPublicId);
+  if (!repository) throw new NotFoundError(`Unknown Repository ${repositoryPublicId}`);
+  const ref = qualifiedBranch(branch);
+  if (ref === null) throw new NotFoundError(`${JSON.stringify(branch)} isn't a branch name`);
+  const pinned = await pinCommit(db, repository, { kind: "ref", name: ref }, { ...options, config });
+  // A request for the configured reference says which commit it names now (unify-surveys, design decision 4).
+  if (repository.gitRef !== null && qualifiedBranch(repository.gitRef) === ref) recordConfiguredResolution(db, repository.id, pinned.commitSha, new Date());
+  return openPreparation(db, repository, pinned).preparation;
 }

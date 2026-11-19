@@ -39,6 +39,8 @@ export const APPLICATION_STATUS_LABELS: Readonly<Record<ApplicationStatus, strin
 export const STATUS_FILTERS = ["ready", "building", "failed"] as const;
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
 
+export const STATUS_FILTER_LABELS: Readonly<Record<StatusFilter, string>> = { ready: "Ready", building: "Building", failed: "Failed" };
+
 /** What the card and page show in the image area. */
 export type ApplicationImage =
   /** The first build is queued or running: the building placeholder. */

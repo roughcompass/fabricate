@@ -42,3 +42,13 @@ export function formatRelative(value: Date, now: Date = new Date()): string {
 function plural(count: number, unit: string): string {
   return `${count} ${unit}${count === 1 ? "" : "s"} ago`;
 }
+
+/** How long something took: "45s", "3m 5s", or "1h 2m"; under a second, "<1s". */
+export function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1_000);
+  if (seconds < 1) return "<1s";
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return seconds % 60 ? `${minutes}m ${seconds % 60}s` : `${minutes}m`;
+  return minutes % 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${Math.floor(minutes / 60)}h`;
+}

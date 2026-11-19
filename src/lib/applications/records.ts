@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { JsonObject } from "@repo-facts/contract";
 import { type Executor, immediate } from "@/lib/db/client";
@@ -167,6 +167,27 @@ export function allApplications(db: Executor): Application[] {
     .all()
     .map(toApplication)
     .sort((a, b) => compareNames(a.name, b.name));
+}
+
+/** The applications with these public IDs, for the status endpoint; unknown IDs are left out. */
+export function applicationsByPublicId(db: Executor, publicIds: readonly string[]): Application[] {
+  if (publicIds.length === 0) return [];
+  return selectApplications(db)
+    .where(inArray(applications.publicId, [...publicIds]))
+    .all()
+    .map(toApplication);
+}
+
+/**
+ * What a page that shows +shown+ polls for: a version that changes whenever
+ * one's status, image, or screenshot does, and each one's state, so a page
+ * can refresh and announce a finished build (catalog spec, "Applications
+ * update while builds run").
+ */
+export function statusSnapshot(shown: readonly Application[]): { version: string; settling: boolean; applications: { id: string; name: string; status: ApplicationStatus; image: ApplicationImage; settling: boolean }[] } {
+  const items = shown.map((application) => ({ id: application.publicId, name: application.name, status: application.status, image: application.image, settling: application.settling }));
+  const version = shown.map((application) => `${application.publicId}:${application.status}:${application.image}:${application.screenshot?.version ?? ""}:${application.latest.build?.attempt ?? 0}`).join("|");
+  return { version, settling: items.some((item) => item.settling), applications: items };
 }
 
 /** The application built from a Repository's package, if it is one. */

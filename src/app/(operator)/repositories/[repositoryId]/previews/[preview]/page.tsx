@@ -141,7 +141,7 @@ export default async function RepositoryPreviewPage({ params, searchParams }: Pa
           </Panel>
         )}
 
-        <Section title="Build log" description={attemptLine(preview)}>
+        <Section id="log" title="Build log" description={attemptLine(preview)}>
           <BuildLog key={`${preview.attempt}:${log.log ?? ""}`} preview={preview.publicId} attempt={preview.attempt} state={preview.attemptState} initial={log} />
         </Section>
 

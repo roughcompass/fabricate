@@ -6,6 +6,8 @@ import { profileDocument, profilesOf } from "../../src/lib/profiles/profile-reco
 import { reviseRelease } from "../../src/lib/standards/publish";
 import { standardById } from "../../src/lib/standards/standard-records";
 import { ORDERS, publishStandard, seedMapStates, selectReleases } from "../../test/support/scenarios";
+import { offlineViteApp } from "../../test/support/preview-trees";
+import { registered, seeded } from "./applications";
 import { gitRepo } from "./fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate } from "./results";
 import { paths } from "./paths";
@@ -65,6 +67,21 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["08-finding-indeterminate", `/evaluations/${evaluation.publicId}/findings/${indeterminate.publicId}`],
     ["09-design-system", "/design-system"],
     ["09-not-found", "/runs/asm_doesnotexist0000"],
+  ];
+}
+
+/** Applications' pages: the gallery, a ready application's page and settings, one still building, and preview mode once it exists. */
+export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
+  const repository = registered(db, path.join(sourcesDir, "orders-web"), offlineViteApp());
+  seeded(db, "Orders portal", { description: "Order tracking for partners", repository });
+  seeded(db, "Payments hub", { state: "building" });
+  seeded(db, "Admin console", { state: "failed" });
+  return [
+    ["15-applications", paths.applications],
+    ["15-application", paths.application("orders-portal")],
+    ["15-application-building", paths.application("payments-hub")],
+    ["15-application-failed", paths.application("admin-console")],
+    ["15-application-settings", paths.applicationSettings("orders-portal")],
   ];
 }
 

@@ -82,6 +82,12 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   not_previewable: ["Not previewable", "neutral"],
   building: ["Building", "progress"],
   ready: ["Ready", "success"],
+  // Applications (add-applications): Ready and Building above; a first build that failed or was refused, and a later one.
+  build_failed: ["Build failed", "error"],
+  cant_be_previewed: ["Can't be previewed", "error"],
+  latest_build_failed: ["Latest build failed", "error"],
+  latest_not_previewable: ["Latest commit can't be previewed", "error"],
+  replaced: ["Replaced", "neutral"],
 };
 
 /** A readable label for a value without a mapping: underscores become spaces, first letter capitalized. */

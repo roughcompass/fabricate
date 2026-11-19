@@ -194,6 +194,52 @@ export function ContentSpecimens() {
       />
 
       <Specimen
+        id="media-card-states"
+        title="Media card states"
+        description="An application's card while its first build runs, when no build succeeded, and when its screenshot couldn't be taken. The status is in text with its icon and tone; the placeholder is hidden from assistive technology and still under reduced motion."
+        render={(theme) => (
+          <div className={styles.cards}>
+            <MediaCard
+              title="Orders portal"
+              description="Order tracking for partners."
+              image={{ state: "building" }}
+              href={`/design-system?card=${theme}-building#media-card-states`}
+              footer={
+                <>
+                  <Status state="building" size="sm" />
+                  <Tag>main</Tag>
+                </>
+              }
+            />
+            <MediaCard
+              title="Payments hub"
+              description="Send and track payments."
+              image={{ state: "failure" }}
+              href={`/design-system?card=${theme}-failed#media-card-states`}
+              footer={
+                <>
+                  <Status state="build_failed" size="sm" />
+                  <Tag>main</Tag>
+                </>
+              }
+            />
+            <MediaCard
+              title="Admin console"
+              description="Manage users and access."
+              image={{ state: "unavailable" }}
+              href={`/design-system?card=${theme}-unavailable#media-card-states`}
+              footer={
+                <>
+                  <Status state="ready" size="sm" />
+                  <Tag>release/2.0</Tag>
+                </>
+              }
+            />
+          </div>
+        )}
+      />
+
+      <Specimen
         id="empty-state"
         title="Empty state"
         description="A title, one sentence, and the action that fills the area."
