@@ -143,7 +143,7 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
                   </Primary>
                 </Td>
                 <Td label="Profile">
-                  <ProfileCell repositoryPublicId={repository.publicId} summary={profiles.get(repository.id)} />
+                  <ProfileCell repositoryPublicId={repository.publicId} name={repository.name} summary={profiles.get(repository.id)} />
                 </Td>
                 <Td align="actions">
                   <RowActions>
@@ -178,15 +178,19 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
  * and when it was profiled. A newest version that failed follows the current
  * one.
  */
-function ProfileCell({ repositoryPublicId, summary }: { repositoryPublicId: string; summary: ProfileSummary | undefined }) {
+function ProfileCell({ repositoryPublicId, name, summary }: { repositoryPublicId: string; name: string; summary: ProfileSummary | undefined }) {
   if (!summary) return <span className={styles.muted}>Queued</span>;
   const { latest, current } = summary;
   const pending = (ACTIVE_STATES as readonly string[]).includes(latest.state);
   // The newest version is newer than the current one, and failed.
   const failed = !pending && !latest.profiled && (!current || latest.version > current.version);
-  const currentLink = current && <Link href={routes.repositoryVersion(repositoryPublicId, current.version)}>{`Version ${current.version}`}</Link>;
+  const currentLink = current && (
+    <Link href={routes.repositoryVersion(repositoryPublicId, current.version)} aria-label={`${name}, version ${current.version}`}>
+      {`Version ${current.version}`}
+    </Link>
+  );
   const failedLink = (
-    <Link href={routes.repositoryVersion(repositoryPublicId, latest.version)}>
+    <Link href={routes.repositoryVersion(repositoryPublicId, latest.version)} aria-label={`${name}, version ${latest.version}, failed`}>
       <Status state="failed" label={`Version ${latest.version} failed`} size="sm" />
     </Link>
   );

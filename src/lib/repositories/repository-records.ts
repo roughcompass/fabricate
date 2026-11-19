@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, IssueCollector, NotFoundError, StaleRecordError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
@@ -63,6 +63,13 @@ export function updateRepository(db: Executor, publicId: string, expectedLockVer
 
 export function findRepository(db: Executor, publicId: string): Repository | undefined {
   return db.select().from(repositories).where(and(eq(repositories.publicId, publicId), isNull(repositories.deletedAt))).get();
+}
+
+/** Which of these Repositories still exist, so history links only the ones whose pages open. */
+export function liveRepositoryIds(db: Executor, publicIds: readonly string[]): Set<string> {
+  if (publicIds.length === 0) return new Set();
+  const rows = db.select({ publicId: repositories.publicId }).from(repositories).where(and(inArray(repositories.publicId, [...new Set(publicIds)]), isNull(repositories.deletedAt))).all();
+  return new Set(rows.map((row) => row.publicId));
 }
 
 /** A Repository by public ID, deleted or not, for history and for saying what was deleted. */

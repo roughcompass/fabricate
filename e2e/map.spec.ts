@@ -103,7 +103,7 @@ test("leads a focus with what a change affects, keeps it in the address, and ope
   await row.locator("summary").focus();
   await page.keyboard.press("Enter");
   await expect(row.getByText("package.exact-name")).toBeVisible();
-  await expect(row.getByRole("link", { name: /^package\.json / }).first()).toBeVisible();
+  await expect(row.getByRole("link", { name: /^\S+ package\.json / }).first()).toBeVisible();
 });
 
 test("lists a runtime contract among both a repository's dependents and its dependencies (Runtime contract both ways)", async ({ page, db }) => {
@@ -186,7 +186,7 @@ test("reviews every resolution state and the coverage gap", async ({ page, db })
 test("navigates from a relationship to its evidence with the keyboard", async ({ page, db }) => {
   const { run } = await seedMapStates(db);
   await page.goto(paths.runMap(run.publicId));
-  const evidence = relationshipRow(page, "legacy-ui").getByRole("link", { name: /^package\.json / });
+  const evidence = relationshipRow(page, "legacy-ui").getByRole("link", { name: /^\S+ package\.json / });
   await evidence.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { level: 1, name: /^package\.json \/dependencies\/legacy-ui$/ })).toBeVisible();

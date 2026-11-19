@@ -78,9 +78,11 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
   return (
     <DetailsTemplate
       header={{
+        // One chain: Assessment, Run, Evaluation, Finding.
         breadcrumbs: [
           { href: "/assessments", label: "Assessments" },
           { href: routes.assessment(assessment.publicId), label: assessment.name },
+          { href: routes.run(run.publicId), label: `Run #${found.runNumber}` },
         ],
         title: name,
         status: <Status state={evaluation.state} />,
@@ -250,7 +252,10 @@ function FindingsSection({ evaluationId, releases, findings, terminal }: { evalu
                           {items.map((item) => (
                             <tr key={item.finding.publicId}>
                               <Td label="Subject">
-                                <Link href={routes.finding(evaluationId, item.finding.publicId)}>{String((item.document.subject as JsonObject).name)}</Link>
+                                {/* The link opens the Finding, named by its Control and subject. */}
+                                <Link href={routes.finding(evaluationId, item.finding.publicId)} aria-label={`${String(control.title)}: ${String((item.document.subject as JsonObject).name)}`}>
+                                  {String((item.document.subject as JsonObject).name)}
+                                </Link>
                               </Td>
                               <Td label="Outcome">
                                 <Status state={item.finding.outcome as Outcome} />

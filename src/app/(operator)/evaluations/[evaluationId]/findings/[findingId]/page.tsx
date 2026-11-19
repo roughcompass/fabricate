@@ -13,6 +13,7 @@ import { Section } from "@/components/ui/section";
 import { Severity, Status } from "@/components/ui/status";
 import { ShortValue, Tag } from "@/components/ui/tag";
 import { runById } from "@/lib/runs/lookups";
+import { runNumber } from "@/lib/runs/run-records";
 import { getDb } from "@/lib/db/client";
 import { PRODUCT } from "@/lib/product";
 import { evaluationNumber, findEvaluation, findFinding, findingDocument } from "@/lib/evaluations/evaluation-records";
@@ -21,6 +22,7 @@ import { assessmentById } from "@/lib/assessments/assessment-records";
 import { findingCategory } from "@/lib/profiles/links";
 import { profileSectionHref } from "@/lib/profiles/tabs";
 import { releaseById, standardById } from "@/lib/standards/standard-records";
+import { findRepository } from "@/lib/repositories/repository-records";
 import { COLLECTION_BY_ID, SELECTOR_BY_ID } from "@/lib/standards/registry";
 import styles from "./finding.module.css";
 import { routes } from "@/lib/web/routes";
@@ -71,12 +73,21 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
   // The Profile link opens the category the Control reads, and names it.
   const category = findingCategory(condition, applicability);
   const categoryLabel = category ? SHARED_CATEGORIES.find((definition) => definition.id === category)?.label : undefined;
-  const subjectLink =
+  // A repository subject links to its Repository page, unless it has since been deleted.
+  const repositoryLink =
+    subject.type === "repository" && typeof subject.key === "string" && findRepository(db, subject.key) ? (
+      <Link key="repository" href={routes.repository(subject.key)}>
+        {String(subject.name)}
+      </Link>
+    ) : (
+      String(subject.name)
+    );
+  const profileLink =
     subject.type === "repository" ? (
       profile ? (
         <Link href={category && categoryLabel ? profileSectionHref(routes.profile(String(profile.public_id)), category) : routes.profile(String(profile.public_id))}>{category && categoryLabel ? `${categoryLabel} in the ${String(subject.name)} Profile` : `${String(subject.name)} Profile`}</Link>
       ) : (
-        <span>{`${String(subject.name)} (no Profile)`}</span>
+        <span>{`None; ${String(subject.name)} had no Profile in this Run`}</span>
       )
     ) : map ? (
       <Link href={routes.runMap(run.publicId)}>Relationship Map</Link>
@@ -90,11 +101,12 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
         breadcrumbs: [
           { href: "/assessments", label: "Assessments" },
           { href: routes.assessment(assessment.publicId), label: assessment.name },
+          { href: routes.run(run.publicId), label: `Run #${runNumber(db, run)}` },
           { href: routes.evaluation(evaluation.publicId), label: `Evaluation #${number}` },
         ],
         title: String(control.title),
         status: <Status state={finding.outcome} />,
-        meta: [String(subject.name), releaseLink, <Severity key="severity" value={finding.severity} />],
+        meta: [repositoryLink, releaseLink, <Severity key="severity" value={finding.severity} />],
       }}
     >
 
@@ -102,7 +114,7 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
         <p className={styles.reasoning}>{String(document.reasoning)}</p>
         <DescriptionList surface
           items={[
-            ["Subject", subjectLink],
+            ...(subject.type === "repository" ? ([["Repository", repositoryLink], ["Profile", profileLink]] as [string, React.ReactNode][]) : ([["Subject", profileLink]] as [string, React.ReactNode][])),
             ...(typeof subject.commit === "string" ? ([["Commit", <ShortValue key="commit" value={subject.commit} label="commit" />]] as [string, React.ReactNode][]) : []),
           ]}
         />

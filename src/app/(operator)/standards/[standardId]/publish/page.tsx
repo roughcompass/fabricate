@@ -23,7 +23,9 @@ import { loadStandard } from "../load";
 
 export async function generateMetadata({ params }: PageProps<"/standards/[standardId]/publish">): Promise<Metadata> {
   const standard = loadStandard((await params).standardId);
-  return { title: standard ? `Publish ${standard.name}` : "Standard not found" };
+  if (!standard) return { title: "Standard not found" };
+  // The browser title begins with the page's, which names the Release it publishes.
+  return { title: `Publish ${standard.name} v${(releasesOf(getDb(), standard.id)[0]?.version ?? 0) + 1}` };
 }
 
 export default async function PublishPage({ params, searchParams }: PageProps<"/standards/[standardId]/publish">) {

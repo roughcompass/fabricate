@@ -35,7 +35,7 @@ export default async function EditAssessmentPage({ params }: PageProps<"/assessm
           { href: "/assessments", label: "Assessments" },
           { href: routes.assessment(assessment.publicId), label: assessment.name },
         ],
-        title: "Edit Assessment",
+        title: `Edit ${assessment.name}`,
         description: "Changes apply to future Runs and Evaluations only.",
       }}
     >

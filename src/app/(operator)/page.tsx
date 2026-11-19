@@ -246,7 +246,9 @@ function RepositoryCards({ repositories, profiling, changes }: { repositories: F
       <div className={styles.card} data-figure="Repositories" data-key-figure="">
         <dt className={styles.cardLabel}>Repositories</dt>
         <dd className={styles.cardValue}>
-          <Link href={repositoriesHref()}>{formatNumber(total)}</Link>
+          <Link href={repositoriesHref()} aria-label={`${countLabel(total, "Repository", "Repositories")}`}>
+            {formatNumber(total)}
+          </Link>
         </dd>
         <dd className={styles.muted}>Registered</dd>
         <Change change={changes.repositories!} />
@@ -281,7 +283,9 @@ function AssessmentCard({ assessments, changes }: { assessments: FleetSummary["a
     <div className={styles.card} data-figure="Assessments" data-key-figure="">
       <dt className={styles.cardLabel}>Assessments</dt>
       <dd className={styles.cardValue}>
-        <Link href={assessmentsHref()}>{formatNumber(total)}</Link>
+        <Link href={assessmentsHref()} aria-label={`${countLabel(total, "Assessment")}`}>
+          {formatNumber(total)}
+        </Link>
       </dd>
       <Change change={changes.assessments!} />
       <dd className={styles.split} role="img" aria-label={shown.map((conclusion) => `${statusLabel(conclusion.state)} ${byConclusion[conclusion.id]}`).join(", ")}>
@@ -296,7 +300,9 @@ function AssessmentCard({ assessments, changes }: { assessments: FleetSummary["a
                 {statusLabel(conclusion.state)}
               </dt>
               <dd>
-                <Link href={assessmentsHref({ conclusion: conclusion.id })}>{formatNumber(byConclusion[conclusion.id])}</Link>
+                <Link href={assessmentsHref({ conclusion: conclusion.id })} aria-label={`${countLabel(byConclusion[conclusion.id], "Assessment")}: ${statusLabel(conclusion.state)}`}>
+                  {formatNumber(byConclusion[conclusion.id])}
+                </Link>
               </dd>
             </div>
           ))}

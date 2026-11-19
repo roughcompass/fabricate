@@ -34,6 +34,7 @@ import { cancelRun } from "../actions";
 import { runOutcome } from "../outcomes";
 import { routes } from "@/lib/web/routes";
 import { loadRun } from "./load";
+import { liveRepositoryIds } from "@/lib/repositories/repository-records";
 import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 export async function generateMetadata({ params }: PageProps<"/runs/[runId]">): Promise<Metadata> {
@@ -129,7 +130,7 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
         />
       </Section>
 
-      <ScopeSection targets={targets} profiles={profiles} commits={targetCommits(db, run.id)} terminal={terminal} requested={param(query, "page")} href={(page) => withQuery(routes.run(run.publicId, { page: pageQuery(page) }), {}, "repositories")} />
+      <ScopeSection targets={targets} profiles={profiles} commits={targetCommits(db, run.id)} live={(ids) => liveRepositoryIds(db, ids)} terminal={terminal} requested={param(query, "page")} href={(page) => withQuery(routes.run(run.publicId, { page: pageQuery(page) }), {}, "repositories")} />
 
       {evaluations.length > 0 && (
         <Section title="Evaluations">
@@ -181,9 +182,11 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
 }
 
 /** The Run's scope as it was when it started, and each repository's progress and Profile. */
-function ScopeSection({ targets, profiles, commits, terminal, requested, href }: { targets: RunTarget[]; profiles: Map<number, RepositoryProfile>; commits: Map<number, string>; terminal: boolean; requested: string | undefined; href: (page: number) => string }) {
+function ScopeSection({ targets, profiles, commits, live, terminal, requested, href }: { targets: RunTarget[]; profiles: Map<number, RepositoryProfile>; commits: Map<number, string>; live: (publicIds: string[]) => Set<string>; terminal: boolean; requested: string | undefined; href: (page: number) => string }) {
   // Fifty to a page, so a fleet-sized Run reads only the Profiles it shows.
   const { rows, page, pages } = pageOf(targets, requested);
+  // Each repository links to its page, unless it has since been deleted.
+  const existing = live(rows.map((target) => target.repositoryPublicId));
   const skippedInputs = (targetId: number) => {
     const profile = profiles.get(targetId);
     return profile ? profileDiagnostics(profileDocument(profile)).skipped.length : 0;
@@ -209,7 +212,7 @@ function ScopeSection({ targets, profiles, commits, terminal, requested, href }:
             return (
               <tr key={target.publicId} id={target.publicId}>
                 <Td label="Repository">
-                  <Primary>{target.repositoryName}</Primary>
+                  <Primary>{existing.has(target.repositoryPublicId) ? <Link href={routes.repository(target.repositoryPublicId)}>{target.repositoryName}</Link> : target.repositoryName}</Primary>
                   <Secondary>
                     <Tag>{target.cloneUrl}</Tag>
                   </Secondary>

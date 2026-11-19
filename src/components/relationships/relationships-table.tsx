@@ -80,7 +80,7 @@ export function RelationshipsTable({ page, runId, focusHref, pageHref, coverageC
                   {row.state === "unresolved" && !coverageComplete && <Secondary>A repository that was not assessed might resolve it.</Secondary>}
                 </Td>
                 <Td label="Evidence">
-                  <EvidenceList ids={row.evidence} records={page.evidence} owner={{ run: runId }} />
+                  <EvidenceList ids={row.evidence} records={page.evidence} owner={{ run: runId }} of={`${row.from.label} ${EDGE_LABELS[row.type]?.[1] ?? row.type} ${row.to?.label ?? `one of ${row.candidates.map((candidate) => candidate.label).join(", ")}`}`} />
                 </Td>
               </tr>
             ))}

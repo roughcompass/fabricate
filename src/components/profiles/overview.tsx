@@ -64,18 +64,18 @@ export function OverviewValues({ row, base }: { row: OverviewRow; base: string }
           </Linked>
         )),
         row.more > 0 && (
-          <Linked key="more" href={href}>
+          <Linked key="more" href={href} label={`${row.label}: ${row.more} more`}>
             <span className={styles.more}>{`+${row.more} more`}</span>
           </Linked>
         ),
         ...row.placeholders.map((placeholder, index) => (
-          <Linked key={`placeholder-${index}`} href={href}>
+          <Linked key={`placeholder-${index}`} href={href} label={`${row.label}: ${placeholder.label ? `${placeholder.label} ` : ""}${statusLabel(placeholder.value.state)}`}>
             {placeholder.label && <span className={styles.valueText}>{`${placeholder.label}:`}</span>}
             <NoValuePlaceholder value={placeholder.value} />
           </Linked>
         )),
         row.partial && (
-          <Linked key="partial" href={href}>
+          <Linked key="partial" href={href} label={`${row.label}: partial`}>
             <Status state="partial" size="sm" label="Partial: some inputs weren't read" />
           </Linked>
         ),
@@ -94,9 +94,10 @@ function Value({ value }: { value: OverviewValue }) {
   );
 }
 
-function Linked({ href, children }: { href: string; children: React.ReactNode }) {
+/** A link to a value's facts; +label+ names the category it opens, for values that read alike, such as None detected. */
+function Linked({ href, label, children }: { href: string; label?: string; children: React.ReactNode }) {
   return (
-    <a href={href} className={styles.value}>
+    <a href={href} className={styles.value} aria-label={label}>
       {children}
     </a>
   );

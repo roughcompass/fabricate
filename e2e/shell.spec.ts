@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { profilesOf } from "../src/lib/profiles/profile-records";
+import { runById } from "../src/lib/runs/lookups";
 import { buildRepository } from "../test/support/builders";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, seedResults, seedEvaluation } from "./support/results";
@@ -162,13 +163,16 @@ test.describe("the shell header", () => {
   });
 
   test("Breadcrumbs on a Finding: the Control title and its ancestors in the page header", async ({ page, db }) => {
-    const { evaluation } = await seedEvaluation(db);
+    const { evaluation, assessment } = await seedEvaluation(db);
     const finding = findingsOf(db, evaluation.id)[0]!;
     const control = [...BASELINE_CONTROLS, ...SERVICE_CONTROLS].find((candidate) => candidate.key === finding.controlKey)!;
     await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
     await expect(pageTitle(page)).toHaveText(control.title as string);
     const crumbs = pageHeader(page).getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
-    await expect(crumbs).toHaveText(["Assessments", "Fleet assessment", "Evaluation #1"]);
+    await expect(crumbs).toHaveText(["Assessments", "Fleet assessment", "Run #1", "Evaluation #1"]);
+    // Each item links to its record.
+    const run = runById(db, evaluation.runId);
+    expect(await crumbs.evaluateAll((links) => links.map((link) => link.getAttribute("href")))).toEqual(["/assessments", `/assessments/${assessment.publicId}`, `/runs/${run.publicId}`, `/evaluations/${evaluation.publicId}`]);
   });
 
   for (const theme of ["light", "dark"] as const) {

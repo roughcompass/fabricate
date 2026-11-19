@@ -114,7 +114,8 @@ test("explains observed, inferred, unknown, conflicting, negative, and skipped-i
   const { profile } = await seedOrders(db);
   await open(page, profile.publicId, "tooling");
   await expect(page.getByRole("heading", { level: 1, name: "orders" })).toBeVisible();
-  await expect(page.getByText("Nothing in the repository was run.")).toBeVisible();
+  // A statement that holds for every Profile isn't its description (content standard, "Descriptions").
+  await expect(page.getByText("Nothing in the repository was run.")).toHaveCount(0);
 
   const languages = category(page, "languages");
   await expect(languages.getByText("Observed").first()).toBeVisible();

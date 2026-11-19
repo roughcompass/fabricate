@@ -24,7 +24,8 @@ const load = cache((publicId: string) => {
 
 export async function generateMetadata({ params }: PageProps<"/profiles/[profileId]">): Promise<Metadata> {
   const found = load((await params).profileId);
-  return { title: found ? `Version ${found.version.version} · ${found.repository.name}` : "Profile not found" };
+  // The page is titled with its repository; the version follows, so the browser title begins with the page's.
+  return { title: found ? `${found.repository.name} · Version ${found.version.version}` : "Profile not found" };
 }
 
 /**
