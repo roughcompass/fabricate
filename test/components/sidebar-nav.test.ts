@@ -33,6 +33,7 @@ describe("primary menu", () => {
       { label: "Repositories", current: null },
       { label: "All Assessments", current: null },
       { label: "Standards", current: null },
+      { label: "System", current: null },
       { label: "Bitbucket tokens", current: null },
     ]);
   });

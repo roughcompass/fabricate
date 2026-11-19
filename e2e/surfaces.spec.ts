@@ -77,6 +77,7 @@ async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sources
     ...surfaces,
     ["10-repository-version", `${url("03-repository")}/versions/1`],
     ["10-profile-evidence", `${profile}/evidence/${evidenceId}`],
+    ["10-system", "/admin/system"],
     ["10-bitbucket-tokens", "/admin/bitbucket-tokens"],
     ["10-bitbucket-token-new", "/admin/bitbucket-tokens/new"],
     ["10-unknown-address", "/no-such-page"],

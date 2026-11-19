@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import { BITBUCKET_TOKENS_HREF } from "./bitbucket-tokens/paths";
 
-/** Admin has one page so far. */
+/** Admin opens on System status. */
 export default function AdminPage() {
-  redirect(BITBUCKET_TOKENS_HREF);
+  redirect("/admin/system");
 }

@@ -276,7 +276,7 @@ Every page is built from one of ten page templates (below), each composing `Page
 - First, Home, with no heading.
 - **Assessments:** Repositories, All Assessments, and Standards.
 - **Templates:** Salt Patterns, while the template demo is enabled.
-- **Admin:** Bitbucket tokens, last.
+- **Admin:** System, then Bitbucket tokens, last.
 - Every item has an icon, and every page is listed inline.
 - `locate()` takes a `NavFlags` with the demo switch; pages build it with `navFlags()`.
 
@@ -328,7 +328,7 @@ The templates follow Cloudscape, AWS's design system for consoles, whose numeric
 
 | Template | File | For | Header slots besides the title | Zones below the header, in order | References |
 | --- | --- | --- | --- | --- | --- |
-| Dashboard | `dashboard-template.tsx` | A landing page: Home; the adoption overview and System status to come | Description, one primary, secondary actions; no breadcrumbs | Alerts, `attention`, `figures` (at most five), the panels (`DashboardPanel`: a heading, a link that names the list it summarizes, and its content as a function that reads its own data, so a failed read shows in that panel with Try again while the others render, without JavaScript too; `PanelBoundary` catches a failure while the browser renders it. No Suspense boundary, which would stream the panel behind a skeleton) | Cloudscape service dashboard; Polaris Homepage; Salt Analytical dashboard and Metric |
+| Dashboard | `dashboard-template.tsx` | A landing page: Home and System status; the adoption overview to come | Description, one primary, secondary actions; no breadcrumbs | Alerts, `attention`, `figures` (at most five), the panels (`DashboardPanel`: a heading, a link that names the list it summarizes, and its content as a function that reads its own data, so a failed read shows in that panel with Try again while the others render, without JavaScript too; `PanelBoundary` catches a failure while the browser renders it. No Suspense boundary, which would stream the panel behind a skeleton) | Cloudscape service dashboard; Polaris Homepage; Salt Analytical dashboard and Metric |
 | Index | `index-template.tsx` | A collection: Repositories, a Repository's Versions, Assessments, Standards, Bitbucket tokens, and Salt Patterns as cards | Breadcrumbs for a list that belongs to a record, description, one primary that creates or adds, secondary and extra actions | Alerts, `tabs` with counts, `filters` across the page with the result count beside the results, the results (with a `rail` beside a card grid), `pagination` | Cloudscape table and card views; Polaris Index; Fiori list report and worklist |
 | Details | `details-template.tsx` | One record: plain, with view tabs, or a hub of related records | Every slot | Alerts, the selected view (the overview first), and for a hub `related` sections of at most five records with a link to all of them | Cloudscape details (plain, tabs, hub); Fiori object page; Polaris Details |
 | Analysis | `analysis-template.tsx` | Aggregates with drill-down: the Relationship Map and its levels; adoption pages to come | Breadcrumbs, a meta row naming the scope and when it was read, description, secondary and extra actions, tabs | Alerts on partial coverage, `figures`, `filters` with a summary of those applied, `chart`, then a table of the same data | Fiori analytical list page; Salt Analytical dashboard |

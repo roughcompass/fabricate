@@ -55,7 +55,8 @@ const EXPECTED: Record<string, string | null> = {
   "/templates": "salt-patterns",
   "/templates/[templateSlug]": "salt-patterns",
   "/templates/[templateSlug]/preview": "salt-patterns",
-  "/admin": "bitbucket-tokens",
+  "/admin": "system",
+  "/admin/system": "system",
   "/admin/bitbucket-tokens": "bitbucket-tokens",
   "/admin/bitbucket-tokens/new": "bitbucket-tokens",
   "/design-system": null,
@@ -91,7 +92,7 @@ describe("primary menu", () => {
       [null, ["Home"]],
       ["Assessments", ["Repositories", "All Assessments", "Standards"]],
       ["Templates", ["Salt Patterns"]],
-      ["Admin", ["Bitbucket tokens"]],
+      ["Admin", ["System", "Bitbucket tokens"]],
     ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
     for (const item of visibleGroups(ALL).flatMap((group) => group.items)) expect(item.icon, item.id).toBeTruthy();
@@ -101,7 +102,7 @@ describe("primary menu", () => {
     expect(shape(BASE)).toEqual([
       [null, ["Home"]],
       ["Assessments", ["Repositories", "All Assessments", "Standards"]],
-      ["Admin", ["Bitbucket tokens"]],
+      ["Admin", ["System", "Bitbucket tokens"]],
     ]);
     for (const route of ["/templates", "/templates/payments-hub/preview"]) expect(locate(route, BASE), route).toBeNull();
   });

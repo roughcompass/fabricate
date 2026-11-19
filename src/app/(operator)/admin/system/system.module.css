@@ -1,0 +1,7 @@
+@layer pages {
+  /* A build's outcome: its state, what it means, and its details. */
+  .outcome { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+  /* An entry's sources, one per line. */
+  .sources { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+  .version { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+}

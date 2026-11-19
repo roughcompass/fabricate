@@ -8,6 +8,7 @@ import { skeletonFor } from "@/components/shell/skeleton-routes";
 describe("navigation skeletons", () => {
   it.each([
     ["/", "dashboard"],
+    ["/admin/system", "dashboard"],
     ["/assessments", "index-tabs"],
     ["/repositories", "repositories"],
     ["/repositories/bulk", "form"],

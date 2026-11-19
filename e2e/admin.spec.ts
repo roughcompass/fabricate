@@ -1,12 +1,22 @@
+import { catalogConfiguration } from "../src/lib/catalog/configuration";
+import { queueBuild } from "../src/lib/catalog/build";
+import { storeEntry } from "../src/lib/catalog/entries";
+import { jobHandlers } from "../src/lib/jobs/registry";
+import { drainJobs } from "../src/lib/jobs/worker";
+import { currentRecipe, moveSurvey, requestSurvey } from "../src/lib/surveys/records";
+import { buildRepository } from "../test/support/builders";
+import { saltEntry } from "../test/support/catalog";
+import { manifest } from "../test/support/profiles";
+import { seedSurvey } from "../test/support/scenarios";
 import { expect, test } from "./support/fixtures";
-import { toasts } from "./support/shell";
+import { serverConfig } from "./support/results";
+import { expectCurrentItem, pageTitle, toasts } from "./support/shell";
 
 
 const TOKEN = "BBDC-NzA2MzQ1NjYxMjM0OkxhYmNkZWZnaGlqa2xtbm9w";
 
 test("saves a Bitbucket Server token, shows only its last four characters, and deletes it after confirming", async ({ page, db: _db }) => {
-  await page.goto("/admin");
-  await expect(page).toHaveURL(/\/admin\/bitbucket-tokens$/);
+  await page.goto("/admin/bitbucket-tokens");
   await expect(page.getByText("No Bitbucket tokens yet")).toBeVisible();
 
   await page.getByRole("link", { name: "Add token" }).first().click();
@@ -39,4 +49,76 @@ test("saves a Bitbucket Server token, shows only its last four characters, and d
   await dialog.getByRole("button", { name: "Delete token" }).click();
   await expect(toasts(page).getByText("Platform team was deleted.")).toBeVisible();
   await expect(page.getByText("No Bitbucket tokens yet")).toBeVisible();
+});
+
+const SALT_APP = {
+  "package.json": manifest({ name: "current", version: "1.0.0", dependencies: { "@salt-ds/core": "1.75.0" } }),
+  "src/App.tsx": 'import { Button } from "@salt-ds/core";\nexport const App = () => <Button>Save</Button>;\n',
+};
+
+// operator-interface/system-status spec.
+test.describe("System status", () => {
+  const FAR_FUTURE = new Date("2100-01-01T00:00:00.000Z");
+
+  test("Catalog build failed: shows the failure with its time and reason, and the entries still in use", async ({ page, db }) => {
+    const config = serverConfig();
+    storeEntry(db, saltEntry());
+    queueBuild(db, catalogConfiguration(config).things[0]!, "1.76.0", "published");
+    // The browser tests' registry is unreachable; draining at a later time runs every retry.
+    await drainJobs(db, jobHandlers(db, config), { now: () => FAR_FUTURE });
+
+    await page.goto("/admin");
+    await expect(page).toHaveURL(/\/admin\/system$/);
+    await expect(page).toHaveTitle("System · Frontend Registry");
+    await expect(pageTitle(page)).toHaveText("System");
+    await expectCurrentItem(page, "System");
+
+    const alert = page.locator("#page-alerts");
+    await expect(alert).toContainText("The latest Catalog build, of Salt 1.76.0, failed");
+    await expect(alert).toContainText("The package registry couldn't be reached.");
+    await expect(alert).toContainText("The entries in use below are unchanged.");
+
+    const builds = page.getByRole("table", { name: "Catalog builds" });
+    const failed = builds.getByRole("row").filter({ hasText: "Salt 1.76.0" });
+    await expect(failed).toContainText("Newest release");
+    await expect(failed).toContainText("Failed");
+    await expect(failed).toContainText("The package registry couldn't be reached.");
+    await expect(failed.locator("time")).toBeVisible();
+    // The Catalog Builder's reason is in the details, not the overview.
+    await expect(failed.getByText("registry_unreachable")).toBeHidden();
+    await failed.getByText("Details").click();
+    await expect(failed.getByText("registry_unreachable")).toBeVisible();
+
+    const entries = page.getByRole("table", { name: "Reference Catalog entries" });
+    await expect(entries.getByRole("row").filter({ hasText: "Salt 1.75.0" })).toContainText("@salt-ds/core");
+    await expect(entries.getByRole("row").filter({ hasText: "Salt 1.75.0" })).toContainText("as of 2026-03-31");
+    await expect(page.getByText("Surveyor release", { exact: true })).toBeVisible();
+  });
+
+  test("Re-survey progress: counts current, waiting, and failed Repositories, each a link to those Repositories (After a Surveyor upgrade)", async ({ page, db }) => {
+    const config = serverConfig();
+    storeEntry(db, saltEntry());
+    // A Salt app's survey records the Salt entry it was given, as a real survey does.
+    await seedSurvey(db, buildRepository(db, { name: "current" }), { files: SALT_APP });
+    const earlier = buildRepository(db, { name: "earlier" });
+    requestSurvey(db, { repositoryId: earlier.id, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...currentRecipe(config), surveyorRelease: "0.6.0" });
+    const failing = buildRepository(db, { name: "failing" });
+    const { survey } = requestSurvey(db, { repositoryId: failing.id, commitSha: "b".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...currentRecipe(config) });
+    moveSurvey(db, survey, "failed", { failureCode: "source_unavailable", failureMessage: "The remote is down" });
+    buildRepository(db, { name: "unsurveyed" });
+
+    await page.goto("/admin/system");
+    const figure = (label: string) => page.locator("dl[data-key-figures] > div").filter({ hasText: label });
+    await expect(figure("Current recipe").locator("dd").first()).toHaveText("1");
+    await expect(figure("Waiting").locator("dd").first()).toHaveText("2");
+    await expect(figure("Failed").locator("dd").first()).toHaveText("1");
+
+    for (const [label, names] of [["Current recipe", ["current"]], ["Waiting", ["earlier", "unsurveyed"]], ["Failed", ["failing"]]] as const) {
+      await page.goto("/admin/system");
+      await figure(label).getByRole("link").click();
+      await expect(page).toHaveURL(/\/repositories\?recipe=/);
+      const table = page.getByRole("table", { name: "Repositories" });
+      await expect(table.locator("tbody tr td:first-child a"), label).toHaveText([...names]);
+    }
+  });
 });

@@ -1,3 +1,4 @@
+import type { RecipeState } from "@/lib/catalog/updates";
 import type { ConclusionFilter } from "@/lib/evaluations/conclusions";
 import { withQuery } from "./query";
 import { routes } from "./routes";
@@ -9,9 +10,9 @@ import { routes } from "./routes";
  * a figure and the list it opens always agree on the parameters.
  */
 
-/** The Repositories list with a search. */
-export function repositoriesHref(filters: { q?: string } = {}): string {
-  return withQuery(routes.repositories, { q: filters.q });
+/** The Repositories list with a search, and filtered to a recipe state, as System status's counts open it. */
+export function repositoriesHref(filters: { q?: string; recipe?: RecipeState | null } = {}): string {
+  return withQuery(routes.repositories, { q: filters.q, recipe: filters.recipe });
 }
 
 /** The Assessments list on a conclusion tab. */

@@ -36,8 +36,11 @@ const ASSESSMENT_ITEMS: readonly NavItem[] = [
   { id: "standards", label: "Standards", href: "/standards", icon: "target", match: [/^\/standards(\/.*)?$/] },
 ];
 
-/** Admin: settings the Frontend Registry keeps for every operator, such as Bitbucket Server tokens. */
-const ADMIN_ITEMS: readonly NavItem[] = [{ id: "bitbucket-tokens", label: "Bitbucket tokens", href: "/admin/bitbucket-tokens", icon: "lock", match: [/^\/admin(\/.*)?$/] }];
+/** Admin: how the Frontend Registry's parts stand, and settings it keeps for every operator, such as Bitbucket Server tokens. */
+const ADMIN_ITEMS: readonly NavItem[] = [
+  { id: "system", label: "System", href: "/admin/system", icon: "monitor", match: [/^\/admin(\/system)?\/?$/] },
+  { id: "bitbucket-tokens", label: "Bitbucket tokens", href: "/admin/bitbucket-tokens", icon: "lock", match: [/^\/admin\/bitbucket-tokens(\/.*)?$/] },
+];
 
 export const SALT_PATTERNS = { id: "salt-patterns", label: "Salt Patterns", href: "/templates", icon: "sparkle", match: [/^\/templates(\/.*)?$/] } as const satisfies NavItem;
 

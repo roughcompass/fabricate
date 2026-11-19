@@ -8,13 +8,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Menu, MenuAction, MenuItem } from "@/components/ui/menu";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
-import { param, searchTerm } from "@/lib/web/query";
+import { oneOf, param, searchTerm } from "@/lib/web/query";
 import { Panel } from "@/components/ui/panel";
 import { Status, humanize } from "@/components/ui/status";
 import { SearchField } from "@/components/ui/search-field";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
+import { Select } from "@/components/ui/form";
+import { RECIPE_STATES, type RecipeState, recipeStates } from "@/lib/catalog/updates";
+import { getConfig } from "@/lib/config";
 import { runCounts } from "@/lib/repositories/registration";
 import { listRepositories, repositoryReferenceLabel } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
@@ -27,13 +30,20 @@ import { routes } from "@/lib/web/routes";
 
 export const metadata: Metadata = { title: "Repositories" };
 
+/** Each recipe state as the filter names it (System status counts the same states). */
+const RECIPE_LABELS: Record<RecipeState, string> = { current: "On the current recipe", waiting: "Waiting to be surveyed", failed: "Failed its newest survey" };
+const RECIPE_OPTIONS = [{ value: "", label: "Any recipe" }, ...RECIPE_STATES.map((state) => ({ value: state, label: RECIPE_LABELS[state] }))];
+
 export default async function RepositoriesPage({ searchParams }: PageProps<"/repositories">) {
   const query = await searchParams;
   const search = searchTerm(query);
+  const recipe = oneOf(query, "recipe", RECIPE_STATES) ?? null;
   const db = getDb();
   const all = listRepositories(db);
   const needle = search.toLowerCase();
-  const repositories = needle ? all.filter((repository) => repository.name.toLowerCase().includes(needle) || repository.cloneUrl.toLowerCase().includes(needle)) : all;
+  const states = recipe ? recipeStates(db, getConfig()) : null;
+  const repositories = all.filter((repository) => (!needle || repository.name.toLowerCase().includes(needle) || repository.cloneUrl.toLowerCase().includes(needle)) && (!states || states.get(repository.id) === recipe));
+  const filtered = Boolean(search || recipe);
   const counts = runCounts(db);
   const profiles = profileSummaries(db);
   const activity = profilingActivity(db);
@@ -60,8 +70,9 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
               {countLabel(repositories.length, "Repository", "Repositories")}
               {repositories.length !== all.length ? ` of ${all.length}` : ""}
             </p>
-            <FilterBar key={search} action="/repositories" label="Search Repositories" filtered={Boolean(search)} clearHref={repositoriesHref()}>
-              <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref()} />
+            <FilterBar key={`${search}:${recipe}`} action="/repositories" label="Search Repositories" filtered={filtered} clearHref={repositoriesHref()}>
+              <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref({ recipe })} />
+              <Select id="recipe-filter" name="recipe" label="Recipe" hideLabel size="sm" defaultValue={recipe ?? ""} options={RECIPE_OPTIONS} />
             </FilterBar>
           </div>
           {busy && (
@@ -148,7 +159,9 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
           </Table>
         ) : (
           // The filter bar above offers Clear filters.
-          <EmptyState title="No matching Repositories" icon="search">{`No Repository name or clone URL contains “${search}”.`}</EmptyState>
+          <EmptyState title="No matching Repositories" icon="search">
+            {search ? `No Repository name or clone URL contains “${search}”${recipe ? ` among those ${RECIPE_LABELS[recipe].toLowerCase()}` : ""}.` : `No Repository is ${RECIPE_LABELS[recipe ?? "current"].toLowerCase()}.`}
+          </EmptyState>
         )}
       </Panel>
     </IndexTemplate>

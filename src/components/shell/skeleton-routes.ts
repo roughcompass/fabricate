@@ -6,7 +6,7 @@
 export type SkeletonKind = "dashboard" | "index" | "index-tabs" | "repositories" | "cards" | "details" | "details-tabs" | "analysis" | "form" | "editor" | "settings" | "focused";
 
 const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
-  [/^\/$/, "dashboard"],
+  [/^\/(admin\/system\/?)?$/, "dashboard"],
   [/^\/(assessments|repositories|standards)\/new\/?$/, "form"],
   [/^\/(assessments|standards)\/[^/]+\/(edit|publish)\/?$/, "form"],
   [/^\/repositories\/bulk\/?$/, "form"],
