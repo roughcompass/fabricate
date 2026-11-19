@@ -20,7 +20,7 @@ import { repositoryRelationships } from "@/lib/profiles/relationships";
 import { surveyRequestFailure } from "@/lib/surveys/background";
 import { PREVIEW_OUTCOME_PARAMS, previewOutcome, repositoryOutcome } from "../outcomes";
 import { PreviewsSection } from "./previews-section";
-import { ReprofileForm } from "./version-parts";
+import { ReprofileForm, VersionStatus } from "./version-parts";
 import styles from "@/components/profiles/profile-body.module.css";
 import { routes } from "@/lib/web/routes";
 import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
@@ -66,6 +66,8 @@ export function RepositoryView({
   // A reference that couldn't be read leaves no version; its request's error says why.
   const unreadable = explicit ? null : surveyRequestFailure(db, repository, latest?.survey);
   const newer = explicit && latest && latest.version > version.version ? latest : null;
+  // The state beside the title: the version shown's, or on the Repository's own page, its newest version's.
+  const stated = explicit ? version : latest;
   const requested = param(query, "tab");
   const overview = !isProfileTab(requested) || requested === "overview";
 
@@ -74,6 +76,7 @@ export function RepositoryView({
       header={{
         breadcrumbs: explicit ? [{ href: "/repositories", label: "Repositories" }, { href: routes.repository(repository.publicId), label: repository.name }, { href: routes.repositoryVersions(repository.publicId), label: "Versions" }] : [{ href: "/repositories", label: "Repositories" }],
         title: explicit && !address ? `Version ${version.version}` : repository.name,
+        status: stated && <VersionStatus version={stated} />,
         meta: [
           // At its Profile's address, a version is titled by its repository and names its number here.
           ...(explicit && address ? [<Link key="version" href={routes.repositoryVersion(repository.publicId, version.version)}>{`Version ${version.version}`}</Link>] : []),

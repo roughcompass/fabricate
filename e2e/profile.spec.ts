@@ -13,6 +13,7 @@ import { ORDERS, STOREFRONT, seedRun, seedSurvey } from "../test/support/scenari
 import { serverConfig } from "./support/results";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, gitRepo, test } from "./support/fixtures";
 import { paths } from "./support/paths";
+import { pageHeader, pageTitle } from "./support/shell";
 
 const category = (page: Page, id: string) => page.locator(`#${id}`);
 /** Opens a Profile at one of its views. */
@@ -79,6 +80,24 @@ test("leads with an overview that answers each question, then what needs attenti
   await expect(page).toHaveURL(new RegExp(`/profiles/${profile.publicId}\\?tab=dependencies$`));
   await expect(views.getByRole("link", { name: /^Dependencies/ })).toHaveAttribute("aria-current", "page");
   await expect(detail(page.getByRole("region", { name: "Dependencies" }).first(), "Declared")).toContainText("6 packages");
+});
+
+// operator-interface/page-templates spec, Details.
+test("Repository: breadcrumbs to Repositories, its name with its status and actions, a meta row, and its seven views as the page header's last child, Overview first", async ({ page, db }) => {
+  const { storefront } = await seedStorefront(db);
+  await page.goto(paths.repository(storefront.publicId));
+  const header = pageHeader(page);
+  await expect(header).toHaveAttribute("data-template", "details");
+  await expect(header.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Repositories"]);
+  await expect(pageTitle(page)).toHaveText("storefront");
+  await expect(header.locator("[data-header-status]")).toBeVisible();
+  await expect(header.locator("[data-header-actions]").getByRole("link", { name: "Settings" })).toBeVisible();
+  await expect(header.locator("[data-meta-item]").first()).toBeVisible();
+  const views = header.getByRole("navigation", { name: "Profile views" });
+  await expect(views.getByRole("link")).toHaveCount(7);
+  await expect(views.getByRole("link").first()).toHaveText("Overview");
+  await expect(views.getByRole("link").first()).toHaveAttribute("aria-current", "page");
+  expect(await header.evaluate((element) => element.lastElementChild?.querySelector("nav")?.getAttribute("aria-label"))).toBe("Profile views");
 });
 
 test("tells a repository that isn't a frontend from one that is, and leaves out the views that don't apply", async ({ page, db }) => {
