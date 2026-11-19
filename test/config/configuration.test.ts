@@ -17,6 +17,7 @@ const shared: Settings = {
   demo: { enabled: false },
   deConsole: { source: null, refreshMinutes: 60 },
   profiling: { checkMinutes: 60 },
+  previews: { enabled: false, trustedSources: [], nodeVersions: {}, storage: "storage/previews", concurrency: 1, timeoutMinutes: 15, maxOutputBytes: 209_715_200, maxStorageBytes: 5_368_709_120 },
 };
 
 describe("configuration", () => {
@@ -210,6 +211,99 @@ describe("configuration", () => {
       expect(JSON.stringify(config)).not.toContain("service-token");
     });
   });
+
+  describe("repository previews", () => {
+    const withPreviews = (previews: Partial<Settings["previews"]>) => ({ shared: { ...shared, previews: { ...shared.previews, ...previews } } });
+
+    it("are off, enroll nothing, and configure no Node by default, in every committed environment", () => {
+      for (const environment of ["development", "test", "production"] as const) {
+        expect(loadConfig({ appRoot: process.cwd(), environment, env: {} }).previews).toEqual({
+          enabled: false,
+          trustedSources: [],
+          nodeVersions: {},
+          storage: path.join(process.cwd(), "storage/previews"),
+          concurrency: 1,
+          timeoutMinutes: 15,
+          maxOutputBytes: 200 * 1024 * 1024,
+          maxStorageBytes: 5 * 1024 * 1024 * 1024,
+        });
+      }
+    });
+
+    it("enroll remotes by canonical identity, whatever form of the clone URL is listed", () => {
+      const config = load(withPreviews({ trustedSources: ["https://Git.Example.com:443/acme/orders.git", "ssh://git@git.example.com/acme/orders/", "https://git.example.com/acme/orders"] }));
+      expect(config.previews.trustedSources).toEqual(["https://git.example.com/acme/orders", "ssh://git.example.com/acme/orders"]);
+    });
+
+    it("key Node installs by version and resolve their directories from the app root", () => {
+      const config = load(withPreviews({ nodeVersions: { "22.11.0": "/opt/node-22/bin", "v20.18.1": "runtimes/node-20/bin" } }));
+      expect(config.previews.nodeVersions).toEqual({ "22.11.0": "/opt/node-22/bin", "20.18.1": path.join(appRoot, "runtimes/node-20/bin") });
+    });
+
+    it("keep preview storage under the app root unless an absolute directory is given", () => {
+      expect(load().previews.storage).toBe(path.join(appRoot, "storage/previews"));
+      expect(load(withPreviews({ storage: "/srv/previews" })).previews.storage).toBe("/srv/previews");
+    });
+
+    it("apply typed environment overrides", () => {
+      const config = load({ shared }, {
+        FABRICATE_PREVIEWS: "true",
+        FABRICATE_PREVIEWS_TRUSTED_SOURCES: "https://git.example.com/acme/orders.git \n ssh://git@git.example.com/acme/admin.git",
+        FABRICATE_PREVIEWS_NODE_VERSIONS: ["22.11.0=/opt/node-22/bin", "20.18.1=/opt/node-20/bin"].join(path.delimiter),
+        FABRICATE_PREVIEWS_STORAGE: "/var/lib/fabricate/previews",
+        FABRICATE_PREVIEWS_CONCURRENCY: "2",
+        FABRICATE_PREVIEWS_TIMEOUT_MINUTES: "30",
+        FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES: "1000",
+        FABRICATE_PREVIEWS_MAX_STORAGE_BYTES: "5000",
+      });
+
+      expect(config.previews).toEqual({
+        enabled: true,
+        trustedSources: ["https://git.example.com/acme/orders", "ssh://git.example.com/acme/admin"],
+        nodeVersions: { "22.11.0": "/opt/node-22/bin", "20.18.1": "/opt/node-20/bin" },
+        storage: "/var/lib/fabricate/previews",
+        concurrency: 2,
+        timeoutMinutes: 30,
+        maxOutputBytes: 1000,
+        maxStorageBytes: 5000,
+      });
+      expect(load({ shared }, { FABRICATE_PREVIEWS: "0" }).previews.enabled).toBe(false);
+      expect(load({ shared }, { FABRICATE_PREVIEWS: " " }).previews.enabled).toBe(false);
+    });
+
+    it.each([
+      ["a non-boolean switch", { FABRICATE_PREVIEWS: "yes" }, /FABRICATE_PREVIEWS must be true, false, 1, or 0/],
+      ["zero concurrency", { FABRICATE_PREVIEWS_CONCURRENCY: "0" }, ConfigurationError],
+      ["a fractional time limit", { FABRICATE_PREVIEWS_TIMEOUT_MINUTES: "1.5" }, /must be a positive integer/],
+      ["a negative output limit", { FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES: "-1" }, /must be a positive integer/],
+      ["a Node entry without a directory", { FABRICATE_PREVIEWS_NODE_VERSIONS: "22.11.0" }, /must be version=directory/],
+      ["a trusted source with credentials", { FABRICATE_PREVIEWS_TRUSTED_SOURCES: "https://user:secret@git.example.com/acme/orders.git" }, /not a valid clone URL/],
+    ])("reject %s from the environment", (_label, env, error) => {
+      expect(() => load({ shared }, env)).toThrow(error);
+    });
+
+    it.each([
+      ["a Node version that isn't a full version", { nodeVersions: { "22": "/opt/node-22/bin" } }, /must be a full version/],
+      ["one Node version configured twice", { nodeVersions: { "22.11.0": "/a", "v22.11.0": "/b" } }, /configured twice/],
+      ["a blank Node directory", { nodeVersions: { "22.11.0": " " } }, ConfigurationError],
+      ["a blank storage directory", { storage: " " }, ConfigurationError],
+      ["a scp-style trusted source", { trustedSources: ["git@git.example.com:acme/orders.git"] }, /not a valid clone URL/],
+      ["a blank trusted source", { trustedSources: [" "] }, ConfigurationError],
+      ["a zero storage limit", { maxStorageBytes: 0 }, ConfigurationError],
+    ])("reject %s in the file", (_label, previews, error) => {
+      expect(() => load(withPreviews(previews as Partial<Settings["previews"]>))).toThrow(error);
+    });
+
+    it("reject a missing or extended previews section, and survive overrides of other settings", () => {
+      const { previews: _omitted, ...missing } = shared;
+      expect(() => load({ shared: missing })).toThrow(ConfigurationError);
+      expect(() => load(withPreviews({ extra: true } as Partial<Settings["previews"]>))).toThrow(ConfigurationError);
+
+      const enabled = load(withPreviews({ enabled: true, trustedSources: ["https://git.example.com/acme/orders.git"] }));
+      expect(withOverrides(enabled, { workerConcurrency: 1 }).previews).toMatchObject({ enabled: true, trustedSources: ["https://git.example.com/acme/orders"] });
+      expect(withOverrides(enabled, { previews: { enabled: false } }).previews).toMatchObject({ enabled: false, trustedSources: ["https://git.example.com/acme/orders"] });
+    });
+  });
 });
 
 describe("npm run config", () => {
@@ -221,5 +315,18 @@ describe("npm run config", () => {
     });
     expect(output).toContain("DE Console:         https://de-console.example.test/export, every 60 minutes, token set");
     expect(output).not.toContain("console-secret-91");
+  }, 30_000);
+
+  it("prints the preview settings", async () => {
+    const { execFileSync } = await import("node:child_process");
+    const output = execFileSync("npx", ["tsx", "src/lib/config/print-cli.ts"], {
+      encoding: "utf8",
+      env: { ...process.env, FABRICATE_ENV: "test", FABRICATE_PREVIEWS: "true", FABRICATE_PREVIEWS_TRUSTED_SOURCES: "https://git.example.com/acme/orders.git", FABRICATE_PREVIEWS_NODE_VERSIONS: "22.11.0=/opt/node-22/bin" },
+    });
+    expect(output).toContain("Previews:           enabled");
+    expect(output).toContain("Preview sources:    https://git.example.com/acme/orders");
+    expect(output).toContain("Preview Node:       22.11.0=/opt/node-22/bin");
+    expect(output).toMatch(/Preview storage: {4}\/.+\/storage\/previews\n/);
+    expect(output).toContain("Preview limits:     concurrency=1, timeoutMinutes=15, maxOutputBytes=209715200, maxStorageBytes=5368709120");
   }, 30_000);
 });

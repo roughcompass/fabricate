@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import semver from "semver";
 import { z } from "zod";
+import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
 
 /**
  * Typed, immutable safety and analysis configuration.
@@ -54,6 +56,20 @@ const settingsSchema = z.strictObject({
   profiling: z.strictObject({
     checkMinutes: positiveInteger,
   }),
+  // Repository previews (docs/previews.md): off by default. Only remotes
+  // listed in trustedSources, by clone URL, can be previewed; nodeVersions
+  // maps each Node version a build may use to its binary directory. Builds,
+  // their logs, published output, and package caches live under storage.
+  previews: z.strictObject({
+    enabled: z.boolean(),
+    trustedSources: z.array(z.string().trim().min(1, "trusted sources must not be blank")),
+    nodeVersions: z.record(z.string(), pathSetting),
+    storage: pathSetting,
+    concurrency: positiveInteger,
+    timeoutMinutes: positiveInteger,
+    maxOutputBytes: positiveInteger,
+    maxStorageBytes: positiveInteger,
+  }),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -84,6 +100,14 @@ export const ENV_KEYS = {
   deConsoleSource: "FABRICATE_DE_CONSOLE_SOURCE",
   deConsoleRefreshMinutes: "FABRICATE_DE_CONSOLE_REFRESH_MINUTES",
   profilingCheckMinutes: "FABRICATE_PROFILING_CHECK_MINUTES",
+  previewsEnabled: "FABRICATE_PREVIEWS",
+  previewsTrustedSources: "FABRICATE_PREVIEWS_TRUSTED_SOURCES",
+  previewsNodeVersions: "FABRICATE_PREVIEWS_NODE_VERSIONS",
+  previewsStorage: "FABRICATE_PREVIEWS_STORAGE",
+  previewsConcurrency: "FABRICATE_PREVIEWS_CONCURRENCY",
+  previewsTimeoutMinutes: "FABRICATE_PREVIEWS_TIMEOUT_MINUTES",
+  previewsMaxOutputBytes: "FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES",
+  previewsMaxStorageBytes: "FABRICATE_PREVIEWS_MAX_STORAGE_BYTES",
 } as const;
 
 /** The DE Console service identity's token. Read from the environment when a request is made, and never stored in the configuration. */
@@ -102,6 +126,21 @@ export interface AnalysisBudgets {
   readonly maxLockfileBytes: number;
   readonly maxFiles: number;
   readonly maxTotalBytes: number;
+}
+
+/** Repository previews (docs/previews.md). */
+export interface PreviewSettings {
+  readonly enabled: boolean;
+  /** Enrolled remotes, as canonical clone URL identities; a Repository is enrolled only when its canonical URL is listed. */
+  readonly trustedSources: readonly string[];
+  /** Configured Node installs: normalized version → binary directory, resolved from the app root. */
+  readonly nodeVersions: Readonly<Record<string, string>>;
+  /** Where builds stage, and keep their logs, published output, and package caches; resolved from the app root. */
+  readonly storage: string;
+  readonly concurrency: number;
+  readonly timeoutMinutes: number;
+  readonly maxOutputBytes: number;
+  readonly maxStorageBytes: number;
 }
 
 export interface FabricateConfig {
@@ -123,6 +162,7 @@ export interface FabricateConfig {
   readonly demoEnabled: boolean;
   readonly deConsole: DeConsoleSettings;
   readonly profiling: { readonly checkMinutes: number };
+  readonly previews: PreviewSettings;
   /** The settings this configuration was built from, before mandatory additions. */
   readonly settings: Settings;
 }
@@ -158,10 +198,11 @@ export function loadConfig(options: LoadOptions = {}): FabricateConfig {
  */
 export function withOverrides(
   config: FabricateConfig,
-  overrides: Partial<Omit<Settings, "analysis" | "deConsole" | "profiling">> & {
+  overrides: Partial<Omit<Settings, "analysis" | "deConsole" | "profiling" | "previews">> & {
     analysis?: Partial<Settings["analysis"]>;
     deConsole?: Partial<Settings["deConsole"]>;
     profiling?: Partial<Settings["profiling"]>;
+    previews?: Partial<Settings["previews"]>;
   },
 ): FabricateConfig {
   const settings = {
@@ -171,6 +212,7 @@ export function withOverrides(
     demo: { ...config.settings.demo, ...overrides.demo },
     deConsole: { ...config.settings.deConsole, ...overrides.deConsole },
     profiling: { ...config.settings.profiling, ...overrides.profiling },
+    previews: { ...config.settings.previews, ...overrides.previews },
   };
   return buildConfig(settings, { appRoot: config.appRoot, environment: config.environment });
 }
@@ -225,8 +267,40 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
     demoEnabled: settings.demo.enabled,
     deConsole: { source: deConsoleSource(settings.deConsole.source, resolve, mandatory), refreshMinutes: settings.deConsole.refreshMinutes },
     profiling: { checkMinutes: settings.profiling.checkMinutes },
+    previews: {
+      enabled: settings.previews.enabled,
+      trustedSources: unique(settings.previews.trustedSources.map(trustedSource)),
+      nodeVersions: nodeVersions(settings.previews.nodeVersions, resolve),
+      storage: resolve(settings.previews.storage),
+      concurrency: settings.previews.concurrency,
+      timeoutMinutes: settings.previews.timeoutMinutes,
+      maxOutputBytes: settings.previews.maxOutputBytes,
+      maxStorageBytes: settings.previews.maxStorageBytes,
+    },
     settings,
   });
+}
+
+/** A trusted source's canonical remote identity, as the catalog computes it for duplicate detection. */
+function trustedSource(value: string): string {
+  try {
+    return CloneUrl.parse(value).canonical;
+  } catch (error) {
+    if (error instanceof InvalidCloneUrl) throw new ConfigurationError(`The trusted preview source ${JSON.stringify(CloneUrl.redact(value))} is not a valid clone URL: ${error.message}`);
+    throw error;
+  }
+}
+
+/** Node versions keyed by their normalized semantic version, each with its resolved binary directory. */
+function nodeVersions(entries: Readonly<Record<string, string>>, resolve: (value: string) => string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [version, directory] of Object.entries(entries)) {
+    const normalized = semver.valid(version.trim());
+    if (!normalized) throw new ConfigurationError(`The preview Node version ${JSON.stringify(version)} must be a full version such as 22.11.0`);
+    if (normalized in result) throw new ConfigurationError(`The preview Node version ${normalized} is configured twice`);
+    result[normalized] = resolve(directory);
+  }
+  return result;
 }
 
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]"]);
@@ -284,6 +358,21 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   const demo: Record<string, unknown> = { ...(settings.demo as Record<string, unknown>) };
   const deConsole: Record<string, unknown> = { ...(settings.deConsole as Record<string, unknown>) };
   const profiling: Record<string, unknown> = { ...(settings.profiling as Record<string, unknown>) };
+  const previews: Record<string, unknown> = { ...(settings.previews as Record<string, unknown>) };
+  // Clone URLs can't contain whitespace, so whitespace separates them; ":" would split a URL.
+  const urls = (key: string) => text(key)?.split(/\s+/);
+  // version=directory pairs, separated like other path lists.
+  const versions = (key: string) => {
+    const entries = list(key);
+    if (entries === undefined) return undefined;
+    return Object.fromEntries(
+      entries.map((entry) => {
+        const separator = entry.indexOf("=");
+        if (separator <= 0 || separator === entry.length - 1) throw new ConfigurationError(`${key} entries must be version=directory (got ${JSON.stringify(entry)})`);
+        return [entry.slice(0, separator).trim(), entry.slice(separator + 1).trim()];
+      }),
+    );
+  };
 
   const assignments: [Record<string, unknown>, string, unknown][] = [
     [result, "allowedRoots", list(ENV_KEYS.allowedRoots)],
@@ -302,12 +391,21 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [deConsole, "source", text(ENV_KEYS.deConsoleSource)],
     [deConsole, "refreshMinutes", integer(ENV_KEYS.deConsoleRefreshMinutes)],
     [profiling, "checkMinutes", integer(ENV_KEYS.profilingCheckMinutes)],
+    [previews, "enabled", boolean(ENV_KEYS.previewsEnabled)],
+    [previews, "trustedSources", urls(ENV_KEYS.previewsTrustedSources)],
+    [previews, "nodeVersions", versions(ENV_KEYS.previewsNodeVersions)],
+    [previews, "storage", text(ENV_KEYS.previewsStorage)],
+    [previews, "concurrency", integer(ENV_KEYS.previewsConcurrency)],
+    [previews, "timeoutMinutes", integer(ENV_KEYS.previewsTimeoutMinutes)],
+    [previews, "maxOutputBytes", integer(ENV_KEYS.previewsMaxOutputBytes)],
+    [previews, "maxStorageBytes", integer(ENV_KEYS.previewsMaxStorageBytes)],
   ];
   for (const [target, key, value] of assignments) if (value !== undefined) target[key] = value;
   result.analysis = analysis;
   if (Object.keys(demo).length > 0) result.demo = demo;
   if (Object.keys(deConsole).length > 0) result.deConsole = deConsole;
   if (Object.keys(profiling).length > 0) result.profiling = profiling;
+  if (Object.keys(previews).length > 0) result.previews = previews;
   return result;
 }
 

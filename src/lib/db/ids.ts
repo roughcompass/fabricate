@@ -35,6 +35,8 @@ export const PUBLIC_ID_PREFIXES = {
   placementDecision: "pdc",
   externalReference: "xrf",
   bitbucketToken: "bbt",
+  previewPreparation: "ppr",
+  previewBuild: "pvw",
 } as const;
 
 export type PublicIdPrefix = (typeof PUBLIC_ID_PREFIXES)[keyof typeof PUBLIC_ID_PREFIXES];

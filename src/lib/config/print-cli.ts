@@ -24,3 +24,9 @@ console.log(
     .map(([key, value]) => `${key}=${value}`)
     .join(", ")}`,
 );
+const previews = config.previews;
+console.log(`Previews:           ${previews.enabled ? "enabled" : "disabled"}`);
+console.log(`Preview sources:    ${list(previews.trustedSources)}`);
+console.log(`Preview Node:       ${list(Object.entries(previews.nodeVersions).map(([version, directory]) => `${version}=${directory}`))}`);
+console.log(`Preview storage:    ${previews.storage}`);
+console.log(`Preview limits:     concurrency=${previews.concurrency}, timeoutMinutes=${previews.timeoutMinutes}, maxOutputBytes=${previews.maxOutputBytes}, maxStorageBytes=${previews.maxStorageBytes}`);
