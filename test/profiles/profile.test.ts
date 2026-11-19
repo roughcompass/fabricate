@@ -1,4 +1,4 @@
-import { DETECTOR_RELEASE } from "@repo-facts/bundle";
+import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { type JsonObject, digestOf, dump } from "@repo-facts/contract";
 import { afterEach, describe, expect, it } from "vitest";
 import { sourceById } from "@/lib/catalog/source-records";
@@ -51,15 +51,15 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
       schema_version: 2,
       source: { public_id: repository.publicId, name: "app", clone_url: repository.cloneUrl, git_ref: null },
       commit: survey.commitSha,
-      detector_release: DETECTOR_RELEASE,
+      detector_release: SURVEYOR_RELEASE,
       detector_configuration_digest: survey.configurationDigest,
     });
     // Profile version 2 embeds fact document version 2, with the design-system categories.
-    expect(document.fact_document).toMatchObject({ schema: "repo_facts.fact_document", schema_version: 2, commit: survey.commitSha, detector_release: DETECTOR_RELEASE });
+    expect(document.fact_document).toMatchObject({ schema: "repo_facts.fact_document", schema_version: 2, commit: survey.commitSha, detector_release: SURVEYOR_RELEASE });
     expect(Object.keys(factDocument(document).categories!)).toEqual(expect.arrayContaining(["design_systems", "ui_elements", "style_values"]));
     expect(document.fact_document_digest).toBe(digestOf(document.fact_document).digest);
     expect(profileProblems(document)).toEqual([]);
-    expect(profile).toMatchObject({ detectorRelease: DETECTOR_RELEASE, schemaVersion: 2, surveyId: survey.id });
+    expect(profile).toMatchObject({ surveyorRelease: SURVEYOR_RELEASE, schemaVersion: 2, surveyId: survey.id });
     expect(survey).toMatchObject({ state: "succeeded", failureCode: null });
     // Survey identity and times stay on the record, so they cannot change the document.
     expect(dump(document)).not.toContain(survey.publicId);
@@ -141,7 +141,7 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
     const document = buildProfile({
       source: reference.source as never,
       commit: survey.commitSha,
-      detectorRelease: DETECTOR_RELEASE,
+      surveyorRelease: SURVEYOR_RELEASE,
       configurationDigest: survey.configurationDigest,
       factDocument: tampered.fact_document as never,
     });

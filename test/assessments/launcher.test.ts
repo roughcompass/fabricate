@@ -5,7 +5,8 @@ import { COORDINATE_ASSESSMENT, launchAssessment } from "@/lib/assessments/launc
 import { ScopeResolutionError } from "@/lib/assessments/scope-resolver";
 import type { Db } from "@/lib/db/client";
 import { assessmentTargets, assessments, jobs } from "@/lib/db/schema";
-import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
+import { detectorConfiguration } from "@repo-facts/bundle";
+import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { parseCanonical, sha256 } from "@repo-facts/contract";
 import { getConfig } from "@/lib/config";
 import { selectedReleases } from "@/lib/initiatives/initiative-records";
@@ -40,10 +41,10 @@ describe("assessment launch", () => {
     ]);
     // The pinned bundle's version is the Surveyor release, and its configuration digest is the Assessment's.
     const bundle = detectorConfiguration(getConfig().analysis);
-    expect(assessment).toMatchObject({ state: "queued", detectorRelease: DETECTOR_RELEASE, configurationDigest: bundle.digest });
+    expect(assessment).toMatchObject({ state: "queued", surveyorRelease: SURVEYOR_RELEASE, configurationDigest: bundle.digest });
     expect(sha256(assessment.configuration)).toBe(bundle.digest);
     expect(parseCanonical(assessment.configuration)).toEqual(bundle.configuration);
-    expect(parseCanonical(assessment.configuration)).toMatchObject({ schema: "repo_facts.detector_configuration", release: DETECTOR_RELEASE });
+    expect(parseCanonical(assessment.configuration)).toMatchObject({ schema: "repo_facts.detector_configuration", release: SURVEYOR_RELEASE });
 
     const [job] = db.select().from(jobs).all();
     expect(job).toMatchObject({ kind: COORDINATE_ASSESSMENT, state: "queued" });

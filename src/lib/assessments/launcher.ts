@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { isUniqueViolation } from "@/lib/db/errors";
-import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
+import { detectorConfiguration } from "@repo-facts/bundle";
+import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
 import { JOB_PRIORITIES } from "@/lib/db/schema";
 import { getInitiative } from "@/lib/initiatives/initiative-records";
@@ -34,7 +35,7 @@ export interface LaunchResult {
 /** The priority of a Run's jobs, and of the surveys it joins: ahead of background surveying. */
 export const RUN_PRIORITY = JOB_PRIORITIES.normal;
 
-export function launchAssessment(db: Executor, initiativePublicId: string, launchToken: string, config: FabricateConfig = getConfig()): LaunchResult {
+export function launchAssessment(db: Executor, initiativePublicId: string, launchToken: string, config: FrontendRegistryConfig = getConfig()): LaunchResult {
   const token = LAUNCH_TOKEN.test(launchToken) ? launchToken : crypto.randomUUID();
   try {
     return immediate(db, (tx) => {
@@ -45,7 +46,7 @@ export function launchAssessment(db: Executor, initiativePublicId: string, launc
       const { assessment, targets } = createAssessment(tx, {
         initiative,
         launchToken: token,
-        detectorRelease: DETECTOR_RELEASE,
+        surveyorRelease: SURVEYOR_RELEASE,
         // The bundle's configuration under this deployment's analysis limits; its digest is the Assessment's.
         configuration: detectorConfiguration(config.analysis).configuration,
         profileSchemaVersion: CURRENT_VERSION.repositoryProfile,

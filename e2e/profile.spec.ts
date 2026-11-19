@@ -291,7 +291,7 @@ test("shows an unavailable Service Dependency's call boundary, missing evidence,
   await expect(detail(ledger, "Authentication signals")).toContainText("template from process.env.LEDGER_TOKEN");
   await expect(detail(ledger, "Missing evidence")).toContainText("consumed response fields");
 
-  // Nothing offers to connect, fabricate a response, or test the service.
+  // Nothing offers to connect, invent a response, or test the service.
   await expect(services.getByRole("button")).toHaveCount(0);
   await expect(services.getByRole("link", { name: /connect|test|mock|try/i })).toHaveCount(0);
 });

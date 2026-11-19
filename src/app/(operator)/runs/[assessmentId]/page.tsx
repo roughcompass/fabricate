@@ -163,7 +163,7 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
       <Disclosure summary="Details" variant="plain">
         <DescriptionList surface
           items={[
-            [SURVEYOR_RELEASE_LABEL, <Tag key="release">{assessment.detectorRelease}</Tag>],
+            [SURVEYOR_RELEASE_LABEL, <Tag key="release">{assessment.surveyorRelease}</Tag>],
             ["Configuration digest", <ShortValue key="digest" value={assessment.configurationDigest} label="digest" />],
             ["Created", <RelativeTime key="created" value={assessment.createdAt} />],
             ["Started", <RelativeTime key="started" value={assessment.startedAt} />],

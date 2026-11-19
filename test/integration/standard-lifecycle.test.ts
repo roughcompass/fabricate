@@ -30,7 +30,7 @@ vi.mock("next/navigation", async () => (await import("../support/next")).navigat
  * markup, code, or a prototype key stays inert data everywhere it goes.
  */
 
-const TRAP = "__fabricateControlTrap";
+const TRAP = "__frontendRegistryControlTrap";
 const HOSTILE = {
   title: `<img src=x onerror="globalThis.${TRAP}=1">Service destinations are configurable`,
   rationale: "${globalThis." + TRAP + "=1} `" + "${process.exit(1)}` {{constructor.constructor('return process')()}}",

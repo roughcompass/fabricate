@@ -1,6 +1,6 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
-import type { FabricateConfig } from "@/lib/config";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import type { PreviewBuild } from "./records";
 import { attemptLogFile } from "./storage";
 
@@ -46,7 +46,7 @@ export function logName(preview: Pick<PreviewBuild, "attemptLog">): string | nul
  * +from+ is absent or belongs to a log other than +log+. A final line
  * without its newline is returned only once nothing more is written to it.
  */
-export async function readLogChunk(config: FabricateConfig, preview: Pick<PreviewBuild, "publicId" | "attempt" | "attemptLog" | "attemptState">, request: { from?: number; log?: string } = {}): Promise<LogChunk> {
+export async function readLogChunk(config: FrontendRegistryConfig, preview: Pick<PreviewBuild, "publicId" | "attempt" | "attemptLog" | "attemptState">, request: { from?: number; log?: string } = {}): Promise<LogChunk> {
   const name = logName(preview);
   const file = attemptLogFile(config, preview);
   const handle = file ? await fsp.open(file, "r").catch(() => null) : null;

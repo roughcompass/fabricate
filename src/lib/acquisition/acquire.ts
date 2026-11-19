@@ -2,7 +2,7 @@ import { type AssessmentTarget, getTarget } from "@/lib/assessments/assessment-r
 import { transitionTarget } from "@/lib/assessments/transitions";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
 import { BoundaryViolation, SourceBoundary } from "@/lib/catalog/source-boundary";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { GitError } from "@/lib/git/errors";
 import { failureText } from "@/lib/git/redact";
@@ -22,7 +22,7 @@ import { Mirror, type Resolution } from "./mirror";
  */
 
 export interface ResolveOptions {
-  config?: FabricateConfig;
+  config?: FrontendRegistryConfig;
   runner?: GitRunner;
   boundary?: SourceBoundary;
   signal?: AbortSignal;

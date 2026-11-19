@@ -5,7 +5,7 @@ import { AcquisitionError } from "@/lib/acquisition/errors";
 import { editSource, registerSource } from "@/lib/catalog/catalog";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, getSource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { JOB_PRIORITIES, assessments, initiatives, jobs, surveys } from "@/lib/db/schema";
 import { jobPayload } from "@/lib/jobs/queue";
@@ -116,7 +116,7 @@ describe("background surveying", () => {
   });
 
   /** Runs queued jobs, at most +limit+, through the worker's handlers with +config+. */
-  const run = (config: FabricateConfig = world.config, limit?: number) => drainJobs(world.db, jobHandlers(world.db, config), limit ? { limit } : {});
+  const run = (config: FrontendRegistryConfig = world.config, limit?: number) => drainJobs(world.db, jobHandlers(world.db, config), limit ? { limit } : {});
   const register = (name = "web", location = work.path, gitRef: string | null = null) => registerLocalSource(world.db, world.config, name, location, gitRef);
   /** The repository as stored now, with its current survey. */
   const fresh = (source: RepositorySource) => getSource(world.db, source.publicId);

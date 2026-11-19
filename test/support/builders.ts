@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
+import { detectorConfiguration } from "@repo-facts/bundle";
+import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import type { Budgets, JsonObject } from "@repo-facts/contract";
 import { createAssessment } from "@/lib/assessments/assessment-records";
 import { type RepositorySource, insertSource, listSources } from "@/lib/catalog/source-records";
@@ -28,7 +29,7 @@ export function buildAssessment(db: Executor, options: { initiative?: Initiative
   return createAssessment(db, {
     initiative: options.initiative ?? buildInitiative(db),
     launchToken: crypto.randomUUID(),
-    detectorRelease: DETECTOR_RELEASE,
+    surveyorRelease: SURVEYOR_RELEASE,
     configuration: detectorConfiguration(options.limits ?? getConfig().analysis).configuration,
     profileSchemaVersion: CURRENT_VERSION.repositoryProfile,
     relationshipSchemaVersion: 1,

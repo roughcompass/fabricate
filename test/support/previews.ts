@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import type { FabricateConfig } from "@/lib/config";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import type { ArtifactLayout } from "@/lib/db/schema";
 import type { PackageVerdict } from "@/lib/previews/eligibility";
@@ -42,7 +42,7 @@ export function queuedPreview(db: Db, source: RepositorySource, layout: Artifact
  * Publishes +files+ as +preview+'s current attempt's artifact, at
  * out/<attempt>-test, with +entry+, its index.html, not rebased by default.
  */
-export function publishFiles(db: Db, config: FabricateConfig, preview: PreviewBuild, files: Record<string, string | Buffer>, entry: Partial<ArtifactEntry> = {}): PreviewBuild {
+export function publishFiles(db: Db, config: FrontendRegistryConfig, preview: PreviewBuild, files: Record<string, string | Buffer>, entry: Partial<ArtifactEntry> = {}): PreviewBuild {
   const current = findPreview(db, preview.publicId)!;
   const directory = `out/${current.attempt}-test`;
   const root = path.join(previewDirectory(config, preview.publicId), directory);

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type FabricateConfig, getConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import { type CheckCommand, type CheckRunner, checkToolchain, formatCheck, summarize } from "@/lib/previews/doctor";
 
 /*
@@ -40,7 +40,7 @@ describe("preview toolchain doctor", () => {
     return bin;
   }
 
-  const configWith = (nodeVersions: Record<string, string>): FabricateConfig => withOverrides(getConfig(), { previews: { nodeVersions, storage } });
+  const configWith = (nodeVersions: Record<string, string>): FrontendRegistryConfig => withOverrides(getConfig(), { previews: { nodeVersions, storage } });
 
   /** Answers each command by its name and first argument, as +answers+ say; anything else exits 0 with a version. */
   function runner(answers: Record<string, { code?: number; output: string } | Error> = {}): CheckRunner {
@@ -54,7 +54,7 @@ describe("preview toolchain doctor", () => {
     };
   }
 
-  const check = (config: FabricateConfig, run: CheckRunner) => checkToolchain(config, { run, gitPath: tools, tarPath: tools });
+  const check = (config: FrontendRegistryConfig, run: CheckRunner) => checkToolchain(config, { run, gitPath: tools, tarPath: tools });
 
   it("passes a Node version that reports itself and runs pnpm and Yarn through its corepack", async () => {
     const bin = install("24.22.0");

@@ -1,6 +1,7 @@
-import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
+import { detectorConfiguration } from "@repo-facts/bundle";
+import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { and, desc, eq, max } from "drizzle-orm";
-import type { FabricateConfig } from "@/lib/config";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
@@ -26,8 +27,8 @@ export interface Recipe {
 }
 
 /** The recipe this worker surveys with. */
-export function currentRecipe(config: FabricateConfig): Recipe {
-  return { surveyorRelease: DETECTOR_RELEASE, configurationDigest: detectorConfiguration(config.analysis).digest, profileSchemaVersion: CURRENT_VERSION.repositoryProfile };
+export function currentRecipe(config: FrontendRegistryConfig): Recipe {
+  return { surveyorRelease: SURVEYOR_RELEASE, configurationDigest: detectorConfiguration(config.analysis).digest, profileSchemaVersion: CURRENT_VERSION.repositoryProfile };
 }
 
 export interface SurveyRequest extends Recipe {

@@ -67,7 +67,7 @@ describe("assessment records", () => {
   it("finds an assessment by its launch token and rejects a reused token", () => {
     const initiative = buildInitiative(db);
     const source = buildSource(db);
-    const input = { initiative, launchToken: crypto.randomUUID(), detectorRelease: "test", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [source] };
+    const input = { initiative, launchToken: crypto.randomUUID(), surveyorRelease: "test", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [source] };
     const { assessment } = createAssessment(db, input);
 
     expect(findAssessmentByLaunchToken(db, initiative.id, input.launchToken)?.id).toBe(assessment.id);
@@ -77,13 +77,13 @@ describe("assessment records", () => {
   it("requires a scope, a Surveyor release, and a UUID launch token", () => {
     const error = (() => {
       try {
-        createAssessment(db, { initiative: buildInitiative(db), launchToken: "again", detectorRelease: " ", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [] });
+        createAssessment(db, { initiative: buildInitiative(db), launchToken: "again", surveyorRelease: " ", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [] });
       } catch (caught) {
         return caught as ValidationError;
       }
     })();
 
-    expect(error?.issues.map((issue) => issue.field).sort()).toEqual(["detectorRelease", "launchToken", "sources"]);
+    expect(error?.issues.map((issue) => issue.field).sort()).toEqual(["launchToken", "sources", "surveyorRelease"]);
   });
 
   it("retains an initiative that has assessments", () => {
@@ -115,7 +115,7 @@ describe("assessment records", () => {
         fromConfiguredReference: true,
         trigger: "run",
         requestedByAssessmentId: assessment.id,
-        surveyorRelease: assessment.detectorRelease,
+        surveyorRelease: assessment.surveyorRelease,
         configurationDigest: assessment.configurationDigest,
         profileSchemaVersion: assessment.profileSchemaVersion,
       }).survey;

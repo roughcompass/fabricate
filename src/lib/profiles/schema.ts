@@ -36,7 +36,7 @@ interface ProfileSource {
 export interface ProfileInput {
   source: ProfileSource;
   commit: string;
-  detectorRelease: string;
+  surveyorRelease: string;
   configurationDigest: string;
   factDocument: FactDocument;
 }
@@ -48,7 +48,7 @@ export function buildProfile(input: ProfileInput): JsonObject {
     schema_version: PROFILE_SCHEMA_VERSION,
     source: { public_id: input.source.public_id, name: input.source.name, clone_url: input.source.clone_url, git_ref: input.source.git_ref },
     commit: input.commit,
-    detector_release: input.detectorRelease,
+    detector_release: input.surveyorRelease,
     detector_configuration_digest: input.configurationDigest,
     fact_document: factDocument,
     fact_document_digest: digestOf(factDocument).digest,

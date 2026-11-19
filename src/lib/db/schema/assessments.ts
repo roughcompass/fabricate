@@ -28,7 +28,7 @@ export const assessments = sqliteTable(
       .references(() => initiatives.id, { onDelete: "restrict" }),
     state: text("state", { enum: ASSESSMENT_STATES }).notNull().default("queued"),
     launchToken: text("launch_token").notNull().unique(),
-    detectorRelease: text("detector_release").notNull(),
+    surveyorRelease: text("detector_release").notNull(),
     configuration: text("configuration").notNull(),
     configurationDigest: text("configuration_digest").notNull(),
     profileSchemaVersion: integer("profile_schema_version").notNull(),

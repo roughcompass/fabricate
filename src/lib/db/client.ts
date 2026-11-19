@@ -65,16 +65,16 @@ export function pendingMigrationCount(db: Db, migrationsFolder = MIGRATIONS_FOLD
   return migrations.filter((migration) => migration.folderMillis > last).length;
 }
 
-const holder = globalThis as typeof globalThis & { __fabricateDb?: Db };
+const holder = globalThis as typeof globalThis & { __frontendRegistryDb?: Db };
 
 /** The process-wide connection to the configured database. */
 export function getDb(): Db {
-  return (holder.__fabricateDb ??= openDatabase(getConfig().database));
+  return (holder.__frontendRegistryDb ??= openDatabase(getConfig().database));
 }
 
 /** Replaces the process-wide connection (tests only). */
 export function setDb(db: Db | undefined): void {
-  holder.__fabricateDb = db;
+  holder.__frontendRegistryDb = db;
 }
 
 /**

@@ -42,7 +42,7 @@ describe("demo schema", () => {
 
   it("adds exactly the demo tables on top of the product schema and leaves product tables unchanged", () => {
     // Migrate a copy of drizzle/ without the demo migration to get the product schema alone.
-    const folder = fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-migrations-"));
+    const folder = fs.mkdtempSync(path.join(os.tmpdir(), "frontend-registry-migrations-"));
     try {
       fs.cpSync(MIGRATIONS_FOLDER, folder, { recursive: true });
       const journalFile = path.join(folder, "meta", "_journal.json");
@@ -88,7 +88,7 @@ describe("demo schema", () => {
   });
 
   it("removes visitors' deployments with their threads, comments, and share links, keeping reference deployments' (migration 0037)", () => {
-    const folder = fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-migrations-"));
+    const folder = fs.mkdtempSync(path.join(os.tmpdir(), "frontend-registry-migrations-"));
     try {
       fs.cpSync(MIGRATIONS_FOLDER, folder, { recursive: true });
       const journalFile = path.join(folder, "meta", "_journal.json");

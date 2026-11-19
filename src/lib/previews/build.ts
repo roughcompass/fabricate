@@ -4,7 +4,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { mirrorPath } from "@/lib/acquisition/mirror";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { previewBuilds, repositorySources } from "@/lib/db/schema";
 import { GitError } from "@/lib/git/errors";
@@ -48,7 +48,7 @@ export interface BuildJob {
 export interface BuildOptions {
   /** Identifies the worker claim running the job, so that only it can publish. */
   claim: string;
-  config?: FabricateConfig;
+  config?: FrontendRegistryConfig;
   runner?: GitRunner;
   /** Aborts when the job's lease is lost or the worker stops. */
   signal?: AbortSignal;
@@ -136,7 +136,7 @@ export async function runPreviewBuild(db: Executor, job: BuildJob, options: Buil
 }
 
 interface BuildContext {
-  config: FabricateConfig;
+  config: FrontendRegistryConfig;
   preview: PreviewBuild;
   sourcePublicId: string;
   files: ClaimFiles;
@@ -294,7 +294,7 @@ type Publication = { state: "published"; superseded: string | null } | { state: 
  * enrolled, and +identity+ still owns the current attempt of the undeleted
  * preview. When enrollment was revoked, the attempt fails instead.
  */
-function publish(db: Executor, config: FabricateConfig, publicId: string, identity: AttemptIdentity, artifact: PublishedArtifact): Publication {
+function publish(db: Executor, config: FrontendRegistryConfig, publicId: string, identity: AttemptIdentity, artifact: PublishedArtifact): Publication {
   return immediate(db, (tx) => {
     const current = findPreview(tx, publicId);
     if (!current) return { state: "not_current" };
@@ -313,7 +313,7 @@ function publish(db: Executor, config: FabricateConfig, publicId: string, identi
  * earlier attempts, which can no longer publish. Other claims of this attempt
  * clean up after themselves.
  */
-async function sweep(config: FabricateConfig, preview: PreviewBuild, files: ClaimFiles): Promise<void> {
+async function sweep(config: FrontendRegistryConfig, preview: PreviewBuild, files: ClaimFiles): Promise<void> {
   const root = previewDirectory(config, preview.publicId);
   const earlier = (name: string) => Number(name.split("-")[0]) < preview.attempt;
   const remove = async (directory: string, keep: (name: string) => boolean) => {

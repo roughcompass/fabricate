@@ -1,4 +1,5 @@
-import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
+import { detectorConfiguration } from "@repo-facts/bundle";
+import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { surveyRefFor } from "@/lib/acquisition/mirror";
@@ -53,7 +54,7 @@ describe("surveys", () => {
 
   describe("records", () => {
     it("records the recipe this worker surveys with: the Surveyor release, configuration digest, and profile schema version", () => {
-      expect(recipe).toEqual({ surveyorRelease: DETECTOR_RELEASE, configurationDigest: detectorConfiguration(getConfig().analysis).digest, profileSchemaVersion: CURRENT_VERSION.repositoryProfile });
+      expect(recipe).toEqual({ surveyorRelease: SURVEYOR_RELEASE, configurationDigest: detectorConfiguration(getConfig().analysis).digest, profileSchemaVersion: CURRENT_VERSION.repositoryProfile });
     });
 
     it("finds the one survey of a repository, commit, and recipe, whoever asks for it", () => {

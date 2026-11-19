@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
-import { type FabricateConfig, getConfig, isInside } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, isInside } from "@/lib/config";
 import { GitError } from "./errors";
 import { redact } from "./redact";
 
@@ -82,7 +82,7 @@ export interface GitRunnerOptions {
   executable?: string;
   timeoutMs?: number;
   home?: string;
-  config?: FabricateConfig;
+  config?: FrontendRegistryConfig;
 }
 
 export interface Invocation {

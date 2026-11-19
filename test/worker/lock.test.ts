@@ -54,7 +54,7 @@ describe("worker lock", () => {
   });
 
   it("stops a second worker process with the message, before it runs any job", async () => {
-    const database = path.join(directory, "fabricate.sqlite3");
+    const database = path.join(directory, "frontend-registry.sqlite3");
     createTestDbFile(database);
     const other = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"]);
     fs.writeFileSync(file, `${other.pid}\n`);

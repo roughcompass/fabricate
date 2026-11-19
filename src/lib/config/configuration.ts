@@ -134,7 +134,7 @@ export interface PreviewSettings {
   readonly maxStorageBytes: number;
 }
 
-export interface FabricateConfig {
+export interface FrontendRegistryConfig {
   readonly environment: Environment;
   readonly appRoot: string;
   readonly workspaceRoot: string;
@@ -173,7 +173,7 @@ export function currentEnvironment(env: Readonly<Record<string, string | undefin
   throw new ConfigurationError(`Unsupported environment ${JSON.stringify(value)}`);
 }
 
-export function loadConfig(options: LoadOptions = {}): FabricateConfig {
+export function loadConfig(options: LoadOptions = {}): FrontendRegistryConfig {
   // Not traced: the image copies config/ and drizzle/ itself, and tracing from the
   // working directory would ship the whole project, tests included, in the server output.
   const appRoot = path.resolve(options.appRoot ?? /*turbopackIgnore: true*/ process.cwd());
@@ -193,13 +193,13 @@ export function loadConfig(options: LoadOptions = {}): FabricateConfig {
  * @public Tests override settings through this.
  */
 export function withOverrides(
-  config: FabricateConfig,
+  config: FrontendRegistryConfig,
   overrides: Partial<Omit<Settings, "analysis" | "profiling" | "previews">> & {
     analysis?: Partial<Settings["analysis"]>;
     profiling?: Partial<Settings["profiling"]>;
     previews?: Partial<Settings["previews"]>;
   },
-): FabricateConfig {
+): FrontendRegistryConfig {
   const settings = {
     ...config.settings,
     ...overrides,
@@ -227,7 +227,7 @@ export function namesProtectedDirectory(candidate: string): boolean {
   return candidate.split(/[\\/]+/).includes(PROTECTED_DIRECTORY);
 }
 
-function buildConfig(raw: unknown, context: { appRoot: string; environment: Environment }): FabricateConfig {
+function buildConfig(raw: unknown, context: { appRoot: string; environment: Environment }): FrontendRegistryConfig {
   const settings = parse(settingsSchema, raw, "configuration");
   const { appRoot } = context;
   // Settings name paths anywhere on disk; the ignore keeps the build from tracing everything they could reach.

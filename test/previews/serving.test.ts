@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { editSource } from "@/lib/catalog/catalog";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { contentType, isNavigation, servePreview } from "@/lib/previews/serving";
 import { type PreviewBuild, failAttempt, findPreview, rebuildPreview } from "@/lib/previews/records";
 import { previewDirectory } from "@/lib/previews/storage";
@@ -33,7 +33,7 @@ describe("serving previews", () => {
   const original = getConfig();
   const app = useAppDb();
   let storage: string;
-  let config: FabricateConfig;
+  let config: FrontendRegistryConfig;
   let source: RepositorySource;
 
   beforeEach(() => {
@@ -47,7 +47,7 @@ describe("serving previews", () => {
     fs.rmSync(storage, { recursive: true, force: true });
   });
 
-  function configure(previews: Partial<FabricateConfig["settings"]["previews"]>): void {
+  function configure(previews: Partial<FrontendRegistryConfig["settings"]["previews"]>): void {
     config = withOverrides(original, { previews: { enabled: true, trustedSources: [source.canonicalUrl], storage, ...previews } });
     setConfig(config);
   }

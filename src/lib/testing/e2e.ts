@@ -14,7 +14,7 @@ export function e2eRoutesEnabled(): boolean {
 /** Replaces the database, repository storage, and preview storage with empty, migrated ones. */
 export function resetE2eData(): void {
   const config = getConfig();
-  (globalThis as { __fabricateDb?: { $client: { close(): void } } }).__fabricateDb?.$client.close();
+  (globalThis as { __frontendRegistryDb?: { $client: { close(): void } } }).__frontendRegistryDb?.$client.close();
   setDb(undefined);
   for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(`${config.database}${suffix}`, { force: true });
   fs.rmSync(config.repositoryStorage, { recursive: true, force: true });

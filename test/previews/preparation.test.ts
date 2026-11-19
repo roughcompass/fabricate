@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { mirrorPath, surveyRefFor } from "@/lib/acquisition/mirror";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, withOverrides } from "@/lib/config";
 import { immediate } from "@/lib/db/client";
 import { assessments, jobs, previewBuilds, previewPreparations, repositoryProfiles, surveys } from "@/lib/db/schema";
 import { jobPayload } from "@/lib/jobs/queue";
@@ -38,9 +38,9 @@ const EARLIER_RELEASE = "0.0.1";
 
 describe("preview preparation", () => {
   const world = useAcquisitionWorld("preview-preparation");
-  let config: FabricateConfig;
+  let config: FrontendRegistryConfig;
 
-  const settings = (source: RepositorySource, previews: Partial<FabricateConfig["settings"]["previews"]> = {}) =>
+  const settings = (source: RepositorySource, previews: Partial<FrontendRegistryConfig["settings"]["previews"]> = {}) =>
     withOverrides(world.config, { previews: { enabled: true, trustedSources: [source.cloneUrl], nodeVersions: NODE, ...previews } });
 
   /** A remote holding +tree+ on main, registered and enrolled. */

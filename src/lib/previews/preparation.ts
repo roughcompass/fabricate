@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { JsonObject } from "@repo-facts/contract";
 import { mirrorPath } from "@/lib/acquisition/mirror";
 import { type RepositorySource, getSource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, repositorySources } from "@/lib/db/schema";
 import { readDocument } from "@/lib/documents/digested";
@@ -55,7 +55,7 @@ export interface PreparationJob {
  * the preparation rather than retried, except when the job's lease was lost
  * or the worker is stopping.
  */
-export async function runPreparation(db: Executor, job: PreparationJob, options: { config?: FabricateConfig; runner?: GitRunner; signal?: AbortSignal } = {}): Promise<PreviewPreparation | null> {
+export async function runPreparation(db: Executor, job: PreparationJob, options: { config?: FrontendRegistryConfig; runner?: GitRunner; signal?: AbortSignal } = {}): Promise<PreviewPreparation | null> {
   const config = options.config ?? getConfig();
   const preparation = findPreparation(db, job.preparation);
   if (!preparation || preparation.state !== "profiling" || preparation.requestedAt.getTime() !== job.requested) return null;
@@ -101,7 +101,7 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
  * Repository's versions, and becomes current only when the commit came from
  * the configured reference.
  */
-function previewSurvey(db: Executor, source: RepositorySource, preparation: PreviewPreparation, config: FabricateConfig): Survey {
+function previewSurvey(db: Executor, source: RepositorySource, preparation: PreviewPreparation, config: FrontendRegistryConfig): Survey {
   return immediate(db, (tx) => {
     const { survey } = requestSurvey(tx, {
       repositorySourceId: source.id,

@@ -1,5 +1,5 @@
 import { mirrorPath } from "@/lib/acquisition/mirror";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { GitRunner } from "@/lib/git/runner";
 import { type Budgets, SnapshotReader, type SnapshotReaderOptions } from "./reader";
 
@@ -7,7 +7,7 @@ import { type Budgets, SnapshotReader, type SnapshotReaderOptions } from "./read
 export function openSnapshot(
   target: { sourcePublicId: string },
   snapshot: { internalRef: string; commitSha: string },
-  options: { config?: FabricateConfig; runner?: GitRunner; budgets?: Budgets } & SnapshotReaderOptions = {},
+  options: { config?: FrontendRegistryConfig; runner?: GitRunner; budgets?: Budgets } & SnapshotReaderOptions = {},
 ): Promise<SnapshotReader> {
   const config = options.config ?? getConfig();
   const runner = options.runner ?? new GitRunner({ config });

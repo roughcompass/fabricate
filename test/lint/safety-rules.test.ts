@@ -47,7 +47,7 @@ describe("safety lint rules", () => {
   });
 
   it("lets Profile document validation name types from isolated modules", async () => {
-    expect(await violations('import type { FabricateConfig } from "@/lib/config";\nexport type Limits = FabricateConfig["analysis"];', PROFILE_SCHEMA)).toEqual([]);
+    expect(await violations('import type { FrontendRegistryConfig } from "@/lib/config";\nexport type Limits = FrontendRegistryConfig["analysis"];', PROFILE_SCHEMA)).toEqual([]);
   });
 
   it("still applies the execution rules to Profile document validation", async () => {

@@ -37,7 +37,7 @@ export function insertProfile(db: Executor, input: NewProfile): RepositoryProfil
         publicId: generatePublicId("prf"),
         surveyId: input.survey.id,
         schemaVersion: prepared.schemaVersion,
-        detectorRelease: input.survey.surveyorRelease,
+        surveyorRelease: input.survey.surveyorRelease,
         document: prepared.text,
         digest: prepared.digest,
         createdAt: new Date(),

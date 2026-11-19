@@ -1,7 +1,7 @@
 import type { Resolution } from "@/lib/acquisition/mirror";
 import { resolveTarget } from "@/lib/acquisition/acquire";
 import { sourceById } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ASSESSMENT_MACHINE, TARGET_MACHINE, isTerminal } from "@/lib/db/state-machines";
 import { failureText } from "@/lib/git/redact";
@@ -62,7 +62,7 @@ export function coordinateAssessment(db: Executor, assessmentPublicId: string): 
 }
 
 export interface ProcessOptions {
-  config?: FabricateConfig;
+  config?: FrontendRegistryConfig;
   runner?: GitRunner;
   signal?: AbortSignal;
 }
@@ -112,7 +112,7 @@ function joinSurvey(db: Executor, target: AssessmentTarget, resolution: Resoluti
       fromConfiguredReference: configured,
       trigger: "run",
       requestedByAssessmentId: assessment.id,
-      surveyorRelease: assessment.detectorRelease,
+      surveyorRelease: assessment.surveyorRelease,
       configurationDigest: assessment.configurationDigest,
       profileSchemaVersion: assessment.profileSchemaVersion,
     });

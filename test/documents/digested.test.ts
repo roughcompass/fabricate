@@ -84,7 +84,7 @@ describe("digested documents", () => {
         fromConfiguredReference: true,
         trigger: "run",
         requestedByAssessmentId: assessment.id,
-        surveyorRelease: assessment.detectorRelease,
+        surveyorRelease: assessment.surveyorRelease,
         configurationDigest: assessment.configurationDigest,
         profileSchemaVersion: assessment.profileSchemaVersion,
       });

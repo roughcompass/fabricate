@@ -23,7 +23,7 @@ export const LAUNCH_TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0
 export interface NewAssessment {
   initiative: Initiative;
   launchToken: string;
-  detectorRelease: string;
+  surveyorRelease: string;
   configuration: JsonObject;
   profileSchemaVersion: number;
   relationshipSchemaVersion: number;
@@ -38,7 +38,7 @@ export interface NewAssessment {
 export function createAssessment(db: Executor, input: NewAssessment): { assessment: Assessment; targets: AssessmentTarget[] } {
   const issues = new IssueCollector();
   if (!LAUNCH_TOKEN.test(input.launchToken)) issues.add("launchToken", "Launch token must be a lowercase UUID");
-  if (!input.detectorRelease.trim()) issues.add("detectorRelease", `${SURVEYOR_RELEASE_LABEL} is required`);
+  if (!input.surveyorRelease.trim()) issues.add("surveyorRelease", `${SURVEYOR_RELEASE_LABEL} is required`);
   if (input.sources.length === 0) issues.add("sources", "An assessment needs at least one target");
   issues.throwIfAny();
 
@@ -51,7 +51,7 @@ export function createAssessment(db: Executor, input: NewAssessment): { assessme
         publicId: generatePublicId("asm"),
         initiativeId: input.initiative.id,
         launchToken: input.launchToken,
-        detectorRelease: input.detectorRelease,
+        surveyorRelease: input.surveyorRelease,
         configuration: configuration.text,
         configurationDigest: configuration.digest,
         profileSchemaVersion: input.profileSchemaVersion,

@@ -10,7 +10,7 @@ import { transitionTarget } from "@/lib/assessments/transitions";
 import { resolveCloneUrl } from "@/lib/catalog/catalog";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, insertSource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { GitRunner } from "@/lib/git/runner";
 import { buildAssessment } from "./builders";
@@ -18,7 +18,7 @@ import { createTestDb } from "./db";
 import { GitFixture } from "./git-fixture";
 
 /** Configuration whose allowed root is a fixture and whose storage is private. */
-export function acquisitionConfig(fixture: GitFixture, overrides: Parameters<typeof withOverrides>[1] = {}): FabricateConfig {
+export function acquisitionConfig(fixture: GitFixture, overrides: Parameters<typeof withOverrides>[1] = {}): FrontendRegistryConfig {
   const storage = fs.mkdtempSync(path.join(os.tmpdir(), "acquire-storage-"));
   return withOverrides(getConfig(), { allowedRoots: [fixture.root], repositoryStorage: fs.realpathSync(storage), ...overrides });
 }
@@ -27,7 +27,7 @@ export interface AcquisitionWorld {
   /** The Git fixture whose root is the only allowed one. */
   fixture: GitFixture;
   /** Configuration that allows the fixture, with private repository storage. */
-  config: FabricateConfig;
+  config: FrontendRegistryConfig;
   db: Db;
 }
 
@@ -52,7 +52,7 @@ export function useAcquisitionWorld(name: string, options: { overrides?: Paramet
   return world;
 }
 
-export function registerLocalSource(db: Db, config: FabricateConfig, name: string, location: string, gitRef: string | null = null): RepositorySource {
+export function registerLocalSource(db: Db, config: FrontendRegistryConfig, name: string, location: string, gitRef: string | null = null): RepositorySource {
   const url = resolveCloneUrl(`file://${location}`, new SourceBoundary(config));
   return insertSource(db, { name, ...url, gitRef });
 }
@@ -68,7 +68,7 @@ export function acquiringTarget(db: Db, source: RepositorySource): AssessmentTar
  * survey job does, without surveying it. Returns the survey, and the pin as
  * readers open it.
  */
-export async function acquire(db: Db, config: FabricateConfig, source: RepositorySource, options: { runner?: GitRunner; signal?: AbortSignal } = {}) {
+export async function acquire(db: Db, config: FrontendRegistryConfig, source: RepositorySource, options: { runner?: GitRunner; signal?: AbortSignal } = {}) {
   const runner = options.runner ?? new GitRunner({ config });
   const resolution = await resolveReference({ sourcePublicId: source.publicId, cloneUrl: source.cloneUrl, gitRef: source.gitRef }, { config, runner, ...(options.signal && { signal: options.signal }) });
   const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha: resolution.commitSha, reference: resolution.name, fromConfiguredReference: true, trigger: "manual", ...currentRecipe(config) });

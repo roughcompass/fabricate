@@ -87,7 +87,7 @@ describe("Evaluation pipeline", () => {
       const selected = select(initiative, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]);
       const failedOnly = await (async () => {
         const source = buildSource(db, { name: "down" });
-        const { assessment: run, targets } = createAssessment(db, { initiative: selected, launchToken: crypto.randomUUID(), detectorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [source] });
+        const { assessment: run, targets } = createAssessment(db, { initiative: selected, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [source] });
         transitionTarget(db, transitionTarget(db, targets[0]!, "acquiring"), "failed", { failureCode: "source_unavailable", failureMessage: "x" });
         return transitionAssessment(db, transitionAssessment(db, run, "finalizing"), "failed");
       })();
@@ -95,7 +95,7 @@ describe("Evaluation pipeline", () => {
 
       // A Release that reads only Profile v2 cannot evaluate an Assessment from Surveyor release 0.1.0, with Profile v1.
       const v2Only = select(selected, [publishStandard(db, "Design system", [control({ key: "uses-pnpm", condition: manager("pnpm") })], { profileVersions: [2] })]);
-      const v1 = createAssessment(db, { initiative: v2Only, launchToken: crypto.randomUUID(), detectorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [buildSource(db, { name: "earlier" })] }).assessment;
+      const v1 = createAssessment(db, { initiative: v2Only, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [buildSource(db, { name: "earlier" })] }).assessment;
       expectRefusal(v2Only.publicId, v1.publicId, /supports Repository Profile v2, but the Assessment has v1/);
       expect(db.select().from(jobs).all().filter((job) => job.kind === EVALUATE_RELEASE)).toEqual([]);
     });

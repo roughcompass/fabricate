@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { type FabricateConfig, getConfig, isInside, namesProtectedDirectory } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, isInside, namesProtectedDirectory } from "@/lib/config";
 
 /**
  * Decides whether a local path may be used as a repository source.
@@ -52,7 +52,7 @@ export class SourceBoundary {
   private readonly deniedRoots: readonly string[];
   private readonly allowedRoots: readonly string[];
 
-  constructor(readonly config: FabricateConfig = getConfig()) {
+  constructor(readonly config: FrontendRegistryConfig = getConfig()) {
     this.deniedRoots = [...new Set(config.deniedRoots.flatMap((root) => [root, realpathOrNull(root)]).filter((root): root is string => root !== null))];
     this.allowedRoots = config.allowedRoots.map(realpathOrNull).filter((root): root is string => root !== null);
   }

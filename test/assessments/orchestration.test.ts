@@ -77,7 +77,7 @@ describe("Assessment orchestration", () => {
         requestedByAssessmentId: assessment.id,
         reference: "refs/heads/main",
         fromConfiguredReference: true,
-        surveyorRelease: assessment.detectorRelease,
+        surveyorRelease: assessment.surveyorRelease,
         configurationDigest: assessment.configurationDigest,
         profileSchemaVersion: assessment.profileSchemaVersion,
       });

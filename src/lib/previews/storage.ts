@@ -1,5 +1,5 @@
 import path from "node:path";
-import { type FabricateConfig, isInside } from "@/lib/config";
+import { type FrontendRegistryConfig, isInside } from "@/lib/config";
 import { isPublicId } from "@/lib/db/ids";
 import type { PreviewBuild } from "./records";
 
@@ -19,23 +19,23 @@ import type { PreviewBuild } from "./records";
  */
 
 /** A preview's own directory. */
-export function previewDirectory(config: FabricateConfig, publicId: string): string {
+export function previewDirectory(config: FrontendRegistryConfig, publicId: string): string {
   if (!isPublicId(publicId, "pvw")) throw new Error(`${JSON.stringify(publicId)} is not a preview id`);
   return path.join(config.previews.storage, publicId);
 }
 
 /** The directory a preview's published artifact is served from, or null before any attempt published one. */
-export function publishedDirectory(config: FabricateConfig, preview: Pick<PreviewBuild, "publicId" | "artifact">): string | null {
+export function publishedDirectory(config: FrontendRegistryConfig, preview: Pick<PreviewBuild, "publicId" | "artifact">): string | null {
   return preview.artifact === null ? null : within(previewDirectory(config, preview.publicId), preview.artifact);
 }
 
 /** The latest attempt's log file, or null until a worker starts the attempt. */
-export function attemptLogFile(config: FabricateConfig, preview: Pick<PreviewBuild, "publicId" | "attemptLog">): string | null {
+export function attemptLogFile(config: FrontendRegistryConfig, preview: Pick<PreviewBuild, "publicId" | "attemptLog">): string | null {
   return preview.attemptLog === null ? null : within(previewDirectory(config, preview.publicId), preview.attemptLog);
 }
 
 /** The package caches every build shares, one directory per manager. */
-export function cacheDirectory(config: FabricateConfig): string {
+export function cacheDirectory(config: FrontendRegistryConfig): string {
   return path.join(config.previews.storage, ".cache");
 }
 
@@ -59,7 +59,7 @@ export interface ClaimFiles {
   readonly artifactName: string;
 }
 
-export function claimFiles(config: FabricateConfig, publicId: string, attempt: number, claim: string): ClaimFiles {
+export function claimFiles(config: FrontendRegistryConfig, publicId: string, attempt: number, claim: string): ClaimFiles {
   if (!/^[a-z0-9]+$/.test(claim)) throw new Error("A claim's files are named by a lowercase alphanumeric key");
   const root = previewDirectory(config, publicId);
   const key = `${attempt}-${claim}`;

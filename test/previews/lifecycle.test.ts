@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { deleteSource } from "@/lib/catalog/catalog";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { jobs } from "@/lib/db/schema";
 import { claimNext } from "@/lib/jobs/queue";
 import { type PruneCandidate, cacheBytes, choosePrunable, deletePreview, prunePreviews, requestPreview, requestRebuild } from "@/lib/previews/lifecycle";
@@ -83,7 +83,7 @@ describe("preview lifecycle", () => {
   const original = getConfig();
   const app = useAppDb();
   let storage: string;
-  let config: FabricateConfig;
+  let config: FrontendRegistryConfig;
   let source: RepositorySource;
 
   beforeEach(() => {
@@ -97,7 +97,7 @@ describe("preview lifecycle", () => {
     fs.rmSync(storage, { recursive: true, force: true });
   });
 
-  function configure(previews: Partial<FabricateConfig["settings"]["previews"]>): void {
+  function configure(previews: Partial<FrontendRegistryConfig["settings"]["previews"]>): void {
     config = withOverrides(original, { previews: { enabled: true, trustedSources: [source.canonicalUrl], storage, ...previews } });
     setConfig(config);
   }

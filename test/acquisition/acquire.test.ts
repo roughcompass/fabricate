@@ -8,7 +8,7 @@ import { Mirror, mirrorPath, surveyRefFor } from "@/lib/acquisition/mirror";
 import { getTarget } from "@/lib/assessments/assessment-records";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import type { FabricateConfig } from "@/lib/config";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import { surveys } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
 import { currentRecipe, moveSurvey, requestSurvey } from "@/lib/surveys/records";
@@ -155,7 +155,7 @@ describe("reference resolution and survey pinning", () => {
       let release!: () => void;
       const held = withSourceLock(source.id, { waitMs: 1_000 }, () => new Promise<void>((resolve) => (release = resolve)));
 
-      const quick = { ...world.config, gitLockTimeoutSeconds: 1 } as FabricateConfig;
+      const quick = { ...world.config, gitLockTimeoutSeconds: 1 } as FrontendRegistryConfig;
       await expect(acquire(world.db, quick, source)).rejects.toMatchObject({ code: "lock_timeout" });
       release();
       await held;

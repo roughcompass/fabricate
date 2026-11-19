@@ -1,5 +1,5 @@
 import { listSources } from "@/lib/catalog/source-records";
-import type { FabricateConfig } from "@/lib/config";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { type Job, enqueue } from "@/lib/jobs/queue";
 import { requestBackgroundSurvey } from "@/lib/surveys/background";
@@ -22,7 +22,7 @@ import { settleAbandonedSurveys } from "@/lib/surveys/run";
 
 export const CHECK_PROFILES = "profiling.check";
 
-function slotOf(config: FabricateConfig, time: Date, offset = 0): Date {
+function slotOf(config: FrontendRegistryConfig, time: Date, offset = 0): Date {
   const length = config.profiling.checkMinutes * 60_000;
   return new Date((Math.floor(time.getTime() / length) + offset) * length);
 }
@@ -32,7 +32,7 @@ function enqueueSlot(db: Executor, slot: Date, runAfter: Date): Job {
 }
 
 /** Queues this slot's check to run now, unless it already ran, and the next slot's. Called when a worker starts, so a new Surveyor release is checked at once. */
-export function scheduleProfileChecks(db: Executor, config: FabricateConfig, now = new Date()): Job[] {
+export function scheduleProfileChecks(db: Executor, config: FrontendRegistryConfig, now = new Date()): Job[] {
   const next = slotOf(config, now, 1);
   return [enqueueSlot(db, slotOf(config, now), now), enqueueSlot(db, next, next)];
 }
@@ -58,7 +58,7 @@ export function checkProfiles(db: Executor, slot: string): CheckResult {
 }
 
 /** The job handler: queues the next slot, then checks. */
-export function runScheduledProfileCheck(db: Executor, config: FabricateConfig, options: { slot?: string; now?: Date; log?: (message: string) => void } = {}): CheckResult {
+export function runScheduledProfileCheck(db: Executor, config: FrontendRegistryConfig, options: { slot?: string; now?: Date; log?: (message: string) => void } = {}): CheckResult {
   const now = options.now ?? new Date();
   const next = slotOf(config, now, 1);
   enqueueSlot(db, next, next);

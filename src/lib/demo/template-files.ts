@@ -1,5 +1,5 @@
 import { GENERATED_SOURCES } from "@/demo/runtime/generated/sources";
-import fabricatePackage from "../../../package.json";
+import frontendRegistryPackage from "../../../package.json";
 import { BRANDS, type GroupMember, type Template, shellOf } from "./catalog";
 import { scaffoldCommand } from "./preview";
 
@@ -124,7 +124,7 @@ export function isIllustrative(template: Template): boolean {
 /** A hero's package.json: its microfrontends, React, the portal runtime interface, and the Salt packages its source imports, at the versions the Frontend Registry renders with. */
 function heroPackageJson(template: Template, sources: readonly string[]): string {
   const children = template.app.members.filter((member) => member.role === "child");
-  const packages: Readonly<Record<string, string>> = fabricatePackage.dependencies;
+  const packages: Readonly<Record<string, string>> = frontendRegistryPackage.dependencies;
   const salt = [...new Set(sources.flatMap((source) => [...source.matchAll(/from\s+["'](@salt-ds\/[a-z-]+)["']/g)].map((match) => match[1]!)))].sort();
   return json({
     name: template.slug,

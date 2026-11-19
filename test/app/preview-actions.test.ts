@@ -6,7 +6,7 @@ import { previewOutcome } from "@/app/(operator)/repositories/outcomes";
 import { buildPreview, deletePreviewAction, preparePreview, rebuildPreview } from "@/app/(operator)/repositories/preview-actions";
 import type { PrepareFormState } from "@/app/(operator)/repositories/preview-form-state";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { setDb } from "@/lib/db/client";
 import { previewBuilds } from "@/lib/db/schema";
 import { jobHandlers } from "@/lib/jobs/registry";
@@ -58,7 +58,7 @@ describe("preview Server Actions", () => {
     fs.rmSync(storage, { recursive: true, force: true });
   });
 
-  function enroll(source: RepositorySource, previews: Partial<FabricateConfig["settings"]["previews"]> = {}): FabricateConfig {
+  function enroll(source: RepositorySource, previews: Partial<FrontendRegistryConfig["settings"]["previews"]> = {}): FrontendRegistryConfig {
     const config = withOverrides(world.config, { previews: { enabled: true, trustedSources: [source.cloneUrl], nodeVersions: { [process.versions.node]: NODE_BIN }, storage, ...previews } });
     setConfig(config);
     return config;

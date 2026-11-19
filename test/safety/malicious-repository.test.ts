@@ -48,7 +48,7 @@ describe("Assessment of a malicious repository", () => {
   const touch = (name: string) => `touch '${path.join(sentinels, name)}'`;
   const script = (name: string) => `#!/bin/sh\n${touch(name)}\n`;
   const moduleSource = (name: string) =>
-    `require("fs").writeFileSync(${JSON.stringify(path.join(sentinels, `module-${name.replaceAll("/", "_")}`))}, "loaded");\nglobalThis.__fabricateModuleTrap = ${JSON.stringify(name)};\nfetch(${JSON.stringify(`${trapUrl}/module`)}).catch(() => {});\nmodule.exports = {};\n`;
+    `require("fs").writeFileSync(${JSON.stringify(path.join(sentinels, `module-${name.replaceAll("/", "_")}`))}, "loaded");\nglobalThis.__frontendRegistryModuleTrap = ${JSON.stringify(name)};\nfetch(${JSON.stringify(`${trapUrl}/module`)}).catch(() => {});\nmodule.exports = {};\n`;
 
   function hostileRepository(): Repo {
     const work = world.fixture.repo("fleet/hostile");
@@ -136,7 +136,7 @@ describe("Assessment of a malicious repository", () => {
   afterAll(async () => {
     await trap.close();
     fs.rmSync(outside, { recursive: true, force: true });
-    delete (globalThis as { __fabricateModuleTrap?: unknown }).__fabricateModuleTrap;
+    delete (globalThis as { __frontendRegistryModuleTrap?: unknown }).__frontendRegistryModuleTrap;
   });
 
   const facts = () => profileDocument(profilesOf(world.db, getAssessment(world.db, assessmentId).id)[0]!.profile).fact_document as JsonObject;
@@ -154,7 +154,7 @@ describe("Assessment of a malicious repository", () => {
   });
 
   it("loads no repository file as a module", () => {
-    expect((globalThis as { __fabricateModuleTrap?: unknown }).__fabricateModuleTrap).toBeUndefined();
+    expect((globalThis as { __frontendRegistryModuleTrap?: unknown }).__frontendRegistryModuleTrap).toBeUndefined();
     const loaded = Object.keys(createRequire(import.meta.url).cache);
     expect(loaded.filter((file) => file.startsWith(world.fixture.root) || file.startsWith(world.config.repositoryStorage))).toEqual([]);
   });
@@ -231,7 +231,7 @@ describe("Assessment of a malicious repository", () => {
     expect(fs.readdirSync(sentinels)).toContain("committed-hook-post-commit");
 
     createRequire(import.meta.url)(path.join(work.path, "index.js"));
-    expect((globalThis as { __fabricateModuleTrap?: unknown }).__fabricateModuleTrap).toBe("index.js");
+    expect((globalThis as { __frontendRegistryModuleTrap?: unknown }).__frontendRegistryModuleTrap).toBe("index.js");
     expect(fs.readdirSync(sentinels)).toContain("module-index.js");
     await expect.poll(() => trap.connections.length).toBeGreaterThan(0);
   });

@@ -1,6 +1,6 @@
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import type { FabricateConfig } from "@/lib/config";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
 import { previewBuilds, previewPreparations } from "@/lib/db/schema";
@@ -90,7 +90,7 @@ const listings = new Map<string, { at: number; listing: Promise<RefListing> }>()
  * reused for half a minute per Repository, remote, and reference. A listing
  * that failed is never reused.
  */
-export function remoteRefsFor(config: FabricateConfig, source: Pick<RepositorySource, "publicId" | "cloneUrl" | "gitRef">, now = Date.now()): Promise<RefListing> {
+export function remoteRefsFor(config: FrontendRegistryConfig, source: Pick<RepositorySource, "publicId" | "cloneUrl" | "gitRef">, now = Date.now()): Promise<RefListing> {
   const key = `${source.publicId}\n${source.cloneUrl}\n${source.gitRef ?? ""}`;
   const cached = listings.get(key);
   if (cached && now - cached.at < REFS_TTL_MS) return cached.listing;

@@ -40,7 +40,7 @@ const dirty = execFileSync("git", ["status", "--porcelain", "--untracked-files=n
 if (dirty) console.warn("Uncommitted changes are left out of the release; it builds HEAD.");
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
 
-const work = fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-release-"));
+const work = fs.mkdtempSync(path.join(os.tmpdir(), "frontend-registry-release-"));
 try {
   execFileSync("sh", ["-c", `git archive --format=tar "${commit}" | tar -x -C "${work}"`], { cwd: root, stdio: "inherit" });
   run("npm", ["ci", "--no-audit", "--no-fund"], work);

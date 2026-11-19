@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type FabricateConfig, getConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import { GitError } from "@/lib/git/errors";
 import { GitRunner, type Invocation } from "@/lib/git/runner";
 import { type RecordingGit, recordingGit } from "../support/fake-git";
@@ -23,7 +23,7 @@ const BASE = [
 
 describe("GitRunner", () => {
   let storage: string;
-  let config: FabricateConfig;
+  let config: FrontendRegistryConfig;
   let fake: RecordingGit;
   let gitDir: string;
   const saved = { secret: process.env.FRONTEND_REGISTRY_TEST_SECRET, proxy: process.env.HTTPS_PROXY, agent: process.env.SSH_AUTH_SOCK };

@@ -5,7 +5,7 @@ import { type Advertisement, Mirror, advertisedCommit, parseLsRemote, resolveAdv
 import { withSourceLock } from "@/lib/acquisition/source-lease";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, isValidGitRef } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { GitRunner, type Protocol } from "@/lib/git/runner";
 import type { PinnedCommit } from "./records";
@@ -59,7 +59,7 @@ export class RefResolutionError extends Error {
 }
 
 export interface RefOptions {
-  config?: FabricateConfig;
+  config?: FrontendRegistryConfig;
   runner?: GitRunner;
   signal?: AbortSignal;
 }

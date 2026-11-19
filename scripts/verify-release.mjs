@@ -5,7 +5,7 @@
 // - No registry credential: no file holds the token, a literal npm
 //   `_authToken`, or a SURVEYOR_NPM_TOKEN assignment (or one of the old
 //   REPO_FACTS_NPM_TOKEN, which is still read for one release).
-// - The detector release: the release's @repo-facts packages are exactly the
+// - The Surveyor release: the release's @repo-facts packages are exactly the
 //   versions package-lock.json pins, each with its release provenance.
 import fs from "node:fs";
 import path from "node:path";
@@ -61,26 +61,27 @@ const scan = (directory) => {
 };
 scan(release);
 
-// The detector release.
+// The Surveyor release.
 const lock = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
 const pinned = Object.entries(lock.packages).filter(([key]) => key.startsWith("node_modules/@repo-facts/"));
 const scope = path.join(release, "node_modules", "@repo-facts");
 const installed = {};
 for (const name of fs.existsSync(scope) ? fs.readdirSync(scope) : []) {
   const manifest = JSON.parse(fs.readFileSync(path.join(scope, name, "package.json"), "utf8"));
-  installed[manifest.name] = { version: manifest.version, repoFacts: manifest.repoFacts ?? null };
+  // Each package records its release provenance under the manifest field its publisher named repoFacts.
+  installed[manifest.name] = { version: manifest.version, provenance: manifest["repoFacts"] ?? null };
 }
 for (const [key, entry] of pinned) {
   const name = key.slice("node_modules/".length);
   const found = installed[name];
   if (!found) problems.push(`${name} is not in the release`);
   else if (found.version !== entry.version) problems.push(`${name} is ${found.version} in the release, but the lockfile pins ${entry.version}`);
-  else if (found.repoFacts?.release !== entry.version || !/^[0-9a-f]{40}$/.test(found.repoFacts?.commit ?? "")) problems.push(`${name} lacks release provenance for ${entry.version}`);
+  else if (found.provenance?.release !== entry.version || !/^[0-9a-f]{40}$/.test(found.provenance?.commit ?? "")) problems.push(`${name} lacks release provenance for ${entry.version}`);
 }
 for (const name of Object.keys(installed)) if (!pinned.some(([key]) => key === `node_modules/${name}`)) problems.push(`${name} is in the release but not in the lockfile`);
 
 const bundle = installed["@repo-facts/bundle"];
 console.log(`Scanned ${files} files in ${path.relative(root, release)}${token ? " for the registry token" : " (no token given; checked for literal _authToken values only)"}.`);
-console.log(`Detector release: @repo-facts/bundle ${bundle?.version ?? "missing"} from commit ${bundle?.repoFacts?.commit ?? "unknown"}; lockfile pins ${lock.packages["node_modules/@repo-facts/bundle"]?.version}.`);
-console.log(problems.length ? `Problems:\n- ${problems.join("\n- ")}` : "No registry credential in the release, and its detector release matches the lockfile.");
+console.log(`Surveyor release: @repo-facts/bundle ${bundle?.version ?? "missing"} from commit ${bundle?.provenance?.commit ?? "unknown"}; lockfile pins ${lock.packages["node_modules/@repo-facts/bundle"]?.version}.`);
+console.log(problems.length ? `Problems:\n- ${problems.join("\n- ")}` : "No registry credential in the release, and its Surveyor release matches the lockfile.");
 process.exit(problems.length ? 1 : 0);

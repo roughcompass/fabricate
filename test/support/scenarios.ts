@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
+import { detectorConfiguration } from "@repo-facts/bundle";
+import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { type JsonObject, type MemoryFile, digestOf } from "@repo-facts/contract";
 import { type Assessment, type AssessmentTarget, createAssessment, getAssessment, linkSurvey } from "@/lib/assessments/assessment-records";
 import { continueWaitingTargets } from "@/lib/assessments/waiting";
@@ -87,7 +88,7 @@ export async function seedAssessment(db: Db, initiative: Initiative, sources: re
   const { assessment, targets } = createAssessment(db, {
     initiative,
     launchToken: crypto.randomUUID(),
-    detectorRelease: DETECTOR_RELEASE,
+    surveyorRelease: SURVEYOR_RELEASE,
     configuration: detectorConfiguration(getConfig().analysis).configuration,
     profileSchemaVersion: options.profileVersion1 ? 1 : CURRENT_VERSION.repositoryProfile,
     relationshipSchemaVersion: 1,
@@ -171,7 +172,7 @@ export async function completeTarget(db: Db, assessment: Assessment, target: Ass
     fromConfiguredReference: configured,
     trigger: "run",
     requestedByAssessmentId: assessment.id,
-    surveyorRelease: assessment.detectorRelease,
+    surveyorRelease: assessment.surveyorRelease,
     configurationDigest: assessment.configurationDigest,
     profileSchemaVersion: assessment.profileSchemaVersion,
   });

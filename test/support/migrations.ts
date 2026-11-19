@@ -5,7 +5,7 @@ import { MIGRATIONS_FOLDER } from "@/lib/db/client";
 
 /** A copy of the committed migrations up to and including +tag+, to migrate a test database to an earlier schema. */
 export function migrationFolderAt(tag: string): string {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-migrations-"));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), "frontend-registry-migrations-"));
   fs.cpSync(MIGRATIONS_FOLDER, folder, { recursive: true });
   const journalFile = path.join(folder, "meta", "_journal.json");
   const journal = JSON.parse(fs.readFileSync(journalFile, "utf8")) as { entries: { idx: number; tag: string }[] };

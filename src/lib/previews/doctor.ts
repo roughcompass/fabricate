@@ -3,7 +3,7 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import semver from "semver";
-import type { FabricateConfig } from "@/lib/config";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import type { BuildPlan } from "./eligibility";
 import { type CommandResult, TAR_PATH, runCommand } from "./process";
 import { cacheDirectory } from "./storage";
@@ -65,7 +65,7 @@ const MANAGERS: readonly { label: string; plan: Manager }[] = [
 const NODE_ONLY: Manager = { name: "npm", version: null, lockfile: "package-lock.json" };
 
 /** Checks every configured Node version, then git and tar. */
-export async function checkToolchain(config: FabricateConfig, options: DoctorOptions = {}): Promise<ToolchainCheck[]> {
+export async function checkToolchain(config: FrontendRegistryConfig, options: DoctorOptions = {}): Promise<ToolchainCheck[]> {
   const run = options.run ?? runWithLimit;
   const checks: ToolchainCheck[] = [];
   const report = (subject: string, status: CheckStatus, detail: string) => {
@@ -74,7 +74,7 @@ export async function checkToolchain(config: FabricateConfig, options: DoctorOpt
     options.onCheck?.(check);
     return check;
   };
-  const scratch = await fsp.mkdtemp(path.join(os.tmpdir(), "fabricate-previews-doctor-"));
+  const scratch = await fsp.mkdtemp(path.join(os.tmpdir(), "frontend-registry-previews-doctor-"));
   try {
     const home = path.join(scratch, "home");
     const tmp = path.join(scratch, "tmp");

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { type SQL, and, eq, inArray, isNull } from "drizzle-orm";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
@@ -35,7 +35,7 @@ import { attemptLogFile, cacheDirectory, previewDirectory } from "./storage";
  * operator chose it, or opens the existing one, only while previews are on
  * and the Repository is enrolled.
  */
-export function requestPreview(db: Executor, preparationPublicId: string, packageDir: string, config: FabricateConfig = getConfig()): { preview: PreviewBuild; created: boolean } {
+export function requestPreview(db: Executor, preparationPublicId: string, packageDir: string, config: FrontendRegistryConfig = getConfig()): { preview: PreviewBuild; created: boolean } {
   return immediate(db, (tx) => {
     const preparation = tx.select().from(previewPreparations).where(eq(previewPreparations.publicId, preparationPublicId)).get();
     if (!preparation) throw new NotFoundError(`Preview preparation ${preparationPublicId} does not exist`);
@@ -45,7 +45,7 @@ export function requestPreview(db: Executor, preparationPublicId: string, packag
 }
 
 /** Starts the next attempt of a preview, only while previews are on and its Repository is enrolled. */
-export function requestRebuild(db: Executor, publicId: string, config: FabricateConfig = getConfig()): PreviewBuild {
+export function requestRebuild(db: Executor, publicId: string, config: FrontendRegistryConfig = getConfig()): PreviewBuild {
   return immediate(db, (tx) => {
     const preview = findPreview(tx, publicId);
     if (!preview) throw new NotFoundError(`Preview ${publicId} does not exist`);
@@ -67,7 +67,7 @@ function sourceOf(db: Executor, id: number) {
  * storage can always be reclaimed. Returns false when there's no such
  * undeleted preview.
  */
-export async function deletePreview(db: Executor, publicId: string, config: FabricateConfig = getConfig()): Promise<boolean> {
+export async function deletePreview(db: Executor, publicId: string, config: FrontendRegistryConfig = getConfig()): Promise<boolean> {
   const deleted = immediate(db, (tx) => markDeleted(tx, eq(previewBuilds.publicId, publicId)));
   await discardPreviewFiles(config, deleted);
   return deleted.length > 0;
@@ -99,7 +99,7 @@ function markDeleted(db: Executor, where: SQL | undefined): string[] {
  * while a build is still writing into it, and is then removed. Never
  * rejects: what it can't remove, the next prune sweeps.
  */
-export function discardPreviewFiles(config: FabricateConfig, publicIds: readonly string[]): Promise<void> {
+export function discardPreviewFiles(config: FrontendRegistryConfig, publicIds: readonly string[]): Promise<void> {
   const removals: string[] = [];
   for (const publicId of publicIds) {
     const directory = previewDirectory(config, publicId);
@@ -116,7 +116,7 @@ export function discardPreviewFiles(config: FabricateConfig, publicIds: readonly
   return Promise.all(removals.map((directory) => fsp.rm(directory, { recursive: true, force: true }).catch(() => {}))).then(() => {});
 }
 
-function trashDirectory(config: FabricateConfig): string {
+function trashDirectory(config: FrontendRegistryConfig): string {
   return path.join(config.previews.storage, ".trash");
 }
 
@@ -176,7 +176,7 @@ export interface PruneResult {
  * state or last open changed since it was weighed is left for the next prune.
  * Finally removes files no undeleted preview owns.
  */
-export async function prunePreviews(db: Executor, config: FabricateConfig = getConfig(), options: { keep?: string } = {}): Promise<PruneResult> {
+export async function prunePreviews(db: Executor, config: FrontendRegistryConfig = getConfig(), options: { keep?: string } = {}): Promise<PruneResult> {
   settleAbandonedAttempts(db);
   const rows = db.select().from(previewBuilds).where(isNull(previewBuilds.deletedAt)).all();
   const candidates = await Promise.all(
@@ -202,7 +202,7 @@ export async function prunePreviews(db: Executor, config: FabricateConfig = getC
  * linked more than once only once. Design decision 8 has the package
  * managers prune them when this passes half of `previews.maxStorageBytes`.
  */
-export async function cacheBytes(config: FabricateConfig): Promise<number> {
+export async function cacheBytes(config: FrontendRegistryConfig): Promise<number> {
   const seen = new Set<string>();
   let total = 0;
   const pending = [cacheDirectory(config)];
@@ -224,7 +224,7 @@ export async function cacheBytes(config: FabricateConfig): Promise<number> {
   return total;
 }
 
-async function logBytes(config: FabricateConfig, preview: Pick<PreviewBuild, "publicId" | "attemptLog">): Promise<number> {
+async function logBytes(config: FrontendRegistryConfig, preview: Pick<PreviewBuild, "publicId" | "attemptLog">): Promise<number> {
   const file = attemptLogFile(config, preview);
   return file ? ((await fsp.stat(file).catch(() => null))?.size ?? 0) : 0;
 }
@@ -234,7 +234,7 @@ async function logBytes(config: FabricateConfig, preview: Pick<PreviewBuild, "pu
  * any preview that's deleted or unknown. The package caches and anything
  * that isn't named for a preview are left alone.
  */
-async function sweepStorage(db: Executor, config: FabricateConfig): Promise<void> {
+async function sweepStorage(db: Executor, config: FrontendRegistryConfig): Promise<void> {
   const names = await fsp.readdir(config.previews.storage).catch(() => [] as string[]);
   const live = new Set(
     db

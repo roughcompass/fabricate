@@ -66,13 +66,13 @@ export function purgeIdleWorkspaces(db: Executor, now = new Date()): number {
   return db.delete(demoWorkspaces).where(lt(demoWorkspaces.lastSeenAt, cutoff)).run().changes;
 }
 
-const purgeClock = globalThis as typeof globalThis & { __fabricateDemoPurgeAt?: number };
+const purgeClock = globalThis as typeof globalThis & { __frontendRegistryDemoPurgeAt?: number };
 
 /** Runs the idle purge at most once an hour per process. */
 export function maybePurgeIdleWorkspaces(db: Executor, now = new Date()): number | null {
-  const last = purgeClock.__fabricateDemoPurgeAt;
+  const last = purgeClock.__frontendRegistryDemoPurgeAt;
   if (last !== undefined && now.getTime() - last < HOUR_MS) return null;
-  purgeClock.__fabricateDemoPurgeAt = now.getTime();
+  purgeClock.__frontendRegistryDemoPurgeAt = now.getTime();
   return purgeIdleWorkspaces(db, now);
 }
 
@@ -80,7 +80,7 @@ export function maybePurgeIdleWorkspaces(db: Executor, now = new Date()): number
  * @public Tests use it until `add-applications` removes the demo.
  */
 export function resetPurgeClock(): void {
-  purgeClock.__fabricateDemoPurgeAt = undefined;
+  purgeClock.__frontendRegistryDemoPurgeAt = undefined;
 }
 
 export function normalizeDisplayName(value: string): string {

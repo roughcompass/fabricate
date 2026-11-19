@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import type { MemoryFile } from "@repo-facts/contract";
-import type { FabricateConfig } from "@/lib/config";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { openSnapshot } from "@/lib/snapshot/open";
 import type { Budgets, SnapshotReader, SnapshotReaderOptions } from "@/lib/snapshot/reader";
@@ -17,7 +17,7 @@ export type FileTree = Readonly<Record<string, MemoryFile>>;
  */
 export class SnapshotFixture {
   readonly fixture: GitFixture;
-  readonly config: FabricateConfig;
+  readonly config: FrontendRegistryConfig;
   readonly db: Db;
   readonly work: Repo;
   private source: ReturnType<typeof registerLocalSource> | undefined;

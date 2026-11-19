@@ -33,8 +33,8 @@ export function createTestDbFile(file: string): void {
  * processes would hold, then closes both and removes the file.
  */
 export async function withSharedFileDb<T>(work: (first: Db, second: Db) => T | Promise<T>): Promise<T> {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-shared-"));
-  const file = path.join(directory, "fabricate.sqlite3");
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "frontend-registry-shared-"));
+  const file = path.join(directory, "frontend-registry.sqlite3");
   const first = openDatabase(file);
   migrateDatabase(first);
   const second = openDatabase(file);

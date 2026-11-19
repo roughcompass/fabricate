@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { resolveReference } from "@/lib/acquisition/acquire";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, type SurveyTrigger, jobs } from "@/lib/db/schema";
 import type { GitRunner } from "@/lib/git/runner";
@@ -35,7 +35,7 @@ export type BackgroundResult =
   | { readonly status: "current"; readonly survey: Survey };
 
 export interface SurveyRepositoryOptions {
-  config?: FabricateConfig;
+  config?: FrontendRegistryConfig;
   runner?: GitRunner;
   signal?: AbortSignal;
 }

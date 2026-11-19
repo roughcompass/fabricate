@@ -5,7 +5,7 @@ import { continueWaitingTargets } from "@/lib/assessments/waiting";
 import { continuePreparations } from "@/lib/previews/records";
 import { type RepositorySource, sourceById } from "@/lib/catalog/source-records";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, jobs, surveys } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
@@ -33,7 +33,7 @@ export function queueSurvey(db: Executor, survey: Survey, priority: number = JOB
 }
 
 export interface RunSurveyOptions {
-  config?: FabricateConfig;
+  config?: FrontendRegistryConfig;
   runner?: GitRunner;
   boundary?: SourceBoundary;
   signal?: AbortSignal;
@@ -63,7 +63,7 @@ export async function runSurvey(db: Executor, publicId: string, options: RunSurv
 }
 
 /** Pins the survey's commit under its own ref, fetching it unless the mirror has it, and records the pin. */
-export async function pinSurveyCommit(db: Executor, survey: Survey, repository: RepositorySource, options: { config: FabricateConfig; runner: GitRunner; boundary: SourceBoundary; signal?: AbortSignal }): Promise<Survey> {
+export async function pinSurveyCommit(db: Executor, survey: Survey, repository: RepositorySource, options: { config: FrontendRegistryConfig; runner: GitRunner; boundary: SourceBoundary; signal?: AbortSignal }): Promise<Survey> {
   const { config, runner, signal } = options;
   return withSourceLock(repository.id, { waitMs: config.gitLockTimeoutSeconds * 1_000, ...(signal && { signal }) }, async () => {
     const mirror = new Mirror(runner, repository.publicId);

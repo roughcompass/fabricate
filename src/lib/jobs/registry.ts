@@ -1,5 +1,5 @@
 import { COORDINATE_ASSESSMENT, FINALIZE_ASSESSMENT, PROCESS_TARGET, coordinateAssessment, finalizeAssessment, processTarget } from "@/lib/assessments/orchestration";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, getDb } from "@/lib/db/client";
 import { FINALIZE_EVALUATION, finalizeEvaluation, runEvaluationRelease } from "@/lib/evaluations/jobs";
 import { EVALUATE_RELEASE } from "@/lib/evaluations/start";
@@ -14,7 +14,7 @@ import type { KindLimits } from "./queue";
 import type { HandlerRegistry } from "./worker";
 
 /** Every job kind the worker runs, bound to +db+ and +config+. */
-export function jobHandlers(db: Executor = getDb(), config: FabricateConfig = getConfig()): HandlerRegistry {
+export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConfig = getConfig()): HandlerRegistry {
   return {
     [COORDINATE_ASSESSMENT]: (payload) => coordinateAssessment(db, String(payload.assessment)),
     [PROCESS_TARGET]: async (payload, context) => void (await processTarget(db, String(payload.target), { config, signal: context.signal })),
@@ -37,6 +37,6 @@ export function jobHandlers(db: Executor = getDb(), config: FabricateConfig = ge
 }
 
 /** Job kinds with their own limit on how many run at once, apart from the worker's concurrency (design decision 8). */
-export function jobLimits(config: FabricateConfig = getConfig()): KindLimits {
+export function jobLimits(config: FrontendRegistryConfig = getConfig()): KindLimits {
   return { [BUILD_PREVIEW]: config.previews.concurrency };
 }

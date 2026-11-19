@@ -4,7 +4,7 @@ import { parsePreviewState, previewHref, scaffoldCommand } from "@/lib/demo/prev
 import { DEVICES, frameSize, sizeLabel } from "@/lib/web/device-preview";
 import { isIllustrative, templateFiles } from "@/lib/demo/template-files";
 import { GENERATED_SOURCES } from "@/demo/runtime/generated/sources";
-import fabricatePackage from "../../package.json";
+import frontendRegistryPackage from "../../package.json";
 
 describe("preview mode state", () => {
   it("starts on the Preview tab with the Desktop device in landscape", () => {
@@ -64,7 +64,7 @@ describe("template files", () => {
     expect(payeeList).toContain('from "@salt-ds/core"');
     const dependencies = JSON.parse(files[0]!.content).dependencies as Record<string, string>;
     // At the version the Frontend Registry renders with, so the source runs as shown.
-    expect(dependencies["@salt-ds/core"]).toBe(fabricatePackage.dependencies["@salt-ds/core"]);
+    expect(dependencies["@salt-ds/core"]).toBe(frontendRegistryPackage.dependencies["@salt-ds/core"]);
     expect(dependencies["@deweb/portal"]).toBeDefined();
   });
 

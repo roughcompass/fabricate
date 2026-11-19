@@ -37,7 +37,7 @@ describe("Git capability", () => {
   });
 
   it("reports a missing executable as unavailable", async () => {
-    const runner = new GitRunner({ executable: "/nonexistent/fabricate-git" });
+    const runner = new GitRunner({ executable: "/nonexistent/frontend-registry-git" });
     await expect(verifyGit(runner)).rejects.toMatchObject({ code: "git_unavailable", message: expect.stringContaining("ENOENT") });
   });
 

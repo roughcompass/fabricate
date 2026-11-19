@@ -5,7 +5,7 @@ import path from "node:path";
 export const E2E_PORT = Number(process.env.E2E_PORT ?? 3100);
 export const E2E_ROOT = path.resolve(process.env.E2E_ROOT ?? "tmp/e2e");
 export const E2E_SOURCES = path.join(E2E_ROOT, "sources");
-export const E2E_DATABASE = path.join(E2E_ROOT, "fabricate.sqlite3");
+export const E2E_DATABASE = path.join(E2E_ROOT, "frontend-registry.sqlite3");
 
 /**
  * Repository previews (docs/previews.md) are on, unless E2E_PREVIEWS=0, and

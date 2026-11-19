@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import { DETECTOR_RELEASE, analyze, detectorConfiguration } from "@repo-facts/bundle";
+import { analyze, detectorConfiguration } from "@repo-facts/bundle";
+import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { type JsonObject, MemoryReader, type MemoryFile, digestOf } from "@repo-facts/contract";
 import { getConfig } from "@/lib/config";
 import { buildProfile } from "@/lib/profiles/schema";
@@ -17,7 +18,7 @@ export async function memoryProfile(files: Readonly<Record<string, MemoryFile>>,
   const document = buildProfile({
     source: { public_id: source.public_id, name: source.name, clone_url: `https://git.example.com/acme/${source.name}.git`, git_ref: null },
     commit,
-    detectorRelease: DETECTOR_RELEASE,
+    surveyorRelease: SURVEYOR_RELEASE,
     configurationDigest: detectorConfiguration(limits).digest,
     factDocument,
   });

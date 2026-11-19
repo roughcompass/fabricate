@@ -85,7 +85,7 @@ describe("preview toolchain", () => {
     });
 
     it("never takes anything from the worker's environment", () => {
-      process.env.FRONTEND_REGISTRY_SECRET_TOKEN = "fabricate-secret";
+      process.env.FRONTEND_REGISTRY_SECRET_TOKEN = "frontend-registry-secret";
       process.env.GIT_ASKPASS = "/usr/local/bin/askpass";
       process.env.VERCEL_TOKEN = "vercel-secret";
       process.env.npm_config__authToken = "registry-secret";

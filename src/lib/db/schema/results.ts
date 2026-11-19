@@ -15,7 +15,7 @@ export const repositoryProfiles = sqliteTable(
       .unique()
       .references(() => surveys.id, { onDelete: "restrict" }),
     schemaVersion: integer("schema_version").notNull(),
-    detectorRelease: text("detector_release").notNull(),
+    surveyorRelease: text("detector_release").notNull(),
     document: text("document").notNull(),
     digest: text("digest").notNull(),
     createdAt: createdAt(),

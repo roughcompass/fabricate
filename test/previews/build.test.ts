@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mirrorPath } from "@/lib/acquisition/mirror";
 import { deleteSource, editSource } from "@/lib/catalog/catalog";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { previewBuilds, repositorySources } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
 import { type Job, claimNext, jobPayload } from "@/lib/jobs/queue";
@@ -97,7 +97,7 @@ const plan = (overrides: Partial<BuildPlan> = {}): BuildPlan => ({
 
 describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", () => {
   const world = useAcquisitionWorld("preview-build");
-  let config: FabricateConfig;
+  let config: FrontendRegistryConfig;
   let storage: string;
   let control: string;
 
@@ -110,7 +110,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
     fs.rmSync(storage, { recursive: true, force: true });
   });
 
-  const settings = (source: RepositorySource, previews: Partial<FabricateConfig["settings"]["previews"]> = {}) =>
+  const settings = (source: RepositorySource, previews: Partial<FrontendRegistryConfig["settings"]["previews"]> = {}) =>
     withOverrides(world.config, { previews: { enabled: true, trustedSources: [source.cloneUrl], nodeVersions: { [NODE]: NODE_BIN }, storage, ...previews } });
 
   /** A queued preview of +packageDir+ in a remote holding +tree+, pinned and prepared with +buildPlan+. */
@@ -191,7 +191,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
         "packages/web/emit.json": JSON.stringify({ ...STANDALONE, info: "../../install-cwd.txt" }),
       };
       const preview = await previewOf(workspace, plan(), "packages/web");
-      const secrets = { FRONTEND_REGISTRY_SECRET_TOKEN: "fabricate-secret", GIT_ASKPASS: "/usr/local/bin/askpass-secret", VERCEL_TOKEN: "vercel-secret", AI_GATEWAY_API_KEY: "ai-secret" };
+      const secrets = { FRONTEND_REGISTRY_SECRET_TOKEN: "frontend-registry-secret", GIT_ASKPASS: "/usr/local/bin/askpass-secret", VERCEL_TOKEN: "vercel-secret", AI_GATEWAY_API_KEY: "ai-secret" };
       Object.assign(process.env, secrets);
       try {
         // Through the worker's registered handler.

@@ -10,7 +10,7 @@ const shared: Settings = {
   gitTimeoutSeconds: 120,
   gitLockTimeoutSeconds: 300,
   workerConcurrency: 3,
-  database: "storage/fabricate.sqlite3",
+  database: "storage/frontend-registry.sqlite3",
   repositoryStorage: "storage/repositories",
   gitCredentialHelper: null,
   analysis: { maxBlobBytes: 1024, maxLockfileBytes: 2048, maxFiles: 10, maxTotalBytes: 4096 },
@@ -25,8 +25,8 @@ describe("configuration", () => {
   let fleetKit: string;
 
   beforeEach(() => {
-    workspace = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-config-")));
-    appRoot = path.join(workspace, "fabricate");
+    workspace = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "frontend-registry-config-")));
+    appRoot = path.join(workspace, "frontend-registry");
     fleetKit = path.join(workspace, "fleet-kit");
     for (const dir of [appRoot, fleetKit, path.join(workspace, "fleet")]) fs.mkdirSync(dir);
   });
@@ -41,7 +41,7 @@ describe("configuration", () => {
 
     expect(config.allowedRoots).toEqual([path.join(workspace, "fleet")]);
     expect(config.workerConcurrency).toBe(1);
-    expect(config.database).toBe(path.join(appRoot, "storage/fabricate.sqlite3"));
+    expect(config.database).toBe(path.join(appRoot, "storage/frontend-registry.sqlite3"));
     expect(config.analysis).toEqual({ maxBlobBytes: 1024, maxLockfileBytes: 2048, maxFiles: 10, maxTotalBytes: 4096 });
   });
 
@@ -274,7 +274,7 @@ describe("configuration", () => {
         FRONTEND_REGISTRY_PREVIEWS: "true",
         FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES: "https://git.example.com/acme/orders.git \n ssh://git@git.example.com/acme/admin.git",
         FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS: ["22.11.0=/opt/node-22/bin", "20.18.1=/opt/node-20/bin"].join(path.delimiter),
-        FRONTEND_REGISTRY_PREVIEWS_STORAGE: "/var/lib/fabricate/previews",
+        FRONTEND_REGISTRY_PREVIEWS_STORAGE: "/var/lib/frontend-registry/previews",
         FRONTEND_REGISTRY_PREVIEWS_CONCURRENCY: "2",
         FRONTEND_REGISTRY_PREVIEWS_TIMEOUT_MINUTES: "30",
         FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES: "1000",
@@ -285,7 +285,7 @@ describe("configuration", () => {
         enabled: true,
         trustedSources: ["https://git.example.com/acme/orders", "ssh://git.example.com/acme/admin"],
         nodeVersions: { "22.11.0": "/opt/node-22/bin", "20.18.1": "/opt/node-20/bin" },
-        storage: "/var/lib/fabricate/previews",
+        storage: "/var/lib/frontend-registry/previews",
         concurrency: 2,
         timeoutMinutes: 30,
         maxOutputBytes: 1000,

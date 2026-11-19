@@ -2,14 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { BoundaryViolation, type BoundaryViolationCode, SourceBoundary } from "@/lib/catalog/source-boundary";
-import { type FabricateConfig, type Settings, getConfig, loadConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, type Settings, getConfig, loadConfig } from "@/lib/config";
 import { GitFixture } from "../support/git-fixture";
 
 describe("local source boundary", () => {
   let fixture: GitFixture;
   let fleet: string;
   let fleetKit: string;
-  let config: FabricateConfig;
+  let config: FrontendRegistryConfig;
 
   const settings = (overrides: Partial<Settings> = {}): Settings => ({
     ...getConfig().settings,
@@ -18,7 +18,7 @@ describe("local source boundary", () => {
     ...overrides,
   });
   const boundary = (overrides: Partial<Settings> = {}) =>
-    new SourceBoundary(loadConfig({ appRoot: path.join(fixture.root, "fabricate"), environment: "test", env: {}, file: { shared: settings(overrides) } }));
+    new SourceBoundary(loadConfig({ appRoot: path.join(fixture.root, "frontend-registry"), environment: "test", env: {}, file: { shared: settings(overrides) } }));
   const violation = (work: () => unknown): BoundaryViolationCode => {
     try {
       work();
@@ -31,7 +31,7 @@ describe("local source boundary", () => {
 
   beforeEach(() => {
     fixture = GitFixture.create("boundary");
-    fixture.dir("fabricate");
+    fixture.dir("frontend-registry");
     fleet = fixture.dir("fleet");
     fleetKit = fixture.dir("fleet-kit");
     fixture.repo("fleet/orders").write("README.md", "orders").commit();

@@ -9,9 +9,9 @@ describe("openDatabase", () => {
   afterEach(() => directories.splice(0).forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 
   it("creates the database with WAL, foreign keys, and a busy timeout", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-db-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "frontend-registry-db-"));
     directories.push(dir);
-    const db = openDatabase(path.join(dir, "nested", "fabricate.sqlite3"));
+    const db = openDatabase(path.join(dir, "nested", "frontend-registry.sqlite3"));
 
     expect(db.$client.pragma("journal_mode", { simple: true })).toBe("wal");
     expect(db.$client.pragma("foreign_keys", { simple: true })).toBe(1);

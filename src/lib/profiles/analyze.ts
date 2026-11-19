@@ -1,7 +1,8 @@
-import { DETECTOR_RELEASE, analyze } from "@repo-facts/bundle";
+import { analyze } from "@repo-facts/bundle";
+import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import type { JsonObject } from "@repo-facts/contract";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import type { GitRunner } from "@/lib/git/runner";
 import { openSnapshot } from "@/lib/snapshot/open";
 import { type Survey, currentRecipe } from "@/lib/surveys/records";
@@ -21,7 +22,7 @@ export class AnalysisMismatchError extends Error {
 export interface SurveyCommitInput {
   survey: Survey;
   repository: Pick<RepositorySource, "publicId" | "name" | "cloneUrl" | "gitRef">;
-  config?: FabricateConfig;
+  config?: FrontendRegistryConfig;
   runner?: GitRunner;
   signal?: AbortSignal;
 }
@@ -39,7 +40,7 @@ export async function surveyDocument(input: SurveyCommitInput): Promise<JsonObje
   return buildProfile({
     source: { public_id: repository.publicId, name: repository.name, clone_url: repository.cloneUrl, git_ref: survey.fromConfiguredReference ? repository.gitRef : survey.reference },
     commit: survey.commitSha,
-    detectorRelease: DETECTOR_RELEASE,
+    surveyorRelease: SURVEYOR_RELEASE,
     configurationDigest: survey.configurationDigest,
     factDocument,
   });

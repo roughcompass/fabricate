@@ -3,7 +3,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { type FabricateConfig, getConfig, isInside } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, isInside } from "@/lib/config";
 import { type Executor, getDb } from "@/lib/db/client";
 import { openPreview } from "./access";
 import { type ArtifactEntry, PAGE } from "./output";
@@ -102,7 +102,7 @@ export function isNavigation(request: Pick<Request, "headers">, segments: readon
 
 export interface ServeOptions {
   db?: Executor;
-  config?: FabricateConfig;
+  config?: FrontendRegistryConfig;
   now?: Date;
 }
 
@@ -141,7 +141,7 @@ export async function servePreview(request: Request, publicId: string, segments:
 }
 
 /** The published directory, resolved, when it's where the preview's row says, inside the preview's own directory. */
-async function artifactRoot(config: FabricateConfig, preview: { publicId: string; artifact: string | null }): Promise<string | null> {
+async function artifactRoot(config: FrontendRegistryConfig, preview: { publicId: string; artifact: string | null }): Promise<string | null> {
   try {
     const directory = publishedDirectory(config, preview);
     if (!directory) return null;

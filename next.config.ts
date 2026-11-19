@@ -4,7 +4,7 @@ import { LEGACY_REDIRECTS } from "./src/lib/web/redirects";
 
 const root = path.dirname(new URL(import.meta.url).pathname);
 
-const REPO_FACTS_PACKAGES = ["@repo-facts/architecture", "@repo-facts/bundle", "@repo-facts/contract", "@repo-facts/core", "@repo-facts/design-system", "@repo-facts/services", "@repo-facts/syntax"];
+const SURVEYOR_PACKAGES = ["@repo-facts/architecture", "@repo-facts/bundle", "@repo-facts/contract", "@repo-facts/core", "@repo-facts/design-system", "@repo-facts/services", "@repo-facts/syntax"];
 
 const nextConfig: NextConfig = {
   // Browser tests build into their own directory, so they can run beside a
@@ -13,9 +13,9 @@ const nextConfig: NextConfig = {
   // A release (`npm run release`) runs the standalone server with Node alone.
   output: "standalone",
   // Loaded from node_modules, never bundled: the native SQLite binding, and the
-  // pinned repo-facts detector release, which ships in a release as its
+  // pinned Surveyor release, which ships in a release as its
   // published packages with their provenance. The worker bundle loads the same copy.
-  serverExternalPackages: ["better-sqlite3", ...REPO_FACTS_PACKAGES],
+  serverExternalPackages: ["better-sqlite3", ...SURVEYOR_PACKAGES],
   outputFileTracingRoot: root,
   turbopack: { root },
   poweredByHeader: false,

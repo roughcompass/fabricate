@@ -2,7 +2,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTypeScript from "eslint-config-next/typescript";
 
 const executionMessage =
-  "Fabricate never executes, loads, or evaluates data. See design.md, decision 6.";
+  "The Frontend Registry never executes, loads, or evaluates data. See design.md, decision 6.";
 
 // Imports that can run code or start processes. child_process is allowed only
 // in GitRunner, the single audited path to the Git executable, and in the

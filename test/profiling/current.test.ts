@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { launchAssessment } from "@/lib/assessments/launcher";
 import { type RepositorySource, getSource, updateSource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig, withOverrides } from "@/lib/config";
+import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
@@ -29,7 +29,7 @@ describe("a repository's current Profile", () => {
   });
 
   /** Runs every queued job through the worker's handlers with +config+. */
-  const run = (config: FabricateConfig = world.config) => drainJobs(world.db, jobHandlers(world.db, config));
+  const run = (config: FrontendRegistryConfig = world.config) => drainJobs(world.db, jobHandlers(world.db, config));
   /** Surveys web's configured reference in the background, to the end. */
   async function surveyInBackground(): Promise<void> {
     await surveyRepository(world.db, getSource(world.db, web.publicId), "manual", { config: world.config });
