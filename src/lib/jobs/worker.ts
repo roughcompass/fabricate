@@ -86,6 +86,8 @@ export interface WorkerOptions {
   concurrency: number;
   /** Per-kind limits on jobs running at once, enforced where jobs are claimed. */
   limits?: KindLimits;
+  /** Kinds whose queued or running jobs hold background work back. */
+  holdBackground?: readonly string[];
   pollIntervalMs?: number;
   leaseMs?: number;
   workerId?: string;
@@ -120,13 +122,13 @@ export class Worker {
   }
 
   private async run(): Promise<void> {
-    const { db, handlers, concurrency, leaseMs, limits } = this.options;
+    const { db, handlers, concurrency, leaseMs, limits, holdBackground } = this.options;
     const pollIntervalMs = this.options.pollIntervalMs ?? 1_000;
 
     while (!this.stopping.signal.aborted) {
       let claimed = false;
       while (this.active.size < concurrency && !this.stopping.signal.aborted) {
-        const job = claimNext(db, { workerId: this.workerId, leaseMs, limits });
+        const job = claimNext(db, { workerId: this.workerId, leaseMs, limits, holdBackground });
         if (!job) break;
         claimed = true;
         const running = runJob(db, job, handlers, { workerId: this.workerId, leaseMs })

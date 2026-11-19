@@ -1,6 +1,9 @@
+import { CHECK_CATALOG, queueCatalogCheckAfter } from "@/lib/catalog/check";
 import { listRepositories } from "@/lib/repositories/repository-records";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
+import { and, asc, eq } from "drizzle-orm";
+import { jobs } from "@/lib/db/schema";
 import { type Job, enqueue } from "@/lib/jobs/queue";
 import { requestBackgroundSurvey } from "@/lib/surveys/background";
 import { latestSurvey } from "@/lib/surveys/records";
@@ -57,12 +60,23 @@ export function checkProfiles(db: Executor, slot: string): CheckResult {
   return { checked: repositories.length, requested };
 }
 
-/** The job handler: queues the next slot, then checks. */
+/** The job handler: queues the next slot, then checks, then queues a Catalog check for the versions the check's surveys may bring. */
 export function runScheduledProfileCheck(db: Executor, config: FrontendRegistryConfig, options: { slot?: string; now?: Date; log?: (message: string) => void } = {}): CheckResult {
   const now = options.now ?? new Date();
   const next = slotOf(config, now, 1);
   enqueueSlot(db, next, next);
-  const result = checkProfiles(db, options.slot ?? slotOf(config, now).toISOString());
+  const slot = options.slot ?? slotOf(config, now).toISOString();
+  const result = checkProfiles(db, slot);
+  queueCatalogCheckAfter(db, slot, now);
   options.log?.(`profiling check: ${result.checked} repositories, ${result.requested} survey requests queued`);
   return result;
+}
+
+/**
+ * When the next profiling check and Catalog check are due: the earliest queued job of each, or null when none is queued.
+ * @public The system status page shows the next checks through this.
+ */
+export function nextScheduledChecks(db: Executor): { profiling: Date | null; catalog: Date | null } {
+  const next = (kind: string) => db.select({ runAfter: jobs.runAfter }).from(jobs).where(and(eq(jobs.kind, kind), eq(jobs.state, "queued"))).orderBy(asc(jobs.runAfter)).limit(1).get()?.runAfter ?? null;
+  return { profiling: next(CHECK_PROFILES), catalog: next(CHECK_CATALOG) };
 }

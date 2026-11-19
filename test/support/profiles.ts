@@ -5,18 +5,20 @@ import { type JsonObject, MemoryReader, type MemoryFile, digestOf } from "@repo-
 import { getConfig } from "@/lib/config";
 import { buildProfile } from "@/lib/profiles/schema";
 import type { ResolverTarget } from "@/lib/relationships/resolve";
+import { saltEntry } from "./catalog";
 
 export const sha1 = (seed: string) => crypto.createHash("sha1").update(seed).digest("hex");
 
 /**
  * A Profile document for +files+, analyzed in memory by the pinned bundle
- * exactly as the worker analyzes a snapshot, without Git.
+ * exactly as the worker analyzes a snapshot, without Git, against the Salt
+ * 1.75.0 Reference Catalog entry.
  */
 export async function memoryProfile(files: Readonly<Record<string, MemoryFile>>, source: { public_id: string; name: string }, commit = sha1(`commit:${source.public_id}`)): Promise<{ document: JsonObject; digest: string }> {
   const limits = getConfig().analysis;
-  const factDocument = await analyze(MemoryReader.fromFiles(files, { commit, budgets: limits }));
+  const factDocument = await analyze(MemoryReader.fromFiles(files, { commit, budgets: limits }), { entries: [saltEntry()] });
   const document = buildProfile({
-    source: { public_id: source.public_id, name: source.name, clone_url: `https://git.example.com/acme/${source.name}.git`, git_ref: null },
+    repository: source.public_id,
     commit,
     surveyorRelease: SURVEYOR_RELEASE,
     configurationDigest: detectorConfiguration(limits).digest,

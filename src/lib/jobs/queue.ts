@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, lte, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, notInArray, or, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, jobs } from "@/lib/db/schema";
 import { type JsonObject, dump, parseCanonical } from "@repo-facts/contract";
@@ -12,7 +12,9 @@ import { redact } from "@/lib/git/redact";
  * roll back. Workers claim jobs under a lease inside an immediate
  * transaction; a job whose lease expires is claimable again. A repeated
  * idempotency key never creates a second job. Background jobs are claimed
- * only when no normal job is runnable. A kind can be limited to a number of
+ * only when no normal job is runnable, and not while a job of a kind that
+ * holds background work back is queued or running, as Catalog builds do so
+ * surveys use the entries being built. A kind can be limited to a number of
  * jobs running at once, so long jobs of one kind can't hold every slot.
  */
 
@@ -70,6 +72,8 @@ export interface ClaimOptions {
   now?: Date;
   leaseMs?: number;
   limits?: KindLimits;
+  /** Kinds whose queued or running jobs hold background work back until they finish. */
+  holdBackground?: readonly string[];
 }
 
 /**
@@ -84,6 +88,7 @@ export function claimNext(db: Executor, options: ClaimOptions): Job | undefined 
 
   return immediate(db, (tx) => {
     const saturated = saturatedKinds(tx, options.limits ?? {}, now);
+    const held = holdsBackground(tx, options.holdBackground ?? [], now);
     for (;;) {
       const candidate = tx
         .select()
@@ -92,6 +97,7 @@ export function claimNext(db: Executor, options: ClaimOptions): Job | undefined 
           and(
             or(and(eq(jobs.state, "queued"), lte(jobs.runAfter, now)), and(eq(jobs.state, "running"), lte(jobs.leaseExpiresAt, now))),
             saturated.length ? notInArray(jobs.kind, saturated) : undefined,
+            held ? gte(jobs.priority, JOB_PRIORITIES.normal) : undefined,
           ),
         )
         .orderBy(desc(jobs.priority), asc(jobs.runAfter), asc(jobs.id))
@@ -122,6 +128,19 @@ export function claimNext(db: Executor, options: ClaimOptions): Job | undefined 
         .get();
     }
   });
+}
+
+/** Whether a job of one of +kinds+ is queued, or running under a live lease, so background work waits. */
+function holdsBackground(db: Executor, kinds: readonly string[], now: Date): boolean {
+  if (kinds.length === 0) return false;
+  return (
+    db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(and(inArray(jobs.kind, [...kinds]), or(eq(jobs.state, "queued"), and(eq(jobs.state, "running"), gt(jobs.leaseExpiresAt, now)))))
+      .limit(1)
+      .get() !== undefined
+  );
 }
 
 /** The limited kinds with as many jobs running under live leases as their limit allows. An expired lease no longer counts. */

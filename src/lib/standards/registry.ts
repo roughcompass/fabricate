@@ -16,8 +16,12 @@ import { EDGE_TYPES, NODE_KINDS, RESOLUTION_STATES } from "@/lib/relationships/s
 export const INPUT_SCHEMAS = ["repository_profile", "relationship_map"] as const;
 export type InputSchema = (typeof INPUT_SCHEMAS)[number];
 
-/** Input schema versions this release can evaluate. Profile version 2 extends version 1 with the design-system fields. */
-export const SUPPORTED_VERSIONS: Readonly<Record<InputSchema, readonly number[]>> = { repository_profile: [1, 2], relationship_map: [1] };
+/**
+ * Input schema versions this release can evaluate. Profile version 2 extends
+ * version 1 with the design-system fields, and version 3 extends version 2
+ * with the Reference Catalog entries its facts were compared against.
+ */
+export const SUPPORTED_VERSIONS: Readonly<Record<InputSchema, readonly number[]>> = { repository_profile: [1, 2, 3], relationship_map: [1] };
 
 /** Every Repository Profile version: the fields of version 1 are fields of every later version. */
 const PROFILE_VERSIONS = SUPPORTED_VERSIONS.repository_profile;
@@ -60,7 +64,7 @@ const profile = (id: string, label: string, type: ValueType, description: string
 const service = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "service_dependency", type, schema: "repository_profile", versions: PROFILE_VERSIONS, ...extra });
 const graph = (scope: Scope, id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope, type, schema: "relationship_map", versions: [1], ...extra });
 // Design-system fields exist from Profile version 2, which embeds Surveyor fact document version 2. Counts and shares read the app scope.
-const design = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "repository", type, schema: "repository_profile", versions: [2], ...extra });
+const design = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "repository", type, schema: "repository_profile", versions: [2, 3], ...extra });
 const DESIGN_SYSTEM = { label: "Design system", description: "The design system's catalog id, such as salt" };
 
 export const SELECTORS: readonly SelectorDefinition[] = [

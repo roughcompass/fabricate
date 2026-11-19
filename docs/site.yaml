@@ -1,0 +1,120 @@
+# The Frontend Registry's docs (docs/site/, served under /docs). Sections and
+# pages are listed in reading order, which sets each page's previous and next
+# links. A page's title and summary must match its file's `#` heading and
+# first paragraph; the docs test (test/docs/site.test.ts) checks them, every
+# link, and every anchor. A page with `package` and `file` is read from an
+# installed Surveyor package, so it describes that release.
+summary: >-
+  The Frontend Registry is the Digital Enablement team's official registry of
+  CIB frontend applications. Every team registers its frontend repositories
+  there, and it keeps an evidence-backed record of what each one is built on,
+  surveyed without running any of its code, with Reference Catalog entries
+  for the design systems it uses, Standards and Assessments to compare
+  repositories against expectations, and Adoption Analytics across the fleet.
+sections:
+  - id: get-started
+    title: Get started
+    pages:
+      - path: what-it-is
+        title: What the Frontend Registry is
+        summary: The Frontend Registry is CIB's registry of frontend applications, and this page says what it gives you and where to start.
+      - path: add-your-repository
+        title: Add your repository
+        summary: Register your repository once, and the Frontend Registry surveys it and keeps its Profile current.
+      - path: find-and-read-a-profile
+        title: Find a repository and read its Profile
+        summary: Find any registered repository and read what its Profile says it's built on, with the evidence for each fact.
+      - path: see-adoption
+        title: See adoption across the fleet
+        summary: Design-system teams see which components, props, versions, and tokens repositories use across the whole fleet.
+  - id: concepts
+    title: Concepts
+    pages:
+      - path: four-parts
+        title: The four parts
+        summary: The Frontend Registry, Surveyor, the Reference Catalog, and the Catalog Builder each do one job and agree through versioned formats.
+      - path: repositories
+        title: Repositories
+        summary: A Repository is a Git repository registered by its clone URL and reference, and surveyed whenever either moves.
+      - path: profiles-and-recipes
+        title: Profiles and recipes
+        summary: A Profile is the immutable record of one commit's facts, and its recipe says exactly what produced it.
+      - path: facts-and-states
+        title: Facts and their states
+        summary: Every fact says how it is known, observed, inferred, unknown, or conflicting, and cites the evidence it came from.
+      - path: reference-catalog
+        title: Reference Catalog entries
+        summary: A Reference Catalog entry describes one design system at one version, and each repository is compared against the entry for the version it uses.
+      - path: standards-and-assessments
+        title: Standards and Assessments
+        summary: Standards state expectations as Controls, and Assessments compare repositories' Profiles with published Releases of them.
+      - path: how-a-survey-runs
+        title: How a survey runs
+        summary: A survey reads one commit of one repository with one recipe, without running its code, and stores its Profile.
+  - id: guides
+    title: Guides
+    pages:
+      - path: write-a-standard
+        title: Write a Standard
+        summary: Write a Standard's Controls in the structured editor, then publish a Release that Assessments can evaluate against.
+      - path: start-an-assessment
+        title: Start an Assessment
+        summary: Choose repositories and Standard Releases, start a Run, and evaluate it to get a Finding for each Control and repository.
+      - path: read-evidence
+        title: Read evidence
+        summary: Every fact and Finding links to the committed files and lines it came from, so you can check it yourself.
+      - path: adoption
+        title: Read Adoption Analytics
+        summary: Adoption Analytics totals design-system and package use across every registered repository, and its figures are defined here.
+      - path: use-with-your-agent
+        title: Use the Frontend Registry with your agent
+        summary: Your agent can read these docs as Markdown, find every page through llms.txt, and read any repository's Profile as JSON.
+  - id: reference
+    title: Reference
+    pages:
+      - path: fact-document
+        title: Fact document
+        summary: The fact document is Surveyor's record of one commit's facts, evidence, and Reference Catalog entries, as its contract defines it.
+        package: "@repo-facts/contract"
+        file: docs/detector-contract.md
+      - path: profile-versions
+        title: Profile versions
+        summary: Each Profile keeps the version it was written with, and later versions extend earlier ones for every Standard.
+      - path: entry-format
+        title: Reference Catalog entry format
+        summary: The Reference Catalog entry format describes one thing at one version as validated, digested JSON.
+        package: "@repo-facts/contract"
+        file: docs/reference-catalog.md
+      - path: json-profile
+        title: The JSON Profile
+        summary: A Repository's current Profile's fact document is readable as JSON at a stable address, with its digest.
+      - path: standard-format
+        title: The Standard format
+        summary: A Standard is a document of Controls whose expressions are data, validated against a closed set of operators and fields.
+      - path: configuration
+        title: Configuration and environment variables
+        summary: Every setting, where it's set, and the environment variable that overrides it.
+      - path: failure-reasons
+        title: Failure reasons
+        summary: When a survey, a Run's repository, or a Catalog build fails, its reason says what happened and what to do.
+      - path: glossary
+        title: Glossary
+        summary: The Frontend Registry's terms, each defined in one place.
+  - id: operate
+    title: Operate
+    pages:
+      - path: deploy-and-configure
+        title: Deploy and configure
+        summary: Run the Frontend Registry as a web server and a worker over one database, from a release built for it.
+      - path: system-status
+        title: System status
+        summary: The System status page shows the Surveyor release, the Reference Catalog entries in use, recent Catalog builds, and re-survey progress.
+      - path: re-surveys
+        title: Re-surveys
+        summary: The worker surveys a repository again when its commit, the Surveyor release, or a Reference Catalog entry it used changes.
+      - path: catalog-builds
+        title: Catalog builds
+        summary: The worker builds Reference Catalog entries for every version in use, from the registry you configure.
+      - path: upgrading-surveyor
+        title: Upgrade Surveyor
+        summary: A new Surveyor release ships with a Frontend Registry release, and the worker surveys every repository again with it.

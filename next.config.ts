@@ -1,10 +1,11 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 import { LEGACY_REDIRECTS } from "./src/lib/web/redirects";
+import { DOCS_REWRITES } from "./src/lib/web/rewrites";
 
 const root = path.dirname(new URL(import.meta.url).pathname);
 
-const SURVEYOR_PACKAGES = ["@repo-facts/architecture", "@repo-facts/bundle", "@repo-facts/contract", "@repo-facts/core", "@repo-facts/design-system", "@repo-facts/services", "@repo-facts/syntax"];
+const SURVEYOR_PACKAGES = ["@repo-facts/architecture", "@repo-facts/bundle", "@repo-facts/catalog-builder", "@repo-facts/contract", "@repo-facts/core", "@repo-facts/design-system", "@repo-facts/services", "@repo-facts/syntax"];
 
 const nextConfig: NextConfig = {
   // Browser tests build into their own directory, so they can run beside a
@@ -34,6 +35,10 @@ const nextConfig: NextConfig = {
   // Addresses the product no longer serves open the pages that replaced them (src/lib/web/redirects.ts).
   redirects() {
     return Promise.resolve(LEGACY_REDIRECTS);
+  },
+  // A docs page's Markdown, at its `.md` address or for `Accept: text/markdown` (src/lib/web/rewrites.ts).
+  rewrites() {
+    return Promise.resolve({ beforeFiles: DOCS_REWRITES, afterFiles: [], fallback: [] });
   },
 };
 

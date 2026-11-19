@@ -1,0 +1,16 @@
+# The things the Reference Catalog describes (docs/profiling.md, "The Reference Catalog").
+# The worker builds an entry of each for every version a Repository uses and
+# for its newest release, from the packages and data named here and the
+# team's rules in config/catalog-rules/<id>.yaml.
+things:
+  - kind: design_system
+    id: salt
+    # Its version is the entry's; components and their props come from it.
+    package: "@salt-ds/core"
+    # Tokens come from its stylesheets, and icons from its exports.
+    tokens: "@salt-ds/theme"
+    icons: "@salt-ds/icons"
+    # Salt's own published data: patterns, deprecations, and guidance.
+    data:
+      package: "@salt-ds/mcp"
+      format: salt-mcp

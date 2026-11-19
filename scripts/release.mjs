@@ -57,10 +57,13 @@ try {
   copy("dist");
   copy("drizzle");
   copy("config");
+  // The docs the web server serves: the Frontend Registry's own, and Surveyor's reference from its installed package, which tracing leaves out.
+  copy("docs");
+  copy("node_modules/@repo-facts/contract/docs");
   // The worker bundle loads the native SQLite binding from node_modules.
   copy("node_modules/better-sqlite3");
   // Standalone tracing copies the whole project directory; keep only what the processes run or read.
-  const keep = new Set([".next", "server.js", "node_modules", "package.json", "config", "dist", "drizzle", "public"]);
+  const keep = new Set([".next", "server.js", "node_modules", "package.json", "config", "dist", "drizzle", "docs", "public"]);
   for (const name of fs.readdirSync(target)) if (!keep.has(name)) fs.rmSync(path.join(target, name), { recursive: true, force: true });
   fs.mkdirSync(path.join(target, "storage"), { recursive: true });
   fs.writeFileSync(path.join(target, "RELEASE"), `${commit}\n`);

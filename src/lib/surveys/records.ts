@@ -8,6 +8,9 @@ import { generatePublicId } from "@/lib/db/ids";
 import { type SurveyState, type SurveyTrigger, runTargets, repositories, surveys } from "@/lib/db/schema";
 import { SURVEY_MACHINE, assertTransition } from "@/lib/db/state-machines";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
+import { catalogConfiguration } from "@/lib/catalog/configuration";
+import { type CurrentCatalog, currentCatalog } from "@/lib/catalog/current";
+import { catalogIsCurrent } from "@/lib/catalog/recipe";
 
 /*
  * Surveys (unify-surveys, design decision 1): one Surveyor run per
@@ -15,11 +18,17 @@ import { CURRENT_VERSION } from "@/lib/documents/schemas";
  * previews share. Finding or creating one, retrying a failed one, and
  * numbering happen in one immediate transaction, so two requests for one key
  * never make two surveys.
+ *
+ * The recipe includes the Reference Catalog entries a survey was compared
+ * against (establish-frontend-registry, design decision 6). Surveyor picks
+ * them as it runs, so a successful survey matches a request only while its
+ * entries are still the ones a survey would pick now; otherwise the commit
+ * is surveyed again under a new key.
  */
 
 export type Survey = typeof surveys.$inferSelect;
 
-/** What a survey's Profile is made with. */
+/** What a survey's Profile is made with, besides the Reference Catalog entries Surveyor picks as it runs. */
 export interface Recipe {
   surveyorRelease: string;
   configurationDigest: string;
@@ -40,6 +49,8 @@ export interface SurveyRequest extends Recipe {
   trigger: SurveyTrigger;
   requestedByRunId?: number | null;
   resolvedAt?: Date;
+  /** The current Reference Catalog, which decides whether a successful survey's entries are still current; read from the database when not given. */
+  catalog?: CurrentCatalog;
 }
 
 export interface Requested {
@@ -54,7 +65,7 @@ export interface Requested {
  */
 export function requestSurvey(db: Executor, request: SurveyRequest): Requested {
   return immediate(db, (tx) => {
-    const existing = surveyOfKey(tx, request.repositoryId, request.commitSha, request);
+    const existing = surveyOfKey(tx, request.repositoryId, request.commitSha, request, request.catalog ?? currentCatalog(tx, catalogConfiguration()));
     if (existing) {
       if (existing.state !== "failed") return { survey: existing, queued: false };
       return { survey: moveSurvey(tx, existing, "queued", {}), queued: true };
@@ -84,8 +95,13 @@ export function requestSurvey(db: Executor, request: SurveyRequest): Requested {
   });
 }
 
-export function surveyOfKey(db: Executor, repositoryId: number, commitSha: string, recipe: Recipe): Survey | undefined {
-  return db
+/**
+ * The survey of a commit under +recipe+ and the current Catalog +catalog+: a
+ * successful one whose entries are still current, or else the one on its way
+ * or failed, which compares against the current entries when it runs.
+ */
+export function surveyOfKey(db: Executor, repositoryId: number, commitSha: string, recipe: Recipe, catalog: CurrentCatalog): Survey | undefined {
+  const candidates = db
     .select()
     .from(surveys)
     .where(
@@ -97,11 +113,18 @@ export function surveyOfKey(db: Executor, repositoryId: number, commitSha: strin
         eq(surveys.profileSchemaVersion, recipe.profileSchemaVersion),
       ),
     )
-    .get();
+    .orderBy(desc(surveys.number))
+    .all();
+  return candidates.find((survey) => survey.state === "succeeded" && catalogIsCurrent(survey.catalog, catalog)) ?? candidates.find((survey) => survey.state !== "succeeded");
+}
+
+/** Whether +survey+ was made with +recipe+'s Surveyor release, configuration, and Profile version. */
+export function sameRecipe(survey: Pick<Survey, keyof Recipe>, recipe: Recipe): boolean {
+  return survey.surveyorRelease === recipe.surveyorRelease && survey.configurationDigest === recipe.configurationDigest && survey.profileSchemaVersion === recipe.profileSchemaVersion;
 }
 
 /** Moves +survey+ to +state+ with +changes+, checking the state machine. */
-export function moveSurvey(db: Executor, survey: Survey, state: SurveyState, changes: Partial<Pick<Survey, "attempts" | "failureCode" | "failureMessage" | "treeSha" | "internalRef">>): Survey {
+export function moveSurvey(db: Executor, survey: Survey, state: SurveyState, changes: Partial<Pick<Survey, "attempts" | "failureCode" | "failureMessage" | "treeSha" | "internalRef" | "catalog" | "catalogDigest">>): Survey {
   if (state !== survey.state) assertTransition(SURVEY_MACHINE, survey.state, state, `Survey ${survey.publicId}`);
   const finishedAt = state === "succeeded" || state === "failed" ? new Date() : null;
   return db.update(surveys).set({ ...changes, state, finishedAt }).where(eq(surveys.id, survey.id)).returning().get();

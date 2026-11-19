@@ -1,4 +1,4 @@
-import type { JsonObject } from "@repo-facts/contract";
+import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { beforeAll, describe, expect, it } from "vitest";
 import { kindLabel } from "@/components/ui/status";
 import { layoutOf, rowCells } from "@/lib/profiles/layouts";
@@ -70,6 +70,14 @@ describe("Profile category layouts", () => {
         { text: "@salt-ds/core 1.74.0 · @salt-ds/icons 1.18.4", secondary: "Declared in 2 manifests" },
       ],
     });
+  });
+
+  it("names the Reference Catalog entry a version 3 design-system fact was compared against", () => {
+    const fact = (entry: JsonValue): Fact => ({ key: "salt", state: "observed", value: { catalog: "salt", entry, imported: true, name: "Salt", provider: true, theme_stylesheet: true, packages: [] }, evidence: [], rule: "design-system.recognize" });
+    const named = rowCells(layoutOf("design_systems"), fact({ version: "1.75.0", digest: "a".repeat(64) }));
+    expect(named.kind === "cells" && named.cells[0]).toEqual({ text: "Salt", secondary: "Reference Catalog entry 1.75.0" });
+    const none = rowCells(layoutOf("design_systems"), fact(null));
+    expect(none.kind === "cells" && none.cells[0]).toEqual({ text: "Salt", secondary: "No Reference Catalog entry for its version" });
   });
 
   it("counts element and style uses in the app first, with stories and tests apart, and leads with the summary", () => {

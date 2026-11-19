@@ -10,7 +10,7 @@ A draft and a Release share one document, `fabricate.standard` version 1:
 
 | Field | Meaning |
 | --- | --- |
-| `input_schemas` | The Repository Profile and Relationship Map versions the Controls read, such as `{ "repository_profile": [2], "relationship_map": [1] }` |
+| `input_schemas` | The Repository Profile and Relationship Map versions the Controls read, such as `{ "repository_profile": [3], "relationship_map": [1] }` |
 | `controls` | One or more Controls |
 | `standard` | On a Release only: the Standard's name and purpose when it was published |
 
@@ -68,13 +68,13 @@ Each selector reads one typed value in a scope. A Control's expressions start in
 
 Each repository selector also names the Profile fact category it reads, such as `ci_systems` for `repository.ci_systems` (`category` in `src/lib/standards/registry.ts`). A Finding's link to its Profile opens that category, and a registry test requires every repository selector to name a category the installed contract defines.
 
-### Repository Profile, versions 1 and 2
+### Repository Profile, versions 1, 2, and 3
 
-Profile version 2 embeds the fact document version 2 that Surveyor 0.2.0 introduced, with the design-system categories. Runs from Surveyor release 0.2.0 or later record version 2, and Runs from 0.1.0 keep version 1.
+Profile version 2 embeds the fact document version 2 that Surveyor 0.2.0 introduced, with the design-system categories. Profile version 3 embeds the fact document version 3 that Surveyor 0.7.0 introduced, which also names the Reference Catalog entries its facts were compared against. Runs from Surveyor release 0.7.0 or later record version 3, Runs from 0.2.0 to 0.6.0 version 2, and Runs from 0.1.0 version 1.
 
-Version 2 *extends* version 1: every version 1 field below reads the same from a version 2 Profile. So a Release that declares version 1 also evaluates version 2 Runs, without being republished. The design-system fields exist only in version 2, so a Control that reads one must declare `repository_profile: [2]`. A Release that declares only version 2 refuses a version 1 Run as incompatible. New drafts declare version 2, the current version.
+Each version *extends* the ones before it: every version 1 field below reads the same from a version 2 or 3 Profile, and every version 2 field reads the same from a version 3 Profile. So a Release that declares version 1 or 2 also evaluates version 3 Runs, without being republished. The design-system fields exist from version 2, so a Control that reads one must declare `repository_profile: [2]` or `[3]`. A Release that declares only version 2 refuses a version 1 Run as incompatible. New drafts declare version 3, the current version.
 
-Scope `repository`, versions 1 and 2:
+Scope `repository`, versions 1, 2, and 3:
 
 | Selector | Type | Reads |
 | --- | --- | --- |
@@ -99,7 +99,7 @@ Scope `repository`, versions 1 and 2:
 | `repository.declared_range` | version, with a package parameter | The range manifests declare for a direct dependency |
 | `repository.resolved_version` | version, with a package parameter | The versions lockfiles resolve for a direct dependency |
 
-Design-system fields, in scope `repository`, version 2 only. They read the `design_systems`, `ui_elements`, and `style_values` categories. A design-system parameter is the design system's catalog id, such as `salt`:
+Design-system fields, in scope `repository`, versions 2 and 3. They read the `design_systems`, `ui_elements`, and `style_values` categories. A design-system parameter is the design system's catalog id, such as `salt`:
 
 | Selector | Type | Reads |
 | --- | --- | --- |

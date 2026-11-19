@@ -244,6 +244,7 @@ export function selectReleases(db: Db, assessment: Assessment, releases: readonl
 export function asProfileVersion1(document: JsonObject): JsonObject {
   const factDocument = structuredClone(document.fact_document) as JsonObject & { categories: Record<string, unknown> };
   for (const id of ["design_systems", "ui_elements", "style_values"]) delete factDocument.categories[id];
+  delete factDocument.catalog_entries;
   factDocument.schema_version = 1;
   return { ...document, schema_version: 1, fact_document: factDocument, fact_document_digest: digestOf(factDocument).digest };
 }

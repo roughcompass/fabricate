@@ -45,8 +45,6 @@ const KEPT: readonly RegExp[] = [
 const KEPT_IN: Readonly<Record<string, readonly RegExp[]>> = {
   // The names still read for one release, all in one module.
   "src/lib/legacy-names.ts": [OLD_NAMES],
-  // The installed @repo-facts/bundle 0.6.0 exports the release under its old name; this module is its one importer.
-  "src/lib/surveys/surveyor-release.ts": [/\bDETECTOR_RELEASE\b/g],
   // The registry variables' old names, which the release scripts still read for one release.
   "scripts/release.mjs": [/\bREPO_FACTS_NPM_REGISTRY\b/g],
   "scripts/verify-release.mjs": [/\bREPO_FACTS_NPM_TOKEN\b/g, /\(\?:SURVEYOR\|REPO_FACTS\)_NPM_TOKEN/g, /\brepoFacts\b/g],

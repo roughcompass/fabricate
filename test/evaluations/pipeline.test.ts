@@ -57,8 +57,8 @@ describe("Evaluation pipeline", () => {
       const token = crypto.randomUUID();
       const { evaluation, releases, duplicate } = startEvaluation(db, updated.publicId, partial.publicId, token);
       expect(duplicate).toBe(false);
-      // The Releases read Profile v1; the Assessment's v2 Profiles extend it.
-      expect(evaluation).toMatchObject({ state: "queued", evaluatorVersion: "1", profileSchemaVersion: 2, relationshipSchemaVersion: 1 });
+      // The Releases read Profile v1; the Assessment's v3 Profiles extend it.
+      expect(evaluation).toMatchObject({ state: "queued", evaluatorVersion: "1", profileSchemaVersion: 3, relationshipSchemaVersion: 1 });
       expect(releases.map((release) => release.releaseDigest)).toEqual([a!.digest, b!.digest]);
       expect(parseCanonical(evaluation.coverageGaps)).toEqual([{ target: expect.any(String), source: { public_id: failing.publicId, name: "billing" }, state: "failed", reason: "source_unavailable" }]);
       expect(db.select().from(jobs).all().filter((job) => job.kind === EVALUATE_RELEASE).map((job) => job.idempotencyKey)).toEqual([`${EVALUATE_RELEASE}:${evaluation.publicId}:0`, `${EVALUATE_RELEASE}:${evaluation.publicId}:1`]);
@@ -102,6 +102,18 @@ describe("Evaluation pipeline", () => {
   });
 
   describe("jobs and finalization", () => {
+    it("evaluate version 3 Profiles with a Release that reads Profile version 2", async () => {
+      const { assessment, run } = await scenario();
+      expect(run.profileSchemaVersion).toBe(3);
+      const release = publishStandard(db, "Reads v2", [control({ key: "uses-pnpm", condition: manager("pnpm") })], { profileVersions: [2] });
+      const { evaluation } = startEvaluation(db, select(assessment, [release]).publicId, run.publicId, crypto.randomUUID());
+
+      await drainJobs(db, jobHandlers(db));
+      expect(getEvaluation(db, evaluation.publicId)).toMatchObject({ state: "complete", profileSchemaVersion: 3 });
+      const outcomes = Object.fromEntries(findingsOf(db, evaluation.id).map((finding) => [String((findingDocument(finding).subject as JsonObject).name), finding.outcome]));
+      expect(outcomes).toEqual({ "npm-app": "gap", "pnpm-app": "meets" });
+    });
+
     it("evaluate each Release independently, keeping contradictory expectations as separate Findings, and finalize once", async () => {
       const { assessment, run } = await scenario();
       const pnpmRelease = publishStandard(db, "Prefers pnpm", [control({ key: "package-manager", condition: manager("pnpm") })]);

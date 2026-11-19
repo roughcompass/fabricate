@@ -11,8 +11,10 @@ The assessment projection holds indexed copies of what Repository Profiles and R
 | `graph_nodes` | Node of a Relationship Map. A repository node names its catalog source and assessment target, so edges join to their repositories. | The map |
 | `graph_edges` | Edge of a Relationship Map: type, resolution state, endpoints, resolver rule, basis, reason, evidence IDs, reference, and review kind | The map |
 | `graph_edge_candidates` | Candidate endpoint of an ambiguous edge | The map |
+| `design_system_usage` | Design-system component a Profile's repository uses (`kind` `component`), or raw HTML element a design-system component replaces (`kind` `element`): the design system, the entry its facts were compared against, the component's package or the element's replacement, sites, customized sites, and unknown sites in the app, stories, and tests, and a component's props per scope | The Profile |
+| `design_system_profiles` | Profile: the states of its `design_systems`, `ui_elements`, and `style_values` categories, and each design system it recognizes, with its entry, the version wanted, and its adoption and token figures per scope | The Profile |
 
-Every row records the digest of the document it came from and the projection version that produced it.
+Every row records the digest of the document it came from and the projection version that produced it. Projection version 4 added the design-system tables, which Adoption Analytics reads; Profiles stored before it have none until a rebuild.
 
 An edge's review kind tells views what to draw:
 

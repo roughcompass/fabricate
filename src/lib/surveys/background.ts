@@ -7,7 +7,7 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, type SurveyTrigger, jobs } from "@/lib/db/schema";
 import type { GitRunner } from "@/lib/git/runner";
 import { type Job, enqueue } from "@/lib/jobs/queue";
-import { type Survey, currentRecipe, recordConfiguredResolution, requestSurvey, surveyById } from "./records";
+import { type Recipe, type Survey, currentRecipe, recordConfiguredResolution, requestSurvey, sameRecipe, surveyById } from "./records";
 import { queueSurvey } from "./run";
 
 /*
@@ -51,7 +51,7 @@ export async function surveyRepository(db: Executor, repository: Repository, tri
       commitSha: resolution.commitSha,
       reference: resolution.name,
       fromConfiguredReference: true,
-      trigger: trigger === "check" ? checkTrigger(tx, repository, resolution.commitSha) : trigger,
+      trigger: trigger === "check" ? checkTrigger(tx, repository, resolution.commitSha, recipe) : trigger,
       ...recipe,
     });
     recordConfiguredResolution(tx, repository.id, resolution.commitSha, new Date());
@@ -63,10 +63,17 @@ export async function surveyRepository(db: Executor, repository: Repository, tri
   });
 }
 
-/** Why the scheduled check surveys a commit: the Repository's first survey, a new commit of its reference, or the same commit under a new recipe. */
-function checkTrigger(db: Executor, repository: Repository, commitSha: string): SurveyTrigger {
+/**
+ * Why the scheduled check surveys a commit: the Repository's first survey, a
+ * new commit of its reference, the same commit under a new Surveyor release
+ * or configuration, or the same commit and recipe when a Reference Catalog
+ * entry its current survey used has changed.
+ */
+function checkTrigger(db: Executor, repository: Repository, commitSha: string, recipe: Recipe): SurveyTrigger {
   if (repository.currentSurveyId === null) return "added";
-  return surveyById(db, repository.currentSurveyId).commitSha === commitSha ? "recipe" : "commit";
+  const current = surveyById(db, repository.currentSurveyId);
+  if (current.commitSha !== commitSha) return "commit";
+  return sameRecipe(current, recipe) ? "catalog" : "recipe";
 }
 
 /**

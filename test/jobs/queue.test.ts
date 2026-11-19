@@ -7,7 +7,8 @@ import { jobCounts } from "../support/jobs";
 import { NonRetryableError, Worker, drainJobs, runJob } from "@/lib/jobs/worker";
 import { PROCESS_TARGET } from "@/lib/runs/orchestration";
 import { getConfig, withOverrides } from "@/lib/config";
-import { jobLimits } from "@/lib/jobs/registry";
+import { HOLD_BACKGROUND, jobLimits } from "@/lib/jobs/registry";
+import { BUILD_ENTRY } from "@/lib/catalog/build";
 import { BUILD_PREVIEW } from "@/lib/previews/records";
 import type { JsonObject } from "@repo-facts/contract";
 import { createTestDb, rawRun, withSharedFileDb } from "../support/db";
@@ -75,6 +76,26 @@ describe("job queue", () => {
     expect(claimNext(db, { workerId: "w", now: at(1_000) })?.idempotencyKey).toBe("test.work:profile");
     expect(claimNext(db, { workerId: "w", now: at(1_000) })).toBeUndefined();
     expect(reload(db, 1).priority).toBe(JOB_PRIORITIES.background);
+  });
+
+  it("holds background work back while a Catalog build is queued or running, but not work people start", () => {
+    const holdBackground = HOLD_BACKGROUND;
+    enqueue(db, job("survey", { runAfter: at(0), priority: JOB_PRIORITIES.background }));
+    enqueue(db, { kind: BUILD_ENTRY, payload: { version: "1.76.0" }, idempotencyKey: "build", runAfter: at(0) });
+    enqueue(db, job("run", { runAfter: at(500) }));
+
+    const build = claimNext(db, { workerId: "w", now: at(1_000), holdBackground })!;
+    expect(build.kind).toBe(BUILD_ENTRY);
+    expect(claimNext(db, { workerId: "w", now: at(1_000), holdBackground })?.idempotencyKey).toBe("test.work:run");
+    // The build is running, so the background survey waits.
+    expect(claimNext(db, { workerId: "w", now: at(1_000), holdBackground })).toBeUndefined();
+    // A worker that doesn't hold background work back claims it.
+    expect(claimNext(db, { workerId: "w", now: at(1_000) })?.idempotencyKey).toBe("test.work:survey");
+
+    enqueue(db, job("later survey", { runAfter: at(0), priority: JOB_PRIORITIES.background }));
+    expect(claimNext(db, { workerId: "w", now: at(1_000), holdBackground })).toBeUndefined();
+    expect(succeed(db, build, "w")).toBe(true);
+    expect(claimNext(db, { workerId: "w", now: at(1_000), holdBackground })?.idempotencyKey).toBe("test.work:later survey");
   });
 
   it("claims a background job joined at normal priority ahead of other background work", () => {

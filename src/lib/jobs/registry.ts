@@ -1,4 +1,7 @@
 import { COORDINATE_RUN, FINALIZE_RUN, PROCESS_TARGET, coordinateRun, finalizeRun, processTarget } from "@/lib/runs/orchestration";
+import { BUILD_ENTRY, buildRequest, runBuild } from "@/lib/catalog/build";
+import { CHECK_CATALOG, runCatalogCheck } from "@/lib/catalog/check";
+import { TAKE_SNAPSHOTS, runSnapshots } from "@/lib/adoption/snapshots";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, getDb } from "@/lib/db/client";
 import { FINALIZE_EVALUATION, finalizeEvaluation, runEvaluationRelease } from "@/lib/evaluations/jobs";
@@ -29,6 +32,11 @@ export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConf
       const repository = findRepository(db, String(payload.repository));
       if (repository) await surveyRepository(db, repository, String(payload.trigger) as BackgroundTrigger, { config, signal: context.signal });
     },
+    [TAKE_SNAPSHOTS]: (payload) => void runSnapshots(db, config, { slot: String(payload.slot), log: (message) => console.log(`[worker] ${message}`) }),
+    [CHECK_CATALOG]: async (payload) =>
+      void (await runCatalogCheck(db, config, { ...(typeof payload.slot === "string" && { slot: payload.slot }), ...(typeof payload.after === "string" && { after: payload.after }) }, { log: (message) => console.log(`[worker] ${message}`) })),
+    // A build that fails stores nothing; its job's last error says why, and only an unreachable registry is retried.
+    [BUILD_ENTRY]: async (payload, context) => void (await runBuild(db, buildRequest(payload), { config, jobId: context.job.id })),
     // Fails the preparation, rather than running it, while previews are off or the Repository isn't enrolled.
     [PREPARE_PREVIEW]: async (payload, context) => void (await runPreparation(db, { preparation: String(payload.preparation), requested: Number(payload.requested), afterSurvey: payload.afterSurvey === true }, { config, signal: context.signal })),
     // Each claim of the job is its own claim of the attempt (job attempts count claims), so only the latest can publish.
@@ -36,6 +44,13 @@ export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConf
       void (await runPreviewBuild(db, { preview: String(payload.preview), attempt: Number(payload.attempt) }, { config, signal: context.signal, claim: `${context.job.leaseOwner ?? "worker"}#${context.job.id}.${context.job.attempts}` })),
   };
 }
+
+/**
+ * Job kinds that hold background work back while they're queued or running:
+ * Catalog builds, so background surveys, such as every Repository's after a
+ * Surveyor upgrade, run with the entries being built rather than before them.
+ */
+export const HOLD_BACKGROUND: readonly string[] = [BUILD_ENTRY];
 
 /** Job kinds with their own limit on how many run at once, apart from the worker's concurrency (design decision 8). */
 export function jobLimits(config: FrontendRegistryConfig = getConfig()): KindLimits {

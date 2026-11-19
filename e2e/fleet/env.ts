@@ -16,4 +16,6 @@ export const FLEET_ENV = {
   FRONTEND_REGISTRY_DATABASE: FLEET_DATABASE,
   FRONTEND_REGISTRY_REPOSITORY_STORAGE: path.join(FLEET_RUN, "repositories"),
   FRONTEND_REGISTRY_ALLOWED_ROOTS: FLEET_ROOT,
+  // The fleet run never reaches a package registry: Catalog checks and builds find this one unreachable.
+  FRONTEND_REGISTRY_CATALOG_REGISTRY: "http://127.0.0.1:9/",
 };

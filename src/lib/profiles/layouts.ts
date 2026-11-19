@@ -3,6 +3,7 @@ import { factText, formatValue } from "@/components/results/value";
 import { countLabel, formatBytes, formatNumber } from "@/components/ui/count";
 import { checkKind, ciSystem, dependencyKind, humanize, kindLabel, runtimeName } from "@/components/ui/status";
 import { isJsonObject } from "@/lib/json";
+import { PRODUCT } from "@/lib/product";
 import { COMPOSITION } from "./composition";
 import type { Fact } from "./states";
 
@@ -185,14 +186,28 @@ const outsideApp = (names: string[]): Column => ({
   },
 });
 
+/**
+ * What a design system's facts were compared against: from fact document
+ * version 3, the Reference Catalog entry for the version in use; before
+ * that, the catalog compiled into the Surveyor release.
+ */
+function comparedWith(fact: Fact): string | undefined {
+  const value = isJsonObject(fact.value) ? fact.value : {};
+  if ("entry" in value) {
+    const version = isJsonObject(value.entry) ? text(value.entry.version) : null;
+    return version ? `${PRODUCT.referenceCatalog} entry ${version}` : `No ${PRODUCT.referenceCatalog} entry for its version`;
+  }
+  const catalog = [text(field(fact, "catalog")), text(field(fact, "catalog_version"))].filter(Boolean).join(" ");
+  return catalog ? `Catalog ${catalog}` : undefined;
+}
+
 const designSystems = layout(
   {
     label: "Design system",
     cell: (fact) => {
       const name = text(field(fact, "name"));
       if (name === null) return null;
-      const catalog = [text(field(fact, "catalog")), text(field(fact, "catalog_version"))].filter(Boolean).join(" ");
-      return { text: name, secondary: catalog ? `Catalog ${catalog}` : undefined };
+      return { text: name, secondary: comparedWith(fact) };
     },
   },
   {

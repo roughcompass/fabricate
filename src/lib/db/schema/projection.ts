@@ -199,3 +199,119 @@ export const evidenceIndex = sqliteTable(
     versionCheck("evidence_index_projection_version", t.projectionVersion),
   ],
 );
+
+export const DESIGN_SYSTEM_USAGE_KINDS = ["component", "element"] as const;
+export type DesignSystemUsageKind = (typeof DESIGN_SYSTEM_USAGE_KINDS)[number];
+
+/** How often one prop is passed, and each value passed when its entry lists a finite set. */
+export interface PropCount {
+  count: number;
+  values?: Record<string, number>;
+}
+
+/** The props passed to a component in one scope, by name; `unknown` counts elements whose props can't be read, such as spreads. */
+export interface ScopeProps {
+  unknown: number;
+  names: Record<string, PropCount>;
+}
+
+/**
+ * How one Profile's repository uses one design-system component, or writes
+ * one raw HTML element a design-system component replaces
+ * (establish-frontend-registry, design decision 7). Counts are per scope:
+ * the app, stories, and tests. A component's customized sites are those
+ * styled beyond what it offers; an element's are those it styles. Unknown
+ * sites are ones whose use couldn't be read whole. Adoption Analytics reads
+ * these rows, never the Profile.
+ */
+export const designSystemUsage = sqliteTable(
+  "design_system_usage",
+  {
+    id: id(),
+    profileId: integer("profile_id")
+      .notNull()
+      .references(() => repositoryProfiles.id, { onDelete: "restrict" }),
+    /** The design system's id, such as salt. */
+    designSystem: text("design_system").notNull(),
+    /** The Reference Catalog entry the Profile's facts were compared against, when its fact document names one. */
+    entryDigest: text("entry_digest"),
+    kind: text("kind", { enum: DESIGN_SYSTEM_USAGE_KINDS }).notNull(),
+    /** A component's name, such as Button, or an element's tag, such as button. */
+    name: text("name").notNull(),
+    /** A component's package, or the component that replaces an element. */
+    counterpart: text("counterpart"),
+    appSites: integer("app_sites").notNull(),
+    appCustomized: integer("app_customized").notNull(),
+    appUnknown: integer("app_unknown").notNull(),
+    storiesSites: integer("stories_sites").notNull(),
+    storiesCustomized: integer("stories_customized").notNull(),
+    storiesUnknown: integer("stories_unknown").notNull(),
+    testsSites: integer("tests_sites").notNull(),
+    testsCustomized: integer("tests_customized").notNull(),
+    testsUnknown: integer("tests_unknown").notNull(),
+    /** A component's props, per scope; null for elements, and for components from fact documents before version 3. */
+    props: text("props", { mode: "json" }).$type<{ app: ScopeProps; stories: ScopeProps; tests: ScopeProps }>(),
+    documentDigest: text("document_digest").notNull(),
+    projectionVersion: integer("projection_version").notNull(),
+  },
+  (t) => [
+    index("design_system_usage_name").on(t.designSystem, t.kind, t.name),
+    index("design_system_usage_profile").on(t.profileId),
+    check("design_system_usage_kind", sql.raw(`kind IN (${sqlList(DESIGN_SYSTEM_USAGE_KINDS)})`)),
+    check("design_system_usage_counts", sql`min(${t.appSites}, ${t.appCustomized}, ${t.appUnknown}, ${t.storiesSites}, ${t.storiesCustomized}, ${t.storiesUnknown}, ${t.testsSites}, ${t.testsCustomized}, ${t.testsUnknown}) >= 0`),
+    check("design_system_usage_props", sql`${t.props} IS NULL OR (${t.kind} = 'component' AND json_valid(${t.props}) AND json_type(${t.props}) = 'object')`),
+    check("design_system_usage_entry_digest", sql`${t.entryDigest} IS NULL OR length(${t.entryDigest}) = 64`),
+    digestCheck("design_system_usage_document_digest", t.documentDigest),
+    versionCheck("design_system_usage_projection_version", t.projectionVersion),
+  ],
+);
+
+/** A design system a Profile recognizes, and its summary figures, per scope. */
+export interface RecognizedDesignSystem {
+  id: string;
+  name: string;
+  /** The entry its facts were compared against: its version and digest, or null when no entry was at or before the version in use. Absent before fact document version 3. */
+  entry?: { version: string; digest: string } | null;
+  /** The version the repository wanted, from the fact document's Catalog entries. */
+  wanted?: { package: string; version: string | null };
+  app: DesignSystemFigures;
+  stories: DesignSystemFigures;
+  tests: DesignSystemFigures;
+}
+
+/** One scope's design-system figures: elements that are its components, of all elements, and style declarations that use its tokens, of those that could. */
+export interface DesignSystemFigures {
+  designSystem: number;
+  elements: number;
+  tokenized: number;
+  tokenCapable: number;
+}
+
+/**
+ * What one Profile says about design systems as a whole: the states of its
+ * design-system categories, which say whether its facts can be counted, and
+ * the design systems it recognizes, with their summary figures. One row per
+ * Profile, so Adoption Analytics can count the repositories it covers.
+ */
+export const designSystemProfiles = sqliteTable(
+  "design_system_profiles",
+  {
+    id: id(),
+    profileId: integer("profile_id")
+      .notNull()
+      .unique()
+      .references(() => repositoryProfiles.id, { onDelete: "restrict" }),
+    /** Each design-system category's state, such as observed, absent, or unknown; null when the document has no such category. */
+    designSystemsState: text("design_systems_state"),
+    uiElementsState: text("ui_elements_state"),
+    styleValuesState: text("style_values_state"),
+    recognized: text("recognized", { mode: "json" }).$type<RecognizedDesignSystem[]>().notNull(),
+    documentDigest: text("document_digest").notNull(),
+    projectionVersion: integer("projection_version").notNull(),
+  },
+  (t) => [
+    jsonArrayCheck("design_system_profiles_recognized", t.recognized),
+    digestCheck("design_system_profiles_document_digest", t.documentDigest),
+    versionCheck("design_system_profiles_projection_version", t.projectionVersion),
+  ],
+);

@@ -16,6 +16,8 @@ const shared: Settings = {
   analysis: { maxBlobBytes: 1024, maxLockfileBytes: 2048, maxFiles: 10, maxTotalBytes: 4096 },
   demo: { enabled: false },
   profiling: { checkMinutes: 60 },
+  catalog: { registry: "https://registry.npmjs.org/" },
+  adoption: { snapshotDays: 7, rarelyUsedPercentile: 25 },
   previews: { enabled: false, trustedSources: [], nodeVersions: {}, storage: "storage/previews", concurrency: 1, timeoutMinutes: 15, maxOutputBytes: 209_715_200, maxStorageBytes: 5_368_709_120 },
 };
 
