@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
+import { CloneUrl, InvalidCloneUrl } from "@/lib/repositories/clone-url";
 import { type FrontendRegistryConfig, getConfig, isInside } from "@/lib/config";
 import { GitError } from "./errors";
 import { redact } from "./redact";

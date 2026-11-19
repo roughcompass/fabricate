@@ -130,7 +130,7 @@ export interface EligibilityInput {
 
 /** Decides every package of the commit, and the refusal when none qualifies. */
 export function evaluateEligibility(input: EligibilityInput): Eligibility {
-  const repository = new Repository(input.document);
+  const repository = new ProfiledRepository(input.document);
   const packages = repository.packages.map((directory) => evaluatePackage(repository, directory, input));
   if (packages.some((verdict) => verdict.qualifies)) return { packages, refusal: null };
   if (packages.length === 0) return { packages, refusal: { reason: "No package declares a browser framework", conditions: [{ ...noPackage(repository), package: null }] } };
@@ -142,7 +142,7 @@ export function evaluateEligibility(input: EligibilityInput): Eligibility {
 
 /** The directories whose committed package.json evaluation reads: every package's install root. */
 export function installRootManifests(document: FactDocument): string[] {
-  const repository = new Repository(document);
+  const repository = new ProfiledRepository(document);
   return [...new Set(repository.packages.map((directory) => repository.membership(directory).root ?? directory))].sort();
 }
 
@@ -150,7 +150,7 @@ export function manifestPath(directory: string): string {
   return directory === "." ? "package.json" : `${directory}/package.json`;
 }
 
-function evaluatePackage(repository: Repository, directory: string, input: EligibilityInput): PackageVerdict {
+function evaluatePackage(repository: ProfiledRepository, directory: string, input: EligibilityInput): PackageVerdict {
   const membership = repository.membership(directory);
   const installRoot = membership.root ?? directory;
   const framework = frameworkCondition(repository, directory);
@@ -170,7 +170,7 @@ function evaluatePackage(repository: Repository, directory: string, input: Eligi
 
 // -- Conditions ---------------------------------------------------------------
 
-function frameworkCondition(repository: Repository, directory: string): { condition: Condition } {
+function frameworkCondition(repository: ProfiledRepository, directory: string): { condition: Condition } {
   const manifest = manifestPath(directory);
   const facts = repository.facts("frameworks").filter((fact) => manifestOfFact(fact) === manifest);
   const deciding = facts.map((fact) => repository.decidingFact("frameworks", fact));
@@ -187,7 +187,7 @@ function frameworkCondition(repository: Repository, directory: string): { condit
   return fail(`No browser framework is declared in ${manifest}. Previews need ${list(Object.values(BROWSER_FRAMEWORKS), "or")}.`);
 }
 
-function buildToolCondition(repository: Repository, directory: string): { condition: Condition; tool: BuildTool | null } {
+function buildToolCondition(repository: ProfiledRepository, directory: string): { condition: Condition; tool: BuildTool | null } {
   const applicable = repository.facts("build_tools").filter((fact) => fact.evidence.some((id) => repository.owner(repository.evidencePath(id)) === directory));
   const supported = applicable.filter((fact) => (BUILD_TOOLS as readonly string[]).includes(toolId(fact)));
   // A tool is reported once for the whole repository, so only this package's evidence is kept.
@@ -204,7 +204,7 @@ function buildToolCondition(repository: Repository, directory: string): { condit
   return fail(`No supported build tool applies to this package.${found} Previews support Vite, webpack, Rspack, and Rsbuild.`);
 }
 
-function packageManagerCondition(repository: Repository, directory: string, membership: Membership, manifests: ReadonlyMap<string, ManifestRead>): { condition: Condition; plan: BuildPlan["packageManager"] | null } {
+function packageManagerCondition(repository: ProfiledRepository, directory: string, membership: Membership, manifests: ReadonlyMap<string, ManifestRead>): { condition: Condition; plan: BuildPlan["packageManager"] | null } {
   const fail = (reason: string, facts: DecidingFact[]) => ({ condition: { condition: "package_manager" as const, passed: false, reason, facts }, plan: null });
   if (membership.unknown) return fail(`Whether it belongs to a workspace couldn't be decided: ${membership.unknown}`, membership.facts);
 
@@ -249,7 +249,7 @@ function packageManagerCondition(repository: Repository, directory: string, memb
   return { condition: { condition: "package_manager", passed: true, reason: `Installs with ${name}${version ? ` ${version}` : ""} from ${lockfiles[0]} at ${at}`, facts }, plan };
 }
 
-function nodeCondition(repository: Repository, directory: string, installRoot: string, configured: readonly string[]): { condition: Condition; plan: BuildPlan["node"] | null } {
+function nodeCondition(repository: ProfiledRepository, directory: string, installRoot: string, configured: readonly string[]): { condition: Condition; plan: BuildPlan["node"] | null } {
   const category = categoryOf(repository.document, "runtime_requirements");
   const scope = repository.nodeScope(directory, installRoot);
   const applicable = (input: string) => {
@@ -320,7 +320,7 @@ export function selectNode(configured: readonly string[], ranges: readonly strin
   return { version, reason: ranges.length === 0 ? `No Node version is declared, so the highest configured, ${version}, is used` : `Node ${version} satisfies ${wanted}` };
 }
 
-function buildScriptCondition(repository: Repository, directory: string): { condition: Condition; command: string | null } {
+function buildScriptCondition(repository: ProfiledRepository, directory: string): { condition: Condition; command: string | null } {
   const manifest = manifestPath(directory);
   const fact = repository.facts("scripts").find((candidate) => manifestOfFact(candidate) === manifest && objectValue(candidate)?.name === "build");
   if (fact && fact.state !== "conflicting" && typeof objectValue(fact)?.command === "string") {
@@ -351,7 +351,7 @@ function pageCondition(directory: string, tool: { condition: Condition; tool: Bu
 }
 
 /** The commit-level refusal when no package manifest exists, as in a Scala, Go, or Java repository. */
-function noPackage(repository: Repository): Condition {
+function noPackage(repository: ProfiledRepository): Condition {
   const unknown = repository.unknownReason("frameworks", () => true);
   const languages = repository.facts("languages").map((fact) => repository.decidingFact("languages", fact));
   const reason = unknown
@@ -361,7 +361,7 @@ function noPackage(repository: Repository): Condition {
 }
 
 /** What kind of package it is: a Module Federation remote, a single-spa application, or else a standalone app. Only for display. */
-function layoutOf(repository: Repository, directory: string): { layout: ArtifactLayout; composition: JsonValue } {
+function layoutOf(repository: ProfiledRepository, directory: string): { layout: ArtifactLayout; composition: JsonValue } {
   const owned = repository.facts("composition").filter((fact) => fact.state !== "conflicting" && fact.evidence.some((id) => repository.owner(repository.evidencePath(id)) === directory));
   const remote = owned.find((fact) => objectValue(fact)?.mechanism === "module-federation" && Array.isArray(objectValue(fact)?.exposes) && (objectValue(fact)!.exposes as JsonValue[]).length > 0);
   if (remote) return { layout: "module_federation", composition: remote.value };
@@ -374,7 +374,7 @@ function layoutOf(repository: Repository, directory: string): { layout: Artifact
 
 /** The packages that build with Vite, whose page preparation looks for before deciding. */
 export function vitePackages(document: FactDocument): string[] {
-  const repository = new Repository(document);
+  const repository = new ProfiledRepository(document);
   return repository.packages.filter((directory) => buildToolCondition(repository, directory).tool === "vite");
 }
 
@@ -387,7 +387,7 @@ interface Membership {
   facts: DecidingFact[];
 }
 
-class Repository {
+class ProfiledRepository {
   /** Every package directory, from its package.json manifest, in path order. */
   readonly packages: string[];
   private readonly owners = new Map<string, string | null>();

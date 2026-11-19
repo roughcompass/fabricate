@@ -5,21 +5,21 @@ import { type JsonObject, type MemoryFile, digestOf } from "@repo-facts/contract
 import { type Run, type RunTarget, createRun, getRun, linkSurvey } from "@/lib/runs/run-records";
 import { continueWaitingTargets } from "@/lib/runs/waiting";
 import { surveyRefFor } from "@/lib/acquisition/mirror";
-import { sourceById } from "@/lib/catalog/source-records";
+import { repositoryById } from "@/lib/repositories/repository-records";
 import { type Survey, currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey, updateCurrentSurvey } from "@/lib/surveys/records";
 import { finishSurvey } from "@/lib/surveys/run";
 import { requestCancellation, transitionRun, transitionTarget } from "@/lib/runs/transitions";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { getConfig } from "@/lib/config";
 import { type Db, immediate } from "@/lib/db/client";
 import type { SurveyTrigger } from "@/lib/db/schema";
-import { type Assessment, getAssessment, selectedSources, updateAssessment } from "@/lib/assessments/assessment-records";
+import { type Assessment, getAssessment, selectedRepositories, updateAssessment } from "@/lib/assessments/assessment-records";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { finalizeRelationshipMap, resolveMapDocument } from "@/lib/relationships/finalize";
 import { insertRelationshipMap } from "@/lib/relationships/map-records";
 import { publishDraft } from "@/lib/standards/publish";
 import { type StandardRelease, createStandard, saveDraft } from "@/lib/standards/standard-records";
-import { buildAssessment, buildSource } from "./builders";
+import { buildAssessment, buildRepository } from "./builders";
 import { manifest, memoryProfile, sha1 } from "./profiles";
 import { standardDocument } from "./standards";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
@@ -84,7 +84,7 @@ export const STOREFRONT = {
  * as orchestration would. No Git is involved, so evidence excerpts are not
  * available for these snapshots.
  */
-export async function seedRun(db: Db, assessment: Assessment, sources: readonly RepositorySource[], outcomes: readonly Outcome[], options: RunOptions = {}): Promise<Run> {
+export async function seedRun(db: Db, assessment: Assessment, repositories: readonly Repository[], outcomes: readonly Outcome[], options: RunOptions = {}): Promise<Run> {
   const { run, targets } = createRun(db, {
     assessment,
     launchToken: crypto.randomUUID(),
@@ -92,9 +92,9 @@ export async function seedRun(db: Db, assessment: Assessment, sources: readonly 
     configuration: detectorConfiguration(getConfig().analysis).configuration,
     profileSchemaVersion: options.profileVersion1 ? 1 : CURRENT_VERSION.repositoryProfile,
     relationshipSchemaVersion: 1,
-    sources,
+    repositories,
   });
-  return completeRun(db, run, targets, sources, outcomes, options);
+  return completeRun(db, run, targets, repositories, outcomes, options);
 }
 
 /** How a seeded Run ends: canceled, with Profile version 1 documents, or with its resolved map document adjusted before it's stored. */
@@ -109,12 +109,12 @@ export async function completeRun(
   db: Db,
   run: Run,
   targets: readonly RunTarget[],
-  sources: readonly Pick<RepositorySource, "publicId">[],
+  repositories: readonly Pick<Repository, "publicId">[],
   outcomes: readonly Outcome[],
   options: RunOptions = {},
 ): Promise<Run> {
   if (options.cancel) requestCancellation(db, run.id);
-  for (const [index, outcome] of outcomes.entries()) await completeTarget(db, run, targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!, outcome, options);
+  for (const [index, outcome] of outcomes.entries()) await completeTarget(db, run, targets.find((item) => item.repositoryPublicId === repositories[index]!.publicId)!, outcome, options);
   const finalizing = finalizingRun(db, run);
   if (options.transformMap) insertRelationshipMap(db, { run: finalizing, document: options.transformMap(resolveMapDocument(db, finalizing)) });
   else finalizeRelationshipMap(db, finalizing);
@@ -131,13 +131,13 @@ let surveyed = 0;
  * survey of the configured reference records that reference's resolution,
  * as background surveying does.
  */
-export async function seedSurvey(db: Db, source: Pick<RepositorySource, "id" | "publicId" | "name">, options: { trigger?: SurveyTrigger; reference?: string; fromConfiguredReference?: boolean; files?: Readonly<Record<string, MemoryFile>> } = {}): Promise<Survey> {
-  const commitSha = sha1(`survey:${source.publicId}:${++surveyed}`);
+export async function seedSurvey(db: Db, repository: Pick<Repository, "id" | "publicId" | "name">, options: { trigger?: SurveyTrigger; reference?: string; fromConfiguredReference?: boolean; files?: Readonly<Record<string, MemoryFile>> } = {}): Promise<Survey> {
+  const commitSha = sha1(`survey:${repository.publicId}:${++surveyed}`);
   const configured = options.fromConfiguredReference ?? true;
-  const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha, reference: options.reference ?? "refs/heads/main", fromConfiguredReference: configured, trigger: options.trigger ?? "added", ...currentRecipe(getConfig()) });
-  if (configured) recordConfiguredResolution(db, source.id, commitSha, new Date());
+  const { survey } = requestSurvey(db, { repositoryId: repository.id, commitSha, reference: options.reference ?? "refs/heads/main", fromConfiguredReference: configured, trigger: options.trigger ?? "added", ...currentRecipe(getConfig()) });
+  if (configured) recordConfiguredResolution(db, repository.id, commitSha, new Date());
   const running = pinSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { treeSha: sha1(`tree:${commitSha}`), internalRef: surveyRefFor(survey.publicId) });
-  const { document } = await memoryProfile(options.files ?? { "package.json": manifest({ name: source.name, version: "1.0.0" }) }, { public_id: source.publicId, name: source.name }, commitSha);
+  const { document } = await memoryProfile(options.files ?? { "package.json": manifest({ name: repository.name, version: "1.0.0" }) }, { public_id: repository.publicId, name: repository.name }, commitSha);
   return finishSurvey(db, running, { document });
 }
 
@@ -164,9 +164,9 @@ export async function completeTarget(db: Db, run: Run, target: RunTarget, outcom
     return;
   }
   const commitSha = sha1(`commit:${target.publicId}`);
-  const configured = target.gitRef === sourceById(db, target.repositorySourceId).gitRef;
+  const configured = target.gitRef === repositoryById(db, target.repositoryId).gitRef;
   const { survey } = requestSurvey(db, {
-    repositorySourceId: target.repositorySourceId,
+    repositoryId: target.repositoryId,
     commitSha,
     reference: "refs/heads/main",
     fromConfiguredReference: configured,
@@ -176,10 +176,10 @@ export async function completeTarget(db: Db, run: Run, target: RunTarget, outcom
     configurationDigest: run.configurationDigest,
     profileSchemaVersion: run.profileSchemaVersion,
   });
-  if (configured) recordConfiguredResolution(db, target.repositorySourceId, commitSha, new Date());
+  if (configured) recordConfiguredResolution(db, target.repositoryId, commitSha, new Date());
   linkSurvey(db, acquiring, { refKind: "default_branch", resolvedRef: "refs/heads/main", surveyId: survey.id });
   const running = pinSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { treeSha: sha1(`tree:${target.publicId}`), internalRef: surveyRefFor(survey.publicId) });
-  const { document } = await memoryProfile(outcome, { public_id: target.sourcePublicId, name: target.sourceName }, commitSha);
+  const { document } = await memoryProfile(outcome, { public_id: target.repositoryPublicId, name: target.repositoryName }, commitSha);
   // A Profile as an earlier release stored it isn't valid under today's contract, so it's written without validation.
   if (!options.profileVersion1) return void finishSurvey(db, running, { document });
   immediate(db, (tx) => {
@@ -210,11 +210,11 @@ export const MAP_STATE_OUTCOMES: Readonly<Record<string, Outcome>> = {
 /** Seeds the Run of MAP_STATE_OUTCOMES, and +also+ after it, with legacy-ui in the catalog outside the Run. */
 export async function seedMapStates(db: Db, options: { assessmentName?: string; also?: Readonly<Record<string, Outcome>> } = {}) {
   const outcomes = { ...MAP_STATE_OUTCOMES, ...options.also };
-  const sources = Object.keys(outcomes).map((name) => buildSource(db, { name }));
-  buildSource(db, { name: "legacy-ui" });
-  const assessment = buildAssessment(db, { name: options.assessmentName ?? "Fleet assessment", sources });
-  const run = await seedRun(db, assessment, sources, Object.values(outcomes));
-  return { assessment, sources, run };
+  const repositories = Object.keys(outcomes).map((name) => buildRepository(db, { name }));
+  buildRepository(db, { name: "legacy-ui" });
+  const assessment = buildAssessment(db, { name: options.assessmentName ?? "Fleet assessment", repositories });
+  const run = await seedRun(db, assessment, repositories, Object.values(outcomes));
+  return { assessment, sources: repositories, run };
 }
 
 /** Publishes a Standard with +controls+, reading Repository Profile +profileVersions+, and returns its Release. */
@@ -230,7 +230,7 @@ export function selectReleases(db: Db, assessment: Assessment, releases: readonl
     name: current.name,
     objective: current.objective,
     selectionMode: current.selectionMode,
-    sourcePublicIds: selectedSources(db, current.id).map((source) => source.publicId),
+    repositoryPublicIds: selectedRepositories(db, current.id).map((repository) => repository.publicId),
     standardReleasePublicIds: releases.map((release) => release.publicId),
   });
 }

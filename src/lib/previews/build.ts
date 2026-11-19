@@ -6,7 +6,7 @@ import { and, eq, isNull, ne } from "drizzle-orm";
 import { mirrorPath } from "@/lib/acquisition/mirror";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
-import { previewBuilds, repositorySources } from "@/lib/db/schema";
+import { previewBuilds, repositories } from "@/lib/db/schema";
 import { GitError } from "@/lib/git/errors";
 import { failureText } from "@/lib/git/redact";
 import { GitRunner } from "@/lib/git/runner";
@@ -75,10 +75,10 @@ export async function runPreviewBuild(db: Executor, job: BuildJob, options: Buil
   settleAbandonedAttempts(db);
   const preview = findPreview(db, job.preview);
   if (!preview || preview.attempt !== job.attempt || (preview.attemptState !== "queued" && preview.attemptState !== "building")) return "skipped";
-  const source = db.select().from(repositorySources).where(eq(repositorySources.id, preview.repositorySourceId)).get()!;
+  const repository = db.select().from(repositories).where(eq(repositories.id, preview.repositoryId)).get()!;
   const refuse = (reason: string): BuildOutcome => (failAttempt(db, preview.publicId, { attempt: job.attempt }, reason) ? "failed" : "skipped");
   if (!config.previews.enabled) return refuse("Previews were turned off before the build ran");
-  if (!isEnrolled(config, source)) return refuse(`${source.name} is not enrolled for previews`);
+  if (!isEnrolled(config, repository)) return refuse(`${repository.name} is not enrolled for previews`);
 
   const files = claimFiles(config, preview.publicId, job.attempt, crypto.randomBytes(5).toString("hex"));
   const identity: AttemptIdentity = { attempt: job.attempt, claim: options.claim };
@@ -98,7 +98,7 @@ export async function runPreviewBuild(db: Executor, job: BuildJob, options: Buil
   try {
     const own = claimed.id;
     const othersBuilding = () => otherBuildRunning(db, own);
-    const artifact = await build({ config, preview: claimed, sourcePublicId: source.publicId, files, log, runner: options.runner, signal: options.signal, othersBuilding });
+    const artifact = await build({ config, preview: claimed, repositoryPublicId: repository.publicId, files, log, runner: options.runner, signal: options.signal, othersBuilding });
     log.step("publish", artifact.directory);
     await fsp.mkdir(path.dirname(files.artifact), { recursive: true });
     await fsp.rename(files.output, files.artifact);
@@ -138,7 +138,7 @@ export async function runPreviewBuild(db: Executor, job: BuildJob, options: Buil
 interface BuildContext {
   config: FrontendRegistryConfig;
   preview: PreviewBuild;
-  sourcePublicId: string;
+  repositoryPublicId: string;
   files: ClaimFiles;
   log: AttemptLog;
   runner?: GitRunner;
@@ -160,7 +160,7 @@ async function build(context: BuildContext): Promise<PublishedArtifact> {
 
   // 1. Extract the pinned commit. No checkout, hook, filter, or submodule runs.
   log.step("extract", `git archive ${preview.commitSha}`);
-  const gitDir = mirrorPath(config.repositoryStorage, context.sourcePublicId);
+  const gitDir = mirrorPath(config.repositoryStorage, context.repositoryPublicId);
   const runner = context.runner ?? new GitRunner({ config, timeoutMs: Math.max(1, deadline - Date.now()) });
   for (const directory of [files.work, files.home, files.tmp]) await fsp.mkdir(directory, { recursive: true });
   try {
@@ -298,9 +298,9 @@ function publish(db: Executor, config: FrontendRegistryConfig, publicId: string,
   return immediate(db, (tx) => {
     const current = findPreview(tx, publicId);
     if (!current) return { state: "not_current" };
-    const source = tx.select().from(repositorySources).where(eq(repositorySources.id, current.repositorySourceId)).get()!;
-    if (!isEnrolled(config, source)) {
-      const reason = config.previews.enabled ? `${source.name} is no longer enrolled for previews, so the output wasn't published` : "Previews were turned off before the output was published";
+    const repository = tx.select().from(repositories).where(eq(repositories.id, current.repositoryId)).get()!;
+    if (!isEnrolled(config, repository)) {
+      const reason = config.previews.enabled ? `${repository.name} is no longer enrolled for previews, so the output wasn't published` : "Previews were turned off before the output was published";
       return failAttempt(tx, publicId, identity, reason) ? { state: "revoked", reason } : { state: "not_current" };
     }
     return publishAttempt(tx, publicId, identity, artifact) ? { state: "published", superseded: current.artifact } : { state: "not_current" };

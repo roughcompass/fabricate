@@ -20,7 +20,7 @@ function readForm(formData: FormData): AssessmentFormValues {
     name: text(formData, "name", 500),
     objective: text(formData, "objective", 4_000),
     selectionMode: (records.SELECTION_MODES as readonly string[]).includes(mode) ? (mode as SelectionMode) : ("" as SelectionMode),
-    sourcePublicIds: texts(formData, "sourcePublicIds", 40),
+    repositoryPublicIds: texts(formData, "sourcePublicIds", 40),
     standardReleasePublicIds: texts(formData, "standardReleasePublicIds", 40),
   };
 }

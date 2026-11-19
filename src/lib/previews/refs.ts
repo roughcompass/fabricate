@@ -2,9 +2,9 @@ import crypto from "node:crypto";
 import { gitSource, normalizeAcquisitionError } from "@/lib/acquisition/acquire";
 import { AcquisitionError } from "@/lib/acquisition/errors";
 import { type Advertisement, Mirror, advertisedCommit, parseLsRemote, resolveAdvertised } from "@/lib/acquisition/mirror";
-import { withSourceLock } from "@/lib/acquisition/source-lease";
-import { SourceBoundary } from "@/lib/catalog/source-boundary";
-import { type RepositorySource, isValidGitRef } from "@/lib/catalog/source-records";
+import { withRepositoryLock } from "@/lib/acquisition/repository-lease";
+import { SourceBoundary } from "@/lib/repositories/source-boundary";
+import { type Repository, isValidGitRef } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { GitRunner, type Protocol } from "@/lib/git/runner";
@@ -64,7 +64,7 @@ export interface RefOptions {
   signal?: AbortSignal;
 }
 
-type Source = Pick<RepositorySource, "id" | "publicId" | "name" | "cloneUrl" | "gitRef">;
+type RefRepository = Pick<Repository, "id" | "publicId" | "name" | "cloneUrl" | "gitRef">;
 
 const LIST_TIMEOUT_MS = 15_000;
 const FULL_SHA = /^[0-9a-f]{40}$/;
@@ -78,19 +78,19 @@ export function previewPinRef(commitSha: string): string {
 }
 
 /** What requesting the Repository's configured reference asks for: its commit when it's a full SHA, else the ref, or the default branch when none is set. */
-export function configuredRequest(source: Pick<RepositorySource, "gitRef">): RefRequest {
-  return source.gitRef && FULL_SHA.test(source.gitRef) ? { kind: "commit", sha: source.gitRef } : { kind: "ref", name: source.gitRef };
+export function configuredRequest(repository: Pick<Repository, "gitRef">): RefRequest {
+  return repository.gitRef && FULL_SHA.test(repository.gitRef) ? { kind: "commit", sha: repository.gitRef } : { kind: "ref", name: repository.gitRef };
 }
 
 /** The remote's branches and tags, the configured reference first; the configured reference alone when the remote can't be read. */
-export async function listRemoteRefs(source: Pick<RepositorySource, "cloneUrl" | "gitRef">, options: RefOptions = {}): Promise<RefListing> {
+export async function listRemoteRefs(repository: Pick<Repository, "cloneUrl" | "gitRef">, options: RefOptions = {}): Promise<RefListing> {
   const config = options.config ?? getConfig();
-  const configured = { label: source.gitRef ?? "Default branch", request: configuredRequest(source) };
+  const configured = { label: repository.gitRef ?? "Default branch", request: configuredRequest(repository) };
   try {
-    const { url, protocol } = gitSource(source, new SourceBoundary(config));
+    const { url, protocol } = gitSource(repository, new SourceBoundary(config));
     const runner = options.runner ?? new GitRunner({ config, timeoutMs: Math.min(LIST_TIMEOUT_MS, config.gitTimeoutSeconds * 1_000) });
     const advertised = parseLsRemote(await runner.lsRemote(url, protocol, options.signal));
-    const configuredName = configuredRef(advertised, source.gitRef);
+    const configuredName = configuredRef(advertised, repository.gitRef);
     const refs = [...advertised.refs.keys()]
       .filter((name) => name.startsWith("refs/heads/") || name.startsWith("refs/tags/"))
       .map((name): RemoteRef => {
@@ -111,7 +111,7 @@ export async function listRemoteRefs(source: Pick<RepositorySource, "cloneUrl" |
  * that moved while it was fetched; other failures are normalized like
  * acquisition failures.
  */
-export async function pinCommit(db: Executor, source: Source, request: RefRequest, options: RefOptions = {}): Promise<PinnedCommit> {
+export async function pinCommit(db: Executor, source: RefRepository, request: RefRequest, options: RefOptions = {}): Promise<PinnedCommit> {
   const config = options.config ?? getConfig();
   const runner = options.runner ?? new GitRunner({ config });
   const { signal } = options;
@@ -120,7 +120,7 @@ export async function pinCommit(db: Executor, source: Source, request: RefReques
     // The remote, and a local source's boundary check, are reached only when the mirror lacks the commit.
     let endpoint: { url: string; protocol: Protocol } | undefined;
     const connect = () => (endpoint ??= gitSource(source, new SourceBoundary(config)));
-    return await withSourceLock(source.id, { waitMs: config.gitLockTimeoutSeconds * 1_000, signal }, async () => {
+    return await withRepositoryLock(source.id, { waitMs: config.gitLockTimeoutSeconds * 1_000, signal }, async () => {
       const mirror = new Mirror(runner, source.publicId);
       await mirror.ensure();
       const remote = new Remote(runner, mirror, connect, `preview-${crypto.randomBytes(6).toString("hex")}`, signal);

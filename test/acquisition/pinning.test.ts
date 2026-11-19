@@ -3,7 +3,7 @@ import { AcquisitionError } from "@/lib/acquisition/errors";
 import { Mirror, mirrorPath, surveyRefFor } from "@/lib/acquisition/mirror";
 import { GitRunner } from "@/lib/git/runner";
 import { getSurvey, pinSurvey } from "@/lib/surveys/records";
-import { acquire, registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { acquire, registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { rawRun } from "../support/db";
 import { git } from "../support/git-fixture";
 
@@ -26,10 +26,10 @@ describe("survey pinning", () => {
   it("pins the commit under its survey's id and records the pin and the reference it resolved from", async () => {
     const work = world.fixture.repo("work/orders");
     const commit = work.write("README.md", "orders\n").commit();
-    const source = registerLocalSource(world.db, world.config, "orders", work.path, "main");
+    const repository = registerLocalRepository(world.db, world.config, "orders", work.path, "main");
 
-    const { survey, resolution, snapshot } = await acquire(world.db, world.config, source);
-    const gitDir = mirrorPath(world.config.repositoryStorage, source.publicId);
+    const { survey, resolution, snapshot } = await acquire(world.db, world.config, repository);
+    const gitDir = mirrorPath(world.config.repositoryStorage, repository.publicId);
 
     expect(snapshot.internalRef).toBe(surveyRefFor(survey.publicId));
     expect(snapshot.internalRef).toMatch(/^refs\/fabricate\/snapshots\/srv_[a-z0-9]{16}$/);
@@ -42,8 +42,8 @@ describe("survey pinning", () => {
   it("keeps a recorded pin: pinning again changes nothing, and the database refuses another", async () => {
     const work = world.fixture.repo("work/orders");
     work.write("README.md", "orders\n").commit();
-    const source = registerLocalSource(world.db, world.config, "orders", work.path);
-    const { survey } = await acquire(world.db, world.config, source);
+    const repository = registerLocalRepository(world.db, world.config, "orders", work.path);
+    const { survey } = await acquire(world.db, world.config, repository);
 
     expect(pinSurvey(world.db, survey, { treeSha: "1".repeat(40), internalRef: surveyRefFor("srv_aaaaaaaaaaaaaaaa") })).toEqual(survey);
     expect(() => rawRun(world.db, "update surveys set internal_ref = ? where id = ?", surveyRefFor("srv_aaaaaaaaaaaaaaaa"), survey.id)).toThrow(/a pinned commit stays pinned/);
@@ -53,9 +53,9 @@ describe("survey pinning", () => {
   it("pins only under refs/fabricate/snapshots/", async () => {
     const work = world.fixture.repo("work/orders");
     const commit = work.write("README.md", "orders\n").commit();
-    const source = registerLocalSource(world.db, world.config, "orders", work.path);
-    await acquire(world.db, world.config, source);
-    const mirror = new Mirror(new GitRunner({ config: world.config }), source.publicId);
+    const repository = registerLocalRepository(world.db, world.config, "orders", work.path);
+    await acquire(world.db, world.config, repository);
+    const mirror = new Mirror(new GitRunner({ config: world.config }), repository.publicId);
 
     for (const ref of ["refs/heads/main", "refs/fabricate/incoming/srv_aaaaaaaaaaaaaaaa", "refs/fabricate/snapshots/prf_aaaaaaaaaaaaaaaa"]) {
       await expect(mirror.pin(ref, commit)).rejects.toBeInstanceOf(AcquisitionError);
@@ -66,17 +66,17 @@ describe("survey pinning", () => {
     const work = world.fixture.repo("work/orders");
     work.write("README.md", "first\n").write("docs/guide.md", "guide\n").commit("first");
     const remote = world.fixture.bare("remotes/orders.git", { from: work });
-    const source = registerLocalSource(world.db, world.config, "orders", remote.path);
-    const before = (await acquire(world.db, world.config, source)).snapshot;
+    const repository = registerLocalRepository(world.db, world.config, "orders", remote.path);
+    const before = (await acquire(world.db, world.config, repository)).snapshot;
     const blob = git(remote.path, ["rev-parse", `${before.commitSha}:docs/guide.md`]).trim();
 
     work.git("checkout", "--quiet", "--orphan", "rewrite");
     work.git("rm", "-rq", "--cached", ".");
     work.remove("docs").write("README.md", "rewritten\n").commit("rewrite");
     work.git("push", "--quiet", "--force", remote.path, "rewrite:main");
-    const after = (await acquire(world.db, world.config, source)).snapshot;
+    const after = (await acquire(world.db, world.config, repository)).snapshot;
 
-    const gitDir = mirrorPath(world.config.repositoryStorage, source.publicId);
+    const gitDir = mirrorPath(world.config.repositoryStorage, repository.publicId);
     prune(gitDir);
     for (const objectId of [before.commitSha, before.treeSha, blob, after.commitSha]) expect(objectExists(gitDir, objectId)).toBe(true);
     expect(git(gitDir, ["cat-file", "-p", `${before.internalRef}:docs/guide.md`])).toBe("guide\n");
@@ -100,9 +100,9 @@ describe("survey pinning", () => {
     const unstagedBlob = work.git("hash-object", "README.md").trim();
     const untrackedBlob = work.git("hash-object", "secret.txt").trim();
 
-    const source = registerLocalSource(world.db, world.config, "orders", work.path);
-    const { snapshot } = await acquire(world.db, world.config, source);
-    const gitDir = mirrorPath(world.config.repositoryStorage, source.publicId);
+    const repository = registerLocalRepository(world.db, world.config, "orders", work.path);
+    const { snapshot } = await acquire(world.db, world.config, repository);
+    const gitDir = mirrorPath(world.config.repositoryStorage, repository.publicId);
 
     expect(git(gitDir, ["ls-tree", "-r", "--name-only", snapshot.commitSha]).trim().split("\n")).toEqual(["README.md", "src/app.js"]);
     expect(git(gitDir, ["cat-file", "-p", `${snapshot.commitSha}:README.md`])).toBe("committed\n");

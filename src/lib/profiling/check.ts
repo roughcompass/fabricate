@@ -1,4 +1,4 @@
-import { listSources } from "@/lib/catalog/source-records";
+import { listRepositories } from "@/lib/repositories/repository-records";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { type Job, enqueue } from "@/lib/jobs/queue";
@@ -46,15 +46,15 @@ export interface CheckResult {
 /** Requests a background survey of every Repository that has none queued or running, once per +slot+, after failing surveys whose jobs were lost. */
 export function checkProfiles(db: Executor, slot: string): CheckResult {
   settleAbandonedSurveys(db);
-  const sources = listSources(db);
+  const repositories = listRepositories(db);
   let requested = 0;
-  for (const source of sources) {
-    const latest = latestSurvey(db, source.id);
+  for (const repository of repositories) {
+    const latest = latestSurvey(db, repository.id);
     if (latest && (latest.state === "queued" || latest.state === "running")) continue;
-    requestBackgroundSurvey(db, source, "check", `check:${slot}`);
+    requestBackgroundSurvey(db, repository, "check", `check:${slot}`);
     requested += 1;
   }
-  return { checked: sources.length, requested };
+  return { checked: repositories.length, requested };
 }
 
 /** The job handler: queues the next slot, then checks. */

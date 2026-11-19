@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { StaleRecordError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
-import { createAssessment, getAssessment, scopeLabel, selectedSources, updateAssessment } from "@/lib/assessments/assessment-records";
-import { buildAssessment, buildSource } from "../support/builders";
+import { createAssessment, getAssessment, scopeLabel, selectedRepositories, updateAssessment } from "@/lib/assessments/assessment-records";
+import { buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { captureValidation } from "../support/validation";
 
@@ -14,43 +14,43 @@ describe("initiative records", () => {
   });
 
   it("records the all-Repositories policy without copying catalog membership", () => {
-    buildSource(db);
+    buildRepository(db);
     const assessment = createAssessment(db, { name: "Modernize", objective: "Upgrade", selectionMode: "all" });
 
     expect(isPublicId(assessment.publicId, "ini")).toBe(true);
-    expect(selectedSources(db, assessment.id)).toEqual([]);
+    expect(selectedRepositories(db, assessment.id)).toEqual([]);
     expect(scopeLabel(assessment, 0)).toBe("All Repositories");
   });
 
   it("records exactly the explicitly selected sources", () => {
-    const [first, second] = [buildSource(db, { name: "b" }), buildSource(db, { name: "a" }), buildSource(db)];
-    const assessment = createAssessment(db, { name: "Subset", selectionMode: "explicit", sourcePublicIds: [first!.publicId, second!.publicId, first!.publicId] });
+    const [first, second] = [buildRepository(db, { name: "b" }), buildRepository(db, { name: "a" }), buildRepository(db)];
+    const assessment = createAssessment(db, { name: "Subset", selectionMode: "explicit", repositoryPublicIds: [first!.publicId, second!.publicId, first!.publicId] });
 
-    expect(selectedSources(db, assessment.id).map((source) => source.name)).toEqual(["a", "b"]);
+    expect(selectedRepositories(db, assessment.id).map((repository) => repository.name)).toEqual(["a", "b"]);
   });
 
   it("requires a name and at least one source for an explicit scope", () => {
     const error = captureValidation(() => createAssessment(db, { name: " ", selectionMode: "explicit" }));
 
     expect(error.messagesFor("name")).toEqual(["Enter a name"]);
-    expect(error.messagesFor("sources")).toEqual(["Select at least one repository source for an explicit scope"]);
+    expect(error.messagesFor("sources")).toEqual(["Select at least one Repository for an explicit scope"]);
   });
 
   it("rejects unknown sources with one message each", () => {
-    const known = buildSource(db, { name: "legacy" });
+    const known = buildRepository(db, { name: "legacy" });
     const error = captureValidation(() =>
-      createAssessment(db, { name: "Invalid", selectionMode: "explicit", sourcePublicIds: [known.publicId, "src_missingmissingmi", "src_missingmissing2"] }),
+      createAssessment(db, { name: "Invalid", selectionMode: "explicit", repositoryPublicIds: [known.publicId, "src_missingmissingmi", "src_missingmissing2"] }),
     );
 
-    expect(error.messagesFor("sources")).toEqual(["Repository source src_missingmissingmi does not exist", "Repository source src_missingmissing2 does not exist"]);
+    expect(error.messagesFor("sources")).toEqual(["Repository src_missingmissingmi does not exist", "Repository src_missingmissing2 does not exist"]);
   });
 
   it("clears explicit selections when switching to all Repositories", () => {
-    const assessment = buildAssessment(db, { sources: [buildSource(db)] });
-    const updated = updateAssessment(db, assessment.publicId, 0, { name: assessment.name, selectionMode: "all", sourcePublicIds: [] });
+    const assessment = buildAssessment(db, { repositories: [buildRepository(db)] });
+    const updated = updateAssessment(db, assessment.publicId, 0, { name: assessment.name, selectionMode: "all", repositoryPublicIds: [] });
 
     expect(updated.selectionMode).toBe("all");
-    expect(selectedSources(db, updated.id)).toEqual([]);
+    expect(selectedRepositories(db, updated.id)).toEqual([]);
   });
 
   it("uses optimistic locking", () => {
@@ -62,11 +62,11 @@ describe("initiative records", () => {
   });
 
   it("loads selections through relations", () => {
-    const source = buildSource(db, { name: "orders" });
-    const assessment = buildAssessment(db, { sources: [source] });
+    const repository = buildRepository(db, { name: "orders" });
+    const assessment = buildAssessment(db, { repositories: [repository] });
 
-    const loaded = db.query.assessments.findFirst({ where: (table, { eq }) => eq(table.id, assessment.id), with: { targets: { with: { repositorySource: true } } } }).sync();
-    expect(loaded?.targets.map((target) => target.repositorySource.name)).toEqual(["orders"]);
+    const loaded = db.query.assessments.findFirst({ where: (table, { eq }) => eq(table.id, assessment.id), with: { targets: { with: { repository: true } } } }).sync();
+    expect(loaded?.targets.map((target) => target.repository.name)).toEqual(["orders"]);
   });
 
   describe("database rules", () => {
@@ -79,24 +79,24 @@ describe("initiative records", () => {
 
     it("rejects explicit selections on an initiative of all Repositories", () => {
       const assessment = buildAssessment(db);
-      const source = buildSource(db);
+      const repository = buildRepository(db);
 
-      expect(() => rawRun(db, "insert into initiative_targets (initiative_id, repository_source_id, created_at) values (?, ?, 0)", assessment.id, source.id)).toThrow(
+      expect(() => rawRun(db, "insert into initiative_targets (initiative_id, repository_source_id, created_at) values (?, ?, 0)", assessment.id, repository.id)).toThrow(
         /only explicit initiatives/,
       );
     });
 
     it("rejects switching to all Repositories while selections remain", () => {
-      const assessment = buildAssessment(db, { sources: [buildSource(db)] });
+      const assessment = buildAssessment(db, { repositories: [buildRepository(db)] });
 
       expect(() => rawRun(db, "update initiatives set selection_mode = 'all' where id = ?", assessment.id)).toThrow(/remove explicit selections/);
     });
 
     it("rejects duplicate selections", () => {
-      const source = buildSource(db);
-      const assessment = buildAssessment(db, { sources: [source] });
+      const repository = buildRepository(db);
+      const assessment = buildAssessment(db, { repositories: [repository] });
 
-      expect(() => rawRun(db, "insert into initiative_targets (initiative_id, repository_source_id, created_at) values (?, ?, 0)", assessment.id, source.id)).toThrow(
+      expect(() => rawRun(db, "insert into initiative_targets (initiative_id, repository_source_id, created_at) values (?, ?, 0)", assessment.id, repository.id)).toThrow(
         /UNIQUE constraint failed/,
       );
     });

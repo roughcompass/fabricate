@@ -4,7 +4,7 @@ import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { openSnapshot } from "@/lib/snapshot/open";
 import type { Budgets, SnapshotReader, SnapshotReaderOptions } from "@/lib/snapshot/reader";
-import { acquire, acquisitionConfig, registerLocalSource } from "./acquisition";
+import { acquire, acquisitionConfig, registerLocalRepository } from "./acquisition";
 import { createTestDb } from "./db";
 import { GitFixture, type Repo } from "./git-fixture";
 
@@ -20,7 +20,7 @@ export class SnapshotFixture {
   readonly config: FrontendRegistryConfig;
   readonly db: Db;
   readonly work: Repo;
-  private source: ReturnType<typeof registerLocalSource> | undefined;
+  private repository: ReturnType<typeof registerLocalRepository> | undefined;
 
   private constructor(prefix: string, overrides: Parameters<typeof acquisitionConfig>[1]) {
     this.fixture = GitFixture.create(prefix);
@@ -66,8 +66,8 @@ export class SnapshotFixture {
 
   /** Pins whatever the work repository last committed for a survey, and opens a reader on it. */
   async acquireCommitted(budgets?: Budgets, options: SnapshotReaderOptions = {}) {
-    this.source ??= registerLocalSource(this.db, this.config, "app", this.work.path);
-    const { survey, target, snapshot } = await acquire(this.db, this.config, this.source);
+    this.repository ??= registerLocalRepository(this.db, this.config, "app", this.work.path);
+    const { survey, target, snapshot } = await acquire(this.db, this.config, this.repository);
     const reader = await openSnapshot(target, snapshot, { config: this.config, ...(budgets && { budgets }), ...options });
     return { survey, target, snapshot, reader };
   }

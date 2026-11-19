@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox, Select, TextInput } from "@/components/ui/form";
 import { booleanLabel, humanize } from "@/components/ui/status";
-import type { CatalogSelector, EditorCatalog } from "../../catalog";
+import type { VocabularySelector, EditorVocabulary } from "../../vocabulary";
 import { fieldProps } from "./fields";
 import styles from "./editor.module.css";
 
@@ -34,7 +34,7 @@ export interface ExpressionEditorProps {
   path: string;
   depth: number;
   label: string;
-  catalog: EditorCatalog;
+  vocabulary: EditorVocabulary;
   idPrefix: string;
   errorsFor: (path: string) => string[];
   onChange: (next: Node) => void;
@@ -49,37 +49,37 @@ function kindOf(node: Node): string {
   return "field";
 }
 
-export function defaultPredicate(catalog: EditorCatalog, scope: string): Node {
-  const selector = catalog.selectors.find((item) => item.scope === scope);
+export function defaultPredicate(vocabulary: EditorVocabulary, scope: string): Node {
+  const selector = vocabulary.selectors.find((item) => item.scope === scope);
   if (!selector) return { op: "always" };
   return { op: "exists", selector: selector.id, ...(selector.parameter && { parameter: "" }) };
 }
 
-function defaultNode(catalog: EditorCatalog, scope: string, kind: string, current: Node): Node {
-  const collection = catalog.collections.find((item) => item.scope === scope);
+function defaultNode(vocabulary: EditorVocabulary, scope: string, kind: string, current: Node): Node {
+  const collection = vocabulary.collections.find((item) => item.scope === scope);
   switch (kind) {
     case "always":
       return { op: "always" };
     case "all":
     case "any":
       // Switching between all and any keeps the conditions.
-      return { op: kind, items: Array.isArray(current.items) ? current.items : [defaultPredicate(catalog, scope)] };
+      return { op: kind, items: Array.isArray(current.items) ? current.items : [defaultPredicate(vocabulary, scope)] };
     case "not":
-      return { op: "not", item: defaultPredicate(catalog, scope) };
+      return { op: "not", item: defaultPredicate(vocabulary, scope) };
     case "every":
     case "some":
-      return collection ? { op: kind, collection: collection.id, condition: defaultPredicate(catalog, collection.item) } : { op: "always" };
+      return collection ? { op: kind, collection: collection.id, condition: defaultPredicate(vocabulary, collection.item) } : { op: "always" };
     case "count":
       return collection ? { op: "count", collection: collection.id, comparator: "eq", value: 0 } : { op: "always" };
     default:
-      return defaultPredicate(catalog, scope);
+      return defaultPredicate(vocabulary, scope);
   }
 }
 
-export function ExpressionEditor({ node, scope, path, depth, label, catalog, idPrefix, errorsFor, onChange, onRemove }: ExpressionEditorProps) {
+export function ExpressionEditor({ node, scope, path, depth, label, vocabulary, idPrefix, errorsFor, onChange, onRemove }: ExpressionEditorProps) {
   const id = `${idPrefix}-${path.replace(/[^A-Za-z0-9]+/g, "-")}`;
   const kind = kindOf(node);
-  const collections = catalog.collections.filter((item) => item.scope === scope);
+  const collections = vocabulary.collections.filter((item) => item.scope === scope);
   const kinds = ["always", "field", "all", "any", "not", ...(collections.length ? ["every", "some", "count"] : [])];
   const nodeErrors = [...errorsFor(path), ...errorsFor(`${path}.op`)];
   const child = (field: string) => `${path}.${field}`;
@@ -100,28 +100,28 @@ export function ExpressionEditor({ node, scope, path, depth, label, catalog, idP
           value={kind}
           options={kinds.map((value) => ({ value, label: KIND_LABELS[value]! }))}
           errors={nodeErrors}
-          onChange={(event) => onChange(defaultNode(catalog, scope, event.target.value, node))}
+          onChange={(event) => onChange(defaultNode(vocabulary, scope, event.target.value, node))}
         />
-        {kind === "field" && <PredicateFields node={node} scope={scope} path={path} catalog={catalog} id={id} errorsFor={errorsFor} onChange={onChange} />}
-        {(kind === "every" || kind === "some" || kind === "count") && <QuantifierFields node={node} scope={scope} path={path} catalog={catalog} id={id} errorsFor={errorsFor} onChange={onChange} />}
+        {kind === "field" && <PredicateFields node={node} scope={scope} path={path} vocabulary={vocabulary} id={id} errorsFor={errorsFor} onChange={onChange} />}
+        {(kind === "every" || kind === "some" || kind === "count") && <QuantifierFields node={node} scope={scope} path={path} vocabulary={vocabulary} id={id} errorsFor={errorsFor} onChange={onChange} />}
       </div>
 
-      {kind === "field" && <OperandEditor node={node} scope={scope} path={path} catalog={catalog} id={id} errorsFor={errorsFor} onChange={onChange} />}
+      {kind === "field" && <OperandEditor node={node} scope={scope} path={path} vocabulary={vocabulary} id={id} errorsFor={errorsFor} onChange={onChange} />}
 
-      {(kind === "all" || kind === "any") && <GroupEditor node={node} scope={scope} path={path} depth={depth} catalog={catalog} idPrefix={idPrefix} errorsFor={errorsFor} onChange={onChange} />}
+      {(kind === "all" || kind === "any") && <GroupEditor node={node} scope={scope} path={path} depth={depth} vocabulary={vocabulary} idPrefix={idPrefix} errorsFor={errorsFor} onChange={onChange} />}
 
       {kind === "not" && (
         <div className={styles.children}>
-          <ExpressionEditor node={record(node.item)} scope={scope} path={child("item")} depth={depth + 1} label="The condition that must not hold" catalog={catalog} idPrefix={idPrefix} errorsFor={errorsFor} onChange={(item) => onChange({ ...node, item })} />
+          <ExpressionEditor node={record(node.item)} scope={scope} path={child("item")} depth={depth + 1} label="The condition that must not hold" vocabulary={vocabulary} idPrefix={idPrefix} errorsFor={errorsFor} onChange={(item) => onChange({ ...node, item })} />
         </div>
       )}
 
-      {(kind === "every" || kind === "some" || kind === "count") && <QuantifierChildren node={node} scope={scope} path={path} depth={depth} catalog={catalog} idPrefix={idPrefix} errorsFor={errorsFor} onChange={onChange} />}
+      {(kind === "every" || kind === "some" || kind === "count") && <QuantifierChildren node={node} scope={scope} path={path} depth={depth} vocabulary={vocabulary} idPrefix={idPrefix} errorsFor={errorsFor} onChange={onChange} />}
     </fieldset>
   );
 }
 
-function GroupEditor({ node, scope, path, depth, catalog, idPrefix, errorsFor, onChange }: Omit<ExpressionEditorProps, "label" | "onRemove">) {
+function GroupEditor({ node, scope, path, depth, vocabulary, idPrefix, errorsFor, onChange }: Omit<ExpressionEditorProps, "label" | "onRemove">) {
   const items = Array.isArray(node.items) ? node.items.map(record) : [];
   const update = (next: Node[]) => onChange({ ...node, items: next });
   return (
@@ -134,7 +134,7 @@ function GroupEditor({ node, scope, path, depth, catalog, idPrefix, errorsFor, o
           path={`${path}.items[${index}]`}
           depth={depth + 1}
           label={`Condition ${index + 1}`}
-          catalog={catalog}
+          vocabulary={vocabulary}
           idPrefix={idPrefix}
           errorsFor={errorsFor}
           onChange={(next) => update(items.map((existing, position) => (position === index ? next : existing)))}
@@ -147,7 +147,7 @@ function GroupEditor({ node, scope, path, depth, catalog, idPrefix, errorsFor, o
         </p>
       ))}
       <div className={styles.toolbar}>
-        <Button variant="tertiary" size="sm" icon="plus" disabled={items.length >= catalog.limits.items || depth >= catalog.limits.depth} onClick={() => update([...items, defaultPredicate(catalog, scope)])}>
+        <Button variant="tertiary" size="sm" icon="plus" disabled={items.length >= vocabulary.limits.items || depth >= vocabulary.limits.depth} onClick={() => update([...items, defaultPredicate(vocabulary, scope)])}>
           Add condition
         </Button>
       </div>
@@ -155,16 +155,16 @@ function GroupEditor({ node, scope, path, depth, catalog, idPrefix, errorsFor, o
   );
 }
 
-type FieldsProps = { node: Node; scope: string; path: string; catalog: EditorCatalog; id: string; errorsFor: (path: string) => string[]; onChange: (next: Node) => void };
+type FieldsProps = { node: Node; scope: string; path: string; vocabulary: EditorVocabulary; id: string; errorsFor: (path: string) => string[]; onChange: (next: Node) => void };
 
-function collectionOf(node: Node, catalog: EditorCatalog, scope: string) {
-  const collections = catalog.collections.filter((item) => item.scope === scope);
+function collectionOf(node: Node, vocabulary: EditorVocabulary, scope: string) {
+  const collections = vocabulary.collections.filter((item) => item.scope === scope);
   return { collections, collection: collections.find((item) => item.id === node.collection) ?? collections[0]! };
 }
 
-function QuantifierFields({ node, scope, path, catalog, id, errorsFor, onChange }: FieldsProps) {
+function QuantifierFields({ node, scope, path, vocabulary, id, errorsFor, onChange }: FieldsProps) {
   const field = fieldProps(id, path, errorsFor);
-  const { collections, collection } = collectionOf(node, catalog, scope);
+  const { collections, collection } = collectionOf(node, vocabulary, scope);
   return (
     <>
       <Select
@@ -177,7 +177,7 @@ function QuantifierFields({ node, scope, path, catalog, id, errorsFor, onChange 
         onChange={(event) => {
           const next = collections.find((item) => item.id === event.target.value)!;
           const { where: _where, ...rest } = node;
-          onChange({ ...rest, collection: next.id, ...(node.op !== "count" && { condition: defaultPredicate(catalog, next.item) }) });
+          onChange({ ...rest, collection: next.id, ...(node.op !== "count" && { condition: defaultPredicate(vocabulary, next.item) }) });
         }}
       />
       {node.op === "count" && (
@@ -187,7 +187,7 @@ function QuantifierFields({ node, scope, path, catalog, id, errorsFor, onChange 
             label="The number of items is"
             size="sm"
             value={String(node.comparator ?? "eq")}
-            options={catalog.comparators.map((value) => ({ value, label: COMPARATOR_LABELS[value] ?? value }))}
+            options={vocabulary.comparators.map((value) => ({ value, label: COMPARATOR_LABELS[value] ?? value }))}
             onChange={(event) => onChange({ ...node, comparator: event.target.value })}
           />
           <TextInput {...field("value")} label="Count" size="sm" type="number" min={0} step={1} value={String(node.value ?? 0)} onChange={(event) => onChange({ ...node, value: wholeNumber(event.target.value) })} />
@@ -197,8 +197,8 @@ function QuantifierFields({ node, scope, path, catalog, id, errorsFor, onChange 
   );
 }
 
-function QuantifierChildren({ node, scope, path, depth, catalog, idPrefix, errorsFor, onChange }: Omit<ExpressionEditorProps, "label" | "onRemove">) {
-  const { collection } = collectionOf(node, catalog, scope);
+function QuantifierChildren({ node, scope, path, depth, vocabulary, idPrefix, errorsFor, onChange }: Omit<ExpressionEditorProps, "label" | "onRemove">) {
+  const { collection } = collectionOf(node, vocabulary, scope);
   const hasWhere = node.where !== undefined && node.where !== null;
   const id = `${idPrefix}-${path.replace(/[^A-Za-z0-9]+/g, "-")}`;
   return (
@@ -209,12 +209,12 @@ function QuantifierChildren({ node, scope, path, depth, catalog, idPrefix, error
         checked={hasWhere}
         onChange={(event) => {
           const { where: _where, ...rest } = node;
-          onChange(event.target.checked ? { ...node, where: defaultPredicate(catalog, collection.item) } : rest);
+          onChange(event.target.checked ? { ...node, where: defaultPredicate(vocabulary, collection.item) } : rest);
         }}
       />
       {(hasWhere || node.op !== "count") && (
         <div className={styles.children}>
-          {hasWhere && <ExpressionEditor node={record(node.where)} scope={collection.item} path={`${path}.where`} depth={depth + 1} label="Items to include" catalog={catalog} idPrefix={idPrefix} errorsFor={errorsFor} onChange={(where) => onChange({ ...node, where })} />}
+          {hasWhere && <ExpressionEditor node={record(node.where)} scope={collection.item} path={`${path}.where`} depth={depth + 1} label="Items to include" vocabulary={vocabulary} idPrefix={idPrefix} errorsFor={errorsFor} onChange={(where) => onChange({ ...node, where })} />}
           {node.op !== "count" && (
             <ExpressionEditor
               node={record(node.condition)}
@@ -222,7 +222,7 @@ function QuantifierChildren({ node, scope, path, depth, catalog, idPrefix, error
               path={`${path}.condition`}
               depth={depth + 1}
               label={node.op === "every" ? "Condition every item must meet" : "Condition at least one item must meet"}
-              catalog={catalog}
+              vocabulary={vocabulary}
               idPrefix={idPrefix}
               errorsFor={errorsFor}
               onChange={(condition) => onChange({ ...node, condition })}
@@ -234,20 +234,20 @@ function QuantifierChildren({ node, scope, path, depth, catalog, idPrefix, error
   );
 }
 
-function selectorOf(node: Node, catalog: EditorCatalog, scope: string) {
-  const selectors = catalog.selectors.filter((item) => item.scope === scope);
-  const selector: CatalogSelector | undefined = selectors.find((item) => item.id === node.selector);
-  const operators = selector ? (catalog.operatorsByType[selector.type] ?? []) : [];
+function selectorOf(node: Node, vocabulary: EditorVocabulary, scope: string) {
+  const selectors = vocabulary.selectors.filter((item) => item.scope === scope);
+  const selector: VocabularySelector | undefined = selectors.find((item) => item.id === node.selector);
+  const operators = selector ? (vocabulary.operatorsByType[selector.type] ?? []) : [];
   const op = typeof node.op === "string" && operators.includes(node.op) ? node.op : (operators[0] ?? "exists");
   return { selectors, selector, operators, op };
 }
 
-function PredicateFields({ node, scope, path, catalog, id, errorsFor, onChange }: FieldsProps) {
+function PredicateFields({ node, scope, path, vocabulary, id, errorsFor, onChange }: FieldsProps) {
   const field = fieldProps(id, path, errorsFor);
-  const { selectors, selector, operators, op } = selectorOf(node, catalog, scope);
+  const { selectors, selector, operators, op } = selectorOf(node, vocabulary, scope);
   const choose = (selectorId: string) => {
     const next = selectors.find((item) => item.id === selectorId)!;
-    const nextOperators = catalog.operatorsByType[next.type] ?? [];
+    const nextOperators = vocabulary.operatorsByType[next.type] ?? [];
     onChange(operands({ op: nextOperators.includes(op) ? op : nextOperators[0]!, selector: next.id, ...(next.parameter && { parameter: typeof node.parameter === "string" ? node.parameter : "" }) }, next));
   };
   return (
@@ -279,7 +279,7 @@ function PredicateFields({ node, scope, path, catalog, id, errorsFor, onChange }
 }
 
 /** The operands an operator needs for +selector+, with defaults. */
-function operands(node: Node, selector: CatalogSelector): Node {
+function operands(node: Node, selector: VocabularySelector): Node {
   const base = pick(node, ["op", "selector", "parameter"]);
   switch (node.op) {
     case "equals":
@@ -297,9 +297,9 @@ function operands(node: Node, selector: CatalogSelector): Node {
   }
 }
 
-function OperandEditor({ node, scope, path, catalog, id, errorsFor, onChange }: FieldsProps) {
+function OperandEditor({ node, scope, path, vocabulary, id, errorsFor, onChange }: FieldsProps) {
   const field = fieldProps(id, path, errorsFor);
-  const { selector, op } = selectorOf(node, catalog, scope);
+  const { selector, op } = selectorOf(node, vocabulary, scope);
   if (!selector) return null;
   const current = { ...node, op };
   const valuesErrors = () => [...errorsFor(`${path}.values`), ...Object.keys(Array.isArray(node.values) ? node.values : []).flatMap((index) => errorsFor(`${path}.values[${index}]`))];
@@ -372,7 +372,7 @@ function OperandEditor({ node, scope, path, catalog, id, errorsFor, onChange }: 
             label="Comparison"
             size="sm"
             value={String(node.comparator ?? "gte")}
-            options={catalog.comparators.map((value) => ({ value, label: COMPARATOR_LABELS[value] ?? value }))}
+            options={vocabulary.comparators.map((value) => ({ value, label: COMPARATOR_LABELS[value] ?? value }))}
             onChange={(event) => onChange({ ...current, comparator: event.target.value })}
           />
           <TextInput {...field("value")} label="Number" size="sm" type="number" min={0} step={1} value={String(node.value ?? 0)} onChange={(event) => onChange({ ...current, value: wholeNumber(event.target.value) })} />
@@ -387,7 +387,7 @@ function OperandEditor({ node, scope, path, catalog, id, errorsFor, onChange }: 
               label="Must contain"
               size="sm"
               value={String(node.mode ?? "any")}
-              options={catalog.containsModes.map((value) => ({ value, label: value === "all" ? "All of the values" : "Any of the values" }))}
+              options={vocabulary.containsModes.map((value) => ({ value, label: value === "all" ? "All of the values" : "Any of the values" }))}
               onChange={(event) => onChange({ ...current, mode: event.target.value })}
             />,
           )}

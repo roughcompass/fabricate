@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import type { Db } from "@/lib/db/client";
 import { jobs, previewBuilds } from "@/lib/db/schema";
 import type { Eligibility, PackageVerdict } from "@/lib/previews/eligibility";
@@ -27,7 +27,7 @@ import {
 } from "@/lib/previews/records";
 import { jobPayload } from "@/lib/jobs/queue";
 import { moveSurvey, requestSurvey } from "@/lib/surveys/records";
-import { buildSource } from "../support/builders";
+import { buildRepository } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 
 /*
@@ -58,31 +58,31 @@ const artifact = (directory: string): PublishedArtifact => ({ directory, layout:
 
 describe("preview records", () => {
   let db: Db;
-  let source: RepositorySource;
+  let repository: Repository;
   const main: PinnedCommit = { commitSha: COMMIT, refName: "refs/heads/main", refKind: "branch" };
   const release: PinnedCommit = { commitSha: COMMIT, refName: "refs/heads/release/1.4", refKind: "branch" };
   const jobsOf = (kind: string) => db.select().from(jobs).where(eq(jobs.kind, kind)).all();
   /** The survey of +commitSha+ a preparation decides from. */
   const surveyOf = (commitSha: string) =>
-    requestSurvey(db, { repositorySourceId: source.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: DIGEST, profileSchemaVersion: 2 }).survey;
+    requestSurvey(db, { repositoryId: repository.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: DIGEST, profileSchemaVersion: 2 }).survey;
   /** The Profile of +commitSha+'s survey, as a decision records it. */
   const profileOf = (commitSha: string): PreparationProfile => ({ surveyId: surveyOf(commitSha).id, digest: DIGEST });
 
   beforeEach(() => {
     db = createTestDb();
-    source = buildSource(db, { name: "orders" });
+    repository = buildRepository(db, { name: "orders" });
   });
 
   /** The preparation of +pinned+, decided with +outcome+ unless it was decided already. */
   const prepared = (pinned: PinnedCommit, outcome: Eligibility = eligibility(verdict("apps/web"), verdict("apps/admin"), verdict("packages/ui", false))) => {
-    const { preparation, started } = openPreparation(db, source, pinned);
+    const { preparation, started } = openPreparation(db, repository, pinned);
     return started ? decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), profileOf(pinned.commitSha), outcome)! : preparation;
   };
 
   describe("preparations", () => {
     it("share one preparation among refs at one commit, keeping the ref first prepared", () => {
-      const first = openPreparation(db, source, main);
-      const second = openPreparation(db, source, release);
+      const first = openPreparation(db, repository, main);
+      const second = openPreparation(db, repository, release);
 
       expect(first.started).toBe(true);
       expect(second).toEqual({ preparation: first.preparation, started: false });
@@ -105,11 +105,11 @@ describe("preview records", () => {
     });
 
     it("ignore a late job for an earlier request, and prepare a refused or failed commit again when it's requested", () => {
-      const { preparation } = openPreparation(db, source, main);
+      const { preparation } = openPreparation(db, repository, main);
       const earlier = preparation.requestedAt.getTime();
       expect(failPreparation(db, preparation.publicId, earlier, "The detector stopped")).toMatchObject({ state: "failed", failure: "The detector stopped" });
 
-      const again = openPreparation(db, source, release);
+      const again = openPreparation(db, repository, release);
       expect(again.started).toBe(true);
       expect(again.preparation).toMatchObject({ state: "profiling", failure: null, refName: "refs/heads/main" });
       expect(again.preparation.requestedAt.getTime()).toBeGreaterThan(earlier);
@@ -118,13 +118,13 @@ describe("preview records", () => {
 
       const refused = decidePreparation(db, preparation.publicId, again.preparation.requestedAt.getTime(), profileOf(COMMIT), eligibility(verdict("apps/web", false)))!;
       // The survey it decided from stays linked, for the next job to reuse.
-      expect(openPreparation(db, source, main)).toMatchObject({ started: true, preparation: { state: "profiling", surveyId: surveyOf(COMMIT).id } });
+      expect(openPreparation(db, repository, main)).toMatchObject({ started: true, preparation: { state: "profiling", surveyId: surveyOf(COMMIT).id } });
       expect(refused.state).toBe("refused");
       expect(jobsOf(PREPARE_PREVIEW)).toHaveLength(3);
     });
 
     it("link a survey of their own commit only, and are queued again once each survey they wait on finishes", () => {
-      const { preparation } = openPreparation(db, source, main);
+      const { preparation } = openPreparation(db, repository, main);
       expect(() => linkPreparationSurvey(db, preparation.id, surveyOf(OTHER).id)).toThrow(/links a survey of its Repository and commit/);
       const survey = surveyOf(COMMIT);
       linkPreparationSurvey(db, preparation.id, survey.id);
@@ -145,10 +145,10 @@ describe("preview records", () => {
   describe("previews", () => {
     it("open the same Repository and package preview from different branches at one commit", () => {
       const preparation = prepared(main);
-      expect(openPreparation(db, source, release).preparation.publicId).toBe(preparation.publicId);
+      expect(openPreparation(db, repository, release).preparation.publicId).toBe(preparation.publicId);
 
       const fromMain = startPreview(db, preparation.publicId, "apps/web");
-      const fromRelease = startPreview(db, openPreparation(db, source, release).preparation.publicId, "apps/web");
+      const fromRelease = startPreview(db, openPreparation(db, repository, release).preparation.publicId, "apps/web");
 
       expect(fromMain.created).toBe(true);
       expect(fromRelease).toEqual({ preview: fromMain.preview, created: false });
@@ -168,7 +168,7 @@ describe("preview records", () => {
     });
 
     it("start only from a ready preparation and a package that qualifies", () => {
-      const profiling = openPreparation(db, source, main).preparation;
+      const profiling = openPreparation(db, repository, main).preparation;
       expect(() => startPreview(db, profiling.publicId, "apps/web")).toThrow(expect.objectContaining({ name: "PreviewRequestError", code: "not_ready" }));
       const ready = decidePreparation(db, profiling.publicId, profiling.requestedAt.getTime(), profileOf(COMMIT), eligibility(verdict("apps/web"), verdict("packages/ui", false)))!;
       expect(() => startPreview(db, ready.publicId, "packages/ui")).toThrow(expect.objectContaining({ code: "not_qualifying" }));

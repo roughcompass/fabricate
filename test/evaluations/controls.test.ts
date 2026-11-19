@@ -1,7 +1,7 @@
 import type { JsonObject, MemoryFile } from "@repo-facts/contract";
 import { describe, expect, it } from "vitest";
 import { type EvaluationInputs, type ReleaseInput, type TargetInput, evaluateReleaseControls } from "@/lib/evaluations/controls";
-import { type CatalogIdentity, type ResolverTarget, resolveRelationships } from "@/lib/relationships/resolve";
+import { type RegisteredIdentity, type ResolverTarget, resolveRelationships } from "@/lib/relationships/resolve";
 import type { MapDocument } from "@/lib/relationships/schema";
 import { contributed, manifest, missing } from "../support/profiles";
 import { control, standardDocument } from "../support/standards";
@@ -14,7 +14,7 @@ const toTarget = (target: ResolverTarget): TargetInput => ({
   profile: target.profile ? { public_id: `prf_${target.source.name}`, digest: target.profile.digest, commit: String(target.profile.document.commit), factDocument: target.profile.document.fact_document as JsonObject } : null,
 });
 
-function inputs(targets: ResolverTarget[], outOfScope: CatalogIdentity[] = []): EvaluationInputs {
+function inputs(targets: ResolverTarget[], outOfScope: RegisteredIdentity[] = []): EvaluationInputs {
   const map = resolveRelationships({ targets, outOfScope }) as unknown as MapDocument;
   return { targets: targets.map(toTarget), map: { public_id: "map_test", digest: "0".repeat(64), document: map } };
 }

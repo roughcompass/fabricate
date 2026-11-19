@@ -4,11 +4,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { listRuns } from "@/lib/runs/run-records";
-import { listSources } from "@/lib/catalog/source-records";
+import { listRepositories } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
-import { selectedReleases, selectedSources } from "@/lib/assessments/assessment-records";
+import { selectedReleases, selectedRepositories } from "@/lib/assessments/assessment-records";
 import { deleteAssessment, updateAssessment } from "../../actions";
-import { releaseChoices, sourceChoices } from "../../choices";
+import { releaseChoices, repositoryChoices } from "../../choices";
 import { AssessmentForm } from "../../assessment-form";
 import { routes } from "@/lib/web/routes";
 import { loadAssessment } from "../load";
@@ -24,7 +24,7 @@ export default async function EditAssessmentPage({ params }: PageProps<"/assessm
   const assessment = loadAssessment(assessmentId);
   if (!assessment) notFound();
 
-  const sourceIds = selectedSources(db, assessment.id).map((source) => source.publicId);
+  const repositoryIds = selectedRepositories(db, assessment.id).map((repository) => repository.publicId);
   const releaseIds = selectedReleases(db, assessment.id).map(({ release }) => release.publicId);
   const assessed = listRuns(db, assessment.id).length > 0;
 
@@ -41,12 +41,12 @@ export default async function EditAssessmentPage({ params }: PageProps<"/assessm
       <AssessmentForm
         action={updateAssessment.bind(null, assessment.publicId)}
         initial={{
-          values: { name: assessment.name, objective: assessment.objective, selectionMode: assessment.selectionMode, sourcePublicIds: sourceIds, standardReleasePublicIds: releaseIds },
+          values: { name: assessment.name, objective: assessment.objective, selectionMode: assessment.selectionMode, repositoryPublicIds: repositoryIds, standardReleasePublicIds: releaseIds },
           errors: {},
         }}
         lockVersion={assessment.lockVersion}
-        sourceCount={listSources(db).length}
-        sourceChoices={sourceChoices(db)}
+        repositoryCount={listRepositories(db).length}
+        repositoryChoices={repositoryChoices(db)}
         releaseChoices={releaseChoices(db)}
         submitLabel="Save changes"
         cancelHref={routes.assessment(assessment.publicId)}

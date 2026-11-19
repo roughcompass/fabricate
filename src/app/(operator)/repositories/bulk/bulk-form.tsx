@@ -8,7 +8,7 @@ import { Panel } from "@/components/ui/panel";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Secondary, Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
-import { BULK_LIMIT } from "@/lib/catalog/bulk-lines";
+import { BULK_LIMIT } from "@/lib/repositories/bulk-lines";
 import type { BulkFormState } from "./bulk-state";
 
 /**

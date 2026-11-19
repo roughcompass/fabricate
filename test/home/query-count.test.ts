@@ -3,16 +3,16 @@ import type { Db } from "@/lib/db/client";
 import { attentionItems } from "@/lib/home/attention";
 import { WEEK_MS, assessmentTrend, figuresAt, recentActivity } from "@/lib/home/dashboard";
 import { fleetSummary } from "@/lib/home/summary";
-import { buildRun, buildAssessment, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 
 /** A fleet of +repositories+ Repositories and +assessments+ Assessments with a mix of outcomes. */
-function seed(repositories: number, assessments: number): Db {
+function seed(repositoryCount: number, assessments: number): Db {
   const db = createTestDb();
-  const sources = Array.from({ length: repositories }, () => buildSource(db));
+  const repositories = Array.from({ length: repositoryCount }, () => buildRepository(db));
   for (let index = 0; index < assessments; index++) {
-    const assessment = buildAssessment(db, { sources: [sources[index % sources.length]!] });
+    const assessment = buildAssessment(db, { repositories: [repositories[index % repositories.length]!] });
     const run = driveRun(db, buildRun(db, { assessment }).run, index % 3 === 0 ? "failed" : "complete");
     if (run.state === "complete") driveEvaluation(db, buildEvaluation(db, assessment, run), index % 2 === 0 ? "complete" : "failed", "gaps");
   }

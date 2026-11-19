@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { PAGE_SIZE, focusOf, furtherDependents, impactSentence, relationshipPage, runLevel, searchMap, systemLevel } from "@/lib/relationships/levels";
 import { type MapView, loadMapView } from "@/lib/relationships/map-view";
-import { buildAssessment, buildSource } from "../support/builders";
+import { buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { type MapWorld, seedMapWorld } from "../support/map-world";
 import { manifest } from "../support/profiles";
@@ -137,8 +137,8 @@ describe("map levels", () => {
 describe("indirect dependents", () => {
   it("counts each repository in a cycle once, never the focused library itself (Cycle among dependents)", async () => {
     const db = createTestDb();
-    const sources = ["lib", "a", "b", "c"].map((name) => buildSource(db, { name }));
-    const run = await seedRun(db, buildAssessment(db, { sources }), sources, [
+    const repositories = ["lib", "a", "b", "c"].map((name) => buildRepository(db, { name }));
+    const run = await seedRun(db, buildAssessment(db, { repositories }), repositories, [
       { "package.json": manifest({ name: "@acme/lib", version: "1.0.0", dependencies: { "@acme/a": "^1.0.0" } }) },
       { "package.json": manifest({ name: "@acme/a", version: "1.0.0", dependencies: { "@acme/lib": "^1.0.0", "@acme/b": "^1.0.0" } }) },
       { "package.json": manifest({ name: "@acme/b", version: "1.0.0", dependencies: { "@acme/lib": "^1.0.0", "@acme/a": "^1.0.0" } }) },

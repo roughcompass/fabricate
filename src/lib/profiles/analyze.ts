@@ -1,7 +1,7 @@
 import { analyze } from "@repo-facts/bundle";
 import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import type { JsonObject } from "@repo-facts/contract";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import type { GitRunner } from "@/lib/git/runner";
 import { openSnapshot } from "@/lib/snapshot/open";
@@ -21,7 +21,7 @@ export class AnalysisMismatchError extends Error {
 
 export interface SurveyCommitInput {
   survey: Survey;
-  repository: Pick<RepositorySource, "publicId" | "name" | "cloneUrl" | "gitRef">;
+  repository: Pick<Repository, "publicId" | "name" | "cloneUrl" | "gitRef">;
   config?: FrontendRegistryConfig;
   runner?: GitRunner;
   signal?: AbortSignal;
@@ -35,7 +35,7 @@ export async function surveyDocument(input: SurveyCommitInput): Promise<JsonObje
     throw new AnalysisMismatchError(`Survey ${survey.publicId} needs Surveyor ${survey.surveyorRelease} with its recorded configuration and Profile version ${survey.profileSchemaVersion}, but this worker runs Surveyor ${recipe.surveyorRelease}`);
   }
   if (!survey.internalRef) throw new AnalysisMismatchError(`Survey ${survey.publicId} has no pinned commit`);
-  const reader = await openSnapshot({ sourcePublicId: repository.publicId }, { internalRef: survey.internalRef, commitSha: survey.commitSha }, { config, ...(input.runner && { runner: input.runner }) });
+  const reader = await openSnapshot({ repositoryPublicId: repository.publicId }, { internalRef: survey.internalRef, commitSha: survey.commitSha }, { config, ...(input.runner && { runner: input.runner }) });
   const factDocument = await analyze(reader, { ...(input.signal && { signal: input.signal }) });
   return buildProfile({
     source: { public_id: repository.publicId, name: repository.name, clone_url: repository.cloneUrl, git_ref: survey.fromConfiguredReference ? repository.gitRef : survey.reference },

@@ -6,7 +6,7 @@ import { attentionItems } from "@/lib/home/attention";
 import { currentRecipe, moveSurvey, requestSurvey } from "@/lib/surveys/records";
 import { finishSurvey } from "@/lib/surveys/run";
 import { getConfig } from "@/lib/config";
-import { buildRun, buildAssessment, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 
@@ -34,16 +34,16 @@ describe("figures over seven days", () => {
 
   it("counts the Repositories added this week, not a deleted one (Repositories added this week)", () => {
     const db = createTestDb();
-    for (let index = 0; index < 4; index++) backdate(db, "repository_sources", "created_at", buildSource(db).id, 10);
-    buildSource(db);
-    buildSource(db);
+    for (let index = 0; index < 4; index++) backdate(db, "repository_sources", "created_at", buildRepository(db).id, 10);
+    buildRepository(db);
+    buildRepository(db);
     expect(changes(db)).toEqual({ repositories: "+2 this week", assessments: "No change this week" });
   });
 
   it("counts an Assessment's conclusion from Evaluations completed by then, and states no change for an Assessment created earlier (No change)", () => {
     const db = createTestDb();
-    const source = buildSource(db);
-    const assessment = buildAssessment(db, { sources: [source] });
+    const repository = buildRepository(db);
+    const assessment = buildAssessment(db, { repositories: [repository] });
     backdate(db, "initiatives", "created_at", assessment.id, 10);
     const evaluation = driveEvaluation(db, buildEvaluation(db, assessment, driveRun(db, buildRun(db, { assessment }).run, "complete")), "complete", "gaps");
     expect(figuresAt(db, new Date(NOW - WEEK_MS)).assessments).toMatchObject({ total: 1, byConclusion: { gaps: 0, none: 1 } });
@@ -56,9 +56,9 @@ describe("figures over seven days", () => {
 describe("Assessment trend", () => {
   it("counts this week's Evaluations by conclusion in the last of eight weeks (Trend)", () => {
     const db = createTestDb();
-    const source = buildSource(db);
+    const repository = buildRepository(db);
     const evaluate = (conclusion: "gaps" | "conforms") => {
-      const assessment = buildAssessment(db, { sources: [source] });
+      const assessment = buildAssessment(db, { repositories: [repository] });
       return driveEvaluation(db, buildEvaluation(db, assessment, driveRun(db, buildRun(db, { assessment }).run, "complete")), "complete", conclusion);
     };
     evaluate("gaps");
@@ -79,13 +79,13 @@ describe("Assessment trend", () => {
 describe("recent activity", () => {
   it("leads with the newest finished Run, linking to it, and leaves background surveys out", () => {
     const db = createTestDb();
-    const source = buildSource(db);
-    const orders = buildAssessment(db, { name: "Orders review", sources: [source] });
+    const repository = buildRepository(db);
+    const orders = buildAssessment(db, { name: "Orders review", repositories: [repository] });
     const older = driveRun(db, buildRun(db, { assessment: orders }).run, "complete");
     backdate(db, "assessments", "finished_at", older.id, 1);
     const failed = driveRun(db, buildRun(db, { assessment: orders }).run, "failed");
     // A background survey that failed is a version of the Repository, not a Run.
-    const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...currentRecipe(getConfig()) });
+    const { survey } = requestSurvey(db, { repositoryId: repository.id, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...currentRecipe(getConfig()) });
     finishSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { failure: { code: "source_unavailable", message: "The repository could not be reached" } });
 
     const activity = recentActivity(db);
@@ -97,7 +97,7 @@ describe("recent activity", () => {
 
   it("lists at most ten", () => {
     const db = createTestDb();
-    const assessment = buildAssessment(db, { sources: [buildSource(db)] });
+    const assessment = buildAssessment(db, { repositories: [buildRepository(db)] });
     for (let index = 0; index < 12; index++) driveRun(db, buildRun(db, { assessment }).run, "complete");
     expect(recentActivity(db)).toHaveLength(10);
   });

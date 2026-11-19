@@ -27,8 +27,8 @@ export function fleetSummary(db: Executor): FleetSummary {
 /** The Repositories in the catalog, or with +at+, those in it then, in one query. */
 export function repositoryCount(db: Executor, options: { at?: Date } = {}): number {
   const at = options.at?.getTime();
-  const inCatalog = at === undefined ? sql`deleted_at is null` : sql`created_at <= ${at} and (deleted_at is null or deleted_at > ${at})`;
-  return db.get<{ total: number }>(sql`select count(*) as total from repository_sources where ${inCatalog}`)?.total ?? 0;
+  const registered = at === undefined ? sql`deleted_at is null` : sql`created_at <= ${at} and (deleted_at is null or deleted_at > ${at})`;
+  return db.get<{ total: number }>(sql`select count(*) as total from repository_sources where ${registered}`)?.total ?? 0;
 }
 
 /** Repositories in the catalog with a current Profile, in one query. */

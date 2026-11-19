@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { assessments } from "./catalog";
+import { assessments } from "./assessments";
 import { createdAt, id, lockVersion, publicId, timestamp, updatedAt } from "./columns";
 
 /**

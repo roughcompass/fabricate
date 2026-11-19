@@ -1,9 +1,9 @@
 import type { Page } from "@playwright/test";
 import { listRuns } from "../src/lib/runs/run-records";
 import { jobs } from "../src/lib/db/schema";
-import { listAssessments, selectedReleases, selectedSources } from "../src/lib/assessments/assessment-records";
+import { listAssessments, selectedReleases, selectedRepositories } from "../src/lib/assessments/assessment-records";
 import { createStandard } from "../src/lib/standards/standard-records";
-import { buildRun, buildAssessment, buildRelease, buildSource } from "../test/support/builders";
+import { buildRun, buildAssessment, buildRelease, buildRepository } from "../test/support/builders";
 import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -12,7 +12,7 @@ const toast = (page: Page, text: string) => page.getByRole("region", { name: "No
 const overview = (page: Page) => page.getByRole("region", { name: "Overview" });
 
 test("creates an Initiative of all Repositories with two Releases, then narrows it to an explicit subset", async ({ page, db }) => {
-  for (const name of ["orders", "billing", "accounts"]) buildSource(db, { name });
+  for (const name of ["orders", "billing", "accounts"]) buildRepository(db, { name });
   const frontend = createStandard(db, { name: "Frontend baseline", purpose: "Consistent builds" }).standard;
   const security = createStandard(db, { name: "Security baseline", purpose: "Safe defaults" }).standard;
   buildRelease(db, { standard: frontend });
@@ -34,13 +34,13 @@ test("creates an Initiative of all Repositories with two Releases, then narrows 
   await expect(overview(page)).toContainText("Security baseline v1");
   const [assessment] = listAssessments(db);
   expect(selectedReleases(db, assessment!.id)).toHaveLength(2);
-  expect(selectedSources(db, assessment!.id)).toEqual([]);
+  expect(selectedRepositories(db, assessment!.id)).toEqual([]);
 
   await page.getByRole("link", { name: "Edit" }).click();
   await page.getByRole("radio", { name: /Selected Repositories/ }).check();
   await page.getByRole("button", { name: "Save changes" }).click();
   // The error appears once, under its field, and the field takes focus.
-  await expect(page.getByText("Select at least one repository source")).toHaveCount(1);
+  await expect(page.getByText("Select at least one Repository")).toHaveCount(1);
   await expect(page.getByRole("group", { name: "Selected Repositories" }).getByRole("checkbox").first()).toBeFocused();
 
   await page.getByRole("group", { name: "Selected Repositories" }).getByLabel("orders").check();
@@ -48,7 +48,7 @@ test("creates an Initiative of all Repositories with two Releases, then narrows 
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(toast(page, "Modernize the fleet was updated.")).toBeVisible();
   await expect(overview(page)).toContainText("2 selected Repositories");
-  expect(selectedSources(db, assessment!.id).map((source) => source.name)).toEqual(["accounts", "orders"]);
+  expect(selectedRepositories(db, assessment!.id).map((repository) => repository.name)).toEqual(["accounts", "orders"]);
 });
 
 test("shows a rejected field once and focuses it", async ({ page, db: _db }) => {
@@ -85,8 +85,8 @@ test("refuses a draft Standard submitted as a Release selection", async ({ page,
 });
 
 test("starts an Assessment once and lists it in the Initiative's history", async ({ page, db }) => {
-  buildSource(db, { name: "orders", gitRef: "main" });
-  buildSource(db, { name: "billing" });
+  buildRepository(db, { name: "orders", gitRef: "main" });
+  buildRepository(db, { name: "billing" });
   const assessment = buildAssessment(db, { name: "Assess me" });
 
   await page.goto(paths.assessment(assessment.publicId));
@@ -143,7 +143,7 @@ test("Link to a field: Select a Release opens the edit form at its Standard Rele
 });
 
 test("Initiative pages stay usable at mobile width", async ({ page, db }) => {
-  buildSource(db, { name: "a-source-with-a-long-name-for-layout-testing" });
+  buildRepository(db, { name: "a-source-with-a-long-name-for-layout-testing" });
   buildRelease(db);
   const assessment = buildAssessment(db, { name: "An initiative with a long descriptive name for layout" });
   await page.setViewportSize({ width: 375, height: 812 });
@@ -163,9 +163,9 @@ test.describe("conclusion tabs", () => {
   const rows = (page: Page) => page.getByRole("table", { name: "Assessments", exact: true }).locator("tbody tr");
 
   test("Gaps found tab lists only Assessments whose latest completed Evaluation found Gaps", async ({ page, db }) => {
-    const source = buildSource(db, { name: "orders" });
+    const repository = buildRepository(db, { name: "orders" });
     const evaluated = (name: string, conclusion: "gaps" | "conforms") => {
-      const assessment = buildAssessment(db, { name, sources: [source] });
+      const assessment = buildAssessment(db, { name, repositories: [repository] });
       return driveEvaluation(db, buildEvaluation(db, assessment, driveRun(db, buildRun(db, { assessment }).run, "complete")), "complete", conclusion);
     };
     const gaps = evaluated("Checkout platform migration", "gaps");
@@ -183,7 +183,7 @@ test.describe("conclusion tabs", () => {
   });
 
   test("Not evaluated tab lists an Assessment with Runs but no completed Evaluation", async ({ page, db }) => {
-    const assessment = buildAssessment(db, { name: "Checkout platform migration", sources: [buildSource(db)] });
+    const assessment = buildAssessment(db, { name: "Checkout platform migration", repositories: [buildRepository(db)] });
     driveRun(db, buildRun(db, { assessment }).run, "complete");
 
     await page.goto(`${paths.assessments}?conclusion=none`);

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { runTargets, runs } from "./runs";
-import { assessments } from "./catalog";
+import { assessments } from "./assessments";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
 import { standardReleases } from "./standards";
 

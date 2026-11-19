@@ -3,16 +3,16 @@ import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { surveyRefFor } from "@/lib/acquisition/mirror";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { TransitionError } from "@/lib/db/errors";
-import { JOB_PRIORITIES, repositorySources, surveys } from "@/lib/db/schema";
+import { JOB_PRIORITIES, repositories, surveys } from "@/lib/db/schema";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { currentRecipe, moveSurvey, pinSurvey, type Recipe, recordConfiguredResolution, requestSurvey, type Survey, surveyOfKey, type SurveyRequest, updateCurrentSurvey } from "@/lib/surveys/records";
 import { finishSurvey, queueSurvey } from "@/lib/surveys/run";
-import { buildRun, buildSource } from "../support/builders";
+import { buildRun, buildRepository } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { manifest, memoryProfile, sha1 } from "../support/profiles";
 import { findVersion } from "@/lib/profiling/versions";
@@ -23,11 +23,11 @@ const at = (minutes: number) => new Date(Date.UTC(2026, 10, 18, 9, minutes));
 
 describe("surveys", () => {
   let db: Db;
-  let web: RepositorySource;
+  let web: Repository;
   let recipe: Recipe;
   beforeEach(() => {
     db = createTestDb();
-    web = buildSource(db, { name: "web" });
+    web = buildRepository(db, { name: "web" });
     recipe = currentRecipe(getConfig());
   });
 
@@ -36,9 +36,9 @@ describe("surveys", () => {
    * configured reference unless +overrides+ say otherwise, recording that
    * reference's resolution as background surveying does.
    */
-  const request = (source: RepositorySource, commitSha: string, overrides: Partial<SurveyRequest> = {}) => {
-    const requested = requestSurvey(db, { repositorySourceId: source.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...recipe, ...overrides });
-    if (overrides.fromConfiguredReference !== false) recordConfiguredResolution(db, source.id, commitSha, overrides.resolvedAt ?? new Date());
+  const request = (repository: Repository, commitSha: string, overrides: Partial<SurveyRequest> = {}) => {
+    const requested = requestSurvey(db, { repositoryId: repository.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...recipe, ...overrides });
+    if (overrides.fromConfiguredReference !== false) recordConfiguredResolution(db, repository.id, commitSha, overrides.resolvedAt ?? new Date());
     return requested;
   };
 
@@ -50,7 +50,7 @@ describe("surveys", () => {
     return finishSurvey(db, running, { document });
   }
 
-  const currentSurveyId = (source: RepositorySource) => db.select({ id: repositorySources.currentSurveyId }).from(repositorySources).where(eq(repositorySources.id, source.id)).get()!.id;
+  const currentSurveyId = (repository: Repository) => db.select({ id: repositories.currentSurveyId }).from(repositories).where(eq(repositories.id, repository.id)).get()!.id;
 
   describe("records", () => {
     it("records the recipe this worker surveys with: the Surveyor release, configuration digest, and profile schema version", () => {
@@ -62,7 +62,7 @@ describe("surveys", () => {
       expect(first).toMatchObject({ queued: true, survey: { number: 1, state: "queued", trigger: "added", attempts: 0, requestedByRunId: null, ...recipe } });
 
       // A Run asking for the same key joins the background survey as it is.
-      const { run } = buildRun(db, { sources: [web] });
+      const { run } = buildRun(db, { repositories: [web] });
       expect(request(web, A, { trigger: "run", requestedByRunId: run.id })).toEqual({ survey: first.survey, queued: false });
       expect(surveyOfKey(db, web.id, A, recipe)?.id).toBe(first.survey.id);
 
@@ -104,7 +104,7 @@ describe("surveys", () => {
     });
 
     it("numbers each repository's surveys 1, 2, 3 in the order they're created", async () => {
-      const orders = buildSource(db, { name: "orders" });
+      const orders = buildRepository(db, { name: "orders" });
       await finish(request(web, A).survey, "failed");
       request(orders, A);
       request(web, B);
@@ -153,7 +153,7 @@ describe("surveys", () => {
     });
 
     it("can only name one of the repository's own successful surveys of its configured reference", async () => {
-      const orders = buildSource(db, { name: "orders" });
+      const orders = buildRepository(db, { name: "orders" });
       const queued = request(web, A).survey;
       const branch = await finish(request(web, B, { fromConfiguredReference: false }).survey);
       const others = (await finish(request(orders, A).survey)).id;

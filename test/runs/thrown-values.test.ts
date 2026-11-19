@@ -5,7 +5,7 @@ import { launchRun } from "@/lib/runs/launcher";
 import { drainJobs } from "@/lib/jobs/worker";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { surveyById } from "@/lib/surveys/records";
-import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { buildAssessment } from "../support/builders";
 
 // Surveyor throws whatever the test sets: JavaScript code can throw any value, not only an Error.
@@ -29,8 +29,8 @@ describe("a thrown value that isn't an Error", () => {
     thrown.value = value;
     const work = world.fixture.repo("fleet/orders");
     work.write("README.md", "orders\n").commit();
-    const source = registerLocalSource(world.db, world.config, "orders", work.path);
-    const { run } = launchRun(world.db, buildAssessment(world.db, { sources: [source] }).publicId, crypto.randomUUID(), world.config);
+    const repository = registerLocalRepository(world.db, world.config, "orders", work.path);
+    const { run } = launchRun(world.db, buildAssessment(world.db, { repositories: [repository] }).publicId, crypto.randomUUID(), world.config);
 
     // The target resolves and joins its survey; the survey pins the commit, then Surveyor throws.
     await drainJobs(world.db, jobHandlers(world.db, world.config));

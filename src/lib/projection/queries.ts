@@ -24,7 +24,7 @@ export interface MissingTarget {
  */
 export function missingTargets(db: Executor, runId: number): MissingTarget[] {
   return db
-    .select({ target: runTargets.publicId, source: runTargets.sourceName, state: runTargets.state, reason: runTargets.failureCode })
+    .select({ target: runTargets.publicId, source: runTargets.repositoryName, state: runTargets.state, reason: runTargets.failureCode })
     .from(runTargets)
     .where(and(eq(runTargets.runId, runId), inArray(runTargets.state, ["failed", "canceled"])))
     .orderBy(asc(runTargets.position))

@@ -1,8 +1,8 @@
 import type { MemoryFile } from "@repo-facts/contract";
 import type { Run } from "@/lib/runs/run-records";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import type { Db } from "@/lib/db/client";
-import { buildAssessment, buildSource } from "./builders";
+import { buildAssessment, buildRepository } from "./builders";
 import { manifest } from "./profiles";
 import { seedRun } from "./scenarios";
 
@@ -43,7 +43,7 @@ const libraries = (index: number) => Object.fromEntries([0, 7, 13].map((offset) 
 
 export interface LargeMap {
   run: Run;
-  sources: Map<string, RepositorySource>;
+  repositories: Map<string, Repository>;
 }
 
 export async function seedLargeMap(db: Db): Promise<LargeMap> {
@@ -63,8 +63,8 @@ export async function seedLargeMap(db: Db): Promise<LargeMap> {
   for (let index = 0; index < LOOSE; index++) trees.set(`loose-${pad(index)}`, { "package.json": manifest({ name: `loose-${index}`, version: "1.0.0" }) });
 
   const names = [...trees.keys()];
-  const sources = new Map(names.map((name) => [name, buildSource(db, { name })]));
-  const assessment = buildAssessment(db, { name: "Large map", sources: [...sources.values()] });
-  const run = await seedRun(db, assessment, [...sources.values()], names.map((name) => trees.get(name)!));
-  return { run, sources };
+  const repositories = new Map(names.map((name) => [name, buildRepository(db, { name })]));
+  const assessment = buildAssessment(db, { name: "Large map", repositories: [...repositories.values()] });
+  const run = await seedRun(db, assessment, [...repositories.values()], names.map((name) => trees.get(name)!));
+  return { run, repositories };
 }

@@ -23,7 +23,7 @@ const REFUSALS: Record<string, string> = {
 
 /** Where the cited commit is pinned: the survey's commit in its Repository's mirror. */
 export interface EvidencePin {
-  sourcePublicId: string;
+  repositoryPublicId: string;
   internalRef: string | null;
   commitSha: string;
 }

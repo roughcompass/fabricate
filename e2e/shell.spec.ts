@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { profilesOf } from "../src/lib/profiles/profile-records";
-import { buildSource } from "../test/support/builders";
+import { buildRepository } from "../test/support/builders";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, seedResults, seedEvaluation } from "./support/results";
 import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
@@ -78,7 +78,7 @@ test.describe("on a wide viewport", () => {
   });
 
   test("The create pages that left the menu are offered on their list pages", async ({ page, db }) => {
-    buildSource(db);
+    buildRepository(db);
     await page.goto(paths.assessments);
     await expect(pageHeader(page).getByRole("link", { name: "New Assessment" })).toBeVisible();
     await page.goto(paths.repositories);
@@ -351,15 +351,15 @@ test.describe("an outcome toast beside a wide sidebar", () => {
     expect(box.x + box.width).toBeGreaterThan(1280 - 48);
   }
 
-  async function setUp(page: Page, db: Parameters<typeof buildSource>[0], baseURL: string) {
-    const sources = Array.from({ length: 40 }, (_, index) => buildSource(db, { name: `source-${String(index).padStart(2, "0")}` }));
+  async function setUp(page: Page, db: Parameters<typeof buildRepository>[0], baseURL: string) {
+    const repositories = Array.from({ length: 40 }, (_, index) => buildRepository(db, { name: `source-${String(index).padStart(2, "0")}` }));
     await page.context().addCookies([{ name: "frontend-registry-sidebar-width", value: "400", url: baseURL }]);
-    return sources[0]!;
+    return repositories[0]!;
   }
 
   test("the live toast stays on the viewport", async ({ page, db, baseURL }) => {
-    const source = await setUp(page, db, baseURL!);
-    await page.goto(`${paths.repositories}?notice=added&source=${source.publicId}`);
+    const repository = await setUp(page, db, baseURL!);
+    await page.goto(`${paths.repositories}?notice=added&source=${repository.publicId}`);
     await expect.poll(async () => (await page.locator("#sidebar").boundingBox())?.width).toBe(400);
     await expectOnViewport(page, page.getByRole("listitem").filter({ hasText: "source-00 was added." }).first());
   });
@@ -368,8 +368,8 @@ test.describe("an outcome toast beside a wide sidebar", () => {
     test.use({ javaScriptEnabled: false });
 
     test("the server-rendered toast inside the page stays on the viewport", async ({ page, db, baseURL }) => {
-      const source = await setUp(page, db, baseURL!);
-      await page.goto(`${paths.repositories}?notice=added&source=${source.publicId}`);
+      const repository = await setUp(page, db, baseURL!);
+      await page.goto(`${paths.repositories}?notice=added&source=${repository.publicId}`);
       await expectOnViewport(page, page.getByRole("status").filter({ hasText: "source-00 was added." }).first());
     });
   });

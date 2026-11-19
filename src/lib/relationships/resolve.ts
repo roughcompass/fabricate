@@ -1,5 +1,5 @@
 import { type JsonObject, type JsonValue, compareCodeUnits } from "@repo-facts/contract";
-import { CloneUrl } from "@/lib/catalog/clone-url";
+import { CloneUrl } from "@/lib/repositories/clone-url";
 import { type CoverageGap, type EdgeType, MAP_SCHEMA, MAP_SCHEMA_VERSION, type MapEdge, type MapNode, type NodeIdentity, RESOLVER_VERSION, type ReferenceIdentity, type ResolutionState, type SourceIdentity, edgeId, nodeId } from "./schema";
 import { asObject, asArray } from "@/lib/json";
 
@@ -37,7 +37,7 @@ export interface ResolverTarget {
 }
 
 /** A catalog source outside the Assessment's scope: identity metadata only. */
-export interface CatalogIdentity {
+export interface RegisteredIdentity {
   public_id: string;
   name: string;
   canonical_url: string;
@@ -57,7 +57,7 @@ interface Contributor {
 
 const NO_SERVED_ORIGIN = "No Profile in this Run records the origin an application is served from, so a URL cannot be matched to a repository";
 
-export function resolveRelationships(input: { targets: readonly ResolverTarget[]; outOfScope: readonly CatalogIdentity[] }): JsonObject {
+export function resolveRelationships(input: { targets: readonly ResolverTarget[]; outOfScope: readonly RegisteredIdentity[] }): JsonObject {
   const map = new MapBuilder();
   const contributors: Contributor[] = [];
   const gaps: CoverageGap[] = [];
@@ -81,7 +81,7 @@ export function resolveRelationships(input: { targets: readonly ResolverTarget[]
   const remotes = indexBy(contributors, (contributor) =>
     contributor.references.filter((reference) => reference.type === "composition" && reference.role === "remote" && reference.identifier.mechanism === "module-federation").map((reference) => [reference.identifier.name!, reference]),
   );
-  const catalog = new CatalogLabels(input.outOfScope, map);
+  const registered = new RegisteredLabels(input.outOfScope, map);
 
   for (const contributor of contributors) {
     for (const reference of contributor.references) {
@@ -89,9 +89,9 @@ export function resolveRelationships(input: { targets: readonly ResolverTarget[]
         const to = map.node({ kind: "package", name: reference.identifier.name! });
         map.edge(contributor, { type: "package_production", reference, to, state: "resolved", rule: "package.production", details: { package: reference.identifier.name! } }, [[contributor, reference.evidence]]);
       } else if (reference.type === "package" && reference.role === "consumer") {
-        resolvePackage(map, catalog, contributor, reference, producers);
+        resolvePackage(map, registered, contributor, reference, producers);
       } else if (reference.type === "composition" && reference.role === "host") {
-        resolveComposition(map, catalog, contributor, reference, producers, remotes);
+        resolveComposition(map, registered, contributor, reference, producers, remotes);
       } else if (reference.type === "iframe" || reference.type === "runtime_contract") {
         const type: EdgeType = reference.type;
         const to = map.node({ kind: "unresolved_endpoint", reference: { type: reference.type, identifier: reference.identifier } });
@@ -116,7 +116,7 @@ export function resolveRelationships(input: { targets: readonly ResolverTarget[]
 
 type Candidate = { contributor: Contributor; reference: Reference };
 
-function resolvePackage(map: MapBuilder, catalog: CatalogLabels, contributor: Contributor, reference: Reference, producers: Map<string, Candidate[]>) {
+function resolvePackage(map: MapBuilder, registered: RegisteredLabels, contributor: Contributor, reference: Reference, producers: Map<string, Candidate[]>) {
   const name = reference.identifier.name!;
   const details = { package: name };
   // A repository's use of its own workspace package is an internal fact in its Profile, never a consumer reference.
@@ -125,7 +125,7 @@ function resolvePackage(map: MapBuilder, catalog: CatalogLabels, contributor: Co
     resolveAmong(map, contributor, reference, candidates, { type: "package_dependency", rule: "package.exact-name", details, noun: `a package named ${name}` });
     return;
   }
-  const label = catalog.match(name, gitUrlOf(contributor.facts, name));
+  const label = registered.match(name, gitUrlOf(contributor.facts, name));
   if (label) {
     map.edge(contributor, { type: "package_dependency", reference, ...label, details }, [[contributor, reference.evidence]]);
     return;
@@ -134,7 +134,7 @@ function resolvePackage(map: MapBuilder, catalog: CatalogLabels, contributor: Co
   map.edge(contributor, { type: "package_dependency", reference, to, state: "unresolved", rule: "package.unresolved", reason: `No repository in this Run produces ${name}`, details }, [[contributor, reference.evidence]]);
 }
 
-function resolveComposition(map: MapBuilder, catalog: CatalogLabels, contributor: Contributor, reference: Reference, producers: Map<string, Candidate[]>, remotes: Map<string, Candidate[]>) {
+function resolveComposition(map: MapBuilder, registered: RegisteredLabels, contributor: Contributor, reference: Reference, producers: Map<string, Candidate[]>, remotes: Map<string, Candidate[]>) {
   const mechanism = reference.identifier.mechanism;
   const compositionFacts = asArray(asObject(asObject(contributor.facts.categories).composition).facts).map(asObject);
   let name: string;
@@ -162,7 +162,7 @@ function resolveComposition(map: MapBuilder, catalog: CatalogLabels, contributor
     resolveAmong(map, contributor, reference, candidates, { type: "composition", rule, details, noun });
     return;
   }
-  const label = catalog.match(name, null);
+  const label = registered.match(name, null);
   if (label) {
     map.edge(contributor, { type: "composition", reference, ...label, details }, [[contributor, reference.evidence]]);
     return;
@@ -285,9 +285,9 @@ function gitUrlOf(facts: JsonObject, name: string): string | null {
 }
 
 /** Labels an unmatched reference with a catalog source outside the scope, from its identity metadata alone. */
-class CatalogLabels {
+class RegisteredLabels {
   constructor(
-    private readonly sources: readonly CatalogIdentity[],
+    private readonly sources: readonly RegisteredIdentity[],
     private readonly map: MapBuilder,
   ) {}
 

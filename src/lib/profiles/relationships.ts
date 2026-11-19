@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { runs, graphEdges, graphNodes, repositorySources } from "@/lib/db/schema";
+import { runs, graphEdges, graphNodes, repositories } from "@/lib/db/schema";
 import { routes } from "@/lib/web/routes";
 
 /**
@@ -32,13 +32,13 @@ export interface RepositoryRelationships {
 
 const NONE: RepositoryRelationships = { run: null, uses: [], usedBy: [], mapHref: null };
 
-export function repositoryRelationships(db: Executor, sourceId: number): RepositoryRelationships {
+export function repositoryRelationships(db: Executor, repositoryId: number): RepositoryRelationships {
   // The newest Assessment Run that mapped the repository.
   const node = db
     .select({ mapId: graphNodes.mapId, nodeId: graphNodes.nodeId, run: runs.publicId, finishedAt: runs.finishedAt })
     .from(graphNodes)
     .innerJoin(runs, eq(runs.id, graphNodes.runId))
-    .where(and(eq(graphNodes.repositorySourceId, sourceId), eq(graphNodes.kind, "repository")))
+    .where(and(eq(graphNodes.repositoryId, repositoryId), eq(graphNodes.kind, "repository")))
     .orderBy(desc(graphNodes.mapId))
     .limit(1)
     .get();
@@ -50,12 +50,12 @@ export function repositoryRelationships(db: Executor, sourceId: number): Reposit
     .where(and(eq(graphEdges.mapId, node.mapId), eq(graphEdges.state, "resolved"), eq(graphEdges.kind, "architecture"), or(eq(graphEdges.fromNode, node.nodeId), eq(graphEdges.toNode, node.nodeId))))
     .all();
   const others = [...new Set(edges.flatMap((edge) => [edge.from, edge.to]).filter((id): id is string => id !== null && id !== node.nodeId))];
-  const repositories = new Map(
+  const named = new Map(
     (others.length
       ? db
-          .select({ nodeId: graphNodes.nodeId, publicId: repositorySources.publicId, name: repositorySources.name })
+          .select({ nodeId: graphNodes.nodeId, publicId: repositories.publicId, name: repositories.name })
           .from(graphNodes)
-          .innerJoin(repositorySources, eq(repositorySources.id, graphNodes.repositorySourceId))
+          .innerJoin(repositories, eq(repositories.id, graphNodes.repositoryId))
           .where(and(eq(graphNodes.mapId, node.mapId), eq(graphNodes.kind, "repository"), inArray(graphNodes.nodeId, others)))
           .all()
       : []
@@ -66,7 +66,7 @@ export function repositoryRelationships(db: Executor, sourceId: number): Reposit
     const related = new Map<string, RelatedRepository>();
     for (const edge of edges) {
       const other = direction === "uses" ? (edge.from === node.nodeId ? edge.to : null) : edge.to === node.nodeId ? edge.from : null;
-      const repository = other ? repositories.get(other) : undefined;
+      const repository = other ? named.get(other) : undefined;
       if (!repository) continue;
       const entry = related.get(repository.publicId) ?? { publicId: repository.publicId, name: repository.name, types: [] };
       if (!entry.types.includes(edge.type)) entry.types.push(edge.type);

@@ -5,12 +5,12 @@ import { resolveTarget } from "@/lib/acquisition/acquire";
 import { type RunTarget, getTarget } from "@/lib/runs/run-records";
 import { processTarget } from "@/lib/runs/orchestration";
 import { transitionTarget } from "@/lib/runs/transitions";
-import { type RepositorySource, insertSource } from "@/lib/catalog/source-records";
+import { type Repository, insertRepository } from "@/lib/repositories/repository-records";
 import { surveys } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
 import { surveyById } from "@/lib/surveys/records";
 import { runSurvey } from "@/lib/surveys/run";
-import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { buildRun } from "../support/builders";
 import { fakeExecutable } from "../support/fake-git";
 
@@ -18,13 +18,13 @@ const realGit = execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" 
 
 describe("acquisition failures", () => {
   const world = useAcquisitionWorld("failures");
-  let healthy: RepositorySource;
+  let healthy: Repository;
   const cleanups: (() => void)[] = [];
 
   beforeEach(() => {
     const work = world.fixture.repo("fleet/healthy");
     work.write("README.md", "healthy\n").commit();
-    healthy = registerLocalSource(world.db, world.config, "healthy", work.path);
+    healthy = registerLocalRepository(world.db, world.config, "healthy", work.path);
   });
 
   afterEach(() => {
@@ -32,9 +32,9 @@ describe("acquisition failures", () => {
   });
 
   /** An assessment over [failing, healthy] with both targets acquiring. */
-  const pair = (failing: RepositorySource): [RunTarget, RunTarget] => {
-    const { targets } = buildRun(world.db, { sources: [failing, healthy] });
-    const byName = new Map(targets.map((target) => [target.sourceName, transitionTarget(world.db, target, "acquiring")]));
+  const pair = (failing: Repository): [RunTarget, RunTarget] => {
+    const { targets } = buildRun(world.db, { repositories: [failing, healthy] });
+    const byName = new Map(targets.map((target) => [target.repositoryName, transitionTarget(world.db, target, "acquiring")]));
     return [byName.get(failing.name)!, byName.get("healthy")!];
   };
 
@@ -45,10 +45,10 @@ describe("acquisition failures", () => {
     return new GitRunner({ config: world.config, executable: fake.executable, timeoutMs: options.timeoutMs });
   };
 
-  const surveysOf = (source: RepositorySource) => world.db.select().from(surveys).all().filter((survey) => survey.repositorySourceId === source.id);
+  const surveysOf = (repository: Repository) => world.db.select().from(surveys).all().filter((survey) => survey.repositoryId === repository.id);
 
   it("records an unreachable remote on its own target, with no survey, while a sibling source resolves", async () => {
-    const unreachable = insertSource(world.db, { name: "unreachable", cloneUrl: "https://127.0.0.1:1/acme/orders.git", canonicalUrl: "https://127.0.0.1:1/acme/orders" });
+    const unreachable = insertRepository(world.db, { name: "unreachable", cloneUrl: "https://127.0.0.1:1/acme/orders.git", canonicalUrl: "https://127.0.0.1:1/acme/orders" });
     const [failing, sibling] = pair(unreachable);
 
     const failed = await resolveTarget(world.db, failing, { config: world.config });
@@ -64,7 +64,7 @@ describe("acquisition failures", () => {
   it("treats a local source removed after registration as unavailable", async () => {
     const work = world.fixture.repo("fleet/removed");
     work.commit();
-    const removed = registerLocalSource(world.db, world.config, "removed", work.path);
+    const removed = registerLocalRepository(world.db, world.config, "removed", work.path);
     fs.rmSync(work.path, { recursive: true, force: true });
     const [failing] = pair(removed);
 
@@ -75,7 +75,7 @@ describe("acquisition failures", () => {
   it("records an invalid reference", async () => {
     const work = world.fixture.repo("fleet/orders");
     work.commit();
-    const [failing] = pair(registerLocalSource(world.db, world.config, "orders", work.path, "no-such-branch"));
+    const [failing] = pair(registerLocalRepository(world.db, world.config, "orders", work.path, "no-such-branch"));
 
     await resolveTarget(world.db, failing, { config: world.config });
     expect(getTarget(world.db, failing.publicId)).toMatchObject({ state: "failed", failureCode: "invalid_ref", failureMessage: expect.stringContaining("no-such-branch") });
@@ -84,7 +84,7 @@ describe("acquisition failures", () => {
   it("records a Git command that exceeds the timeout", async () => {
     const work = world.fixture.repo("fleet/slow");
     work.commit();
-    const [failing, sibling] = pair(registerLocalSource(world.db, world.config, "slow", work.path));
+    const [failing, sibling] = pair(registerLocalRepository(world.db, world.config, "slow", work.path));
 
     const outcome = await resolveTarget(world.db, failing, { config: world.config, runner: wrappedRunner("sleep 5", { timeoutMs: 300 }) });
     expect(outcome).toMatchObject({ ok: false, error: { code: "timeout" } });
@@ -95,7 +95,7 @@ describe("acquisition failures", () => {
   it("marks a canceled resolution canceled rather than failed", async () => {
     const work = world.fixture.repo("fleet/canceled");
     work.commit();
-    const [failing] = pair(registerLocalSource(world.db, world.config, "canceled", work.path));
+    const [failing] = pair(registerLocalRepository(world.db, world.config, "canceled", work.path));
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 150);
 
@@ -107,7 +107,7 @@ describe("acquisition failures", () => {
   it("never persists credentials that appear in Git's diagnostics", async () => {
     const work = world.fixture.repo("fleet/private");
     work.commit();
-    const [failing] = pair(registerLocalSource(world.db, world.config, "private", work.path));
+    const [failing] = pair(registerLocalRepository(world.db, world.config, "private", work.path));
     const runner = wrappedRunner(
       `echo "fatal: unable to access 'https://deploy:s3cr3t-token@git.example.com/acme/private.git/': The requested URL returned error: 403" >&2; echo "Authorization: Bearer tok_abcdef123456" >&2; exit 128`,
     );
@@ -126,8 +126,8 @@ describe("acquisition failures", () => {
   it("normalizes a failure while a survey fetches its commit, redacts it, and fails the target waiting on it with the same code", async () => {
     const work = world.fixture.repo("fleet/private");
     work.commit();
-    const source = registerLocalSource(world.db, world.config, "private", work.path);
-    const { targets } = buildRun(world.db, { sources: [source] });
+    const repository = registerLocalRepository(world.db, world.config, "private", work.path);
+    const { targets } = buildRun(world.db, { repositories: [repository] });
     const waiting = await processTarget(world.db, targets[0]!.publicId, { config: world.config });
     expect(waiting).toMatchObject({ state: "analyzing", surveyId: expect.any(Number) });
     const runner = wrappedRunner(`echo "fatal: unable to access 'https://deploy:s3cr3t-token@git.example.com/acme/private.git/': The requested URL returned error: 403" >&2; exit 128`, { command: "fetch" });

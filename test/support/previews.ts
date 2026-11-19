@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import type { ArtifactLayout } from "@/lib/db/schema";
@@ -19,9 +19,9 @@ import { requestSurvey } from "@/lib/surveys/records";
 let commits = 0;
 
 /** A queued preview of a new commit of +source+, of a package of kind +layout+. */
-export function queuedPreview(db: Db, source: RepositorySource, layout: ArtifactLayout = "standalone"): PreviewBuild {
+export function queuedPreview(db: Db, repository: Repository, layout: ArtifactLayout = "standalone"): PreviewBuild {
   const commitSha = (++commits).toString(16).padStart(40, "0");
-  const { preparation } = openPreparation(db, source, { commitSha, refName: "refs/heads/main", refKind: "branch" });
+  const { preparation } = openPreparation(db, repository, { commitSha, refName: "refs/heads/main", refKind: "branch" });
   const verdict: PackageVerdict = {
     directory: ".",
     manifest: "package.json",
@@ -31,7 +31,7 @@ export function queuedPreview(db: Db, source: RepositorySource, layout: Artifact
     plan: { installRoot: ".", packageManager: { name: "npm", version: null, lockfile: "package-lock.json" }, buildTool: "vite", buildScript: "vite build", node: { version: "22.11.0", ranges: [] }, layout, composition: null },
   };
   // A survey of the commit to decide from; the decision is recorded here, so it never runs.
-  const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
+  const { survey } = requestSurvey(db, { repositoryId: repository.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
   decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), { surveyId: survey.id, digest: "f".repeat(64) }, { packages: [verdict], refusal: null });
   // Decided here, so its job has nothing left to do; only the build job is queued.
   rawRun(db, "delete from jobs where kind = ?", PREPARE_PREVIEW);

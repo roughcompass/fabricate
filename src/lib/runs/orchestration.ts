@@ -1,6 +1,6 @@
 import type { Resolution } from "@/lib/acquisition/mirror";
 import { resolveTarget } from "@/lib/acquisition/acquire";
-import { sourceById } from "@/lib/catalog/source-records";
+import { repositoryById } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { RUN_MACHINE, TARGET_MACHINE, isTerminal } from "@/lib/db/state-machines";
@@ -104,9 +104,9 @@ export async function processTarget(db: Executor, targetPublicId: string, option
 function joinSurvey(db: Executor, target: RunTarget, resolution: Resolution): RunTarget {
   return immediate(db, (tx) => {
     const run = runById(tx, target.runId);
-    const configured = target.gitRef === sourceById(tx, target.repositorySourceId).gitRef;
+    const configured = target.gitRef === repositoryById(tx, target.repositoryId).gitRef;
     const { survey } = requestSurvey(tx, {
-      repositorySourceId: target.repositorySourceId,
+      repositoryId: target.repositoryId,
       commitSha: resolution.commitSha,
       reference: resolution.name,
       fromConfiguredReference: configured,
@@ -118,7 +118,7 @@ function joinSurvey(db: Executor, target: RunTarget, resolution: Resolution): Ru
     });
     if (survey.state === "queued") queueSurvey(tx, survey, RUN_PRIORITY);
     // A Run of the configured reference says which commit it names now.
-    if (configured) recordConfiguredResolution(tx, target.repositorySourceId, resolution.commitSha, new Date());
+    if (configured) recordConfiguredResolution(tx, target.repositoryId, resolution.commitSha, new Date());
     return linkSurvey(tx, target, { refKind: resolution.kind, resolvedRef: resolution.name, surveyId: survey.id });
   });
 }
@@ -141,7 +141,7 @@ export function finalizeRun(db: Executor, runPublicId: string): Run {
     // Completed Profiles stay reviewable in the map even when the Assessment was canceled.
     finalizeRelationshipMap(tx, run);
     const outcome: AggregateOutcome = run.cancelRequestedAt ? "canceled" : profiles === targets.length ? "complete" : profiles > 0 ? "complete_with_issues" : "failed";
-    const failures = targets.filter((target) => target.state === "failed").map((target) => `${target.sourceName}: ${target.failureCode}`);
+    const failures = targets.filter((target) => target.state === "failed").map((target) => `${target.repositoryName}: ${target.failureCode}`);
     return transitionRun(tx, run, outcome, outcome === "failed" ? { failureReason: failures.length ? `No repository could be assessed (${failures.join("; ")})` : "No repository could be assessed" } : {});
   });
 }

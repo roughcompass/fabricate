@@ -7,13 +7,13 @@ import type { JsonObject } from "@repo-facts/contract";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getRun, targetsOf } from "@/lib/runs/run-records";
 import { launchRun } from "@/lib/runs/launcher";
-import { resolveCloneUrl } from "@/lib/catalog/catalog";
-import { SourceBoundary } from "@/lib/catalog/source-boundary";
+import { resolveCloneUrl } from "@/lib/repositories/registration";
+import { SourceBoundary } from "@/lib/repositories/source-boundary";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
-import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { buildAssessment } from "../support/builders";
 import { type Repo } from "../support/git-fixture";
 import { GitLog, NO_NETWORK_CALLS, NetworkTrap, countNetworkCalls } from "../support/traps";
@@ -122,8 +122,8 @@ describe("Assessment of a malicious repository", () => {
     gitLog = new GitLog(world.fixture.dir("git-log"));
 
     work = hostileRepository();
-    const source = registerLocalSource(world.db, world.config, "hostile", work.path);
-    const assessment = buildAssessment(world.db, { sources: [source] });
+    const repository = registerLocalRepository(world.db, world.config, "hostile", work.path);
+    const assessment = buildAssessment(world.db, { repositories: [repository] });
 
     spyCalls = await gitLog.during(() =>
       countNetworkCalls(async () => {

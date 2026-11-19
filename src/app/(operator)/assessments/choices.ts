@@ -1,5 +1,5 @@
 import type { Choice } from "@/components/ui/form";
-import { listSources, sourceReferenceLabel } from "@/lib/catalog/source-records";
+import { listRepositories, repositoryReferenceLabel } from "@/lib/repositories/repository-records";
 import type { Executor } from "@/lib/db/client";
 import { listSelectableReleases, releaseDocument, releaseLabel } from "@/lib/standards/standard-records";
 import { countLabel } from "@/components/ui/count";
@@ -7,8 +7,8 @@ import { formatDate } from "@/components/ui/time";
 
 
 /** Every Repository, to choose an explicit scope from. */
-export function sourceChoices(db: Executor): Choice[] {
-  return listSources(db).map((source) => ({ value: source.publicId, label: source.name, description: `${source.cloneUrl} · ${sourceReferenceLabel(source)}` }));
+export function repositoryChoices(db: Executor): Choice[] {
+  return listRepositories(db).map((repository) => ({ value: repository.publicId, label: repository.name, description: `${repository.cloneUrl} · ${repositoryReferenceLabel(repository)}` }));
 }
 
 /** Every published Release. Drafts are never offered. */

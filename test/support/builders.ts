@@ -3,7 +3,7 @@ import { detectorConfiguration } from "@repo-facts/bundle";
 import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import type { Budgets, JsonObject } from "@repo-facts/contract";
 import { createRun } from "@/lib/runs/run-records";
-import { type RepositorySource, insertSource, listSources } from "@/lib/catalog/source-records";
+import { type Repository, insertRepository, listRepositories } from "@/lib/repositories/repository-records";
 import { getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { type Standard, type StandardRelease, blankDraftDocument, createStandard, insertRelease } from "@/lib/standards/standard-records";
@@ -13,19 +13,19 @@ import { CURRENT_VERSION } from "@/lib/documents/schemas";
 const suffix = () => crypto.randomBytes(3).toString("hex");
 
 /** A remote source with a unique canonical URL unless one is given. */
-export function buildSource(db: Executor, overrides: Partial<{ name: string; cloneUrl: string; canonicalUrl: string; gitRef: string | null }> = {}): RepositorySource {
+export function buildRepository(db: Executor, overrides: Partial<{ name: string; cloneUrl: string; canonicalUrl: string; gitRef: string | null }> = {}): Repository {
   const name = overrides.name ?? `source-${suffix()}`;
   const cloneUrl = overrides.cloneUrl ?? `https://git.example.com/acme/${name}.git`;
   const canonicalUrl = overrides.canonicalUrl ?? cloneUrl.replace(/\.git$/, "");
-  return insertSource(db, { name, cloneUrl, canonicalUrl, gitRef: overrides.gitRef ?? null });
+  return insertRepository(db, { name, cloneUrl, canonicalUrl, gitRef: overrides.gitRef ?? null });
 }
 
 /**
  * An Assessment over +sources+ (default: every source), written directly without launching jobs.
  * Like a launched one, it records the pinned bundle's release and configuration.
  */
-export function buildRun(db: Executor, options: { assessment?: Assessment; sources?: readonly RepositorySource[]; limits?: Budgets } = {}) {
-  const sources = options.sources ?? listSources(db);
+export function buildRun(db: Executor, options: { assessment?: Assessment; repositories?: readonly Repository[]; limits?: Budgets } = {}) {
+  const repositories = options.repositories ?? listRepositories(db);
   return createRun(db, {
     assessment: options.assessment ?? buildAssessment(db),
     launchToken: crypto.randomUUID(),
@@ -33,7 +33,7 @@ export function buildRun(db: Executor, options: { assessment?: Assessment; sourc
     configuration: detectorConfiguration(options.limits ?? getConfig().analysis).configuration,
     profileSchemaVersion: CURRENT_VERSION.repositoryProfile,
     relationshipSchemaVersion: 1,
-    sources,
+    repositories,
   });
 }
 
@@ -43,11 +43,11 @@ export function buildRelease(db: Executor, options: { standard?: Standard; docum
   return insertRelease(db, { standard, document: options.document ?? { ...blankDraftDocument(), controls: [] }, draftLockVersion: 0 });
 }
 
-export function buildAssessment(db: Executor, options: { name?: string; sources?: readonly RepositorySource[] } = {}): Assessment {
+export function buildAssessment(db: Executor, options: { name?: string; repositories?: readonly Repository[] } = {}): Assessment {
   return createAssessment(db, {
     name: options.name ?? `Assessment ${suffix()}`,
     objective: "Assess the fleet",
-    selectionMode: options.sources ? "explicit" : "all",
-    sourcePublicIds: options.sources?.map((source) => source.publicId),
+    selectionMode: options.repositories ? "explicit" : "all",
+    repositoryPublicIds: options.repositories?.map((repository) => repository.publicId),
   });
 }

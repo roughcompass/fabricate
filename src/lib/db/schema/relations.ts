@@ -1,16 +1,17 @@
 import { relations } from "drizzle-orm";
 import { runTargets, runs } from "./runs";
-import { assessmentTargets, assessments, repositorySources } from "./catalog";
+import { assessmentTargets, assessments } from "./assessments";
+import { repositories } from "./repositories";
 import { evaluationReleases, evaluations, findings } from "./evaluations";
 import { relationshipMaps, repositoryProfiles } from "./results";
 import { assessmentStandardReleases, standardReleases, standards } from "./standards";
 import { surveys } from "./surveys";
 
-export const repositorySourceRelations = relations(repositorySources, ({ one, many }) => ({
+export const repositoryRelations = relations(repositories, ({ one, many }) => ({
   assessmentTargets: many(assessmentTargets),
   runTargets: many(runTargets),
   surveys: many(surveys),
-  currentSurvey: one(surveys, { fields: [repositorySources.currentSurveyId], references: [surveys.id] }),
+  currentSurvey: one(surveys, { fields: [repositories.currentSurveyId], references: [surveys.id] }),
 }));
 
 export const assessmentRelations = relations(assessments, ({ many }) => ({
@@ -22,7 +23,7 @@ export const assessmentRelations = relations(assessments, ({ many }) => ({
 
 export const assessmentTargetRelations = relations(assessmentTargets, ({ one }) => ({
   assessment: one(assessments, { fields: [assessmentTargets.assessmentId], references: [assessments.id] }),
-  repositorySource: one(repositorySources, { fields: [assessmentTargets.repositorySourceId], references: [repositorySources.id] }),
+  repository: one(repositories, { fields: [assessmentTargets.repositoryId], references: [repositories.id] }),
 }));
 
 export const runRelations = relations(runs, ({ one, many }) => ({
@@ -34,12 +35,12 @@ export const runRelations = relations(runs, ({ one, many }) => ({
 
 export const runTargetRelations = relations(runTargets, ({ one }) => ({
   run: one(runs, { fields: [runTargets.runId], references: [runs.id] }),
-  repositorySource: one(repositorySources, { fields: [runTargets.repositorySourceId], references: [repositorySources.id] }),
+  repository: one(repositories, { fields: [runTargets.repositoryId], references: [repositories.id] }),
   survey: one(surveys, { fields: [runTargets.surveyId], references: [surveys.id] }),
 }));
 
 export const surveyRelations = relations(surveys, ({ one, many }) => ({
-  repositorySource: one(repositorySources, { fields: [surveys.repositorySourceId], references: [repositorySources.id] }),
+  repository: one(repositories, { fields: [surveys.repositoryId], references: [repositories.id] }),
   profile: one(repositoryProfiles),
   targets: many(runTargets),
 }));

@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
-import { previewBuilds, repositorySources } from "@/lib/db/schema";
+import { previewBuilds, repositories } from "@/lib/db/schema";
 
 /**
  * Whether previews are on and a Repository's remote is enrolled for them
@@ -24,20 +24,20 @@ export class PreviewAccessError extends Error {
   }
 }
 
-export function isEnrolled(config: FrontendRegistryConfig, source: Pick<RepositorySource, "canonicalUrl" | "deletedAt">): boolean {
-  return config.previews.enabled && source.deletedAt === null && config.previews.trustedSources.includes(source.canonicalUrl);
+export function isEnrolled(config: FrontendRegistryConfig, repository: Pick<Repository, "canonicalUrl" | "deletedAt">): boolean {
+  return config.previews.enabled && repository.deletedAt === null && config.previews.trustedSources.includes(repository.canonicalUrl);
 }
 
 /** Throws unless previews are on and +source+ is enrolled. */
-export function assertEnrolled(config: FrontendRegistryConfig, source: Pick<RepositorySource, "name" | "canonicalUrl" | "deletedAt">): void {
+export function assertEnrolled(config: FrontendRegistryConfig, repository: Pick<Repository, "name" | "canonicalUrl" | "deletedAt">): void {
   if (!config.previews.enabled) throw new PreviewAccessError("disabled", "Previews are turned off");
-  if (!isEnrolled(config, source)) throw new PreviewAccessError("not_enrolled", `${source.name} is not enrolled for previews`);
+  if (!isEnrolled(config, repository)) throw new PreviewAccessError("not_enrolled", `${repository.name} is not enrolled for previews`);
 }
 
 /** A preview that may be shown, with its Repository. */
 export interface OpenPreview {
   readonly preview: typeof previewBuilds.$inferSelect;
-  readonly source: RepositorySource;
+  readonly repository: Repository;
 }
 
 /**
@@ -50,6 +50,6 @@ export function openPreview(db: Executor, config: FrontendRegistryConfig, public
   if (!config.previews.enabled || !isPublicId(publicId, "pvw")) return null;
   const preview = db.select().from(previewBuilds).where(eq(previewBuilds.publicId, publicId)).get();
   if (!preview || preview.deletedAt !== null) return null;
-  const source = db.select().from(repositorySources).where(eq(repositorySources.id, preview.repositorySourceId)).get();
-  return source && isEnrolled(config, source) ? { preview, source } : null;
+  const repository = db.select().from(repositories).where(eq(repositories.id, preview.repositoryId)).get();
+  return repository && isEnrolled(config, repository) ? { preview, repository } : null;
 }

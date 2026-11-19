@@ -27,7 +27,7 @@ export interface RunStatus {
 
 export function runStatus(db: Executor, run: Run): RunStatus {
   const profiles = new Set(profilesOf(db, run.id).map(({ target }) => target.id));
-  const targets = targetsOf(db, run.id).map((target) => ({ id: target.publicId, name: target.sourceName, state: target.state, failure: target.failureCode, profile: profiles.has(target.id), terminal: isTerminal(TARGET_MACHINE, target.state) }));
+  const targets = targetsOf(db, run.id).map((target) => ({ id: target.publicId, name: target.repositoryName, state: target.state, failure: target.failureCode, profile: profiles.has(target.id), terminal: isTerminal(TARGET_MACHINE, target.state) }));
   const evaluations = listEvaluations(db, { runId: run.id }).map((evaluation) => ({ id: evaluation.publicId, state: evaluation.state }));
   const body = {
     terminal: isTerminal(RUN_MACHINE, run.state) && evaluations.every((evaluation) => isTerminal(EVALUATION_MACHINE, evaluation.state as Evaluation["state"])),

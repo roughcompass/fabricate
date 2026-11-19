@@ -35,7 +35,7 @@ export default async function ProfileEvidencePage({ params }: PageProps<"/profil
       ]}
       repository={found.repository.name}
       record={found.record}
-      pin={{ sourcePublicId: found.repository.publicId, internalRef: found.survey.internalRef, commitSha: found.survey.commitSha }}
+      pin={{ repositoryPublicId: found.repository.publicId, internalRef: found.survey.internalRef, commitSha: found.survey.commitSha }}
     />
   );
 }

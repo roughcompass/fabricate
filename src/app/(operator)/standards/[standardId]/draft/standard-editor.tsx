@@ -12,7 +12,7 @@ import { Severity, Status, severityOptions } from "@/components/ui/status";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Tag } from "@/components/ui/tag";
 import { issueLocation } from "@/lib/standards/issue-location";
-import type { EditorCatalog } from "../../catalog";
+import type { EditorVocabulary } from "../../vocabulary";
 import type { DraftSaveState } from "../../form-state";
 import { ExpressionEditor, type Json, defaultPredicate } from "./expression-editor";
 import { fieldProps } from "./fields";
@@ -31,7 +31,7 @@ interface StandardEditorProps {
   action: (previous: DraftSaveState, formData: FormData) => Promise<DraftSaveState>;
   initial: DraftSaveState;
   document: { [key: string]: Json };
-  catalog: EditorCatalog;
+  vocabulary: EditorVocabulary;
   publishHref: string;
 }
 
@@ -40,18 +40,18 @@ const SUBJECT_OPTIONS = [
   { value: "relationship_map", label: "The Relationship Map" },
 ];
 
-export function StandardEditor({ action, initial, document, catalog, publishHref }: StandardEditorProps) {
+export function StandardEditor({ action, initial, document, vocabulary, publishHref }: StandardEditorProps) {
   // The editor opens the Control an issue is in and focuses the field itself.
   return (
     <ActionForm action={action} initial={initial} focusInvalid={false} className={styles.editor}>
-      {(state) => <EditorBody state={state} document={document} catalog={catalog} publishHref={publishHref} />}
+      {(state) => <EditorBody state={state} document={document} vocabulary={vocabulary} publishHref={publishHref} />}
     </ActionForm>
   );
 }
 
 /** The editor's Controls and save bar, from the state of its latest save. */
-function EditorBody({ state, document, catalog, publishHref }: { state: DraftSaveState } & Pick<StandardEditorProps, "document" | "catalog" | "publishHref">) {
-  const { controls, open, dirty, issues, errorsFor, issueCount, setExpanded, update, move, add, remove, showIssue, serialized } = useControlList(document, catalog, state);
+function EditorBody({ state, document, vocabulary, publishHref }: { state: DraftSaveState } & Pick<StandardEditorProps, "document" | "vocabulary" | "publishHref">) {
+  const { controls, open, dirty, issues, errorsFor, issueCount, setExpanded, update, move, add, remove, showIssue, serialized } = useControlList(document, vocabulary, state);
 
   return (
     <>
@@ -98,7 +98,7 @@ function EditorBody({ state, document, catalog, publishHref }: { state: DraftSav
                 last={index === controls.length - 1}
                 expanded={open.has(control.uid)}
                 issueCount={issueCount(index)}
-                catalog={catalog}
+                vocabulary={vocabulary}
                 errorsFor={errorsFor}
                 onExpand={(expanded) => setExpanded(control.uid, expanded)}
                 onUpdate={(patch) => update(control.uid, patch)}
@@ -118,7 +118,7 @@ function EditorBody({ state, document, catalog, publishHref }: { state: DraftSav
 
       {controls.length > 0 && (
         <div className={styles.toolbar}>
-          <Button icon="plus" disabled={controls.length >= catalog.limits.controls} onClick={add}>
+          <Button icon="plus" disabled={controls.length >= vocabulary.limits.controls} onClick={add}>
             Add Control
           </Button>
         </div>
@@ -155,7 +155,7 @@ interface ControlPanelProps {
   last: boolean;
   expanded: boolean;
   issueCount: number;
-  catalog: EditorCatalog;
+  vocabulary: EditorVocabulary;
   errorsFor: (path: string) => string[];
   onExpand: (expanded: boolean) => void;
   onUpdate: (patch: Partial<ControlDraft>) => void;
@@ -164,7 +164,7 @@ interface ControlPanelProps {
 }
 
 /** One Control: a summary row that expands to its fields and conditions. */
-function ControlPanel({ control, index, last, expanded, issueCount, catalog, errorsFor, onExpand, onUpdate, onMove, onRemove }: ControlPanelProps) {
+function ControlPanel({ control, index, last, expanded, issueCount, vocabulary, errorsFor, onExpand, onUpdate, onMove, onRemove }: ControlPanelProps) {
   const path = `controls[${index}]`;
   const id = `control-${control.uid}`;
   const name = `Control ${index + 1}`;
@@ -212,17 +212,17 @@ function ControlPanel({ control, index, last, expanded, issueCount, catalog, err
         </div>
         <TextArea {...field("rationale")} label="Rationale" rows={2} value={control.rationale} onChange={(event) => onUpdate({ rationale: event.target.value })} />
         <div className={styles.row}>
-          <Select {...field("severity")} label="Severity" value={control.severity} options={severityOptions(catalog.severities)} onChange={(event) => onUpdate({ severity: event.target.value })} />
+          <Select {...field("severity")} label="Severity" value={control.severity} options={severityOptions(vocabulary.severities)} onChange={(event) => onUpdate({ severity: event.target.value })} />
           <Select
             {...field("subject")}
             label="Subject"
             value={control.subject}
             options={SUBJECT_OPTIONS}
-            onChange={(event) => onUpdate({ subject: event.target.value, applicability: { op: "always" }, condition: defaultPredicate(catalog, event.target.value) })}
+            onChange={(event) => onUpdate({ subject: event.target.value, applicability: { op: "always" }, condition: defaultPredicate(vocabulary, event.target.value) })}
           />
         </div>
-        <ExpressionEditor node={control.applicability} scope={control.subject} path={`${path}.applicability`} depth={1} label="Applies when" catalog={catalog} idPrefix={`${id}-applicability`} errorsFor={errorsFor} onChange={(applicability) => onUpdate({ applicability })} />
-        <ExpressionEditor node={control.condition} scope={control.subject} path={`${path}.condition`} depth={1} label="Expected condition" catalog={catalog} idPrefix={`${id}-condition`} errorsFor={errorsFor} onChange={(condition) => onUpdate({ condition })} />
+        <ExpressionEditor node={control.applicability} scope={control.subject} path={`${path}.applicability`} depth={1} label="Applies when" vocabulary={vocabulary} idPrefix={`${id}-applicability`} errorsFor={errorsFor} onChange={(applicability) => onUpdate({ applicability })} />
+        <ExpressionEditor node={control.condition} scope={control.subject} path={`${path}.condition`} depth={1} label="Expected condition" vocabulary={vocabulary} idPrefix={`${id}-condition`} errorsFor={errorsFor} onChange={(condition) => onUpdate({ condition })} />
         <TextArea {...field("guidance")} label="Guidance" optional description="Shown with Findings as advice; never run." rows={2} value={control.guidance} onChange={(event) => onUpdate({ guidance: event.target.value })} />
       </div>
     </section>

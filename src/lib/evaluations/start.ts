@@ -126,7 +126,7 @@ function pinnedReleases(db: Executor, releaseIds: readonly string[], problems: s
 function coverageGaps(db: Executor, run: Run): JsonValue[] {
   return targetsOf(db, run.id)
     .filter((target) => target.state !== "complete")
-    .map((target) => ({ target: target.publicId, source: { public_id: target.sourcePublicId, name: target.sourceName }, state: target.state, reason: target.failureCode }));
+    .map((target) => ({ target: target.publicId, source: { public_id: target.repositoryPublicId, name: target.repositoryName }, state: target.state, reason: target.failureCode }));
 }
 
 /** An Assessment's stored results, verified against their digests: the only inputs an Evaluation reads. */
@@ -139,7 +139,7 @@ export function evaluationInputs(db: Executor, runId: number): EvaluationInputs 
       const document = profile ? profileDocument(profile) : null;
       return {
         public_id: target.publicId,
-        source: { public_id: target.sourcePublicId, name: target.sourceName },
+        source: { public_id: target.repositoryPublicId, name: target.repositoryName },
         state: target.state,
         failure: target.failureCode,
         profile: profile && document ? { public_id: profile.publicId, digest: profile.digest, commit: profileCommit(document), factDocument: document.fact_document as JsonObject } : null,

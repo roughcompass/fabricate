@@ -37,7 +37,7 @@ export default async function EvidencePage({ params }: PageProps<"/runs/[runId]/
       breadcrumbs={[...run.context.parents, { href: routes.run(run.run.publicId), label: run.context.name }, { href: section ? profileSectionHref(profileHref, section) : profileHref, label: found.repository.name }]}
       repository={found.repository.name}
       record={found.record}
-      pin={{ sourcePublicId: found.repository.publicId, internalRef: found.survey.internalRef, commitSha: found.survey.commitSha }}
+      pin={{ repositoryPublicId: found.repository.publicId, internalRef: found.survey.internalRef, commitSha: found.survey.commitSha }}
     />
   );
 }

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
 import { z } from "zod";
-import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
+import { CloneUrl, InvalidCloneUrl } from "@/lib/repositories/clone-url";
 import { LEGACY_NAMES } from "@/lib/legacy-names";
 
 /**

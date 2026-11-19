@@ -2,9 +2,9 @@ import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { surveyRefFor } from "@/lib/acquisition/mirror";
 import { launchRun } from "@/lib/runs/launcher";
-import { registerSource } from "@/lib/catalog/catalog";
-import { SourceBoundary } from "@/lib/catalog/source-boundary";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import { registerRepository } from "@/lib/repositories/registration";
+import { SourceBoundary } from "@/lib/repositories/source-boundary";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { type SurveyTrigger, runs } from "@/lib/db/schema";
@@ -19,8 +19,8 @@ import { profileOfSurvey } from "@/lib/profiles/profile-records";
 import { surveyRepository } from "@/lib/surveys/background";
 import { type Survey, currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey } from "@/lib/surveys/records";
 import { finishSurvey } from "@/lib/surveys/run";
-import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildAssessment, buildSource } from "../support/builders";
+import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
+import { buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { manifest, memoryProfile, sha1 } from "../support/profiles";
 
@@ -34,10 +34,10 @@ interface SurveyOptions {
 }
 
 /** A survey of a new commit of +source+ under the current recipe, driven to +end+ as the survey job would. */
-async function survey(db: Db, source: RepositorySource, options: SurveyOptions = {}): Promise<Survey> {
-  const commitSha = sha1(`commit:${source.publicId}:${++commits}`);
+async function survey(db: Db, repository: Repository, options: SurveyOptions = {}): Promise<Survey> {
+  const commitSha = sha1(`commit:${repository.publicId}:${++commits}`);
   const { survey: queued } = requestSurvey(db, {
-    repositorySourceId: source.id,
+    repositoryId: repository.id,
     commitSha,
     reference: options.fromConfiguredReference === false ? "refs/heads/feature" : "refs/heads/main",
     fromConfiguredReference: options.fromConfiguredReference ?? true,
@@ -45,22 +45,22 @@ async function survey(db: Db, source: RepositorySource, options: SurveyOptions =
     ...currentRecipe(getConfig()),
   });
   // Background surveying records which commit the configured reference names.
-  if (options.fromConfiguredReference !== false) recordConfiguredResolution(db, source.id, commitSha, new Date());
+  if (options.fromConfiguredReference !== false) recordConfiguredResolution(db, repository.id, commitSha, new Date());
   const end = options.end ?? "succeeded";
   if (end === "queued") return queued;
   const running = pinSurvey(db, moveSurvey(db, queued, "running", { attempts: 1 }), { treeSha: sha1(`tree:${commitSha}`), internalRef: surveyRefFor(queued.publicId) });
   if (end === "running") return running;
   if (end === "failed") return finishSurvey(db, running, { failure: { code: "source_unavailable", message: "The repository could not be reached" } });
-  const { document } = await memoryProfile({ "package.json": manifest({ name: source.name, version: "1.0.0" }) }, { public_id: source.publicId, name: source.name }, commitSha);
+  const { document } = await memoryProfile({ "package.json": manifest({ name: repository.name, version: "1.0.0" }) }, { public_id: repository.publicId, name: repository.name }, commitSha);
   return finishSurvey(db, running, { document });
 }
 
 describe("profile versions", () => {
   let db: Db;
-  let orders: RepositorySource;
+  let orders: Repository;
   beforeEach(() => {
     db = createTestDb();
-    orders = buildSource(db, { name: "orders" });
+    orders = buildRepository(db, { name: "orders" });
   });
 
   it("numbers a fifth survey 5, and versions 1 to 4 keep their numbers and addresses", async () => {
@@ -79,7 +79,7 @@ describe("profile versions", () => {
   });
 
   it("numbers each repository's surveys on their own", async () => {
-    const ledger = buildSource(db, { name: "ledger" });
+    const ledger = buildRepository(db, { name: "ledger" });
     await survey(db, orders);
     await survey(db, ledger);
     await survey(db, orders);
@@ -107,7 +107,7 @@ describe("profile versions", () => {
     expect(versionCount(db, orders.id)).toBe(4);
     expect(versionsOf(db, orders.id, 2, 1).map((version) => version.version)).toEqual([3, 2]);
     for (const missing of [0, 5, 1.5, -1]) expect(findVersion(db, orders.id, missing)).toBeUndefined();
-    expect(versionCount(db, buildSource(db, { name: "ledger" }).id)).toBe(0);
+    expect(versionCount(db, buildRepository(db, { name: "ledger" }).id)).toBe(0);
   });
 
   it("shows the newest successful survey of the configured reference as current, apart from the newest version", async () => {
@@ -116,13 +116,13 @@ describe("profile versions", () => {
     await survey(db, orders, { end: "queued" });
 
     expect(repositoryProfiling(db, orders.id)).toMatchObject({ current: { version: 1 }, latest: { version: 3, survey: { state: "queued" } }, count: 3 });
-    expect(repositoryProfiling(db, buildSource(db, { name: "ledger" }).id)).toEqual({ current: undefined, latest: undefined, count: 0 });
+    expect(repositoryProfiling(db, buildRepository(db, { name: "ledger" }).id)).toEqual({ current: undefined, latest: undefined, count: 0 });
   });
 
   it("summarizes every repository's newest version and current Profile", async () => {
-    const ledger = buildSource(db, { name: "ledger" });
-    const shop = buildSource(db, { name: "shop" });
-    buildSource(db, { name: "billing" });
+    const ledger = buildRepository(db, { name: "ledger" });
+    const shop = buildRepository(db, { name: "shop" });
+    buildRepository(db, { name: "billing" });
     await survey(db, orders);
     await survey(db, orders, { end: "queued" });
     await survey(db, ledger, { end: "queued" });
@@ -137,7 +137,7 @@ describe("profile versions", () => {
   });
 
   it("counts surveys running and waiting, and changes its version as each one moves", async () => {
-    const ledger = buildSource(db, { name: "ledger" });
+    const ledger = buildRepository(db, { name: "ledger" });
     expect(profilingActivity(db)).toMatchObject({ profiling: 0, queued: 0 });
     const waiting = await survey(db, orders, { end: "queued" });
     await survey(db, ledger, { end: "queued" });
@@ -160,7 +160,7 @@ describe("background profiling", () => {
   it("surveys repositories without any Assessment or Run", async () => {
     const work = world.fixture.repo("fleet/web");
     work.write("package.json", manifest({ name: "web", version: "1.0.0" })).commit("first");
-    const web = registerLocalSource(world.db, world.config, "web", work.path);
+    const web = registerLocalRepository(world.db, world.config, "web", work.path);
     await surveyRepository(world.db, web, "added", { config: world.config });
     await drainJobs(world.db, jobHandlers(world.db, world.config));
 
@@ -172,7 +172,7 @@ describe("background profiling", () => {
   it("names what started each version: adding the repository, a new commit, a Run of an Assessment, and a preview", async () => {
     const work = world.fixture.repo("fleet/web");
     work.write("package.json", manifest({ name: "web", version: "1.0.0" })).commit("first");
-    const web = registerSource(world.db, { name: "web", cloneUrl: work.url, gitRef: "" }, new SourceBoundary(world.config));
+    const web = registerRepository(world.db, { name: "web", cloneUrl: work.url, gitRef: "" }, new SourceBoundary(world.config));
     const config = withOverrides(world.config, { previews: { enabled: true, trustedSources: [web.canonicalUrl] } });
     const drain = () => drainJobs(world.db, jobHandlers(world.db, config));
     await drain();
@@ -182,7 +182,7 @@ describe("background profiling", () => {
     await drain();
 
     work.write("README.md", "three\n").commit("third");
-    const assessment = buildAssessment(world.db, { name: "Checkout platform migration", sources: [web] });
+    const assessment = buildAssessment(world.db, { name: "Checkout platform migration", repositories: [web] });
     const { run } = launchRun(world.db, assessment.publicId, crypto.randomUUID(), config);
     await drain();
 

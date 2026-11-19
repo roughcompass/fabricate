@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { mirrorPath, surveyRefFor } from "@/lib/acquisition/mirror";
 import { getRun, getTarget } from "@/lib/runs/run-records";
 import { processTarget } from "@/lib/runs/orchestration";
-import { type RepositorySource, sourceById } from "@/lib/catalog/source-records";
+import { type Repository, repositoryById } from "@/lib/repositories/repository-records";
 import { withOverrides } from "@/lib/config";
 import { dependencyFacts, jobs, surveys } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
@@ -15,7 +15,7 @@ import { SnapshotReader } from "@/lib/snapshot/reader";
 import { surveyRepository } from "@/lib/surveys/background";
 import { type SurveyRequest, currentRecipe, getSurvey, requestSurvey, surveyById } from "@/lib/surveys/records";
 import { RUN_SURVEY, queueSurvey, runSurvey } from "@/lib/surveys/run";
-import { acquire, registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { acquire, registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { buildRun } from "../support/builders";
 import { type BareRepo, type Repo, git } from "../support/git-fixture";
 import { manifest } from "../support/profiles";
@@ -32,20 +32,20 @@ describe("the survey job", () => {
     remote = world.fixture.bare("remotes/web.git", { from: work });
   });
 
-  const register = (gitRef: string | null = null) => registerLocalSource(world.db, world.config, "web", remote.path, gitRef);
+  const register = (gitRef: string | null = null) => registerLocalRepository(world.db, world.config, "web", remote.path, gitRef);
   const drain = () => drainJobs(world.db, jobHandlers(world.db, world.config));
   const surveyJobs = () => world.db.select().from(jobs).where(eq(jobs.kind, RUN_SURVEY)).all();
 
   /** Requests a survey of +commitSha+ of +source+ under the worker's recipe unless +overrides+ say otherwise, and queues its job. */
-  function request(source: RepositorySource, commitSha: string, overrides: Partial<SurveyRequest> = {}) {
-    const { survey } = requestSurvey(world.db, { repositorySourceId: source.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", ...currentRecipe(world.config), ...overrides });
+  function request(repository: Repository, commitSha: string, overrides: Partial<SurveyRequest> = {}) {
+    const { survey } = requestSurvey(world.db, { repositoryId: repository.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", ...currentRecipe(world.config), ...overrides });
     queueSurvey(world.db, survey);
     return survey;
   }
 
   /** A Run over +source+ whose target has resolved its reference and waits on the survey of its commit. */
-  async function waitingRun(source: RepositorySource) {
-    const { run, targets } = buildRun(world.db, { sources: [source] });
+  async function waitingRun(repository: Repository) {
+    const { run, targets } = buildRun(world.db, { repositories: [repository] });
     const target = await processTarget(world.db, targets[0]!.publicId, { config: world.config });
     expect(target).toMatchObject({ state: "analyzing", surveyId: expect.any(Number) });
     return { run, target };
@@ -64,7 +64,7 @@ describe("the survey job", () => {
       const profile = profileOfSurvey(world.db, survey.id)!;
       expect(profileDocument(profile)).toMatchObject({ commit: head, detector_release: survey.surveyorRelease, detector_configuration_digest: survey.configurationDigest });
       expect(world.db.select().from(dependencyFacts).where(eq(dependencyFacts.profileId, profile.id)).all().map((row) => row.packageName)).toContain("react");
-      expect(sourceById(world.db, web.id).currentSurveyId).toBe(survey.id);
+      expect(repositoryById(world.db, web.id).currentSurveyId).toBe(survey.id);
       expect(surveyJobs().map((job) => [job.idempotencyKey, job.state])).toEqual([[`survey.run:${survey.publicId}:1`, "succeeded"]]);
 
       // A survey already finished stays as it is.
@@ -77,7 +77,7 @@ describe("the survey job", () => {
       await drain();
 
       expect(getSurvey(world.db, survey.publicId).state).toBe("succeeded");
-      expect(sourceById(world.db, web.id).currentSurveyId).toBeNull();
+      expect(repositoryById(world.db, web.id).currentSurveyId).toBeNull();
     });
   });
 
@@ -93,7 +93,7 @@ describe("the survey job", () => {
       expect(getTarget(world.db, target.publicId)).toMatchObject({ state: "failed", failureCode: "invalid_ref", failureMessage: survey.failureMessage });
       expect(getRun(world.db, run.publicId).state).toBe("failed");
       expect(profileOfSurvey(world.db, survey.id)).toBeUndefined();
-      expect(sourceById(world.db, web.id).currentSurveyId).toBeNull();
+      expect(repositoryById(world.db, web.id).currentSurveyId).toBeNull();
     });
 
     it("fails as unavailable when the remote is gone, and fails every target waiting on it", async () => {
@@ -143,7 +143,7 @@ describe("the survey job", () => {
       expect(getSurvey(world.db, survey.publicId)).toMatchObject({ state: "failed", attempts: 1, failureCode: "invalid_ref" });
 
       work.git("push", "--quiet", remote.path, `${unpushed}:refs/heads/late`);
-      const retried = requestSurvey(world.db, { repositorySourceId: web.id, commitSha: unpushed, reference: "refs/heads/late", fromConfiguredReference: false, trigger: "manual", ...currentRecipe(world.config) });
+      const retried = requestSurvey(world.db, { repositoryId: web.id, commitSha: unpushed, reference: "refs/heads/late", fromConfiguredReference: false, trigger: "manual", ...currentRecipe(world.config) });
       // The same survey, queued again; its latest failure stays until it succeeds.
       expect(retried).toMatchObject({ queued: true, survey: { id: survey.id, state: "queued", attempts: 1, failureCode: "invalid_ref", finishedAt: null } });
       expect(queueSurvey(world.db, retried.survey).idempotencyKey).toBe(`survey.run:${survey.publicId}:2`);

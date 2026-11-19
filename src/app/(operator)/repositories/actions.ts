@@ -1,10 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { addRepositories } from "@/lib/catalog/bulk-add";
-import { deleteSource, editSource, registerSource, type SourceForm } from "@/lib/catalog/catalog";
-import { getSource } from "@/lib/catalog/source-records";
-import { CloneUrl } from "@/lib/catalog/clone-url";
+import { addRepositories } from "@/lib/repositories/bulk-add";
+import * as registration from "@/lib/repositories/registration";
+import { getRepository } from "@/lib/repositories/repository-records";
+import { CloneUrl } from "@/lib/repositories/clone-url";
 import { getDb } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { requirePublicId } from "@/lib/db/ids";
@@ -14,32 +14,32 @@ import { lockVersion, submitForm } from "@/lib/web/actions";
 import { errorsFrom, text } from "@/lib/web/form-data";
 import { withQuery } from "@/lib/web/query";
 import type { BulkFormState } from "./bulk/bulk-state";
-import type { SourceFormState } from "./source-form-state";
+import type { RepositoryFormState } from "./repository-form-state";
 import { routes } from "@/lib/web/routes";
 
-function readForm(formData: FormData): SourceForm {
+function readForm(formData: FormData): registration.RepositoryForm {
   return { name: text(formData, "name", 500), cloneUrl: text(formData, "cloneUrl", 2_048), gitRef: text(formData, "gitRef", 300) };
 }
 
 /** Form values safe to render back: a rejected secret is never echoed. */
-function safeValues(form: SourceForm): SourceForm {
+function safeValues(form: registration.RepositoryForm): registration.RepositoryForm {
   return { ...form, cloneUrl: CloneUrl.redact(form.cloneUrl) };
 }
 
-const repositoryId = (publicId: string) => requirePublicId(publicId, "src", "repository source");
+const requireRepositoryId = (publicId: string) => requirePublicId(publicId, "src", "Repository");
 
-export async function createSource(_previous: SourceFormState, formData: FormData): Promise<SourceFormState> {
+export async function createRepository(_previous: RepositoryFormState, formData: FormData): Promise<RepositoryFormState> {
   const form = readForm(formData);
-  return submitForm(safeValues(form), () => withQuery(routes.repositories, { notice: "added", source: registerSource(getDb(), form).publicId }));
+  return submitForm(safeValues(form), () => withQuery(routes.repositories, { notice: "added", source: registration.registerRepository(getDb(), form).publicId }));
 }
 
-export async function updateSource(publicId: string, _previous: SourceFormState, formData: FormData): Promise<SourceFormState> {
-  repositoryId(publicId);
+export async function updateRepository(publicId: string, _previous: RepositoryFormState, formData: FormData): Promise<RepositoryFormState> {
+  requireRepositoryId(publicId);
   const form = readForm(formData);
   return submitForm(
     safeValues(form),
     () => {
-      editSource(getDb(), publicId, lockVersion(formData), form);
+      registration.editRepository(getDb(), publicId, lockVersion(formData), form);
       return withQuery(routes.repositorySettings(publicId), { notice: "updated" });
     },
     "This source was changed by someone else. Reload the page to review the current values, then try again.",
@@ -53,11 +53,11 @@ export async function updateSource(publicId: string, _previous: SourceFormState,
  * repeated submission finds too. Returns to the Repository's page, or to the
  * list when it was chosen there.
  */
-export async function reprofileSource(formData: FormData): Promise<void> {
-  const publicId = repositoryId(text(formData, "publicId", 40));
+export async function reprofileRepository(formData: FormData): Promise<void> {
+  const publicId = requireRepositoryId(text(formData, "publicId", 40));
   let notice: string;
   try {
-    const result = await surveyRepository(getDb(), getSource(getDb(), publicId), "manual");
+    const result = await surveyRepository(getDb(), getRepository(getDb(), publicId), "manual");
     notice = { queued: "reprofiled", active: "profiling", current: "current" }[result.status];
   } catch (error) {
     if (!(error instanceof AcquisitionError)) throw error;
@@ -93,9 +93,9 @@ export async function addRepositoriesInBulk(previous: BulkFormState, formData: F
  * opens the list. A confirmation that doesn't match deletes nothing.
  */
 export async function deleteRepository(publicId: string, _previous: { error: string | null }, formData: FormData): Promise<{ error: string | null }> {
-  repositoryId(publicId);
+  requireRepositoryId(publicId);
   try {
-    deleteSource(getDb(), publicId, text(formData, "confirmation", 200));
+    registration.deleteRepository(getDb(), publicId, text(formData, "confirmation", 200));
   } catch (error) {
     if (error instanceof ValidationError) return { error: error.issues.map((issue) => issue.message).join(" ") };
     throw error;

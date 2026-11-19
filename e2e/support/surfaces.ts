@@ -20,12 +20,12 @@ export type Surface = [name: string, url: string];
 
 /** Seeds an Initiative with an Assessment, an Evaluation, Standards, and a draft, and returns the operator surfaces. */
 export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<Surface[]> {
-  const { assessment, sources, run } = await seedMapStates(db, { assessmentName: "Checkout platform migration", also: { orders: ORDERS } });
+  const { assessment, sources: repositories, run } = await seedMapStates(db, { assessmentName: "Checkout platform migration", also: { orders: ORDERS } });
   const baseline = publishStandard(db, "Engineering baseline", BASELINE_CONTROLS);
   const services = publishStandard(db, "Service readiness", SERVICE_CONTROLS);
   selectReleases(db, assessment, [baseline, services]);
   const evaluation = await evaluate(db, assessment.publicId, run.publicId);
-  const orders = profilesOf(db, run.id).find(({ target }) => target.sourceName === "orders")!.profile;
+  const orders = profilesOf(db, run.id).find(({ target }) => target.repositoryName === "orders")!.profile;
   const evidenceId = Object.keys((profileDocument(orders).fact_document as JsonObject).evidence as JsonObject)[0]!;
   const gap = findingsOf(db, evaluation.id, { controlKey: "services-configurable", outcomes: ["gap"] })[0]!;
   const indeterminate = findingsOf(db, evaluation.id, { controlKey: "verified-runtime", outcomes: ["indeterminate"] })[0]!;
@@ -43,10 +43,10 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["02-initiative-edit", paths.assessmentEdit(assessment.publicId)],
     ["03-sources", paths.repositories],
     ["03-source-new", paths.newRepository],
-    ["03-source-settings", paths.repositorySettings(sources[0]!.publicId)],
+    ["03-source-settings", paths.repositorySettings(repositories[0]!.publicId)],
     ["03-source-bulk", paths.bulkRepositories],
-    ["03-source", `/repositories/${sources[0]!.publicId}`],
-    ["03-source-versions", `/repositories/${sources[0]!.publicId}/versions`],
+    ["03-source", `/repositories/${repositories[0]!.publicId}`],
+    ["03-source-versions", `/repositories/${repositories[0]!.publicId}/versions`],
     ["04-standards", "/standards"],
     ["04-standard", `/standards/${baselineStandard.publicId}`],
     ["04-standard-published", `/standards/${servicesStandard.publicId}`],

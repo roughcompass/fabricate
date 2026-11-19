@@ -4,7 +4,7 @@ import type { Db } from "@/lib/db/client";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { rebuildProjection } from "@/lib/projection/rebuild";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
-import { buildAssessment, buildSource } from "../support/builders";
+import { buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { count } from "../support/projection";
 import { ORDERS, STOREFRONT, seedRun, seedMapStates } from "../support/scenarios";
@@ -16,8 +16,8 @@ interface Fact {
 /** The Runs the e2e suite seeds: the Relationship Map's states and gap, and the Profile's every category state. */
 async function seedFixtureRuns(db: Db): Promise<Run[]> {
   const { run: map } = await seedMapStates(db);
-  const results = [buildSource(db, { name: "orders" }), buildSource(db, { name: "storefront" })];
-  const profiled = await seedRun(db, buildAssessment(db, { name: "Results", sources: results }), results, [ORDERS, STOREFRONT]);
+  const results = [buildRepository(db, { name: "orders" }), buildRepository(db, { name: "storefront" })];
+  const profiled = await seedRun(db, buildAssessment(db, { name: "Results", repositories: results }), results, [ORDERS, STOREFRONT]);
   return [map, profiled];
 }
 

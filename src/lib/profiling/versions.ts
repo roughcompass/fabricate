@@ -47,15 +47,15 @@ export function isActive(version: Pick<ProfileVersion, "survey">): boolean {
   return ACTIVE_STATES.includes(version.survey.state);
 }
 
-/** The versions of the repository +sourceId+, newest first: at most +limit+, after skipping +offset+. One query. */
-export function versionsOf(db: Executor, sourceId: number, limit = -1, offset = 0): ProfileVersion[] {
+/** The versions of the repository +repositoryId+, newest first: at most +limit+, after skipping +offset+. One query. */
+export function versionsOf(db: Executor, repositoryId: number, limit = -1, offset = 0): ProfileVersion[] {
   return db
     .select({ survey: surveys, profileId: repositoryProfiles.id, profilePublicId: repositoryProfiles.publicId, profileCreatedAt: repositoryProfiles.createdAt, runPublicId: runs.publicId, assessmentName: assessments.name })
     .from(surveys)
     .leftJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, surveys.id))
     .leftJoin(runs, eq(runs.id, surveys.requestedByRunId))
     .leftJoin(assessments, eq(assessments.id, runs.assessmentId))
-    .where(eq(surveys.repositorySourceId, sourceId))
+    .where(eq(surveys.repositoryId, repositoryId))
     .orderBy(desc(surveys.number))
     .limit(limit)
     .offset(offset)
@@ -72,27 +72,27 @@ export function versionsOf(db: Executor, sourceId: number, limit = -1, offset = 
     }));
 }
 
-/** How many versions the repository +sourceId+ has. */
-export function versionCount(db: Executor, sourceId: number): number {
-  return db.select({ count: count() }).from(surveys).where(eq(surveys.repositorySourceId, sourceId)).get()?.count ?? 0;
+/** How many versions the repository +repositoryId+ has. */
+export function versionCount(db: Executor, repositoryId: number): number {
+  return db.select({ count: count() }).from(surveys).where(eq(surveys.repositoryId, repositoryId)).get()?.count ?? 0;
 }
 
-/** The version of +sourceId+ numbered +version+. */
-export function findVersion(db: Executor, sourceId: number, version: number): ProfileVersion | undefined {
+/** The version of +repositoryId+ numbered +version+. */
+export function findVersion(db: Executor, repositoryId: number, version: number): ProfileVersion | undefined {
   if (!Number.isInteger(version) || version < 1) return undefined;
-  const total = versionCount(db, sourceId);
+  const total = versionCount(db, repositoryId);
   if (version > total) return undefined;
   // Numbers run from 1 without gaps, so the newest-first offset of version n is total - n.
-  return versionsOf(db, sourceId, 1, total - version)[0];
+  return versionsOf(db, repositoryId, 1, total - version)[0];
 }
 
 /**
  * What a Repository's page shows of its surveys: its current Profile, and
  * its newest version, whose number is how many it has.
  */
-export function repositoryProfiling(db: Executor, sourceId: number): { current: CurrentProfile | undefined; latest: ProfileVersion | undefined; count: number } {
-  const latest = versionsOf(db, sourceId, 1)[0];
-  return { current: currentProfile(db, sourceId), latest, count: latest?.version ?? 0 };
+export function repositoryProfiling(db: Executor, repositoryId: number): { current: CurrentProfile | undefined; latest: ProfileVersion | undefined; count: number } {
+  const latest = versionsOf(db, repositoryId, 1)[0];
+  return { current: currentProfile(db, repositoryId), latest, count: latest?.version ?? 0 };
 }
 
 export interface ProfileSummary {

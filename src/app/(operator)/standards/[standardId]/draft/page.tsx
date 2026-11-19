@@ -7,7 +7,7 @@ import { getDb } from "@/lib/db/client";
 import { draftDocument, draftOf } from "@/lib/standards/standard-records";
 import { validateStandard } from "@/lib/standards/validate";
 import { saveDraft } from "../../actions";
-import { editorCatalog } from "../../catalog";
+import { editorVocabulary } from "../../vocabulary";
 import { draftOutcome } from "../../outcomes";
 import type { Json } from "./expression-editor";
 import { StandardEditor } from "./standard-editor";
@@ -44,7 +44,7 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/st
         initial={{ lockVersion: draft.lockVersion, issues: validateStandard(document, { metadata: standard }), status: "unsaved", message: null, submission: 0 }}
         // A plain copy: the parsed draft has null-prototype objects, which cannot cross to a client component.
         document={JSON.parse(JSON.stringify(document)) as { [key: string]: Json }}
-        catalog={editorCatalog()}
+        vocabulary={editorVocabulary()}
         publishHref={routes.standardPublish(standard.publicId)}
       />
     </Page>

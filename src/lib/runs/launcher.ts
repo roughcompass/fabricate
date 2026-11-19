@@ -42,7 +42,7 @@ export function launchRun(db: Executor, assessmentPublicId: string, launchToken:
       const assessment = getAssessment(tx, assessmentPublicId);
       const previous = findRunByLaunchToken(tx, assessment.id, token);
       if (previous) return { run: previous, targets: [], duplicate: true };
-      const sources = resolveScope(tx, assessment);
+      const repositories = resolveScope(tx, assessment);
       const { run, targets } = createRun(tx, {
         assessment,
         launchToken: token,
@@ -51,7 +51,7 @@ export function launchRun(db: Executor, assessmentPublicId: string, launchToken:
         configuration: detectorConfiguration(config.analysis).configuration,
         profileSchemaVersion: CURRENT_VERSION.repositoryProfile,
         relationshipSchemaVersion: CURRENT_VERSION.relationshipMap,
-        sources,
+        repositories,
       });
       enqueue(tx, { kind: COORDINATE_RUN, payload: { assessment: run.publicId }, idempotencyKey: `${COORDINATE_RUN}:${run.publicId}`, priority: RUN_PRIORITY });
       return { run, targets, duplicate: false };

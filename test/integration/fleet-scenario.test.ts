@@ -7,9 +7,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type Run, getRun, targetsOf } from "@/lib/runs/run-records";
 import { launchRun } from "@/lib/runs/launcher";
 import { requestCancellation } from "@/lib/runs/transitions";
-import { addRepositories } from "@/lib/catalog/bulk-add";
-import { SourceBoundary } from "@/lib/catalog/source-boundary";
-import { type RepositorySource, listSources } from "@/lib/catalog/source-records";
+import { addRepositories } from "@/lib/repositories/bulk-add";
+import { SourceBoundary } from "@/lib/repositories/source-boundary";
+import { type Repository, listRepositories } from "@/lib/repositories/repository-records";
 import { type Assessment, createAssessment } from "@/lib/assessments/assessment-records";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
@@ -40,7 +40,7 @@ describe("Multi-repository Assessment scenario", () => {
   const repos: Record<string, Repo> = {};
   const networkCalls: (typeof NO_NETWORK_CALLS)[] = [];
   const savedOrdersUrl = process.env.ORDERS_URL;
-  let sources: Record<string, RepositorySource>;
+  let repositories: Record<string, Repository>;
   let wholeFleet: Assessment;
   let explicit: Assessment;
 
@@ -54,12 +54,12 @@ describe("Multi-repository Assessment scenario", () => {
     });
   const launch = (assessment: Assessment) => launchRun(world.db, assessment.publicId, crypto.randomUUID(), world.config).run;
   const refreshed = (run: Run) => getRun(world.db, run.publicId);
-  const states = (run: Run) => Object.fromEntries(targetsOf(world.db, run.id).map((target) => [target.sourceName, target.state]));
+  const states = (run: Run) => Object.fromEntries(targetsOf(world.db, run.id).map((target) => [target.repositoryName, target.state]));
   const shas = (run: Run) => {
     const commits = targetCommits(world.db, run.id);
-    return Object.fromEntries(targetsOf(world.db, run.id).map((target) => [target.sourceName, commits.get(target.id) ?? null]));
+    return Object.fromEntries(targetsOf(world.db, run.id).map((target) => [target.repositoryName, commits.get(target.id) ?? null]));
   };
-  const profiles = (run: Run) => Object.fromEntries(profilesOf(world.db, run.id).map(({ profile, target }) => [target.sourceName, profile]));
+  const profiles = (run: Run) => Object.fromEntries(profilesOf(world.db, run.id).map(({ profile, target }) => [target.repositoryName, profile]));
   const map = (run: Run) => mapDocument(mapOf(world.db, run.id)!) as unknown as MapDocument;
   /** A map without its per-run target identifiers, which are the only run identity it records. */
   const withoutTargets = (value: JsonValue): JsonValue => (Array.isArray(value) ? value.map(withoutTargets) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== "target").map(([key, item]) => [key, withoutTargets(item)])) : value);
@@ -106,12 +106,12 @@ describe("Multi-repository Assessment scenario", () => {
     const urls = ["billing", "client", "ui", "web", "zz-outside-link"].map((name) => `file://${fleet}/${name}`);
     const result = addRepositories(world.db, [...urls, `file://${outside}`].join("\n"), boundary);
     expect(result.failed.map((failure) => failure.line)).toEqual([5, 6]);
-    sources = Object.fromEntries(listSources(world.db).map((source) => [source.name, source]));
-    expect(Object.keys(sources).sort()).toEqual(["billing", "client", "ui", "web"]);
-    for (const source of Object.values(sources)) expect(source.cloneUrl.startsWith(`file://${fleet}/`)).toBe(true);
+    repositories = Object.fromEntries(listRepositories(world.db).map((repository) => [repository.name, repository]));
+    expect(Object.keys(repositories).sort()).toEqual(["billing", "client", "ui", "web"]);
+    for (const repository of Object.values(repositories)) expect(repository.cloneUrl.startsWith(`file://${fleet}/`)).toBe(true);
 
     wholeFleet = createAssessment(world.db, { name: "Whole fleet", objective: "Current state of every repository", selectionMode: "all" });
-    explicit = createAssessment(world.db, { name: "Shared packages", objective: "The UI and client packages", selectionMode: "explicit", sourcePublicIds: [sources.ui!.publicId, sources.client!.publicId] });
+    explicit = createAssessment(world.db, { name: "Shared packages", objective: "The UI and client packages", selectionMode: "explicit", repositoryPublicIds: [repositories.ui!.publicId, repositories.client!.publicId] });
   });
 
   let first: Run;
@@ -124,7 +124,7 @@ describe("Multi-repository Assessment scenario", () => {
     first = refreshed(first);
     expect(first.state).toBe("complete_with_issues");
     expect(states(first)).toEqual({ billing: "failed", client: "complete", ui: "complete", web: "complete" });
-    expect(targetsOf(world.db, first.id).find((target) => target.sourceName === "billing")).toMatchObject({ failureCode: "source_unavailable" });
+    expect(targetsOf(world.db, first.id).find((target) => target.repositoryName === "billing")).toMatchObject({ failureCode: "source_unavailable" });
     expect(Object.keys(profiles(first)).sort()).toEqual(["client", "ui", "web"]);
   });
 

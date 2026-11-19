@@ -1,5 +1,5 @@
 import { listRuns } from "../src/lib/runs/run-records";
-import { buildAssessment, buildSource } from "../test/support/builders";
+import { buildAssessment, buildRepository } from "../test/support/builders";
 import { ORDERS, seedRun } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { seedResults, runJobs } from "./support/results";
@@ -65,8 +65,8 @@ test("starts a second Evaluation against the same Assessment after changing only
 });
 
 test("offers Evaluation only for finished Assessments and explains what is missing", async ({ page, db }) => {
-  const orders = buildSource(db, { name: "orders" });
-  const assessment = buildAssessment(db, { name: "Unscored", sources: [orders] });
+  const orders = buildRepository(db, { name: "orders" });
+  const assessment = buildAssessment(db, { name: "Unscored", repositories: [orders] });
   const finished = await seedRun(db, assessment, [orders], [ORDERS]);
   const failed = await seedRun(db, assessment, [orders], ["failed"]);
 

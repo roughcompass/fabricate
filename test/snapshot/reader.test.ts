@@ -3,7 +3,7 @@ import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { openSnapshot } from "@/lib/snapshot/open";
 import type { Budgets } from "@/lib/snapshot/reader";
-import { acquire, registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { acquire, registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { type Repo } from "../support/git-fixture";
 
 const GENEROUS: Budgets = { maxBlobBytes: 1_048_576, maxLockfileBytes: 1_048_576, maxFiles: 1_000, maxTotalBytes: 10_485_760 };
@@ -19,8 +19,8 @@ describe("SnapshotReader", () => {
   /** Commits the work repository (unless already committed) and opens a reader on a fresh snapshot of it. */
   const snapshotReader = async (budgets = GENEROUS, options: { committed?: boolean } = {}) => {
     if (!options.committed) work.commit();
-    const source = registerLocalSource(world.db, world.config, "orders", work.path);
-    const { target, snapshot } = await acquire(world.db, world.config, source);
+    const repository = registerLocalRepository(world.db, world.config, "orders", work.path);
+    const { target, snapshot } = await acquire(world.db, world.config, repository);
     return openSnapshot(target, snapshot, { config: world.config, budgets });
   };
 
@@ -73,8 +73,8 @@ describe("SnapshotReader", () => {
 
     it("refuses to open a ref that no longer names the recorded commit", async () => {
       work.write("a.txt", "a\n").commit();
-      const source = registerLocalSource(world.db, world.config, "orders", work.path);
-      const { target, snapshot } = await acquire(world.db, world.config, source);
+      const repository = registerLocalRepository(world.db, world.config, "orders", work.path);
+      const { target, snapshot } = await acquire(world.db, world.config, repository);
 
       await expect(openSnapshot(target, { ...snapshot, commitSha: "0".repeat(40) }, { config: world.config })).rejects.toMatchObject({ code: "command_rejected" });
       await expect(openSnapshot(target, { ...snapshot, internalRef: "refs/heads/main" }, { config: world.config })).rejects.toMatchObject({ code: "command_rejected" });
@@ -201,9 +201,9 @@ describe("SnapshotReader", () => {
       const budgets = { maxBlobBytes: 200, maxLockfileBytes: 200, maxFiles: 10, maxTotalBytes: 120 };
 
       work.commit();
-      const source = registerLocalSource(world.db, world.config, "orders", work.path);
+      const repository = registerLocalRepository(world.db, world.config, "orders", work.path);
       const readerFor = async () => {
-        const { target, snapshot } = await acquire(world.db, world.config, source);
+        const { target, snapshot } = await acquire(world.db, world.config, repository);
         return openSnapshot(target, snapshot, { config: world.config, budgets });
       };
       const first = await readerFor();

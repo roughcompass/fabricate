@@ -4,14 +4,14 @@ import { createAssessment, deleteAssessment, startRun, updateAssessment } from "
 import type { AssessmentFormState } from "@/app/(operator)/assessments/form-state";
 import { listRuns, targetsOf } from "@/lib/runs/run-records";
 import { jobs } from "@/lib/db/schema";
-import { getAssessment, listAssessments, selectedReleases, selectedSources } from "@/lib/assessments/assessment-records";
+import { getAssessment, listAssessments, selectedReleases, selectedRepositories } from "@/lib/assessments/assessment-records";
 import { createStandard } from "@/lib/standards/standard-records";
-import { buildRun, buildAssessment, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildRelease, buildRepository } from "../support/builders";
 import { redirectOf, useAppDb, formData } from "../support/next";
 
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
 
-const blank: AssessmentFormState = { values: { name: "", objective: "", selectionMode: "all", sourcePublicIds: [], standardReleasePublicIds: [] }, errors: {} };
+const blank: AssessmentFormState = { values: { name: "", objective: "", selectionMode: "all", repositoryPublicIds: [], standardReleasePublicIds: [] }, errors: {} };
 
 describe("initiative Server Actions", () => {
   const app = useAppDb();
@@ -27,10 +27,10 @@ describe("initiative Server Actions", () => {
   });
 
   it("creates an explicit initiative with exactly the selected sources", async () => {
-    const [a, , c] = ["a", "b", "c"].map((name) => buildSource(app.db, { name }));
+    const [a, , c] = ["a", "b", "c"].map((name) => buildRepository(app.db, { name }));
     await redirectOf(createAssessment(blank, formData({ name: "Subset", selectionMode: "explicit", sourcePublicIds: [a!.publicId, c!.publicId] })));
 
-    expect(selectedSources(app.db, listAssessments(app.db)[0]!.id).map((source) => source.name)).toEqual(["a", "c"]);
+    expect(selectedRepositories(app.db, listAssessments(app.db)[0]!.id).map((repository) => repository.name)).toEqual(["a", "c"]);
   });
 
   it("rejects a draft Standard submitted in place of a Release", async () => {
@@ -43,7 +43,7 @@ describe("initiative Server Actions", () => {
 
   it("requires a source for an explicit scope and a supported scope mode", async () => {
     expect((await createAssessment(blank, formData({ name: "Empty", selectionMode: "explicit" }))).errors.sources).toEqual([
-      "Select at least one repository source for an explicit scope",
+      "Select at least one Repository for an explicit scope",
     ]);
     expect((await createAssessment(blank, formData({ name: "Odd", selectionMode: "everything" }))).errors.selectionMode).toHaveLength(1);
   });
@@ -59,7 +59,7 @@ describe("initiative Server Actions", () => {
 
   it("deletes an unassessed initiative and retains an assessed one", async () => {
     const assessed = buildAssessment(app.db);
-    buildRun(app.db, { assessment: assessed, sources: [buildSource(app.db)] });
+    buildRun(app.db, { assessment: assessed, repositories: [buildRepository(app.db)] });
     const fresh = buildAssessment(app.db);
 
     expect(await redirectOf(deleteAssessment(formData({ publicId: assessed.publicId })))).toBe(`/assessments/${assessed.publicId}?notice=retained`);
@@ -68,14 +68,14 @@ describe("initiative Server Actions", () => {
   });
 
   it("starts an assessment and redirects to it, once per launch token", async () => {
-    buildSource(app.db, { name: "orders" });
+    buildRepository(app.db, { name: "orders" });
     const assessment = buildAssessment(app.db);
     const token = crypto.randomUUID();
 
     const first = await redirectOf(startRun(assessment.publicId, { problems: [] }, formData({ launchToken: token })));
     const [run] = listRuns(app.db, assessment.id);
     expect(first).toBe(`/runs/${run!.publicId}?notice=started`);
-    expect(targetsOf(app.db, run!.id).map((target) => target.sourceName)).toEqual(["orders"]);
+    expect(targetsOf(app.db, run!.id).map((target) => target.repositoryName)).toEqual(["orders"]);
 
     expect(await redirectOf(startRun(assessment.publicId, { problems: [] }, formData({ launchToken: token })))).toBe(`/runs/${run!.publicId}?notice=already-started`);
     expect(listRuns(app.db, assessment.id)).toHaveLength(1);

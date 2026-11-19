@@ -7,9 +7,9 @@ import { currentRecipe, moveSurvey, requestSurvey } from "@/lib/surveys/records"
 import { pinSurveyCommit } from "@/lib/surveys/run";
 import type { RunTarget } from "@/lib/runs/run-records";
 import { transitionTarget } from "@/lib/runs/transitions";
-import { resolveCloneUrl } from "@/lib/catalog/catalog";
-import { SourceBoundary } from "@/lib/catalog/source-boundary";
-import { type RepositorySource, insertSource } from "@/lib/catalog/source-records";
+import { resolveCloneUrl } from "@/lib/repositories/registration";
+import { SourceBoundary } from "@/lib/repositories/source-boundary";
+import { type Repository, insertRepository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { GitRunner } from "@/lib/git/runner";
@@ -52,14 +52,14 @@ export function useAcquisitionWorld(name: string, options: { overrides?: Paramet
   return world;
 }
 
-export function registerLocalSource(db: Db, config: FrontendRegistryConfig, name: string, location: string, gitRef: string | null = null): RepositorySource {
+export function registerLocalRepository(db: Db, config: FrontendRegistryConfig, name: string, location: string, gitRef: string | null = null): Repository {
   const url = resolveCloneUrl(`file://${location}`, new SourceBoundary(config));
-  return insertSource(db, { name, ...url, gitRef });
+  return insertRepository(db, { name, ...url, gitRef });
 }
 
 /** A new Assessment over +source+ with its target moved to acquiring. */
-export function acquiringTarget(db: Db, source: RepositorySource): RunTarget {
-  const { targets } = buildRun(db, { sources: [source] });
+export function acquiringTarget(db: Db, repository: Repository): RunTarget {
+  const { targets } = buildRun(db, { repositories: [repository] });
   return transitionTarget(db, targets[0]!, "acquiring");
 }
 
@@ -68,11 +68,11 @@ export function acquiringTarget(db: Db, source: RepositorySource): RunTarget {
  * survey job does, without surveying it. Returns the survey, and the pin as
  * readers open it.
  */
-export async function acquire(db: Db, config: FrontendRegistryConfig, source: RepositorySource, options: { runner?: GitRunner; signal?: AbortSignal } = {}) {
+export async function acquire(db: Db, config: FrontendRegistryConfig, repository: Repository, options: { runner?: GitRunner; signal?: AbortSignal } = {}) {
   const runner = options.runner ?? new GitRunner({ config });
-  const resolution = await resolveReference({ sourcePublicId: source.publicId, cloneUrl: source.cloneUrl, gitRef: source.gitRef }, { config, runner, ...(options.signal && { signal: options.signal }) });
-  const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha: resolution.commitSha, reference: resolution.name, fromConfiguredReference: true, trigger: "manual", ...currentRecipe(config) });
+  const resolution = await resolveReference({ repositoryPublicId: repository.publicId, cloneUrl: repository.cloneUrl, gitRef: repository.gitRef }, { config, runner, ...(options.signal && { signal: options.signal }) });
+  const { survey } = requestSurvey(db, { repositoryId: repository.id, commitSha: resolution.commitSha, reference: resolution.name, fromConfiguredReference: true, trigger: "manual", ...currentRecipe(config) });
   const running = survey.state === "queued" ? moveSurvey(db, survey, "running", { attempts: survey.attempts + 1 }) : survey;
-  const pinned = await pinSurveyCommit(db, running, source, { config, runner, boundary: new SourceBoundary(config), ...(options.signal && { signal: options.signal }) });
-  return { survey: pinned, resolution, target: { sourcePublicId: source.publicId }, snapshot: { publicId: pinned.publicId, commitSha: pinned.commitSha, treeSha: pinned.treeSha!, internalRef: pinned.internalRef!, refKind: resolution.kind, resolvedRef: resolution.name } };
+  const pinned = await pinSurveyCommit(db, running, repository, { config, runner, boundary: new SourceBoundary(config), ...(options.signal && { signal: options.signal }) });
+  return { survey: pinned, resolution, target: { repositoryPublicId: repository.publicId }, snapshot: { publicId: pinned.publicId, commitSha: pinned.commitSha, treeSha: pinned.treeSha!, internalRef: pinned.internalRef!, refKind: resolution.kind, resolvedRef: resolution.name } };
 }

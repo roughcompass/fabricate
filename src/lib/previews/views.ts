@@ -1,5 +1,5 @@
 import { and, count, desc, eq, isNull } from "drizzle-orm";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
@@ -17,37 +17,37 @@ import { statusVersion } from "@/lib/runs/status";
  */
 
 /** The Repository's undeleted previews, newest first, +limit+ from +offset+. */
-export function listPreviews(db: Executor, source: Pick<RepositorySource, "id">, options: { limit: number; offset?: number }): PreviewBuild[] {
+export function listPreviews(db: Executor, repository: Pick<Repository, "id">, options: { limit: number; offset?: number }): PreviewBuild[] {
   return db
     .select()
     .from(previewBuilds)
-    .where(and(eq(previewBuilds.repositorySourceId, source.id), isNull(previewBuilds.deletedAt)))
+    .where(and(eq(previewBuilds.repositoryId, repository.id), isNull(previewBuilds.deletedAt)))
     .orderBy(desc(previewBuilds.createdAt), desc(previewBuilds.id))
     .limit(options.limit)
     .offset(options.offset ?? 0)
     .all();
 }
 
-export function previewCount(db: Executor, source: Pick<RepositorySource, "id">): number {
-  return db.select({ count: count() }).from(previewBuilds).where(and(eq(previewBuilds.repositorySourceId, source.id), isNull(previewBuilds.deletedAt))).get()?.count ?? 0;
+export function previewCount(db: Executor, repository: Pick<Repository, "id">): number {
+  return db.select({ count: count() }).from(previewBuilds).where(and(eq(previewBuilds.repositoryId, repository.id), isNull(previewBuilds.deletedAt))).get()?.count ?? 0;
 }
 
 /** The preparation +publicId+ of +source+, or undefined for one of another Repository or none. */
-export function preparationOf(db: Executor, source: Pick<RepositorySource, "id">, publicId: string | undefined): PreviewPreparation | undefined {
+export function preparationOf(db: Executor, repository: Pick<Repository, "id">, publicId: string | undefined): PreviewPreparation | undefined {
   if (!isPublicId(publicId, "ppr")) return undefined;
   return db
     .select()
     .from(previewPreparations)
-    .where(and(eq(previewPreparations.publicId, publicId), eq(previewPreparations.repositorySourceId, source.id)))
+    .where(and(eq(previewPreparations.publicId, publicId), eq(previewPreparations.repositoryId, repository.id)))
     .get();
 }
 
 /** The undeleted previews of +preparation+'s commit, by package directory. */
-export function previewsOfCommit(db: Executor, preparation: Pick<PreviewPreparation, "repositorySourceId" | "commitSha">): Map<string, PreviewBuild> {
+export function previewsOfCommit(db: Executor, preparation: Pick<PreviewPreparation, "repositoryId" | "commitSha">): Map<string, PreviewBuild> {
   const rows = db
     .select()
     .from(previewBuilds)
-    .where(and(eq(previewBuilds.repositorySourceId, preparation.repositorySourceId), eq(previewBuilds.commitSha, preparation.commitSha), isNull(previewBuilds.deletedAt)))
+    .where(and(eq(previewBuilds.repositoryId, preparation.repositoryId), eq(previewBuilds.commitSha, preparation.commitSha), isNull(previewBuilds.deletedAt)))
     .all();
   return new Map(rows.map((row) => [row.packageDir, row]));
 }
@@ -66,12 +66,12 @@ export interface PreviewActivity {
 }
 
 /** The state of the Repository's preview work, which its page polls while +active+. */
-export function previewActivity(db: Executor, source: Pick<RepositorySource, "id">, preparationPublicId?: string): PreviewActivity {
-  const preparation = preparationOf(db, source, preparationPublicId);
+export function previewActivity(db: Executor, repository: Pick<Repository, "id">, preparationPublicId?: string): PreviewActivity {
+  const preparation = preparationOf(db, repository, preparationPublicId);
   const previews = db
     .select({ publicId: previewBuilds.publicId, attempt: previewBuilds.attempt, state: previewBuilds.attemptState, artifact: previewBuilds.artifactAttempt })
     .from(previewBuilds)
-    .where(and(eq(previewBuilds.repositorySourceId, source.id), isNull(previewBuilds.deletedAt)))
+    .where(and(eq(previewBuilds.repositoryId, repository.id), isNull(previewBuilds.deletedAt)))
     .orderBy(previewBuilds.id)
     .all();
   const parts = [preparation ? `${preparation.publicId}:${preparation.state}:${preparation.requestedAt.getTime()}` : "-", ...previews.map((row) => `${row.publicId}:${row.attempt}:${row.state}:${row.artifact ?? 0}`)];
@@ -90,12 +90,12 @@ const listings = new Map<string, { at: number; listing: Promise<RefListing> }>()
  * reused for half a minute per Repository, remote, and reference. A listing
  * that failed is never reused.
  */
-export function remoteRefsFor(config: FrontendRegistryConfig, source: Pick<RepositorySource, "publicId" | "cloneUrl" | "gitRef">, now = Date.now()): Promise<RefListing> {
-  const key = `${source.publicId}\n${source.cloneUrl}\n${source.gitRef ?? ""}`;
+export function remoteRefsFor(config: FrontendRegistryConfig, repository: Pick<Repository, "publicId" | "cloneUrl" | "gitRef">, now = Date.now()): Promise<RefListing> {
+  const key = `${repository.publicId}\n${repository.cloneUrl}\n${repository.gitRef ?? ""}`;
   const cached = listings.get(key);
   if (cached && now - cached.at < REFS_TTL_MS) return cached.listing;
   for (const [stale, entry] of listings) if (now - entry.at >= REFS_TTL_MS) listings.delete(stale);
-  const listing: Promise<RefListing> = listRemoteRefs(source, { config }).then((result) => {
+  const listing: Promise<RefListing> = listRemoteRefs(repository, { config }).then((result) => {
     if (result.unavailable !== null && listings.get(key)?.listing === listing) listings.delete(key);
     return result;
   });

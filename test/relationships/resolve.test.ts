@@ -2,11 +2,11 @@ import dns from "node:dns";
 import net from "node:net";
 import type { JsonObject } from "@repo-facts/contract";
 import { describe, expect, it, vi } from "vitest";
-import { type CatalogIdentity, type ResolverTarget, resolveRelationships } from "@/lib/relationships/resolve";
+import { type RegisteredIdentity, type ResolverTarget, resolveRelationships } from "@/lib/relationships/resolve";
 import { type MapDocument, type MapEdge, mapProblems } from "@/lib/relationships/schema";
 import { contributed, manifest, missing } from "../support/profiles";
 
-function resolved(targets: ResolverTarget[], outOfScope: CatalogIdentity[] = []) {
+function resolved(targets: ResolverTarget[], outOfScope: RegisteredIdentity[] = []) {
   const document = resolveRelationships({ targets, outOfScope });
   expect(mapProblems(document)).toEqual([]);
   return document as unknown as MapDocument;
@@ -243,18 +243,18 @@ describe("external-service relationships", () => {
 });
 
 describe("out-of-scope sources and coverage", () => {
-  const catalog: CatalogIdentity[] = [{ public_id: "src_catalog_ui", name: "@acme/ui", canonical_url: "https://git.example.com/acme/ui" }];
+  const registered: RegisteredIdentity[] = [{ public_id: "src_catalog_ui", name: "@acme/ui", canonical_url: "https://git.example.com/acme/ui" }];
 
   it("labels an unmatched package with a catalog source outside the scope, by name or declared Git URL, without analyzing it", async () => {
-    const byName = resolved([await app()], catalog);
+    const byName = resolved([await app()], registered);
     expect(view(byName, (edge) => edge.reference.identifier.name === "@acme/ui")).toEqual(["app -package_dependency/out_of_scope-> catalog:@acme/ui"]);
     expect(edgeFor(byName, "package_dependency", { name: "@acme/ui" })).toMatchObject({ rule: "catalog.name", basis: "inferred", reason: expect.stringContaining("was not analyzed") });
 
     const gitApp = await contributed("git-app", { "package.json": manifest({ name: "git-app", version: "1.0.0", dependencies: { "ui-lib": "git+https://git.example.com/acme/ui.git#v1" } }) });
-    const byUrl = resolved([gitApp], catalog);
+    const byUrl = resolved([gitApp], registered);
     expect(edgeFor(byUrl, "package_dependency", { name: "ui-lib" })).toMatchObject({ state: "out_of_scope", rule: "catalog.canonical-url", basis: "observed" });
     // Only identity metadata is recorded for the out-of-scope source.
-    expect(byUrl.nodes.find((node) => node.kind === "out_of_scope_source")).toEqual({ id: expect.any(String), kind: "out_of_scope_source", source: catalog[0] });
+    expect(byUrl.nodes.find((node) => node.kind === "out_of_scope_source")).toEqual({ id: expect.any(String), kind: "out_of_scope_source", source: registered[0] });
   });
 
   it("records failed and canceled targets as coverage gaps and keeps edges from the successful Profiles", async () => {

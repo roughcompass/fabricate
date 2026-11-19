@@ -1,5 +1,5 @@
 import { and, asc, desc, eq } from "drizzle-orm";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
@@ -28,7 +28,7 @@ export interface NewRun {
   profileSchemaVersion: number;
   relationshipSchemaVersion: number;
   /** The resolved scope, in the order targets are processed and displayed. */
-  sources: readonly RepositorySource[];
+  repositories: readonly Repository[];
 }
 
 /**
@@ -39,7 +39,7 @@ export function createRun(db: Executor, input: NewRun): { run: Run; targets: Run
   const issues = new IssueCollector();
   if (!LAUNCH_TOKEN.test(input.launchToken)) issues.add("launchToken", "Launch token must be a lowercase UUID");
   if (!input.surveyorRelease.trim()) issues.add("surveyorRelease", `${SURVEYOR_RELEASE_LABEL} is required`);
-  if (input.sources.length === 0) issues.add("sources", "A Run needs at least one target");
+  if (input.repositories.length === 0) issues.add("sources", "A Run needs at least one target");
   issues.throwIfAny();
 
   const configuration = digestOf(input.configuration);
@@ -65,16 +65,16 @@ export function createRun(db: Executor, input: NewRun): { run: Run; targets: Run
     const targets = tx
       .insert(runTargets)
       .values(
-        input.sources.map((source, position) => ({
+        input.repositories.map((repository, position) => ({
           publicId: generatePublicId("tgt"),
           runId: run.id,
-          repositorySourceId: source.id,
+          repositoryId: repository.id,
           position,
-          sourcePublicId: source.publicId,
-          sourceName: source.name,
-          cloneUrl: source.cloneUrl,
-          canonicalUrl: source.canonicalUrl,
-          gitRef: source.gitRef,
+          repositoryPublicId: repository.publicId,
+          repositoryName: repository.name,
+          cloneUrl: repository.cloneUrl,
+          canonicalUrl: repository.canonicalUrl,
+          gitRef: repository.gitRef,
           createdAt: now,
           updatedAt: now,
         })),

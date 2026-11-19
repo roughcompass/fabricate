@@ -12,7 +12,7 @@ import { getConfig } from "@/lib/config";
 import { selectedReleases } from "@/lib/assessments/assessment-records";
 import { jobPayload } from "@/lib/jobs/queue";
 import { drainJobs } from "@/lib/jobs/worker";
-import { buildAssessment, buildSource } from "../support/builders";
+import { buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb } from "../support/db";
 
 describe("assessment launch", () => {
@@ -28,14 +28,14 @@ describe("assessment launch", () => {
   });
 
   it("commits the immutable scope and its coordinator job together", async () => {
-    buildSource(db, { name: "orders", gitRef: "main" });
-    buildSource(db, { name: "billing" });
+    buildRepository(db, { name: "orders", gitRef: "main" });
+    buildRepository(db, { name: "billing" });
     const assessment = buildAssessment(db);
 
     const { run, targets, duplicate } = launchRun(db, assessment.publicId, crypto.randomUUID());
 
     expect(duplicate).toBe(false);
-    expect(targets.map((target) => [target.sourceName, target.gitRef])).toEqual([
+    expect(targets.map((target) => [target.repositoryName, target.gitRef])).toEqual([
       ["billing", null],
       ["orders", "main"],
     ]);
@@ -57,7 +57,7 @@ describe("assessment launch", () => {
   });
 
   it("is valid without a selected Standard Release", () => {
-    buildSource(db);
+    buildRepository(db);
     const assessment = buildAssessment(db);
 
     expect(selectedReleases(db, assessment.id)).toEqual([]);
@@ -80,7 +80,7 @@ describe("assessment launch", () => {
   });
 
   it("returns the existing assessment when the same launch is submitted twice", () => {
-    buildSource(db);
+    buildRepository(db);
     const assessment = buildAssessment(db);
     const token = crypto.randomUUID();
 
@@ -94,7 +94,7 @@ describe("assessment launch", () => {
   });
 
   it("starts a new assessment for a new launch token", () => {
-    buildSource(db);
+    buildRepository(db);
     const assessment = buildAssessment(db);
     launchRun(db, assessment.publicId, crypto.randomUUID());
     launchRun(db, assessment.publicId, "not-a-token");

@@ -13,7 +13,7 @@ import { getAssessment, listAssessments, selectedReleases } from "@/lib/assessme
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { draftOf, getStandard, listStandards, releaseDocument, releasesOf } from "@/lib/standards/standard-records";
-import { buildSource } from "../support/builders";
+import { buildRepository } from "../support/builders";
 import { rawRun } from "../support/db";
 import { redirectOf, useAppDb, formData } from "../support/next";
 import { manifest } from "../support/profiles";
@@ -135,8 +135,8 @@ describe("Standard lifecycle", () => {
 
   it("is selected by an Initiative and evaluated against an Assessment without running any Control content", async () => {
     const [v1] = releasesOf(app.db, getStandard(app.db, standardId).id);
-    const storefront = buildSource(app.db, { name: "storefront" });
-    const blank: AssessmentFormState = { values: { name: "", objective: "", selectionMode: "all", sourcePublicIds: [], standardReleasePublicIds: [] }, errors: {} };
+    const storefront = buildRepository(app.db, { name: "storefront" });
+    const blank: AssessmentFormState = { values: { name: "", objective: "", selectionMode: "all", repositoryPublicIds: [], standardReleasePublicIds: [] }, errors: {} };
     await redirectOf(createAssessment(blank, formData({ name: "Offline readiness", objective: "Work without live services", selectionMode: "explicit", sourcePublicIds: [storefront.publicId], standardReleasePublicIds: [v1!.publicId] })));
     const assessment = listAssessments(app.db)[0]!;
     expect(selectedReleases(app.db, assessment.id).map(({ release }) => release.publicId)).toEqual([v1!.publicId]);

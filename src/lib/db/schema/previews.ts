@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { repositorySources } from "./catalog";
+import { repositories } from "./repositories";
 import { createdAt, id, publicId, sqlList, timestamp, updatedAt } from "./columns";
 import { surveys } from "./surveys";
 import type { JsonObject } from "@repo-facts/contract";
@@ -46,9 +46,9 @@ export const previewPreparations = sqliteTable(
   {
     id: id(),
     publicId: publicId(),
-    repositorySourceId: integer("repository_source_id")
+    repositoryId: integer("repository_source_id")
       .notNull()
-      .references(() => repositorySources.id, { onDelete: "restrict" }),
+      .references(() => repositories.id, { onDelete: "restrict" }),
     commitSha: text("commit_sha").notNull(),
     refName: text("ref_name"),
     refKind: text("ref_kind", { enum: PREVIEW_REF_KINDS }).notNull(),
@@ -69,7 +69,7 @@ export const previewPreparations = sqliteTable(
     finishedAt: timestamp("finished_at"),
   },
   (t) => [
-    uniqueIndex("preview_preparations_commit").on(t.repositorySourceId, t.commitSha),
+    uniqueIndex("preview_preparations_commit").on(t.repositoryId, t.commitSha),
     check("preview_preparations_public_id", sql`${t.publicId} GLOB 'ppr_*'`),
     check("preview_preparations_commit_sha", commitCheck(t.commitSha)),
     check("preview_preparations_ref", refCheck(t.refName, t.refKind)),
@@ -100,9 +100,9 @@ export const previewBuilds = sqliteTable(
   {
     id: id(),
     publicId: publicId(),
-    repositorySourceId: integer("repository_source_id")
+    repositoryId: integer("repository_source_id")
       .notNull()
-      .references(() => repositorySources.id, { onDelete: "restrict" }),
+      .references(() => repositories.id, { onDelete: "restrict" }),
     /** The preparation that decided the package qualifies, with the Profile it decided from. */
     preparationId: integer("preparation_id")
       .notNull()
@@ -141,8 +141,8 @@ export const previewBuilds = sqliteTable(
     deletedAt: timestamp("deleted_at"),
   },
   (t) => [
-    uniqueIndex("preview_builds_identity").on(t.repositorySourceId, t.commitSha, t.packageDir).where(sql`${t.deletedAt} IS NULL`),
-    index("preview_builds_source").on(t.repositorySourceId, t.createdAt),
+    uniqueIndex("preview_builds_identity").on(t.repositoryId, t.commitSha, t.packageDir).where(sql`${t.deletedAt} IS NULL`),
+    index("preview_builds_source").on(t.repositoryId, t.createdAt),
     check("preview_builds_public_id", sql`${t.publicId} GLOB 'pvw_*'`),
     check("preview_builds_commit_sha", commitCheck(t.commitSha)),
     // `.` or a relative path of plain segments: no leading, trailing, or doubled slash, and no `.` or `..` segment.

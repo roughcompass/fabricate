@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
@@ -58,7 +58,7 @@ export class PreviewRequestError extends Error {
  * configured Node versions; the Profile it already has is kept for the job to
  * reuse.
  */
-export function openPreparation(db: Executor, source: Pick<RepositorySource, "id">, pinned: PinnedCommit): { preparation: PreviewPreparation; started: boolean } {
+export function openPreparation(db: Executor, repository: Pick<Repository, "id">, pinned: PinnedCommit): { preparation: PreviewPreparation; started: boolean } {
   return immediate(db, (tx) => {
     // A preparation whose job was abandoned is Failed, so it's prepared again rather than left profiling.
     settleAbandonedPreparations(tx);
@@ -66,7 +66,7 @@ export function openPreparation(db: Executor, source: Pick<RepositorySource, "id
     const existing = tx
       .select()
       .from(previewPreparations)
-      .where(and(eq(previewPreparations.repositorySourceId, source.id), eq(previewPreparations.commitSha, pinned.commitSha)))
+      .where(and(eq(previewPreparations.repositoryId, repository.id), eq(previewPreparations.commitSha, pinned.commitSha)))
       .get();
     if (existing && (existing.state === "profiling" || existing.state === "ready")) return { preparation: existing, started: false };
 
@@ -81,7 +81,7 @@ export function openPreparation(db: Executor, source: Pick<RepositorySource, "id
           .get()
       : tx
           .insert(previewPreparations)
-          .values({ publicId: generatePublicId("ppr"), repositorySourceId: source.id, commitSha: pinned.commitSha, refName: pinned.refName, refKind: pinned.refKind, requestedAt: now, createdAt: now, updatedAt: now })
+          .values({ publicId: generatePublicId("ppr"), repositoryId: repository.id, commitSha: pinned.commitSha, refName: pinned.refName, refKind: pinned.refKind, requestedAt: now, createdAt: now, updatedAt: now })
           .returning()
           .get();
     enqueue(tx, { kind: PREPARE_PREVIEW, payload: preparationJob(preparation), idempotencyKey: `${PREPARE_PREVIEW}:${preparation.publicId}:${preparation.requestedAt.getTime()}` });
@@ -187,7 +187,7 @@ export function startPreview(db: Executor, preparationPublicId: string, packageD
     const existing = tx
       .select()
       .from(previewBuilds)
-      .where(and(eq(previewBuilds.repositorySourceId, preparation.repositorySourceId), eq(previewBuilds.commitSha, preparation.commitSha), eq(previewBuilds.packageDir, packageDir), isNull(previewBuilds.deletedAt)))
+      .where(and(eq(previewBuilds.repositoryId, preparation.repositoryId), eq(previewBuilds.commitSha, preparation.commitSha), eq(previewBuilds.packageDir, packageDir), isNull(previewBuilds.deletedAt)))
       .get();
     if (existing) return { preview: existing, created: false };
 
@@ -196,7 +196,7 @@ export function startPreview(db: Executor, preparationPublicId: string, packageD
       .insert(previewBuilds)
       .values({
         publicId: generatePublicId("pvw"),
-        repositorySourceId: preparation.repositorySourceId,
+        repositoryId: preparation.repositoryId,
         preparationId: preparation.id,
         commitSha: preparation.commitSha,
         packageDir,

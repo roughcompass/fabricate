@@ -5,7 +5,7 @@ import type { Db } from "../../src/lib/db/client";
 import { startEvaluation } from "../../src/lib/evaluations/start";
 import { jobHandlers } from "../../src/lib/jobs/registry";
 import { drainJobs } from "../../src/lib/jobs/worker";
-import { buildAssessment, buildSource } from "../../test/support/builders";
+import { buildAssessment, buildRepository } from "../../test/support/builders";
 import { ORDERS, publishStandard, seedRun, selectReleases } from "../../test/support/scenarios";
 import { control } from "../../test/support/standards";
 import { E2E_ENV } from "./env";
@@ -53,9 +53,9 @@ export const SERVICE_CONTROLS: JsonObject[] = [
 
 /** A finished Assessment of ORDERS and a failed billing repository, and an Initiative that selects both Standards. */
 export async function seedResults(db: Db) {
-  const orders = buildSource(db, { name: "orders" });
-  const billing = buildSource(db, { name: "billing" });
-  const assessment = buildAssessment(db, { name: "Fleet assessment", sources: [orders, billing] });
+  const orders = buildRepository(db, { name: "orders" });
+  const billing = buildRepository(db, { name: "billing" });
+  const assessment = buildAssessment(db, { name: "Fleet assessment", repositories: [orders, billing] });
   const run = await seedRun(db, assessment, [orders, billing], [ORDERS, "failed"]);
   const baseline = publishStandard(db, "Engineering baseline", BASELINE_CONTROLS);
   const services = publishStandard(db, "Service readiness", SERVICE_CONTROLS);

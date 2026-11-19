@@ -5,7 +5,7 @@ import type { FrontendRegistryConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { type SurveyState, type SurveyTrigger, runTargets, repositorySources, surveys } from "@/lib/db/schema";
+import { type SurveyState, type SurveyTrigger, runTargets, repositories, surveys } from "@/lib/db/schema";
 import { SURVEY_MACHINE, assertTransition } from "@/lib/db/state-machines";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
 
@@ -32,7 +32,7 @@ export function currentRecipe(config: FrontendRegistryConfig): Recipe {
 }
 
 export interface SurveyRequest extends Recipe {
-  repositorySourceId: number;
+  repositoryId: number;
   commitSha: string;
   /** The reference the commit was resolved from, or the commit itself. */
   reference: string;
@@ -54,18 +54,18 @@ export interface Requested {
  */
 export function requestSurvey(db: Executor, request: SurveyRequest): Requested {
   return immediate(db, (tx) => {
-    const existing = surveyOfKey(tx, request.repositorySourceId, request.commitSha, request);
+    const existing = surveyOfKey(tx, request.repositoryId, request.commitSha, request);
     if (existing) {
       if (existing.state !== "failed") return { survey: existing, queued: false };
       return { survey: moveSurvey(tx, existing, "queued", {}), queued: true };
     }
-    const number = (tx.select({ last: max(surveys.number) }).from(surveys).where(eq(surveys.repositorySourceId, request.repositorySourceId)).get()?.last ?? 0) + 1;
+    const number = (tx.select({ last: max(surveys.number) }).from(surveys).where(eq(surveys.repositoryId, request.repositoryId)).get()?.last ?? 0) + 1;
     const now = new Date();
     const survey = tx
       .insert(surveys)
       .values({
         publicId: generatePublicId("srv"),
-        repositorySourceId: request.repositorySourceId,
+        repositoryId: request.repositoryId,
         number,
         commitSha: request.commitSha,
         reference: request.reference,
@@ -84,13 +84,13 @@ export function requestSurvey(db: Executor, request: SurveyRequest): Requested {
   });
 }
 
-export function surveyOfKey(db: Executor, repositorySourceId: number, commitSha: string, recipe: Recipe): Survey | undefined {
+export function surveyOfKey(db: Executor, repositoryId: number, commitSha: string, recipe: Recipe): Survey | undefined {
   return db
     .select()
     .from(surveys)
     .where(
       and(
-        eq(surveys.repositorySourceId, repositorySourceId),
+        eq(surveys.repositoryId, repositoryId),
         eq(surveys.commitSha, commitSha),
         eq(surveys.surveyorRelease, recipe.surveyorRelease),
         eq(surveys.configurationDigest, recipe.configurationDigest),
@@ -119,18 +119,18 @@ export function pinSurvey(db: Executor, survey: Survey, pin: { treeSha: string |
  * that commit's newest successful survey current when there is one. While the
  * commit has none, the survey current before stays current.
  */
-export function recordConfiguredResolution(db: Executor, repositorySourceId: number, commitSha: string, at: Date): void {
-  const repository = db.select({ deletedAt: repositorySources.deletedAt, resolvedAt: repositorySources.configuredResolvedAt }).from(repositorySources).where(eq(repositorySources.id, repositorySourceId)).get();
+export function recordConfiguredResolution(db: Executor, repositoryId: number, commitSha: string, at: Date): void {
+  const repository = db.select({ deletedAt: repositories.deletedAt, resolvedAt: repositories.configuredResolvedAt }).from(repositories).where(eq(repositories.id, repositoryId)).get();
   if (!repository || repository.deletedAt || (repository.resolvedAt && repository.resolvedAt > at)) return;
-  db.update(repositorySources).set({ configuredCommit: commitSha, configuredResolvedAt: at }).where(eq(repositorySources.id, repositorySourceId)).run();
+  db.update(repositories).set({ configuredCommit: commitSha, configuredResolvedAt: at }).where(eq(repositories.id, repositoryId)).run();
   const succeeded = db
     .select()
     .from(surveys)
-    .where(and(eq(surveys.repositorySourceId, repositorySourceId), eq(surveys.commitSha, commitSha), eq(surveys.state, "succeeded")))
+    .where(and(eq(surveys.repositoryId, repositoryId), eq(surveys.commitSha, commitSha), eq(surveys.state, "succeeded")))
     .orderBy(desc(surveys.number))
     .limit(1)
     .get();
-  if (succeeded) db.update(repositorySources).set({ currentSurveyId: succeeded.id }).where(eq(repositorySources.id, repositorySourceId)).run();
+  if (succeeded) db.update(repositories).set({ currentSurveyId: succeeded.id }).where(eq(repositories.id, repositoryId)).run();
 }
 
 /**
@@ -140,9 +140,9 @@ export function recordConfiguredResolution(db: Executor, repositorySourceId: num
  */
 export function updateCurrentSurvey(db: Executor, survey: Survey): void {
   if (survey.state !== "succeeded") return;
-  const repository = db.select({ configuredCommit: repositorySources.configuredCommit, deletedAt: repositorySources.deletedAt }).from(repositorySources).where(eq(repositorySources.id, survey.repositorySourceId)).get();
+  const repository = db.select({ configuredCommit: repositories.configuredCommit, deletedAt: repositories.deletedAt }).from(repositories).where(eq(repositories.id, survey.repositoryId)).get();
   if (!repository || repository.deletedAt || repository.configuredCommit !== survey.commitSha) return;
-  db.update(repositorySources).set({ currentSurveyId: survey.id }).where(eq(repositorySources.id, survey.repositorySourceId)).run();
+  db.update(repositories).set({ currentSurveyId: survey.id }).where(eq(repositories.id, survey.repositoryId)).run();
 }
 
 export function surveyById(db: Executor, id: number): Survey {
@@ -164,6 +164,6 @@ export function targetCommits(db: Executor, runId: number): Map<number, string> 
 }
 
 /** A Repository's newest survey, whatever its state. */
-export function latestSurvey(db: Executor, repositorySourceId: number): Survey | undefined {
-  return db.select().from(surveys).where(eq(surveys.repositorySourceId, repositorySourceId)).orderBy(desc(surveys.number)).limit(1).get();
+export function latestSurvey(db: Executor, repositoryId: number): Survey | undefined {
+  return db.select().from(surveys).where(eq(surveys.repositoryId, repositoryId)).orderBy(desc(surveys.number)).limit(1).get();
 }

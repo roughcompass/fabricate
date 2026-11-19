@@ -9,7 +9,7 @@ import { activeStates, RUN_MACHINE, canTransition, EVALUATION_MACHINE, EVALUATIO
 import { createEvaluation } from "@/lib/evaluations/evaluation-records";
 import { transitionEvaluation, transitionEvaluationRelease } from "@/lib/evaluations/transitions";
 import { moveSurvey, requestSurvey, surveyById } from "@/lib/surveys/records";
-import { buildRun, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildRelease, buildRepository } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { ACTIVE_STATES } from "@/lib/profiling/versions";
 
@@ -32,7 +32,7 @@ const harnesses: Harness[] = [
   {
     table: "assessments",
     machine: RUN_MACHINE as StateMachine<string>,
-    create: (db) => buildRun(db, { sources: [buildSource(db)] }).run.id,
+    create: (db) => buildRun(db, { repositories: [buildRepository(db)] }).run.id,
     transition: (db, id, to) => transitionRun(db, db.select().from(runs).where(eq(runs.id, id)).get()!, to as never),
   },
   {
@@ -40,9 +40,9 @@ const harnesses: Harness[] = [
     machine: TARGET_MACHINE as StateMachine<string>,
     // With a survey of its Repository to link, as resolving its reference does.
     create: (db) => {
-      const source = buildSource(db);
-      newSurvey(db, source.id);
-      return buildRun(db, { sources: [source] }).targets[0]!.id;
+      const repository = buildRepository(db);
+      newSurvey(db, repository.id);
+      return buildRun(db, { repositories: [repository] }).targets[0]!.id;
     },
     // A target moves to analyzing when it links its survey, which completing requires.
     extra: (state) =>
@@ -72,20 +72,20 @@ const harnesses: Harness[] = [
     table: "surveys",
     machine: SURVEY_MACHINE as StateMachine<string>,
     // Each on a Repository of its own, so its number is 1.
-    create: (db) => newSurvey(db, buildSource(db).id).id,
+    create: (db) => newSurvey(db, buildRepository(db).id).id,
     extra: (state) => (state === "failed" ? ", failure_code = 'test', finished_at = 1" : state === "succeeded" ? ", finished_at = 1, internal_ref = 'refs/fabricate/snapshots/srv_test'" : ", finished_at = NULL"),
     touch: "attempts = attempts + 1",
     transition: (db, id, to) => moveSurvey(db, surveyById(db, id), to as never, to === "failed" ? { failureCode: "unexpected" } : to === "succeeded" ? { internalRef: "refs/fabricate/snapshots/srv_test" } : {}),
   },
 ];
 
-/** A queued survey of a commit of the Repository +repositorySourceId+. */
-function newSurvey(db: Db, repositorySourceId: number) {
-  return requestSurvey(db, { repositorySourceId, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", surveyorRelease: "0.6.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 }).survey;
+/** A queued survey of a commit of the Repository +repositoryId+. */
+function newSurvey(db: Db, repositoryId: number) {
+  return requestSurvey(db, { repositoryId, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", surveyorRelease: "0.6.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 }).survey;
 }
 
 function newEvaluation(db: Db) {
-  const { run } = buildRun(db, { sources: [buildSource(db)] });
+  const { run } = buildRun(db, { repositories: [buildRepository(db)] });
   return createEvaluation(db, {
     assessment: { id: run.assessmentId } as never,
     run,
@@ -166,7 +166,7 @@ describe("aggregate progress and cancellation", () => {
   });
 
   it("advances the aggregate state forward and never regresses", () => {
-    const { run } = buildRun(db, { sources: [buildSource(db)] });
+    const { run } = buildRun(db, { repositories: [buildRepository(db)] });
 
     expect(advanceRun(db, run.id, "acquiring").state).toBe("acquiring");
     expect(advanceRun(db, run.id, "analyzing").state).toBe("analyzing");
@@ -175,7 +175,7 @@ describe("aggregate progress and cancellation", () => {
   });
 
   it("records timestamps on start and on terminal states", () => {
-    const { run, targets } = buildRun(db, { sources: [buildSource(db)] });
+    const { run, targets } = buildRun(db, { repositories: [buildRepository(db)] });
     const acquiring = transitionTarget(db, targets[0]!, "acquiring");
     const failed = transitionTarget(db, acquiring, "failed", { failureCode: "source_unavailable", failureMessage: "https://user:secret@example.com unreachable" });
 
@@ -187,7 +187,7 @@ describe("aggregate progress and cancellation", () => {
   });
 
   it("records a durable, idempotent cancellation request and refuses it once terminal", () => {
-    const { run } = buildRun(db, { sources: [buildSource(db)] });
+    const { run } = buildRun(db, { repositories: [buildRepository(db)] });
     const requested = requestCancellation(db, run.id);
 
     expect(requested.cancelRequestedAt).toBeInstanceOf(Date);
@@ -197,7 +197,7 @@ describe("aggregate progress and cancellation", () => {
   });
 
   it("refuses a stale write when the state changed underneath the caller", () => {
-    const { run } = buildRun(db, { sources: [buildSource(db)] });
+    const { run } = buildRun(db, { repositories: [buildRepository(db)] });
     transitionRun(db, run, "acquiring");
 
     expect(() => transitionRun(db, run, "failed")).toThrow(/changed while moving/);

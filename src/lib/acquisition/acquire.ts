@@ -1,7 +1,7 @@
 import { type RunTarget, getTarget } from "@/lib/runs/run-records";
 import { transitionTarget } from "@/lib/runs/transitions";
-import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
-import { BoundaryViolation, SourceBoundary } from "@/lib/catalog/source-boundary";
+import { CloneUrl, InvalidCloneUrl } from "@/lib/repositories/clone-url";
+import { BoundaryViolation, SourceBoundary } from "@/lib/repositories/source-boundary";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { GitError } from "@/lib/git/errors";
@@ -29,12 +29,12 @@ export interface ResolveOptions {
 }
 
 /** What +gitRef+ names on +source+'s remote: the default branch when null. */
-export async function resolveReference(source: { sourcePublicId: string; cloneUrl: string; gitRef: string | null }, options: ResolveOptions = {}): Promise<Resolution> {
+export async function resolveReference(source: { repositoryPublicId: string; cloneUrl: string; gitRef: string | null }, options: ResolveOptions = {}): Promise<Resolution> {
   const config = options.config ?? getConfig();
   const runner = options.runner ?? new GitRunner({ config });
   try {
     const { url, protocol } = gitSource(source, options.boundary ?? new SourceBoundary(config));
-    return await new Mirror(runner, source.sourcePublicId).resolve(url, protocol, source.gitRef, options.signal);
+    return await new Mirror(runner, source.repositoryPublicId).resolve(url, protocol, source.gitRef, options.signal);
   } catch (error) {
     throw normalizeAcquisitionError(error);
   }

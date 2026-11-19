@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import type { JsonObject } from "@repo-facts/contract";
 import { mirrorPath } from "@/lib/acquisition/mirror";
-import { type RepositorySource, getSource } from "@/lib/catalog/source-records";
+import { type Repository, getRepository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
-import { JOB_PRIORITIES, repositorySources } from "@/lib/db/schema";
+import { JOB_PRIORITIES, repositories } from "@/lib/db/schema";
 import { readDocument } from "@/lib/documents/digested";
 import { failureText } from "@/lib/git/redact";
 import { GitRunner } from "@/lib/git/runner";
@@ -31,14 +31,14 @@ import { type RefOptions, type RefRequest, pinCommit, previewPinRef } from "./re
  */
 
 /** Pins +request+ for the Repository +sourcePublicId+ and returns its preparation, queued or as it stands. */
-export async function requestPreparation(db: Executor, sourcePublicId: string, request: RefRequest, options: RefOptions = {}): Promise<PreviewPreparation> {
+export async function requestPreparation(db: Executor, repositoryPublicId: string, request: RefRequest, options: RefOptions = {}): Promise<PreviewPreparation> {
   const config = options.config ?? getConfig();
-  const source = getSource(db, sourcePublicId);
-  assertEnrolled(config, source);
-  const pinned = await pinCommit(db, source, request, { ...options, config });
+  const repository = getRepository(db, repositoryPublicId);
+  assertEnrolled(config, repository);
+  const pinned = await pinCommit(db, repository, request, { ...options, config });
   // A request for the configured reference says which commit it names now (unify-surveys, design decision 4).
-  if (request.kind === "ref" && request.name === source.gitRef) recordConfiguredResolution(db, source.id, pinned.commitSha, new Date());
-  return openPreparation(db, source, pinned).preparation;
+  if (request.kind === "ref" && request.name === repository.gitRef) recordConfiguredResolution(db, repository.id, pinned.commitSha, new Date());
+  return openPreparation(db, repository, pinned).preparation;
 }
 
 export interface PreparationJob {
@@ -59,17 +59,17 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
   const config = options.config ?? getConfig();
   const preparation = findPreparation(db, job.preparation);
   if (!preparation || preparation.state !== "profiling" || preparation.requestedAt.getTime() !== job.requested) return null;
-  const source = db.select().from(repositorySources).where(eq(repositorySources.id, preparation.repositorySourceId)).get()!;
+  const repository = db.select().from(repositories).where(eq(repositories.id, preparation.repositoryId)).get()!;
   if (!config.previews.enabled) return failPreparation(db, job.preparation, job.requested, "Previews were turned off before the commit was prepared");
-  if (!isEnrolled(config, source)) return failPreparation(db, job.preparation, job.requested, `${source.name} is not enrolled for previews`);
+  if (!isEnrolled(config, repository)) return failPreparation(db, job.preparation, job.requested, `${repository.name} is not enrolled for previews`);
 
   try {
     const runner = options.runner ?? new GitRunner({ config });
-    const gitDir = mirrorPath(config.repositoryStorage, source.publicId);
+    const gitDir = mirrorPath(config.repositoryStorage, repository.publicId);
     const open = () => SnapshotReader.open(runner, gitDir, previewPinRef(preparation.commitSha), preparation.commitSha, config.analysis);
     // Waking from a survey that failed fails the preparation; a new request tries the survey again.
     const linked = job.afterSurvey && preparation.surveyId !== null ? surveyById(db, preparation.surveyId) : undefined;
-    const survey = linked?.state === "failed" ? linked : previewSurvey(db, source, preparation, config);
+    const survey = linked?.state === "failed" ? linked : previewSurvey(db, repository, preparation, config);
     if (survey.state === "failed") return failPreparation(db, job.preparation, job.requested, `The commit couldn't be surveyed: ${survey.failureMessage ?? survey.failureCode}`);
     // The survey continues this preparation when it finishes.
     if (survey.state !== "succeeded") return null;
@@ -101,14 +101,14 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
  * Repository's versions, and becomes current only when the commit came from
  * the configured reference.
  */
-function previewSurvey(db: Executor, source: RepositorySource, preparation: PreviewPreparation, config: FrontendRegistryConfig): Survey {
+function previewSurvey(db: Executor, repository: Repository, preparation: PreviewPreparation, config: FrontendRegistryConfig): Survey {
   return immediate(db, (tx) => {
     const { survey } = requestSurvey(tx, {
-      repositorySourceId: source.id,
+      repositoryId: repository.id,
       commitSha: preparation.commitSha,
       reference: preparation.refName ?? preparation.commitSha,
       // Whatever ref the preview named, its survey becomes current only if its commit is the one the configured reference last named.
-      fromConfiguredReference: source.configuredCommit === preparation.commitSha,
+      fromConfiguredReference: repository.configuredCommit === preparation.commitSha,
       trigger: "preview",
       ...currentRecipe(config),
     });

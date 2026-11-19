@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { resolveReference } from "@/lib/acquisition/acquire";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, type SurveyTrigger, jobs } from "@/lib/db/schema";
@@ -41,13 +41,13 @@ export interface SurveyRepositoryOptions {
 }
 
 /** Resolves +repository+'s configured reference and requests its survey under the current recipe, at background priority. */
-export async function surveyRepository(db: Executor, repository: RepositorySource, trigger: BackgroundTrigger, options: SurveyRepositoryOptions = {}): Promise<BackgroundResult> {
+export async function surveyRepository(db: Executor, repository: Repository, trigger: BackgroundTrigger, options: SurveyRepositoryOptions = {}): Promise<BackgroundResult> {
   const config = options.config ?? getConfig();
-  const resolution = await resolveReference({ sourcePublicId: repository.publicId, cloneUrl: repository.cloneUrl, gitRef: repository.gitRef }, { config, ...(options.runner && { runner: options.runner }), ...(options.signal && { signal: options.signal }) });
+  const resolution = await resolveReference({ repositoryPublicId: repository.publicId, cloneUrl: repository.cloneUrl, gitRef: repository.gitRef }, { config, ...(options.runner && { runner: options.runner }), ...(options.signal && { signal: options.signal }) });
   const recipe = currentRecipe(config);
   return immediate(db, (tx) => {
     const { survey, queued } = requestSurvey(tx, {
-      repositorySourceId: repository.id,
+      repositoryId: repository.id,
       commitSha: resolution.commitSha,
       reference: resolution.name,
       fromConfiguredReference: true,
@@ -64,7 +64,7 @@ export async function surveyRepository(db: Executor, repository: RepositorySourc
 }
 
 /** Why the scheduled check surveys a commit: the Repository's first survey, a new commit of its reference, or the same commit under a new recipe. */
-function checkTrigger(db: Executor, repository: RepositorySource, commitSha: string): SurveyTrigger {
+function checkTrigger(db: Executor, repository: Repository, commitSha: string): SurveyTrigger {
   if (repository.currentSurveyId === null) return "added";
   return surveyById(db, repository.currentSurveyId).commitSha === commitSha ? "recipe" : "commit";
 }
@@ -74,7 +74,7 @@ function checkTrigger(db: Executor, repository: RepositorySource, commitSha: str
  * unless a survey was requested since: the error of its newest survey
  * request, which failed before a commit was known.
  */
-export function surveyRequestFailure(db: Executor, repository: Pick<RepositorySource, "publicId">, latest: Pick<Survey, "createdAt"> | undefined): { message: string; at: Date } | null {
+export function surveyRequestFailure(db: Executor, repository: Pick<Repository, "publicId">, latest: Pick<Survey, "createdAt"> | undefined): { message: string; at: Date } | null {
   const job = db
     .select({ state: jobs.state, lastError: jobs.lastError, finishedAt: jobs.finishedAt })
     .from(jobs)
@@ -87,6 +87,6 @@ export function surveyRequestFailure(db: Executor, repository: Pick<RepositorySo
 }
 
 /** Queues a job that surveys +repository+ in the background, so adding or editing one doesn't wait on its remote. */
-export function requestBackgroundSurvey(db: Executor, repository: Pick<RepositorySource, "publicId">, trigger: BackgroundTrigger, key: string = crypto.randomUUID()): Job {
+export function requestBackgroundSurvey(db: Executor, repository: Pick<Repository, "publicId">, trigger: BackgroundTrigger, key: string = crypto.randomUUID()): Job {
   return enqueue(db, { kind: REQUEST_SURVEY, payload: { repository: repository.publicId, trigger }, idempotencyKey: `${REQUEST_SURVEY}:${repository.publicId}:${key}`, priority: JOB_PRIORITIES.background, maxAttempts: 1 });
 }

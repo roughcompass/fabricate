@@ -42,12 +42,12 @@ export const routes = {
   newRepository: "/repositories/new",
   bulkRepositories: "/repositories/bulk",
   /** The Repository's page, which shows its current Profile (docs/profiling.md). */
-  repository: (sourceId: string) => `/repositories/${sourceId}`,
+  repository: (repositoryId: string) => `/repositories/${repositoryId}`,
   /** Its settings: its clone URL, name, and reference, and deleting it. */
-  repositorySettings: (sourceId: string) => `/repositories/${sourceId}/settings`,
+  repositorySettings: (repositoryId: string) => `/repositories/${repositoryId}/settings`,
   /** Every version of it, its surveys, newest first. */
-  repositoryVersions: (sourceId: string, page = 1) => withQuery(`/repositories/${sourceId}/versions`, { page: pageQuery(page) }),
-  repositoryVersion: (sourceId: string, version: number) => `/repositories/${sourceId}/versions/${version}`,
+  repositoryVersions: (repositoryId: string, page = 1) => withQuery(`/repositories/${repositoryId}/versions`, { page: pageQuery(page) }),
+  repositoryVersion: (repositoryId: string, version: number) => `/repositories/${repositoryId}/versions/${version}`,
   /** One of its previews (docs/previews.md): its device frame, state, and build log, with +query+ such as its device. */
-  repositoryPreview: (sourceId: string, previewId: string, query?: Query) => withQuery(`/repositories/${sourceId}/previews/${previewId}`, query),
+  repositoryPreview: (repositoryId: string, previewId: string, query?: Query) => withQuery(`/repositories/${repositoryId}/previews/${previewId}`, query),
 };

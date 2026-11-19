@@ -5,7 +5,7 @@ export interface AssessmentFormValues {
   name: string;
   objective: string;
   selectionMode: SelectionMode;
-  sourcePublicIds: string[];
+  repositoryPublicIds: string[];
   standardReleasePublicIds: string[];
 }
 

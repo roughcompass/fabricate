@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { runs } from "./runs";
-import { repositorySources } from "./catalog";
+import { repositories } from "./repositories";
 import { createdAt, id, publicId, sqlList, timestamp } from "./columns";
 
 /** Why a survey ran (docs/profiling.md): the Repository was added or edited, its reference moved, the recipe changed, an operator asked, a Run needed it, or a preview did. */
@@ -28,9 +28,9 @@ export const surveys = sqliteTable(
   {
     id: id(),
     publicId: publicId(),
-    repositorySourceId: integer("repository_source_id")
+    repositoryId: integer("repository_source_id")
       .notNull()
-      .references(() => repositorySources.id, { onDelete: "restrict" }),
+      .references(() => repositories.id, { onDelete: "restrict" }),
     number: integer("number").notNull(),
     commitSha: text("commit_sha").notNull(),
     treeSha: text("tree_sha"),
@@ -55,8 +55,8 @@ export const surveys = sqliteTable(
     finishedAt: timestamp("finished_at"),
   },
   (t) => [
-    uniqueIndex("surveys_key").on(t.repositorySourceId, t.commitSha, t.surveyorRelease, t.configurationDigest, t.profileSchemaVersion),
-    uniqueIndex("surveys_number").on(t.repositorySourceId, t.number),
+    uniqueIndex("surveys_key").on(t.repositoryId, t.commitSha, t.surveyorRelease, t.configurationDigest, t.profileSchemaVersion),
+    uniqueIndex("surveys_number").on(t.repositoryId, t.number),
     index("surveys_state").on(t.state),
     check("surveys_public_id", sql`${t.publicId} GLOB 'srv_*'`),
     check("surveys_number_range", sql`${t.number} >= 1`),

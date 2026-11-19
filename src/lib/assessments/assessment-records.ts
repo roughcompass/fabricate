@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
@@ -10,7 +10,7 @@ import {
   assessmentStandardReleases,
   assessmentTargets,
   assessments,
-  repositorySources,
+  repositories,
   standardReleases,
   standards,
 } from "@/lib/db/schema";
@@ -39,12 +39,12 @@ export interface AssessmentInput {
   name: string;
   objective?: string;
   selectionMode: SelectionMode;
-  sourcePublicIds?: readonly string[];
+  repositoryPublicIds?: readonly string[];
   standardReleasePublicIds?: readonly string[];
 }
 
 interface Selections {
-  sources: RepositorySource[];
+  repositories: Repository[];
   releases: StandardRelease[];
 }
 
@@ -58,7 +58,7 @@ export function createAssessment(db: Executor, input: AssessmentInput): Assessme
       .values({ publicId: generatePublicId("ini"), name: values.name, objective: values.objective, selectionMode: values.selectionMode, createdAt: now, updatedAt: now })
       .returning()
       .get();
-    replaceSourceSelections(tx, assessment, selections.sources);
+    replaceRepositorySelections(tx, assessment, selections.repositories);
     replaceReleaseSelections(tx, assessment, selections.releases);
     return assessment;
   });
@@ -73,9 +73,9 @@ export function updateAssessment(db: Executor, publicId: string, expectedLockVer
     const selections = validate(tx, values);
 
     // Clear selections before the mode changes so the all-Repositories trigger holds.
-    if (values.selectionMode === "all") replaceSourceSelections(tx, current, []);
+    if (values.selectionMode === "all") replaceRepositorySelections(tx, current, []);
     const updated = updateLocked(tx, assessments, current, { name: values.name, objective: values.objective, selectionMode: values.selectionMode, updatedAt: new Date() }, `${current.name} was changed by someone else`);
-    if (values.selectionMode === "explicit") replaceSourceSelections(tx, updated, selections.sources);
+    if (values.selectionMode === "explicit") replaceRepositorySelections(tx, updated, selections.repositories);
     replaceReleaseSelections(tx, updated, selections.releases);
     return updated;
   });
@@ -114,13 +114,13 @@ export function listAssessments(db: Executor): Assessment[] {
 }
 
 /** The explicit selections of an initiative, in catalog order. */
-export function selectedSources(db: Executor, assessmentId: number): RepositorySource[] {
+export function selectedRepositories(db: Executor, assessmentId: number): Repository[] {
   return db
-    .select({ source: repositorySources })
+    .select({ source: repositories })
     .from(assessmentTargets)
-    .innerJoin(repositorySources, eq(repositorySources.id, assessmentTargets.repositorySourceId))
+    .innerJoin(repositories, eq(repositories.id, assessmentTargets.repositoryId))
     .where(eq(assessmentTargets.assessmentId, assessmentId))
-    .orderBy(sql`lower(${repositorySources.name})`, asc(repositorySources.publicId))
+    .orderBy(sql`lower(${repositories.name})`, asc(repositories.publicId))
     .all()
     .map((row) => row.source);
 }
@@ -148,7 +148,7 @@ function normalize(input: AssessmentInput): Required<AssessmentInput> {
     name: input.name.replace(/\s+/g, " ").trim(),
     objective: (input.objective ?? "").trim(),
     selectionMode: input.selectionMode,
-    sourcePublicIds: ids(input.sourcePublicIds),
+    repositoryPublicIds: ids(input.repositoryPublicIds),
     standardReleasePublicIds: ids(input.standardReleasePublicIds),
   };
 }
@@ -160,17 +160,17 @@ function validate(db: Executor, input: Required<AssessmentInput>): Selections {
   if (input.objective.length > 2000) issues.add("objective", "Objective must be 2,000 characters or fewer");
   if (!SELECTION_MODES.includes(input.selectionMode)) issues.add("selectionMode", "Choose all Repositories or selected Repositories");
 
-  let sources: RepositorySource[] = [];
+  let selected: Repository[] = [];
   if (input.selectionMode === "explicit") {
-    const ids = input.sourcePublicIds;
-    const found = ids.length ? db.select().from(repositorySources).where(and(inArray(repositorySources.publicId, [...ids]), isNull(repositorySources.deletedAt))).all() : [];
-    const byPublicId = new Map(found.map((source) => [source.publicId, source]));
+    const ids = input.repositoryPublicIds;
+    const found = ids.length ? db.select().from(repositories).where(and(inArray(repositories.publicId, [...ids]), isNull(repositories.deletedAt))).all() : [];
+    const byPublicId = new Map(found.map((repository) => [repository.publicId, repository]));
     for (const publicId of ids) {
-      const source = byPublicId.get(publicId);
-      if (!source) issues.add("sources", `Repository source ${publicId} does not exist`);
+      const repository = byPublicId.get(publicId);
+      if (!repository) issues.add("sources", `Repository ${publicId} does not exist`);
     }
-    if (ids.length === 0) issues.add("sources", "Select at least one repository source for an explicit scope");
-    sources = ids.flatMap((publicId) => byPublicId.get(publicId) ?? []);
+    if (ids.length === 0) issues.add("sources", "Select at least one Repository for an explicit scope");
+    selected = ids.flatMap((publicId) => byPublicId.get(publicId) ?? []);
   }
 
   const releaseIds = input.standardReleasePublicIds;
@@ -187,22 +187,22 @@ function validate(db: Executor, input: Required<AssessmentInput>): Selections {
   }
 
   issues.throwIfAny();
-  return { sources, releases: releaseIds.flatMap((publicId) => releasesByPublicId.get(publicId) ?? []) };
+  return { repositories: selected, releases: releaseIds.flatMap((publicId) => releasesByPublicId.get(publicId) ?? []) };
 }
 
-function replaceSourceSelections(db: Executor, assessment: Assessment, sources: readonly RepositorySource[]): void {
-  const wanted = new Set(sources.map((source) => source.id));
+function replaceRepositorySelections(db: Executor, assessment: Assessment, repositories: readonly Repository[]): void {
+  const wanted = new Set(repositories.map((repository) => repository.id));
   const existing = db.select().from(assessmentTargets).where(eq(assessmentTargets.assessmentId, assessment.id)).all();
-  const existingIds = new Set(existing.map((target) => target.repositorySourceId));
+  const existingIds = new Set(existing.map((target) => target.repositoryId));
 
-  const removed = existing.filter((target) => !wanted.has(target.repositorySourceId)).map((target) => target.id);
+  const removed = existing.filter((target) => !wanted.has(target.repositoryId)).map((target) => target.id);
   if (removed.length) db.delete(assessmentTargets).where(inArray(assessmentTargets.id, removed)).run();
 
-  const added = sources.filter((source) => !existingIds.has(source.id));
+  const added = repositories.filter((repository) => !existingIds.has(repository.id));
   const now = new Date();
   if (added.length) {
     db.insert(assessmentTargets)
-      .values(added.map((source) => ({ assessmentId: assessment.id, repositorySourceId: source.id, createdAt: now })))
+      .values(added.map((repository) => ({ assessmentId: assessment.id, repositoryId: repository.id, createdAt: now })))
       .run();
   }
 }

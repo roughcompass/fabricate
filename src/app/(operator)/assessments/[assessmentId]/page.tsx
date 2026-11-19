@@ -16,10 +16,10 @@ import { Status } from "@/components/ui/status";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { Tag, TagList } from "@/components/ui/tag";
 import { type Run, runNumbers, type RunTarget, listRuns, targetsOf } from "@/lib/runs/run-records";
-import { listSources } from "@/lib/catalog/source-records";
+import { listRepositories } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
 import { type Evaluation, evaluationNumbers, evaluationReleasesOf, listEvaluations } from "@/lib/evaluations/evaluation-records";
-import { type Assessment, scopeLabel, selectedReleases, selectedSources } from "@/lib/assessments/assessment-records";
+import { type Assessment, scopeLabel, selectedReleases, selectedRepositories } from "@/lib/assessments/assessment-records";
 import { releaseById, releaseLabel, standardById } from "@/lib/standards/standard-records";
 import { startEvaluationAction } from "../../evaluations/actions";
 import { startRun } from "../actions";
@@ -55,7 +55,7 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
   const assessment = loadAssessment(assessmentId);
   if (!assessment) notFound();
 
-  const sources = selectedSources(db, assessment.id);
+  const repositories = selectedRepositories(db, assessment.id);
   const releases = selectedReleases(db, assessment.id);
   const runNumber = runNumbers(db, assessment.id);
   const evaluationNumber = evaluationNumbers(db, assessment.id);
@@ -73,7 +73,7 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
       return releaseLabel(standardById(db, release.standardId), release);
     }),
   }));
-  const scope = assessment.selectionMode === "all" ? `${scopeLabel(assessment, 0)} (${listSources(db).length} now)` : scopeLabel(assessment, sources.length);
+  const scope = assessment.selectionMode === "all" ? `${scopeLabel(assessment, 0)} (${listRepositories(db).length} now)` : scopeLabel(assessment, repositories.length);
   const editHref = routes.assessmentEdit(assessment.publicId);
 
   return (
@@ -102,10 +102,10 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
                   [
                     "Selected Repositories",
                     <span key="sources">
-                      {sources.map((source, index) => (
-                        <span key={source.publicId}>
+                      {repositories.map((repository, index) => (
+                        <span key={repository.publicId}>
                           {index > 0 && ", "}
-                          {source.name}
+                          {repository.name}
                         </span>
                       ))}
                     </span>,

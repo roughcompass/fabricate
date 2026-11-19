@@ -1,7 +1,7 @@
 import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { type JsonObject, digestOf, dump } from "@repo-facts/contract";
 import { afterEach, describe, expect, it } from "vitest";
-import { sourceById } from "@/lib/catalog/source-records";
+import { repositoryById } from "@/lib/repositories/repository-records";
 import { withOverrides } from "@/lib/config";
 import { repositoryProfiles } from "@/lib/db/schema";
 import { ValidationError } from "@/lib/db/errors";
@@ -26,7 +26,7 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
   type Acquired = Awaited<ReturnType<SnapshotFixture["acquireCommitted"]>>;
 
   /** Runs Surveyor on +survey+'s pinned commit like the survey job does, and returns the Profile document. */
-  const documentOf = (survey: Survey, config = snapshots.config) => surveyDocument({ survey, repository: sourceById(snapshots.db, survey.repositorySourceId), config });
+  const documentOf = (survey: Survey, config = snapshots.config) => surveyDocument({ survey, repository: repositoryById(snapshots.db, survey.repositoryId), config });
 
   /** Commits +files+, pins them for a survey, and surveys them like the survey job does. */
   async function surveyed(files: FileTree) {
@@ -37,7 +37,7 @@ describe("Repository Profiles from the pinned repo-facts bundle", () => {
   async function finish(acquired: Acquired) {
     const survey = finishSurvey(snapshots.db, acquired.survey, { document: await documentOf(acquired.survey) });
     const profile = profileOfSurvey(snapshots.db, survey.id)!;
-    return { ...acquired, survey, repository: sourceById(snapshots.db, survey.repositorySourceId), profile, document: profileDocument(profile) as Record<string, JsonObject> & JsonObject };
+    return { ...acquired, survey, repository: repositoryById(snapshots.db, survey.repositoryId), profile, document: profileDocument(profile) as Record<string, JsonObject> & JsonObject };
   }
 
   const factDocument = (document: JsonObject) => document.fact_document as Record<string, Record<string, JsonObject>>;

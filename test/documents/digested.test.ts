@@ -9,7 +9,7 @@ import { profileDocument, insertProfile, profileOfSurvey } from "@/lib/profiles/
 import { insertRelationshipMap, mapDocument } from "@/lib/relationships/map-records";
 import { releaseDocument } from "@/lib/standards/standard-records";
 import { type Survey, moveSurvey, pinSurvey, requestSurvey } from "@/lib/surveys/records";
-import { buildRun, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildRelease, buildRepository } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { captureValidation } from "../support/validation";
 
@@ -75,10 +75,10 @@ describe("digested documents", () => {
 
     beforeEach(() => {
       db = createTestDb();
-      const source = buildSource(db);
-      run = buildRun(db, { sources: [source] }).run;
+      const repository = buildRepository(db);
+      run = buildRun(db, { repositories: [repository] }).run;
       const { survey: queued } = requestSurvey(db, {
-        repositorySourceId: source.id,
+        repositoryId: repository.id,
         commitSha: sha1("c"),
         reference: "refs/heads/main",
         fromConfiguredReference: true,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { rebuildProjection } from "@/lib/projection/rebuild";
-import { buildAssessment, buildSource } from "../support/builders";
+import { buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { count, pinnedRepository, projectionRows } from "../support/projection";
 import { seedRun } from "../support/scenarios";
@@ -11,8 +11,8 @@ describe("projection rebuild", () => {
 
   beforeEach(async () => {
     db = createTestDb();
-    const sources = [buildSource(db, { name: "web" }), buildSource(db, { name: "client" }), buildSource(db, { name: "billing" })];
-    await seedRun(db, buildAssessment(db, { sources }), sources, [pinnedRepository("web", { "@acme/client": "1.0.0", react: "16.14.0" }), pinnedRepository("@acme/client", { react: "18.3.1" }), "failed"]);
+    const repositories = [buildRepository(db, { name: "web" }), buildRepository(db, { name: "client" }), buildRepository(db, { name: "billing" })];
+    await seedRun(db, buildAssessment(db, { repositories }), repositories, [pinnedRepository("web", { "@acme/client": "1.0.0", react: "16.14.0" }), pinnedRepository("@acme/client", { react: "18.3.1" }), "failed"]);
   });
 
   it("produces the same rows on every rebuild, and the same rows the writes produced (Repeatable rebuild)", () => {

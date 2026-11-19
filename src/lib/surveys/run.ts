@@ -1,10 +1,10 @@
-import { withSourceLock } from "@/lib/acquisition/source-lease";
+import { withRepositoryLock } from "@/lib/acquisition/repository-lease";
 import { gitSource, normalizeAcquisitionError } from "@/lib/acquisition/acquire";
 import { Mirror, surveyRefFor } from "@/lib/acquisition/mirror";
 import { continueWaitingTargets } from "@/lib/runs/waiting";
 import { continuePreparations } from "@/lib/previews/records";
-import { type RepositorySource, sourceById } from "@/lib/catalog/source-records";
-import { SourceBoundary } from "@/lib/catalog/source-boundary";
+import { type Repository, repositoryById } from "@/lib/repositories/repository-records";
+import { SourceBoundary } from "@/lib/repositories/source-boundary";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, jobs, surveys } from "@/lib/db/schema";
@@ -47,7 +47,7 @@ export async function runSurvey(db: Executor, publicId: string, options: RunSurv
   if (survey.state !== "queued" && survey.state !== "running") return survey;
   // A job rerun after its lease expired resumes a running survey.
   if (survey.state === "queued") survey = moveSurvey(db, survey, "running", { attempts: survey.attempts + 1 });
-  const repository = sourceById(db, survey.repositorySourceId);
+  const repository = repositoryById(db, survey.repositoryId);
   let phase: "pin" | "analysis" = "pin";
   try {
     survey = await pinSurveyCommit(db, survey, repository, { config, runner, boundary: options.boundary ?? new SourceBoundary(config), ...(options.signal && { signal: options.signal }) });
@@ -63,9 +63,9 @@ export async function runSurvey(db: Executor, publicId: string, options: RunSurv
 }
 
 /** Pins the survey's commit under its own ref, fetching it unless the mirror has it, and records the pin. */
-export async function pinSurveyCommit(db: Executor, survey: Survey, repository: RepositorySource, options: { config: FrontendRegistryConfig; runner: GitRunner; boundary: SourceBoundary; signal?: AbortSignal }): Promise<Survey> {
+export async function pinSurveyCommit(db: Executor, survey: Survey, repository: Repository, options: { config: FrontendRegistryConfig; runner: GitRunner; boundary: SourceBoundary; signal?: AbortSignal }): Promise<Survey> {
   const { config, runner, signal } = options;
-  return withSourceLock(repository.id, { waitMs: config.gitLockTimeoutSeconds * 1_000, ...(signal && { signal }) }, async () => {
+  return withRepositoryLock(repository.id, { waitMs: config.gitLockTimeoutSeconds * 1_000, ...(signal && { signal }) }, async () => {
     const mirror = new Mirror(runner, repository.publicId);
     await mirror.ensure();
     if (survey.internalRef && (await mirror.hasCommit(survey.commitSha))) return survey;

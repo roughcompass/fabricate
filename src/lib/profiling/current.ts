@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { repositoryProfiles, repositorySources, surveys } from "@/lib/db/schema";
+import { repositoryProfiles, repositories, surveys } from "@/lib/db/schema";
 import type { RepositoryProfile } from "@/lib/profiles/profile-records";
 import type { Survey } from "@/lib/surveys/records";
 
@@ -23,19 +23,19 @@ export interface CurrentProfile {
 }
 
 /** The current Profile of each repository in +sourceIds+, or of every repository, by source id, in one query. */
-export function currentProfiles(db: Executor, sourceIds?: readonly number[]): Map<number, CurrentProfile> {
-  if (sourceIds?.length === 0) return new Map();
+export function currentProfiles(db: Executor, repositoryIds?: readonly number[]): Map<number, CurrentProfile> {
+  if (repositoryIds?.length === 0) return new Map();
   const rows = db
-    .select({ sourceId: repositorySources.id, profile: repositoryProfiles, survey: surveys })
-    .from(repositorySources)
-    .innerJoin(surveys, eq(surveys.id, repositorySources.currentSurveyId))
+    .select({ repositoryId: repositories.id, profile: repositoryProfiles, survey: surveys })
+    .from(repositories)
+    .innerJoin(surveys, eq(surveys.id, repositories.currentSurveyId))
     .innerJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, surveys.id))
-    .where(sourceIds ? inArray(repositorySources.id, [...sourceIds]) : undefined)
+    .where(repositoryIds ? inArray(repositories.id, [...repositoryIds]) : undefined)
     .all();
-  return new Map(rows.map((row) => [row.sourceId, { profile: row.profile, survey: row.survey, commit: row.survey.commitSha, version: row.survey.number }]));
+  return new Map(rows.map((row) => [row.repositoryId, { profile: row.profile, survey: row.survey, commit: row.survey.commitSha, version: row.survey.number }]));
 }
 
-/** The current Profile of the repository +sourceId+, or undefined when none of its surveys of the configured reference has succeeded. */
-export function currentProfile(db: Executor, sourceId: number): CurrentProfile | undefined {
-  return currentProfiles(db, [sourceId]).get(sourceId);
+/** The current Profile of the repository +repositoryId+, or undefined when none of its surveys of the configured reference has succeeded. */
+export function currentProfile(db: Executor, repositoryId: number): CurrentProfile | undefined {
+  return currentProfiles(db, [repositoryId]).get(repositoryId);
 }

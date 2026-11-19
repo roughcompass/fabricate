@@ -91,7 +91,7 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
             <OutcomeToast outcome={runOutcome(param(query, "notice"), run, name)} />
             {run.state === "complete_with_issues" && (
               <Alert tone="warning" title={`${failed.length} of ${countLabel(targets.length, "repository", "repositories")} could not be assessed`}>
-                <p>{`${failed.map((target) => target.sourceName).join(", ")}: ${failed[0]?.failureMessage ?? "not assessed"}${failed.length > 1 ? " (and more below)" : ""}.`}</p>
+                <p>{`${failed.map((target) => target.repositoryName).join(", ")}: ${failed[0]?.failureMessage ?? "not assessed"}${failed.length > 1 ? " (and more below)" : ""}.`}</p>
                 <p>Their relationships are missing from the Relationship Map, and Evaluations treat what they could contain as unknown.</p>
               </Alert>
             )}
@@ -203,7 +203,7 @@ function ScopeSection({ targets, profiles, commits, terminal }: { targets: RunTa
             return (
               <tr key={target.publicId} id={target.publicId}>
                 <Td label="Repository">
-                  <Primary>{target.sourceName}</Primary>
+                  <Primary>{target.repositoryName}</Primary>
                   <Secondary>
                     <Tag>{target.cloneUrl}</Tag>
                   </Secondary>
@@ -224,7 +224,7 @@ function ScopeSection({ targets, profiles, commits, terminal }: { targets: RunTa
                 <Td label="Profile">
                   {profile ? (
                     <>
-                      <Link href={routes.profile(profile.publicId)} aria-label={`${target.sourceName} Profile`}>
+                      <Link href={routes.profile(profile.publicId)} aria-label={`${target.repositoryName} Profile`}>
                         Profile
                       </Link>
                       {skipped > 0 && <Secondary>{countLabel(skipped, "skipped input")}</Secondary>}

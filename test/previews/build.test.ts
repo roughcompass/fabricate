@@ -4,10 +4,10 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mirrorPath } from "@/lib/acquisition/mirror";
-import { deleteSource, editSource } from "@/lib/catalog/catalog";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import { deleteRepository, editRepository } from "@/lib/repositories/registration";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
-import { previewBuilds, repositorySources } from "@/lib/db/schema";
+import { previewBuilds, repositories } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
 import { type Job, claimNext, jobPayload } from "@/lib/jobs/queue";
 import { jobHandlers } from "@/lib/jobs/registry";
@@ -21,7 +21,7 @@ import { pinCommit } from "@/lib/previews/refs";
 import { servePreview } from "@/lib/previews/serving";
 import { attemptLogFile, cacheDirectory, previewDirectory, publishedDirectory } from "@/lib/previews/storage";
 import { requestSurvey } from "@/lib/surveys/records";
-import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { rawRun } from "../support/db";
 import type { Tree } from "../support/preview-trees";
 import { publishFiles, queuedPreview } from "../support/previews";
@@ -110,8 +110,8 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
     fs.rmSync(storage, { recursive: true, force: true });
   });
 
-  const settings = (source: RepositorySource, previews: Partial<FrontendRegistryConfig["settings"]["previews"]> = {}) =>
-    withOverrides(world.config, { previews: { enabled: true, trustedSources: [source.cloneUrl], nodeVersions: { [NODE]: NODE_BIN }, storage, ...previews } });
+  const settings = (repository: Repository, previews: Partial<FrontendRegistryConfig["settings"]["previews"]> = {}) =>
+    withOverrides(world.config, { previews: { enabled: true, trustedSources: [repository.cloneUrl], nodeVersions: { [NODE]: NODE_BIN }, storage, ...previews } });
 
   /** A queued preview of +packageDir+ in a remote holding +tree+, pinned and prepared with +buildPlan+. */
   async function previewOf(tree: Tree, buildPlan: BuildPlan, packageDir = "."): Promise<PreviewBuild> {
@@ -119,13 +119,13 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
     for (const [file, content] of Object.entries(tree)) work.write(file, content);
     work.commit("initial");
     const remote = world.fixture.bare("remotes/orders.git", { from: work });
-    const source = registerLocalSource(world.db, world.config, "orders", remote.path);
-    config = settings(source);
-    const pinned = await pinCommit(world.db, source, { kind: "ref", name: null }, { config });
-    const { preparation } = openPreparation(world.db, source, pinned);
+    const repository = registerLocalRepository(world.db, world.config, "orders", remote.path);
+    config = settings(repository);
+    const pinned = await pinCommit(world.db, repository, { kind: "ref", name: null }, { config });
+    const { preparation } = openPreparation(world.db, repository, pinned);
     const verdict: PackageVerdict = { directory: packageDir, manifest: "package.json", name: "orders", qualifies: true, conditions: [], plan: buildPlan };
     // A survey of the commit to decide from; the decision is recorded here, so it never runs.
-    const { survey } = requestSurvey(world.db, { repositorySourceId: source.id, commitSha: pinned.commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
+    const { survey } = requestSurvey(world.db, { repositoryId: repository.id, commitSha: pinned.commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
     decidePreparation(world.db, preparation.publicId, preparation.requestedAt.getTime(), { surveyId: survey.id, digest: "f".repeat(64) }, { packages: [verdict], refusal: null });
     // Decided here, so its job has nothing left to do; only the build job is queued.
     rawRun(world.db, "delete from jobs where kind = ?", PREPARE_PREVIEW);
@@ -159,12 +159,12 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       work.git("update-index", "--add", "--cacheinfo", `160000,${"c".repeat(40)},vendor/lib`);
       const commit = work.commit("initial");
       const remote = world.fixture.bare("remotes/orders.git", { from: work });
-      const source = registerLocalSource(world.db, world.config, "orders", remote.path);
-      config = settings(source);
-      await pinCommit(world.db, source, { kind: "ref", name: null }, { config });
+      const repository = registerLocalRepository(world.db, world.config, "orders", remote.path);
+      config = settings(repository);
+      await pinCommit(world.db, repository, { kind: "ref", name: null }, { config });
 
       const destination = fs.mkdtempSync(path.join(storage, "work-"));
-      await extractCommit(new GitRunner({ config }), mirrorPath(config.repositoryStorage, source.publicId), commit, destination);
+      await extractCommit(new GitRunner({ config }), mirrorPath(config.repositoryStorage, repository.publicId), commit, destination);
       expect(fs.readFileSync(path.join(destination, "src/app.txt"), "utf8")).toBe("orders\n");
       expect(fs.statSync(path.join(destination, "bin/run.sh")).mode & 0o111).not.toBe(0);
       // A submodule's content is never fetched or unpacked.
@@ -412,7 +412,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
   describe("lifecycle", () => {
     const serve = (preview: PreviewBuild, file = "") =>
       servePreview(new Request(`http://localhost/previews/${preview.publicId}/${file}`, { headers: { "sec-fetch-dest": "document" } }), preview.publicId, file ? file.split("/") : [], { db: world.db, config });
-    const sourceOf = (preview: PreviewBuild) => world.db.select().from(repositorySources).where(eq(repositorySources.id, preview.repositorySourceId)).get()!;
+    const repositoryOf = (preview: PreviewBuild) => world.db.select().from(repositories).where(eq(repositories.id, preview.repositoryId)).get()!;
     const row = (preview: PreviewBuild) => world.db.select().from(previewBuilds).where(eq(previewBuilds.publicId, preview.publicId)).get()!;
 
     /** A published preview whose rebuild is held in its build step. */
@@ -451,7 +451,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       // Repository deletion reads the process's settings.
       setConfig(config);
       try {
-        deleteSource(world.db, sourceOf(preview).publicId, "orders");
+        deleteRepository(world.db, repositoryOf(preview).publicId, "orders");
       } finally {
         setConfig(previous);
       }
@@ -466,9 +466,9 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
 
     it("refuses to publish once the Repository names a remote that isn't enrolled, and stops serving its earlier output", async () => {
       const { preview, first, rebuilding } = await rebuildingPreview();
-      const source = sourceOf(preview);
+      const repository = repositoryOf(preview);
 
-      editSource(world.db, source.publicId, source.lockVersion, { name: "orders", cloneUrl: "https://git.example.com/acme/orders-fork.git", gitRef: "" });
+      editRepository(world.db, repository.publicId, repository.lockVersion, { name: "orders", cloneUrl: "https://git.example.com/acme/orders-fork.git", gitRef: "" });
       expect((await serve(preview, "assets/app.js")).status).toBe(404);
 
       hold({});
@@ -481,9 +481,9 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
 
     it("prunes the least recently opened previews after a successful build, never the one it published", async () => {
       const preview = await previewOf(app(STANDALONE), plan());
-      const source = sourceOf(preview);
-      const stale = publishFiles(world.db, config, queuedPreview(world.db, source), { "index.html": "s".repeat(10_000) });
-      const opened = publishFiles(world.db, config, queuedPreview(world.db, source), { "index.html": "o".repeat(3_000) });
+      const repository = repositoryOf(preview);
+      const stale = publishFiles(world.db, config, queuedPreview(world.db, repository), { "index.html": "s".repeat(10_000) });
+      const opened = publishFiles(world.db, config, queuedPreview(world.db, repository), { "index.html": "o".repeat(3_000) });
       markOpened(world.db, stale.publicId, new Date(Date.now() - 60 * 60_000));
       markOpened(world.db, opened.publicId, new Date(Date.now() - 30 * 60_000));
       config = withOverrides(config, { previews: { maxStorageBytes: 8_000 } });

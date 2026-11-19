@@ -3,13 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GET } from "@/app/api/previews/[preview]/log/route";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { deletePreview } from "@/lib/previews/lifecycle";
 import { LOG_TAIL_BYTES, cleanLog, readLogChunk } from "@/lib/previews/log";
 import { type PreviewBuild, claimAttempt, failAttempt, findPreview, rebuildPreview } from "@/lib/previews/records";
 import { previewDirectory } from "@/lib/previews/storage";
-import { buildSource } from "../support/builders";
+import { buildRepository } from "../support/builders";
 import { queuedPreview } from "../support/previews";
 import { useAppDb } from "../support/next";
 
@@ -25,11 +25,11 @@ describe("preview logs", () => {
   const app = useAppDb();
   let storage: string;
   let config: FrontendRegistryConfig;
-  let source: RepositorySource;
+  let repository: Repository;
 
   beforeEach(() => {
     storage = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "preview-logs-")));
-    source = buildSource(app.db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git" });
+    repository = buildRepository(app.db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git" });
     configure({});
   });
 
@@ -39,7 +39,7 @@ describe("preview logs", () => {
   });
 
   function configure(previews: Partial<FrontendRegistryConfig["settings"]["previews"]>): void {
-    config = withOverrides(original, { previews: { enabled: true, trustedSources: [source.canonicalUrl], storage, ...previews } });
+    config = withOverrides(original, { previews: { enabled: true, trustedSources: [repository.canonicalUrl], storage, ...previews } });
     setConfig(config);
   }
 
@@ -56,7 +56,7 @@ describe("preview logs", () => {
 
   describe("reading by offset", () => {
     it("reads the tail, then only the whole lines written since, and the last line once the attempt finishes", async () => {
-      const preview = building(queuedPreview(app.db, source), "==> extract: git archive\n==> install: npm ci in the repository root\nadded 2 pack");
+      const preview = building(queuedPreview(app.db, repository), "==> extract: git archive\n==> install: npm ci in the repository root\nadded 2 pack");
 
       const tail = await readLogChunk(config, preview);
       expect(tail).toMatchObject({ attempt: 1, log: "1-abc123", start: 0, text: "==> extract: git archive\n==> install: npm ci in the repository root\n", truncated: false, reset: false, more: true });
@@ -73,7 +73,7 @@ describe("preview logs", () => {
     });
 
     it("starts over from the new log's tail when the offset belongs to an earlier attempt's or claim's log", async () => {
-      const first = building(queuedPreview(app.db, source), "==> install: npm ci\n".repeat(20));
+      const first = building(queuedPreview(app.db, repository), "==> install: npm ci\n".repeat(20));
       const read = await readLogChunk(config, first);
       failAttempt(app.db, first.publicId, { attempt: 1 }, "The build failed");
 
@@ -89,7 +89,7 @@ describe("preview logs", () => {
 
     it("starts a long log's tail at a line, and reads a long remainder in chunks", async () => {
       const line = `${"x".repeat(99)}\n`;
-      const preview = building(queuedPreview(app.db, source), line.repeat(10_000));
+      const preview = building(queuedPreview(app.db, repository), line.repeat(10_000));
       const size = line.length * 10_000;
 
       const tail = await readLogChunk(config, preview);
@@ -107,7 +107,7 @@ describe("preview logs", () => {
     });
 
     it("has no log before a worker starts the attempt", async () => {
-      const preview = queuedPreview(app.db, source);
+      const preview = queuedPreview(app.db, repository);
       expect(await readLogChunk(config, preview)).toEqual({ attempt: 1, log: null, start: 0, end: 0, text: "", truncated: false, reset: false, more: false });
       expect((await readLogChunk(config, preview, { from: 40, log: "1-abc123" })).reset).toBe(true);
     });
@@ -126,7 +126,7 @@ describe("preview logs", () => {
     };
 
     it("answers the attempt, its log, its state, and the lines after an offset", async () => {
-      const preview = building(queuedPreview(app.db, source), "==> extract: git archive\n");
+      const preview = building(queuedPreview(app.db, repository), "==> extract: git archive\n");
       const first = await get(preview.publicId);
       expect(first).toMatchObject({ status: 200, cache: "no-store", body: { attempt: 1, log: "1-abc123", state: "building", start: 0, end: 25, text: "==> extract: git archive\n", reset: false } });
 
@@ -141,7 +141,7 @@ describe("preview logs", () => {
     });
 
     it("answers not found while previews are off, for a deleted preview, an unenrolled remote, or an unknown id", async () => {
-      const preview = building(queuedPreview(app.db, source), "==> extract: git archive\n");
+      const preview = building(queuedPreview(app.db, repository), "==> extract: git archive\n");
       configure({ enabled: false });
       expect((await get(preview.publicId)).status).toBe(404);
       configure({ trustedSources: [] });

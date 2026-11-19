@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { runTargets, runs } from "./runs";
-import { repositorySources } from "./catalog";
+import { repositories } from "./repositories";
 import { id, sqlList } from "./columns";
 import { relationshipMaps, repositoryProfiles } from "./results";
 
@@ -82,7 +82,7 @@ export const graphNodes = sqliteTable(
     nodeId: text("node_id").notNull(),
     kind: text("kind", { enum: PROJECTED_NODE_KINDS }).notNull(),
     label: text("label").notNull(),
-    repositorySourceId: integer("repository_source_id").references(() => repositorySources.id, { onDelete: "restrict" }),
+    repositoryId: integer("repository_source_id").references(() => repositories.id, { onDelete: "restrict" }),
     runTargetId: integer("assessment_target_id").references(() => runTargets.id, { onDelete: "restrict" }),
     documentDigest: text("document_digest").notNull(),
     projectionVersion: integer("projection_version").notNull(),
@@ -90,12 +90,12 @@ export const graphNodes = sqliteTable(
   (t) => [
     uniqueIndex("graph_nodes_map_node").on(t.mapId, t.nodeId),
     index("graph_nodes_map_kind").on(t.mapId, t.kind),
-    index("graph_nodes_repository_source").on(t.repositorySourceId),
+    index("graph_nodes_repository_source").on(t.repositoryId),
     index("graph_nodes_assessment_target").on(t.runTargetId),
     check("graph_nodes_kind", sql.raw(`kind IN (${sqlList(PROJECTED_NODE_KINDS)})`)),
     // A repository node always names the target it was assessed as, and that target's catalog source.
     check("graph_nodes_repository_target", sql`(${t.kind} = 'repository') = (${t.runTargetId} IS NOT NULL)`),
-    check("graph_nodes_repository_source", sql`${t.kind} <> 'repository' OR ${t.repositorySourceId} IS NOT NULL`),
+    check("graph_nodes_repository_source", sql`${t.kind} <> 'repository' OR ${t.repositoryId} IS NOT NULL`),
     digestCheck("graph_nodes_document_digest", t.documentDigest),
     versionCheck("graph_nodes_projection_version", t.projectionVersion),
   ],

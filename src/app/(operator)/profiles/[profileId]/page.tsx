@@ -4,27 +4,27 @@ import { PROFILE_DESCRIPTION, ProfileBody } from "@/components/profiles/profile-
 import { Alert } from "@/components/ui/alert";
 import { Page, PageHeader } from "@/components/ui/page";
 import { cache } from "react";
-import { sourceById } from "@/lib/catalog/source-records";
+import { repositoryById } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
 import { findProfile } from "@/lib/profiles/profile-records";
 import { findVersion, versionsOf } from "@/lib/profiling/versions";
 import { surveyById } from "@/lib/surveys/records";
 import { routes } from "@/lib/web/routes";
-import { RepositoryView } from "../../repositories/[sourceId]/repository-view";
+import { RepositoryView } from "../../repositories/[repositoryId]/repository-view";
 
 const load = cache((publicId: string) => {
   const db = getDb();
   const profile = isPublicId(publicId, "prf") ? findProfile(db, publicId) : undefined;
   if (!profile) return undefined;
   const survey = surveyById(db, profile.surveyId);
-  const source = sourceById(db, survey.repositorySourceId);
-  return { profile, source, version: findVersion(db, source.id, survey.number)! };
+  const repository = repositoryById(db, survey.repositoryId);
+  return { profile, repository, version: findVersion(db, repository.id, survey.number)! };
 });
 
 export async function generateMetadata({ params }: PageProps<"/profiles/[profileId]">): Promise<Metadata> {
   const found = load((await params).profileId);
-  return { title: found ? `Version ${found.version.version} · ${found.source.name}` : "Profile not found" };
+  return { title: found ? `Version ${found.version.version} · ${found.repository.name}` : "Profile not found" };
 }
 
 /**
@@ -38,12 +38,12 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
   const found = load(profileId);
   if (!found) notFound();
   // A deleted Repository's Profiles stay with the Runs that used them, without its actions.
-  if (found.source.deletedAt) {
+  if (found.repository.deletedAt) {
     return (
       <Page>
         <PageHeader
           breadcrumbs={[{ href: routes.repositories, label: "Repositories" }]}
-          title={found.source.name}
+          title={found.repository.name}
           description={PROFILE_DESCRIPTION}
           alerts={
             <Alert tone="info" title="This Repository was deleted">
@@ -55,6 +55,6 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
       </Page>
     );
   }
-  const latest = versionsOf(getDb(), found.source.id, 1)[0];
-  return <RepositoryView source={found.source} version={found.version} latest={latest} count={latest?.version ?? 0} query={query} address={routes.profile(found.profile.publicId)} />;
+  const latest = versionsOf(getDb(), found.repository.id, 1)[0];
+  return <RepositoryView repository={found.repository} version={found.version} latest={latest} count={latest?.version ?? 0} query={query} address={routes.profile(found.profile.publicId)} />;
 }

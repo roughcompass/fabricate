@@ -1,6 +1,6 @@
 import { countLabel } from "@/components/ui/count";
 import type { Outcome } from "@/components/ui/outcome-toast";
-import { findSource, findSourceIncludingDeleted } from "@/lib/catalog/source-records";
+import { findRepository, findRepositoryIncludingDeleted } from "@/lib/repositories/repository-records";
 import type { Executor } from "@/lib/db/client";
 import { findPreviewIncludingDeleted, packageLabel } from "@/lib/previews/views";
 import { versionsOf } from "@/lib/profiling/versions";
@@ -10,32 +10,32 @@ import { versionsOf } from "@/lib/profiling/versions";
  * only a code, a Source ID, and counts; the text is built here from the
  * records, so a crafted link cannot inject text. An unknown code shows nothing.
  */
-export function sourceOutcome(db: Executor, code: string | undefined, sourcePublicId: string | undefined, count?: string): Outcome | undefined {
+export function repositoryOutcome(db: Executor, code: string | undefined, repositoryPublicId: string | undefined, count?: string): Outcome | undefined {
   if (code === "bulk-added") {
     const created = Number.parseInt(count ?? "0", 10) || 0;
     return { id: `bulk-added:${created}`, tone: "success", title: `Added ${countLabel(created, "Repository", "Repositories")}.`, description: "Each is profiled in the background." };
   }
 
-  const source = sourcePublicId ? (code === "deleted" ? findSourceIncludingDeleted : findSource)(db, sourcePublicId) : undefined;
-  if (!code || !source) return undefined;
-  const id = `${code}:${source.publicId}`;
+  const repository = repositoryPublicId ? (code === "deleted" ? findRepositoryIncludingDeleted : findRepository)(db, repositoryPublicId) : undefined;
+  if (!code || !repository) return undefined;
+  const id = `${code}:${repository.publicId}`;
   switch (code) {
     case "deleted":
-      return { id, tone: "success", title: `${source.name} was deleted.`, description: "Its past Run results stay with the Runs." };
+      return { id, tone: "success", title: `${repository.name} was deleted.`, description: "Its past Run results stay with the Runs." };
     case "added":
-      return { id, tone: "success", title: `${source.name} was added.` };
+      return { id, tone: "success", title: `${repository.name} was added.` };
     case "updated":
-      return { id, tone: "success", title: `${source.name} was updated.`, description: "Running and past Runs keep the configuration they started with." };
+      return { id, tone: "success", title: `${repository.name} was updated.`, description: "Running and past Runs keep the configuration they started with." };
     case "reprofiled": {
-      const latest = versionsOf(db, source.id, 1)[0];
-      return { id, tone: "success", title: latest ? `Version ${latest.version} of ${source.name} is queued.` : `${source.name} is queued for profiling.`, description: "Work people start runs first, so it may wait." };
+      const latest = versionsOf(db, repository.id, 1)[0];
+      return { id, tone: "success", title: latest ? `Version ${latest.version} of ${repository.name} is queued.` : `${repository.name} is queued for profiling.`, description: "Work people start runs first, so it may wait." };
     }
     case "profiling":
-      return { id, tone: "info", title: `${source.name} is already being profiled.`, description: "A new version can be queued once this one finishes." };
+      return { id, tone: "info", title: `${repository.name} is already being profiled.`, description: "A new version can be queued once this one finishes." };
     case "current":
-      return { id, tone: "info", title: `${source.name}'s Profile is already up to date.`, description: "Its reference names the commit its current Profile describes, under the same Surveyor release and configuration." };
+      return { id, tone: "info", title: `${repository.name}'s Profile is already up to date.`, description: "Its reference names the commit its current Profile describes, under the same Surveyor release and configuration." };
     case "unreachable":
-      return { id, tone: "error", title: `${source.name}'s reference couldn't be read.`, description: "Nothing was queued. Check its clone URL and reference, then try again." };
+      return { id, tone: "error", title: `${repository.name}'s reference couldn't be read.`, description: "Nothing was queued. Check its clone URL and reference, then try again." };
     default:
       return undefined;
   }

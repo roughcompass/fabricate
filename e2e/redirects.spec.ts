@@ -1,4 +1,4 @@
-import { buildAssessment, buildSource } from "../test/support/builders";
+import { buildAssessment, buildRepository } from "../test/support/builders";
 import { expect, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 
@@ -36,7 +36,7 @@ test("Retired address: an Initiative address opens the not-found page without re
 });
 
 test("serves the new Assessment addresses without redirecting", async ({ request, db }) => {
-  const assessment = buildAssessment(db, { name: "Redirect check", sources: [buildSource(db, { name: "redirect-check" })] });
+  const assessment = buildAssessment(db, { name: "Redirect check", repositories: [buildRepository(db, { name: "redirect-check" })] });
   for (const path of [paths.assessments, paths.newAssessment, paths.assessment(assessment.publicId), paths.assessmentEdit(assessment.publicId)]) {
     expect((await request.get(path, { maxRedirects: 0 })).status(), path).toBe(200);
   }

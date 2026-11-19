@@ -3,7 +3,7 @@ import type { RunTarget } from "@/lib/runs/run-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { runTargets, repositoryProfiles, repositorySources, surveys } from "@/lib/db/schema";
+import { runTargets, repositoryProfiles, repositories, surveys } from "@/lib/db/schema";
 import { type JsonObject, type JsonValue, SKIPPED_INPUT_REASONS } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 import { projectProfile } from "@/lib/projection/project";
@@ -62,9 +62,9 @@ export function getProfile(db: Executor, publicId: string): RepositoryProfile {
 /** The Repository a Profile describes, through its survey. */
 export function profileRepository(db: Executor, profile: Pick<RepositoryProfile, "surveyId">): { id: number; publicId: string; name: string } {
   return db
-    .select({ id: repositorySources.id, publicId: repositorySources.publicId, name: repositorySources.name })
+    .select({ id: repositories.id, publicId: repositories.publicId, name: repositories.name })
     .from(surveys)
-    .innerJoin(repositorySources, eq(repositorySources.id, surveys.repositorySourceId))
+    .innerJoin(repositories, eq(repositories.id, surveys.repositoryId))
     .where(eq(surveys.id, profile.surveyId))
     .get()!;
 }

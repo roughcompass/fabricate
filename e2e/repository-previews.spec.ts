@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Page } from "@playwright/test";
 import { eq } from "drizzle-orm";
-import { resolveCloneUrl } from "../src/lib/catalog/catalog";
-import { SourceBoundary } from "../src/lib/catalog/source-boundary";
-import { type RepositorySource, insertSource } from "../src/lib/catalog/source-records";
+import { resolveCloneUrl } from "../src/lib/repositories/registration";
+import { SourceBoundary } from "../src/lib/repositories/source-boundary";
+import { type Repository, insertRepository } from "../src/lib/repositories/repository-records";
 import type { Db } from "../src/lib/db/client";
 import { jobs, previewBuilds } from "../src/lib/db/schema";
 import { requestPreparation } from "../src/lib/previews/preparation";
@@ -46,7 +46,7 @@ test.afterEach(() => {
 });
 
 /** A repository at the enrolled path +remote+: +tree+ on main, each of +branches+ on its own, and v1.0.0 annotated on main; registered as a Repository. */
-function enrolled(db: Db, remote: string, tree: Tree, branches: Record<string, Tree> = {}): RepositorySource {
+function enrolled(db: Db, remote: string, tree: Tree, branches: Record<string, Tree> = {}): Repository {
   fs.rmSync(remote, { recursive: true, force: true });
   gitRepo(remote, tree);
   for (const [branch, files] of Object.entries(branches)) {
@@ -61,30 +61,30 @@ function enrolled(db: Db, remote: string, tree: Tree, branches: Record<string, T
     git(remote, ["checkout", "--quiet", "main"]);
   }
   git(remote, ["tag", "-a", "v1.0.0", "-m", "Release 1.0.0"]);
-  return insertSource(db, { name: path.basename(remote), ...resolveCloneUrl(`file://${remote}`, new SourceBoundary(serverConfig())), gitRef: null });
+  return insertRepository(db, { name: path.basename(remote), ...resolveCloneUrl(`file://${remote}`, new SourceBoundary(serverConfig())), gitRef: null });
 }
 
 /** Prepares the default branch of +source+ and runs its jobs: preparation and, with one package, its build. */
-async function built(db: Db, source: RepositorySource) {
-  await requestPreparation(db, source.publicId, { kind: "ref", name: null }, { config: serverConfig() });
+async function built(db: Db, repository: Repository) {
+  await requestPreparation(db, repository.publicId, { kind: "ref", name: null }, { config: serverConfig() });
   await runJobs(db);
   return previews(db)[0]!;
 }
 
-const previewPage = (source: RepositorySource, preview: { publicId: string }) => `/repositories/${source.publicId}/previews/${preview.publicId}`;
+const previewPage = (repository: Repository, preview: { publicId: string }) => `/repositories/${repository.publicId}/previews/${preview.publicId}`;
 
 test("offers no preview controls for a Repository whose remote isn't enrolled", async ({ page, db, sourcesDir }) => {
-  const repository = gitRepo(path.join(sourcesDir, "ledger"), offlineViteApp());
-  const source = insertSource(db, { name: "ledger", ...resolveCloneUrl(`file://${repository}`, new SourceBoundary(serverConfig())), gitRef: null });
-  await page.goto(`/repositories/${source.publicId}`);
+  const remote = gitRepo(path.join(sourcesDir, "ledger"), offlineViteApp());
+  const repository = insertRepository(db, { name: "ledger", ...resolveCloneUrl(`file://${remote}`, new SourceBoundary(serverConfig())), gitRef: null });
+  await page.goto(`/repositories/${repository.publicId}`);
   await expect(page.getByText("Not profiled yet")).toBeVisible();
   await expect(section(page)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Prepare preview" })).toHaveCount(0);
 });
 
 test("lists the remote's branches and tags, the configured reference first, and keeps the reference and commit entry when the remote can't be listed", async ({ page, db }) => {
-  const source = enrolled(db, ORDERS, offlineViteApp(), { "feature/new-nav": offlineViteApp({ heading: "New nav" }) });
-  await page.goto(`/repositories/${source.publicId}`);
+  const repository = enrolled(db, ORDERS, offlineViteApp(), { "feature/new-nav": offlineViteApp({ heading: "New nav" }) });
+  await page.goto(`/repositories/${repository.publicId}`);
   const choice = section(page).getByRole("combobox", { name: "Branch or tag" });
   await expect(choice.locator("option").first()).toHaveText("Default branch (main)");
   await expect(choice.locator("optgroup[label=Branches] option")).toHaveText(["feature/new-nav"]);
@@ -106,8 +106,8 @@ test("lists the remote's branches and tags, the configured reference first, and 
 });
 
 test("refuses a server-rendered commit with each failed condition and its evidence, and queues no build", async ({ page, db }) => {
-  const source = enrolled(db, ORDERS, offlineViteApp(), { "feature/ssr": NEXT_APP });
-  await page.goto(`/repositories/${source.publicId}`);
+  const repository = enrolled(db, ORDERS, offlineViteApp(), { "feature/ssr": NEXT_APP });
+  await page.goto(`/repositories/${repository.publicId}`);
   await section(page).getByRole("combobox", { name: "Branch or tag" }).selectOption({ label: "feature/ssr" });
   await section(page).getByRole("button", { name: "Prepare preview" }).click();
   await expect(page).toHaveURL(/preparation=ppr_/);
@@ -130,8 +130,8 @@ test("refuses a server-rendered commit with each failed condition and its eviden
 });
 
 test("keeps several qualifying packages selectable before any build, and builds the one chosen", async ({ page, db }) => {
-  const source = enrolled(db, PORTAL, FEDERATED_WORKSPACE);
-  await page.goto(`/repositories/${source.publicId}`);
+  const repository = enrolled(db, PORTAL, FEDERATED_WORKSPACE);
+  await page.goto(`/repositories/${repository.publicId}`);
   await section(page).getByRole("button", { name: "Prepare preview" }).click();
   await expect(page).toHaveURL(/preparation=ppr_/);
   await runJobs(db);
@@ -164,8 +164,8 @@ test("keeps several qualifying packages selectable before any build, and builds 
 test("follows a build to Ready through its live log, and shows it in the device frame", async ({ page, db, sourcesDir }) => {
   const control = path.join(sourcesDir, "control.json");
   fs.writeFileSync(control, JSON.stringify({ hold: true }));
-  const source = enrolled(db, ORDERS, offlineViteApp({ settings: { control } }));
-  await page.goto(`/repositories/${source.publicId}`);
+  const repository = enrolled(db, ORDERS, offlineViteApp({ settings: { control } }));
+  await page.goto(`/repositories/${repository.publicId}`);
   await section(page).getByRole("button", { name: "Prepare preview" }).click();
   await expect(page).toHaveURL(/preparation=ppr_/);
 
@@ -216,11 +216,11 @@ test("follows a build to Ready through its live log, and shows it in the device 
 });
 
 test("shows a failed build's reason and log tail, and Rebuild queues the next attempt", async ({ page, db }) => {
-  const source = enrolled(db, ORDERS, offlineViteApp({ broken: true }));
-  const preview = await built(db, source);
+  const repository = enrolled(db, ORDERS, offlineViteApp({ broken: true }));
+  const preview = await built(db, repository);
   expect(preview.attemptState).toBe("failed");
 
-  await page.goto(previewPage(source, preview));
+  await page.goto(previewPage(repository, preview));
   await expect(state(page)).toHaveText("Failed");
   const alert = page.locator("#page-alerts").getByText("Attempt 1 failed");
   await expect(alert).toBeVisible();
@@ -243,11 +243,11 @@ test("shows a failed build's reason and log tail, and Rebuild queues the next at
 
 test("keeps showing the published output while a rebuild runs and after it fails", async ({ page, db, sourcesDir }) => {
   const control = path.join(sourcesDir, "control.json");
-  const source = enrolled(db, ORDERS, offlineViteApp({ settings: { control } }));
-  const preview = await built(db, source);
+  const repository = enrolled(db, ORDERS, offlineViteApp({ settings: { control } }));
+  const preview = await built(db, repository);
   expect(preview.attemptState).toBe("ready");
 
-  await page.goto(previewPage(source, preview));
+  await page.goto(previewPage(repository, preview));
   await expect(frame(page).getByRole("heading", { name: "Orders" })).toBeVisible();
   fs.writeFileSync(control, JSON.stringify({ fail: true }));
   await page.getByRole("button", { name: "Rebuild orders-web" }).click();
@@ -263,13 +263,13 @@ test("keeps showing the published output while a rebuild runs and after it fails
 });
 
 test("warns that only HTML asset references were rewritten, and deletes the preview with its files after confirmation", async ({ page, db, request }) => {
-  const source = enrolled(db, ORDERS, offlineViteApp({ settings: { ignoreBase: true } }));
-  const preview = await built(db, source);
+  const repository = enrolled(db, ORDERS, offlineViteApp({ settings: { ignoreBase: true } }));
+  const preview = await built(db, repository);
   expect(preview.attemptState).toBe("ready");
   const directory = previewDirectory(serverConfig(), preview.publicId);
   expect(fs.existsSync(directory)).toBe(true);
 
-  await page.goto(previewPage(source, preview));
+  await page.goto(previewPage(repository, preview));
   await expect(page.locator("#page-alerts")).toContainText("Only the page's asset references were rewritten");
   await expect(page.locator("#page-alerts")).toContainText("deep links may not work");
   await expect(frame(page).getByRole("heading", { name: "Orders" })).toBeVisible();
@@ -284,23 +284,23 @@ test("warns that only HTML asset references were rewritten, and deletes the prev
 
   await page.getByRole("button", { name: "Delete" }).click();
   await dialog.getByRole("button", { name: "Delete preview" }).click();
-  await expect(page).toHaveURL(new RegExp(`/repositories/${source.publicId}(\\?|#|$)`));
+  await expect(page).toHaveURL(new RegExp(`/repositories/${repository.publicId}(\\?|#|$)`));
   await expect(notifications(page).getByText(`The preview of orders-web at ${preview.commitSha.slice(0, 12)} was deleted.`)).toBeVisible();
   await expect(section(page).getByRole("table", { name: "Previews" })).toHaveCount(0);
   expect(previews(db)[0]!.deletedAt).not.toBeNull();
   expect(fs.existsSync(directory)).toBe(false);
   expect((await request.get(`/previews/${preview.publicId}/`)).status()).toBe(404);
-  expect((await page.goto(previewPage(source, preview)))!.status()).toBe(404);
+  expect((await page.goto(previewPage(repository, preview)))!.status()).toBe(404);
 });
 
 test.describe("microfrontends", () => {
   test("previews a Module Federation remote through the page its build emits, like any other application", async ({ page, db, request }) => {
-    const source = enrolled(db, PORTAL, offlineFederatedRemote());
-    const preview = await built(db, source);
+    const repository = enrolled(db, PORTAL, offlineFederatedRemote());
+    const preview = await built(db, repository);
     expect([preview.attemptState, preview.artifactLayout, preview.artifactEntry]).toEqual(["ready", "standalone", { file: "index.html", rebase: false }]);
     const base = `/previews/${preview.publicId}/`;
 
-    await page.goto(previewPage(source, preview));
+    await page.goto(previewPage(repository, preview));
     // The remote's own bootstrap renders its exposed module, whose chunk loads beside its container entry.
     await expect(frame(page).getByRole("heading", { name: "Admin header" })).toBeVisible();
     await expect(frame(page).locator("[data-route]")).toHaveText(base);
@@ -318,13 +318,13 @@ test.describe("microfrontends", () => {
   });
 
   test("fails a single-spa bundle whose build emits no page, publishing nothing", async ({ page, db, request }) => {
-    const source = enrolled(db, ORDERS, offlineSingleSpaBundle());
-    const preview = await built(db, source);
+    const repository = enrolled(db, ORDERS, offlineSingleSpaBundle());
+    const preview = await built(db, repository);
     const reason = "The output has no index.html. Previews need a page that loads the application on its own.";
     expect(preview).toMatchObject({ attemptState: "failed", attemptReason: reason, artifact: null, artifactLayout: null, artifactEntry: null });
     expect((await request.get(`/previews/${preview.publicId}/`)).status()).toBe(404);
 
-    await page.goto(previewPage(source, preview));
+    await page.goto(previewPage(repository, preview));
     await expect(state(page)).toHaveText("Failed");
     await expect(page.locator("#page-alerts")).toContainText(reason);
     await expect(page.getByRole("figure", { name: "Attempt 1 log" })).toContainText(`==> failed: ${reason}`);
@@ -333,8 +333,8 @@ test.describe("microfrontends", () => {
   });
 
   test("refuses a Vite single-spa library with no committed page before building, naming the page", async ({ page, db }) => {
-    const source = enrolled(db, ORDERS, offlineViteLibrary());
-    await page.goto(`/repositories/${source.publicId}`);
+    const repository = enrolled(db, ORDERS, offlineViteLibrary());
+    await page.goto(`/repositories/${repository.publicId}`);
     await section(page).getByRole("button", { name: "Prepare preview" }).click();
     await expect(page).toHaveURL(/preparation=ppr_/);
     await runJobs(db);
@@ -353,8 +353,8 @@ test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
   test("prepares a tag and shows its decision on the next visit", async ({ page, db }) => {
-    const source = enrolled(db, ORDERS, offlineViteApp());
-    await page.goto(`/repositories/${source.publicId}`);
+    const repository = enrolled(db, ORDERS, offlineViteApp());
+    await page.goto(`/repositories/${repository.publicId}`);
     await section(page).getByRole("combobox", { name: "Branch or tag" }).selectOption({ label: "v1.0.0" });
     await section(page).getByRole("button", { name: "Prepare preview" }).click();
     await expect(page).toHaveURL(/preparation=ppr_/);

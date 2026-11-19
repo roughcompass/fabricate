@@ -1,5 +1,5 @@
 import { type Run, getRun, targetsOf } from "@/lib/runs/run-records";
-import { listSources } from "@/lib/catalog/source-records";
+import { listRepositories } from "@/lib/repositories/repository-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { TARGET_MACHINE, isTerminal } from "@/lib/db/state-machines";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
@@ -44,16 +44,16 @@ export function resolveMapDocument(db: Executor, current: Run): JsonObject {
     const profile = profiles.get(target.id);
     return {
       public_id: target.publicId,
-      source: { public_id: target.sourcePublicId, name: target.sourceName },
+      source: { public_id: target.repositoryPublicId, name: target.repositoryName },
       state: target.state as ResolverTarget["state"],
       failure: target.failureCode,
       profile: profile ? { digest: profile.digest, document: profileDocument(profile) } : null,
     };
   });
-  const scope = new Set(targets.map((target) => target.repositorySourceId));
-  const outOfScope = (targets.length ? listSources(db) : [])
-    .filter((source) => !scope.has(source.id))
-    .map((source) => ({ public_id: source.publicId, name: source.name, canonical_url: source.canonicalUrl }));
+  const scope = new Set(targets.map((target) => target.repositoryId));
+  const outOfScope = (targets.length ? listRepositories(db) : [])
+    .filter((repository) => !scope.has(repository.id))
+    .map((repository) => ({ public_id: repository.publicId, name: repository.name, canonical_url: repository.canonicalUrl }));
 
   return resolveRelationships({ targets: inputs, outOfScope });
 }

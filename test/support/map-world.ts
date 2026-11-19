@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 import type { JsonObject, MemoryFile } from "@repo-facts/contract";
 import { type Run } from "@/lib/runs/run-records";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import type { Db } from "@/lib/db/client";
-import { buildAssessment, buildSource } from "./builders";
+import { buildAssessment, buildRepository } from "./builders";
 import { manifest } from "./profiles";
 import { seedRun } from "./scenarios";
 
@@ -56,7 +56,7 @@ const MAP_WORLD: Record<string, Record<string, MemoryFile>> = {
 
 export interface MapWorld {
   run: Run;
-  sources: Record<string, RepositorySource>;
+  repositories: Record<string, Repository>;
 }
 
 export interface MapWorldOptions {
@@ -67,10 +67,10 @@ export interface MapWorldOptions {
 /** The map world's Run. */
 export async function seedMapWorld(db: Db, options: MapWorldOptions = {}): Promise<MapWorld> {
   const names = Object.keys(MAP_WORLD);
-  const sources = Object.fromEntries(names.map((name) => [name, buildSource(db, { name })]));
-  const assessment = buildAssessment(db, { name: "Fleet assessment", sources: Object.values(sources) });
-  const run = await seedRun(db, assessment, Object.values(sources), names.map((name) => MAP_WORLD[name]!), options.runtimeContract ? { transformMap: addRuntimeContract } : {});
-  return { run, sources };
+  const repositories = Object.fromEntries(names.map((name) => [name, buildRepository(db, { name })]));
+  const assessment = buildAssessment(db, { name: "Fleet assessment", repositories: Object.values(repositories) });
+  const run = await seedRun(db, assessment, Object.values(repositories), names.map((name) => MAP_WORLD[name]!), options.runtimeContract ? { transformMap: addRuntimeContract } : {});
+  return { run, repositories };
 }
 
 /** A resolved runtime contract from payee-hub to access-shell, citing payee-hub's own evidence. */

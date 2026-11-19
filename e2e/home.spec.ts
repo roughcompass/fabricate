@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { buildRun, buildAssessment, buildSource } from "../test/support/builders";
+import { buildRun, buildAssessment, buildRepository } from "../test/support/builders";
 import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -12,11 +12,11 @@ const primary = (page: Page) => page.getByRole("navigation", { name: "Primary" }
 const title = (page: Page) => page.locator("[data-shell-header]").getByRole("heading", { level: 1 });
 const attention = (page: Page) => page.getByRole("table", { name: "Needs attention" }).locator("tbody tr");
 
-type Db = Parameters<typeof buildSource>[0];
+type Db = Parameters<typeof buildRepository>[0];
 
 /** An Assessment over one new Repository whose latest Run ends in +run+, evaluated to +conclusion+ when given. */
 function assessment(db: Db, name: string, run: "complete" | "failed", conclusion?: "gaps" | "conforms" | "undetermined") {
-  const assessment = buildAssessment(db, { name, sources: [buildSource(db)] });
+  const assessment = buildAssessment(db, { name, repositories: [buildRepository(db)] });
   const finished = driveRun(db, buildRun(db, { assessment }).run, run);
   if (conclusion) driveEvaluation(db, buildEvaluation(db, assessment, finished), "complete", conclusion);
   return { assessment, run: finished };
@@ -52,7 +52,7 @@ test("Fresh installation: each group shows its empty state and actions, and noth
 });
 
 test("every figure opens a list showing exactly the records it counts (Conclusion figure opens its tab)", async ({ page, db }) => {
-  for (let index = 0; index < 6; index++) buildSource(db, { name: `repo-${index}` });
+  for (let index = 0; index < 6; index++) buildRepository(db, { name: `repo-${index}` });
   assessment(db, "Checkout platform migration", "complete", "gaps");
   assessment(db, "Payments baseline", "complete", "gaps");
   assessment(db, "Markets baseline", "complete", "conforms");
@@ -88,7 +88,7 @@ test("every figure opens a list showing exactly the records it counts (Conclusio
 });
 
 test("Same page for everyone: a visitor's cookies don't change Home", async ({ page, context, db, baseURL }) => {
-  buildSource(db);
+  buildRepository(db);
   assessment(db, "Checkout platform migration", "failed");
   await page.goto(paths.home);
   const first = await page.getByRole("main").innerText();
@@ -251,8 +251,8 @@ test.describe("the dashboard", () => {
   });
 
   test("Profiled: how many Repositories have a profile, out of all, with what's profiling now", async ({ page, db }) => {
-    buildSource(db, { name: "payee-hub" });
-    buildSource(db, { name: "ledger" });
+    buildRepository(db, { name: "payee-hub" });
+    buildRepository(db, { name: "ledger" });
     await page.goto(paths.home);
     const profiled = page.locator('dl[aria-label="Repositories"] [data-figure="Profiled"]');
     await expect(profiled).toContainText("0");
@@ -261,8 +261,8 @@ test.describe("the dashboard", () => {
   });
 
   test("Repositories added this week: the figure states its change over seven days in words", async ({ page, db }) => {
-    buildSource(db, { name: "payee-hub" });
-    buildSource(db, { name: "ledger" });
+    buildRepository(db, { name: "payee-hub" });
+    buildRepository(db, { name: "ledger" });
     await page.goto(paths.home);
     const repositories = page.locator('dl[aria-label="Repositories"]');
     await expect(repositories.locator('[data-figure="Repositories"]')).toContainText("2");
@@ -294,7 +294,7 @@ test.describe("the dashboard", () => {
   });
 
   test("Actions in the header: New Assessment and Add Repositories", async ({ page, db }) => {
-    buildSource(db);
+    buildRepository(db);
     await page.goto(paths.home);
     await expect(page.getByRole("main").getByRole("link", { name: "Add Repositories" }).first()).toHaveAttribute("href", "/repositories/bulk");
     await page.getByRole("main").getByRole("link", { name: "New Assessment" }).first().click();

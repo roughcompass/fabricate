@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appendLog, endsAttempt } from "@/app/(operator)/repositories/[sourceId]/previews/[preview]/build-log";
+import { appendLog, endsAttempt } from "@/app/(operator)/repositories/[repositoryId]/previews/[preview]/build-log";
 
 // The preview page's live build log (task 6.3): when an attempt's log is whole, and how much of it the page keeps.
 describe("the build log", () => {

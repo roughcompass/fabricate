@@ -14,7 +14,7 @@ import { drainJobs } from "@/lib/jobs/worker";
 import { SnapshotReader } from "@/lib/snapshot/reader";
 import { publishDraft, reviseRelease } from "@/lib/standards/publish";
 import { type StandardRelease, saveDraft } from "@/lib/standards/standard-records";
-import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { buildAssessment } from "../support/builders";
 import { manifest } from "../support/profiles";
 import { publishStandard, selectReleases } from "../support/scenarios";
@@ -95,14 +95,14 @@ describe("Evaluation scenario", () => {
       ui: { "package.json": manifest({ name: "@acme/ui", version: "2.0.0", engines: { node: ">=20" } }) },
       billing: { "package.json": manifest({ name: "billing", version: "1.0.0" }) },
     };
-    const sources = Object.entries(trees).map(([name, files]) => {
+    const repositories = Object.entries(trees).map(([name, files]) => {
       const work = world.fixture.repo(`fleet/${name}`);
       for (const [file, content] of Object.entries(files)) work.write(file, content);
       work.commit();
-      return registerLocalSource(world.db, world.config, name, work.path);
+      return registerLocalRepository(world.db, world.config, name, work.path);
     });
     fs.rmSync(path.join(world.fixture.root, "fleet/billing"), { recursive: true, force: true });
-    assessment = buildAssessment(world.db, { sources });
+    assessment = buildAssessment(world.db, { repositories });
     run = launchRun(world.db, assessment.publicId, crypto.randomUUID(), world.config).run;
     await drainJobs(world.db, jobHandlers(world.db, world.config));
     run = getRun(world.db, run.publicId);

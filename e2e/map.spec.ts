@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { buildAssessment, buildSource } from "../test/support/builders";
+import { buildAssessment, buildRepository } from "../test/support/builders";
 import { seedMapWorld } from "../test/support/map-world";
 import { manifest } from "../test/support/profiles";
 import { seedRun, seedMapStates } from "../test/support/scenarios";
@@ -10,9 +10,9 @@ import { pageHeader } from "./support/shell";
 
 /** One repository with 64 third-party dependencies: more relationships than one page holds. */
 async function seedWide(db: Db) {
-  const source = buildSource(db, { name: "wide-app" });
+  const repository = buildRepository(db, { name: "wide-app" });
   const dependencies = Object.fromEntries(Array.from({ length: 64 }, (_, index) => [`lib-${String(index).padStart(2, "0")}`, "^1.0.0"]));
-  return seedRun(db, buildAssessment(db, { sources: [source] }), [source], [{ "package.json": manifest({ name: "wide-app", version: "1.0.0", dependencies }) }]);
+  return seedRun(db, buildAssessment(db, { repositories: [repository] }), [repository], [{ "package.json": manifest({ name: "wide-app", version: "1.0.0", dependencies }) }]);
 }
 
 /** The node ID of the repository named +label+, which is also the ID of the runtime system it names. */

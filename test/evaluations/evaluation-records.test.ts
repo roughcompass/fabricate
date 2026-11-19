@@ -16,7 +16,7 @@ import {
   insertFinding,
 } from "@/lib/evaluations/evaluation-records";
 import type { StandardRelease } from "@/lib/standards/standard-records";
-import { buildRun, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildRelease, buildRepository } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 
 const findingDocumentFor = (controlKey: string, subjectKey: string, outcome = "meets", severity = "medium", type = "repository"): JsonObject => ({
@@ -39,7 +39,7 @@ describe("evaluation records", () => {
     db = createTestDb();
     first = buildRelease(db);
     second = buildRelease(db);
-    const built = buildRun(db, { sources: [buildSource(db)] });
+    const built = buildRun(db, { repositories: [buildRepository(db)] });
     target = built.targets[0]!;
     rawRun(db, "update assessments set state = 'acquiring' where id = ?", built.run.id);
     ({ evaluation, releases: pinned } = createEvaluation(db, {

@@ -15,7 +15,7 @@ import { type Assessment, updateAssessment } from "@/lib/assessments/assessment-
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { type StandardRelease, createStandard, insertRelease } from "@/lib/standards/standard-records";
-import { buildAssessment, buildSource } from "../support/builders";
+import { buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb, withSharedFileDb } from "../support/db";
 import { manifest } from "../support/profiles";
 import { publishStandard, seedRun } from "../support/scenarios";
@@ -37,8 +37,8 @@ describe("Evaluation pipeline", () => {
   }
 
   async function scenario() {
-    const npm = buildSource(db, { name: "npm-app" });
-    const pnpm = buildSource(db, { name: "pnpm-app" });
+    const npm = buildRepository(db, { name: "npm-app" });
+    const pnpm = buildRepository(db, { name: "pnpm-app" });
     const assessment = buildAssessment(db);
     const run = await seedRun(db, assessment, [npm, pnpm], [NPM, PNPM]);
     return { assessment, run };
@@ -48,9 +48,9 @@ describe("Evaluation pipeline", () => {
 
   describe("starting", () => {
     it("pins the selected Releases by digest, records coverage gaps, and enqueues one job per Release in one transaction", async () => {
-      const failing = buildSource(db, { name: "billing" });
+      const failing = buildRepository(db, { name: "billing" });
       const { assessment } = await scenario();
-      const partial = await seedRun(db, assessment, [buildSource(db, { name: "orders" }), failing], [NPM, "failed"]);
+      const partial = await seedRun(db, assessment, [buildRepository(db, { name: "orders" }), failing], [NPM, "failed"]);
       const [a, b] = [publishStandard(db, "Tooling A", [control({ key: "uses-pnpm", condition: manager("pnpm") })]), publishStandard(db, "Tooling B", [control({ key: "uses-npm", condition: manager("npm") })])];
       const updated = select(assessment, [a!, b!]);
 
@@ -86,8 +86,8 @@ describe("Evaluation pipeline", () => {
       expectRefusal(assessment.publicId, run.publicId, /Select at least one published Standard Release/);
       const selected = select(assessment, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]);
       const failedOnly = await (async () => {
-        const source = buildSource(db, { name: "down" });
-        const { run, targets } = createRun(db, { assessment: selected, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [source] });
+        const repository = buildRepository(db, { name: "down" });
+        const { run, targets } = createRun(db, { assessment: selected, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, repositories: [repository] });
         transitionTarget(db, transitionTarget(db, targets[0]!, "acquiring"), "failed", { failureCode: "source_unavailable", failureMessage: "x" });
         return transitionRun(db, transitionRun(db, run, "finalizing"), "failed");
       })();
@@ -95,7 +95,7 @@ describe("Evaluation pipeline", () => {
 
       // A Release that reads only Profile v2 cannot evaluate an Assessment from Surveyor release 0.1.0, with Profile v1.
       const v2Only = select(selected, [publishStandard(db, "Design system", [control({ key: "uses-pnpm", condition: manager("pnpm") })], { profileVersions: [2] })]);
-      const v1 = createRun(db, { assessment: v2Only, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [buildSource(db, { name: "earlier" })] }).run;
+      const v1 = createRun(db, { assessment: v2Only, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, repositories: [buildRepository(db, { name: "earlier" })] }).run;
       expectRefusal(v2Only.publicId, v1.publicId, /supports Repository Profile v2, but the Assessment has v1/);
       expect(db.select().from(jobs).all().filter((job) => job.kind === EVALUATE_RELEASE)).toEqual([]);
     });
@@ -197,7 +197,7 @@ describe("Evaluation pipeline", () => {
 
     it("never fold Indeterminate or Not applicable into Gap, and never conclude conformance under uncertainty", async () => {
       const assessment = buildAssessment(db);
-      const partial = await seedRun(db, assessment, [buildSource(db, { name: "pnpm-app" }), buildSource(db, { name: "billing" })], [PNPM, "failed"]);
+      const partial = await seedRun(db, assessment, [buildRepository(db, { name: "pnpm-app" }), buildRepository(db, { name: "billing" })], [PNPM, "failed"]);
       const selected = select(assessment, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") }), control({ key: "typescript-only", applicability: { op: "contains", selector: "repository.languages", mode: "any", values: ["TypeScript"] }, condition: { op: "always" } })])]);
       const { evaluation } = startEvaluation(db, selected.publicId, partial.publicId, crypto.randomUUID());
       await drainJobs(db, jobHandlers(db));

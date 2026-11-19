@@ -8,7 +8,7 @@ import { launchRun } from "@/lib/runs/launcher";
 import { finalizeRun, processTarget } from "@/lib/runs/orchestration";
 import { requestCancellation } from "@/lib/runs/transitions";
 import { requestRunCancellation, requestFinalization } from "@/lib/runs/waiting";
-import { type RepositorySource, insertSource } from "@/lib/catalog/source-records";
+import { type Repository, insertRepository } from "@/lib/repositories/repository-records";
 import { withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { JOB_PRIORITIES, jobs, repositoryProfiles, surveys } from "@/lib/db/schema";
@@ -21,34 +21,34 @@ import type { MapDocument } from "@/lib/relationships/schema";
 import { surveyRepository } from "@/lib/surveys/background";
 import { type Survey, surveyById } from "@/lib/surveys/records";
 import { RUN_SURVEY } from "@/lib/surveys/run";
-import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { buildAssessment } from "../support/builders";
 import { withSharedFileDb } from "../support/db";
 
 describe("Assessment orchestration", () => {
   const world = useAcquisitionWorld("orchestration");
 
-  function source(name: string, files: Record<string, string> = { "package.json": `{ "name": "${name}", "version": "1.0.0" }\n` }): RepositorySource {
+  function repository(name: string, files: Record<string, string> = { "package.json": `{ "name": "${name}", "version": "1.0.0" }\n` }): Repository {
     const work = world.fixture.repo(`fleet/${name}`);
     for (const [file, content] of Object.entries(files)) work.write(file, content);
     work.commit();
-    return registerLocalSource(world.db, world.config, name, work.path);
+    return registerLocalRepository(world.db, world.config, name, work.path);
   }
 
-  function launch(sources: RepositorySource[], database: Db = world.db) {
-    const assessment = buildAssessment(database, { sources });
+  function launch(repositories: Repository[], database: Db = world.db) {
+    const assessment = buildAssessment(database, { repositories });
     return launchRun(database, assessment.publicId, crypto.randomUUID(), world.config).run;
   }
 
   const drain = (handlersConfig = world.config, limit?: number) => drainJobs(world.db, jobHandlers(world.db, handlersConfig), limit ? { limit } : {});
-  const states = (runId: number) => Object.fromEntries(targetsOf(world.db, runId).map((target) => [target.sourceName, target.state]));
+  const states = (runId: number) => Object.fromEntries(targetsOf(world.db, runId).map((target) => [target.repositoryName, target.state]));
   const allSurveys = () => world.db.select().from(surveys).all();
   const surveyJobs = () => world.db.select().from(jobs).where(eq(jobs.kind, RUN_SURVEY)).all();
   const jobOf = (survey: Survey) => surveyJobs().find((job) => jobPayload(job).survey === survey.publicId)!;
 
   describe("target jobs", () => {
     it("assess every target independently: a failed source neither blocks the others nor erases their Profiles", async () => {
-      const [orders, billing, missing] = [source("orders"), source("billing"), source("gone")];
+      const [orders, billing, missing] = [repository("orders"), repository("billing"), repository("gone")];
       fs.rmSync(path.join(world.fixture.root, "fleet/gone"), { recursive: true, force: true });
       const run = launch([orders, billing, missing]);
 
@@ -56,14 +56,14 @@ describe("Assessment orchestration", () => {
       const done = getRun(world.db, run.publicId);
       expect(done.state).toBe("complete_with_issues");
       expect(states(done.id)).toEqual({ billing: "complete", gone: "failed", orders: "complete" });
-      expect(targetsOf(world.db, done.id).find((target) => target.sourceName === "gone")).toMatchObject({ failureCode: "source_unavailable" });
-      expect(profilesOf(world.db, done.id).map(({ target }) => target.sourceName).sort()).toEqual(["billing", "orders"]);
+      expect(targetsOf(world.db, done.id).find((target) => target.repositoryName === "gone")).toMatchObject({ failureCode: "source_unavailable" });
+      expect(profilesOf(world.db, done.id).map(({ target }) => target.repositoryName).sort()).toEqual(["billing", "orders"]);
       const map = mapDocument(mapOf(world.db, done.id)!) as unknown as MapDocument;
       expect(map.coverage.gaps).toEqual([expect.objectContaining({ source: expect.objectContaining({ name: "gone" }), state: "failed", reason: "source_unavailable" })]);
     });
 
     it("record how each target resolved and the survey of its commit, started by the Run under its recipe", async () => {
-      const orders = source("orders");
+      const orders = repository("orders");
       const run = launch([orders]);
       await drain();
 
@@ -71,7 +71,7 @@ describe("Assessment orchestration", () => {
       const survey = surveyById(world.db, target!.surveyId!);
       expect(target).toMatchObject({ state: "complete", refKind: "default_branch", resolvedRef: "refs/heads/main", resolvedAt: expect.any(Date) });
       expect(survey).toMatchObject({
-        repositorySourceId: orders.id,
+        repositoryId: orders.id,
         state: "succeeded",
         trigger: "run",
         requestedByRunId: run.id,
@@ -85,7 +85,7 @@ describe("Assessment orchestration", () => {
     });
 
     it("normalize an analysis failure to one target, with a stable code and no effect on others' records", async () => {
-      const run = launch([source("orders"), source("billing")]);
+      const run = launch([repository("orders"), repository("billing")]);
       // A worker whose analysis limits differ from the launch's cannot reproduce the recorded configuration.
       await drain(withOverrides(world.config, { analysis: { maxFiles: 7 } }));
 
@@ -103,7 +103,7 @@ describe("Assessment orchestration", () => {
 
   describe("shared surveys", () => {
     it("two Runs on one commit share one survey and one Profile, and both complete", async () => {
-      const web = source("web");
+      const web = repository("web");
       const [first, second] = [launch([web]), launch([web])];
       await drain();
 
@@ -117,7 +117,7 @@ describe("Assessment orchestration", () => {
     });
 
     it("a Run on a commit already surveyed completes at once, without surveying it again", async () => {
-      const web = source("web");
+      const web = repository("web");
       launch([web]);
       await drain();
 
@@ -130,7 +130,7 @@ describe("Assessment orchestration", () => {
     });
 
     it("a Run joining a queued background survey raises its job to the Run's priority, ahead of other background work", async () => {
-      const [other, web] = [source("other"), source("web")];
+      const [other, web] = [repository("other"), repository("web")];
       const queuedFirst = await surveyRepository(world.db, other, "added", { config: world.config });
       const background = await surveyRepository(world.db, web, "added", { config: world.config });
       expect(jobOf(background.survey).priority).toBe(JOB_PRIORITIES.background);
@@ -149,30 +149,30 @@ describe("Assessment orchestration", () => {
       await drain();
       expect(getRun(world.db, run.publicId).state).toBe("complete");
       // The Run used the background survey rather than starting its own.
-      expect(allSurveys().filter((survey) => survey.repositorySourceId === web.id)).toEqual([expect.objectContaining({ id: background.survey.id, trigger: "added", requestedByRunId: null, state: "succeeded" })]);
+      expect(allSurveys().filter((survey) => survey.repositoryId === web.id)).toEqual([expect.objectContaining({ id: background.survey.id, trigger: "added", requestedByRunId: null, state: "succeeded" })]);
     });
 
     it("an unreachable remote fails its own target with its own code, and creates no survey", async () => {
-      const unreachable = insertSource(world.db, { name: "unreachable", cloneUrl: "https://127.0.0.1:1/acme/orders.git", canonicalUrl: "https://127.0.0.1:1/acme/orders" });
-      const orders = source("orders");
+      const unreachable = insertRepository(world.db, { name: "unreachable", cloneUrl: "https://127.0.0.1:1/acme/orders.git", canonicalUrl: "https://127.0.0.1:1/acme/orders" });
+      const orders = repository("orders");
       const run = launch([unreachable, orders]);
       await drain();
 
       expect(getRun(world.db, run.publicId).state).toBe("complete_with_issues");
-      expect(targetsOf(world.db, run.id).find((target) => target.sourceName === "unreachable")).toMatchObject({
+      expect(targetsOf(world.db, run.id).find((target) => target.repositoryName === "unreachable")).toMatchObject({
         state: "failed",
         failureCode: "source_unavailable",
         refKind: null,
         resolvedRef: null,
         surveyId: null,
       });
-      expect(allSurveys().map((survey) => survey.repositorySourceId)).toEqual([orders.id]);
+      expect(allSurveys().map((survey) => survey.repositoryId)).toEqual([orders.id]);
     });
   });
 
   describe("finalization", () => {
     it("derives complete when every target contributes a Profile, and writes the map once", async () => {
-      const run = launch([source("orders"), source("billing")]);
+      const run = launch([repository("orders"), repository("billing")]);
       await drain();
       const done = getRun(world.db, run.publicId);
       expect(done.state).toBe("complete");
@@ -182,7 +182,7 @@ describe("Assessment orchestration", () => {
     });
 
     it("waits for every target, and refuses to finalize an Assessment that is not finalizing", async () => {
-      const run = launch([source("orders"), source("billing")]);
+      const run = launch([repository("orders"), repository("billing")]);
       await drain(world.config, 2); // the coordinator and one target, which then waits on its survey
       const partial = getRun(world.db, run.publicId);
       expect(partial.state).toBe("analyzing");
@@ -197,7 +197,7 @@ describe("Assessment orchestration", () => {
       await withSharedFileDb(async (shared, other) => {
         // The suite's helpers read the world's database.
         world.db = shared;
-        const run = launch([source("orders"), source("billing")]);
+        const run = launch([repository("orders"), repository("billing")]);
         const coordinator = jobHandlers(world.db, world.config);
         await drainJobs(world.db, Object.fromEntries(Object.entries(coordinator).filter(([kind]) => kind !== "assessment.finalize")));
         expect(getRun(world.db, run.publicId).state).toBe("finalizing");
@@ -212,7 +212,7 @@ describe("Assessment orchestration", () => {
 
   describe("cancellation", () => {
     it("before acquisition: no target resolves or joins a survey, and the Assessment is canceled", async () => {
-      const run = launch([source("orders"), source("billing")]);
+      const run = launch([repository("orders"), repository("billing")]);
       requestCancellation(world.db, run.id);
       await drain();
 
@@ -224,7 +224,7 @@ describe("Assessment orchestration", () => {
     });
 
     it("during an Assessment: completed Profiles stay, waiting targets are canceled, their surveys run on, and it is never finalized as complete", async () => {
-      const run = launch([source("orders"), source("billing"), source("reports")]);
+      const run = launch([repository("orders"), repository("billing"), repository("reports")]);
       const byState = () => Object.values(states(run.id)).sort();
       await drain(world.config, 5); // the coordinator, every target, and the first survey
       expect(byState()).toEqual(["analyzing", "analyzing", "complete"]);
@@ -243,7 +243,7 @@ describe("Assessment orchestration", () => {
     });
 
     it("while waiting: a target waiting on its survey is canceled at once, and the survey's Profile isn't the Run's", async () => {
-      const run = launch([source("orders")]);
+      const run = launch([repository("orders")]);
       await drain(world.config, 2); // the coordinator and the target, which then waits on its survey
       const [waiting] = targetsOf(world.db, run.id);
       expect(waiting).toMatchObject({ state: "analyzing", surveyId: expect.any(Number) });
@@ -260,7 +260,7 @@ describe("Assessment orchestration", () => {
     });
 
     it("while resolving: a target canceled before its commit is known joins no survey", async () => {
-      const run = launch([source("orders")]);
+      const run = launch([repository("orders")]);
       const [target] = targetsOf(world.db, run.id);
 
       // The job passes the check before resolving, then awaits ls-remote.
@@ -274,7 +274,7 @@ describe("Assessment orchestration", () => {
     });
 
     it("of one of two Runs waiting on one survey: that target is canceled, the survey keeps running, and the other Run continues when it finishes", async () => {
-      const web = source("web");
+      const web = repository("web");
       const [canceled, continuing] = [launch([web]), launch([web])];
       await drain(world.config, 4); // both coordinators and both targets
       const [survey] = allSurveys();

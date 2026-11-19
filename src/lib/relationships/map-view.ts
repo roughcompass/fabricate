@@ -25,7 +25,7 @@ export interface ViewRepository {
   target: string;
   /** The target's Profile, when one exists. */
   profile: string | null;
-  sourceId: number;
+  repositoryId: number;
   /** The ID of the runtime system the repository belongs to. */
   system: string;
 }
@@ -50,7 +50,7 @@ export function loadMapView(db: Executor, run: Run): MapView | undefined {
   if (!map) return undefined;
 
   const nodes = db
-    .select({ nodeId: graphNodes.nodeId, label: graphNodes.label, sourceId: graphNodes.repositorySourceId, target: runTargets.publicId, profile: repositoryProfiles.publicId })
+    .select({ nodeId: graphNodes.nodeId, label: graphNodes.label, repositoryId: graphNodes.repositoryId, target: runTargets.publicId, profile: repositoryProfiles.publicId })
     .from(graphNodes)
     .innerJoin(runTargets, eq(runTargets.id, graphNodes.runTargetId))
     // A completed target's Profile is its survey's.
@@ -65,7 +65,7 @@ export function loadMapView(db: Executor, run: Run): MapView | undefined {
   );
   const systemOf = new Map(systems.flatMap((system) => system.members.map((member) => [member, system.id] as const)));
   const repositories = new Map<string, ViewRepository>(
-    nodes.map((node) => [node.nodeId, { nodeId: node.nodeId, label: node.label, target: node.target, profile: node.profile, sourceId: node.sourceId!, system: systemOf.get(node.nodeId)! }]),
+    nodes.map((node) => [node.nodeId, { nodeId: node.nodeId, label: node.label, target: node.target, profile: node.profile, repositoryId: node.repositoryId!, system: systemOf.get(node.nodeId)! }]),
   );
 
   return { run, map, base: routes.runMap(run.publicId), repositories, systems: new Map(systems.map((system) => [system.id, system])), missing: missingTargets(db, run.id) };

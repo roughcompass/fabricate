@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { assessments, repositorySources } from "./catalog";
+import { assessments } from "./assessments";
+import { repositories } from "./repositories";
 import { surveys } from "./surveys";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
 
@@ -63,12 +64,12 @@ export const runTargets = sqliteTable(
     runId: integer("assessment_id")
       .notNull()
       .references(() => runs.id, { onDelete: "restrict" }),
-    repositorySourceId: integer("repository_source_id")
+    repositoryId: integer("repository_source_id")
       .notNull()
-      .references(() => repositorySources.id, { onDelete: "restrict" }),
+      .references(() => repositories.id, { onDelete: "restrict" }),
     position: integer("position").notNull(),
-    sourcePublicId: text("source_public_id").notNull(),
-    sourceName: text("source_name").notNull(),
+    repositoryPublicId: text("source_public_id").notNull(),
+    repositoryName: text("source_name").notNull(),
     cloneUrl: text("clone_url").notNull(),
     canonicalUrl: text("canonical_url").notNull(),
     gitRef: text("git_ref"),
@@ -89,8 +90,8 @@ export const runTargets = sqliteTable(
   },
   (t) => [
     uniqueIndex("assessment_targets_position").on(t.runId, t.position),
-    uniqueIndex("assessment_targets_source").on(t.runId, t.repositorySourceId),
-    index("assessment_targets_repository_source").on(t.repositorySourceId),
+    uniqueIndex("assessment_targets_source").on(t.runId, t.repositoryId),
+    index("assessment_targets_repository_source").on(t.repositoryId),
     index("assessment_targets_survey").on(t.surveyId),
     check("assessment_targets_public_id", sql`${t.publicId} GLOB 'tgt_*'`),
     check("assessment_targets_position_range", sql`${t.position} >= 0`),

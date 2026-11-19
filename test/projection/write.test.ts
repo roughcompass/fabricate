@@ -4,7 +4,7 @@ import { surveyRefFor } from "@/lib/acquisition/mirror";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { profileProblems } from "@/lib/profiles/schema";
 import { moveSurvey, pinSurvey, requestSurvey } from "@/lib/surveys/records";
-import { buildRun, buildAssessment, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { memoryProfile } from "../support/profiles";
 import { count, pinnedRepository } from "../support/projection";
@@ -17,10 +17,10 @@ const failInsertsInto = (db: ReturnType<typeof createTestDb>, table: string) =>
 describe("projection writes", () => {
   it("stores neither the Profile nor any of its rows when projecting it fails (Failed write)", async () => {
     const db = createTestDb();
-    const source = buildSource(db, { name: "web" });
-    const { run } = buildRun(db, { sources: [source] });
+    const repository = buildRepository(db, { name: "web" });
+    const { run } = buildRun(db, { repositories: [repository] });
     const { survey: queued } = requestSurvey(db, {
-      repositorySourceId: source.id,
+      repositoryId: repository.id,
       commitSha: sha1("c"),
       reference: "refs/heads/main",
       fromConfiguredReference: true,
@@ -31,7 +31,7 @@ describe("projection writes", () => {
       profileSchemaVersion: run.profileSchemaVersion,
     });
     const survey = pinSurvey(db, moveSurvey(db, queued, "running", { attempts: 1 }), { treeSha: sha1("t"), internalRef: surveyRefFor(queued.publicId) });
-    const { document } = await memoryProfile(pinnedRepository("web", { react: "16.14.0" }), { public_id: source.publicId, name: source.name }, survey.commitSha);
+    const { document } = await memoryProfile(pinnedRepository("web", { react: "16.14.0" }), { public_id: repository.publicId, name: repository.name }, survey.commitSha);
     failInsertsInto(db, "evidence_index");
 
     expect(() => insertProfile(db, { survey, document, validate: profileProblems })).toThrow(/projection failed/);
@@ -41,11 +41,11 @@ describe("projection writes", () => {
 
   it("stores neither the map nor any of its rows when projecting it fails", async () => {
     const db = createTestDb();
-    const sources = [buildSource(db, { name: "web" })];
-    const assessment = buildAssessment(db, { sources });
+    const repositories = [buildRepository(db, { name: "web" })];
+    const assessment = buildAssessment(db, { repositories });
     failInsertsInto(db, "graph_edges");
 
-    await expect(seedRun(db, assessment, sources, [pinnedRepository("web", { react: "16.14.0" })])).rejects.toThrow(/projection failed/);
+    await expect(seedRun(db, assessment, repositories, [pinnedRepository("web", { react: "16.14.0" })])).rejects.toThrow(/projection failed/);
     expect(count(db, "relationship_maps")).toBe(0);
     expect(count(db, "graph_nodes")).toBe(0);
     expect(count(db, "repository_profiles")).toBe(1);

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import type { JsonObject } from "@repo-facts/contract";
 import { expect, type Page, test } from "@playwright/test";
 import { listRuns, targetsOf } from "../../src/lib/runs/run-records";
-import { listSources } from "../../src/lib/catalog/source-records";
+import { listRepositories } from "../../src/lib/repositories/repository-records";
 import { loadConfig } from "../../src/lib/config";
 import { openDatabase } from "../../src/lib/db/client";
 import { findingDocument, findingsOf, listEvaluations } from "../../src/lib/evaluations/evaluation-records";
@@ -63,9 +63,9 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await page.getByRole("button", { name: "Add Repositories" }).click();
     // Exact, so the bulk page's own "Add Repositories" heading doesn't satisfy it before the Repositories are added.
     await expect(page.getByRole("heading", { level: 1, name: "Repositories", exact: true })).toBeVisible();
-    const sources = listSources(db);
-    expect(sources.map((source) => source.name).sort()).toEqual(REPOSITORIES);
-    for (const source of sources) expect(source.cloneUrl).toBe(`file://${FLEET_ROOT}/${source.name}`);
+    const repositories = listRepositories(db);
+    expect(repositories.map((repository) => repository.name).sort()).toEqual(REPOSITORIES);
+    for (const repository of repositories) expect(repository.cloneUrl).toBe(`file://${FLEET_ROOT}/${repository.name}`);
   });
 
   await test.step("run a full baseline Assessment", async () => {
@@ -78,12 +78,12 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await run();
     await expect(pageHeader(page)).toContainText("Complete");
     const baseline = listRuns(db, listAssessments(db)[0]!.id)[0]!;
-    expect(targetsOf(db, baseline.id).map((target) => [target.sourceName, target.state]).sort()).toEqual(REPOSITORIES.map((name) => [name, "complete"]));
+    expect(targetsOf(db, baseline.id).map((target) => [target.repositoryName, target.state]).sort()).toEqual(REPOSITORIES.map((name) => [name, "complete"]));
   });
 
   await test.step("represent discovered analytics calls statically", async () => {
     const run = listRuns(db, listAssessments(db)[0]!.id)[0]!;
-    const profiles = new Map(profilesOf(db, run.id).map(({ profile, target }) => [target.sourceName, profile]));
+    const profiles = new Map(profilesOf(db, run.id).map(({ profile, target }) => [target.repositoryName, profile]));
     for (const name of ANALYTICS_CONSUMERS) {
       const services = (profileDocument(profiles.get(name)!).fact_document as JsonObject).service_dependencies as JsonObject[];
       expect(services, name).toContainEqual(expect.objectContaining({ key: "package:@acme/analytics", client: { kind: "packaged", package: "@acme/analytics" }, access: expect.objectContaining({ state: "unknown" }) }));
@@ -203,7 +203,7 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
   await test.step("store nothing from outside the fleet", async () => {
     const stored = db.$client.serialize();
     expect(stored.includes(Buffer.from("fleet-kit"))).toBe(false);
-    for (const source of listSources(db)) expect(source.cloneUrl.startsWith(`file://${FLEET_ROOT}/`)).toBe(true);
+    for (const repository of listRepositories(db)) expect(repository.cloneUrl.startsWith(`file://${FLEET_ROOT}/`)).toBe(true);
   });
 
   db.$client.close();

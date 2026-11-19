@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { runNumber, runNumbers } from "@/lib/runs/run-records";
 import type { Db } from "@/lib/db/client";
 import { createEvaluation, evaluationNumber, evaluationNumbers } from "@/lib/evaluations/evaluation-records";
-import { buildRun, buildAssessment, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildRelease, buildRepository } from "../support/builders";
 import { createTestDb } from "../support/db";
 
 describe("record sequence numbers", () => {
   let db: Db;
   beforeEach(() => {
     db = createTestDb();
-    buildSource(db);
+    buildRepository(db);
   });
 
   it("numbers Assessments from 1 within each Initiative and keeps the numbers as more start", () => {

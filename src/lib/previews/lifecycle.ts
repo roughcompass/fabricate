@@ -7,7 +7,7 @@ import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
-import { type AttemptState, previewBuilds, previewPreparations, repositorySources } from "@/lib/db/schema";
+import { type AttemptState, previewBuilds, previewPreparations, repositories } from "@/lib/db/schema";
 import { assertEnrolled } from "./access";
 import { type PreviewBuild, findPreview, rebuildPreview, settleAbandonedAttempts, startPreview } from "./records";
 import { attemptLogFile, cacheDirectory, previewDirectory } from "./storage";
@@ -39,7 +39,7 @@ export function requestPreview(db: Executor, preparationPublicId: string, packag
   return immediate(db, (tx) => {
     const preparation = tx.select().from(previewPreparations).where(eq(previewPreparations.publicId, preparationPublicId)).get();
     if (!preparation) throw new NotFoundError(`Preview preparation ${preparationPublicId} does not exist`);
-    assertEnrolled(config, sourceOf(tx, preparation.repositorySourceId));
+    assertEnrolled(config, repositoryOf(tx, preparation.repositoryId));
     return startPreview(tx, preparationPublicId, packageDir);
   });
 }
@@ -49,13 +49,13 @@ export function requestRebuild(db: Executor, publicId: string, config: FrontendR
   return immediate(db, (tx) => {
     const preview = findPreview(tx, publicId);
     if (!preview) throw new NotFoundError(`Preview ${publicId} does not exist`);
-    assertEnrolled(config, sourceOf(tx, preview.repositorySourceId));
+    assertEnrolled(config, repositoryOf(tx, preview.repositoryId));
     return rebuildPreview(tx, publicId);
   });
 }
 
-function sourceOf(db: Executor, id: number) {
-  return db.select().from(repositorySources).where(eq(repositorySources.id, id)).get()!;
+function repositoryOf(db: Executor, id: number) {
+  return db.select().from(repositories).where(eq(repositories.id, id)).get()!;
 }
 
 // -- Deletion -----------------------------------------------------------------------
@@ -74,12 +74,12 @@ export async function deletePreview(db: Executor, publicId: string, config: Fron
 }
 
 /**
- * Marks every undeleted preview of the Repository +sourceId+ deleted, in the
+ * Marks every undeleted preview of the Repository +repositoryId+ deleted, in the
  * caller's transaction, which deletes the Repository. Returns their public
  * ids, whose files the caller discards once the transaction commits.
  */
-export function deleteRepositoryPreviews(db: Executor, sourceId: number): string[] {
-  return markDeleted(db, eq(previewBuilds.repositorySourceId, sourceId));
+export function deleteRepositoryPreviews(db: Executor, repositoryId: number): string[] {
+  return markDeleted(db, eq(previewBuilds.repositoryId, repositoryId));
 }
 
 function markDeleted(db: Executor, where: SQL | undefined): string[] {

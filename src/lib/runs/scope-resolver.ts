@@ -1,7 +1,7 @@
 import { asc, eq, isNull, sql } from "drizzle-orm";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import type { Repository } from "@/lib/repositories/repository-records";
 import type { Executor } from "@/lib/db/client";
-import { assessmentTargets, repositorySources } from "@/lib/db/schema";
+import { assessmentTargets, repositories } from "@/lib/db/schema";
 import type { Assessment } from "@/lib/assessments/assessment-records";
 
 /**
@@ -16,8 +16,8 @@ import type { Assessment } from "@/lib/assessments/assessment-records";
  */
 
 export interface ScopeProblem {
-  sourcePublicId: string | null;
-  sourceName: string | null;
+  repositoryPublicId: string | null;
+  repositoryName: string | null;
   message: string;
 }
 
@@ -29,47 +29,47 @@ export class ScopeResolutionError extends Error {
   }
 }
 
-const byCatalogOrder = [sql`lower(${repositorySources.name})`, asc(repositorySources.publicId)] as const;
+const byNameOrder = [sql`lower(${repositories.name})`, asc(repositories.publicId)] as const;
 
-export function resolveScope(db: Executor, assessment: Assessment): RepositorySource[] {
-  return assessment.selectionMode === "all" ? allSources(db) : explicitSources(db, assessment);
+export function resolveScope(db: Executor, assessment: Assessment): Repository[] {
+  return assessment.selectionMode === "all" ? allRepositories(db) : explicitRepositories(db, assessment);
 }
 
-function allSources(db: Executor): RepositorySource[] {
-  const sources = db.select().from(repositorySources).where(isNull(repositorySources.deletedAt)).orderBy(...byCatalogOrder).all();
-  if (sources.length === 0) {
-    throw new ScopeResolutionError([{ sourcePublicId: null, sourceName: null, message: "The scope is empty: there are no Repositories. Add one before starting a Run." }]);
+function allRepositories(db: Executor): Repository[] {
+  const registered = db.select().from(repositories).where(isNull(repositories.deletedAt)).orderBy(...byNameOrder).all();
+  if (registered.length === 0) {
+    throw new ScopeResolutionError([{ repositoryPublicId: null, repositoryName: null, message: "The scope is empty: there are no Repositories. Add one before starting a Run." }]);
   }
-  return sources;
+  return registered;
 }
 
-function explicitSources(db: Executor, assessment: Assessment): RepositorySource[] {
+function explicitRepositories(db: Executor, assessment: Assessment): Repository[] {
   const rows = db
-    .select({ selection: assessmentTargets, source: repositorySources })
+    .select({ selection: assessmentTargets, repository: repositories })
     .from(assessmentTargets)
-    .leftJoin(repositorySources, eq(repositorySources.id, assessmentTargets.repositorySourceId))
+    .leftJoin(repositories, eq(repositories.id, assessmentTargets.repositoryId))
     .where(eq(assessmentTargets.assessmentId, assessment.id))
-    .orderBy(...byCatalogOrder, asc(assessmentTargets.id))
+    .orderBy(...byNameOrder, asc(assessmentTargets.id))
     .all();
 
   if (rows.length === 0) {
     throw new ScopeResolutionError([
-      { sourcePublicId: null, sourceName: null, message: "The scope is empty: this Assessment's explicit scope selects no Repositories." },
+      { repositoryPublicId: null, repositoryName: null, message: "The scope is empty: this Assessment's explicit scope selects no Repositories." },
     ]);
   }
 
   const problems: ScopeProblem[] = [];
-  for (const { selection, source } of rows) {
-    if (!source) {
+  for (const { selection, repository } of rows) {
+    if (!repository) {
       problems.push({
-        sourcePublicId: null,
-        sourceName: null,
-        message: `A selected Repository (record ${selection.repositorySourceId}) no longer exists. Edit the Assessment's scope to remove it.`,
+        repositoryPublicId: null,
+        repositoryName: null,
+        message: `A selected Repository (record ${selection.repositoryId}) no longer exists. Edit the Assessment's scope to remove it.`,
       });
-    } else if (source.deletedAt) {
-      problems.push({ sourcePublicId: source.publicId, sourceName: source.name, message: `${source.name} (${source.publicId}) was deleted. Edit the Assessment's scope to remove it.` });
+    } else if (repository.deletedAt) {
+      problems.push({ repositoryPublicId: repository.publicId, repositoryName: repository.name, message: `${repository.name} (${repository.publicId}) was deleted. Edit the Assessment's scope to remove it.` });
     }
   }
   if (problems.length) throw new ScopeResolutionError(problems);
-  return rows.map((row) => row.source!);
+  return rows.map((row) => row.repository!);
 }

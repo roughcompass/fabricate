@@ -1,8 +1,8 @@
 import path from "node:path";
 import { listRuns } from "../src/lib/runs/run-records";
-import { resolveCloneUrl } from "../src/lib/catalog/catalog";
-import { SourceBoundary } from "../src/lib/catalog/source-boundary";
-import { insertSource } from "../src/lib/catalog/source-records";
+import { resolveCloneUrl } from "../src/lib/repositories/registration";
+import { SourceBoundary } from "../src/lib/repositories/source-boundary";
+import { insertRepository } from "../src/lib/repositories/repository-records";
 import { loadConfig } from "../src/lib/config";
 import { listAssessments } from "../src/lib/assessments/assessment-records";
 import { jobHandlers } from "../src/lib/jobs/registry";
@@ -20,7 +20,7 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
   const boundary = new SourceBoundary(config());
   for (const name of ["orders", "billing"]) {
     const repository = gitRepo(path.join(sourcesDir, name), { "package.json": `{ "name": "${name}", "version": "1.0.0" }\n` });
-    insertSource(db, { name, ...resolveCloneUrl(`file://${repository}`, boundary), gitRef: null });
+    insertRepository(db, { name, ...resolveCloneUrl(`file://${repository}`, boundary), gitRef: null });
   }
   buildAssessment(db, { name: "Fleet assessment" });
 

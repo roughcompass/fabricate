@@ -13,14 +13,14 @@ interface AssessmentFormProps {
   action: (previous: AssessmentFormState, formData: FormData) => Promise<AssessmentFormState>;
   initial: AssessmentFormState;
   lockVersion?: number;
-  sourceCount: number;
-  sourceChoices: Choice[];
+  repositoryCount: number;
+  repositoryChoices: Choice[];
   releaseChoices: Choice[];
   submitLabel: string;
   cancelHref: string;
 }
 
-export function AssessmentForm({ action, initial, lockVersion, sourceCount, sourceChoices, releaseChoices, submitLabel, cancelHref }: AssessmentFormProps) {
+export function AssessmentForm({ action, initial, lockVersion, repositoryCount, repositoryChoices, releaseChoices, submitLabel, cancelHref }: AssessmentFormProps) {
   const [mode, setMode] = useState(initial.values.selectionMode);
   // Without JavaScript every field stays visible; the server ignores source
   // selections for a scope of all Repositories.
@@ -65,7 +65,7 @@ export function AssessmentForm({ action, initial, lockVersion, sourceCount, sour
                 errors={state.errors.selectionMode}
                 onChange={(event) => setMode(event.currentTarget.value as typeof mode)}
                 choices={[
-                  { value: "all", label: "All Repositories", description: `Every Repository registered when a Run starts (${sourceCount} now).` },
+                  { value: "all", label: "All Repositories", description: `Every Repository registered when a Run starts (${repositoryCount} now).` },
                   { value: "explicit", label: "Selected Repositories", description: "Exactly the Repositories chosen below." },
                 ]}
               />
@@ -75,11 +75,11 @@ export function AssessmentForm({ action, initial, lockVersion, sourceCount, sour
                   name="sourcePublicIds"
                   legend="Selected Repositories"
                   type="checkbox"
-                  choices={sourceChoices}
-                  selected={state.values.sourcePublicIds}
+                  choices={repositoryChoices}
+                  selected={state.values.repositoryPublicIds}
                   errors={state.errors.sources}
                   description={
-                    sourceChoices.length ? undefined : (
+                    repositoryChoices.length ? undefined : (
                       <>
                         There are no Repositories yet. <Link href="/repositories/new">Add a Repository</Link> to choose it here.
                       </>

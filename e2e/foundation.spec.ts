@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { buildSource } from "../test/support/builders";
+import { buildRepository } from "../test/support/builders";
 import { expect, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 
@@ -12,7 +12,7 @@ const LIGHT = "rgb(250, 250, 250)";
 const DARK = "rgb(0, 0, 0)";
 
 test("renders text in Geist Sans and identifiers in Geist Mono, served by the application", async ({ page, db }) => {
-  const source = buildSource(db, { name: "orders" });
+  const repository = buildRepository(db, { name: "orders" });
   const fonts: string[] = [];
   page.on("request", (request) => {
     if (request.resourceType() === "font") fonts.push(request.url());
@@ -24,7 +24,7 @@ test("renders text in Geist Sans and identifiers in Geist Mono, served by the ap
   const firstFamily = (locator: ReturnType<Page["locator"]>) => locator.first().evaluate((element) => getComputedStyle(element).fontFamily.split(",")[0]!.trim());
   expect(await firstFamily(page.locator("body"))).toMatch(/geist/i);
   // The clone URL is an identifier, shown as a Tag.
-  expect(await firstFamily(page.getByRole("table").getByText(source.cloneUrl, { exact: true }))).toMatch(/geist.*mono|mono.*geist/i);
+  expect(await firstFamily(page.getByRole("table").getByText(repository.cloneUrl, { exact: true }))).toMatch(/geist.*mono|mono.*geist/i);
 
   const loaded = await page.evaluate(() => [...document.fonts].filter((face) => face.status === "loaded").map((face) => face.family));
   expect(loaded.some((family) => /geist/i.test(family))).toBe(true);

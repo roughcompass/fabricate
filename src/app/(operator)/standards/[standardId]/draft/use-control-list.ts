@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useToast } from "@/components/ui/toast";
-import type { EditorCatalog } from "../../catalog";
+import type { EditorVocabulary } from "../../vocabulary";
 import type { DraftIssue, DraftSaveState } from "../../form-state";
 import { type Json, type Node, defaultPredicate, record } from "./expression-editor";
 
@@ -23,7 +23,7 @@ export interface ControlDraft {
 }
 
 /** `uid` identifies a Control in the editor; it must match between the server and client renders. */
-function toDraft(control: Json, catalog: EditorCatalog, uid: number): ControlDraft {
+function toDraft(control: Json, vocabulary: EditorVocabulary, uid: number): ControlDraft {
   const value = record(control);
   const text = (field: string) => (typeof value[field] === "string" ? (value[field] as string) : "");
   const subject = value.subject === "relationship_map" ? "relationship_map" : "repository";
@@ -32,17 +32,17 @@ function toDraft(control: Json, catalog: EditorCatalog, uid: number): ControlDra
     key: text("key"),
     title: text("title"),
     rationale: text("rationale"),
-    severity: catalog.severities.includes(text("severity")) ? text("severity") : "medium",
+    severity: vocabulary.severities.includes(text("severity")) ? text("severity") : "medium",
     subject,
     applicability: value.applicability ? record(value.applicability) : { op: "always" },
-    condition: value.condition ? record(value.condition) : defaultPredicate(catalog, subject),
+    condition: value.condition ? record(value.condition) : defaultPredicate(vocabulary, subject),
     guidance: text("guidance"),
   };
 }
 
-export function useControlList(document: { [key: string]: Json }, catalog: EditorCatalog, state: DraftSaveState) {
+export function useControlList(document: { [key: string]: Json }, vocabulary: EditorVocabulary, state: DraftSaveState) {
   // Initial Controls are numbered by position, so both renders agree; added ones continue from there.
-  const [controls, setControls] = useState<ControlDraft[]>(() => (Array.isArray(document.controls) ? document.controls.map((control, index) => toDraft(control, catalog, index)) : []));
+  const [controls, setControls] = useState<ControlDraft[]>(() => (Array.isArray(document.controls) ? document.controls.map((control, index) => toDraft(control, vocabulary, index)) : []));
   const nextUid = useRef(controls.length);
   const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set());
   const { toast } = useToast();
@@ -87,7 +87,7 @@ export function useControlList(document: { [key: string]: Json }, catalog: Edito
       change(next, true);
     },
     add: () => {
-      const control = toDraft({ key: `control-${controls.length + 1}`, severity: "medium", subject: "repository", applicability: { op: "always" } }, catalog, nextUid.current++);
+      const control = toDraft({ key: `control-${controls.length + 1}`, severity: "medium", subject: "repository", applicability: { op: "always" } }, vocabulary, nextUid.current++);
       change([...controls, control], true);
       setExpanded(control.uid, true);
     },

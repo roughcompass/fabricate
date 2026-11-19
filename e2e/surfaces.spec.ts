@@ -1,5 +1,5 @@
 import type { Locator } from "@playwright/test";
-import { buildSource } from "../test/support/builders";
+import { buildRepository } from "../test/support/builders";
 import { expect, expectNoNestedBorders, test } from "./support/fixtures";
 import { seedResults } from "./support/results";
 import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
@@ -28,7 +28,7 @@ test("Initiative overview on a surface: the list is white, its heading on the ca
 
 test("Sources list in the light theme: canvas behind the sidebar and filters; the header and the table on white", async ({ page, db, baseURL }) => {
   await useTheme(page.context(), "light", baseURL!);
-  buildSource(db, { name: "orders" });
+  buildRepository(db, { name: "orders" });
   await page.goto(paths.repositories);
   expect(await background(page.locator("body"))).toBe(CANVAS.light);
   expect(await background(page.locator("#sidebar"))).toBe(CANVAS.light);
@@ -46,7 +46,7 @@ test("Form page: New Initiative's form sits on white over the canvas", async ({ 
 
 test("Dark theme: the canvas is darker than the surfaces and the header", async ({ page, db, baseURL }) => {
   await useTheme(page.context(), "dark", baseURL!);
-  buildSource(db, { name: "orders" });
+  buildRepository(db, { name: "orders" });
   await page.goto(paths.repositories);
   expect(await background(page.locator("body"))).toBe(CANVAS.dark);
   expect(await background(page.locator("[data-panel]").filter({ has: page.getByRole("table") }))).toBe(SURFACE.dark);

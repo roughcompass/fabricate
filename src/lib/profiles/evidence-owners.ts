@@ -1,7 +1,7 @@
 import type { JsonObject } from "@repo-facts/contract";
 import { and, eq, inArray } from "drizzle-orm";
 import type { RunTarget } from "@/lib/runs/run-records";
-import { sourceById } from "@/lib/catalog/source-records";
+import { repositoryById } from "@/lib/repositories/repository-records";
 import type { Executor } from "@/lib/db/client";
 import { runTargets, evidenceIndex, repositoryProfiles, surveys } from "@/lib/db/schema";
 import type { Survey } from "@/lib/surveys/records";
@@ -49,7 +49,7 @@ export function runEvidence(db: Executor, runId: number, evidenceId: string): (F
     .where(and(eq(evidenceIndex.evidenceId, evidenceId), inArray(evidenceIndex.profileId, runProfileIds(db, runId))))
     .get();
   const found = row && recordOf(row.profile, evidenceId);
-  return row && found ? { ...row, ...found, repository: { publicId: row.target.sourcePublicId, name: row.target.sourceName } } : undefined;
+  return row && found ? { ...row, ...found, repository: { publicId: row.target.repositoryPublicId, name: row.target.repositoryName } } : undefined;
 }
 
 /** Evidence +evidenceId+ of the Profile +profilePublicId+, as a version's page reaches it. */
@@ -59,6 +59,6 @@ export function profileEvidence(db: Executor, profilePublicId: string, evidenceI
   const found = recordOf(profile, evidenceId);
   if (!found) return undefined;
   const survey = db.select().from(surveys).where(eq(surveys.id, profile.surveyId)).get()!;
-  const repository = sourceById(db, survey.repositorySourceId);
+  const repository = repositoryById(db, survey.repositoryId);
   return { profile, survey, ...found, repository: { publicId: repository.publicId, name: repository.name } };
 }

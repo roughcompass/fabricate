@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { launchRun } from "@/lib/runs/launcher";
-import { type RepositorySource, getSource, updateSource } from "@/lib/catalog/source-records";
+import { type Repository, getRepository, updateRepository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { jobHandlers } from "@/lib/jobs/registry";
@@ -11,8 +11,8 @@ import { currentProfile, currentProfiles } from "@/lib/profiling/current";
 import { repositoryProfiling } from "@/lib/profiling/versions";
 import { surveyRepository } from "@/lib/surveys/background";
 import { currentRecipe, latestSurvey, requestSurvey } from "@/lib/surveys/records";
-import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildAssessment, buildSource } from "../support/builders";
+import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
+import { buildAssessment, buildRepository } from "../support/builders";
 import { createTestDb } from "../support/db";
 import type { Repo } from "../support/git-fixture";
 import { manifest, sha1 } from "../support/profiles";
@@ -21,23 +21,23 @@ import { seedRun } from "../support/scenarios";
 describe("a repository's current Profile", () => {
   const world = useAcquisitionWorld("current-profile");
   let work: Repo;
-  let web: RepositorySource;
+  let web: Repository;
   beforeEach(() => {
     work = world.fixture.repo("fleet/web");
     work.write("package.json", manifest({ name: "web", version: "1.0.0" })).commit("first");
-    web = registerLocalSource(world.db, world.config, "web", work.path);
+    web = registerLocalRepository(world.db, world.config, "web", work.path);
   });
 
   /** Runs every queued job through the worker's handlers with +config+. */
   const run = (config: FrontendRegistryConfig = world.config) => drainJobs(world.db, jobHandlers(world.db, config));
   /** Surveys web's configured reference in the background, to the end. */
   async function surveyInBackground(): Promise<void> {
-    await surveyRepository(world.db, getSource(world.db, web.publicId), "manual", { config: world.config });
+    await surveyRepository(world.db, getRepository(world.db, web.publicId), "manual", { config: world.config });
     await run();
   }
   /** Launches a Run of an Assessment over web, as it's configured now, and runs it to the end. */
   async function runAssessment(): Promise<void> {
-    const assessment = buildAssessment(world.db, { sources: [getSource(world.db, web.publicId)] });
+    const assessment = buildAssessment(world.db, { repositories: [getRepository(world.db, web.publicId)] });
     launchRun(world.db, assessment.publicId, crypto.randomUUID(), world.config);
     await run();
   }
@@ -57,9 +57,9 @@ describe("a repository's current Profile", () => {
     work.git("checkout", "--quiet", "-b", "feature");
     const feature = work.write("feature.txt", "feature\n").commit("feature");
     work.checkout("main");
-    const named = updateSource(world.db, web.publicId, web.lockVersion, { gitRef: "feature" });
-    launchRun(world.db, buildAssessment(world.db, { sources: [named] }).publicId, crypto.randomUUID(), world.config);
-    updateSource(world.db, web.publicId, named.lockVersion, { gitRef: null });
+    const named = updateRepository(world.db, web.publicId, web.lockVersion, { gitRef: "feature" });
+    launchRun(world.db, buildAssessment(world.db, { repositories: [named] }).publicId, crypto.randomUUID(), world.config);
+    updateRepository(world.db, web.publicId, named.lockVersion, { gitRef: null });
     await run();
     return feature;
   }
@@ -78,7 +78,7 @@ describe("a repository's current Profile", () => {
     // The branch is merged: main now names the commit the Run surveyed.
     work.git("merge", "--quiet", "--ff-only", "feature");
 
-    const result = await surveyRepository(world.db, getSource(world.db, web.publicId), "check", { config: world.config });
+    const result = await surveyRepository(world.db, getRepository(world.db, web.publicId), "check", { config: world.config });
 
     expect(result).toMatchObject({ status: "current", survey: { number: 2, commitSha: feature } });
     expect(currentProfile(world.db, web.id)).toMatchObject({ version: 2, commit: feature });
@@ -107,7 +107,7 @@ describe("a repository's current Profile", () => {
   it("stays the older survey's Profile when the newest survey failed, which the Repository page shows", async () => {
     await surveyInBackground();
     work.write("README.md", "two\n").commit("second");
-    await surveyRepository(world.db, getSource(world.db, web.publicId), "check", { config: world.config });
+    await surveyRepository(world.db, getRepository(world.db, web.publicId), "check", { config: world.config });
     // A worker on another recipe can't reproduce the survey's, so it fails.
     await run(withOverrides(world.config, { analysis: { maxFiles: 7 } }));
 
@@ -134,18 +134,18 @@ function statementsOf<T>(db: Db, read: () => T): { result: T; statements: string
 
 describe("reading current Profiles", () => {
   let db: Db;
-  let orders: RepositorySource;
+  let orders: Repository;
   beforeEach(() => {
     db = createTestDb();
-    orders = buildSource(db, { name: "orders" });
+    orders = buildRepository(db, { name: "orders" });
   });
 
   const profiled = (name: string) => ({ "package.json": manifest({ name, version: "1.0.0" }) });
 
   it("reads several repositories, or every one, in one query", async () => {
-    const billing = buildSource(db, { name: "billing" });
-    const ledger = buildSource(db, { name: "ledger" });
-    await seedRun(db, buildAssessment(db, { sources: [orders, billing, ledger] }), [orders, billing, ledger], [profiled("orders"), profiled("billing"), "failed"]);
+    const billing = buildRepository(db, { name: "billing" });
+    const ledger = buildRepository(db, { name: "ledger" });
+    await seedRun(db, buildAssessment(db, { repositories: [orders, billing, ledger] }), [orders, billing, ledger], [profiled("orders"), profiled("billing"), "failed"]);
 
     const some = statementsOf(db, () => currentProfiles(db, [orders.id, ledger.id]));
     const every = statementsOf(db, () => currentProfiles(db));
@@ -157,8 +157,8 @@ describe("reading current Profiles", () => {
   });
 
   it("reads what the Repository page shows in two queries, however many versions there are", async () => {
-    for (let index = 0; index < 3; index++) await seedRun(db, buildAssessment(db, { sources: [orders] }), [orders], [profiled("orders")]);
-    requestSurvey(db, { repositorySourceId: orders.id, commitSha: sha1("commit:queued"), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", ...currentRecipe(getConfig()) });
+    for (let index = 0; index < 3; index++) await seedRun(db, buildAssessment(db, { repositories: [orders] }), [orders], [profiled("orders")]);
+    requestSurvey(db, { repositoryId: orders.id, commitSha: sha1("commit:queued"), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", ...currentRecipe(getConfig()) });
 
     const { result, statements } = statementsOf(db, () => repositoryProfiling(db, orders.id));
 

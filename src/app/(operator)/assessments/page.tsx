@@ -12,10 +12,10 @@ import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { TagList } from "@/components/ui/tag";
 import { type Run, runNumber, listRuns } from "@/lib/runs/run-records";
-import { listSources } from "@/lib/catalog/source-records";
+import { listRepositories } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
 import { CONCLUSION_FILTERS, conclusionCounts, type ConclusionFilter, conclusionState, type LatestConclusion, latestConclusions } from "@/lib/evaluations/conclusions";
-import { listAssessments, scopeLabel, selectedReleases, selectedSources } from "@/lib/assessments/assessment-records";
+import { listAssessments, scopeLabel, selectedReleases, selectedRepositories } from "@/lib/assessments/assessment-records";
 import { releaseLabel } from "@/lib/standards/standard-records";
 import { assessmentsHref } from "@/lib/web/list-filters";
 import { assessmentListOutcome } from "./outcomes";
@@ -28,7 +28,7 @@ export default async function AssessmentsPage({ searchParams }: PageProps<"/asse
   const query = await searchParams;
   const conclusion = oneOf(query, "conclusion", CONCLUSION_FILTERS) ?? null;
   const db = getDb();
-  const sourceCount = listSources(db).length;
+  const repositoryCount = listRepositories(db).length;
   // Each Assessment's latest completed Evaluation, in one query; Home counts the same conclusions.
   const conclusions = latestConclusions(db);
   const counts = conclusionCounts(conclusions);
@@ -36,7 +36,7 @@ export default async function AssessmentsPage({ searchParams }: PageProps<"/asse
     const latest = listRuns(db, assessment.id)[0];
     return {
       assessment,
-      scope: assessment.selectionMode === "all" ? `${scopeLabel(assessment, 0)} (${sourceCount})` : scopeLabel(assessment, selectedSources(db, assessment.id).length),
+      scope: assessment.selectionMode === "all" ? `${scopeLabel(assessment, 0)} (${repositoryCount})` : scopeLabel(assessment, selectedRepositories(db, assessment.id).length),
       releases: selectedReleases(db, assessment.id).map(({ release, standard }) => releaseLabel(standard, release)),
       latest: latest && { run: latest, number: runNumber(db, latest) },
     };

@@ -7,7 +7,7 @@ import { runPreviewBuild } from "@/lib/previews/build";
 import { runPreparation } from "@/lib/previews/preparation";
 import { BUILD_PREVIEW, PREPARE_PREVIEW } from "@/lib/previews/records";
 import { CHECK_PROFILES, runScheduledProfileCheck } from "@/lib/profiling/check";
-import { findSource } from "@/lib/catalog/source-records";
+import { findRepository } from "@/lib/repositories/repository-records";
 import { type BackgroundTrigger, REQUEST_SURVEY, surveyRepository } from "@/lib/surveys/background";
 import { RUN_SURVEY, runSurvey } from "@/lib/surveys/run";
 import type { KindLimits } from "./queue";
@@ -26,7 +26,7 @@ export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConf
     [RUN_SURVEY]: async (payload, context) => void (await runSurvey(db, String(payload.survey), { config, signal: context.signal })),
     // A deleted Repository isn't surveyed; a reference that can't be read fails the job, which records why.
     [REQUEST_SURVEY]: async (payload, context) => {
-      const repository = findSource(db, String(payload.repository));
+      const repository = findRepository(db, String(payload.repository));
       if (repository) await surveyRepository(db, repository, String(payload.trigger) as BackgroundTrigger, { config, signal: context.signal });
     },
     // Fails the preparation, rather than running it, while previews are off or the Repository isn't enrolled.

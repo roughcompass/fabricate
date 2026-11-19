@@ -3,8 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { deleteSource } from "@/lib/catalog/catalog";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import { deleteRepository } from "@/lib/repositories/registration";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { jobs } from "@/lib/db/schema";
 import { claimNext } from "@/lib/jobs/queue";
@@ -25,7 +25,7 @@ import {
 } from "@/lib/previews/records";
 import { servePreview } from "@/lib/previews/serving";
 import { cacheDirectory, previewDirectory } from "@/lib/previews/storage";
-import { buildSource } from "../support/builders";
+import { buildRepository } from "../support/builders";
 import { rawRun } from "../support/db";
 import { publishFiles, queuedPreview } from "../support/previews";
 import { useAppDb } from "../support/next";
@@ -84,11 +84,11 @@ describe("preview lifecycle", () => {
   const app = useAppDb();
   let storage: string;
   let config: FrontendRegistryConfig;
-  let source: RepositorySource;
+  let repository: Repository;
 
   beforeEach(() => {
     storage = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "preview-lifecycle-")));
-    source = buildSource(app.db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git" });
+    repository = buildRepository(app.db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git" });
     configure({});
   });
 
@@ -98,13 +98,13 @@ describe("preview lifecycle", () => {
   });
 
   function configure(previews: Partial<FrontendRegistryConfig["settings"]["previews"]>): void {
-    config = withOverrides(original, { previews: { enabled: true, trustedSources: [source.canonicalUrl], storage, ...previews } });
+    config = withOverrides(original, { previews: { enabled: true, trustedSources: [repository.canonicalUrl], storage, ...previews } });
     setConfig(config);
   }
 
   /** A Ready preview whose artifact is +bytes+ long, last opened at +opened+ minutes. */
   function ready(bytes: number, opened?: number): PreviewBuild {
-    const preview = publishFiles(app.db, config, queuedPreview(app.db, source), { "index.html": "x".repeat(bytes) });
+    const preview = publishFiles(app.db, config, queuedPreview(app.db, repository), { "index.html": "x".repeat(bytes) });
     rawRun(app.db, "update preview_builds set finished_at = ? where public_id = ?", at(0).getTime(), preview.publicId);
     rawRun(app.db, "update jobs set state = 'succeeded', attempts = 1, finished_at = ? where idempotency_key = ?", Date.now(), `${BUILD_PREVIEW}:${preview.publicId}:1`);
     if (opened !== undefined) markOpened(app.db, preview.publicId, at(opened));
@@ -212,10 +212,10 @@ describe("preview lifecycle", () => {
     });
 
     it("fails one whose job is running under an expired lease with no tries left, or whose job is gone", () => {
-      const expired = queuedPreview(app.db, source);
-      const gone = queuedPreview(app.db, source);
-      const live = queuedPreview(app.db, source);
-      const waiting = queuedPreview(app.db, source);
+      const expired = queuedPreview(app.db, repository);
+      const gone = queuedPreview(app.db, repository);
+      const live = queuedPreview(app.db, repository);
+      const waiting = queuedPreview(app.db, repository);
       rawRun(app.db, "update jobs set state = 'running', attempts = 3, lease_owner = 'w', lease_expires_at = ? where id = ?", Date.now() - 1_000, buildJob(expired).id);
       rawRun(app.db, "update jobs set state = 'running', attempts = 3, lease_owner = 'w', lease_expires_at = ? where id = ?", Date.now() + MINUTE, buildJob(live).id);
       rawRun(app.db, "update jobs set state = 'queued', attempts = 2 where id = ?", buildJob(waiting).id);
@@ -229,9 +229,9 @@ describe("preview lifecycle", () => {
 
     it("fails a preparation whose job ran out of tries, so requesting the commit again prepares it again", () => {
       const pinned = { commitSha: "e".repeat(40), refName: "refs/heads/main", refKind: "branch" } as const;
-      const { preparation } = openPreparation(app.db, source, pinned);
+      const { preparation } = openPreparation(app.db, repository, pinned);
       const job = () => app.db.select().from(jobs).where(eq(jobs.kind, PREPARE_PREVIEW)).all();
-      expect(openPreparation(app.db, source, pinned)).toMatchObject({ started: false, preparation: { state: "profiling" } });
+      expect(openPreparation(app.db, repository, pinned)).toMatchObject({ started: false, preparation: { state: "profiling" } });
 
       rawRun(app.db, "update jobs set state = 'failed', attempts = 3, last_error = 'Error: The worker is stopping' where id = ?", job()[0]!.id);
       expect(settleAbandonedPreparations(app.db)).toEqual([preparation.publicId]);
@@ -239,12 +239,12 @@ describe("preview lifecycle", () => {
         state: "failed",
         failure: "The preparation stopped before it finished: the worker running it stopped or lost the job on each of its 3 tries. Last error: Error: The worker is stopping",
       });
-      expect(openPreparation(app.db, source, pinned)).toMatchObject({ started: true, preparation: { state: "profiling" } });
+      expect(openPreparation(app.db, repository, pinned)).toMatchObject({ started: true, preparation: { state: "profiling" } });
       expect(job()).toHaveLength(2);
     });
 
     it("lets a rebuild start over an abandoned attempt, but leaves one still running", () => {
-      const preview = queuedPreview(app.db, source);
+      const preview = queuedPreview(app.db, repository);
       expect(rebuildPreview(app.db, preview.publicId)).toMatchObject({ attempt: 1, attemptState: "queued" });
       rawRun(app.db, "update jobs set state = 'failed', attempts = 3, last_error = null where id = ?", buildJob(preview).id);
       expect(rebuildPreview(app.db, preview.publicId)).toMatchObject({ attempt: 2, attemptState: "queued" });
@@ -267,11 +267,11 @@ describe("preview lifecycle", () => {
     it("deletes every preview of a deleted Repository, moving its files aside at once", async () => {
       const first = ready(10);
       const second = ready(10);
-      const other = buildSource(app.db, { name: "billing", cloneUrl: "https://git.example.com/acme/billing.git" });
-      configure({ trustedSources: [source.canonicalUrl, other.canonicalUrl] });
+      const other = buildRepository(app.db, { name: "billing", cloneUrl: "https://git.example.com/acme/billing.git" });
+      configure({ trustedSources: [repository.canonicalUrl, other.canonicalUrl] });
       const unrelated = publishFiles(app.db, config, queuedPreview(app.db, other), { "index.html": "billing" });
 
-      deleteSource(app.db, source.publicId, "orders");
+      deleteRepository(app.db, repository.publicId, "orders");
       for (const preview of [first, second]) {
         expect(findPreview(app.db, preview.publicId)).toBeUndefined();
         expect(exists(preview)).toBe(false);

@@ -10,7 +10,7 @@ import {
   graphEdgeCandidates,
   graphEdges,
   graphNodes,
-  repositorySources,
+  repositories,
 } from "@/lib/db/schema";
 import type { RepositoryProfile } from "@/lib/profiles/profile-records";
 import type { RelationshipMap } from "@/lib/relationships/map-records";
@@ -65,7 +65,7 @@ export function projectMap(db: Executor, map: RelationshipMap, document: JsonObj
 function nodeRows(db: Executor, map: RelationshipMap, nodes: readonly JsonObject[]): Omit<NodeRow, MapColumns>[] {
   const targets = new Map(
     db
-      .select({ id: runTargets.id, publicId: runTargets.publicId, repositorySourceId: runTargets.repositorySourceId })
+      .select({ id: runTargets.id, publicId: runTargets.publicId, repositoryId: runTargets.repositoryId })
       .from(runTargets)
       .where(eq(runTargets.runId, map.runId))
       .all()
@@ -76,9 +76,9 @@ function nodeRows(db: Executor, map: RelationshipMap, nodes: readonly JsonObject
     outOfScope.length === 0
       ? []
       : db
-          .select({ id: repositorySources.id, publicId: repositorySources.publicId })
-          .from(repositorySources)
-          .where(inArray(repositorySources.publicId, outOfScope))
+          .select({ id: repositories.id, publicId: repositories.publicId })
+          .from(repositories)
+          .where(inArray(repositories.publicId, outOfScope))
           .all()
           .map((source) => [source.publicId, source.id]),
   );
@@ -94,9 +94,9 @@ function nodeRows(db: Executor, map: RelationshipMap, nodes: readonly JsonObject
       const target = targetId ? targets.get(targetId) : undefined;
       if (!target) throw new Error(`Relationship Map ${map.publicId} names repository target ${targetId ?? "(none)"}, which isn't in its Assessment`);
       row.runTargetId = target.id;
-      row.repositorySourceId = target.repositorySourceId;
+      row.repositoryId = target.repositoryId;
     } else if (kind === "out_of_scope_source") {
-      row.repositorySourceId = sources.get(stringOf(asObject(node.source)?.public_id) ?? "") ?? null;
+      row.repositoryId = sources.get(stringOf(asObject(node.source)?.public_id) ?? "") ?? null;
     }
     rows.push(row);
   }

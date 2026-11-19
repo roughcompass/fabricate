@@ -2,13 +2,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { editSource } from "@/lib/catalog/catalog";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import { editRepository } from "@/lib/repositories/registration";
+import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { contentType, isNavigation, servePreview } from "@/lib/previews/serving";
 import { type PreviewBuild, failAttempt, findPreview, rebuildPreview } from "@/lib/previews/records";
 import { previewDirectory } from "@/lib/previews/storage";
-import { buildSource } from "../support/builders";
+import { buildRepository } from "../support/builders";
 import { rawRun } from "../support/db";
 import { publishFiles, queuedPreview } from "../support/previews";
 import { useAppDb } from "../support/next";
@@ -34,11 +34,11 @@ describe("serving previews", () => {
   const app = useAppDb();
   let storage: string;
   let config: FrontendRegistryConfig;
-  let source: RepositorySource;
+  let repository: Repository;
 
   beforeEach(() => {
     storage = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "preview-serving-")));
-    source = buildSource(app.db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git" });
+    repository = buildRepository(app.db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git" });
     configure({});
   });
 
@@ -48,13 +48,13 @@ describe("serving previews", () => {
   });
 
   function configure(previews: Partial<FrontendRegistryConfig["settings"]["previews"]>): void {
-    config = withOverrides(original, { previews: { enabled: true, trustedSources: [source.canonicalUrl], storage, ...previews } });
+    config = withOverrides(original, { previews: { enabled: true, trustedSources: [repository.canonicalUrl], storage, ...previews } });
     setConfig(config);
   }
 
   /** A Ready standalone preview whose page refers to its assets under its own path. */
   function standalone(files: Record<string, string | Buffer> = STANDALONE, entry = {}): PreviewBuild {
-    const preview = queuedPreview(app.db, source);
+    const preview = queuedPreview(app.db, repository);
     return publishFiles(app.db, config, preview, { "index.html": PAGE.replace("{{id}}", preview.publicId), ...files }, entry);
   }
 
@@ -210,7 +210,7 @@ describe("serving previews", () => {
     });
 
     it("serves a microfrontend's own page at its root and for navigation, like any other application", async () => {
-      const preview = queuedPreview(app.db, source, "module_federation");
+      const preview = queuedPreview(app.db, repository, "module_federation");
       publishFiles(app.db, config, preview, { "index.html": "<!doctype html><title>admin</title>", "remoteEntry.js": "var mfAdmin;\n" });
 
       expect(await (await get(base(preview), page)).text()).toContain("<title>admin</title>");
@@ -288,7 +288,7 @@ describe("serving previews", () => {
     });
 
     it("answers 404 for an unknown or malformed preview, and for one with nothing published yet", async () => {
-      const queued = queuedPreview(app.db, source);
+      const queued = queuedPreview(app.db, repository);
       for (const id of ["pvw_0000000000000000", "src_0000000000000000", "pvw_x", "..", queued.publicId]) expect((await get(`/previews/${id}/`, page)).status, id).toBe(404);
     });
 
@@ -310,7 +310,7 @@ describe("serving previews", () => {
 
       configure({});
       expect((await get(`${base(preview)}assets/app.js`)).status).toBe(200);
-      editSource(app.db, source.publicId, source.lockVersion, { name: "orders", cloneUrl: "https://git.example.com/acme/orders-fork.git", gitRef: "" });
+      editRepository(app.db, repository.publicId, repository.lockVersion, { name: "orders", cloneUrl: "https://git.example.com/acme/orders-fork.git", gitRef: "" });
       expect((await get(`${base(preview)}assets/app.js`)).status).toBe(404);
     });
 
@@ -320,7 +320,7 @@ describe("serving previews", () => {
       rawRun(app.db, "update preview_builds set deleted_at = ? where public_id = ?", Date.now(), deleted.publicId);
       expect((await get(base(deleted), page)).status).toBe(404);
       expect((await get(base(other), page)).status).toBe(200);
-      rawRun(app.db, "update repository_sources set deleted_at = ? where id = ?", Date.now(), source.id);
+      rawRun(app.db, "update repository_sources set deleted_at = ? where id = ?", Date.now(), repository.id);
       expect((await get(base(other), page)).status).toBe(404);
     });
   });

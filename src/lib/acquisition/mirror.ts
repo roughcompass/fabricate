@@ -44,8 +44,8 @@ function fallbackRefs(key: string): string {
   return `refs/fabricate/fallback/${key}`;
 }
 
-export function mirrorPath(storage: string, sourcePublicId: string): string {
-  return path.join(storage, `${sourcePublicId}.git`);
+export function mirrorPath(storage: string, repositoryPublicId: string): string {
+  return path.join(storage, `${repositoryPublicId}.git`);
 }
 
 export class Mirror {
@@ -53,9 +53,9 @@ export class Mirror {
 
   constructor(
     readonly runner: GitRunner,
-    readonly sourcePublicId: string,
+    readonly repositoryPublicId: string,
   ) {
-    this.gitDir = mirrorPath(runner.storage, sourcePublicId);
+    this.gitDir = mirrorPath(runner.storage, repositoryPublicId);
   }
 
   /** Creates the bare object database on first use. */
