@@ -8,11 +8,12 @@ import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } 
 import { paths } from "./support/paths";
 import { pageHeader } from "./support/shell";
 
-/** One repository with 64 third-party dependencies: more relationships than one page holds. */
+/** One repository that calls 64 services, more relationships than one page holds, and depends on 3 third-party packages, which aren't rows. */
 async function seedWide(db: Db) {
   const repository = buildRepository(db, { name: "wide-app" });
-  const dependencies = Object.fromEntries(Array.from({ length: 64 }, (_, index) => [`lib-${String(index).padStart(2, "0")}`, "^1.0.0"]));
-  return seedRun(db, buildAssessment(db, { repositories: [repository] }), [repository], [{ "package.json": manifest({ name: "wide-app", version: "1.0.0", dependencies }) }]);
+  const dependencies = Object.fromEntries(Array.from({ length: 3 }, (_, index) => [`lib-${String(index).padStart(2, "0")}`, "^1.0.0"]));
+  const calls = Array.from({ length: 64 }, (_, index) => `export const call${index} = () => fetch("https://service-${String(index).padStart(2, "0")}.invalid/v1/items");`).join("\n");
+  return seedRun(db, buildAssessment(db, { repositories: [repository] }), [repository], [{ "package.json": manifest({ name: "wide-app", version: "1.0.0", dependencies }), "src/services.ts": `${calls}\n` }]);
 }
 
 /** The node ID of the repository named +label+, which is also the ID of the runtime system it names. */
@@ -103,7 +104,7 @@ test("leads a focus with what a change affects, keeps it in the address, and ope
   await row.locator("summary").focus();
   await page.keyboard.press("Enter");
   await expect(row.getByText("package.exact-name")).toBeVisible();
-  await expect(row.getByRole("link", { name: /^package\.json / }).first()).toBeVisible();
+  await expect(row.getByRole("link", { name: /^\S+ package\.json / }).first()).toBeVisible();
 });
 
 test("lists a runtime contract among both a repository's dependents and its dependencies (Runtime contract both ways)", async ({ page, db }) => {
@@ -153,13 +154,27 @@ test("pages the relationships of a runtime system, and of a focus (Paged relatio
   await expect(focus(page)).toBeVisible();
 });
 
+// page-patterns spec, finding 25: third-party packages are a count with a disclosure, not a row each.
+test("groups the third-party packages a level depends on into a count with a disclosure that lists them", async ({ page, db }) => {
+  const run = await seedWide(db);
+  await page.goto(systemPath(db, run.publicId, "wide-app"));
+  await expect(relationshipRow(page, "lib-0")).toHaveCount(0);
+  const thirdParty = page.getByRole("region", { name: "Relationships" }).locator("details").filter({ hasText: "third-party package" });
+  await expect(thirdParty.locator("summary")).toHaveText("And 3 third-party packages, which no repository in this Run produces");
+  await thirdParty.locator("summary").click();
+  const packages = thirdParty.getByRole("list", { name: "Third-party packages" }).getByRole("listitem");
+  await expect(packages).toHaveText(["lib-00 declared by 1 repository", "lib-01 declared by 1 repository", "lib-02 declared by 1 repository"]);
+});
+
 test("reviews every resolution state and the coverage gap", async ({ page, db }) => {
   const { run } = await seedMapStates(db);
   await page.goto(paths.runMap(run.publicId));
   const coverage = page.locator("#page-alerts");
   await expect(coverage).toContainText("1 repository did not contribute");
   await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).toContainText("Failed");
-  await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).toContainText("source_unavailable");
+  // The failure in words; its code stays out of the alert (content standard, "Two layers").
+  await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).toContainText("The repository couldn't be reached.");
+  await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).not.toContainText("source_unavailable");
 
   const resolved = relationshipRow(page, "depends on").filter({ has: page.getByRole("link", { name: "client", exact: true }) });
   await expect(resolved).toContainText("Package dependency, observed in source");
@@ -170,9 +185,17 @@ test("reviews every resolution state and the coverage gap", async ({ page, db })
   await expect(ambiguous.getByRole("list", { name: "Candidates" }).getByRole("listitem")).toHaveText(["ui-a", "ui-b"]);
   await expect(ambiguous).toContainText("2 repositories in this Run declare a package named @acme/ui");
 
+  // A third-party package is counted under the table, not a row; its focus shows why it's unresolved.
+  await expect(relationshipRow(page, "left-pad")).toHaveCount(0);
+  const thirdParty = page.getByRole("region", { name: "Relationships" }).locator("details").filter({ hasText: "third-party package" });
+  await thirdParty.locator("summary").click();
+  await expect(thirdParty).toContainText("A repository that was not assessed might produce some of them.");
+  await thirdParty.getByRole("list", { name: "Third-party packages" }).getByRole("link", { name: "left-pad" }).click();
+  await expect(page).toHaveURL(/focus=package%3Aleft-pad|focus=package:left-pad/);
   await expect(relationshipRow(page, "left-pad")).toContainText("Unresolved");
   await expect(relationshipRow(page, "left-pad")).toContainText("No repository in this Run produces left-pad");
   await expect(relationshipRow(page, "left-pad")).toContainText("A repository that was not assessed might resolve it.");
+  await page.goto(paths.runMap(run.publicId));
 
   await expect(relationshipRow(page, "legacy-ui")).toContainText("Out of scope");
   await expect(relationshipRow(page, "legacy-ui")).toContainText("it was not analyzed");
@@ -184,7 +207,7 @@ test("reviews every resolution state and the coverage gap", async ({ page, db })
 test("navigates from a relationship to its evidence with the keyboard", async ({ page, db }) => {
   const { run } = await seedMapStates(db);
   await page.goto(paths.runMap(run.publicId));
-  const evidence = relationshipRow(page, "legacy-ui").getByRole("link", { name: /^package\.json / });
+  const evidence = relationshipRow(page, "legacy-ui").getByRole("link", { name: /^\S+ package\.json / });
   await evidence.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { level: 1, name: /^package\.json \/dependencies\/legacy-ui$/ })).toBeVisible();

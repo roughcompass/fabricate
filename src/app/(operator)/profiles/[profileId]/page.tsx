@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DetailsTemplate } from "@/components/templates/details-template";
 import { notFound } from "next/navigation";
-import { PROFILE_DESCRIPTION, ProfileBody, ProfileTabs } from "@/components/profiles/profile-body";
+import { ProfileBody, ProfileTabs } from "@/components/profiles/profile-body";
 import { Alert } from "@/components/ui/alert";
 import { cache } from "react";
 import { repositoryById } from "@/lib/repositories/repository-records";
@@ -24,7 +24,8 @@ const load = cache((publicId: string) => {
 
 export async function generateMetadata({ params }: PageProps<"/profiles/[profileId]">): Promise<Metadata> {
   const found = load((await params).profileId);
-  return { title: found ? `Version ${found.version.version} · ${found.repository.name}` : "Profile not found" };
+  // The page is titled with its repository; the version follows, so the browser title begins with the page's.
+  return { title: found ? `${found.repository.name} · Version ${found.version.version}` : "Profile not found" };
 }
 
 /**
@@ -44,7 +45,6 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
         header={{
           breadcrumbs: [{ href: routes.repositories, label: "Repositories" }],
           title: found.repository.name,
-          description: PROFILE_DESCRIPTION,
           tabs: <ProfileTabs profile={found.profile} query={query} base={routes.profile(found.profile.publicId)} />,
         }}
         alerts={

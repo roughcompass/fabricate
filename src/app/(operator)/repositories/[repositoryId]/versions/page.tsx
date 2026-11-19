@@ -13,6 +13,7 @@ import { ShortValue, Tag } from "@/components/ui/tag";
 import { getDb } from "@/lib/db/client";
 import { TRIGGER_LABELS, versionCount, versionsOf } from "@/lib/profiling/versions";
 import { ReprofileForm, VersionStatus } from "../version-parts";
+import { FailureReason } from "@/components/results/failure-reason";
 import { routes } from "@/lib/web/routes";
 import { loadRepository } from "../load";
 
@@ -20,7 +21,7 @@ const PAGE_SIZE = 25;
 
 export async function generateMetadata({ params }: PageProps<"/repositories/[repositoryId]/versions">): Promise<Metadata> {
   const repository = loadRepository((await params).repositoryId);
-  return { title: repository ? `Versions · ${repository.name}` : "Repository not found" };
+  return { title: repository ? `Versions of ${repository.name}` : "Repository not found" };
 }
 
 /** Every version of a Repository, its surveys, newest first: why it was queued, its state, and what it profiled (docs/profiling.md). */
@@ -40,8 +41,8 @@ export default async function VersionsPage({ params, searchParams }: PageProps<"
           { href: "/repositories", label: "Repositories" },
           { href: routes.repository(repository.publicId), label: repository.name },
         ],
-        title: "Versions",
-        description: `${countLabel(total, "version")} of ${repository.name}, one survey each of a commit with a Surveyor release and configuration. A version runs when the repository is added, edited, or re-profiled, when its reference has a new commit, when Surveyor is upgraded, and when a Run or a preview needs a commit no version has surveyed.`,
+        title: `Versions of ${repository.name}`,
+        description: `${countLabel(total, "version")}, each one survey of a commit, made when the repository is added, edited, or re-profiled, when its reference changes, when Surveyor is upgraded, or when a Run or preview needs a commit.`,
         primaryAction: <ReprofileForm repository={repository} />,
       }}
     >
@@ -69,7 +70,7 @@ export default async function VersionsPage({ params, searchParams }: PageProps<"
                 </Td>
                 <Td label="Status">
                   <VersionStatus version={version} size="sm" />
-                  {version.failure && <Secondary>{version.failure.message}</Secondary>}
+                  {version.failure && <FailureReason code={version.failure.code} message={version.failure.message} />}
                 </Td>
                 <Td label="Commit">
                   <ShortValue value={version.commit} label="commit" />

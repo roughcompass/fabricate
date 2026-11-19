@@ -6,6 +6,8 @@ export interface StatItem {
   value: React.ReactNode;
   /** A short line under the value, such as a status or a comparison. */
   hint?: React.ReactNode;
+  /** The value is a status, such as Complete or Partial: set at the body size with its indicator, never at the figures' size. */
+  status?: boolean;
   href?: string;
 }
 
@@ -16,7 +18,16 @@ export function StatGroup({ stats, label }: { stats: readonly StatItem[]; label?
       {stats.map((stat) => (
         <div key={stat.label} className={styles.stat} data-key-figure="">
           <dt className={styles.label}>{stat.label}</dt>
-          <dd className={styles.value}>{stat.href ? <Link href={stat.href}>{stat.value}</Link> : stat.value}</dd>
+          <dd className={stat.status ? styles.statusValue : styles.value}>
+            {stat.href ? (
+              // A figure's link names what it opens: its label and its value, never the number alone.
+              <Link href={stat.href} aria-label={typeof stat.value === "string" || typeof stat.value === "number" ? `${stat.label}: ${stat.value}` : undefined}>
+                {stat.value}
+              </Link>
+            ) : (
+              stat.value
+            )}
+          </dd>
           {stat.hint && <dd className={styles.hint}>{stat.hint}</dd>}
         </div>
       ))}

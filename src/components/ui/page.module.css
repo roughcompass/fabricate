@@ -30,9 +30,15 @@
   }
   .status { display: inline-flex; align-items: center; color: var(--color-text); }
 
-  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  /*
+   * A wrapped line never begins with a separator: each fact's separator sits
+   * before it, and the row reaches one separator and its gap past the
+   * header's start edge, where they're clipped, so the first fact on every
+   * line loses its own. The clip leaves room above and below for tooltips.
+   */
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); margin-inline-start: calc(-1 * var(--space-4)); clip-path: inset(-100vh 0 -100vh var(--space-4)); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
   .metaItem { display: inline-flex; align-items: center; gap: var(--space-2); }
-  .metaItem + .metaItem::before { content: "·"; color: var(--color-text-tertiary); }
+  .metaItem::before { content: "·"; flex: none; width: var(--space-2); color: var(--color-text-tertiary); text-align: center; }
   .description { max-width: var(--size-prose); color: var(--color-text-secondary); }
   /* The view tabs close the header; their own rule marks its end. */
   .tabs { margin-top: var(--space-2); }

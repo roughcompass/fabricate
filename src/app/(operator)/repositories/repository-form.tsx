@@ -13,8 +13,10 @@ interface RepositoryFormProps {
   initial: RepositoryFormState;
   lockVersion?: number;
   submitLabel: string;
-  /** "plain" for a settings page: the fields on the page, with the action under them and no Cancel. */
+  /** "plain" for a settings page: the fields on the page, with Cancel and the action under them. */
   layout?: "panel" | "plain";
+  /** Where Cancel goes: the Repositories list, or on a settings page the Repository. */
+  cancelHref?: string;
 }
 
 /**
@@ -23,16 +25,16 @@ interface RepositoryFormProps {
  * until someone types one of their own. Clearing it follows the URL again; a blank name is saved as
  * the URL's, so the form works the same without JavaScript.
  */
-export function RepositoryForm({ action, initial, lockVersion, submitLabel, layout = "panel" }: RepositoryFormProps) {
+export function RepositoryForm({ action, initial, lockVersion, submitLabel, layout = "panel", cancelHref = "/repositories" }: RepositoryFormProps) {
   return (
     <ActionForm action={action} initial={initial} alertId="source-form-alert" hidden={{ lockVersion }}>
-      {(state) => <RepositoryFields state={state} submitLabel={submitLabel} layout={layout} />}
+      {(state) => <RepositoryFields state={state} submitLabel={submitLabel} layout={layout} cancelHref={cancelHref} />}
     </ActionForm>
   );
 }
 
 /** The form's fields and its action, from the state of its latest submission. */
-function RepositoryFields({ state, submitLabel, layout }: { state: RepositoryFormState; submitLabel: string; layout: "panel" | "plain" }) {
+function RepositoryFields({ state, submitLabel, layout, cancelHref }: { state: RepositoryFormState; submitLabel: string; layout: "panel" | "plain"; cancelHref: string }) {
   const [name, setName] = useState(state.values.name);
   const [typed, setTyped] = useState(state.values.name.trim() !== "");
   // A rejected submission renders the values it carried.
@@ -54,7 +56,7 @@ function RepositoryFields({ state, submitLabel, layout }: { state: RepositoryFor
         inputMode="url"
         defaultValue={state.values.cloneUrl}
         errors={state.errors.cloneUrl}
-        description="file://, https://, or ssh:// only. Leave credentials out; the worker's SSH agent or Git credential helper supplies them."
+        description="file://, https://, or ssh:// only; leave credentials out, since the server's SSH agent or Git credential helper supplies them."
         required
         onChange={(event) => {
           if (!typed) setName(repositoryNameFromUrl(event.target.value));
@@ -89,15 +91,16 @@ function RepositoryFields({ state, submitLabel, layout }: { state: RepositoryFor
   return layout === "plain" ? (
     <div className={formStyles.form}>
       {fields}
-      <div>
+      <FormFooter>
+        <ButtonLink href={cancelHref}>Cancel</ButtonLink>
         <SubmitButton pendingLabel="Saving">{submitLabel}</SubmitButton>
-      </div>
+      </FormFooter>
     </div>
   ) : (
     <Panel
       footer={
         <FormFooter>
-          <ButtonLink href="/repositories">Cancel</ButtonLink>
+          <ButtonLink href={cancelHref}>Cancel</ButtonLink>
           <SubmitButton pendingLabel="Saving">{submitLabel}</SubmitButton>
         </FormFooter>
       }

@@ -1,6 +1,6 @@
 import { Page, PageHeader, type TemplateHeader } from "@/components/ui/page";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyZone, HeaderSkeleton, type SpecimenOption, TableSkeleton, type TemplateEmpty, Zone, specimenHeader } from "./parts";
+import { EmptyZone, headerWhileEmpty, HeaderSkeleton, type SpecimenOption, TableSkeleton, type TemplateEmpty, Zone, specimenHeader } from "./parts";
 import styles from "./templates.module.css";
 
 interface IndexProps extends SpecimenOption {
@@ -36,7 +36,7 @@ export function IndexTemplate({ header, alerts, tabs, filters, rail, empty, chil
   );
   return (
     <Page>
-      <PageHeader template="index" {...header} alerts={alerts} {...specimenHeader(specimen)} />
+      <PageHeader template="index" {...headerWhileEmpty(header, empty)} alerts={alerts} {...specimenHeader(specimen)} />
       {tabs && <Zone name="tabs">{tabs}</Zone>}
       {filters && <Zone name="filters">{filters}</Zone>}
       {rail ? (

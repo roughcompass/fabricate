@@ -11,15 +11,19 @@ import { getDb } from "@/lib/db/client";
 import { draftDocument, draftOf, listStandards, releasesOf } from "@/lib/standards/standard-records";
 import { validateStandard } from "@/lib/standards/validate";
 import { routes } from "@/lib/web/routes";
+import { pageOf, pageQuery, param, withQuery } from "@/lib/web/query";
+import { Pagination } from "@/components/ui/pagination";
 
 export const metadata: Metadata = { title: "Standards" };
 
-export default function StandardsPage() {
+export default async function StandardsPage({ searchParams }: PageProps<"/standards">) {
+  const query = await searchParams;
   const db = getDb();
-  const rows = listStandards(db).map((standard) => {
+  const all = listStandards(db).map((standard) => {
     const draft = draftOf(db, standard.id);
     return { standard, draft, problems: draft ? validateStandard(draftDocument(draft), { metadata: standard }).length : 0, releases: releasesOf(db, standard.id) };
   });
+  const { rows, page, pages } = pageOf(all, param(query, "page"));
   const create = (
     <ButtonLink href="/standards/new" variant="primary" icon="plus">
       New Standard
@@ -28,8 +32,9 @@ export default function StandardsPage() {
 
   return (
     <IndexTemplate
-      header={{ title: "Standards", description: "Desired engineering state, written as Controls that Evaluations check. Drafts are editable; publishing a draft creates a Release.", primaryAction: create }}
-      empty={rows.length ? undefined : { title: "No Standards yet", icon: "file", action: create, children: "A Standard describes the desired state that Evaluations compare Assessments with." }}
+      header={{ title: "Standards", description: "Desired engineering state, written as Controls that Evaluations check; publishing a draft creates a Release.", primaryAction: create }}
+      pagination={<Pagination label="Standards pages" page={page} pages={pages} href={(number) => withQuery(routes.standards, { page: pageQuery(number) })} />}
+      empty={all.length ? undefined : { title: "No Standards yet", icon: "file", action: create, children: "A Standard describes the desired state that Evaluations compare Assessments with." }}
     >
       <Panel flush>
 

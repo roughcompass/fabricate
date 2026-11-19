@@ -157,15 +157,28 @@ export function nodesOf(db: Executor, view: MapView, nodes: readonly string[]): 
   return result;
 }
 
-/** Evidence records for +ids+, shaped as the evidence list reads them, from the evidence index. */
+/**
+ * Evidence records for +ids+, shaped as the evidence list reads them, from the
+ * evidence index, each with the repository it's in, since several of a
+ * Run's repositories can cite the same file location.
+ */
 export function evidenceRecords(db: Executor, runId: number, ids: readonly string[]): JsonObject {
   const records: Record<string, JsonObject> = {};
+  const repositoryOf = new Map(
+    db
+      .select({ profileId: repositoryProfiles.id, name: runTargets.repositoryName })
+      .from(runTargets)
+      .innerJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, runTargets.surveyId))
+      .where(eq(runTargets.runId, runId))
+      .all()
+      .map((row) => [row.profileId, row.name]),
+  );
   for (const chunk of chunked([...new Set(ids)])) {
     for (const row of db.select().from(evidenceIndex).where(and(inArray(evidenceIndex.profileId, runProfileIds(db, runId)), inArray(evidenceIndex.evidenceId, chunk))).all()) {
       if (records[row.evidenceId]) continue;
       const location: JsonObject =
         row.locationKind === "lines" ? { kind: "lines", start: row.lineStart!, end: row.lineEnd! } : row.locationKind === "pointer" ? { kind: "pointer", format: row.pointerFormat, pointer: row.pointer! } : { kind: "entry" };
-      records[row.evidenceId] = { path: row.path, location, detector: row.detector, rule: row.rule };
+      records[row.evidenceId] = { path: row.path, location, detector: row.detector, rule: row.rule, ...(repositoryOf.has(row.profileId) && { repository: repositoryOf.get(row.profileId)! }) };
     }
   }
   return records as JsonObject;

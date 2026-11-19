@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { countLabel } from "@/components/ui/count";
 import { DescriptionList } from "@/components/ui/description-list";
+import { Disclosure } from "@/components/ui/disclosure";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
 import { Panel } from "@/components/ui/panel";
@@ -23,7 +24,9 @@ import { loadStandard } from "../load";
 
 export async function generateMetadata({ params }: PageProps<"/standards/[standardId]/publish">): Promise<Metadata> {
   const standard = loadStandard((await params).standardId);
-  return { title: standard ? `Publish ${standard.name}` : "Standard not found" };
+  if (!standard) return { title: "Standard not found" };
+  // The browser title begins with the page's, which names the Release it publishes.
+  return { title: `Publish ${standard.name} v${(releasesOf(getDb(), standard.id)[0]?.version ?? 0) + 1}` };
 }
 
 export default async function PublishPage({ params, searchParams }: PageProps<"/standards/[standardId]/publish">) {
@@ -104,7 +107,6 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
             ["Purpose", standard.purpose],
             ["Controls", preview.controls],
             ["Reads", `Repository Profile ${versions(schemas?.repository_profile)} · Relationship Map ${versions(schemas?.relationship_map)}`],
-            ["Content digest", <Tag key="digest" copy label="digest">{preview.digest}</Tag>],
           ]}
         />
       </Section>
@@ -114,6 +116,11 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
           <ControlList controls={document.controls ?? []} />
         </Panel>
       </Section>
+
+      {/* The digest identifies the content exactly; it belongs with the details, not the overview (page-patterns spec, "Digests out of the overview"). */}
+      <Disclosure summary="Details" variant="plain">
+        <DescriptionList surface items={[["Content digest", <Tag key="digest" copy label="digest">{preview.digest}</Tag>]]} />
+      </Disclosure>
     </FormTemplate>
   );
 }

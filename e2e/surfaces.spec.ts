@@ -1,5 +1,7 @@
 import type { Locator } from "@playwright/test";
 import { addBitbucketToken } from "../src/lib/admin/bitbucket-tokens";
+import { storeEntry } from "../src/lib/catalog/entries";
+import { saltEntry } from "../test/support/catalog";
 import { buildRepository } from "../test/support/builders";
 import { expect, expectNoNestedBorders, test } from "./support/fixtures";
 import { seedResults } from "./support/results";
@@ -70,6 +72,7 @@ test("No nested bordered containers on any surface", async ({ page, db, sourcesD
 async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sourcesDir: string): Promise<Surface[]> {
   const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...demoSurfaces()];
   addBitbucketToken(db, { name: "Platform team", serverUrl: "https://bitbucket.example.com", token: "BBDC-surface-token-0000" });
+  storeEntry(db, saltEntry());
   const url = (name: string) => surfaces.find(([candidate]) => candidate === name)![1];
   const profile = url("06-profile");
   const evidenceId = url("06-evidence").split("/").at(-1)!;
@@ -77,6 +80,13 @@ async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sources
     ...surfaces,
     ["10-repository-version", `${url("03-repository")}/versions/1`],
     ["10-profile-evidence", `${profile}/evidence/${evidenceId}`],
+    ["10-system", "/admin/system"],
+    ["10-adoption", "/adoption"],
+    ["10-adoption-salt", "/adoption/design-systems/salt"],
+    ["10-adoption-salt-html", "/adoption/design-systems/salt?view=html"],
+    ["10-adoption-salt-snapshots", "/adoption/design-systems/salt?view=snapshots"],
+    ["10-adoption-button", "/adoption/design-systems/salt/components/Button"],
+    ["10-adoption-package", "/adoption/packages/@salt-ds/core"],
     ["10-bitbucket-tokens", "/admin/bitbucket-tokens"],
     ["10-bitbucket-token-new", "/admin/bitbucket-tokens/new"],
     ["10-unknown-address", "/no-such-page"],
@@ -99,6 +109,36 @@ test("every operator page has exactly one h1, in its page header, and none in th
       else await expect(pageHeader(page).locator("h1"), name).toHaveCount(1);
     });
   }
+});
+
+// page-patterns spec, the shell header requirement and finding 26: one banner, one main, and no landmark per item.
+test("Landmarks on every page: one banner outside one main, and no region for an item of a list or table", async ({ page, db, sourcesDir }) => {
+  test.setTimeout(300_000);
+  const pages = await everyPage(db, sourcesDir);
+  const profile = pages.find(([name]) => name === "06-profile")![1];
+  const problems: string[] = [];
+  const views = ["composition", "dependencies", "design-system", "services", "tooling", "diagnostics"].map((tab) => [`10-profile-${tab}`, `${profile}?tab=${tab}`] as const);
+  for (const [name, url] of [...pages, ...views]) {
+    await page.goto(url);
+    const found = await page.evaluate(() => {
+      const named = (element: Element) => element.hasAttribute("aria-label") || element.hasAttribute("aria-labelledby");
+      const regions = [...document.querySelectorAll("section, [role=region]")].filter((element) => element.matches("[role=region]") || named(element));
+      return {
+        banners: document.querySelectorAll("header[data-shell-header], [role=banner]").length,
+        mains: document.querySelectorAll("main, [role=main]").length,
+        bannerInMain: Boolean(document.querySelector("main [data-shell-header]")),
+        perItem: regions.filter((region) => region.closest("li, tr, [role=listitem], [role=row]")).map((region) => region.getAttribute("aria-label") ?? region.id),
+        regions: regions.length,
+      };
+    });
+    if (found.banners !== 1) problems.push(`${name}: ${found.banners} banners`);
+    if (found.mains !== 1) problems.push(`${name}: ${found.mains} main landmarks`);
+    if (found.bannerInMain) problems.push(`${name}: the banner is inside the main landmark`);
+    for (const region of found.perItem) problems.push(`${name}: a region for an item, ${region}`);
+    // A page's regions are its sections; a dozen or more means its items became landmarks. The gallery's specimens are examples.
+    if (found.regions > 12 && name !== "09-design-system") problems.push(`${name}: ${found.regions} regions`);
+  }
+  expect(problems).toEqual([]);
 });
 
 test("Limits on every page: one primary action, three secondary actions, four meta facts, seven tabs, and five key figures", async ({ page, db, sourcesDir }) => {

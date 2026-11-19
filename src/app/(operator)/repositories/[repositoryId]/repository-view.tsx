@@ -2,7 +2,7 @@ import Link from "next/link";
 import { isProfileTab } from "@/lib/profiles/tabs";
 import { DetailsTemplate } from "@/components/templates/details-template";
 import { ProgressPoller } from "@/components/progress-poller";
-import { PROFILE_DESCRIPTION, ProfileBody, ProfileTabs, profilePin } from "@/components/profiles/profile-body";
+import { ProfileBody, ProfileTabs, profilePin } from "@/components/profiles/profile-body";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
@@ -20,7 +20,10 @@ import { repositoryRelationships } from "@/lib/profiles/relationships";
 import { surveyRequestFailure } from "@/lib/surveys/background";
 import { PREVIEW_OUTCOME_PARAMS, previewOutcome, repositoryOutcome } from "../outcomes";
 import { PreviewsSection } from "./previews-section";
-import { ReprofileForm, VersionStatus } from "./version-parts";
+import { VersionStatus } from "./version-parts";
+import { failureSentence } from "@/lib/runs/failures";
+import { Menu, MenuAction } from "@/components/ui/menu";
+import { reprofileRepository } from "../actions";
 import styles from "@/components/profiles/profile-body.module.css";
 import { routes } from "@/lib/web/routes";
 import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
@@ -74,7 +77,7 @@ export function RepositoryView({
   return (
     <DetailsTemplate
       header={{
-        breadcrumbs: explicit ? [{ href: "/repositories", label: "Repositories" }, { href: routes.repository(repository.publicId), label: repository.name }, { href: routes.repositoryVersions(repository.publicId), label: "Versions" }] : [{ href: "/repositories", label: "Repositories" }],
+        breadcrumbs: explicit ? [{ href: "/repositories", label: "Repositories" }, { href: routes.repository(repository.publicId), label: repository.name }, { href: routes.repositoryVersions(repository.publicId), label: `Versions of ${repository.name}` }] : [{ href: "/repositories", label: "Repositories" }],
         title: explicit && !address ? `Version ${version.version}` : repository.name,
         status: stated && <VersionStatus version={stated} />,
         meta: [
@@ -95,8 +98,14 @@ export function RepositoryView({
               ]
             : []),
         ],
-        description: pin ? PROFILE_DESCRIPTION : undefined,
-        primaryAction: <ReprofileForm repository={repository} />,
+        // A Repository's page presents a record, so it has no primary action; Re-profile, maintenance, is in More actions.
+        extraActions: (
+          <Menu label="More actions" variant="secondary" size="md">
+            <MenuAction action={reprofileRepository} fields={{ publicId: repository.publicId }} icon="refresh">
+              Re-profile
+            </MenuAction>
+          </Menu>
+        ),
         secondaryActions: [
           { href: routes.repositoryVersions(repository.publicId), label: `Versions (${count})`, icon: "history" },
           ...(mapHref ? [{ href: mapHref, label: "Relationship Map", icon: "network" as const }] : []),
@@ -123,7 +132,7 @@ export function RepositoryView({
                 </Link>
               }
             >
-              {failed.failure?.message ?? "Its survey failed."}
+              {failureSentence(failed.failure?.code ?? "analysis_failed", failed.failure?.message)}
             </Alert>
           )}
           {unreadable && (
@@ -153,7 +162,7 @@ export function RepositoryView({
       {!explicit && overview && <PreviewsSection repository={repository} query={query} />}
 
       {profile ? (
-        <ProfileBody profile={profile} query={query} base={base} />
+        <ProfileBody profile={profile} query={query} base={base} jsonHref={explicit ? undefined : routes.repositoryProfileJson(repository.publicId)} />
       ) : (
         <Panel>
           <NoProfile version={version} latest={latest} />
@@ -175,7 +184,7 @@ function NoProfile({ version, latest }: { version: ProfileVersion | undefined; l
   if (version) {
     return (
       <EmptyState title={`Version ${version.version} couldn't be profiled`} icon="alert">
-        {version.failure ? `${humanize(version.failure.code)}: ${version.failure.message}` : "Its survey failed."}
+        {version.failure ? failureSentence(version.failure.code, version.failure.message) : "Its survey failed."}
       </EmptyState>
     );
   }

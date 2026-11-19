@@ -8,6 +8,11 @@ import { skeletonFor } from "@/components/shell/skeleton-routes";
 describe("navigation skeletons", () => {
   it.each([
     ["/", "dashboard"],
+    ["/admin/system", "dashboard"],
+    ["/adoption", "dashboard"],
+    ["/adoption/design-systems/salt", "analysis"],
+    ["/adoption/design-systems/salt/components/Button", "details-tabs"],
+    ["/adoption/packages/@salt-ds/core", "analysis"],
     ["/assessments", "index-tabs"],
     ["/repositories", "repositories"],
     ["/repositories/bulk", "form"],
@@ -60,7 +65,7 @@ describe("navigation skeletons", () => {
 
   it("has a not-found page for each section", () => {
     expect(fs.existsSync(path.resolve("src/app/not-found.tsx")), "root").toBe(true);
-    for (const section of ["assessments", "runs", "evaluations", "profiles", "repositories", "standards", "templates"]) {
+    for (const section of ["adoption", "assessments", "runs", "evaluations", "profiles", "repositories", "standards", "templates"]) {
       expect(fs.existsSync(path.resolve("src/app/(operator)", section, "not-found.tsx")), section).toBe(true);
     }
   });

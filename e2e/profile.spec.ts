@@ -20,7 +20,7 @@ const category = (page: Page, id: string) => page.locator(`#${id}`);
 const open = (page: Page, publicId: string, tab?: string) => page.goto(`/profiles/${publicId}${tab ? `?tab=${tab}` : ""}`);
 const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** A Service Dependency's panel, by the start of its summary: its endpoint. */
-const service = (page: Page, endpoint: string) => page.locator("#services").getByRole("region", { name: new RegExp(`^${escaped(endpoint)}`) });
+const service = (page: Page, endpoint: string) => page.getByRole("list", { name: "Service Dependencies" }).getByRole("listitem", { name: new RegExp(`^${escaped(endpoint)}`) });
 /** Opens a Service Dependency's panel. */
 const expand = async (region: Locator) => {
   await region.locator("summary").click();
@@ -55,8 +55,9 @@ test("leads with an overview that answers each question, then what needs attenti
   const views = page.getByRole("navigation", { name: "Profile views" });
   await expect(views.getByRole("link")).toHaveText(["Overview", "Composition", "Dependencies6", "Design system", "Services2", "Tooling", /^Diagnostics\d+$/]);
   await expect(views.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
-  expect((await page.locator("main").getByRole("heading", { level: 2 }).allTextContents())[0]).toBe("Overview");
-  expect(await page.locator("main").getByRole("heading", { level: 3 }).allTextContents()).toEqual(["Needs attention", "What it is", "How it fits into the web runtime", "What it depends on", "Design system", "How it's built and tested"]);
+  // The Overview tab names the view, so no heading repeats it; each panel is a section heading under the title.
+  await expect(page.locator("main").getByRole("heading", { name: "Overview", exact: true })).toHaveCount(0);
+  expect(await page.locator("main").getByRole("heading", { level: 2 }).allTextContents()).toEqual(["Needs attention", "What it is", "How it fits into the web runtime", "What it depends on", "Design system", "How it's built and tested"]);
 
   const overview = page.getByRole("region", { name: "Overview" });
   // The scope's counts are links to the views that list them; files read lists nothing, so it isn't one.
@@ -106,14 +107,15 @@ test("tells a repository that isn't a frontend from one that is, and leaves out 
   await open(page, profilesOf(db, run.id)[0]!.profile.publicId);
   await expect(page.getByText("Not a frontend web repository")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Profile views" }).getByRole("link")).toHaveText(["Overview", "Dependencies1", "Services0", "Tooling", /^Diagnostics/]);
-  await expect(page.getByRole("heading", { level: 3, name: "Design system" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "Design system" })).toHaveCount(0);
 });
 
 test("explains observed, inferred, unknown, conflicting, negative, and skipped-input facts", async ({ page, db }) => {
   const { profile } = await seedOrders(db);
   await open(page, profile.publicId, "tooling");
   await expect(page.getByRole("heading", { level: 1, name: "orders" })).toBeVisible();
-  await expect(page.getByText("Nothing in the repository was run.")).toBeVisible();
+  // A statement that holds for every Profile isn't its description (content standard, "Descriptions").
+  await expect(page.getByText("Nothing in the repository was run.")).toHaveCount(0);
 
   const languages = category(page, "languages");
   await expect(languages.getByText("Observed").first()).toBeVisible();
@@ -185,7 +187,7 @@ test("shows each category's search and rule, and a row's state only where it dif
   await open(page, profile.publicId, "dependencies");
   // How each category was searched is one disclosure away, since the column states say whether to look.
   await category(page, "dependencies").getByText("How these were found").click();
-  const dependencies = category(page, "dependencies").getByRole("list", { name: "Categories in Dependencies" }).getByRole("listitem").first();
+  const dependencies = category(page, "dependencies").getByRole("list", { name: "Categories in Direct dependencies" }).getByRole("listitem").first();
   await expect(dependencies).toContainText("Searched 1 input · complete");
   await expect(dependencies).toContainText("Rule manifest.dependencies");
 
@@ -209,8 +211,9 @@ test("shows dependencies and scripts in shared tables, and CI steps with their d
   await expect(page.getByRole("table", { name: "Resolved versions" })).toHaveCount(0);
   await expect(page.getByRole("table", { name: "Packages consumed" })).toHaveCount(0);
   // The table's own state is in its heading; only the columns another category fills show that category's state.
-  // The view is headed Dependencies, and so is its one table.
-  await expect(page.locator("main").getByRole("heading", { level: 3, name: "Dependencies", exact: true })).toHaveCount(1);
+  // The tab names the view; its one table has a heading of its own.
+  await expect(page.locator("main").getByRole("heading", { name: "Dependencies", exact: true })).toHaveCount(0);
+  await expect(page.locator("main").getByRole("heading", { level: 2, name: "Direct dependencies", exact: true })).toHaveCount(1);
   for (const column of ["Kind", "Declared"]) await expect(table.getByRole("columnheader").filter({ hasText: column })).not.toContainText("Observed");
   for (const column of ["Resolved", "Consumed"]) await expect(table.getByRole("columnheader").filter({ hasText: column })).toContainText("Observed");
 
@@ -433,7 +436,7 @@ test("navigates between categories and heads a category without facts like every
   await open(page, profile.publicId, "dependencies");
   const submodules = category(page, "submodules");
   await expect(submodules).toHaveJSProperty("tagName", "SECTION");
-  await expect(submodules.getByRole("heading", { level: 3, name: "Submodules" })).toBeVisible();
+  await expect(submodules.getByRole("heading", { level: 2, name: "Submodules" })).toBeVisible();
   await expect(submodules.getByRole("table")).toHaveCount(0);
   await expect(submodules).toContainText("None detected");
 });
@@ -499,7 +502,8 @@ test("shows design-system usage in the Interface categories, with each scope's n
   await expect(detail(page.getByRole("region", { name: "Design system" }), "Replaceable HTML")).toContainText("<button> → Button");
 
   await open(page, profile.publicId, "design-system");
-  await expect(page.getByRole("heading", { level: 2, name: "Design system" })).toBeVisible();
+  await expect(page.getByText("Which design system it uses, and where it writes its own HTML and CSS")).toBeVisible();
+  await expect(page.locator("main").getByRole("heading", { name: "Design system", exact: true })).toHaveCount(0);
   // Each Interface category reads in its own columns, in words, never as one run of field names and values.
   const systems = category(page, "design_systems");
   await expect(systems.getByRole("row").filter({ hasText: "Salt" })).toContainText("Theme stylesheet imported");
@@ -531,4 +535,48 @@ test("shows a version 1 Profile's facts unchanged, with the design-system catego
   await expect(designSystem).toContainText("Not covered");
   await expect(designSystem).toContainText(/Surveyor release \S+ doesn't report this category/);
   await expect(page.getByRole("list", { name: "Needs attention" }).getByRole("listitem").filter({ hasText: "Design systems, UI elements, Style values" })).toContainText("Not covered");
+});
+
+// operator-interface/page-templates spec, "Every page uses one page template".
+test("Largest heading: on a Repository's Dependencies view, the page title is larger than every other heading, and no heading repeats Dependencies", async ({ page, db }) => {
+  const { storefront } = await seedStorefront(db);
+  await page.goto(`${paths.repository(storefront.publicId)}?tab=dependencies`);
+  const sizes = await page.locator("main").evaluate((main) =>
+    [...main.querySelectorAll("h1, h2, h3, h4, h5, h6")].filter((heading) => heading.getClientRects().length > 0).map((heading) => ({ level: heading.tagName, text: heading.textContent ?? "", size: Number.parseFloat(getComputedStyle(heading).fontSize) })),
+  );
+  const [title, ...others] = sizes;
+  expect(title).toMatchObject({ level: "H1", text: "storefront" });
+  expect(others.length).toBeGreaterThan(3);
+  for (const heading of others) expect(heading.size, heading.text).toBeLessThan(title!.size);
+  expect(others.map((heading) => heading.text)).not.toContain("Dependencies");
+  // Headings step down from the title without skipping a level.
+  expect(others.every((heading) => heading.level === "H2" || heading.level === "H3")).toBe(true);
+});
+
+// product-site spec, "A Repository's current Profile is readable as JSON".
+test("A Profile for an agent: the Repository's details link its current Profile as JSON, whose Digest header is the fact document digest they show", async ({ page, db, request }) => {
+  const { storefront } = await seedStorefront(db);
+  await page.goto(`${paths.repository(storefront.publicId)}?tab=diagnostics`);
+  await page.getByText("Details", { exact: true }).last().click();
+  const json = page.getByRole("link", { name: "Current Profile as JSON" });
+  await expect(json).toHaveAttribute("href", `/repositories/${storefront.publicId}/profile.json`);
+  const shown = (await page.locator("dt", { hasText: /^Fact document digest$/ }).locator("xpath=following-sibling::dd[1]").textContent())!.trim();
+  expect(shown).toMatch(/^[0-9a-f]{64}$/);
+  const response = await request.get(`/repositories/${storefront.publicId}/profile.json`);
+  expect(response.status()).toBe(200);
+  expect(response.headers().digest).toContain(shown);
+});
+
+// design-system spec, "Status and values are presented through one registry".
+test("Observed facts aren't judgments: the Design system view shows raw values and overrides as Observed, neutral, with no green beside them", async ({ page, db }) => {
+  const repository = buildRepository(db, { name: "salt-orders" });
+  const files = { ...SALT_APP, "src/app.css": ".wide { inline-size: 100%; color: #0a6 !important; background: #fff }\n.narrow { color: #123 !important }\n" };
+  const run = await seedRun(db, buildAssessment(db, { name: "Salt adherence", repositories: [repository] }), [repository], [files]);
+  await open(page, profilesOf(db, run.id)[0]!.profile.publicId, "design-system");
+  const styles = category(page, "style_values");
+  await expect(styles.locator('[data-state="observed"]').first()).toBeVisible();
+  for (const observed of await page.locator("main").locator('[data-state="observed"]').all()) {
+    await expect(observed.locator("xpath=preceding-sibling::*[@data-tone][1]")).toHaveAttribute("data-tone", "neutral");
+  }
+  await expect(styles.locator('[data-tone="success"]')).toHaveCount(0);
 });

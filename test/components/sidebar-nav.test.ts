@@ -33,13 +33,15 @@ describe("primary menu", () => {
       { label: "Repositories", current: null },
       { label: "All Assessments", current: null },
       { label: "Standards", current: null },
+      { label: "Adoption", current: null },
+      { label: "System", current: null },
       { label: "Bitbucket tokens", current: null },
     ]);
   });
 
   it("sets the groups apart with dividers and names each group's list by its heading (Full menu)", () => {
     const html = render("/", { demo: true });
-    expect(html.match(/<hr/g)).toHaveLength(3);
+    expect(html.match(/<hr/g)).toHaveLength(5);
     expect(html).toContain('<p id="sidebar-group-assessments"');
     expect(html).toContain('aria-labelledby="sidebar-group-assessments"');
     expect(html).toContain(">Templates</p>");

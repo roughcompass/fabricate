@@ -52,13 +52,18 @@ function ControlDefinition({ control }: { control: JsonValue }) {
   );
 }
 
-export function ExpressionView({ expression }: { expression: JsonValue }) {
-  return <div className={styles.expression}>{describe(expression)}</div>;
+/**
+ * An expression in words. With `paths={false}`, as a Finding leads with it,
+ * fields and collections read by their names alone, and their paths wait in
+ * a disclosure (content standard, "Two layers").
+ */
+export function ExpressionView({ expression, paths = true }: { expression: JsonValue; paths?: boolean }) {
+  return <div className={styles.expression}>{describe(expression, paths)}</div>;
 }
 
-function describe(expression: JsonValue): React.ReactNode {
+function describe(expression: JsonValue, paths = true): React.ReactNode {
   const node = asObject(expression);
-  const identifier = (id: JsonValue | undefined) => <code className={styles.id}>{String(id ?? "")}</code>;
+  const identifier = (id: JsonValue | undefined) => (paths ? <code className={styles.id}>{String(id ?? "")}</code> : null);
   const field = () => {
     const selector = typeof node.selector === "string" ? SELECTOR_BY_ID.get(node.selector) : undefined;
     return (
@@ -80,7 +85,7 @@ function describe(expression: JsonValue): React.ReactNode {
       {label}
       <ul className={styles.tree}>
         {items.map((item, index) => (
-          <li key={index}>{describe(item)}</li>
+          <li key={index}>{describe(item, paths)}</li>
         ))}
       </ul>
     </>
@@ -96,7 +101,7 @@ function describe(expression: JsonValue): React.ReactNode {
   const where = () =>
     node.where ? (
       <ul className={styles.tree}>
-        <li>Only those where: {describe(node.where)}</li>
+        <li>Only those where: {describe(node.where, paths)}</li>
       </ul>
     ) : null;
 
@@ -148,7 +153,7 @@ function describe(expression: JsonValue): React.ReactNode {
           {node.op === "every" ? "Every item in" : "At least one item in"} {collection()} satisfies:
           {where()}
           <ul className={styles.tree}>
-            <li>{describe(node.condition ?? null)}</li>
+            <li>{describe(node.condition ?? null, paths)}</li>
           </ul>
         </>
       );

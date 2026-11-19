@@ -8,7 +8,7 @@ Everything in the demo is simulated. See [What is simulated](#what-is-simulated)
 
 1. Start the Frontend Registry with the demo on: `FRONTEND_REGISTRY_DEMO=true npm run dev`, or use the hosted demo.
 2. Open **Salt Patterns** in the sidebar. The gallery, "Salt Patterns", opens. The demo adds **Salt Patterns** to the sidebar, under a Templates heading.
-3. If you rehearsed in this browser, reset the demo first: in the gallery's header, open **More actions** (⋯), choose **Reset demo**, and confirm.
+3. If you rehearsed in this browser, reset the demo first: at the end of the gallery, under **Reset the demo**, choose **Reset demo**, and confirm.
 4. Turn guided hints off, so they do not appear during the talk. Open any running application, for example a reference deployment from preview mode's **Open full screen**. Open the toolbar menu, choose **Settings**, and clear **Show guided hints**. The choice applies to your whole workspace.
 5. Create a session profile for someone your audience knows, such as their head of payments. In the running application, press **P** to open **Session**, select **New profile**, and enter their name, the **Approver** persona, and their region. The profile is saved in your workspace and offered in every application, so you can sign it in during beat 10.
 6. Use Chrome or Edge. Interaction timing uses the Event Timing API. Other browsers show approximate times, labeled as such.
@@ -44,7 +44,7 @@ Each beat lists what to do, then the point to make.
 11. **Settings.** Press **S**. Switch to the dark theme. In the Markets template, publish `instrument:selected` with `{"symbol": "GLBX"}` and watch the chart follow.
 12. **Comment.** Press **C** and select **Send payment**. A "+" marks the spot. Type in **Start a new thread…**; select a word, choose **Aa**, then **Bold**. Post with the send button or Cmd+Enter. The pin stays on the button when the window is resized. A comment on a payee row, which belongs to a payee list version, is listed as not visible in this view after the payee list changes version, with **Go to comment** to bring that version back.
 13. **Share.** Press **L**. Copy the link and open it in a private window: the recipient sees the same versions, theme, signed-in profile, and comment, and can reply. The profile isn't added to the recipient's own profiles, and their changes never affect your view.
-14. **Reset.** Back in the Frontend Registry, open **Salt Patterns**, choose **More actions** in the page header, then **Reset demo**, and confirm in "Reset the demo?". Your comments, share links, and session profiles are removed, and the gallery confirms "The demo was reset." The share link now answers not found.
+14. **Reset.** Back in the Frontend Registry, open **Salt Patterns**, scroll to **Reset the demo** at the end of the page, choose **Reset demo**, and confirm in "Reset the demo?". Your comments, share links, and session profiles are removed, and the gallery confirms "The demo was reset." The share link now answers not found.
 
 ### Toolbar shortcuts
 

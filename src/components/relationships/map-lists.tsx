@@ -26,7 +26,9 @@ export function GroupTable({ title, description, label, groups, empty }: { title
               <tr key={group.key}>
                 <Td label={label}>
                   <Primary>
-                    <Link href={group.href}>{group.label}</Link>
+                    <Link href={group.href} aria-label={`${group.label} runtime system`}>
+                      {group.label}
+                    </Link>
                   </Primary>
                 </Td>
                 <Td label="Repositories" align="numeric">
@@ -65,10 +67,10 @@ export function GroupRelationships({ relationships, description }: { relationshi
           {relationships.map((relationship) => (
             <tr key={`${relationship.from.key}-${relationship.to.key}`}>
               <Td label="From">
-                <Link href={relationship.from.href}>{relationship.from.label}</Link>
+                <EndpointLink endpoint={relationship.from} />
               </Td>
               <Td label="To">
-                <Link href={relationship.to.href}>{relationship.to.label}</Link>
+                <EndpointLink endpoint={relationship.to} />
               </Td>
               <Td label="Repository relationships" align="numeric">
                 {formatNumber(relationship.repositoryRelationships)}
@@ -113,5 +115,14 @@ export function SharedList({ entries }: { entries: readonly SharedEntry[] }) {
         </Table>
       </Panel>
     </Section>
+  );
+}
+
+/** A relationship's end: a runtime system's link names it as a system, apart from the repository it's named after, whose link opens its focus. */
+function EndpointLink({ endpoint }: { endpoint: { href: string; label: string } }) {
+  return (
+    <Link href={endpoint.href} aria-label={endpoint.href.includes("/systems/") ? `${endpoint.label} runtime system` : undefined}>
+      {endpoint.label}
+    </Link>
   );
 }

@@ -37,7 +37,7 @@ describe("status registry", () => {
   it("moves only for work under way: a settled fact or category state holds still", () => {
     const moving = [...new Set([...FACT_STATES, ...CATEGORY_STATES])].filter((state) => statusOf(state).tone === "progress");
     expect(moving).toEqual([]);
-    expect(statusOf("inferred")).toEqual({ label: "Inferred", tone: "info", indicator: "dot" });
+    expect(statusOf("inferred")).toEqual({ label: "Inferred", tone: "neutral", indicator: "dot" });
     expect(statusOf("analyzing").tone).toBe("progress");
   });
 

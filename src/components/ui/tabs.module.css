@@ -43,9 +43,8 @@
   }
 
   @container content (max-width: 767px) {
-    /* The tabs take the bar's width and wrap onto a second row rather than scroll, so no tab hides past the edge. */
+    /* The tabs take the bar's width on one row that scrolls sideways, with the aside above them; the current tab scrolls into view. */
     .bar { flex-direction: column-reverse; flex-wrap: nowrap; align-items: stretch; }
-    .tabs { flex-wrap: wrap; overflow-x: visible; }
     .aside { flex-basis: auto; }
   }
 }

@@ -35,8 +35,8 @@ const EXPECTED: Record<string, string | null> = {
   "/runs/[runId]/evidence/[evidenceId]": "all-assessments",
   "/evaluations/[evaluationId]": "all-assessments",
   "/evaluations/[evaluationId]/findings/[findingId]": "all-assessments",
-  "/profiles/[profileId]": "all-assessments",
-  "/profiles/[profileId]/evidence/[evidenceId]": "all-assessments",
+  "/profiles/[profileId]": "repositories",
+  "/profiles/[profileId]/evidence/[evidenceId]": "repositories",
   "/repositories": "repositories",
   "/repositories/new": "repositories",
   "/repositories/bulk": "repositories",
@@ -55,9 +55,14 @@ const EXPECTED: Record<string, string | null> = {
   "/templates": "salt-patterns",
   "/templates/[templateSlug]": "salt-patterns",
   "/templates/[templateSlug]/preview": "salt-patterns",
-  "/admin": "bitbucket-tokens",
+  "/admin": "system",
+  "/admin/system": "system",
   "/admin/bitbucket-tokens": "bitbucket-tokens",
   "/admin/bitbucket-tokens/new": "bitbucket-tokens",
+  "/adoption": "adoption",
+  "/adoption/design-systems/[designSystemId]": "adoption",
+  "/adoption/design-systems/[designSystemId]/components/[componentName]": "adoption",
+  "/adoption/packages/[...packageName]": "adoption",
   "/design-system": null,
   "/design-system/error-demo": null,
 };
@@ -86,12 +91,14 @@ describe("primary menu", () => {
     for (const [route, expected] of Object.entries(EXPECTED)) expect(current(sample(route), ALL), route).toEqual(expected);
   });
 
-  it("lists Home, then the Assessments, Templates, and Admin groups under their headings (Full menu)", () => {
+  it("lists Home, then the Registry, Assessments, Templates, Insights, and Admin groups under their headings (Full menu)", () => {
     expect(shape(ALL)).toEqual([
       [null, ["Home"]],
-      ["Assessments", ["Repositories", "All Assessments", "Standards"]],
+      ["Registry", ["Repositories"]],
+      ["Assessments", ["All Assessments", "Standards"]],
       ["Templates", ["Salt Patterns"]],
-      ["Admin", ["Bitbucket tokens"]],
+      ["Insights", ["Adoption"]],
+      ["Admin", ["System", "Bitbucket tokens"]],
     ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
     for (const item of visibleGroups(ALL).flatMap((group) => group.items)) expect(item.icon, item.id).toBeTruthy();
@@ -100,8 +107,10 @@ describe("primary menu", () => {
   it("has no Templates group while the demo is disabled, and leaves its pages outside the menu (Demo disabled)", () => {
     expect(shape(BASE)).toEqual([
       [null, ["Home"]],
-      ["Assessments", ["Repositories", "All Assessments", "Standards"]],
-      ["Admin", ["Bitbucket tokens"]],
+      ["Registry", ["Repositories"]],
+      ["Assessments", ["All Assessments", "Standards"]],
+      ["Insights", ["Adoption"]],
+      ["Admin", ["System", "Bitbucket tokens"]],
     ]);
     for (const route of ["/templates", "/templates/payments-hub/preview"]) expect(locate(route, BASE), route).toBeNull();
   });

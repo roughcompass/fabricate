@@ -1,5 +1,6 @@
 import Form from "next/form";
 import { AnalysisTemplate } from "@/components/templates/analysis-template";
+import { failureSentence } from "@/lib/runs/failures";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FocusPanel } from "@/components/relationships/focus";
@@ -14,7 +15,7 @@ import { SearchField } from "@/components/ui/search-field";
 import { Section } from "@/components/ui/section";
 import { statusLabel } from "@/components/ui/status";
 import { targetsOf } from "@/lib/runs/run-records";
-import { type RelationshipScope, SEARCH_KINDS, type SearchMatch, focusOf, relationshipPage, searchMap } from "@/lib/relationships/levels";
+import { type RelationshipScope, SEARCH_KINDS, type SearchMatch, focusOf, packageFocusHref, relationshipPage, searchMap } from "@/lib/relationships/levels";
 import type { MapView } from "@/lib/relationships/map-view";
 import type { LoadedMap } from "./load";
 import styles from "./map.module.css";
@@ -89,7 +90,7 @@ export function MapLevel({
   const tableScope: RelationshipScope = focus ? (focus.kind === "package" ? { kind: "package", name: focus.label } : { kind: "touching", node: focus.nodeId! }) : scope;
   const page = relationshipPage(db, view, tableScope, param(query, "page"));
   const keep = { focus: focusId };
-  const failures = new Map(targetsOf(db, record.id).flatMap((target) => (target.failureMessage ? [[target.publicId, target.failureMessage] as const] : [])));
+  const failures = new Map(targetsOf(db, record.id).flatMap((target) => (target.failureCode ? [[target.publicId, failureSentence(target.failureCode, target.failureMessage)] as const] : [])));
 
   return (
     <AnalysisTemplate
@@ -107,12 +108,6 @@ export function MapLevel({
                   <strong>{gap.source}</strong>
                   {` · ${statusLabel(gap.state)}: `}
                   {failures.get(gap.target) ?? (gap.state === "canceled" ? "stopped before it finished" : "no reason was recorded")}
-                  {gap.reason && (
-                    <>
-                      {" "}
-                      <span className={styles.code}>{gap.reason}</span>
-                    </>
-                  )}
                 </li>
               ))}
             </ul>
@@ -155,6 +150,7 @@ export function MapLevel({
         page={page}
         runId={record.publicId}
         focusHref={(nodeId) => withQuery(levelHref, { focus: nodeId })}
+        packageHref={(name) => packageFocusHref(levelHref, name)}
         pageHref={(number) => withQuery(levelHref, { ...keep, page: pageQuery(number) })}
         coverageComplete={view.missing.length === 0}
         description={focus ? `The relationships of ${focus.label}, from the repository that declared each one.` : scopeDescription}

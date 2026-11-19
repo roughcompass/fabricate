@@ -23,7 +23,7 @@ export default async function EditStandardPage({ params }: PageProps<"/standards
           { href: "/standards", label: "Standards" },
           { href: routes.standard(standard.publicId), label: standard.name },
         ],
-        title: "Edit Standard",
+        title: `Edit ${standard.name}`,
         description: "Published Releases keep the name and purpose they were published with.",
       }}
     >

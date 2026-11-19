@@ -288,9 +288,9 @@ test.describe("the dashboard", () => {
     await page.goto(paths.home);
     const activity = page.getByRole("list", { name: "Recent activity" }).getByRole("listitem");
     await expect(activity).toHaveCount(2);
-    await expect(activity.first()).toContainText("Run finished: Payments baseline");
-    await expect(activity.nth(1)).toContainText("Run failed: Checkout platform migration");
-    await activity.first().getByRole("link", { name: "Payments baseline" }).click();
+    await expect(activity.first()).toContainText("Run finished: Run #1 · Payments baseline");
+    await expect(activity.nth(1)).toContainText("Run failed: Run #1 · Checkout platform migration");
+    await activity.first().getByRole("link", { name: "Run #1 · Payments baseline" }).click();
     await expect(page).toHaveURL(new RegExp(`${paths.run(run.publicId)}$`));
   });
 
@@ -301,4 +301,25 @@ test.describe("the dashboard", () => {
     await page.getByRole("main").getByRole("link", { name: "New Assessment" }).first().click();
     await expect(page).toHaveURL(/\/assessments\/new$/);
   });
+});
+
+// page-patterns spec, content standard "One label per destination".
+test("One label for adding Repositories: Home and the Repositories list link the bulk page with one label", async ({ page, db }) => {
+  buildRepository(db, { name: "orders" });
+  const labels = new Set<string>();
+  for (const address of [paths.home, paths.repositories]) {
+    await page.goto(address);
+    for (const link of await page.getByRole("main").locator('a[href="/repositories/bulk"]').all()) labels.add((await link.textContent())!.trim());
+  }
+  expect([...labels]).toEqual(["Add Repositories"]);
+});
+
+// page-patterns spec, "Link text names its target".
+test("Recent activity: four Runs of one Assessment each name their Run, and no two links share a text", async ({ page, db }) => {
+  const repositories = [buildRepository(db, { name: "web" })];
+  const fleet = buildAssessment(db, { name: "Salt adherence, fleet", repositories });
+  for (let index = 0; index < 4; index++) driveRun(db, buildRun(db, { assessment: fleet, repositories }).run, "complete");
+  await page.goto(paths.home);
+  const links = page.getByRole("list", { name: "Recent activity" }).getByRole("link");
+  await expect(links).toHaveText(["Run #4 · Salt adherence, fleet", "Run #3 · Salt adherence, fleet", "Run #2 · Salt adherence, fleet", "Run #1 · Salt adherence, fleet"]);
 });

@@ -7,9 +7,10 @@ import { expect, test } from "../support/fixtures";
 
 const primary = (page: Page) => page.getByRole("navigation", { name: "Primary" });
 
-test("The primary menu has no Salt Patterns", async ({ page, db: _db }) => {
+test("Demo disabled: the primary menu shows no Templates group", async ({ page, db: _db }) => {
   await page.goto("/");
-  await expect(primary(page).getByRole("link", { name: "All Assessments", exact: true })).toBeVisible();
+  await expect(primary(page).getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Adoption", "System", "Bitbucket tokens"]);
+  await expect(primary(page).getByRole("list", { name: "Templates" })).toHaveCount(0);
   await expect(primary(page).getByRole("link", { name: "Salt Patterns", exact: true })).toHaveCount(0);
 });
 

@@ -3,20 +3,23 @@ import Link from "next/link";
 import { ProgressPoller } from "@/components/progress-poller";
 import { IndexTemplate } from "@/components/templates/index-template";
 import { ButtonLink } from "@/components/ui/button";
-import { countLabel } from "@/components/ui/count";
+import { countLabel, formatNumber } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Menu, MenuAction, MenuItem } from "@/components/ui/menu";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
-import { param, searchTerm } from "@/lib/web/query";
+import { oneOf, pageNumber, param, searchTerm } from "@/lib/web/query";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
-import { Status, humanize } from "@/components/ui/status";
+import { Status } from "@/components/ui/status";
 import { SearchField } from "@/components/ui/search-field";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
-import { Tag } from "@/components/ui/tag";
-import { runCounts } from "@/lib/repositories/registration";
-import { listRepositories, repositoryReferenceLabel } from "@/lib/repositories/repository-records";
+import { Primary, RowActions, Table, Td, Th } from "@/components/ui/table";
+import { Select } from "@/components/ui/form";
+import { RECIPE_STATES, type RecipeState, recipeStates } from "@/lib/catalog/updates";
+import { getConfig } from "@/lib/config";
+import { PRODUCT } from "@/lib/product";
+import { listRepositories } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
 import { type ProfileSummary, ACTIVE_STATES, profileSummaries, profilingActivity } from "@/lib/profiling/versions";
 import { repositoriesHref } from "@/lib/web/list-filters";
@@ -27,14 +30,34 @@ import { routes } from "@/lib/web/routes";
 
 export const metadata: Metadata = { title: "Repositories" };
 
+/** Each recipe state as the filter names it (System status counts the same states). */
+const RECIPE_LABELS: Record<RecipeState, string> = { current: "On the current recipe", waiting: "Waiting to be surveyed", failed: "Failed its newest survey" };
+const RECIPE_OPTIONS = [{ value: "", label: "Any recipe" }, ...RECIPE_STATES.map((state) => ({ value: state, label: RECIPE_LABELS[state] }))];
+
+/** Rows per page (page-patterns spec, "Long lists are paged"). */
+const PAGE_SIZE = 50;
+
+/** The count beside the results: "Showing 1–50 of 500 Repositories", and with a filter, how many there are in all. */
+function showing(page: number, shown: number, matching: number, total: number | null): string {
+  const all = total === null ? "" : ` (${formatNumber(total)} in all)`;
+  if (matching === 0) return total === null ? "No Repositories" : `None of ${countLabel(total, "Repository", "Repositories")} match`;
+  const start = (page - 1) * PAGE_SIZE + 1;
+  const noun = total === null ? countLabel(matching, "Repository", "Repositories") : countLabel(matching, "matching Repository", "matching Repositories");
+  return `Showing ${formatNumber(start)}–${formatNumber(start + shown - 1)} of ${noun}${all}`;
+}
+
 export default async function RepositoriesPage({ searchParams }: PageProps<"/repositories">) {
   const query = await searchParams;
   const search = searchTerm(query);
+  const recipe = oneOf(query, "recipe", RECIPE_STATES) ?? null;
   const db = getDb();
   const all = listRepositories(db);
   const needle = search.toLowerCase();
-  const repositories = needle ? all.filter((repository) => repository.name.toLowerCase().includes(needle) || repository.cloneUrl.toLowerCase().includes(needle)) : all;
-  const counts = runCounts(db);
+  const states = recipe ? recipeStates(db, getConfig()) : null;
+  const repositories = all.filter((repository) => (!needle || repository.name.toLowerCase().includes(needle) || repository.cloneUrl.toLowerCase().includes(needle)) && (!states || states.get(repository.id) === recipe));
+  const filtered = Boolean(search || recipe);
+  const { page, pages } = pageNumber(param(query, "page"), repositories.length, PAGE_SIZE);
+  const shown = repositories.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const profiles = profileSummaries(db);
   const activity = profilingActivity(db);
   const busy = activity.profiling + activity.queued > 0;
@@ -48,20 +71,20 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
     <IndexTemplate
       header={{
         title: "Repositories",
-        description: "Git repositories available to Assessments, each profiled in the background whenever it changes. Edits apply to Runs started afterward.",
-        secondaryActions: [{ href: "/repositories/bulk", label: "Add in bulk", icon: "layers" }],
+        description: `Every Git repository registered with the ${PRODUCT.name}, and its newest Profile.`,
+        secondaryActions: [{ href: "/repositories/bulk", label: "Add Repositories", icon: "layers" }],
         primaryAction: create,
       }}
       alerts={<OutcomeToast outcome={repositoryOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"))} />}
       filters={
         <>
           <div className={styles.toolbar}>
-            <p className={styles.count}>
-              {countLabel(repositories.length, "Repository", "Repositories")}
-              {repositories.length !== all.length ? ` of ${all.length}` : ""}
+            <p className={styles.count} role="status">
+              {showing(page, shown.length, repositories.length, filtered ? all.length : null)}
             </p>
-            <FilterBar key={search} action="/repositories" label="Search Repositories" filtered={Boolean(search)} clearHref={repositoriesHref()}>
-              <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref()} />
+            <FilterBar key={`${search}:${recipe}`} action="/repositories" label="Search Repositories" filtered={filtered} clearHref={repositoriesHref()}>
+              <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref({ recipe })} />
+              <Select id="recipe-filter" name="recipe" label="Recipe" hideLabel size="sm" defaultValue={recipe ?? ""} options={RECIPE_OPTIONS} />
             </FilterBar>
           </div>
           {busy && (
@@ -84,7 +107,7 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
               action: (
                 <>
                   <ButtonLink href="/repositories/bulk" icon="layers">
-                    Add in bulk
+                    Add Repositories
                   </ButtonLink>
                   {create}
                 </>
@@ -93,6 +116,7 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
             }
           : undefined
       }
+      pagination={<Pagination label="Repositories pages" page={page} pages={pages} href={(number) => repositoriesHref({ q: search || undefined, recipe, page: number })} />}
     >
       <Panel flush>
         {repositories.length > 0 ? (
@@ -101,35 +125,25 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
             head={
               <>
                 <Th>Name</Th>
-                <Th>Reference</Th>
                 <Th>Profile</Th>
-                <Th align="numeric">Runs</Th>
                 <Th align="actions" hidden>
                   Actions
                 </Th>
               </>
             }
           >
-            {repositories.map((repository) => (
+            {shown.map((repository) => (
               <tr key={repository.publicId} id={repository.publicId}>
                 <Td label="Name">
+                  {/* One line: the clone URL is in the name's tooltip and on the Repository's page. */}
                   <Primary>
-                    <Link href={routes.repository(repository.publicId)}>{repository.name}</Link>
+                    <Link href={routes.repository(repository.publicId)} title={repository.cloneUrl}>
+                      {repository.name}
+                    </Link>
                   </Primary>
-                  <Secondary>
-                    <span className={styles.cloneUrl}>
-                      <Tag copy label="clone URL">
-                        {repository.cloneUrl}
-                      </Tag>
-                    </span>
-                  </Secondary>
                 </Td>
-                <Td label="Reference">{repository.gitRef ? <Tag>{repository.gitRef}</Tag> : <Secondary>{humanize(repositoryReferenceLabel(repository))}</Secondary>}</Td>
                 <Td label="Profile">
-                  <ProfileCell repositoryPublicId={repository.publicId} summary={profiles.get(repository.id)} />
-                </Td>
-                <Td label="Runs" align="numeric">
-                  {countLabel(counts.get(repository.id) ?? 0, "Run")}
+                  <ProfileCell repositoryPublicId={repository.publicId} name={repository.name} summary={profiles.get(repository.id)} />
                 </Td>
                 <Td align="actions">
                   <RowActions>
@@ -148,7 +162,9 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
           </Table>
         ) : (
           // The filter bar above offers Clear filters.
-          <EmptyState title="No matching Repositories" icon="search">{`No Repository name or clone URL contains “${search}”.`}</EmptyState>
+          <EmptyState title="No matching Repositories" icon="search">
+            {search ? `No Repository name or clone URL contains “${search}”${recipe ? ` among those ${RECIPE_LABELS[recipe].toLowerCase()}` : ""}.` : `No Repository is ${RECIPE_LABELS[recipe ?? "current"].toLowerCase()}.`}
+          </EmptyState>
         )}
       </Panel>
     </IndexTemplate>
@@ -156,59 +172,41 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
 }
 
 /**
- * A Repository's profile in the list. While a version is being profiled or
- * waits its turn, that leads, with a pulsing indicator for profiling; the
- * current version, linked, and when it was profiled follow. A newest
- * version that failed is marked under the current one.
+ * A Repository's profile in the list, on one line. While a version is being
+ * profiled or waits its turn, that leads, with a pulsing indicator for
+ * profiling, then the current version; otherwise the current version, linked,
+ * and when it was profiled. A newest version that failed follows the current
+ * one.
  */
-function ProfileCell({ repositoryPublicId, summary }: { repositoryPublicId: string; summary: ProfileSummary | undefined }) {
-  if (!summary) return <Secondary>Queued</Secondary>;
+function ProfileCell({ repositoryPublicId, name, summary }: { repositoryPublicId: string; name: string; summary: ProfileSummary | undefined }) {
+  if (!summary) return <span className={styles.muted}>Queued</span>;
   const { latest, current } = summary;
   const pending = (ACTIVE_STATES as readonly string[]).includes(latest.state);
   // The newest version is newer than the current one, and failed.
   const failed = !pending && !latest.profiled && (!current || latest.version > current.version);
-  // The current Profile, by its version, and when it was written.
-  const currentLink = current && <Link href={routes.repositoryVersion(repositoryPublicId, current.version)}>{`Version ${current.version}`}</Link>;
-  const currentRows = current && (
-    <>
-      {currentLink}
-      <Secondary>
-        <RelativeTime value={current.profiledAt} />
-      </Secondary>
-    </>
+  const currentLink = current && (
+    <Link href={routes.repositoryVersion(repositoryPublicId, current.version)} aria-label={`${name}, version ${current.version}`}>
+      {`Version ${current.version}`}
+    </Link>
   );
-  if (pending) {
-    return (
-      <span data-profiling={latest.state === "queued" ? "queued" : "profiling"}>
-        <Status state={latest.state} label={latest.state === "queued" ? `Version ${latest.version} queued` : `Profiling version ${latest.version}`} />
-        {current && (
-          <>
-            <Secondary>{currentLink}</Secondary>
-            <Secondary>
-              <RelativeTime value={current.profiledAt} />
-            </Secondary>
-          </>
-        )}
-      </span>
-    );
-  }
-  if (!current) {
-    return (
-      <Link href={routes.repositoryVersion(repositoryPublicId, latest.version)}>
-        <Status state="failed" label={`Version ${latest.version} failed`} />
-      </Link>
-    );
-  }
+  const failedLink = (
+    <Link href={routes.repositoryVersion(repositoryPublicId, latest.version)} aria-label={`${name}, version ${latest.version}, failed`}>
+      <Status state="failed" label={`Version ${latest.version} failed`} size="sm" />
+    </Link>
+  );
   return (
-    <>
-      {currentRows}
-      {failed && (
-        <Secondary>
-          <Link href={routes.repositoryVersion(repositoryPublicId, latest.version)}>
-            <Status state="failed" label={`Version ${latest.version} failed`} size="sm" />
-          </Link>
-        </Secondary>
+    <span className={styles.profile} data-profiling={pending ? (latest.state === "queued" ? "queued" : "profiling") : undefined}>
+      {pending && <Status state={latest.state} label={latest.state === "queued" ? `Version ${latest.version} queued` : `Profiling version ${latest.version}`} />}
+      {current && (
+        <span className={pending ? styles.muted : undefined}>
+          {currentLink}
+          <span className={styles.muted}>
+            {" · "}
+            <RelativeTime value={current.profiledAt} />
+          </span>
+        </span>
       )}
-    </>
+      {failed && failedLink}
+    </span>
   );
 }

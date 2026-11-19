@@ -41,7 +41,6 @@ export default async function DraftPage({ params, searchParams }: PageProps<"/st
         title: `${standard.name} draft`,
         status: <DraftStatus standard={standard.publicId} issues={issues.length} />,
         secondaryActions: published ? [{ href: routes.release(standard.publicId, published.publicId), label: `View v${published.version}`, icon: "eye" }] : [],
-        description: "Build each Control from fields and operators; Controls are data, and nothing here runs as code.",
       }}
       alerts={<OutcomeToast outcome={draftOutcome(param(query, "notice"), standard)} />}
     >

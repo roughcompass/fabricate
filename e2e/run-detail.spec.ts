@@ -1,9 +1,11 @@
 import type { Page } from "@playwright/test";
 import { buildRun, buildAssessment, buildRepository } from "../test/support/builders";
 import { manifest } from "../test/support/profiles";
-import { seedRun } from "../test/support/scenarios";
+import { ORDERS, seedRun } from "../test/support/scenarios";
+import { driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
 import { paths } from "./support/paths";
+import { seedResults } from "./support/results";
 import { pageHeader } from "./support/shell";
 
 const files = (name: string) => ({ "package.json": manifest({ name, version: "1.0.0" }) });
@@ -92,4 +94,44 @@ test("records a cancellation request for an active Assessment and keeps its scop
   await expect(pageHeader(page)).toContainText("Canceling");
   await expect(page.locator("main").getByText(/[Cc]ancellation (was )?requested/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Cancel Run" })).toHaveCount(0);
+});
+
+// page-patterns spec, content standard "Failures".
+test("Failed Run: the alert says to add a Bitbucket token in Admin, without repeating its title or showing the code", async ({ page, db }) => {
+  const repositories = [buildRepository(db, { name: "orders" }), buildRepository(db, { name: "billing" })];
+  const assessment = buildAssessment(db, { name: "Checkout platform migration", repositories });
+  const run = driveRun(db, buildRun(db, { assessment, repositories }).run, "failed", { failedTargets: 2 });
+  await page.goto(paths.run(run.publicId));
+  const alert = page.locator("#page-alerts").getByText("No repository could be assessed").locator("xpath=ancestor::*[contains(@class, 'alert')][1]");
+  await expect(alert).toContainText("Add a Bitbucket token for its server in Admin");
+  await expect(alert).not.toContainText("authentication_failed");
+  expect((await alert.textContent())!.match(/No repository could be assessed/g)).toHaveLength(1);
+  // Each repository's row leads with the same sentence; its code waits in the row's details.
+  const row = page.getByRole("table", { name: "Run scope" }).getByRole("row").filter({ hasText: "orders" });
+  await expect(row).toContainText("The Git server refused the credentials it was given.");
+  await expect(row.getByText("authentication_failed")).toBeHidden();
+});
+
+// page-patterns spec, "Run actions".
+test("Run actions: Start Evaluation is the primary action at the end of a completed Run's title row", async ({ page, db }) => {
+  const { run } = await seedResults(db);
+  await page.goto(paths.run(run.publicId));
+  const actions = pageHeader(page).locator("[data-header-actions]");
+  await expect(actions.locator('[data-variant="primary"]')).toHaveText("Start Evaluation");
+  await expect(actions.locator("button, a").last()).toHaveText("Start Evaluation");
+  await actions.getByRole("button", { name: "Start Evaluation" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" }).getByText("Evaluation #1 was started.")).toBeVisible();
+});
+
+test("A finished Run whose Assessment selects no Release links to selecting one, and one that failed offers no Evaluation", async ({ page, db }) => {
+  const orders = buildRepository(db, { name: "orders" });
+  const assessment = buildAssessment(db, { name: "Unscored", repositories: [orders] });
+  const finished = await seedRun(db, assessment, [orders], [ORDERS]);
+  const failed = await seedRun(db, assessment, [orders], ["failed"]);
+  await page.goto(paths.run(finished.publicId));
+  await expect(pageHeader(page).locator('[data-variant="primary"]')).toHaveCount(0);
+  await expect(pageHeader(page).getByRole("link", { name: "Select a Release to evaluate" })).toHaveAttribute("href", paths.assessmentEdit(assessment.publicId, "initiative-releases"));
+  await page.goto(paths.run(failed.publicId));
+  await expect(pageHeader(page).getByRole("button", { name: "Start Evaluation" })).toHaveCount(0);
+  await expect(page.locator('[aria-label="Run results"]')).toContainText("No results to evaluate");
 });

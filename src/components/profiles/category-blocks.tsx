@@ -43,7 +43,7 @@ export function CategoryTable({ block, context, pagination }: { block: CategoryB
   const { definition } = block.heading;
   const span = block.columns.length + (block.stepsColumn ? 1 : 0);
   return (
-    <Section id={definition.id} level={3} title={definition.label} description={inVocabulary(definition.description)} actions={<Status state={block.heading.state} />}>
+    <Section id={definition.id} title={definition.label} description={inVocabulary(definition.description)} actions={<Status state={block.heading.state} />}>
       <SearchLine heading={block.heading} />
       <div className={styles.dataTable}>
         <Panel flush>
@@ -284,7 +284,8 @@ function SearchLine({ heading }: { heading: Heading }) {
 }
 
 const SHARED_TITLES: Record<SharedBlock["kind"], { title: string; description: string }> = {
-  dependencies: { title: "Dependencies", description: "Direct dependencies by manifest, with their declared ranges, the versions lockfiles resolve, and whether they're internal" },
+  // Not "Dependencies": the view it sits in has that name, and a heading doesn't repeat it.
+  dependencies: { title: "Direct dependencies", description: "Direct dependencies by manifest, with their declared ranges, the versions lockfiles resolve, and whether they're internal" },
   scripts: { title: "Package scripts", description: "Scripts declared in package manifests, with what each one checks (never run)" },
 };
 
@@ -296,7 +297,7 @@ const SHARED_TITLES: Record<SharedBlock["kind"], { title: string; description: s
  * category was searched sits in one disclosure, since the states say whether
  * to look.
  */
-export function SharedTable({ block, context, filters, pagination, level = 3 }: { block: SharedBlock; context: EvidenceContext; filters?: React.ReactNode; pagination?: React.ReactNode; level?: 2 | 3 }) {
+export function SharedTable({ block, context, filters, pagination, level = 2 }: { block: SharedBlock; context: EvidenceContext; filters?: React.ReactNode; pagination?: React.ReactNode; level?: 2 | 3 }) {
   const [first] = block.sources;
   const { title, description } = SHARED_TITLES[block.kind];
   const rows = block.groups.reduce((sum, group) => sum + group.rows.length, 0);
@@ -424,7 +425,7 @@ function SharedCellView({ cell }: { cell: SharedCell }) {
  */
 export function EmptyCategory({ definition, value }: { definition: CompactBlock["items"][number]["definition"]; value: CompactBlock["items"][number]["value"] }) {
   return (
-    <Section id={definition.id} level={3} title={definition.label} description={inVocabulary(definition.description)} actions={<Status state={value.state} />}>
+    <Section id={definition.id} title={definition.label} description={inVocabulary(definition.description)} actions={<Status state={value.state} />}>
       <p className={styles.search}>{value.reason}</p>
     </Section>
   );

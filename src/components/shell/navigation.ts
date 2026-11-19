@@ -16,12 +16,11 @@ export interface NavItem {
 }
 
 /**
- * A run of the primary menu: the first has no heading; Assessments and
- * Templates each have a heading, and a divider sets every group after the
- * first apart.
+ * A run of the primary menu: the first, Home, has no heading; every other
+ * group has one, and a divider sets every group after the first apart.
  */
 export interface MenuGroup {
-  readonly id: "main" | "assessments" | "build" | "admin";
+  readonly id: "main" | "registry" | "assessments" | "build" | "insights" | "admin";
   readonly heading?: string;
   readonly items: readonly NavItem[];
 }
@@ -29,15 +28,23 @@ export interface MenuGroup {
 /** Home (home spec): the first entry of the primary menu. */
 export const HOME = { id: "home", label: "Home", href: "/", icon: "home", match: [/^\/$/] } as const satisfies NavItem;
 
-/** Assessments' pages, Repositories first since everything starts from them, each list with its create pages and its records. */
+/** The Registry: its records, the Repositories, with their create pages, versions, and Profiles (every page of a Repository marks Repositories). */
+const REGISTRY_ITEMS: readonly NavItem[] = [{ id: "repositories", label: "Repositories", href: "/repositories", icon: "git", match: [/^\/repositories(\/.*)?$/, /^\/profiles\/[^/]+(\/.*)?$/] }];
+
+/** Assessments' pages, each list with its create pages and its records. */
 const ASSESSMENT_ITEMS: readonly NavItem[] = [
-  { id: "repositories", label: "Repositories", href: "/repositories", icon: "git", match: [/^\/repositories(\/.*)?$/] },
-  { id: "all-assessments", label: "All Assessments", href: "/assessments", icon: "checklist", match: [/^\/assessments(\/.*)?$/, /^\/(runs|evaluations|profiles)\/[^/]+(\/.*)?$/] },
+  { id: "all-assessments", label: "All Assessments", href: "/assessments", icon: "checklist", match: [/^\/assessments(\/.*)?$/, /^\/(runs|evaluations)\/[^/]+(\/.*)?$/] },
   { id: "standards", label: "Standards", href: "/standards", icon: "target", match: [/^\/standards(\/.*)?$/] },
 ];
 
-/** Admin: settings the Frontend Registry keeps for every operator, such as Bitbucket Server tokens. */
-const ADMIN_ITEMS: readonly NavItem[] = [{ id: "bitbucket-tokens", label: "Bitbucket tokens", href: "/admin/bitbucket-tokens", icon: "lock", match: [/^\/admin(\/.*)?$/] }];
+/** Admin: how the Frontend Registry's parts stand, and settings it keeps for every operator, such as Bitbucket Server tokens. */
+const ADMIN_ITEMS: readonly NavItem[] = [
+  { id: "system", label: "System", href: "/admin/system", icon: "monitor", match: [/^\/admin(\/system)?\/?$/] },
+  { id: "bitbucket-tokens", label: "Bitbucket tokens", href: "/admin/bitbucket-tokens", icon: "lock", match: [/^\/admin\/bitbucket-tokens(\/.*)?$/] },
+];
+
+/** Insights: Adoption Analytics, how the fleet uses the design systems and packages the Reference Catalog describes. */
+const INSIGHTS_ITEMS: readonly NavItem[] = [{ id: "adoption", label: "Adoption", href: "/adoption", icon: "grid", match: [/^\/adoption(\/.*)?$/] }];
 
 export const SALT_PATTERNS = { id: "salt-patterns", label: "Salt Patterns", href: "/templates", icon: "sparkle", match: [/^\/templates(\/.*)?$/] } as const satisfies NavItem;
 
@@ -50,15 +57,18 @@ export interface NavFlags {
 export const NO_OPTIONAL_AREAS: NavFlags = { demo: false };
 
 /**
- * The primary menu's groups (page-patterns spec, "The primary menu groups
- * areas under headings and dividers"): Home; Assessments; Salt Patterns,
- * under Templates, while the demo is enabled; and Admin last.
+ * The primary menu's groups (page-patterns spec, "The primary menu leads
+ * with the Registry"): Home; the Registry, with Repositories; Assessments;
+ * Salt Patterns, under Templates, while the demo is enabled; Insights; and
+ * Admin last.
  */
 export function visibleGroups(flags: NavFlags): readonly MenuGroup[] {
   return [
     { id: "main", items: [HOME] },
+    { id: "registry", heading: "Registry", items: REGISTRY_ITEMS },
     { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS },
     ...(flags.demo ? [{ id: "build", heading: "Templates", items: [SALT_PATTERNS] } as const] : []),
+    { id: "insights", heading: "Insights", items: INSIGHTS_ITEMS },
     { id: "admin", heading: "Admin", items: ADMIN_ITEMS },
   ];
 }

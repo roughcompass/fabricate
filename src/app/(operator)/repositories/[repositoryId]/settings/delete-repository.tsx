@@ -18,7 +18,7 @@ interface DeleteRepositoryProps {
 }
 
 /**
- * Delete this repository, confirmed as GitHub confirms it: a dialog that
+ * Delete Repository, confirmed as GitHub confirms it: a dialog that
  * first asks whether you want to, then states every effect and asks you to
  * say you read them, then asks you to type the repository's name, which
  * alone enables the button. The server checks the name again. Without
@@ -67,7 +67,7 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
             </p>
           )}
           <SubmitButton variant="danger" disabled={hydrated && !matches} pendingLabel="Deleting">
-            Delete this repository
+            Delete Repository
           </SubmitButton>
         </>
       )}
@@ -78,7 +78,7 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
     <>
       {!hydrated && <div className={styles.inlineConfirm}>{confirmation}</div>}
       <button ref={opener} type="button" {...buttonProps("secondary")} className={`${buttonProps("secondary").className} ${styles.dangerButton} ${styles.trigger}`} aria-haspopup="dialog" onClick={open}>
-        Delete this repository
+        Delete Repository
       </button>
       <dialog ref={dialog} className={styles.dialog} aria-labelledby={titleId} onClose={() => opener.current?.focus()}>
         <div className={styles.dialogHeader}>
@@ -100,7 +100,7 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
         {step === 1 && (
           <div className={styles.dialogStep}>
             <button type="button" {...buttonProps("secondary")} className={`${buttonProps("secondary").className} ${styles.wide}`} onClick={() => setStep(2)}>
-              I want to delete this repository
+              Show what deleting it does
             </button>
           </div>
         )}
@@ -109,7 +109,7 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
           <div className={styles.dialogStep}>
             <div className={styles.warning} role="note">
               <Icon name="alert" />
-              <span>Unexpected bad things will happen if you don&apos;t read this!</span>
+              <span>Deleting it can&apos;t be undone.</span>
             </div>
             <ul className={styles.effects}>
               <li>

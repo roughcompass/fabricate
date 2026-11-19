@@ -34,10 +34,10 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   gap: ["Gap", "error"],
   indeterminate: ["Indeterminate", "warning"],
   not_applicable: ["Not applicable", "neutral"],
-  // Fact and category states.
-  observed: ["Observed", "success"],
-  inferred: ["Inferred", "info"],
-  mixed: ["Mixed", "info"],
+  // Fact and category states. How a fact was found isn't a judgment, so Observed, Inferred, and Mixed are neutral (design-system spec).
+  observed: ["Observed", "neutral"],
+  inferred: ["Inferred", "neutral"],
+  mixed: ["Mixed", "neutral"],
   conflicting: ["Conflicting", "warning"],
   unknown: ["Unknown", "neutral", "ring"],
   absent: ["None detected", "neutral"],
@@ -52,7 +52,8 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   out_of_scope: ["Out of scope", "neutral"],
   // Standards and their drafts.
   draft: ["Draft", "neutral"],
-  draft_ready: ["Ready to publish", "success"],
+  // A draft isn't good news until it's published: neutral, whether or not it's ready.
+  draft_ready: ["Ready to publish", "neutral"],
   draft_problems: ["Has problems", "warning"],
   no_draft: ["No draft", "neutral"],
   unsaved: ["Unsaved changes", "warning"],

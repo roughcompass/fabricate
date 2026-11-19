@@ -59,7 +59,7 @@ export function startEvaluation(db: Executor, assessmentPublicId: string, runPub
       const run = getRun(tx, runPublicId);
       const problems: string[] = [];
       if (run.assessmentId !== assessment.id) problems.push("The Run belongs to a different Assessment.");
-      if (run.state !== "complete" && run.state !== "complete_with_issues") problems.push(`The Run is ${run.state.replaceAll("_", " ")}; evaluate a finished Assessment.`);
+      if (!evaluableRun(run.state)) problems.push(`The Run is ${run.state.replaceAll("_", " ")}; evaluate a finished Assessment.`);
       if (profilesOf(tx, run.id).length === 0) problems.push("The Run has no Repository Profile, so there is no current-state evidence to evaluate.");
       if (!mapOf(tx, run.id)) problems.push("The Run has no Relationship Map.");
 
@@ -147,4 +147,9 @@ export function evaluationInputs(db: Executor, runId: number): EvaluationInputs 
     }),
     map: map ? { public_id: map.publicId, digest: map.digest, document: mapDocument(map) as unknown as MapDocument } : null,
   };
+}
+
+/** Whether a Run in +state+ can be evaluated: it finished with at least one Profile. */
+export function evaluableRun(state: string): boolean {
+  return state === "complete" || state === "complete_with_issues";
 }

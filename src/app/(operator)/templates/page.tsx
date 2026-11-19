@@ -11,6 +11,7 @@ import { MediaCard } from "@/components/ui/media-card";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
 import { SearchField } from "@/components/ui/search-field";
+import { Section } from "@/components/ui/section";
 import { BRANDS, BRAND_IDS, PROVIDERS, PROVIDER_IDS, TEMPLATES } from "@/lib/demo/catalog";
 import { EMPTY_QUERY, filterTemplates, galleryHref, isFiltered, optionCounts, parseGalleryQuery } from "@/lib/demo/gallery";
 import { requireDemo } from "@/lib/demo/guard";
@@ -36,11 +37,6 @@ export default async function TemplatesPage({ searchParams }: PageProps<"/templa
       header={{
         title: "Salt Patterns",
         description: "Jumpstart your app development process with pre-built solutions from DE Web and our community.",
-        extraActions: (
-          <ConfirmDialog action={resetDemo} trigger={{ label: "Reset demo", icon: "undo" }} menu={{ label: "More actions" }} title="Reset the demo?" confirmLabel="Reset demo" tone="danger">
-            {"Your comments, share links, and session profiles are removed. The templates and other visitors' work are not affected."}
-          </ConfirmDialog>
-        ),
       }}
       alerts={<OutcomeToast outcome={demoOutcome(param(params, "notice"))} />}
       rail={
@@ -110,6 +106,14 @@ export default async function TemplatesPage({ searchParams }: PageProps<"/templa
           </Panel>
         )}
       </section>
+      {/* Resetting removes work, so it isn't a header action: it has its own section, last. */}
+      <Section title="Reset the demo" description="Removes your comments, share links, and session profiles, and leaves the templates and other visitors' work as they are.">
+        <div>
+          <ConfirmDialog action={resetDemo} trigger={{ label: "Reset demo", icon: "undo" }} title="Reset the demo?" confirmLabel="Reset demo" tone="danger">
+            {"Your comments, share links, and session profiles are removed. The templates and other visitors' work are not affected."}
+          </ConfirmDialog>
+        </div>
+      </Section>
     </IndexTemplate>
   );
 }

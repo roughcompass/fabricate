@@ -185,7 +185,7 @@ test("follows a build to Ready through its live log, and shows it in the device 
   await expect(log).toContainText("==> install: npm ci in the repository root, with package-lock.json");
   await expect(log).toContainText("vite v5.4.0 building for production...");
   await expect(log).not.toContainText("==> ready");
-  await expect(page.getByText("Waiting for a worker").or(page.getByText("The preview appears here when the build is ready."))).toBeVisible();
+  await expect(page.getByText("Waiting to build").or(page.getByText("The preview appears here when the build is ready."))).toBeVisible();
 
   // The log grows as the build runs, and the page turns Ready when it publishes.
   fs.writeFileSync(control, JSON.stringify({ hold: false }));

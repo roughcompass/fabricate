@@ -50,27 +50,18 @@ export default async function StandardPage({ params, searchParams }: PageProps<"
         breadcrumbs: [{ href: "/standards", label: "Standards" }],
         title: standard.name,
         description: standard.purpose,
-        secondaryActions: [{ href: routes.standardEdit(standard.publicId), label: "Edit name and purpose", icon: "edit" }],
+        // The draft's actions are the page's: the Draft section holds none.
+        secondaryActions: [...(draft ? [{ href: routes.standardDraft(standard.publicId), label: "Edit draft", icon: "edit" as const }] : []), { href: routes.standardEdit(standard.publicId), label: "Edit name and purpose", icon: "edit" }],
+        primaryAction: draft ? (
+          <ButtonLink href={routes.standardPublish(standard.publicId)} variant="primary" icon="lock">
+            Review and publish
+          </ButtonLink>
+        ) : undefined,
       }}
       alerts={<OutcomeToast outcome={standardOutcome(param(query, "notice"), standard)} />}
     >
 
-      <Section
-        title="Draft"
-        description="The editable version of this Standard; publishing it creates a new Release."
-        actions={
-          draft ? (
-            <>
-              <ButtonLink href={routes.standardDraft(standard.publicId)} icon="edit">
-                Edit draft
-              </ButtonLink>
-              <ButtonLink href={routes.standardPublish(standard.publicId)} variant="primary" icon="lock">
-                Review and publish
-              </ButtonLink>
-            </>
-          ) : undefined
-        }
-      >
+      <Section title="Draft" description="The editable version of this Standard; publishing it creates a new Release.">
         {draft ? (
           <DescriptionList
             layout="columns"

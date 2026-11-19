@@ -78,14 +78,16 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
   return (
     <DetailsTemplate
       header={{
+        // One chain: Assessment, Run, Evaluation, Finding.
         breadcrumbs: [
           { href: "/assessments", label: "Assessments" },
           { href: routes.assessment(assessment.publicId), label: assessment.name },
+          { href: routes.run(run.publicId), label: `Run #${found.runNumber}` },
         ],
         title: name,
         status: <Status state={evaluation.state} />,
+        // The Run is the last breadcrumb, so the meta row doesn't repeat it.
         meta: [
-          <Link key="assessment" href={routes.run(run.publicId)}>{`Run #${found.runNumber}`}</Link>,
           countLabel(releases.length, "Release"),
           <span key="started">
             Started <RelativeTime value={evaluation.createdAt} />
@@ -98,7 +100,6 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
               ]
             : []),
         ],
-        description: "A diagnostic comparison of one Run with the Standard Releases pinned when the Evaluation started.",
       }}
       alerts={
         <>
@@ -193,7 +194,7 @@ function FindingsSection({ evaluationId, releases, findings, terminal }: { evalu
   const { all, controls, subjects, filters, filtered, shown } = findings;
   const base = routes.evaluation(evaluationId);
   return (
-    <Section id="findings" title="Findings" description="One Finding per Control and subject, grouped by Release and Control. Open a Finding for what was expected, what was observed, and why.">
+    <Section id="findings" title="Findings" description="One Finding per Control and subject, grouped by Release and Control; each says what was expected, what was observed, and why.">
       <FilterBar key={JSON.stringify(filters)} action={base} label="Filter Findings" filtered={filtered} clearHref={base}>
         <Select id="filter-release" name="release" label="Release" size="sm" defaultValue={filters.release ?? ""} options={[{ value: "", label: "Any Release" }, ...releases.map(({ pinned, label }) => ({ value: String(pinned.position), label }))]} />
         <Select id="filter-outcome" name="outcome" label="Outcome" size="sm" defaultValue={filters.outcome ?? ""} options={[{ value: "", label: "Any outcome" }, ...OUTCOME_ORDER.map((outcome) => ({ value: outcome, label: outcomeLabel(outcome) }))]} />
@@ -251,7 +252,10 @@ function FindingsSection({ evaluationId, releases, findings, terminal }: { evalu
                           {items.map((item) => (
                             <tr key={item.finding.publicId}>
                               <Td label="Subject">
-                                <Link href={routes.finding(evaluationId, item.finding.publicId)}>{String((item.document.subject as JsonObject).name)}</Link>
+                                {/* The link opens the Finding, named by its Control and subject. */}
+                                <Link href={routes.finding(evaluationId, item.finding.publicId)} aria-label={`${String(control.title)}: ${String((item.document.subject as JsonObject).name)}`}>
+                                  {String((item.document.subject as JsonObject).name)}
+                                </Link>
                               </Td>
                               <Td label="Outcome">
                                 <Status state={item.finding.outcome as Outcome} />

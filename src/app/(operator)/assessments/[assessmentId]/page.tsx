@@ -8,7 +8,8 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { countLabel } from "@/components/ui/count";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
-import { param } from "@/lib/web/query";
+import { pageOf, pageQuery, param, withQuery } from "@/lib/web/query";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
@@ -22,6 +23,8 @@ import { type Evaluation, evaluationNumbers, evaluationReleasesOf, listEvaluatio
 import { type Assessment, scopeLabel, selectedReleases, selectedRepositories } from "@/lib/assessments/assessment-records";
 import { releaseById, releaseLabel, standardById } from "@/lib/standards/standard-records";
 import { startEvaluationAction } from "../../evaluations/actions";
+import { evaluableRun } from "@/lib/evaluations/start";
+import { Menu, MenuItem } from "@/components/ui/menu";
 import { startRun } from "../actions";
 import { LaunchForm } from "../launch-form";
 import { assessmentOutcome } from "../outcomes";
@@ -33,8 +36,6 @@ export async function generateMetadata({ params }: PageProps<"/assessments/[asse
   const assessment = loadAssessment((await params).assessmentId);
   return { title: assessment?.name ?? "Assessment not found" };
 }
-
-const reusable = (state: string) => state === "complete" || state === "complete_with_issues";
 
 interface RunRow {
   run: Run;
@@ -134,9 +135,9 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
         />
       </Section>
 
-      <RunsSection assessment={assessment} runs={runs} hasReleases={releases.length > 0} />
+      <RunsSection assessment={assessment} runs={runs} hasReleases={releases.length > 0} requested={param(query, "runs_page")} href={(page) => withQuery(routes.assessment(assessment.publicId, { runs_page: pageQuery(page) }), {}, "runs")} />
 
-      <EvaluationsSection evaluations={evaluations} hasReleases={releases.length > 0} />
+      <EvaluationsSection evaluations={evaluations} hasReleases={releases.length > 0} requested={param(query, "evaluations_page")} href={(page) => withQuery(routes.assessment(assessment.publicId, { evaluations_page: pageQuery(page) }), {}, "evaluations")} />
 
       <Disclosure summary="Details" variant="plain">
         <DescriptionList surface
@@ -157,9 +158,10 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
 }
 
 /** Every Run of the Assessment, each with what it can do next: wait, be evaluated, or have a Release selected first. */
-function RunsSection({ assessment, runs, hasReleases }: { assessment: Assessment; runs: RunRow[]; hasReleases: boolean }) {
+function RunsSection({ assessment, runs, hasReleases, requested, href }: { assessment: Assessment; runs: RunRow[]; hasReleases: boolean; requested: string | undefined; href: (page: number) => string }) {
+  const { rows, page, pages } = pageOf(runs, requested);
   return (
-    <Section title="Runs" description="Each Run keeps the scope it started with; a finished one can be evaluated again after the Release selection changes.">
+    <Section id="runs" title="Runs" description="Each Run keeps the scope it started with; a finished one can be evaluated again after the Release selection changes.">
       <Panel flush>
         {runs.length > 0 ? (
           <Table
@@ -176,7 +178,7 @@ function RunsSection({ assessment, runs, hasReleases }: { assessment: Assessment
               </>
             }
           >
-            {runs.map(({ run, number, targets }) => {
+            {rows.map(({ run, number, targets }) => {
               const failed = targets.filter((target) => target.state === "failed").length;
               const canceled = targets.filter((target) => target.state === "canceled").length;
               return (
@@ -198,20 +200,17 @@ function RunsSection({ assessment, runs, hasReleases }: { assessment: Assessment
                   </Td>
                   <Td align="actions">
                     <RowActions>
-                      {!reusable(run.state) ? (
+                      {!evaluableRun(run.state) ? (
                         <Secondary>{run.state === "failed" || run.state === "canceled" ? "No results to evaluate" : "Evaluate once finished"}</Secondary>
-                      ) : !hasReleases ? (
-                        <Link href={routes.assessmentEdit(assessment.publicId, "initiative-releases")}>Select a Release to evaluate</Link>
                       ) : (
-                        <LaunchForm
-                          action={startEvaluationAction.bind(null, assessment.publicId, run.publicId)}
-                          launchToken={crypto.randomUUID()}
-                          label="Start Evaluation"
-                          accessibleName={`Start Evaluation of Run #${number}`}
-                          failure={`The Evaluation of Run #${number} was not started.`}
-                          variant="secondary"
-                          size="sm"
-                        />
+                        // A row's actions are in its overflow menu, like every list's.
+                        <Menu label={`Actions for Run #${number}`}>
+                          {hasReleases ? (
+                            <LaunchForm action={startEvaluationAction.bind(null, assessment.publicId, run.publicId)} launchToken={crypto.randomUUID()} label="Start Evaluation" failure={`The Evaluation of Run #${number} was not started.`} menuItem />
+                          ) : (
+                            <MenuItem href={routes.assessmentEdit(assessment.publicId, "initiative-releases")}>Select a Release to evaluate</MenuItem>
+                          )}
+                        </Menu>
                       )}
                     </RowActions>
                   </Td>
@@ -223,14 +222,16 @@ function RunsSection({ assessment, runs, hasReleases }: { assessment: Assessment
           <EmptyState title="No Runs yet">Start a Run to pin each scoped repository to a commit and profile it without running its code.</EmptyState>
         )}
       </Panel>
+      <Pagination label="Run pages" page={page} pages={pages} href={href} scrollToTop />
     </Section>
   );
 }
 
 /** Every Evaluation of the Assessment's Runs, newest first. */
-function EvaluationsSection({ evaluations, hasReleases }: { evaluations: EvaluationRow[]; hasReleases: boolean }) {
+function EvaluationsSection({ evaluations, hasReleases, requested, href }: { evaluations: EvaluationRow[]; hasReleases: boolean; requested: string | undefined; href: (page: number) => string }) {
+  const { rows, page, pages } = pageOf(evaluations, requested);
   return (
-    <Section title="Evaluations" description="Comparisons of a Run with the Standard Releases selected when each started.">
+    <Section id="evaluations" title="Evaluations" description="Comparisons of a Run with the Standard Releases selected when each started.">
       <Panel flush>
         {evaluations.length > 0 ? (
           <Table
@@ -245,7 +246,7 @@ function EvaluationsSection({ evaluations, hasReleases }: { evaluations: Evaluat
               </>
             }
           >
-            {evaluations.map(({ evaluation, number, run, releases: pinned }) => (
+            {rows.map(({ evaluation, number, run, releases: pinned }) => (
               <tr key={evaluation.publicId}>
                 <Td label="Evaluation">
                   <Primary>
@@ -276,6 +277,7 @@ function EvaluationsSection({ evaluations, hasReleases }: { evaluations: Evaluat
           </EmptyState>
         )}
       </Panel>
+      <Pagination label="Evaluation pages" page={page} pages={pages} href={href} scrollToTop />
     </Section>
   );
 }

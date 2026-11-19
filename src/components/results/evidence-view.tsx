@@ -54,7 +54,6 @@ export async function EvidenceView({ breadcrumbs, repository, record: found, pin
       header={{
         breadcrumbs,
         title: evidenceLocation(found),
-        description: "Committed content that a fact, relationship, or Finding cites, re-read from the pinned snapshot and verified against its recorded digests.",
       }}
       alerts={
         resolved !== null &&

@@ -84,8 +84,11 @@ export interface ActivityItem {
 
 /** The +limit+ most recently finished Runs, newest first, in one query. */
 export function recentActivity(db: Executor, limit = ACTIVITY_LIMIT): ActivityItem[] {
+  // Each names its Run, "Run #4 · Salt adherence, fleet", so links to different Runs never share a text.
   const rows = db.all<{ kind: ActivityKind; at: number; name: string; href: string }>(sql`
-    select case r.state when 'failed' then 'run_failed' else 'run_completed' end as kind, r.finished_at as at, i.name as name, '/runs/' || r.public_id as href
+    select case r.state when 'failed' then 'run_failed' else 'run_completed' end as kind, r.finished_at as at,
+      'Run #' || (select count(*) from assessments earlier where earlier.initiative_id = r.initiative_id and earlier.id <= r.id) || ' · ' || i.name as name,
+      '/runs/' || r.public_id as href
     from assessments r join initiatives i on i.id = r.initiative_id
     where r.finished_at is not null and r.state in ('complete', 'complete_with_issues', 'failed')
     order by at desc, r.id desc

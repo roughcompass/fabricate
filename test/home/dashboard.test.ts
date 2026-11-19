@@ -77,7 +77,7 @@ describe("Assessment trend", () => {
 });
 
 describe("recent activity", () => {
-  it("leads with the newest finished Run, linking to it, and leaves background surveys out", () => {
+  it("leads with the newest finished Run, linking to it by its number and Assessment, and leaves background surveys out", () => {
     const db = createTestDb();
     const repository = buildRepository(db);
     const orders = buildAssessment(db, { name: "Orders review", repositories: [repository] });
@@ -92,7 +92,8 @@ describe("recent activity", () => {
     expect(attentionItems(db).map((item) => item.kind)).toEqual(["run_failed"]);
     expect(fleetSummary(db).assessments.total).toBe(1);
     expect(activity.map((item) => item.kind)).toEqual(["run_failed", "run_completed"]);
-    expect(activity[0]).toMatchObject({ record: { name: "Orders review", href: `/runs/${failed.publicId}` } });
+    expect(activity[0]).toMatchObject({ record: { name: "Run #2 · Orders review", href: `/runs/${failed.publicId}` } });
+    expect(activity[1]).toMatchObject({ record: { name: "Run #1 · Orders review", href: `/runs/${older.publicId}` } });
   });
 
   it("lists at most ten", () => {

@@ -19,7 +19,8 @@ test("starts a second Evaluation against the same Assessment after changing only
   await expect(runs.locator("tbody tr")).toHaveCount(1);
   await expect(page.getByText("No Evaluations yet")).toBeVisible();
 
-  await runs.getByRole("button", { name: "Start Evaluation of Run #1" }).click();
+  await runs.getByRole("button", { name: "Actions for Run #1" }).click();
+  await runs.getByRole("button", { name: "Start Evaluation" }).click();
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("Evaluation #1 was started.")).toBeVisible();
   await expect(pageHeader(page)).toContainText("Queued");
   const first = page.url().split("/evaluations/")[1]!.split("?")[0]!;
@@ -36,13 +37,14 @@ test("starts a second Evaluation against the same Assessment after changing only
 
   // The finished Assessment is reused, not repeated.
   await expect(runs.locator("tbody tr")).toHaveCount(1);
-  await runs.getByRole("button", { name: "Start Evaluation of Run #1" }).click();
+  await runs.getByRole("button", { name: "Actions for Run #1" }).click();
+  await runs.getByRole("button", { name: "Start Evaluation" }).click();
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("Evaluation #2 was started.")).toBeVisible();
   const second = page.url().split("/evaluations/")[1]!.split("?")[0]!;
   expect(second).not.toBe(first);
   await runJobs(db);
   await expect(pageHeader(page)).toContainText("Complete");
-  await expect(pageHeader(page).getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(run.publicId));
+  await expect(pageHeader(page).getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(run.publicId));
   const findings = page.getByRole("region", { name: "Findings", exact: true });
   await expect(findings).toContainText("Engineering baseline v1");
   await expect(findings).not.toContainText("Service readiness v1");
@@ -72,7 +74,11 @@ test("offers Evaluation only for finished Assessments and explains what is missi
 
   await page.goto(paths.assessment(assessment.publicId));
   const runs = page.getByRole("table", { name: "Run history" });
-  await expect(runs.getByRole("row").filter({ hasText: "Run #1" }).getByRole("link", { name: "Select a Release to evaluate" })).toBeVisible();
+  // A row's actions are in its overflow menu.
+  const first = runs.getByRole("row").filter({ hasText: "Run #1" });
+  await first.getByRole("button", { name: "Actions for Run #1" }).click();
+  await expect(first.getByRole("link", { name: "Select a Release to evaluate" })).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(runs.getByRole("row").filter({ hasText: "Run #2" })).toContainText("No results to evaluate");
   expect([finished.publicId, failed.publicId]).toHaveLength(2);
   await expect(page.getByRole("button", { name: "Start Evaluation" })).toHaveCount(0);

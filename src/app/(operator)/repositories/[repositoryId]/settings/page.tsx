@@ -11,11 +11,12 @@ import { RepositoryForm } from "../../repository-form";
 import { DeleteRepository } from "./delete-repository";
 import styles from "./settings.module.css";
 import { routes } from "@/lib/web/routes";
+import { PRODUCT } from "@/lib/product";
 import { loadRepository } from "../load";
 
 export async function generateMetadata({ params }: PageProps<"/repositories/[repositoryId]/settings">): Promise<Metadata> {
   const repository = loadRepository((await params).repositoryId);
-  return { title: repository ? `Settings · ${repository.name}` : "Repository not found" };
+  return { title: repository ? `Settings for ${repository.name}` : "Repository not found" };
 }
 
 /**
@@ -35,7 +36,7 @@ export default async function SettingsPage({ params, searchParams }: PageProps<"
           { href: "/repositories", label: "Repositories" },
           { href: routes.repository(repository.publicId), label: repository.name },
         ],
-        title: "Settings",
+        title: `Settings for ${repository.name}`,
       }}
       alerts={<OutcomeToast outcome={repositoryOutcome(db, param(query, "notice"), repository.publicId)} />}
       sections={[
@@ -50,6 +51,7 @@ export default async function SettingsPage({ params, searchParams }: PageProps<"
               lockVersion={repository.lockVersion}
               submitLabel="Save changes"
               layout="plain"
+              cancelHref={routes.repository(repository.publicId)}
             />
           ),
         },
@@ -59,8 +61,8 @@ export default async function SettingsPage({ params, searchParams }: PageProps<"
         content: (
           <div className={styles.dangerRow}>
             <div>
-              <p className={styles.dangerTitle}>Delete this repository</p>
-              <p className={styles.muted}>Once you delete a repository, there is no going back. Please be certain.</p>
+              <p className={styles.dangerTitle}>Delete Repository</p>
+              <p className={styles.muted}>{`Removes ${repository.name} from the ${PRODUCT.name}; the Runs that included it keep their results.`}</p>
             </div>
             <DeleteRepository name={repository.name} effects={deletionEffects(db, repository)} action={deleteRepository.bind(null, repository.publicId)} />
           </div>

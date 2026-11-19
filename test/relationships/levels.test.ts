@@ -131,6 +131,10 @@ describe("map levels", () => {
     expect(all.rows.map((row) => row.from.label)).toEqual([...all.rows.map((row) => row.from.label)].sort());
     expect(host.rows.every((row) => row.from.label === "access-shell" || row.to?.label === "access-shell")).toBe(true);
     expect(Object.keys(host.evidence).length).toBeGreaterThan(0);
+    // Third-party packages are counted by name, not rows; a package's own focus keeps them as rows.
+    expect(all.thirdParty.find((item) => item.name === "react")?.dependents).toBe(6);
+    expect(all.rows.some((row) => row.to === null && row.candidates.length === 0 && row.state === "unresolved" && row.type === "package_dependency" && row.reason?.includes("react"))).toBe(false);
+    expect(relationshipPage(db, view, { kind: "package", name: "react" }).total).toBe(6);
   });
 });
 

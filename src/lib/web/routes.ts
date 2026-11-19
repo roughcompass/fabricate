@@ -47,6 +47,15 @@ export const routes = {
   /** Every version of it, its surveys, newest first. */
   repositoryVersions: (repositoryId: string, page = 1) => withQuery(`/repositories/${repositoryId}/versions`, { page: pageQuery(page) }),
   repositoryVersion: (repositoryId: string, version: number) => `/repositories/${repositoryId}/versions/${version}`,
+  /** Its current Profile's fact document, as stored, for an agent (product-site spec, "A Repository's current Profile is readable as JSON"). */
+  repositoryProfileJson: (repositoryId: string) => `/repositories/${repositoryId}/profile.json`,
   /** One of its previews (docs/previews.md): its device frame, state, and build log, with +query+ such as its device. */
   repositoryPreview: (repositoryId: string, previewId: string, query?: Query) => withQuery(`/repositories/${repositoryId}/previews/${previewId}`, query),
+
+  /** Adoption Analytics: the tracked design systems and packages. */
+  adoption: "/adoption",
+  adoptionDesignSystem: (designSystemId: string, query?: Query) => withQuery(`/adoption/design-systems/${designSystemId}`, query),
+  adoptionComponent: (designSystemId: string, name: string, query?: Query) => withQuery(`/adoption/design-systems/${designSystemId}/components/${encodeURIComponent(name)}`, query),
+  /** A package's versions across the fleet; a scoped name keeps its @ and slash, as /adoption/packages/@salt-ds/core. */
+  adoptionPackage: (name: string, query?: Query) => withQuery(`/adoption/packages/${name.split("/").map((part) => encodeURIComponent(part).replace(/^%40/, "@")).join("/")}`, query),
 };

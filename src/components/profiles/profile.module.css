@@ -27,6 +27,8 @@
   .secondary { color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
 
   /* The Overview's questions, two panels to a row on a wide column. */
+  /* The Overview view: its figures, what needs attention, and a panel per question. */
+  .overview { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
   .panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
   @container content (max-width: 1023px) {
     .panels { grid-template-columns: minmax(0, 1fr); }
@@ -154,6 +156,8 @@
   .anchoredTable th[id] { scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
 
 
+  /* Service Dependencies, one disclosure each, spaced as a section's parts are. */
+  .services { display: flex; flex-direction: column; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
   /* Service Dependency summaries. */
   .serviceSummary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); min-width: 0; }
 }

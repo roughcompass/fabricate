@@ -22,7 +22,7 @@ export default async function MapPage({ params, searchParams }: PageProps<"/runs
       view={view}
       query={query}
       title="Relationship Map"
-      description="This Run's repositories by runtime system, with the relationships between them. Open a system to see its diagram, or focus a repository to see what a change to it affects."
+      description="This Run's repositories by runtime system, with the relationships between them; open a system for its diagram, or focus a repository for what a change to it affects."
       levelHref={href.run(view)}
       scope={{ kind: "from", nodes: new Set(view.repositories.keys()) }}
       scopeDescription="Every relationship in this Run, from the repository that declared each one."

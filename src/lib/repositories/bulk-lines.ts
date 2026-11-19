@@ -1,5 +1,5 @@
 /*
- * The lines of an Add in bulk submission: one clone URL per line, optionally
+ * The lines of an Add Repositories submission: one clone URL per line, optionally
  * followed by a branch, tag, or commit. No Node or database dependencies, so
  * the form states the same limit the server applies.
  */

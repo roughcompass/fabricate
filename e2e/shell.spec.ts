@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { profilesOf } from "../src/lib/profiles/profile-records";
+import { runById } from "../src/lib/runs/lookups";
 import { buildRepository } from "../test/support/builders";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, seedResults, seedEvaluation } from "./support/results";
@@ -9,8 +10,8 @@ import { paths } from "./support/paths";
 import { pageHeader, pageTitle, useTheme } from "./support/shell";
 
 // operator-interface/page-patterns spec: the application shell, and the
-// primary menu: Home, then the Assessments and Templates groups under
-// headings and dividers. The narrow-viewport drawer has its own cases below.
+// primary menu, which leads with the Registry. The narrow-viewport drawer
+// has its own cases below.
 
 const primary = (page: Page) => page.getByRole("navigation", { name: "Primary" });
 
@@ -35,14 +36,16 @@ test.describe("on a wide viewport", () => {
     await expectCurrent(page, "All Assessments");
   });
 
-  test("Full menu: Home, then the Assessments, Templates, and Admin groups under headings and dividers", async ({ page, db: _db }) => {
+  test("Full menu: Home; Registry; Assessments; Templates; Insights; and Admin, under headings and dividers", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
-    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Salt Patterns", "Bitbucket tokens"]);
-    await expect(nav.locator("hr")).toHaveCount(3);
-    await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["Repositories", "All Assessments", "Standards"]);
+    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Salt Patterns", "Adoption", "System", "Bitbucket tokens"]);
+    await expect(nav.locator("hr")).toHaveCount(5);
+    await expect(nav.getByRole("list", { name: "Registry" }).getByRole("link")).toHaveText(["Repositories"]);
+    await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["All Assessments", "Standards"]);
     await expect(nav.getByRole("list", { name: "Templates" }).getByRole("link")).toHaveText(["Salt Patterns"]);
-    await expect(nav.getByRole("list", { name: "Admin" }).getByRole("link")).toHaveText(["Bitbucket tokens"]);
+    await expect(nav.getByRole("list", { name: "Insights" }).getByRole("link")).toHaveText(["Adoption"]);
+    await expect(nav.getByRole("list", { name: "Admin" }).getByRole("link")).toHaveText(["System", "Bitbucket tokens"]);
     // Every item has one icon.
     for (const link of await nav.getByRole("link").all()) await expect(link.locator("svg")).toHaveCount(1);
     await expect(nav.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
@@ -56,11 +59,11 @@ test.describe("on a wide viewport", () => {
     await expectCurrent(page, "Repositories");
   });
 
-  test("Record page: a Repository Profile marks All Assessments", async ({ page, db }) => {
+  test("Record page: a Repository's Profile, one of its pages, marks Repositories", async ({ page, db }) => {
     const { run } = await seedResults(db);
     const profile = profilesOf(db, run.id)[0]!.profile;
     await page.goto(`/profiles/${profile.publicId}`);
-    await expectCurrent(page, "All Assessments");
+    await expectCurrent(page, "Repositories");
   });
 
   test("Current section on a deep page: a Finding marks All Assessments", async ({ page, db }) => {
@@ -79,13 +82,15 @@ test.describe("on a wide viewport", () => {
 
   test("The create pages that left the menu are offered on their list pages", async ({ page, db }) => {
     buildRepository(db);
-    await page.goto(paths.assessments);
-    await expect(pageHeader(page).getByRole("link", { name: "New Assessment" })).toBeVisible();
     await page.goto(paths.repositories);
     await expect(pageHeader(page).getByRole("link", { name: "New Repository" })).toBeVisible();
-    await expect(pageHeader(page).getByRole("link", { name: "Add in bulk" })).toBeVisible();
-    await page.goto("/standards");
-    await expect(pageHeader(page).getByRole("link", { name: "New Standard" })).toBeVisible();
+    await expect(pageHeader(page).getByRole("link", { name: "Add Repositories" })).toBeVisible();
+    // An empty list offers its create page once, in its empty state, not again in the page header.
+    for (const [url, name] of [[paths.assessments, "New Assessment"], ["/standards", "New Standard"]] as const) {
+      await page.goto(url);
+      await expect(page.getByRole("main").getByRole("link", { name })).toHaveCount(1);
+      await expect(pageHeader(page).getByRole("link", { name })).toHaveCount(0);
+    }
   });
 
   test("Page outside every item: the gallery shows the primary menu with nothing current", async ({ page, db: _db }) => {
@@ -160,13 +165,16 @@ test.describe("the shell header", () => {
   });
 
   test("Breadcrumbs on a Finding: the Control title and its ancestors in the page header", async ({ page, db }) => {
-    const { evaluation } = await seedEvaluation(db);
+    const { evaluation, assessment } = await seedEvaluation(db);
     const finding = findingsOf(db, evaluation.id)[0]!;
     const control = [...BASELINE_CONTROLS, ...SERVICE_CONTROLS].find((candidate) => candidate.key === finding.controlKey)!;
     await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
     await expect(pageTitle(page)).toHaveText(control.title as string);
     const crumbs = pageHeader(page).getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
-    await expect(crumbs).toHaveText(["Assessments", "Fleet assessment", "Evaluation #1"]);
+    await expect(crumbs).toHaveText(["Assessments", "Fleet assessment", "Run #1", "Evaluation #1"]);
+    // Each item links to its record.
+    const run = runById(db, evaluation.runId);
+    expect(await crumbs.evaluateAll((links) => links.map((link) => link.getAttribute("href")))).toEqual(["/assessments", `/assessments/${assessment.publicId}`, `/runs/${run.publicId}`, `/evaluations/${evaluation.publicId}`]);
   });
 
   for (const theme of ["light", "dark"] as const) {

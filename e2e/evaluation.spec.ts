@@ -1,6 +1,8 @@
 import type { JsonObject } from "@repo-facts/contract";
 import type { Page } from "@playwright/test";
 import { findingDocument, findingsOf } from "../src/lib/evaluations/evaluation-records";
+import { runById } from "../src/lib/runs/lookups";
+import { targetsOf } from "../src/lib/runs/run-records";
 import { selectReleases } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
 import { evaluate, seedResults, seedEvaluation } from "./support/results";
@@ -114,7 +116,7 @@ test("explains a Gap: expected state, observed facts, evidence, reasoning, and g
   // The outcome appears once, in the header.
   await expect(pageHeader(page)).toContainText("Gap");
   await expect(page.locator("main").getByText("Gap", { exact: true })).toHaveCount(1);
-  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Assessments", assessment.name, "Evaluation #1"]);
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Assessments", assessment.name, "Run #1", "Evaluation #1"]);
   const result = page.getByRole("region", { name: "Result" });
   await expect(result).toContainText("The Control applies, and the evidence shows the expected condition does not hold.");
   // A Control that reads only Service Dependencies links to the top of the Profile.
@@ -161,7 +163,7 @@ test("lists every Indeterminate cause, including a missing Profile", async ({ pa
   const billing = all.find(({ document }) => (document.subject as JsonObject).name === "billing")!;
   expect(String((billing.document.causes as JsonObject[])[0]!.reason)).toContain("billing has no Profile");
   await page.goto(`/evaluations/${evaluation.publicId}/findings/${billing.finding.publicId}`);
-  await expect(page.getByRole("region", { name: "Result" })).toContainText("billing (no Profile)");
+  await expect(page.getByRole("region", { name: "Result" })).toContainText("None; billing had no Profile in this Run");
 });
 
 test("opens the Profile at the category a Finding's Control reads", async ({ page, db }) => {
@@ -190,3 +192,47 @@ test("Evaluation pages stay readable at mobile width", async ({ page, db }) => {
   await expectNoHorizontalOverflow(page);
   await expectNoOverlappingContent(page);
 });
+
+// page-patterns spec, content standard "Two layers" and "Outcomes and conclusions".
+test("Two layers on a Finding: it leads with the outcome and the observed value in words, and the field path waits in a disclosure", async ({ page, db }) => {
+  const { evaluation } = await seedEvaluation(db);
+  const finding = findingsOf(db, evaluation.id, { controlKey: "has-ci" })[0]!;
+  await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
+  await expect(pageHeader(page).locator("[data-header-status]")).toBeVisible();
+  await expect(page.getByLabel("Condition trace")).toContainText("Observed:");
+  const path = page.getByText("repository.ci_systems", { exact: true });
+  await expect(path).toBeHidden();
+  await expect(page.getByText("has-ci", { exact: true })).toBeHidden();
+  await page.getByText("Field paths and Control key").click();
+  await expect(path.first()).toBeVisible();
+  await expect(page.getByText("has-ci", { exact: true })).toBeVisible();
+});
+
+test("Conclusion and outcomes on an Evaluation: the conclusion is labeled Conclusion, and the Findings' filter Outcome", async ({ page, db }) => {
+  const { evaluation } = await seedEvaluation(db);
+  await page.goto(`/evaluations/${evaluation.publicId}`);
+  // Against two Releases, each Release's conclusion is in its own row, under the column Conclusion.
+  const summary = page.getByRole("table", { name: "Summary by Release" });
+  await expect(summary.getByRole("columnheader", { name: "Conclusion" })).toBeVisible();
+  await expect(summary.getByRole("cell").filter({ hasText: "Gaps found" }).first()).toBeVisible();
+  const outcome = page.getByRole("form", { name: "Filter Findings" }).getByLabel("Outcome", { exact: true });
+  const options = await outcome.locator("option").allTextContents();
+  for (const label of ["Meets", "Gap", "Indeterminate"]) expect(options).toContain(label);
+});
+
+// page-patterns spec, "Record mentions".
+test("Record mentions: the Run's repositories and a Finding's subject link to their Repository pages", async ({ page, db }) => {
+  const { evaluation } = await seedEvaluation(db);
+  const finding = findingsOf(db, evaluation.id, { controlKey: "has-ci" }).find((candidate) => (findingDocument(candidate).subject as JsonObject).name === "orders")!;
+  const run = runById(db, evaluation.runId);
+  await page.goto(`/runs/${run.publicId}`);
+  const scope = page.getByRole("table", { name: "Run scope" });
+  for (const target of targetsOf(db, run.id)) await expect(scope.getByRole("link", { name: target.repositoryName, exact: true })).toHaveAttribute("href", `/repositories/${target.repositoryPublicId}`);
+
+  await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
+  const orders = targetsOf(db, run.id).find((target) => target.repositoryName === "orders")!;
+  await expect(page.getByRole("region", { name: "Result" }).getByRole("link", { name: "orders", exact: true })).toHaveAttribute("href", `/repositories/${orders.repositoryPublicId}`);
+  await pageHeader(page).getByRole("link", { name: "orders", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "orders" })).toBeVisible();
+});
+

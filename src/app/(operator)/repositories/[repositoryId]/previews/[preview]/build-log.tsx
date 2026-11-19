@@ -117,7 +117,7 @@ export function BuildLog({ preview, attempt, state, initial }: BuildLogProps) {
     return (
       <Panel flush>
         <EmptyState title={live ? "No log yet" : "No log"} icon={live ? "clock" : "file"}>
-          {live ? "The log starts when a worker picks up the build." : "This attempt ended before a worker started it."}
+          {live ? "The log starts when the build does." : "This attempt ended before its build started."}
         </EmptyState>
       </Panel>
     );

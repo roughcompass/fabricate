@@ -3,9 +3,10 @@ import { buildRepository } from "../test/support/builders";
 import { listRepositories } from "../src/lib/repositories/repository-records";
 import { versionsOf } from "../src/lib/profiling/versions";
 import { moveSurvey, requestSurvey } from "../src/lib/surveys/records";
+import { seedSurvey } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
-import { toasts } from "./support/shell";
+import { pageHeader, pageTitle, toasts } from "./support/shell";
 
 const rowMenu = async (page: Page, name: string) => {
   await page.getByRole("button", { name: `Actions for ${name}` }).click();
@@ -51,15 +52,18 @@ test("adds and edits a Source with validation feedback", async ({ page, db: _db 
   await expect(page.getByRole("heading", { level: 1, name: "orders" })).toBeVisible();
   await expect(page.getByText("Not profiled yet")).toBeVisible();
   // Re-profile reads the reference at once, and says when it can't.
-  await page.getByRole("button", { name: "Re-profile" }).click();
+  await pageHeader(page).getByRole("button", { name: "More actions" }).click();
+  await page.locator("[popover]:popover-open").getByRole("button", { name: "Re-profile" }).click();
   await expect(toasts(page).getByText("orders's reference couldn't be read.")).toBeVisible();
-  await page.getByRole("link", { name: "Settings" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await pageHeader(page).getByRole("link", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Settings for orders" })).toBeVisible();
   await page.getByLabel("Reference").fill("release");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(toasts(page).getByText("Running and past Runs keep the configuration they started with.")).toBeVisible();
+  // The list keeps one line a row, so the reference is on the Repository's page.
+  await pageHeader(page).getByRole("link", { name: "orders" }).click();
+  await expect(pageHeader(page)).toContainText("release");
   await page.goto(paths.repositories);
-  await expect(page.getByRole("row", { name: /orders/ })).toContainText("release");
 
   const menu = await rowMenu(page, "orders");
   await expect(menu.getByRole("link", { name: "Settings" })).toBeVisible();
@@ -72,15 +76,15 @@ test("deletes a Repository only after its effects are read and its name is typed
 
   await page.goto(`/repositories/${orders.publicId}/settings`);
   const zone = page.locator("#danger-zone");
-  await expect(zone).toContainText("Once you delete a repository, there is no going back. Please be certain.");
-  await zone.getByRole("button", { name: "Delete this repository" }).click();
+  await expect(zone).toContainText("Removes orders from the Frontend Registry; the Runs that included it keep their results.");
+  await zone.getByRole("button", { name: "Delete Repository" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Delete orders" });
-  await dialog.getByRole("button", { name: "I want to delete this repository" }).click();
-  await expect(dialog).toContainText("Unexpected bad things will happen if you don't read this!");
+  await dialog.getByRole("button", { name: "Show what deleting it does" }).click();
+  await expect(dialog).toContainText("Deleting it can't be undone.");
   await dialog.getByRole("button", { name: "I have read and understand these effects" }).click();
 
-  const remove = dialog.getByRole("button", { name: "Delete this repository" });
+  const remove = dialog.getByRole("button", { name: "Delete Repository" });
   await expect(remove).toBeDisabled();
   await dialog.getByLabel(/To confirm, type/).fill("order");
   await expect(remove).toBeDisabled();
@@ -102,13 +106,13 @@ test.describe("without JavaScript", () => {
 
     await page.goto(`/repositories/${orders.publicId}/settings`);
     const zone = page.locator("#danger-zone");
-    await expect(zone.getByRole("button", { name: "Delete this repository" })).toHaveCount(1);
+    await expect(zone.getByRole("button", { name: "Delete Repository" })).toHaveCount(1);
     await zone.getByLabel(/To confirm, type/).fill("order");
-    await zone.getByRole("button", { name: "Delete this repository" }).click();
+    await zone.getByRole("button", { name: "Delete Repository" }).click();
     await expect(page.getByText("Type orders to confirm")).toBeVisible();
 
     await page.locator("#danger-zone").getByLabel(/To confirm, type/).fill("orders");
-    await page.locator("#danger-zone").getByRole("button", { name: "Delete this repository" }).click();
+    await page.locator("#danger-zone").getByRole("button", { name: "Delete Repository" }).click();
     await expect(page.getByText("orders was deleted.")).toBeVisible();
   });
 });
@@ -137,7 +141,7 @@ test("asks for the clone URL first and names the Repository after its owner and 
 
 test("adds Repositories in bulk, keeps the refused lines to fix, and shows what is being profiled", async ({ page, db }) => {
   await page.goto(paths.repositories);
-  await page.getByRole("link", { name: "Add in bulk" }).first().click();
+  await page.getByRole("link", { name: "Add Repositories" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "Add Repositories" })).toBeVisible();
 
   await page.getByLabel("Clone URLs").fill(["https://github.com/vickykatoch/helios.git", "git@github.com:acme/scp.git", "https://github.com/openmrs/openmrs-esm-core.git main"].join("\n"));
@@ -182,7 +186,7 @@ test("searches Sources by name or clone URL, keeping the search in the address",
   const rows = page.getByRole("table", { name: "Repositories" }).locator("tbody tr");
   await expect(rows).toHaveCount(2);
   await expect(rows.filter({ hasText: "accounts" })).toHaveCount(0);
-  await expect(page.getByText("2 Repositories of 3")).toBeVisible();
+  await expect(page.getByText("Showing 1–2 of 2 matching Repositories (3 in all)")).toBeVisible();
 
   await search.fill("nothing-matches");
   await search.press("Enter");
@@ -204,7 +208,7 @@ test("the removed claim and DE Console addresses respond as not found, and a for
   await expect(page.getByLabel("Ownership")).toHaveCount(0);
 });
 
-test("keeps every row one height, with or without a Reference", async ({ page, db }) => {
+test("keeps every row one line, with or without a Reference", async ({ page, db }) => {
   buildRepository(db, { name: "orders", gitRef: "main" });
   buildRepository(db, { name: "billing" });
   await page.goto(paths.repositories);
@@ -220,4 +224,125 @@ test("the catalog stays usable at mobile width", async ({ page, db }) => {
   await expect(page.getByText("orders-with-a-long-name")).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await expect(page.getByRole("link", { name: "New Repository" })).toBeVisible();
+});
+
+// page-patterns spec, "Page titles and browser titles name the record"; page-templates spec, Settings.
+test("A record's own pages name it: Settings for web and Versions of web, both linked from its page header", async ({ page, db }) => {
+  const web = buildRepository(db, { name: "web" });
+  await page.goto(`/repositories/${web.publicId}`);
+  await pageHeader(page).getByRole("link", { name: "Settings" }).click();
+  await expect(pageTitle(page)).toHaveText("Settings for web");
+  await expect(page).toHaveTitle("Settings for web · Frontend Registry");
+  await page.goto(`/repositories/${web.publicId}`);
+  await pageHeader(page).getByRole("link", { name: /^Versions/ }).click();
+  await expect(pageTitle(page)).toHaveText("Versions of web");
+  await expect(page).toHaveTitle("Versions of web · Frontend Registry");
+});
+
+test("Repository settings: the Settings template, with breadcrumbs to web, Cancel, and Delete Repository in the danger section, which asks for the name", async ({ page, db }) => {
+  const web = buildRepository(db, { name: "web" });
+  await page.goto(`/repositories/${web.publicId}/settings`);
+  await expect(pageHeader(page)).toHaveAttribute("data-template", "settings");
+  await expect(pageHeader(page).getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Repositories", "web"]);
+  await expect(page.getByRole("region", { name: "General" }).getByRole("link", { name: "Cancel" })).toHaveAttribute("href", `/repositories/${web.publicId}`);
+  // Destructive actions sit only in the danger section, last.
+  await expect(pageHeader(page).getByRole("button")).toHaveCount(0);
+  const danger = page.locator("#danger-zone");
+  await expect(danger.getByRole("heading", { name: "Danger zone" })).toBeVisible();
+  await danger.getByRole("button", { name: "Delete Repository" }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete web" });
+  await dialog.getByRole("button", { name: "Show what deleting it does" }).click();
+  await dialog.getByRole("button", { name: "I have read and understand these effects" }).click();
+  await expect(dialog.getByLabel(/To confirm, type .*web/)).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Delete Repository" })).toBeDisabled();
+});
+
+// page-templates spec, Details: "Repository".
+test("Repository: no primary action; Re-profile is in More actions", async ({ page, db }) => {
+  const web = buildRepository(db, { name: "web" });
+  await page.goto(`/repositories/${web.publicId}`);
+  await expect(pageHeader(page).locator('[data-variant="primary"]')).toHaveCount(0);
+  await pageHeader(page).getByRole("button", { name: "More actions" }).click();
+  await expect(page.locator("[popover]:popover-open").getByRole("button", { name: "Re-profile" })).toBeVisible();
+});
+
+// page-patterns spec, content standard "Failures".
+test("Version that failed on a Surveyor release mismatch: the reason says it needs a newer release and what to do, with the code only in its details", async ({ page, db }) => {
+  const web = buildRepository(db, { name: "web" });
+  const { survey } = requestSurvey(db, { repositoryId: web.id, commitSha: "c".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", surveyorRelease: "0.9.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 3 });
+  moveSurvey(db, survey, "failed", { failureCode: "analysis_failed", failureMessage: `Survey ${survey.publicId} needs Surveyor 0.9.0 with its recorded configuration and Profile version 3, but this worker runs Surveyor 0.7.0` });
+  await page.goto(paths.repositoryVersions(web.publicId));
+  const row = page.getByRole("table", { name: "Versions of web" }).getByRole("row").filter({ hasText: "Version 1" });
+  await expect(row).toContainText("This version needs Surveyor 0.9.0, a newer release than the installed 0.7.0. Upgrade the Frontend Registry, or re-profile the Repository to survey it with 0.7.0.");
+  await expect(row.getByText(survey.publicId)).toBeHidden();
+  await expect(row.getByText("analysis_failed")).toBeHidden();
+  await row.getByText("Details", { exact: true }).click();
+  await expect(row.getByText("analysis_failed")).toBeVisible();
+});
+
+// page-patterns spec, "Narrow Repository".
+test.describe("390px wide", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("Narrow Repository: its view tabs stay on one scrolling row, the breadcrumbs show one link to Repositories, and no meta line begins with a separator", async ({ page, db }) => {
+    const repository = buildRepository(db, { name: "checkout-platform-web", cloneUrl: "https://git.example.com/acme/checkout-platform-web.git", gitRef: "release/2026-11" });
+    await seedSurvey(db, repository);
+    await page.goto(`${paths.repository(repository.publicId)}?tab=tooling`);
+
+    const tabs = page.getByRole("navigation", { name: "Profile views" });
+    const tops = await tabs.getByRole("link").evaluateAll((links) => [...new Set(links.map((link) => Math.round(link.getBoundingClientRect().top)))]);
+    expect(tops).toHaveLength(1);
+    expect(await tabs.evaluate((row) => row.scrollWidth > row.clientWidth)).toBe(true);
+    // The current view's tab scrolls into view.
+    await expect(tabs.getByRole("link", { name: "Tooling" })).toBeInViewport({ ratio: 1 });
+
+    const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
+    await expect(breadcrumbs.getByRole("link")).toHaveText(["Repositories"]);
+    await page.goto(paths.repositoryVersions(repository.publicId));
+    // A deeper page shows only its parent.
+    await expect(breadcrumbs.getByRole("link").filter({ visible: true })).toHaveText(["checkout-platform-web"]);
+
+    await page.goto(paths.repository(repository.publicId));
+    const lines = await pageHeader(page)
+      .locator("[data-meta-item]")
+      .evaluateAll((items) => {
+        const header = items[0]!.closest("header")!.getBoundingClientRect();
+        const starts = new Map<number, { left: number; item: Element }>();
+        for (const item of items) {
+          const range = document.createRange();
+          range.selectNodeContents(item);
+          const box = range.getBoundingClientRect();
+          // The facts on a line are centered on it.
+          const bounds = item.getBoundingClientRect();
+          const line = Math.round((bounds.top + bounds.bottom) / 2);
+          if (!starts.has(line) || box.left < starts.get(line)!.left) starts.set(line, { left: box.left, item });
+        }
+        // Each line's first fact starts at the header's edge, and nothing of its own, such as a separator, is drawn before it.
+        return [...starts.values()].map(({ left, item }) => {
+          const box = item.getBoundingClientRect();
+          const before = document.elementFromPoint(left - 4, box.top + box.height / 2);
+          return { atEdge: Math.abs(left - header.left) <= 1, separatorShown: Boolean(before && item.contains(before)) };
+        });
+      });
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) expect(line).toEqual({ atEdge: true, separatorShown: false });
+    await expectNoHorizontalOverflow(page);
+  });
+});
+
+// design-system spec, "Relative times in a list".
+test("Relative times in a list: Tab moves between links and controls, never to a relative time, and each time's full date is available to assistive technology", async ({ page, db }) => {
+  for (const name of ["orders", "billing"]) await seedSurvey(db, buildRepository(db, { name }));
+  await page.goto(paths.repositories);
+  const times = page.getByRole("table", { name: "Repositories" }).locator("time");
+  await expect(times.first()).toBeVisible();
+  const focusable = await times.evaluateAll((elements) => elements.filter((time) => time.closest("[tabindex]:not([tabindex='-1']), a, button")).length);
+  expect(focusable).toBe(0);
+  // Its text for assistive technology names the full date.
+  expect(await times.first().textContent()).toMatch(/\(\w{3} \d{1,2}, \d{4}/);
+  for (let index = 0; index < 30; index++) {
+    await page.keyboard.press("Tab");
+    // Neither a time nor a wrapper that exists only to make one focusable.
+    expect(await page.evaluate(() => document.activeElement?.tagName === "TIME" || (document.activeElement?.tagName === "SPAN" && Boolean(document.activeElement.querySelector("time"))))).toBe(false);
+  }
 });

@@ -6,7 +6,7 @@ import { sampleStandard } from "../test/support/standards";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { pageHeader, pageTitle, toasts, waitForHydration } from "./support/shell";
 
-const control = (page: Page, number: number) => page.getByRole("region", { name: new RegExp(`^Control ${number}\\b`) });
+const control = (page: Page, number: number) => page.getByRole("article", { name: new RegExp(`^Control ${number}\\b`) });
 const builder = (scope: ReturnType<typeof control>, legend: string) => scope.getByRole("group", { name: legend, exact: true });
 const controlAction = async (page: Page, number: number, action: string) => {
   await page.getByRole("button", { name: `Actions for Control ${number}` }).click();
@@ -172,7 +172,10 @@ test("distinguishes drafts from Releases and shows exact publication inputs befo
   await expect(page.getByRole("heading", { name: "Publish Engineering baseline v1" })).toBeVisible();
   const publication = page.getByRole("region", { name: "Publication" });
   await expect(publication).toContainText(`From draft version${saved.lockVersion}`);
-  await expect(publication).toContainText(preview.digest);
+  // page-patterns spec, "Digests out of the overview": the content digest is in the details, not the overview.
+  await expect(publication).not.toContainText(preview.digest);
+  await page.locator("summary", { hasText: "Details" }).click();
+  await expect(page.locator("details[open]")).toContainText(preview.digest);
   // Every Control is shown in full before publication.
   await expect(page.getByRole("article", { name: "Control services-configurable" })).toContainText("service.endpoint_derivation");
 
@@ -249,4 +252,15 @@ test("Standard draft: the title names the draft, its status counts the saved dra
   await waitForHydration(page);
   await page.getByRole("button", { name: "Add Control" }).first().click();
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveAttribute("data-variant", "primary");
+});
+
+// design-system spec, "Status and values are presented through one registry".
+test("Unpublished draft: a never-published draft with no issues is neutral, not green", async ({ page, db }) => {
+  const { draft } = createStandard(db, { name: "Engineering baseline", purpose: "Shared expectations" });
+  saveDraft(db, draft, draft.lockVersion, sampleStandard());
+  await page.goto("/standards");
+  const row = page.getByRole("row", { name: /Engineering baseline/ });
+  await expect(row.locator('[data-state="draft_ready"]')).toHaveText("Ready to publish");
+  await expect(row.locator('[data-tone]').first()).toHaveAttribute("data-tone", "neutral");
+  await expect(row.locator('[data-tone="success"]')).toHaveCount(0);
 });
