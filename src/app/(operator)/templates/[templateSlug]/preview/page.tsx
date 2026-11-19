@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
 import { EditorTemplate } from "@/components/templates/editor-template";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CodeBlock } from "@/components/ui/code-block";
-import { Icon } from "@/components/ui/icon";
 import { DeviceControls } from "@/components/preview/device-controls";
 import { DeviceFrame, PreviewScale } from "@/components/preview/device-frame";
+import { FileTree } from "@/components/preview/file-tree";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { referenceId, runPath, startRoute, templateBySlug } from "@/lib/demo/catalog";
 import { referenceUrl } from "@/lib/demo/deployments";
 import { requireDemo } from "@/lib/demo/guard";
 import { parsePreviewState, previewHref } from "@/lib/demo/preview";
-import { type TemplateFile, isIllustrative, templateFiles } from "@/lib/demo/template-files";
+import { isIllustrative, templateFiles } from "@/lib/demo/template-files";
 import { DEVICES, ORIENTATION_LABELS, frameSize } from "@/lib/web/device-preview";
 import styles from "./preview.module.css";
 
@@ -19,61 +18,6 @@ export async function generateMetadata({ params }: PageProps<"/templates/[templa
   const { templateSlug } = await params;
   const title = templateBySlug(templateSlug)?.title;
   return { title: title ? `Preview ${title}` : "Template not found" };
-}
-
-interface TreeNode {
-  readonly name: string;
-  readonly file?: TemplateFile;
-  readonly children: TreeNode[];
-}
-
-/** The files as folders and files, in the order the files are listed. */
-function treeOf(files: readonly TemplateFile[]): TreeNode[] {
-  const root: TreeNode[] = [];
-  for (const file of files) {
-    const parts = file.path.split("/");
-    let level = root;
-    parts.slice(0, -1).forEach((folder) => {
-      let node = level.find((entry) => entry.name === folder && !entry.file);
-      if (!node) level.push((node = { name: folder, children: [] }));
-      level = node.children;
-    });
-    level.push({ name: parts.at(-1)!, file, children: [] });
-  }
-  return root;
-}
-
-function TreeItems({ nodes, selected, hrefFor }: { nodes: readonly TreeNode[]; selected: string; hrefFor: (path: string) => string }) {
-  return (
-    <ul className={styles.treeList}>
-      {nodes.map((node) =>
-        node.file ? (
-          <li key={node.file.path}>
-            <Link href={hrefFor(node.file.path)} className={styles.file} aria-label={node.file.path} aria-current={node.file.path === selected ? "true" : undefined} scroll={false}>
-              <Icon name="file" size={14} />
-              <span className={styles.fileName}>{node.name}</span>
-            </Link>
-          </li>
-        ) : (
-          <li key={node.name}>
-            <span className={styles.folder}>
-              <Icon name="folder" size={14} />
-              {node.name}
-            </span>
-            <TreeItems nodes={node.children} selected={selected} hrefFor={hrefFor} />
-          </li>
-        ),
-      )}
-    </ul>
-  );
-}
-
-function FileTree({ files, selected, hrefFor }: { files: readonly TemplateFile[]; selected: string; hrefFor: (path: string) => string }) {
-  return (
-    <nav className={styles.tree} aria-label="Files">
-      <TreeItems nodes={treeOf(files)} selected={selected} hrefFor={hrefFor} />
-    </nav>
-  );
 }
 
 /**

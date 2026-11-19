@@ -77,10 +77,11 @@ export function DeviceFrame({ src, width, height, title, address }: { src: strin
  * Opens what the frame shows in a new tab, at the route it shows now: the
  * visitor may have navigated inside it. +prefix+ is the path the frame's
  * routes start with; with +withQuery+, the route keeps its query and
- * fragment, which a single-page application may route by. An icon button,
- * named and with a tooltip.
+ * fragment, which a single-page application may route by. With +to+, the
+ * route opens under +to+ in place of +prefix+, as an application's build
+ * opens running under the toolbar. An icon button, named and with a tooltip.
  */
-export function FullScreenLink({ href, prefix, withQuery = false }: { href: string; prefix: string; withQuery?: boolean }) {
+export function FullScreenLink({ href, prefix, withQuery = false, to }: { href: string; prefix: string; withQuery?: boolean; to?: string }) {
   return (
     <Tooltip content="Open full screen">
       <a
@@ -92,7 +93,10 @@ export function FullScreenLink({ href, prefix, withQuery = false }: { href: stri
           const frame = document.querySelector<HTMLIFrameElement>("[data-preview-frame]");
           try {
             const location = frame?.contentWindow?.location;
-            if (location?.pathname.startsWith(prefix)) event.currentTarget.href = withQuery ? `${location.pathname}${location.search}${location.hash}` : location.pathname;
+            if (location?.pathname.startsWith(prefix)) {
+              const path = to === undefined ? location.pathname : `${to}/${location.pathname.slice(prefix.length).replace(/^\/+/, "")}`.replace(/\/$/, "");
+              event.currentTarget.href = withQuery ? `${path}${location.search}${location.hash}` : path;
+            }
           } catch {
             // The frame is always same-origin; keep the start route if it cannot be read.
           }
