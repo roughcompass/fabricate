@@ -102,10 +102,22 @@ export function TextArea({ id, label, description, optional, errors, hideLabel, 
   );
 }
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 interface SelectProps extends FieldBaseProps, Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "id" | "className" | "size"> {
-  options: readonly { value: string; label: string }[];
+  /** Options, and labeled groups of options, such as a remote's branches and tags. */
+  options: readonly (SelectOption | { label: string; options: readonly SelectOption[] })[];
   size?: Size;
 }
+
+const optionElement = (option: SelectOption) => (
+  <option key={option.value} value={option.value}>
+    {option.label}
+  </option>
+);
 
 export function Select({ id, label, description, optional, errors, hideLabel, options, size = "md", ...select }: SelectProps) {
   return (
@@ -118,11 +130,15 @@ export function Select({ id, label, description, optional, errors, hideLabel, op
           aria-invalid={errors?.length ? true : undefined}
           {...select}
         >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          {options.map((option) =>
+            "options" in option ? (
+              <optgroup key={`group:${option.label}`} label={option.label}>
+                {option.options.map(optionElement)}
+              </optgroup>
+            ) : (
+              optionElement(option)
+            ),
+          )}
         </select>
         <Icon name="chevronDown" size={14} className={styles.chevron} />
       </span>

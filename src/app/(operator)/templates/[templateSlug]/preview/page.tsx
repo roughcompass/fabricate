@@ -3,36 +3,25 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CodeBlock } from "@/components/ui/code-block";
 import { Icon } from "@/components/ui/icon";
+import { DeviceControls } from "@/components/preview/device-controls";
+import { DeviceFrame, PreviewScale } from "@/components/preview/device-frame";
 import { ShellHeader } from "@/components/shell/shell-header";
 import { Page } from "@/components/ui/page";
 import { TabLink, Tabs } from "@/components/ui/tabs";
-import { ToggleGroup } from "@/components/ui/toggle-group";
-import { referenceId, startRoute, templateBySlug } from "@/lib/demo/catalog";
+import { referenceId, runPath, startRoute, templateBySlug } from "@/lib/demo/catalog";
 import { referenceUrl } from "@/lib/demo/deployments";
 import { requireDemo } from "@/lib/demo/guard";
-import { DEVICES, DEVICE_IDS, ORIENTATION_LABELS, type PreviewState, frameSize, parsePreviewState, previewHref, sizeLabel } from "@/lib/demo/preview";
+import { parsePreviewState, previewHref } from "@/lib/demo/preview";
 import { type TemplateFile, isIllustrative, templateFiles } from "@/lib/demo/template-files";
-import { DeviceFrame, FrameSize, FullScreenLink, PreviewScale } from "./device-frame";
-import { LandscapeToggle } from "@/components/ui/landscape-toggle";
+import { DEVICES, ORIENTATION_LABELS, frameSize } from "@/lib/web/device-preview";
 import styles from "./preview.module.css";
 
 type Params = Record<string, string | string[] | undefined>;
-
-const DEVICE_ICONS = { mobile: "smartphone", tablet: "tablet", desktop: "monitor" } as const;
 
 export async function generateMetadata({ params }: { params: Promise<{ templateSlug: string }> }): Promise<Metadata> {
   const { templateSlug } = await params;
   const title = templateBySlug(templateSlug)?.title;
   return { title: title ? `Preview ${title}` : "Template not found" };
-}
-
-/** The query a choice keeps from the rest of the state. */
-function keepFrom(state: PreviewState, omit: "device" | "orientation"): Record<string, string> {
-  const keep: Record<string, string> = {};
-  if (state.view === "code") keep.view = "code";
-  if (omit !== "device") keep.device = state.device;
-  if (state.view === "code" && state.file) keep.file = state.file;
-  return keep;
 }
 
 interface TreeNode {
@@ -108,7 +97,7 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
   const file = files.find((entry) => entry.path === state.file) ?? files[0]!;
   const size = frameSize(state.device, state.orientation);
   const reference = `/run/${referenceId(template.slug)}`;
-  const route = startRoute(template.app);
+  const start = runPath(referenceId(template.slug), startRoute(template.app).path);
   const action = `/templates/${template.slug}/preview`;
 
   return (
@@ -126,28 +115,13 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
                 Code
               </TabLink>
             </Tabs>
-            {state.view === "preview" && (
-              <div className={styles.previewControls}>
-                <FrameSize label={sizeLabel(state.device, state.orientation)} />
-                <ToggleGroup
-                  action={action}
-                  label="Device"
-                  name="device"
-                  selected={state.device}
-                  keep={keepFrom(state, "device")}
-                  iconOnly
-                  options={DEVICE_IDS.map((id) => ({ value: id, label: DEVICES[id].label, icon: DEVICE_ICONS[id] }))}
-                />
-                <LandscapeToggle action={action} orientation={state.orientation} keep={keepFrom(state, "orientation")} />
-                <FullScreenLink href={`${reference}/${route.path}`} prefix={reference} />
-              </div>
-            )}
+            {state.view === "preview" && <DeviceControls action={action} state={state} fullScreen={{ href: start, prefix: reference }} />}
           </div>
 
           {state.view === "preview" ? (
             <DeviceFrame
               key={`${state.device}-${state.orientation}`}
-              src={`${reference}/${route.path}?embed=1`}
+              src={`${start}?embed=1`}
               width={size.width}
               height={size.height}
               title={`${template.title} on ${DEVICES[state.device].label}, ${ORIENTATION_LABELS[state.orientation]}`}

@@ -1,0 +1,237 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { previewOutcome } from "@/app/(operator)/repositories/outcomes";
+import { buildPreview, deletePreviewAction, preparePreview, rebuildPreview } from "@/app/(operator)/repositories/preview-actions";
+import type { PrepareFormState } from "@/app/(operator)/repositories/preview-form-state";
+import type { RepositorySource } from "@/lib/catalog/source-records";
+import { type FabricateConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
+import { type Db, setDb } from "@/lib/db/client";
+import { previewBuilds } from "@/lib/db/schema";
+import { jobHandlers } from "@/lib/jobs/registry";
+import { drainJobs } from "@/lib/jobs/worker";
+import { BUILD_PREVIEW, decidePreparation, failAttempt, findPreparation, findPreview, openPreparation } from "@/lib/previews/records";
+import type { PackageVerdict } from "@/lib/previews/eligibility";
+import { previewDirectory } from "@/lib/previews/storage";
+import { acquisitionConfig, registerLocalSource } from "../support/acquisition";
+import { buildSource } from "../support/builders";
+import { createTestDb, rawRun } from "../support/db";
+import { GitFixture } from "../support/git-fixture";
+import { type Tree, offlineViteApp } from "../support/preview-trees";
+import { publishFiles, queuedPreview } from "../support/previews";
+import { redirectOf } from "../support/next";
+
+vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
+vi.mock("next/cache", async () => (await import("../support/next")).cacheStub);
+
+/*
+ * The Repository page's and the preview page's Server Actions (tasks 6.1 and
+ * 6.4): preparing a ref or commit, building a chosen package, Rebuild, and
+ * Delete. Each answers not found unless previews are on and the remote is
+ * enrolled, like the pages.
+ */
+
+const form = (fields: Record<string, string>) => {
+  const data = new FormData();
+  for (const [name, value] of Object.entries(fields)) data.set(name, value);
+  return data;
+};
+const INITIAL: PrepareFormState = { values: { ref: "configured", commit: "" }, errors: {} };
+const NODE_BIN = path.dirname(process.execPath);
+const verdict = (directory: string): PackageVerdict => ({
+  directory,
+  manifest: `${directory}/package.json`,
+  name: directory.split("/").at(-1)!,
+  qualifies: true,
+  conditions: [],
+  plan: { installRoot: ".", packageManager: { name: "npm", version: null, lockfile: "package-lock.json" }, buildTool: "vite", buildScript: "vite build", node: { version: process.versions.node, ranges: [] }, layout: "standalone", composition: null },
+});
+
+describe("preview Server Actions", () => {
+  const original = getConfig();
+  let db: Db;
+  let fixture: GitFixture;
+  let base: FabricateConfig;
+  let storage: string;
+
+  beforeEach(() => {
+    db = createTestDb();
+    setDb(db);
+    fixture = GitFixture.create("preview-actions");
+    base = acquisitionConfig(fixture);
+    storage = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "preview-actions-")));
+  });
+
+  afterEach(() => {
+    setDb(undefined);
+    setConfig(original);
+    fixture.cleanup();
+    fs.rmSync(base.repositoryStorage, { recursive: true, force: true });
+    fs.rmSync(storage, { recursive: true, force: true });
+  });
+
+  function enroll(source: RepositorySource, previews: Partial<FabricateConfig["settings"]["previews"]> = {}): FabricateConfig {
+    const config = withOverrides(base, { previews: { enabled: true, trustedSources: [source.cloneUrl], nodeVersions: { [process.versions.node]: NODE_BIN }, storage, ...previews } });
+    setConfig(config);
+    return config;
+  }
+
+  /** A remote holding +tree+ on main and +branches+, registered and enrolled. */
+  function repository(tree: Tree, branches: Record<string, Tree> = {}): RepositorySource {
+    const work = fixture.repo("work/orders-web");
+    for (const [file, content] of Object.entries(tree)) work.write(file, content);
+    work.commit("initial");
+    for (const [branch, files] of Object.entries(branches)) {
+      work.git("checkout", "--quiet", "-b", branch);
+      for (const [file, content] of Object.entries(files)) work.write(file, content);
+      work.commit(branch);
+      work.checkout("main");
+    }
+    const remote = fixture.bare("remotes/orders-web.git", { from: work });
+    const source = registerLocalSource(db, base, "orders-web", remote.path);
+    enroll(source);
+    return source;
+  }
+
+  const notFound = async (work: Promise<unknown>) => expect(await redirectOf(work)).toBe("not-found");
+
+  describe("preparing", () => {
+    it("pins the configured reference, a branch, or a commit, and shows its preparation on the Repository page", async () => {
+      const source = repository(offlineViteApp(), { "feature/new-nav": offlineViteApp({ heading: "New nav" }) });
+
+      const configured = await redirectOf(preparePreview(source.publicId, INITIAL, form({ ref: "configured", commit: "" })));
+      expect(configured).toMatch(new RegExp(`^/repositories/${source.publicId}\\?preparation=ppr_[a-z0-9]{16}#previews$`));
+      const preparation = findPreparation(db, /preparation=(ppr_\w+)/.exec(configured)![1]!)!;
+      expect(preparation).toMatchObject({ state: "profiling", refName: "refs/heads/main", refKind: "branch" });
+
+      const branch = await redirectOf(preparePreview(source.publicId, INITIAL, form({ ref: "refs/heads/feature/new-nav", commit: "" })));
+      expect(findPreparation(db, /preparation=(ppr_\w+)/.exec(branch)![1]!)).toMatchObject({ refName: "refs/heads/feature/new-nav" });
+
+      // A commit SHA takes the branch's place, and a prefix of a pinned commit resolves.
+      const commit = await redirectOf(preparePreview(source.publicId, INITIAL, form({ ref: "refs/heads/feature/new-nav", commit: ` ${preparation.commitSha.slice(0, 10).toUpperCase()} ` })));
+      expect(findPreparation(db, /preparation=(ppr_\w+)/.exec(commit)![1]!)).toMatchObject({ commitSha: preparation.commitSha, publicId: preparation.publicId });
+    });
+
+    it("reports a ref or commit that can't be resolved under its field, and keeps the values", async () => {
+      const source = repository(offlineViteApp());
+      expect(await preparePreview(source.publicId, INITIAL, form({ ref: "main", commit: "" }))).toEqual({ values: { ref: "main", commit: "" }, errors: { ref: ["Choose a branch or tag, or enter a commit"] } });
+      expect((await preparePreview(source.publicId, INITIAL, form({ ref: "refs/heads/gone", commit: "" }))).errors.ref?.[0]).toMatch(/gone/);
+      expect((await preparePreview(source.publicId, INITIAL, form({ ref: "configured", commit: "xyz" }))).errors.commit).toEqual(["Enter at least 4 hexadecimal characters of a commit SHA"]);
+      expect((await preparePreview(source.publicId, INITIAL, form({ ref: "configured", commit: "0000000" }))).errors.commit?.[0]).toMatch(/^No branch, tag, or acquired commit of this Repository starts with 0000000/);
+      expect((await preparePreview(source.publicId, INITIAL, form({ ref: "configured", commit: "f".repeat(40) }))).errors.commit?.[0]).toMatch(/The remote didn't supply commit f{40}/);
+    });
+
+    it("reports a remote that can't be reached on the form", async () => {
+      const source = repository(offlineViteApp());
+      fs.rmSync(fixture.dir("remotes/orders-web.git"), { recursive: true, force: true });
+      const state = await preparePreview(source.publicId, INITIAL, form({ ref: "configured", commit: "" }));
+      expect(state.errors.base?.[0]).toBeTruthy();
+    });
+
+    it("answers not found while previews are off or the remote isn't enrolled", async () => {
+      const source = repository(offlineViteApp());
+      enroll(source, { enabled: false });
+      await notFound(preparePreview(source.publicId, INITIAL, form({ ref: "configured", commit: "" })));
+      enroll(source, { trustedSources: [] });
+      await notFound(preparePreview(source.publicId, INITIAL, form({ ref: "configured", commit: "" })));
+      await expect(preparePreview("not-an-id", INITIAL, form({}))).rejects.toThrow(/Unknown repository source/);
+    });
+  });
+
+  describe("choosing a package", () => {
+    function decided(source: RepositorySource, packages: PackageVerdict[]) {
+      const { preparation } = openPreparation(db, source, { commitSha: "d".repeat(40), refName: "refs/heads/main", refKind: "branch" });
+      decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), { document: '{"schema":"fabricate.repository_profile"}', digest: "f".repeat(64) }, { packages, refusal: null });
+      rawRun(db, "delete from jobs");
+      return preparation.publicId;
+    }
+
+    it("builds the chosen package, then opens its preview when chosen again", async () => {
+      const source = buildSource(db, { name: "portal" });
+      enroll(source);
+      const preparation = decided(source, [verdict("apps/shell"), verdict("apps/admin")]);
+      const fields = { source: source.publicId, preparation, package: "apps/shell" };
+
+      const queued = await redirectOf(buildPreview(form(fields)));
+      const [preview] = db.select().from(previewBuilds).all();
+      expect(preview).toMatchObject({ packageDir: "apps/shell", attemptState: "queued" });
+      expect(queued).toBe(`/repositories/${source.publicId}/previews/${preview!.publicId}?notice=queued`);
+      expect(previewOutcome(db, "queued", preview!.publicId)).toMatchObject({ tone: "success", title: "The build of shell is queued." });
+
+      expect(await redirectOf(buildPreview(form(fields)))).toBe(`/repositories/${source.publicId}/previews/${preview!.publicId}`);
+      expect(db.select().from(previewBuilds).all()).toHaveLength(1);
+      // A package that doesn't qualify shows the preparation as it stands.
+      expect(await redirectOf(buildPreview(form({ ...fields, package: "packages/ui" })))).toBe(`/repositories/${source.publicId}?preparation=${preparation}#previews`);
+      enroll(source, { enabled: false });
+      await notFound(buildPreview(form({ ...fields, package: "apps/admin" })));
+      expect(db.select().from(previewBuilds).all()).toHaveLength(1);
+    });
+  });
+
+  describe("Rebuild and Delete", () => {
+    it("rebuilds a finished preview on the device it was viewed on, and says so when it's already building", async () => {
+      const source = buildSource(db, { name: "orders" });
+      const config = enroll(source);
+      const preview = publishFiles(db, config, queuedPreview(db, source), { "index.html": "<h1>Orders</h1>" });
+
+      const rebuilt = await redirectOf(rebuildPreview(form({ preview: preview.publicId, device: "mobile", orientation: "landscape" })));
+      expect(rebuilt).toBe(`/repositories/${source.publicId}/previews/${preview.publicId}?device=mobile&orientation=landscape&notice=rebuilt`);
+      expect(findPreview(db, preview.publicId)).toMatchObject({ attempt: 2, attemptState: "queued", artifactAttempt: 1 });
+      expect(previewOutcome(db, "rebuilt", preview.publicId)).toMatchObject({ title: "Attempt 2 of orders is queued.", description: "The current output stays up until the new build is ready." });
+
+      expect(await redirectOf(rebuildPreview(form({ preview: preview.publicId, device: "desktop" })))).toBe(`/repositories/${source.publicId}/previews/${preview.publicId}?notice=building`);
+      expect(findPreview(db, preview.publicId)!.attempt).toBe(2);
+
+      enroll(source, { enabled: false });
+      failAttempt(db, preview.publicId, { attempt: 2 }, "The build failed");
+      await notFound(rebuildPreview(form({ preview: preview.publicId })));
+      expect(findPreview(db, preview.publicId)!.attempt).toBe(2);
+    });
+
+    it("deletes a preview and its files, and says so on the Repository page", async () => {
+      const source = buildSource(db, { name: "orders" });
+      const config = enroll(source);
+      const preview = publishFiles(db, config, queuedPreview(db, source), { "index.html": "<h1>Orders</h1>" });
+      const directory = previewDirectory(config, preview.publicId);
+      expect(fs.existsSync(directory)).toBe(true);
+
+      // Turned off, nothing is deleted.
+      enroll(source, { enabled: false });
+      await notFound(deletePreviewAction(form({ preview: preview.publicId })));
+      expect(findPreview(db, preview.publicId)).toBeDefined();
+
+      enroll(source);
+      expect(await redirectOf(deletePreviewAction(form({ preview: preview.publicId })))).toBe(`/repositories/${source.publicId}?notice=preview-deleted&preview=${preview.publicId}#previews`);
+      expect(findPreview(db, preview.publicId)).toBeUndefined();
+      expect(fs.existsSync(directory)).toBe(false);
+      expect(previewOutcome(db, "preview-deleted", preview.publicId)).toMatchObject({ tone: "success", title: `The preview of orders at ${preview.commitSha.slice(0, 12)} was deleted.` });
+      // An outcome code never speaks for a preview in another state, or an unknown one.
+      expect(previewOutcome(db, "queued", preview.publicId)).toBeUndefined();
+      expect(previewOutcome(db, "preview-deleted", "pvw_0000000000000000")).toBeUndefined();
+      await notFound(deletePreviewAction(form({ preview: preview.publicId })));
+    });
+  });
+
+  describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("an offline app, end to end", () => {
+    it("prepares the default branch, builds its one package without asking, and rebuilds it", async () => {
+      const source = repository(offlineViteApp());
+      const config = getConfig();
+      await redirectOf(preparePreview(source.publicId, INITIAL, form({ ref: "configured", commit: "" })));
+      await drainJobs(db, jobHandlers(db, config));
+
+      const [preview] = db.select().from(previewBuilds).all();
+      expect(preview).toMatchObject({ packageDir: ".", refName: "refs/heads/main", attemptState: "ready", artifactLayout: "standalone" });
+      const page = fs.readFileSync(path.join(previewDirectory(config, preview!.publicId), preview!.artifact!, "index.html"), "utf8");
+      expect(page).toContain(`src="/previews/${preview!.publicId}/assets/index.js"`);
+      expect(JSON.parse(preview!.artifactEntry!)).toMatchObject({ file: "index.html", rebase: false });
+
+      await redirectOf(rebuildPreview(form({ preview: preview!.publicId })));
+      const jobs = db.$client.prepare("select idempotency_key as key, state from jobs where kind = ? order by id").all(BUILD_PREVIEW);
+      expect(jobs).toEqual([
+        { key: `${BUILD_PREVIEW}:${preview!.publicId}:1`, state: "succeeded" },
+        { key: `${BUILD_PREVIEW}:${preview!.publicId}:2`, state: "queued" },
+      ]);
+    });
+  });
+});

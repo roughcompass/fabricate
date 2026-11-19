@@ -1,0 +1,18 @@
+@layer pages {
+  /* A focused page: the preview's identity and actions, then the frame and its controls close together, then the log. */
+  .workspace { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+
+  /* The package, its latest attempt's state, the ref, and the commit, with Rebuild and Delete at the end. */
+  .summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; }
+  .facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); min-width: 0; }
+  .name { font-weight: var(--font-weight-semibold); overflow-wrap: anywhere; }
+  .state { display: inline-flex; }
+  .fact { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+  /* The device controls, at the end of their row just above the frame. */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
+
+  .log { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+  .note { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+}

@@ -4,7 +4,7 @@ import { createContext, use, useEffect, useRef, useState } from "react";
 import { buttonProps } from "@/components/ui/button-content";
 import { Icon } from "@/components/ui/icon";
 import { Tooltip } from "@/components/ui/tooltip";
-import styles from "./preview.module.css";
+import styles from "./device-frame.module.css";
 
 /** The browser window's border, left and right: 1px each. */
 const WINDOW_BORDER = 2;
@@ -29,13 +29,13 @@ export function FrameSize({ label }: { label: string }) {
 }
 
 /**
- * The reference deployment, running in a frame at a device's size, inside a
- * browser window that shows its simulated address (design.md, decision 6).
- * The application inside lays out at the device's size, so its own
- * breakpoints apply; when the device is wider than the space inside the gray
- * container's padding, the window and the frame scale down together to fit.
- * The title bar keeps its height, and is decoration only. `FrameSize`
- * reports the scale.
+ * A page running in a frame at a device's size, inside a browser window that
+ * shows its address (template-preview design.md, decision 6): a template's
+ * reference deployment, or a repository preview. The page inside lays out at
+ * the device's size, so its own breakpoints apply; when the device is wider
+ * than the space inside the gray container's padding, the window and the
+ * frame scale down together to fit. The title bar keeps its height, and is
+ * decoration only. `FrameSize` reports the scale.
  */
 export function DeviceFrame({ src, width, height, title, address }: { src: string; width: number; height: number; title: string; address: string }) {
   const viewport = useRef<HTMLDivElement>(null);
@@ -73,11 +73,13 @@ export function DeviceFrame({ src, width, height, title, address }: { src: strin
 }
 
 /**
- * Opens the reference deployment with its toolbar in a new tab, at the route
- * the frame shows now: the visitor may have navigated inside it. An icon
- * button, named and with a tooltip.
+ * Opens what the frame shows in a new tab, at the route it shows now: the
+ * visitor may have navigated inside it. +prefix+ is the path the frame's
+ * routes start with; with +withQuery+, the route keeps its query and
+ * fragment, which a single-page application may route by. An icon button,
+ * named and with a tooltip.
  */
-export function FullScreenLink({ href, prefix }: { href: string; prefix: string }) {
+export function FullScreenLink({ href, prefix, withQuery = false }: { href: string; prefix: string; withQuery?: boolean }) {
   return (
     <Tooltip content="Open full screen">
       <a
@@ -88,8 +90,8 @@ export function FullScreenLink({ href, prefix }: { href: string; prefix: string 
         onClick={(event) => {
           const frame = document.querySelector<HTMLIFrameElement>("[data-preview-frame]");
           try {
-            const path = frame?.contentWindow?.location.pathname;
-            if (path?.startsWith(prefix)) event.currentTarget.href = path;
+            const location = frame?.contentWindow?.location;
+            if (location?.pathname.startsWith(prefix)) event.currentTarget.href = withQuery ? `${location.pathname}${location.search}${location.hash}` : location.pathname;
           } catch {
             // The frame is always same-origin; keep the start route if it cannot be read.
           }

@@ -14,6 +14,9 @@
   .label { min-width: 0; color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-caption); overflow-wrap: anywhere; }
 
   .code { margin: 0; padding: var(--space-3) 0; font-size: var(--font-size-secondary); line-height: var(--line-height-body); white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* A log: the lines scroll inside a bounded height, and show keyboard focus inside the block's edge. */
+  .scroll { max-height: 60vh; overflow-y: auto; overscroll-behavior: contain; }
+  .scroll:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
   .line { display: flex; padding: 0 var(--space-4); }
   .number { flex: none; width: var(--size-line-number); margin-right: var(--space-3); color: var(--color-text-tertiary); text-align: right; user-select: none; }
   .text { min-width: 0; }

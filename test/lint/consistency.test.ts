@@ -28,7 +28,7 @@ describe("one source for each visual rule", () => {
   });
 
   it("draws a state's dot only in Indicator, not with a dot of its own", () => {
-    expect(offending(/width:\s*var\(--size-dot\)/).filter((line) => !/indicator\.module\.css|form\.module\.css|preview\.module\.css|timing\.module\.css/.test(line))).toEqual([]);
+    expect(offending(/width:\s*var\(--size-dot\)/).filter((line) => !/indicator\.module\.css|form\.module\.css|device-frame\.module\.css|timing\.module\.css/.test(line))).toEqual([]);
   });
 
   it("draws a content surface with the surface tokens, not its own border, corners, and fill", () => {

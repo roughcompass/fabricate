@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TEMPLATES, templateBySlug } from "@/lib/demo/catalog";
-import { DEVICES, frameSize, parsePreviewState, previewHref, scaffoldCommand, sizeLabel } from "@/lib/demo/preview";
+import { parsePreviewState, previewHref, scaffoldCommand } from "@/lib/demo/preview";
+import { DEVICES, frameSize, sizeLabel } from "@/lib/web/device-preview";
 import { isIllustrative, templateFiles } from "@/lib/demo/template-files";
 import { GENERATED_SOURCES } from "@/demo/runtime/generated/sources";
 import fabricatePackage from "../../package.json";

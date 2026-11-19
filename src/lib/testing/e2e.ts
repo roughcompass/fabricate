@@ -11,12 +11,13 @@ export function e2eRoutesEnabled(): boolean {
   return process.env.FABRICATE_E2E === "1" && process.env.NODE_ENV !== "production" && getConfig().environment !== "production";
 }
 
-/** Replaces the database and repository storage with empty, migrated ones. */
+/** Replaces the database, repository storage, and preview storage with empty, migrated ones. */
 export function resetE2eData(): void {
   const config = getConfig();
   (globalThis as { __fabricateDb?: { $client: { close(): void } } }).__fabricateDb?.$client.close();
   setDb(undefined);
   for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(`${config.database}${suffix}`, { force: true });
   fs.rmSync(config.repositoryStorage, { recursive: true, force: true });
+  fs.rmSync(config.previews.storage, { recursive: true, force: true });
   migrateDatabase(getDb());
 }

@@ -2,6 +2,7 @@ import { countLabel } from "@/components/ui/count";
 import type { Outcome } from "@/components/ui/outcome-toast";
 import { findSource, findSourceIncludingDeleted } from "@/lib/catalog/source-records";
 import type { Executor } from "@/lib/db/client";
+import { findPreviewIncludingDeleted, packageLabel } from "@/lib/previews/views";
 import { versionsOf } from "@/lib/profiling/versions";
 
 /**
@@ -31,6 +32,33 @@ export function sourceOutcome(db: Executor, code: string | undefined, sourcePubl
     }
     case "profiling":
       return { id, tone: "info", title: `${source.name} is already being profiled.`, description: "A new version can be queued once this one finishes." };
+    default:
+      return undefined;
+  }
+}
+
+/** The URL parameters a preview's outcome travels in, removed once it shows. */
+export const PREVIEW_OUTCOME_PARAMS = ["notice", "preview"] as const;
+
+/**
+ * Messages for the outcome codes preview actions redirect with: on the
+ * preview's page, a build or rebuild queued; on the Repository's page, a
+ * preview deleted. Built from the records, like sourceOutcome.
+ */
+export function previewOutcome(db: Executor, code: string | undefined, previewPublicId: string | undefined): Outcome | undefined {
+  const preview = previewPublicId ? findPreviewIncludingDeleted(db, previewPublicId) : undefined;
+  if (!code || !preview) return undefined;
+  const id = `${code}:${preview.publicId}:${preview.attempt}`;
+  const name = packageLabel(preview);
+  switch (code) {
+    case "queued":
+      return preview.deletedAt ? undefined : { id, tone: "success", title: `The build of ${name} is queued.`, description: "It starts when a worker is free." };
+    case "rebuilt":
+      return preview.deletedAt ? undefined : { id, tone: "success", title: `Attempt ${preview.attempt} of ${name} is queued.`, description: preview.artifact ? "The current output stays up until the new build is ready." : undefined };
+    case "building":
+      return preview.deletedAt ? undefined : { id, tone: "info", title: `${name} is already building.`, description: "It can be rebuilt once this attempt finishes." };
+    case "preview-deleted":
+      return preview.deletedAt ? { id, tone: "success", title: `The preview of ${name} at ${preview.commitSha.slice(0, 12)} was deleted.`, description: "Its published output and build log were removed." } : undefined;
     default:
       return undefined;
   }

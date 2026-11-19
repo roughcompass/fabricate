@@ -19,7 +19,8 @@ import { type ProfileVersion, TRIGGER_LABELS, isActive } from "@/lib/profiling/v
 import { repositoryFocusHref } from "@/lib/relationships/map-view";
 import { repositoryHref, settingsHref, versionHref, versionsHref } from "@/lib/web/repository-paths";
 import { reprofileSource } from "../actions";
-import { sourceOutcome } from "../outcomes";
+import { PREVIEW_OUTCOME_PARAMS, previewOutcome, sourceOutcome } from "../outcomes";
+import { PreviewsSection } from "./previews-section";
 import styles from "@/components/profiles/profile-body.module.css";
 
 /** Re-profile: queues the next version. The token is drawn when the page renders, so submitting the page twice queues one version. */
@@ -102,6 +103,7 @@ export function RepositoryView({
         alerts={
           <>
             <OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), source.publicId)} />
+            {!explicit && <OutcomeToast outcome={previewOutcome(db, param(query, "notice"), param(query, "preview"))} strip={PREVIEW_OUTCOME_PARAMS} />}
             {pending && pending.version !== shown?.version && (
               <Alert tone="info" title={`Version ${pending.version} is ${pending.assessment.state === "queued" ? "queued" : "being profiled"}`}>
                 {`${TRIGGER_LABELS[pending.trigger]}. This page shows it once it's profiled.`}
@@ -136,6 +138,8 @@ export function RepositoryView({
           </>
         }
       />
+
+      {!explicit && <PreviewsSection source={source} query={query} />}
 
       {profile && shown ? (
         <ProfileBody profile={profile} assessment={shown.assessment} query={query} base={base} />

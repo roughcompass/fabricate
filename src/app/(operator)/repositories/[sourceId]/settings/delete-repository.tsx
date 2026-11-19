@@ -117,6 +117,7 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
                   : "No Assessment selects it by name; Assessments of all Repositories leave it out from now on."}
               </li>
               <li>{effects.runs ? `The results of the ${countLabel(effects.runs, "Run")} that included it stay with those Runs.` : "No Run of an Assessment has included it."}</li>
+              {effects.previews > 0 && <li>{`Its ${countLabel(effects.previews, "preview")} and their published files will be deleted, and their addresses will stop answering.`}</li>}
             </ul>
             <button type="button" {...buttonProps("secondary")} className={`${buttonProps("secondary").className} ${styles.wide}`} onClick={() => setStep(3)}>
               I have read and understand these effects

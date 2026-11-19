@@ -16,6 +16,7 @@ describe("navigation skeletons", () => {
     ["/repositories/new", "form"],
     ["/repositories/src_abc/settings", "form"],
     ["/repositories/de-console", "detail"],
+    ["/repositories/src_abc/previews/pvw_abc", "focused"],
     ["/standards/new", "form"],
     ["/standards/std_abc/edit", "form"],
     ["/assessments/ini_abc", "detail"],

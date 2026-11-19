@@ -15,6 +15,8 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/admin\/bitbucket-tokens\/new\/?$/, "form"],
   // A Repository's page, its versions, and each version.
   [/^\/repositories\/src_[^/]+(\/versions(\/[^/]+)?)?\/?$/, "detail"],
+  // A repository preview is a focused page, like template preview.
+  [/^\/repositories\/src_[^/]+\/previews\/[^/]+\/?$/, "focused"],
   [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "detail"],
   // The template demo's operator pages; running applications have no skeleton.
   // Preview mode is a focused page: its skeleton hides the sidebar as soon as the navigation starts.

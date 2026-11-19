@@ -19,3 +19,9 @@ export function versionsHref(sourcePublicId: string, page = 1): string {
 export function versionHref(sourcePublicId: string, version: number): string {
   return `/repositories/${sourcePublicId}/versions/${version}`;
 }
+
+/** A preview of the Repository (docs/previews.md): its device frame, state, and build log, with +query+ such as its device. */
+export function previewPageHref(sourcePublicId: string, previewPublicId: string, query: Record<string, string> = {}): string {
+  const params = new URLSearchParams(query);
+  return `/repositories/${sourcePublicId}/previews/${previewPublicId}${params.size ? `?${params}` : ""}`;
+}

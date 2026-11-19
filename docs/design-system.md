@@ -179,7 +179,7 @@ Sizes are `sm` (28px) for table rows, filter bars, and toolbars; `md` (36px) eve
 | --- | --- |
 | `TextInput` | `mono` for URLs, references, and paths; `size="sm"` in filter bars |
 | `TextArea` | Height follows `rows` |
-| `Select` | Custom chevron; `size="sm"` in filter bars |
+| `Select` | Custom chevron; `size="sm"` in filter bars. An option may be a labeled group of options, such as a remote's Branches and Tags |
 | `Checkbox` | A single check box with its label; `hideLabel` in table selection columns |
 | `Switch` | An on/off setting that takes effect as it's turned: the label and description, then the switch at the row's end. A check box with the switch role, so it works without JavaScript; `hideLabel` in a list row. Choosing items from a set, such as a filter, stays a `Checkbox` |
 | `ChoiceGroup` | Radio or check box cards with descriptions; `columns` for two or three short options. A choice's `icon` goes before its label, as on the gallery's Web, Mobile, and Desktop cards. A selected card takes the accent border, and a selected radio card also takes the selection ring |
@@ -216,13 +216,13 @@ Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: t
 | `StatGroup` (`stat-group.tsx`) | Key figures in one divided row; cells fill each row, and a phone shows two per row |
 | `EmptyState` (`empty-state.tsx`) | A title, one sentence, and the action that fills the area, inside the panel or list it replaces; one that stands on its own sits in a flush `Panel` |
 | `Disclosure` (`disclosure.tsx`) | A native `<details>`: `panel` for grouped results, `plain` for secondary details. On narrow screens the `aside` moves below a label that needs the room |
-| `CodeBlock` (`code-block.tsx`) | Cited lines with numbers and a copy control; long lines wrap |
+| `CodeBlock` (`code-block.tsx`) | Cited lines with numbers and a copy control; long lines wrap. `scroll` bounds its height and scrolls its lines, focusable from the keyboard, for a log such as a preview's build log |
 | `Table` (`table.tsx`) | A quiet header, a linked primary cell, `RowActions` that keep rows one height, `EmptyRow`, and stacked rows on narrow screens; `scroll` for many numeric columns, which also stacks on narrow screens. Give every cell a `label`, since stacked rows show it |
 | `BarChart` (`bar-chart.tsx`) | A stacked bar chart drawn as SVG on the server, such as Home's Assessment trend: one bar per group, stacked by series, with each bar's total above it and its label below. Every series has a tone and a pattern (solid, stripes, dots, or lines), so bars read without color, and a legend names them. A visually hidden table holds the same figures. Give each chart on a page its own `id` |
 | `Tabs` (`tabs.tsx`) | Views of one page, with count badges. On narrow screens the tabs keep one line and scroll sideways on their own (`data-scroll-x`), under the aside |
 | `Pagination` (`pagination.tsx`) | Links between the pages of a long list: the position, Previous and Next, the first and last pages, and the current page with its neighbours. The page lives in the address, as `page`, so it works without JavaScript and every page can be shared |
 | `ToggleGroup` (`toggle-group.tsx`, client) | Mutually exclusive choices as a row of buttons, the chosen one pressed (`aria-pressed`), such as preview mode's Mobile, Tablet, and Desktop. The choice lives in the URL: each button submits a GET form, so it works without JavaScript, and navigates in place with it |
-| `LandscapeToggle` (`landscape-toggle.tsx`, client) | The Landscape control for a device preview: one icon button, pressed while a phone or tablet is on its side, that turns it the other way. It is a GET form, so it works without JavaScript, and navigates in place with it. Template preview uses it |
+| `LandscapeToggle` (`landscape-toggle.tsx`, client) | The Landscape control for a device preview: one icon button, pressed while a phone or tablet is on its side, that turns it the other way. It is a GET form, so it works without JavaScript, and navigates in place with it. Template preview and repository previews use it, through `DeviceControls` |
 | `Breadcrumbs` (`breadcrumbs.tsx`) | A record's linked ancestors |
 | `FilterBar` (`filter-bar.tsx`, client) | Compact filters above their results, two per row on a phone; applies on change, or with Apply without JavaScript |
 | `FilterRail` (`filter-rail.tsx`, client) | Check box filters beside their results: a heading (`title`, "Filter templates" in the gallery) with a Clear action while any filter or search is active, then one collapsible group per filter whose heading shows how many of its options are checked. Each option is a tinted row with how many results it would match; a checked row takes the selection tint. On narrow screens the rail becomes a Filters disclosure with the active count above the results. Applies on change, or with Apply without JavaScript. Only the template gallery uses it; every other filterable view uses `FilterBar` |
@@ -282,7 +282,7 @@ Every page marks one item current, and a record's pages mark the item for their 
 
 - A Run, an Evaluation, or a Profile marks All Assessments.
 - A Repository's Settings, New Repository, and the imports mark Repositories.
-- A template preview marks Salt Patterns.
+- A template preview marks Salt Patterns, and a repository preview marks Repositories.
 
 The create and import pages aren't in the menu; their list pages offer them. `locate()` resolves a path to its group and item. Its patterns never overlap, and a unit test checks every operator route against it. A page outside every item, such as this gallery, shows the primary menu with nothing current. The product mark in the sidebar opens Home. The current item takes `--color-bg-selected` and the medium weight, and is exposed as `aria-current`.
 
@@ -296,7 +296,7 @@ Both settings persist for a year in two cookies that the browser may write, so t
 
 **Below 1024px the sidebar is a drawer.** The content takes the whole width, and Open navigation in the shell header opens the sidebar. The sidebar is a native popover (`popover="auto"`), so opening it, Escape, a click outside, and the return of focus to Open navigation all work without JavaScript; from 1024px its styles restate the browser's popover defaults so the same element is the inline sidebar. The drawer slides in over `--color-overlay`, and closes when an item is chosen, when a page opens, and when the viewport widens to 1024px.
 
-**A focused page hides the sidebar.** A focused page gives the content column to one subject, and preview mode is the only one. It renders `ShellHeader` with `back` (`{ href, label }`, such as "Back to Payments workspace"). The header then:
+**A focused page hides the sidebar.** A focused page gives the content column to one subject: template preview mode and a repository preview are the two. Both show a page in a device frame with the components in `src/components/preview/`: `DeviceFrame` draws the browser window at the device's size, scaled to fit, `DeviceControls` puts the frame's size, the device `ToggleGroup`, `LandscapeToggle`, and Open full screen at the end of the control row, and the device and orientation live in the address (`src/lib/web/device-preview.ts`). Each renders `ShellHeader` with `back` (`{ href, label }`, such as "Back to Payments workspace"). The header then:
 - carries `data-shell-header="focused"`
 - holds a tertiary, icon-only back link (`arrowLeft`) in place of Show sidebar and Open navigation, named and titled by the label, which works without JavaScript
 - keeps the title as the page's only `h1`, with `visually-hidden`

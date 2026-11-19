@@ -87,6 +87,12 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   fail: ["Fails", "error"],
   blocking: ["Blocking", "error"],
   warning: ["Warning", "warning"],
+  // Repository previews: a commit being prepared or refused, and a preview's latest build attempt (Queued and Failed above).
+  profiling: ["Profiling", "progress"],
+  previewable: ["Previewable", "success"],
+  not_previewable: ["Not previewable", "neutral"],
+  building: ["Building", "progress"],
+  ready: ["Ready", "success"],
   // DE Console reads, and why an entry is in conflict.
   succeeded: ["Succeeded", "success"],
   duplicate_in_export: ["Listed twice in the export", "warning"],
