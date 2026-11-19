@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { Page, PageHeader, type TemplateHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
-import { PanelBoundary } from "./panel-boundary";
+import { PanelBoundary, PanelFailure } from "./panel-boundary";
 import { EmptyZone, FiguresSkeleton, HeaderSkeleton, type SpecimenOption, TableSkeleton, type TemplateEmpty, Zone, specimenHeader } from "./parts";
 import styles from "./templates.module.css";
 
@@ -59,19 +60,35 @@ interface DashboardPanelProps {
   flush?: boolean;
   /** Spans the grid's full width. */
   wide?: boolean;
-  children: React.ReactNode;
+  /** The panel's content; as a function, it reads its own data, so a read that fails shows in this panel only. */
+  children: React.ReactNode | (() => React.ReactNode);
 }
 
 /**
  * One panel of a Dashboard: a heading, a link to the list it summarizes, and
  * its content. A panel whose content fails shows its own error with Try
- * again, and the other panels render (PanelBoundary).
+ * again, and the other panels render: a read that fails on the server is
+ * caught here, so the page still renders in full without JavaScript, and a
+ * failure while the browser renders it is caught by PanelBoundary. (A
+ * Suspense boundary would isolate both, but it streams the panel behind a
+ * skeleton that only a script reveals.)
  */
 export function DashboardPanel({ title, description, link, flush = false, wide = false, children }: DashboardPanelProps) {
+  let content: React.ReactNode;
+  if (typeof children === "function") {
+    try {
+      content = children();
+    } catch (error) {
+      // Not-found and redirect signals aren't failures; they keep their meaning.
+      unstable_rethrow(error);
+      console.error(`The ${title} panel couldn't be read:`, error);
+      content = <PanelFailure title={title} />;
+    }
+  } else content = children;
   return (
     <div className={styles.panelCell} data-wide={wide || undefined} data-dashboard-panel="">
       <Panel title={title} description={description} flush={flush} actions={link && <Link href={link.href}>{link.label}</Link>}>
-        <PanelBoundary title={title}>{children}</PanelBoundary>
+        <PanelBoundary title={title}>{content}</PanelBoundary>
       </Panel>
     </div>
   );

@@ -59,10 +59,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       figures={<FleetFigures />}
     >
       <DashboardPanel title="Assessment trend" description="Evaluations completed each week, by conclusion, over the last eight weeks." link={{ href: assessmentsHref(), label: "All Assessments" }}>
-        <AssessmentTrend />
+        {assessmentTrendPanel}
       </DashboardPanel>
       <DashboardPanel title="Recent activity" description="The latest finished Runs." link={{ href: assessmentsHref(), label: "All Assessments" }} flush>
-        <RecentActivity />
+        {recentActivityPanel}
       </DashboardPanel>
     </DashboardTemplate>
   );
@@ -163,8 +163,8 @@ function FleetFigures() {
   );
 }
 
-/** Eight weeks of completed Evaluations by conclusion. */
-function AssessmentTrend() {
+/** Eight weeks of completed Evaluations by conclusion, read when its panel renders. */
+function assessmentTrendPanel(): React.ReactNode {
   const trend = assessmentTrend(getDb());
   return (
     <BarChart
@@ -178,8 +178,8 @@ function AssessmentTrend() {
   );
 }
 
-/** The latest finished Runs, each with its outcome as a status dot. */
-function RecentActivity() {
+/** The latest finished Runs, each with its outcome as a status dot, read when its panel renders. */
+function recentActivityPanel(): React.ReactNode {
   const activity = recentActivity(getDb()).slice(0, ACTIVITY_SHOWN);
   if (activity.length === 0) return <EmptyState title="Nothing has happened yet">Finished Runs appear here.</EmptyState>;
   return (

@@ -7,7 +7,7 @@ import { EditorSkeleton, EditorTemplate } from "@/components/templates/editor-te
 import { FlowSkeleton, FlowTemplate } from "@/components/templates/flow-template";
 import { FormSkeleton, FormTemplate } from "@/components/templates/form-template";
 import { IndexSkeleton, IndexTemplate } from "@/components/templates/index-template";
-import { PanelErrorPreview } from "@/components/templates/panel-boundary";
+import { PanelFailure } from "@/components/templates/panel-boundary";
 import { SettingsSkeleton, SettingsTemplate } from "@/components/templates/settings-template";
 import { SystemSkeleton, SystemTemplate } from "@/components/templates/system-template";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -209,7 +209,7 @@ function RecordTemplates() {
                   <p>Run #4 finished.</p>
                 </DashboardPanel>
                 <DashboardPanel title="Assessment trend" link={{ href: "#template-dashboard", label: "All Assessments" }}>
-                  <PanelErrorPreview title="Assessment trend" />
+                  <PanelFailure title="Assessment trend" />
                 </DashboardPanel>
               </DashboardTemplate>
             }
