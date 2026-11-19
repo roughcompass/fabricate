@@ -27,8 +27,6 @@ export const E2E_ENV = {
   FRONTEND_REGISTRY_PREVIEWS_STORAGE: path.join(E2E_ROOT, "previews"),
   FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES: E2E_PREVIEW_REMOTES.map((remote) => `file://${remote}`).join(" "),
   FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS: `${process.versions.node}=${path.dirname(process.execPath)}`,
-  // Applications' screenshots are captured with the Chrome the browser tests run in.
-  FRONTEND_REGISTRY_PREVIEWS_BROWSER: "chrome",
   // Browser tests never reach a package registry: Catalog checks and builds find this one unreachable.
   FRONTEND_REGISTRY_CATALOG_REGISTRY: "http://127.0.0.1:9/",
 };

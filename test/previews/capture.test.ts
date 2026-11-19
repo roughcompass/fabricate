@@ -26,7 +26,8 @@ import { useAppDb } from "../support/next";
  * tasks 4.2 and 4.3): the `preview.screenshot` job serves the build from an
  * in-process server and captures it in a headless browser at 1440 by 900,
  * writing screenshot.webp and a 720-pixel card. These run the browser the
- * browser tests use, the installed Chrome (previews.browser = chrome). A
+ * worker uses by default, Playwright's Chromium, which `npx playwright
+ * install chromium` puts on the host (previews.browser unset). A
  * capture that fails records the screenshot as unavailable and leaves the
  * build as it was.
  */
@@ -57,7 +58,7 @@ describe("screenshots", () => {
   beforeEach(() => {
     storage = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "preview-screenshots-")));
     repository = buildRepository(app.db, { name: "spa-orders", cloneUrl: "https://git.example.com/acme/spa-orders.git" });
-    config = withOverrides(original, { previews: { enabled: true, trustedSources: [repository.canonicalUrl], storage, browser: "chrome" } });
+    config = withOverrides(original, { previews: { enabled: true, trustedSources: [repository.canonicalUrl], storage, browser: null } });
     setConfig(config);
   });
   afterEach(() => {
@@ -157,7 +158,7 @@ describe("screenshots", () => {
       const browser = await launchBrowser(config);
       expect(browser.version()).toMatch(/^\d+\./);
       await browser.close();
-      expect(await checkBrowser(config)).toMatchObject({ subject: "Screenshot browser", status: "ok", detail: expect.stringMatching(/^the chrome channel \d+\.[\d.]+ launches headless$/) });
+      expect(await checkBrowser(config)).toMatchObject({ subject: "Screenshot browser", status: "ok", detail: expect.stringMatching(/^Playwright's Chromium \d+\.[\d.]+ launches headless$/) });
     }, 60_000);
 
     it("names a missing browser, and how to provide it", async () => {
@@ -172,7 +173,7 @@ describe("screenshots", () => {
         "The chrome-canary browser isn't installed on this host: there's nothing at /opt/google/chrome-canary/chrome. Install it, or set previews.browser to another browser.",
       );
       const thrown = new BrowserUnavailableError(launchFailure(config, new Error("browserType.launch: Target page, context or browser has been closed")));
-      expect(await checkBrowser(config, { probe: () => Promise.reject(thrown) })).toEqual({ subject: "Screenshot browser", status: "failed", detail: "the chrome channel couldn't start: Target page, context or browser has been closed" });
+      expect(await checkBrowser(config, { probe: () => Promise.reject(thrown) })).toEqual({ subject: "Screenshot browser", status: "failed", detail: "Playwright's Chromium couldn't start: Target page, context or browser has been closed" });
     }, 60_000);
   });
 });
