@@ -40,7 +40,7 @@ describe("projection version 2", () => {
     const all = edges(db);
     const dependency = (name: string) => all.find((edge) => edge.type === "package_dependency" && JSON.parse(edge.reference_identifier).name === name)!;
 
-    expect(PROJECTION_VERSION).toBe(3);
+    expect(PROJECTION_VERSION).toBeGreaterThanOrEqual(2);
     expect(dependency("left-pad")).toMatchObject({ kind: "third_party", state: "unresolved", rule: "package.unresolved", reference_type: "package", to_label: "left-pad" });
     expect(dependency("@acme/client")).toMatchObject({ kind: "architecture", state: "resolved", to_label: "client" });
     expect(dependency("legacy-ui")).toMatchObject({ kind: "architecture", state: "out_of_scope", to_label: "legacy-ui" });

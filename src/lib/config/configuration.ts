@@ -59,6 +59,13 @@ const settingsSchema = z.strictObject({
   catalog: z.strictObject({
     registry: z.url({ protocol: /^https?$/, error: "the catalog registry must be an http or https address" }),
   }),
+  // Adoption Analytics: how many days apart adoption snapshots are taken,
+  // and which share of used components, by fewest usages, counts as rarely
+  // used, as a percentile.
+  adoption: z.strictObject({
+    snapshotDays: positiveInteger,
+    rarelyUsedPercentile: z.int().min(1).max(100),
+  }),
   // Repository previews (docs/previews.md): off by default. Only remotes
   // listed in trustedSources, by clone URL, can be previewed; nodeVersions
   // maps each Node version a build may use to its binary directory. Builds,
@@ -110,6 +117,8 @@ export const ENV_KEYS = {
   demoEnabled: "FRONTEND_REGISTRY_DEMO",
   profilingCheckMinutes: "FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES",
   catalogRegistry: "FRONTEND_REGISTRY_CATALOG_REGISTRY",
+  adoptionSnapshotDays: "FRONTEND_REGISTRY_ADOPTION_SNAPSHOT_DAYS",
+  adoptionRarelyUsedPercentile: "FRONTEND_REGISTRY_ADOPTION_RARELY_USED_PERCENTILE",
   previewsEnabled: "FRONTEND_REGISTRY_PREVIEWS",
   previewsTrustedSources: "FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES",
   previewsNodeVersions: "FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS",
@@ -162,6 +171,8 @@ export interface FrontendRegistryConfig {
   readonly profiling: { readonly checkMinutes: number };
   /** The Reference Catalog: the npm registry Catalog builds read from, ending in a slash. */
   readonly catalog: { readonly registry: string };
+  /** Adoption Analytics: days between snapshots, and the percentile of used components, by fewest usages, that counts as rarely used. */
+  readonly adoption: { readonly snapshotDays: number; readonly rarelyUsedPercentile: number };
   readonly previews: PreviewSettings;
   /** The settings this configuration was built from, before mandatory additions. */
   readonly settings: Settings;
@@ -204,10 +215,11 @@ export function loadConfig(options: LoadOptions = {}): FrontendRegistryConfig {
  */
 export function withOverrides(
   config: FrontendRegistryConfig,
-  overrides: Partial<Omit<Settings, "analysis" | "profiling" | "catalog" | "previews">> & {
+  overrides: Partial<Omit<Settings, "analysis" | "profiling" | "catalog" | "adoption" | "previews">> & {
     analysis?: Partial<Settings["analysis"]>;
     profiling?: Partial<Settings["profiling"]>;
     catalog?: Partial<Settings["catalog"]>;
+    adoption?: Partial<Settings["adoption"]>;
     previews?: Partial<Settings["previews"]>;
   },
 ): FrontendRegistryConfig {
@@ -218,6 +230,7 @@ export function withOverrides(
     demo: { ...config.settings.demo, ...overrides.demo },
     profiling: { ...config.settings.profiling, ...overrides.profiling },
     catalog: { ...config.settings.catalog, ...overrides.catalog },
+    adoption: { ...config.settings.adoption, ...overrides.adoption },
     previews: { ...config.settings.previews, ...overrides.previews },
   };
   return buildConfig(settings, { appRoot: config.appRoot, environment: config.environment });
@@ -273,6 +286,7 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
     demoEnabled: settings.demo.enabled,
     profiling: { checkMinutes: settings.profiling.checkMinutes },
     catalog: { registry: settings.catalog.registry.endsWith("/") ? settings.catalog.registry : `${settings.catalog.registry}/` },
+    adoption: { ...settings.adoption },
     previews: {
       enabled: settings.previews.enabled,
       trustedSources: unique(settings.previews.trustedSources.map(trustedSource)),
@@ -334,6 +348,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   const demo: Record<string, unknown> = { ...(settings.demo as Record<string, unknown>) };
   const profiling: Record<string, unknown> = { ...(settings.profiling as Record<string, unknown>) };
   const catalog: Record<string, unknown> = { ...(settings.catalog as Record<string, unknown>) };
+  const adoption: Record<string, unknown> = { ...(settings.adoption as Record<string, unknown>) };
   const previews: Record<string, unknown> = { ...(settings.previews as Record<string, unknown>) };
   // Clone URLs can't contain whitespace, so whitespace separates them; ":" would split a URL.
   const urls = (key: string) => text(key)?.split(/\s+/);
@@ -366,6 +381,8 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [demo, "enabled", boolean(ENV_KEYS.demoEnabled)],
     [profiling, "checkMinutes", integer(ENV_KEYS.profilingCheckMinutes)],
     [catalog, "registry", text(ENV_KEYS.catalogRegistry)],
+    [adoption, "snapshotDays", integer(ENV_KEYS.adoptionSnapshotDays)],
+    [adoption, "rarelyUsedPercentile", integer(ENV_KEYS.adoptionRarelyUsedPercentile)],
     [previews, "enabled", boolean(ENV_KEYS.previewsEnabled)],
     [previews, "trustedSources", urls(ENV_KEYS.previewsTrustedSources)],
     [previews, "nodeVersions", versions(ENV_KEYS.previewsNodeVersions)],
@@ -380,12 +397,13 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   if (Object.keys(demo).length > 0) result.demo = demo;
   if (Object.keys(profiling).length > 0) result.profiling = profiling;
   if (Object.keys(catalog).length > 0) result.catalog = catalog;
+  if (Object.keys(adoption).length > 0) result.adoption = adoption;
   if (Object.keys(previews).length > 0) result.previews = previews;
   return result;
 }
 
 /** Variables added after the rename, which never had an old name to fall back to. */
-const NEW_SINCE_RENAME: ReadonlySet<string> = new Set([ENV_KEYS.catalogRegistry]);
+const NEW_SINCE_RENAME: ReadonlySet<string> = new Set([ENV_KEYS.catalogRegistry, ENV_KEYS.adoptionSnapshotDays, ENV_KEYS.adoptionRarelyUsedPercentile]);
 
 /**
  * The environment with each variable's name from before the rename read where its

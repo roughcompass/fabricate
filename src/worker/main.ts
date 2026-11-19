@@ -5,6 +5,7 @@ import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { HOLD_BACKGROUND, jobHandlers, jobLimits } from "@/lib/jobs/registry";
 import { Worker } from "@/lib/jobs/worker";
+import { scheduleAdoptionSnapshots } from "@/lib/adoption/snapshots";
 import { scheduleCatalogChecks } from "@/lib/catalog/check";
 import { scheduleProfileChecks } from "@/lib/profiling/check";
 import { verifyStartup } from "@/lib/startup";
@@ -30,6 +31,8 @@ async function main(): Promise<void> {
   scheduleCatalogChecks(getDb());
   // The profiling check reschedules itself; this starts it, and it also queues the first version of every repository without one.
   scheduleProfileChecks(getDb(), getConfig());
+  // Adoption snapshots reschedule themselves, once per adoption.snapshotDays.
+  scheduleAdoptionSnapshots(getDb(), getConfig());
   worker.start();
   console.log(`[worker] ready as ${worker.workerId}`);
 

@@ -1,6 +1,7 @@
 import { COORDINATE_RUN, FINALIZE_RUN, PROCESS_TARGET, coordinateRun, finalizeRun, processTarget } from "@/lib/runs/orchestration";
 import { BUILD_ENTRY, buildRequest, runBuild } from "@/lib/catalog/build";
 import { CHECK_CATALOG, runCatalogCheck } from "@/lib/catalog/check";
+import { TAKE_SNAPSHOTS, runSnapshots } from "@/lib/adoption/snapshots";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, getDb } from "@/lib/db/client";
 import { FINALIZE_EVALUATION, finalizeEvaluation, runEvaluationRelease } from "@/lib/evaluations/jobs";
@@ -31,6 +32,7 @@ export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConf
       const repository = findRepository(db, String(payload.repository));
       if (repository) await surveyRepository(db, repository, String(payload.trigger) as BackgroundTrigger, { config, signal: context.signal });
     },
+    [TAKE_SNAPSHOTS]: (payload) => void runSnapshots(db, config, { slot: String(payload.slot), log: (message) => console.log(`[worker] ${message}`) }),
     [CHECK_CATALOG]: async (payload) =>
       void (await runCatalogCheck(db, config, { ...(typeof payload.slot === "string" && { slot: payload.slot }), ...(typeof payload.after === "string" && { after: payload.after }) }, { log: (message) => console.log(`[worker] ${message}`) })),
     // A build that fails stores nothing; its job's last error says why, and only an unreachable registry is retried.

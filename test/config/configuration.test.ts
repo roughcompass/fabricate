@@ -17,6 +17,7 @@ const shared: Settings = {
   demo: { enabled: false },
   profiling: { checkMinutes: 60 },
   catalog: { registry: "https://registry.npmjs.org/" },
+  adoption: { snapshotDays: 7, rarelyUsedPercentile: 25 },
   previews: { enabled: false, trustedSources: [], nodeVersions: {}, storage: "storage/previews", concurrency: 1, timeoutMinutes: 15, maxOutputBytes: 209_715_200, maxStorageBytes: 5_368_709_120 },
 };
 

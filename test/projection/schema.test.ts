@@ -28,7 +28,8 @@ describe("projection rows", () => {
       pinnedRepository("web", { "@acme/client": "1.0.0", "@acme/ui": "2.0.0", react: "16.14.0" }),
       pinnedRepository("@acme/client", { react: "18.3.1" }),
       { "package.json": manifest({ name: "@acme/ui", version: "2.0.0" }) },
-      { "package.json": manifest({ name: "@acme/ui", version: "2.1.0" }) },
+      // ui-b renders Salt's Button and a raw button, so it has design-system usage rows.
+      { "package.json": manifest({ name: "@acme/ui", version: "2.1.0", dependencies: { "@salt-ds/core": "1.75.0" } }), "src/Ui.tsx": 'import { Button } from "@salt-ds/core";\nexport const Ui = () => <><Button>Go</Button><button>Raw</button></>;\n' },
       "failed",
     ]);
   });

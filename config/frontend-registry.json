@@ -23,6 +23,10 @@
     "catalog": {
       "registry": "https://registry.npmjs.org/"
     },
+    "adoption": {
+      "snapshotDays": 7,
+      "rarelyUsedPercentile": 25
+    },
     "previews": {
       "enabled": false,
       "trustedSources": [],

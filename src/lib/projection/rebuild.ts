@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
-import { dependencyFacts, evidenceIndex, graphEdgeCandidates, graphEdges, graphNodes, relationshipMaps, repositoryProfiles } from "@/lib/db/schema";
+import { dependencyFacts, designSystemProfiles, designSystemUsage, evidenceIndex, graphEdgeCandidates, graphEdges, graphNodes, relationshipMaps, repositoryProfiles } from "@/lib/db/schema";
 import { DocumentIntegrityError } from "@/lib/documents/digested";
 import { profileDocument } from "@/lib/profiles/profile-records";
 import { mapDocument } from "@/lib/relationships/map-records";
@@ -25,7 +25,7 @@ export interface RebuildReport {
  */
 export function rebuildProjection(db: Executor): RebuildReport {
   return immediate(db, (tx) => {
-    for (const table of [graphEdgeCandidates, graphEdges, graphNodes, evidenceIndex, dependencyFacts]) tx.delete(table).run();
+    for (const table of [graphEdgeCandidates, graphEdges, graphNodes, evidenceIndex, dependencyFacts, designSystemUsage, designSystemProfiles]) tx.delete(table).run();
 
     const report: RebuildReport = { profiles: 0, maps: 0, skipped: [] };
     // Documents can be tens of MB, so they're read one at a time.

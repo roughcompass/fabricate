@@ -6,6 +6,8 @@ import {
   type EdgeKind,
   runTargets,
   dependencyFacts,
+  designSystemProfiles,
+  designSystemUsage,
   evidenceIndex,
   graphEdgeCandidates,
   graphEdges,
@@ -16,6 +18,7 @@ import type { RepositoryProfile } from "@/lib/profiles/profile-records";
 import type { RelationshipMap } from "@/lib/relationships/map-records";
 import { asArray, asObject, isJsonObject } from "@/lib/json";
 import { chunked } from "@/lib/db/chunked";
+import { designSystemProfileRow, designSystemUsageRows } from "./design-systems";
 
 /**
  * The projection: indexed rows copied out of immutable Profile and
@@ -25,10 +28,10 @@ import { chunked } from "@/lib/db/chunked";
  * tolerates a missing section and projects what the document holds.
  */
 
-/** Bump to change what is projected; the rebuild command then recreates every row. */
-export const PROJECTION_VERSION = 3;
+/** Bump to change what is projected; the rebuild command then recreates every row. Version 4 adds design-system usage. */
+export const PROJECTION_VERSION = 4;
 
-/** Rows per INSERT, well under SQLite's bound-parameter limit at 16 columns. */
+/** Rows per INSERT, well under SQLite's bound-parameter limit at 20 columns. */
 const CHUNK = 500;
 
 type DependencyRow = typeof dependencyFacts.$inferInsert;
@@ -49,6 +52,10 @@ export function projectProfile(db: Executor, profile: RepositoryProfile, documen
 
   const evidence: EvidenceRow[] = evidenceRows(asObject(facts?.evidence)).map((row) => ({ ...common, ...row }));
   for (const chunk of chunked(evidence, CHUNK)) db.insert(evidenceIndex).values(chunk).run();
+
+  const usage = designSystemUsageRows(asObject(facts)).map((row) => ({ ...common, ...row }));
+  for (const chunk of chunked(usage, CHUNK)) db.insert(designSystemUsage).values(chunk).run();
+  db.insert(designSystemProfiles).values({ ...common, ...designSystemProfileRow(asObject(facts)) }).run();
 }
 
 export function projectMap(db: Executor, map: RelationshipMap, document: JsonObject): void {
