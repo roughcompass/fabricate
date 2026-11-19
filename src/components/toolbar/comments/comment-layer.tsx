@@ -83,7 +83,8 @@ export function CommentLayer() {
       if (drafted) elements.set("__draft", drafted);
       return elements;
     },
-    true,
+    // Only while there's something to place, so a page that changes constantly costs nothing otherwise.
+    shown.length > 0 || hovered !== null || draft !== null,
     `${shown.map(({ thread }) => thread.id).join(",")}|${hovered ? "h" : ""}|${draft?.anchor.path ?? ""}|${target.route}|${target.changes}`,
   );
 

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { openTool } from "./support/demo";
+import { expectToolbarOnTop, openTool } from "./support/demo";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { application, runOrdersPortal, waitForPage } from "./support/running-app";
@@ -184,6 +184,32 @@ test.describe("keyboard in the application", () => {
     await expect(page.getByText("Choose any element to comment on it. Press Esc to cancel.")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByText("Choose any element to comment on it. Press Esc to cancel.")).toHaveCount(0);
+  });
+});
+
+test.describe("isolation from the application", () => {
+  test("audits only the application, stays above its Feedback tab at the right edge, and keeps its own look", async ({ page, db }) => {
+    await runOrdersPortal(page, db);
+    // Nothing the audit reports is the toolbar's: every element is in the application's page.
+    await openPanel(page, "accessibility", "Accessibility");
+    await panel(page, "Accessibility").getByRole("button", { name: "Run audit" }).click();
+    await expect(panel(page, "Accessibility").locator("[data-audit-node]")).toHaveCount(1);
+    const selector = (await panel(page, "Accessibility").locator("[data-audit-node]").getAttribute("data-selector"))!;
+    await expect(application(page).locator(selector)).toHaveAttribute("type", "search");
+    await page.keyboard.press("Escape");
+
+    // The application's tab sits under the pill, at the highest stacking order, and its stylesheet turns every button red.
+    const feedback = (await application(page).getByRole("button", { name: "Feedback" }).boundingBox())!;
+    const pill = (await page.getByRole("complementary", { name: "Toolbar", exact: true }).boundingBox())!;
+    expect(feedback.x + feedback.width).toBeGreaterThan(pill.x);
+    expect(feedback.y).toBeLessThan(pill.y + pill.height);
+    await application(page).locator("head").evaluate((head) => head.insertAdjacentHTML("beforeend", "<style>button { background: rgb(255, 0, 0) !important; }</style>"));
+    await expect(application(page).getByRole("button", { name: "Feedback" })).toHaveCSS("background-color", "rgb(255, 0, 0)");
+    const menu = page.getByRole("button", { name: /^Open toolbar menu/ });
+    await expect(menu).not.toHaveCSS("background-color", "rgb(255, 0, 0)");
+    await expectToolbarOnTop(page);
+    await menu.click();
+    await expect(page.getByRole("dialog", { name: "Toolbar", exact: true })).toBeVisible();
   });
 });
 

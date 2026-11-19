@@ -214,6 +214,15 @@ function rectOf(element: Element): Rect {
   return { top: box.top, left: box.left, width: box.width, height: box.height };
 }
 
+function sameRects<K>(a: ReadonlyMap<K, Rect>, b: ReadonlyMap<K, Rect>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [key, rect] of a) {
+    const other = b.get(key);
+    if (!other || other.top !== rect.top || other.left !== rect.left || other.width !== rect.width || other.height !== rect.height) return false;
+  }
+  return true;
+}
+
 /**
  * Tracks where the elements `collect` finds in the target document are, by
  * key, in the coordinates of the page around the frame, while `active`. They
@@ -227,7 +236,8 @@ export function useTargetRects<K extends string>(collect: (document: Document) =
   const measure = useEffectEvent(() => {
     const next = new Map<K, Rect>();
     if (target.document) for (const [key, element] of collect(target.document)) if (element.isConnected) next.set(key, target.toParent(rectOf(element)));
-    setRects(next);
+    // A change in the page that moved nothing renders nothing.
+    setRects((current) => (sameRects(current, next) ? current : next));
   });
   const { window: view, document, frame } = target;
 
