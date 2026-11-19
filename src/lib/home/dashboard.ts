@@ -73,7 +73,14 @@ export function assessmentTrend(db: Executor, now: Date = new Date(), weeks = TR
 
 const ACTIVITY_LIMIT = 10;
 
-export type ActivityKind = "run_completed" | "run_failed";
+export type ActivityKind = "run_completed" | "run_with_issues" | "run_failed";
+
+/** The Run state each activity shows, through the status registry, so a Run with issues reads as a warning, not a success. */
+export const ACTIVITY_STATES: Readonly<Record<ActivityKind, "complete" | "complete_with_issues" | "failed">> = {
+  run_completed: "complete",
+  run_with_issues: "complete_with_issues",
+  run_failed: "failed",
+};
 
 export interface ActivityItem {
   kind: ActivityKind;
@@ -86,7 +93,7 @@ export interface ActivityItem {
 export function recentActivity(db: Executor, limit = ACTIVITY_LIMIT): ActivityItem[] {
   // Each names its Run, "Run #4 · Salt adherence, fleet", so links to different Runs never share a text.
   const rows = db.all<{ kind: ActivityKind; at: number; name: string; href: string }>(sql`
-    select case r.state when 'failed' then 'run_failed' else 'run_completed' end as kind, r.finished_at as at,
+    select case r.state when 'failed' then 'run_failed' when 'complete_with_issues' then 'run_with_issues' else 'run_completed' end as kind, r.finished_at as at,
       'Run #' || (select count(*) from assessments earlier where earlier.initiative_id = r.initiative_id and earlier.id <= r.id) || ' · ' || i.name as name,
       '/runs/' || r.public_id as href
     from assessments r join initiatives i on i.id = r.initiative_id

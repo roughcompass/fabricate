@@ -8,6 +8,8 @@
   .panelCell { display: flex; flex-direction: column; min-width: 0; }
   .panelCell > * { flex: 1; }
   .panelCell[data-wide] { grid-column: 1 / -1; }
+  /* A Dashboard panel's link, on its own line under the description. */
+  .panelLink { display: block; margin-top: var(--space-1); }
 
   /* Index: a filter rail beside the results. */
   .railLayout { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); align-items: start; gap: var(--space-8); }

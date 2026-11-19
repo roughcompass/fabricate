@@ -323,3 +323,31 @@ test("Recent activity: four Runs of one Assessment each name their Run, and no t
   const links = page.getByRole("list", { name: "Recent activity" }).getByRole("link");
   await expect(links).toHaveText(["Run #4 · Salt adherence, fleet", "Run #3 · Salt adherence, fleet", "Run #2 · Salt adherence, fleet", "Run #1 · Salt adherence, fleet"]);
 });
+
+// design-system spec, "Status and values are presented through one registry": a Run with issues is a warning wherever it shows.
+test("A Run complete with issues shows the registry's warning tone in Recent activity, the Run header, the Assessments list, and the Assessment's Runs", async ({ page, db }) => {
+  const repositories = [buildRepository(db, { name: "orders" }), buildRepository(db, { name: "billing" })];
+  const fleet = buildAssessment(db, { name: "Fleet baseline", repositories });
+  const run = driveRun(db, buildRun(db, { assessment: fleet, repositories }).run, "complete_with_issues", { failedTargets: 1 });
+  const tone = (scope: ReturnType<Page["locator"]>) => scope.locator("[data-tone]").first().getAttribute("data-tone");
+
+  await page.goto(paths.home);
+  const item = page.getByRole("list", { name: "Recent activity" }).getByRole("listitem");
+  await expect(item).toContainText("Run finished with issues: Run #1 · Fleet baseline");
+  expect(await tone(item)).toBe("warning");
+
+  await page.goto(paths.run(run.publicId));
+  const header = page.locator("main header").first();
+  await expect(header).toContainText("Complete with issues");
+  expect(await tone(header.locator("[data-header-status]"))).toBe("warning");
+
+  await page.goto(paths.assessments);
+  const latest = page.getByRole("table", { name: "Assessments" }).getByRole("row").filter({ hasText: "Fleet baseline" });
+  await expect(latest).toContainText("Complete with issues");
+  expect(await tone(latest.locator("td").filter({ hasText: "Complete with issues" }))).toBe("warning");
+
+  await page.goto(paths.assessment(fleet.publicId));
+  const row = page.getByRole("table", { name: "Run history" }).getByRole("row").filter({ hasText: "Run #1" });
+  await expect(row).toContainText("Complete with issues");
+  expect(await tone(row.locator("td").filter({ hasText: "Complete with issues" }))).toBe("warning");
+});

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
-import { WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity, weekChange } from "@/lib/home/dashboard";
+import { ACTIVITY_STATES, WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity, weekChange } from "@/lib/home/dashboard";
 import { fleetSummary } from "@/lib/home/summary";
 import { attentionItems } from "@/lib/home/attention";
 import { currentRecipe, moveSurvey, requestSurvey } from "@/lib/surveys/records";
@@ -77,6 +77,16 @@ describe("Assessment trend", () => {
 });
 
 describe("recent activity", () => {
+  it("names a Run that finished with issues apart from one that finished cleanly, so it shows as a warning", () => {
+    const db = createTestDb();
+    const repositories = [buildRepository(db, { name: "orders" }), buildRepository(db, { name: "billing" })];
+    const fleet = buildAssessment(db, { name: "Fleet baseline", repositories });
+    driveRun(db, buildRun(db, { assessment: fleet, repositories }).run, "complete_with_issues", { failedTargets: 1 });
+    const [item] = recentActivity(db);
+    expect(item!.kind).toBe("run_with_issues");
+    expect(ACTIVITY_STATES[item!.kind]).toBe("complete_with_issues");
+  });
+
   it("leads with the newest finished Run, linking to it by its number and Assessment, and leaves background surveys out", () => {
     const db = createTestDb();
     const repository = buildRepository(db);
