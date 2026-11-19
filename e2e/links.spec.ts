@@ -113,16 +113,18 @@ async function crawl(page: Page, start: string[], depth: number, problems: strin
       const match = pattern.exec(`${found.title} ${found.text}`);
       if (match) problems.push(`${url} shows "${match[0]}"`);
     }
+    // The page-patterns rules below are the operator interface's; the product site, in its own layout, follows the product-site spec.
+    const site = /^\/(about|docs)(\/|$|\?)/.test(url);
     // Each browser title begins with the page's title (page-patterns spec, "Page titles and browser titles name the record").
-    if (found.heading && !found.title.startsWith(found.heading)) problems.push(`${url}'s browser title "${found.title}" doesn't begin with its title "${found.heading}"`);
+    if (!site && found.heading && !found.title.startsWith(found.heading)) problems.push(`${url}'s browser title "${found.title}" doesn't begin with its title "${found.heading}"`);
     // Links that share a text open one page (page-patterns spec, "Link text names its target"); pagination's Next and Previous are relative to their list.
     const destinations = new Map<string, Set<string>>();
     for (const { href, label, paging, shown } of found.links) {
       if (!label || paging || !shown || !href.startsWith("/")) continue;
       destinations.set(label, (destinations.get(label) ?? new Set()).add(href.split("#")[0]!));
     }
-    for (const [label, hrefs] of destinations) if (hrefs.size > 1) problems.push(`${url} has ${hrefs.size} links named "${label}" to different pages: ${[...hrefs].join(", ")}`);
-    if (sentences(found.description) > 1) problems.push(`${url}'s description has ${sentences(found.description)} sentences: "${found.description}"`);
+    if (!site) for (const [label, hrefs] of destinations) if (hrefs.size > 1) problems.push(`${url} has ${hrefs.size} links named "${label}" to different pages: ${[...hrefs].join(", ")}`);
+    if (!site && sentences(found.description) > 1) problems.push(`${url}'s description has ${sentences(found.description)} sentences: "${found.description}"`);
     visited.push(url);
     if (hops >= depth) continue;
     for (const { href, label } of found.links) {
