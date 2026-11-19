@@ -14,6 +14,7 @@ import type { CategoryBlock, CompactBlock, Heading, Row, SharedBlock, SharedCell
 import { EvidencePanel } from "./evidence-panel";
 import styles from "./profile.module.css";
 import type { EvidenceOwner } from "@/lib/web/routes";
+import { sortedEvidence } from "@/lib/profiles/evidence-locations";
 
 /**
  * A detector's category description in the interface's words: detectors
@@ -35,7 +36,8 @@ export interface EvidenceContext {
 /** A row's evidence panel, which loads the row's facts and locations when it's opened. */
 function RowEvidence({ table, row, title, context }: { table: string; row: { id: string; evidence: readonly string[] }; title: string; context: EvidenceContext }) {
   const url = `/api/profiles/${context.profileId}/evidence?${new URLSearchParams({ table, row: row.id })}`;
-  return <EvidencePanel url={url} title={title} count={row.evidence.length} first={row.evidence[0] ?? null} owner={context.owner} />;
+  // Without JavaScript, the count links to the first location as the panel lists them.
+  return <EvidencePanel url={url} title={title} count={row.evidence.length} first={sortedEvidence(row.evidence, context.records)[0] ?? null} owner={context.owner} />;
 }
 
 /** A category with facts: its heading, its search and rule, and its facts in its own columns, a page at a time when there are many. */

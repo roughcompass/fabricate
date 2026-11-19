@@ -87,7 +87,23 @@ export function DashboardPanel({ title, description, link, flush = false, wide =
   } else content = children;
   return (
     <div className={styles.panelCell} data-wide={wide || undefined} data-dashboard-panel="">
-      <Panel title={title} description={description} flush={flush} actions={link && <Link href={link.href}>{link.label}</Link>}>
+      {/* The link to the list it summarizes always sits under the description, so it holds the same place on every panel at every width, never beside one panel's title and below the next one's. */}
+      <Panel
+        title={title}
+        description={
+          link ? (
+            <>
+              {description}
+              <span className={styles.panelLink}>
+                <Link href={link.href}>{link.label}</Link>
+              </span>
+            </>
+          ) : (
+            description
+          )
+        }
+        flush={flush}
+      >
         <PanelBoundary title={title}>{content}</PanelBoundary>
       </Panel>
     </div>

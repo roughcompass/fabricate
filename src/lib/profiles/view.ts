@@ -2,6 +2,7 @@ import type { CategoryDefinition, JsonObject } from "@repo-facts/contract";
 import { formatValue } from "@/components/results/value";
 import { checkKind, kindLabel } from "@/components/ui/status";
 import { isJsonObject } from "@/lib/json";
+import { sortedEvidence } from "./evidence-locations";
 import { type Attention, attention } from "./attention";
 import { type DependencyRow, type ScriptGroup, type ScriptRow, dependencyGroups, missingCell, scriptGroups } from "./joins";
 import { type Cell, type Layout, type RowCells, layoutOf, rowCells } from "./layouts";
@@ -341,9 +342,10 @@ function endpointOf(service: JsonObject): ServiceSummary["endpoint"] {
   return { text: formatValue(endpoint.value), resolved: true, detail: null };
 }
 
-function serviceSummary(service: JsonObject): ServiceSummary {
+function serviceSummary(service: JsonObject, records: JsonObject): ServiceSummary {
   const client = isJsonObject(service.client) ? service.client : {};
-  const callSites = Array.isArray(service.call_sites) ? service.call_sites.map(String) : [];
+  // The call site it names first is the first by path and line, whatever order the Profile cites them in.
+  const callSites = sortedEvidence(Array.isArray(service.call_sites) ? service.call_sites : [], records);
   return {
     key: String(service.key),
     endpoint: endpointOf(service),
@@ -431,7 +433,7 @@ export function profileView(document: FactDocument, diagnostics: { skipped: Json
     scope: scopeFigures(document),
     attention: attention(document, diagnostics, hidden),
     tabs,
-    services: (document.service_dependencies ?? []).map(serviceSummary),
+    services: (document.service_dependencies ?? []).map((service) => serviceSummary(service, document.evidence ?? {})),
     diagnostics,
   };
 }

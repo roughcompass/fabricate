@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { Page } from "@playwright/test";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOverlappingContent, test } from "./support/fixtures";
 import { openTool, setView, waitForRegions } from "./support/demo";
 import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
@@ -26,10 +27,41 @@ const VIEWPORTS = [
 const THEMES = ["light", "dark"] as const;
 
 test.skip(!process.env.CAPTURE_SCREENSHOTS, "Set CAPTURE_SCREENSHOTS=1 (npm run test:visual) to capture screenshots.");
+
+/**
+ * Waits until React has hydrated the page's title. A screenshot hides the
+ * caret with an inline style on the focused field, such as an autofocused
+ * one, and a capture taken before hydration would make React report it as a
+ * hydration mismatch.
+ */
+const hydrated = (page: Page) => page.waitForFunction(() => Object.keys(document.querySelector("h1") ?? {}).some((key) => key.startsWith("__reactFiber$")));
+
+/** Loads every image now, the lazy ones below the fold too, which a full-page capture never scrolls to. */
+const loadImages = (page: Page) =>
+  page.evaluate(async () => {
+    const images = [...document.images];
+    for (const image of images) image.loading = "eager";
+    const settled = (image: HTMLImageElement) =>
+      new Promise((resolve) => {
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener("error", resolve, { once: true });
+      });
+    await Promise.all(images.map((image) => (image.complete ? null : settled(image))));
+  });
 test.setTimeout(600_000);
 
 test("captures every product surface at desktop and mobile width, in both themes", async ({ page, db, sourcesDir, baseURL }) => {
-  const surfaces = await seedOperatorSurfaces(db, sourcesDir);
+  // The surfaces, then the System status and Adoption pages, which read the Reference Catalog's Salt entry and the surfaces' Profiles, and Bitbucket tokens.
+  storeEntry(db, saltEntry());
+  const surfaces = [
+    ...(await seedOperatorSurfaces(db, sourcesDir)),
+    ["10-system", "/admin/system"],
+    ["10-bitbucket-tokens", "/admin/bitbucket-tokens"],
+    ["10-adoption", "/adoption"],
+    ["10-adoption-salt", "/adoption/design-systems/salt"],
+    ["10-adoption-button", "/adoption/design-systems/salt/components/Button"],
+    ["10-adoption-package", "/adoption/packages/@salt-ds/core"],
+  ] as const;
 
   fs.rmSync(OUTPUT, { recursive: true, force: true });
   fs.mkdirSync(OUTPUT, { recursive: true });
@@ -42,6 +74,7 @@ test("captures every product surface at desktop and mobile width, in both themes
         // The development server's floating indicator is not part of the product.
         await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await hydrated(page);
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         await expectNoHorizontalOverflow(page);
         await expectNoOverlappingContent(page);
@@ -177,12 +210,14 @@ test("captures every template demo surface at desktop and mobile width, in both 
         await page.goto(url);
         await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await hydrated(page);
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         if (name.startsWith("13-preview-") && name !== "13-preview-code") {
           const frame = (await (await page.locator("[data-preview-frame]").elementHandle())!.contentFrame())!;
           await frame.waitForFunction(() => document.querySelector("[data-demo-mfe]") && !document.querySelector('[data-demo-mfe]:not([data-demo-state="ready"])'), null, { timeout: 15_000 });
         }
         await page.waitForLoadState("networkidle");
+        await loadImages(page);
         await expectNoHorizontalOverflow(page);
         await expectNoOverlappingContent(page);
         await expectNoNestedBorders(page);
@@ -308,6 +343,16 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
       await composer.getByLabel("Comment", { exact: true }).fill("Make this **primary**");
       await composer.getByRole("button", { name: "Formatting" }).click();
       await expect(composer.getByRole("group", { name: "Formatting" })).toBeVisible();
+      // Taller with its formatting bar, the composer moves clear of the toolbar once it has measured itself.
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const box = document.querySelector('[role="dialog"][aria-label="New comment"]')!.getBoundingClientRect();
+            const controls = document.querySelector('[data-demo-toolbar="controls"]')!.getBoundingClientRect();
+            return box.bottom <= controls.top || box.top >= controls.bottom || box.right <= controls.left || box.left >= controls.right;
+          }),
+        )
+        .toBe(true);
       await capture("composer", theme, viewport.name);
       await composer.getByLabel("Comment", { exact: true }).press("Escape");
 

@@ -199,6 +199,10 @@ test("puts a stacked row's actions at its top, beside its first cell and no tall
   expect(Math.abs(actions.top - first.top)).toBeLessThanOrEqual(1);
   expect(actions.bottom).toBeLessThanOrEqual(first.bottom + 1);
   expect(actions.left).toBeGreaterThanOrEqual(first.right);
+  // Every value starts at the same edge: the first cell's, the next cell's, and those of a row without actions.
+  const valueLeft = (row: string, cell: number) => light(page, "Table").locator(`[data-row-sample="${row}"] td:nth-child(${cell}) > div`).evaluate((element) => Math.round(element.getBoundingClientRect().left));
+  const edges = await Promise.all([valueLeft("actions", 1), valueLeft("actions", 2), valueLeft("plain", 1), valueLeft("plain", 2)]);
+  expect(new Set(edges).size, `value edges ${edges.join(", ")}`).toBe(1);
 });
 
 for (const [width, narrow] of [[1280, false], [375, true]] as const) {

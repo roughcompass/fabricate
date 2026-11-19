@@ -149,7 +149,7 @@ function ComponentsView({ header, alerts, figures, tracked, adoption, query }: {
             <SearchField id="component-search" name="q" label="Search components" hideLabel size="sm" placeholder="Search by name" defaultValue={search} clearHref={href({ usage })} />
           </FilterBar>
           <p className={styles.muted} role="status">
-            {`Showing ${countLabel(matching.length, "component")}${applied ? `, ${applied}` : ""}, of ${formatNumber(adoption.components.length)}.`}
+            {applied ? `Showing ${formatNumber(matching.length)} of ${countLabel(adoption.components.length, "component")}: ${applied}` : countLabel(adoption.components.length, "component")}
           </p>
         </>
       }

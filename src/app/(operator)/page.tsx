@@ -17,7 +17,7 @@ import { browserTitle } from "@/lib/product";
 import { profilingActivity } from "@/lib/profiling/versions";
 import { BarChart, type BarSeries } from "@/components/ui/bar-chart";
 import { ATTENTION_PAGE_SIZE, type AttentionItem, attentionItems } from "@/lib/home/attention";
-import { type ActivityKind, WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity } from "@/lib/home/dashboard";
+import { ACTIVITY_STATES, type ActivityKind, WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity } from "@/lib/home/dashboard";
 import { type FleetSummary, fleetSummary } from "@/lib/home/summary";
 import { assessmentsHref, repositoriesHref } from "@/lib/web/list-filters";
 import styles from "./home.module.css";
@@ -192,7 +192,7 @@ function recentActivityPanel(): React.ReactNode {
       {activity.map((item) => (
         <li key={`${item.kind}-${item.record.href}-${item.at.getTime()}`} data-activity={item.kind}>
           <span className={styles.activityWhat}>
-            <Status state={item.kind === "run_failed" ? "failed" : "complete"}>
+            <Status state={ACTIVITY_STATES[item.kind]}>
               <span className="visually-hidden">{ACTIVITY_LABELS[item.kind]} </span>
               <Link href={item.record.href}>{item.record.name}</Link>
             </Status>
@@ -219,6 +219,7 @@ const TREND_SERIES: BarSeries[] = [
 // Read before each activity's name by assistive technology; the status dot shows it.
 const ACTIVITY_LABELS: Record<ActivityKind, string> = {
   run_completed: "Run finished:",
+  run_with_issues: "Run finished with issues:",
   run_failed: "Run failed:",
 };
 
