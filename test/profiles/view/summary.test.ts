@@ -56,6 +56,17 @@ describe("The Overview's answers", () => {
     expect(rowOf(panels, "design-system", "Style values")!.values[0]).toMatchObject({ text: expect.stringMatching(/^\d+% use Salt tokens$/) });
   });
 
+  it("says raw HTML can't be matched, rather than that none is replaceable, when no entry covers the design system's version", async () => {
+    // The supplied Salt entry is 1.75.0, later than 1.50.0, so the survey has none to compare with.
+    const early = await analyzedFacts({
+      "package.json": manifest({ name: "early-salt", dependencies: { react: "18.3.1", "@salt-ds/core": "1.50.0" } }),
+      "src/App.tsx": 'import { SaltProvider } from "@salt-ds/core";\nexport const App = () => <SaltProvider><button>Pay</button></SaltProvider>;\n',
+    });
+    const panels = summary(early);
+    expect(rowOf(panels, "design-system", "Design system")!.values[0]).toMatchObject({ text: "Salt" });
+    expect(rowOf(panels, "design-system", "Replaceable HTML")).toMatchObject({ values: [], placeholders: [{ value: { state: "unknown", reason: "No Reference Catalog entry for its version to match raw elements against" } }] });
+  });
+
   it("names the raw controls a design system would provide when none is recognized", () => {
     expect(rowOf(summary(app), "design-system", "Raw controls")!.values).toEqual([expect.objectContaining({ text: "<button>", secondary: "1 site" })]);
   });

@@ -9,7 +9,7 @@ import type { PackageProducer, RelatedRepository, RepositoryRelationships } from
 import { type Fact, type FactDocument, type NoValue, categoryDefinitions, categoryOf, categoryState, noValue } from "./states";
 import type { ProfileTabId } from "./tabs";
 import { routes } from "@/lib/web/routes";
-import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
+import { PRODUCT, SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /**
  * The Overview's answers, one panel per question a reader brings to a
@@ -176,7 +176,11 @@ function designSystemRows(document: FactDocument, rows: readonly OverviewRow[]):
 
   const intrinsic = elements.filter((fact) => fact.key.startsWith("intrinsic:") && count(app(fact), "sites") > 0);
   const equivalent = intrinsic.filter((fact) => valueOf(fact).group === "equivalent").sort((a, b) => count(app(b), "sites") - count(app(a), "sites"));
-  if (systems.size) {
+  // From fact document version 3, a design system names the entry it was compared against; with none for its version, nothing could be matched.
+  const uncompared = facts(document, "design_systems").every((fact) => "entry" in valueOf(fact) && !isJsonObject(valueOf(fact).entry));
+  if (systems.size && uncompared) {
+    result.push(row("Replaceable HTML", "ui_elements", [], [{ value: { state: "unknown", reason: `No ${PRODUCT.referenceCatalog} entry for its version to match raw elements against` } }], { stacked: false }));
+  } else if (systems.size) {
     const sites = equivalent.reduce((sum, fact) => sum + count(app(fact), "sites"), 0);
     result.push(
       row(
