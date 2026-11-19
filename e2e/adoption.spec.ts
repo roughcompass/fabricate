@@ -64,6 +64,20 @@ test("Adoption overview: covers the profiled Repositories, names the rest, and h
   await expect(pageTitle(page)).toHaveText("Salt");
 });
 
+test("A Repository on a Salt version without an entry isn't covered, and the alert says which version (Repository not yet profiled)", async ({ page, db }) => {
+  await seedFleet(db);
+  await seedSurvey(db, buildRepository(db, { name: "early" }), { files: { ...WEB, "package.json": manifest({ name: "early", version: "1.0.0", dependencies: { "@salt-ds/core": "1.60.0" } }) } });
+  await page.goto("/adoption/design-systems/salt");
+  await expect(pageHeader(page)).toContainText("Covers 3 of 5 Repositories");
+  const alert = page.locator("#page-alerts");
+  await expect(alert).toContainText("2 of 5 Repositories aren't covered");
+  await expect(alert.locator("p").filter({ hasText: "No Reference Catalog entry for Salt 1.60.0 yet" }).getByRole("link")).toHaveText(["early"]);
+  await expect(alert.locator("p").filter({ hasText: "No Profile yet" }).getByRole("link")).toHaveText(["unprofiled"]);
+  // It's left out of Salt's figures rather than counted as using none of it.
+  await expect(figure(page, "Repositories using it").locator("dd").first()).toHaveText("2");
+  await expect(figure(page, "Repositories using it")).toContainText("of 3 covered");
+});
+
 test("Salt overview: components tracked and used, app usages, the most used charted, and a table whose rows open each component", async ({ page, db }) => {
   await seedFleet(db);
   await page.goto("/adoption/design-systems/salt");
@@ -73,7 +87,7 @@ test("Salt overview: components tracked and used, app usages, the most used char
   await expect(pageHeader(page)).toContainText("Covers 3 of 4 Repositories");
   await expect(pageHeader(page)).toContainText("Salt 1.75.0 entry");
   // Salt's published data is a snapshot of its main branch, so the page says how old it is.
-  await expect(pageHeader(page)).toContainText("Published data as of 2026-03-31");
+  await expect(pageHeader(page)).toContainText("Salt's published data as of 2026-03-31");
 
   await expect(figure(page, "Components used").locator("dd").first()).toHaveText("2");
   await expect(figure(page, "Components used")).toContainText(`of ${saltEntry().content.components!.length} tracked`);

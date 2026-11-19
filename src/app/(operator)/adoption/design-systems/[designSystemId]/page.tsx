@@ -92,7 +92,8 @@ export default async function DesignSystemAdoptionPage({ params, searchParams }:
     meta: [
       `Covers ${formatNumber(coverage.covered.length)} of ${countLabel(coverage.registered, "Repository", "Repositories")}`,
       `${name} ${tracked.entry.version} entry`,
-      ...(asOf ? [`Published data as of ${asOf}`] : []),
+      // The design system's own published data, not the figures, which are read from current Profiles now.
+      ...(asOf ? [`${name}'s published data as of ${asOf}`] : []),
     ],
     tabs: (
       <Tabs label={`${name} views`}>

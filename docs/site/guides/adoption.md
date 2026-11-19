@@ -8,8 +8,9 @@ Every figure comes from each registered repository's current Profile, the same f
 
 Each page counts only the registered repositories its figures cover. When some aren't, the page says how many and why, and lists them. A repository is **not covered** when:
 
-- it has no Profile yet, or
-- its Profile's design-system facts are unknown, for example because it was surveyed before Reference Catalog entries existed, or because inputs it needed were skipped.
+- it has no Profile yet;
+- its Profile's design-system facts are unknown, for example because it was surveyed before Reference Catalog entries existed, or because inputs it needed were skipped; or
+- it uses a design system at a version no Reference Catalog entry covered when it was surveyed, so none of its components could be recognized. The page names the version, as in "No Reference Catalog entry for Salt 1.60.0 yet". The entry is built within minutes, and once it is, the page says the repository is waiting to be surveyed against it, as the System page counts it among those Waiting.
 
 A repository that isn't covered is never counted as not using a design system.
 
@@ -64,4 +65,4 @@ Each week, the Frontend Registry records every figure of each tracked design sys
 
 ## Data from a design system's own publications
 
-Some sections, such as Salt's patterns, deprecations, and guidance, come from data the design system publishes rather than from a release. A design system's page says the date of that data: "Published data as of" it.
+Some sections, such as Salt's patterns, deprecations, and guidance, come from data the design system publishes rather than from a release. A design system's page says the date of that data, as in "Salt's published data as of 2026-03-31". The figures themselves are read from the current Profiles whenever the page opens.

@@ -38,7 +38,7 @@ export default function AdoptionPage() {
           label="Coverage"
           stats={[
             { label: "Registered", value: formatNumber(coverage.registered), href: routes.repositories, hint: "Repositories" },
-            { label: "Covered", value: formatNumber(coverage.covered.length), hint: "With design-system facts in their current Profile" },
+            { label: "Covered", value: formatNumber(coverage.covered.length), hint: "Whose current Profile measures design-system use" },
             { label: "Design systems", value: formatNumber(systems.length), hint: "Tracked" },
             { label: "Packages", value: formatNumber(packages.length), hint: "Tracked" },
           ]}

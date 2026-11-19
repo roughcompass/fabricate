@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
 import { countLabel, formatNumber, percentOf } from "@/components/ui/count";
 import { formatShortDate } from "@/components/ui/time";
-import type { Coverage, FleetRepository } from "@/lib/adoption/fleet";
+import { type Coverage, type FleetRepository, notCoveredGroups } from "@/lib/adoption/fleet";
 import type { Share } from "@/lib/adoption/queries";
 import type { SnapshotComparison } from "@/lib/adoption/snapshots";
 import { type TrackedDesignSystem, trackedDesignSystem } from "@/lib/adoption/tracked";
@@ -39,19 +39,14 @@ export function RepositoryLinks({ repositories }: { repositories: readonly Fleet
  */
 export function CoverageAlert({ coverage }: { coverage: Coverage }) {
   if (coverage.notCovered.length === 0) return null;
-  const unprofiled = coverage.notCovered.filter((repository) => repository.reason === "no_profile").length;
   return (
     <Alert tone="warning" title={`${formatNumber(coverage.notCovered.length)} of ${countLabel(coverage.registered, "Repository", "Repositories")} aren't covered`}>
-      <p>
-        {unprofiled === coverage.notCovered.length
-          ? "They have no Profile yet, so these figures leave them out."
-          : unprofiled > 0
-            ? `${formatNumber(unprofiled)} have no Profile yet, and the rest have Profiles that don't describe design systems, so these figures leave them out.`
-            : "Their Profiles don't describe design systems, so these figures leave them out."}
-      </p>
-      <p>
-        <RepositoryLinks repositories={coverage.notCovered} />
-      </p>
+      <p>These figures leave them out.</p>
+      {notCoveredGroups(coverage.notCovered).map(({ reason, repositories }) => (
+        <p key={reason}>
+          {reason}: <RepositoryLinks repositories={repositories} />
+        </p>
+      ))}
     </Alert>
   );
 }

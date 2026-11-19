@@ -28,7 +28,7 @@ Its views go further:
 - **Versions:** the Salt versions repositories resolve and declare.
 - **Snapshots:** the figures at each weekly snapshot, and any two compared.
 
-When some registered repositories have no Profile yet, or Profiles that don't describe design systems, the page says how many aren't covered and lists them. They're never counted as not using Salt.
+When some registered repositories have no Profile yet, Profiles that don't describe design systems, or a Salt version that had no Reference Catalog entry when they were surveyed, the page says how many aren't covered, why, and lists them. They're never counted as not using Salt.
 
 ## Open a component
 

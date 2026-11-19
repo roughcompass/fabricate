@@ -21,13 +21,14 @@ Every figure is computed from each registered Repository's current Profile (`rep
 
 - **covered:** a current Profile whose `design_systems` and `ui_elements` categories are present and not `unknown`;
 - **not covered, `no_profile`:** no current Profile yet;
-- **not covered, `facts_unknown`:** a current Profile whose design-system categories are missing, as in a version 1 Profile, or `unknown`, as when it was surveyed with no Reference Catalog entries.
+- **not covered, `facts_unknown`:** a current Profile whose design-system categories are missing, as in a version 1 Profile, or `unknown`, as when it was surveyed with no Reference Catalog entries;
+- **not covered, `no_entry`:** a current Profile, version 3 or later, that recognizes a design system but names no entry for it, because none was at or before the version it wanted. None of its components could be recognized, so counting it would read as not using the design system. Its `missing` names the design system, the wanted version, and the version of an entry `selectEntry` would pick now, if one has been built since. The alert says "No Reference Catalog entry for Salt 1.60.0 yet", or "Waiting to be surveyed against the Salt 1.60.0 entry" once it's built, when the System page counts the Repository as Waiting.
 
 Every figure counts covered Repositories only, and states how many it covers. A Repository that isn't covered is listed, never counted as not using what's measured.
 
 ## A design system
 
-`trackedDesignSystem` (`src/lib/adoption/tracked.ts`) reads the design system's newest current entry, the current entry of the highest version stored, and its sources, whose `snapshot_date` dates the sections from the design system's own published data; the page shows it as "Published data as of". `designSystemAdoption` (`src/lib/adoption/queries.ts`) computes these figures, under the labels the pages show:
+`trackedDesignSystem` (`src/lib/adoption/tracked.ts`) reads the design system's newest current entry, the current entry of the highest version stored, and its sources, whose `snapshot_date` dates the sections from the design system's own published data; the page shows it as "Salt's published data as of", naming the design system, so it isn't read as the date of the figures. `designSystemAdoption` (`src/lib/adoption/queries.ts`) computes these figures, under the labels the pages show:
 
 | Page label | Definition |
 | --- | --- |

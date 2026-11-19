@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { componentAdoption, designSystemAdoption, packageAdoption, replaceableHtml, tokenUse } from "@/lib/adoption/queries";
-import { designSystemCoverage } from "@/lib/adoption/fleet";
+import { designSystemCoverage, notCoveredGroups } from "@/lib/adoption/fleet";
 import { type TrackedDesignSystem, trackedDesignSystem } from "@/lib/adoption/tracked";
+import { sealEntry } from "@repo-facts/contract";
 import { storeEntry } from "@/lib/catalog/entries";
+import { recipeStates } from "@/lib/catalog/updates";
 import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { deleteRepository } from "@/lib/repositories/registration";
@@ -140,5 +142,32 @@ describe("Adoption Analytics' queries", () => {
     expect(core.versions).toEqual([{ version: "1.75.0", repositories: 1, newest: true }]);
     expect(names(core.unresolved)).toEqual(["legacy", "web"]);
     expect(packageAdoption(db, "left-pad")).toMatchObject({ repositories: [], versions: [], unresolved: [] });
+  });
+
+  it("leaves out a Repository on a Salt version no entry covered, saying which, until it's surveyed against one", async () => {
+    const early = buildRepository(db, { name: "early" });
+    const files = { "package.json": manifest({ name: "early", version: "1.0.0", dependencies: { "@salt-ds/core": "1.60.0" } }), "src/App.tsx": WEB["src/App.tsx"] };
+    await seedSurvey(db, early, { files });
+    const coverage = designSystemCoverage(db);
+    // Its Button and raw button can't be told apart without an entry, so it isn't counted, and Salt's figures are as before.
+    expect(names(coverage.covered)).toEqual(["orders", "plain", "web"]);
+    expect(coverage.notCovered.find((repository) => repository.name === "early")).toMatchObject({ reason: "no_entry", missing: { designSystem: "salt", name: "Salt", version: "1.60.0", built: null } });
+    expect(names(designSystemAdoption(db, coverage, tracked, { rarelyUsedPercentile: 25 }).repositories)).toEqual(["orders", "web"]);
+    expect(notCoveredGroups(coverage.notCovered).map(({ reason, repositories }) => [reason, names(repositories)])).toEqual([
+      ["No Profile yet", ["unprofiled"]],
+      ["A Profile that doesn't describe design systems", ["legacy"]],
+      ["No Reference Catalog entry for Salt 1.60.0 yet", ["early"]],
+    ]);
+
+    // Once the 1.60.0 entry is built, it waits for its next survey, as the System page counts it.
+    const { digest: _digest, ...unsealed } = saltEntry();
+    const built = sealEntry({ ...unsealed, version: "1.60.0", packages: unsealed.packages.map((item) => (item.name === "@salt-ds/core" ? { ...item, version: "1.60.0" } : item)) } as never);
+    storeEntry(db, built);
+    expect(notCoveredGroups(designSystemCoverage(db).notCovered).at(-1)).toMatchObject({ reason: "Waiting to be surveyed against the Salt 1.60.0 entry", repositories: [expect.objectContaining({ name: "early" })] });
+    expect(recipeStates(db, getConfig()).get(early.id)).toBe("waiting");
+
+    // Surveyed against it, it's covered.
+    await seedSurvey(db, early, { files, entries: [saltEntry(), built] as never });
+    expect(names(designSystemCoverage(db).covered)).toEqual(["early", "orders", "plain", "web"]);
   });
 });
