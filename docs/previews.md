@@ -216,6 +216,7 @@ Everything lives under `previews.storage`:
 | `<preview>/staging/<attempt>-<claim>/` | One worker's scratch while it builds: the extracted commit, `HOME`, and `TMPDIR`. Deleted when the build ends. |
 | `<preview>/logs/<attempt>-<claim>.log` | The latest attempt's log. |
 | `<preview>/out/<attempt>-<claim>/` | The published artifact. |
+| `<preview>/screenshots/<attempt>-<claim>/` | The screenshot and card image of that artifact, for an application's current build. Never served under `/previews/`. |
 | `.cache/<manager>/` | Package caches every build shares, one for each package manager and one for corepack. |
 | `.trash/` | Directories of deleted previews, moved aside to be removed. |
 
@@ -238,7 +239,7 @@ An application (add-applications) is a Repository's package that the Frontend Re
 The worker reads every application's tracked branch on the profiling check's schedule: once per `profiling.checkMinutes` (default 60, `FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES`), and once when it starts, in the same `profiling.check` job, after the Repositories are checked ([profiling.md](profiling.md)). For each application with no attempt under way, it reads the remote with `git ls-remote`, four remotes at a time and once per remote however many of its packages are applications. When the tracked branch names a commit other than the latest attempt's, it starts an attempt at that commit: it pins the commit, prepares it, and builds the package once the commit's Profile says it can be previewed, as [Preparing a commit](#preparing-a-commit) describes.
 
 - **A commit isn't tried twice.** A commit whose build failed, or which couldn't be previewed, is the latest attempt's, so the check leaves it alone until the branch moves again or an operator rebuilds the application.
-- **A remote that can't be read** is logged by the worker and skipped. Its applications keep their state, and the next check reads it again. So is a tracked branch the remote no longer has.
+- **A remote that can't be read** is logged by the worker and skipped. Its applications keep their state, and the next check reads it again. A tracked branch the remote no longer has is logged and skipped the same way.
 - **Rebuild** builds the tracked branch's current commit again, even one that was built or failed before. It isn't offered while an attempt is under way.
 - **Switching branch** starts an attempt at the new branch's head, replacing any under way. The current build stays in use until the new branch's build succeeds.
 

@@ -10,6 +10,7 @@ import type { PreviewBuild } from "./records";
  *     <storage>/<pvw_…>/staging/<attempt>-<claim>/   one claim's scratch: work/ (the extracted commit), home/, tmp/, shims/, output/
  *     <storage>/<pvw_…>/logs/<attempt>-<claim>.log   one claim's log; the preview's attempt_log names the latest attempt's
  *     <storage>/<pvw_…>/out/<attempt>-<claim>/       published output; the preview's artifact names the one served
+ *     <storage>/<pvw_…>/screenshots/<attempt>-<claim>/  an application's screenshot of that output (screenshots.ts); never served here
  *     <storage>/.cache/<manager>/                    package caches every build shares
  *
  * Each worker claim of an attempt has its own staging directory, log, and
