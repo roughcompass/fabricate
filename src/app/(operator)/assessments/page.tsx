@@ -4,7 +4,8 @@ import { IndexTemplate } from "@/components/templates/index-template";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
-import { oneOf, param } from "@/lib/web/query";
+import { oneOf, pageOf, param } from "@/lib/web/query";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Status, statusLabel } from "@/components/ui/status";
@@ -41,7 +42,8 @@ export default async function AssessmentsPage({ searchParams }: PageProps<"/asse
       latest: latest && { run: latest, number: runNumber(db, latest) },
     };
   });
-  const rows = conclusion ? all.filter(({ assessment }) => conclusions.get(assessment.id)?.conclusion === conclusion) : all;
+  const matching = conclusion ? all.filter(({ assessment }) => conclusions.get(assessment.id)?.conclusion === conclusion) : all;
+  const { rows, page, pages } = pageOf(matching, param(query, "page"));
   const create = (
     <ButtonLink href="/assessments/new" variant="primary" icon="plus">
       New Assessment
@@ -64,6 +66,7 @@ export default async function AssessmentsPage({ searchParams }: PageProps<"/asse
           ))}
         </Tabs>
       }
+      pagination={<Pagination label="Assessments pages" page={page} pages={pages} href={(number) => assessmentsHref({ conclusion, page: number })} />}
       empty={
         all.length === 0
           ? { title: "No Assessments yet", icon: "checklist", action: create, children: "An Assessment covers all Repositories or a chosen subset, and can evaluate them against published Standard Releases." }

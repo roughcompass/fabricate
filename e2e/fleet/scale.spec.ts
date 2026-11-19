@@ -35,14 +35,47 @@ function files(index: number) {
   };
 }
 
-test("Five hundred repositories: every adoption page renders in under one second and reads no Profile document", async ({ page, request }) => {
-  const db = openDatabase(FLEET_DATABASE);
+test.describe.configure({ mode: "serial" });
+
+const db = openDatabase(FLEET_DATABASE);
+
+test.beforeAll(async () => {
   const config = loadConfig({ env: { ...process.env, ...FLEET_ENV } });
   storeEntry(db, saltEntry());
   for (let index = 0; index < COUNT; index++) await seedSurvey(db, buildRepository(db, { name: `scale-${String(index).padStart(3, "0")}` }), { files: files(index) });
   takeSnapshots(db, config, "2026-11-12T00:00:00.000Z", new Date("2026-11-12T00:00:00.000Z"));
   takeSnapshots(db, config, "2026-11-19T00:00:00.000Z", new Date("2026-11-19T00:00:00.000Z"));
+});
 
+// page-patterns spec, "Long lists are paged".
+test("Fleet-sized Repositories list: 50 one-line rows, the count beside them, and the next page in the address", async ({ page }) => {
+  const total = db.$client.prepare("select count(*) as count from repository_sources where deleted_at is null").get() as { count: number };
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/repositories");
+  const rows = page.getByRole("table", { name: "Repositories" }).locator("tbody tr");
+  await expect(rows).toHaveCount(50);
+  await expect(page.getByText(`Showing 1–50 of ${total.count} Repositories`, { exact: true })).toBeVisible();
+  // One line each: every row the height of the first.
+  const heights = await rows.evaluateAll((all) => all.map((row) => row.getBoundingClientRect().height));
+  expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(1);
+  expect(heights[0]).toBeLessThan(60);
+  await page.getByRole("navigation", { name: "Repositories pages" }).getByRole("link", { name: "Next" }).click();
+  await expect(page).toHaveURL(/\/repositories\?page=2$/);
+  await expect(page.getByText(`Showing 51–100 of ${total.count} Repositories`, { exact: true })).toBeVisible();
+});
+
+test("Filtering a later page: searching from the third page returns to the first page of matching Repositories", async ({ page }) => {
+  await page.goto("/repositories?page=3");
+  const search = page.getByRole("searchbox", { name: "Search Repositories" });
+  await search.fill("scale");
+  await search.press("Enter");
+  // No page in the address: the filter bar's fields alone, so the list is on its first page.
+  await expect(page).toHaveURL(/\/repositories\?q=scale(&recipe=)?$/);
+  await expect(page.getByText(/^Showing 1–50 of 500 matching Repositories/)).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Repositories pages" }).getByRole("link", { name: "Page 1", exact: true })).toHaveAttribute("aria-current", "page");
+});
+
+test("Five hundred repositories: every adoption page renders in under one second and reads no Profile document", async ({ page, request }) => {
   // Every Profile document, the fleet's and these, becomes unreadable: an empty object, which fails its digest, so a page that read one would fail.
   db.$client.exec("DROP TRIGGER repository_profiles_immutable; UPDATE repository_profiles SET document = '{}';");
 

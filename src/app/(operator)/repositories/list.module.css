@@ -1,10 +1,7 @@
 @layer pages {
-  /*
-   * A clone URL can break anywhere: unlike a short identifier, it would
-   * otherwise hold the Name column at the URL's full width, and the list
-   * would scroll sideways beside a wide sidebar.
-   */
-  .cloneUrl :where(span) { overflow-wrap: anywhere; }
+  /* A Repository's profile, on one line. */
+  .profile { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); }
+  .muted { color: var(--color-text-secondary); }
 
   /* The count the search and filter leave, beside them. */
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }

@@ -29,6 +29,15 @@ export function pageNumber(requested: string | number | undefined, total: number
   return { page: Number.isInteger(number) ? Math.min(Math.max(1, number), pages) : 1, pages };
 }
 
+/** How many rows a long list shows a page (page-patterns spec, "Long lists are paged"). */
+export const LIST_PAGE_SIZE = 50;
+
+/** The page of +items+ +requested+ names, LIST_PAGE_SIZE to a page: its rows, its number, how many pages there are, and its first row's position. */
+export function pageOf<T>(items: readonly T[], requested: string | undefined, size = LIST_PAGE_SIZE): { rows: T[]; page: number; pages: number; first: number } {
+  const { page, pages } = pageNumber(requested, items.length, size);
+  return { rows: items.slice((page - 1) * size, page * size), page, pages, first: (page - 1) * size + 1 };
+}
+
 /** A search term from +name+, trimmed and at most +maxLength+ characters; empty when there's none. */
 export function searchTerm(query: SearchParams, name = "q", maxLength = 200): string {
   return (param(query, name) ?? "").trim().slice(0, maxLength);

@@ -3,23 +3,22 @@ import Link from "next/link";
 import { ProgressPoller } from "@/components/progress-poller";
 import { IndexTemplate } from "@/components/templates/index-template";
 import { ButtonLink } from "@/components/ui/button";
-import { countLabel } from "@/components/ui/count";
+import { countLabel, formatNumber } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Menu, MenuAction, MenuItem } from "@/components/ui/menu";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
-import { oneOf, param, searchTerm } from "@/lib/web/query";
+import { oneOf, pageNumber, param, searchTerm } from "@/lib/web/query";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
-import { Status, humanize } from "@/components/ui/status";
+import { Status } from "@/components/ui/status";
 import { SearchField } from "@/components/ui/search-field";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
-import { Tag } from "@/components/ui/tag";
+import { Primary, RowActions, Table, Td, Th } from "@/components/ui/table";
 import { Select } from "@/components/ui/form";
 import { RECIPE_STATES, type RecipeState, recipeStates } from "@/lib/catalog/updates";
 import { getConfig } from "@/lib/config";
-import { runCounts } from "@/lib/repositories/registration";
-import { listRepositories, repositoryReferenceLabel } from "@/lib/repositories/repository-records";
+import { listRepositories } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
 import { type ProfileSummary, ACTIVE_STATES, profileSummaries, profilingActivity } from "@/lib/profiling/versions";
 import { repositoriesHref } from "@/lib/web/list-filters";
@@ -34,6 +33,18 @@ export const metadata: Metadata = { title: "Repositories" };
 const RECIPE_LABELS: Record<RecipeState, string> = { current: "On the current recipe", waiting: "Waiting to be surveyed", failed: "Failed its newest survey" };
 const RECIPE_OPTIONS = [{ value: "", label: "Any recipe" }, ...RECIPE_STATES.map((state) => ({ value: state, label: RECIPE_LABELS[state] }))];
 
+/** Rows per page (page-patterns spec, "Long lists are paged"). */
+const PAGE_SIZE = 50;
+
+/** The count beside the results: "Showing 1–50 of 500 Repositories", and with a filter, how many there are in all. */
+function showing(page: number, shown: number, matching: number, total: number | null): string {
+  const all = total === null ? "" : ` (${formatNumber(total)} in all)`;
+  if (matching === 0) return total === null ? "No Repositories" : `None of ${countLabel(total, "Repository", "Repositories")} match`;
+  const start = (page - 1) * PAGE_SIZE + 1;
+  const noun = total === null ? countLabel(matching, "Repository", "Repositories") : countLabel(matching, "matching Repository", "matching Repositories");
+  return `Showing ${formatNumber(start)}–${formatNumber(start + shown - 1)} of ${noun}${all}`;
+}
+
 export default async function RepositoriesPage({ searchParams }: PageProps<"/repositories">) {
   const query = await searchParams;
   const search = searchTerm(query);
@@ -44,7 +55,8 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
   const states = recipe ? recipeStates(db, getConfig()) : null;
   const repositories = all.filter((repository) => (!needle || repository.name.toLowerCase().includes(needle) || repository.cloneUrl.toLowerCase().includes(needle)) && (!states || states.get(repository.id) === recipe));
   const filtered = Boolean(search || recipe);
-  const counts = runCounts(db);
+  const { page, pages } = pageNumber(param(query, "page"), repositories.length, PAGE_SIZE);
+  const shown = repositories.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const profiles = profileSummaries(db);
   const activity = profilingActivity(db);
   const busy = activity.profiling + activity.queued > 0;
@@ -66,9 +78,8 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
       filters={
         <>
           <div className={styles.toolbar}>
-            <p className={styles.count}>
-              {countLabel(repositories.length, "Repository", "Repositories")}
-              {repositories.length !== all.length ? ` of ${all.length}` : ""}
+            <p className={styles.count} role="status">
+              {showing(page, shown.length, repositories.length, filtered ? all.length : null)}
             </p>
             <FilterBar key={`${search}:${recipe}`} action="/repositories" label="Search Repositories" filtered={filtered} clearHref={repositoriesHref()}>
               <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref({ recipe })} />
@@ -104,6 +115,7 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
             }
           : undefined
       }
+      pagination={<Pagination label="Repositories pages" page={page} pages={pages} href={(number) => repositoriesHref({ q: search || undefined, recipe, page: number })} />}
     >
       <Panel flush>
         {repositories.length > 0 ? (
@@ -112,35 +124,25 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
             head={
               <>
                 <Th>Name</Th>
-                <Th>Reference</Th>
                 <Th>Profile</Th>
-                <Th align="numeric">Runs</Th>
                 <Th align="actions" hidden>
                   Actions
                 </Th>
               </>
             }
           >
-            {repositories.map((repository) => (
+            {shown.map((repository) => (
               <tr key={repository.publicId} id={repository.publicId}>
                 <Td label="Name">
+                  {/* One line: the clone URL is in the name's tooltip and on the Repository's page. */}
                   <Primary>
-                    <Link href={routes.repository(repository.publicId)}>{repository.name}</Link>
+                    <Link href={routes.repository(repository.publicId)} title={repository.cloneUrl}>
+                      {repository.name}
+                    </Link>
                   </Primary>
-                  <Secondary>
-                    <span className={styles.cloneUrl}>
-                      <Tag copy label="clone URL">
-                        {repository.cloneUrl}
-                      </Tag>
-                    </span>
-                  </Secondary>
                 </Td>
-                <Td label="Reference">{repository.gitRef ? <Tag>{repository.gitRef}</Tag> : <Secondary>{humanize(repositoryReferenceLabel(repository))}</Secondary>}</Td>
                 <Td label="Profile">
                   <ProfileCell repositoryPublicId={repository.publicId} summary={profiles.get(repository.id)} />
-                </Td>
-                <Td label="Runs" align="numeric">
-                  {countLabel(counts.get(repository.id) ?? 0, "Run")}
                 </Td>
                 <Td align="actions">
                   <RowActions>
@@ -169,59 +171,37 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
 }
 
 /**
- * A Repository's profile in the list. While a version is being profiled or
- * waits its turn, that leads, with a pulsing indicator for profiling; the
- * current version, linked, and when it was profiled follow. A newest
- * version that failed is marked under the current one.
+ * A Repository's profile in the list, on one line. While a version is being
+ * profiled or waits its turn, that leads, with a pulsing indicator for
+ * profiling, then the current version; otherwise the current version, linked,
+ * and when it was profiled. A newest version that failed follows the current
+ * one.
  */
 function ProfileCell({ repositoryPublicId, summary }: { repositoryPublicId: string; summary: ProfileSummary | undefined }) {
-  if (!summary) return <Secondary>Queued</Secondary>;
+  if (!summary) return <span className={styles.muted}>Queued</span>;
   const { latest, current } = summary;
   const pending = (ACTIVE_STATES as readonly string[]).includes(latest.state);
   // The newest version is newer than the current one, and failed.
   const failed = !pending && !latest.profiled && (!current || latest.version > current.version);
-  // The current Profile, by its version, and when it was written.
   const currentLink = current && <Link href={routes.repositoryVersion(repositoryPublicId, current.version)}>{`Version ${current.version}`}</Link>;
-  const currentRows = current && (
-    <>
-      {currentLink}
-      <Secondary>
-        <RelativeTime value={current.profiledAt} />
-      </Secondary>
-    </>
+  const failedLink = (
+    <Link href={routes.repositoryVersion(repositoryPublicId, latest.version)}>
+      <Status state="failed" label={`Version ${latest.version} failed`} size="sm" />
+    </Link>
   );
-  if (pending) {
-    return (
-      <span data-profiling={latest.state === "queued" ? "queued" : "profiling"}>
-        <Status state={latest.state} label={latest.state === "queued" ? `Version ${latest.version} queued` : `Profiling version ${latest.version}`} />
-        {current && (
-          <>
-            <Secondary>{currentLink}</Secondary>
-            <Secondary>
-              <RelativeTime value={current.profiledAt} />
-            </Secondary>
-          </>
-        )}
-      </span>
-    );
-  }
-  if (!current) {
-    return (
-      <Link href={routes.repositoryVersion(repositoryPublicId, latest.version)}>
-        <Status state="failed" label={`Version ${latest.version} failed`} />
-      </Link>
-    );
-  }
   return (
-    <>
-      {currentRows}
-      {failed && (
-        <Secondary>
-          <Link href={routes.repositoryVersion(repositoryPublicId, latest.version)}>
-            <Status state="failed" label={`Version ${latest.version} failed`} size="sm" />
-          </Link>
-        </Secondary>
+    <span className={styles.profile} data-profiling={pending ? (latest.state === "queued" ? "queued" : "profiling") : undefined}>
+      {pending && <Status state={latest.state} label={latest.state === "queued" ? `Version ${latest.version} queued` : `Profiling version ${latest.version}`} />}
+      {current && (
+        <span className={pending ? styles.muted : undefined}>
+          {currentLink}
+          <span className={styles.muted}>
+            {" · "}
+            <RelativeTime value={current.profiledAt} />
+          </span>
+        </span>
       )}
-    </>
+      {failed && failedLink}
+    </span>
   );
 }

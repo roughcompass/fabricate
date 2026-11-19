@@ -9,7 +9,8 @@ import { countLabel } from "@/components/ui/count";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
-import { param } from "@/lib/web/query";
+import { pageOf, pageQuery, param, withQuery } from "@/lib/web/query";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -124,7 +125,7 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
         />
       </Section>
 
-      <ScopeSection targets={targets} profiles={profiles} commits={targetCommits(db, run.id)} terminal={terminal} />
+      <ScopeSection targets={targets} profiles={profiles} commits={targetCommits(db, run.id)} terminal={terminal} requested={param(query, "page")} href={(page) => withQuery(routes.run(run.publicId, { page: pageQuery(page) }), {}, "repositories")} />
 
       {evaluations.length > 0 && (
         <Section title="Evaluations">
@@ -176,13 +177,15 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
 }
 
 /** The Run's scope as it was when it started, and each repository's progress and Profile. */
-function ScopeSection({ targets, profiles, commits, terminal }: { targets: RunTarget[]; profiles: Map<number, RepositoryProfile>; commits: Map<number, string>; terminal: boolean }) {
+function ScopeSection({ targets, profiles, commits, terminal, requested, href }: { targets: RunTarget[]; profiles: Map<number, RepositoryProfile>; commits: Map<number, string>; terminal: boolean; requested: string | undefined; href: (page: number) => string }) {
+  // Fifty to a page, so a fleet-sized Run reads only the Profiles it shows.
+  const { rows, page, pages } = pageOf(targets, requested);
   const skippedInputs = (targetId: number) => {
     const profile = profiles.get(targetId);
     return profile ? profileDiagnostics(profileDocument(profile)).skipped.length : 0;
   };
   return (
-    <Section title="Repositories" description="The scope as it was when the Run started, and each repository's progress.">
+    <Section id="repositories" title="Repositories" description="The scope as it was when the Run started, and each repository's progress.">
       <Panel flush>
         <Table
           label="Run scope"
@@ -195,7 +198,7 @@ function ScopeSection({ targets, profiles, commits, terminal }: { targets: RunTa
             </>
           }
         >
-          {targets.map((target) => {
+          {rows.map((target) => {
             const commit = commits.get(target.id);
             const profile = profiles.get(target.id);
             const skipped = skippedInputs(target.id);
@@ -237,6 +240,7 @@ function ScopeSection({ targets, profiles, commits, terminal }: { targets: RunTa
           })}
         </Table>
       </Panel>
+      <Pagination label="Run scope pages" page={page} pages={pages} href={href} scrollToTop />
     </Section>
   );
 }

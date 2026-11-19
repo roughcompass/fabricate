@@ -59,8 +59,10 @@ test("adds and edits a Source with validation feedback", async ({ page, db: _db 
   await page.getByLabel("Reference").fill("release");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(toasts(page).getByText("Running and past Runs keep the configuration they started with.")).toBeVisible();
+  // The list keeps one line a row, so the reference is on the Repository's page.
+  await pageHeader(page).getByRole("link", { name: "orders" }).click();
+  await expect(pageHeader(page)).toContainText("release");
   await page.goto(paths.repositories);
-  await expect(page.getByRole("row", { name: /orders/ })).toContainText("release");
 
   const menu = await rowMenu(page, "orders");
   await expect(menu.getByRole("link", { name: "Settings" })).toBeVisible();
@@ -183,7 +185,7 @@ test("searches Sources by name or clone URL, keeping the search in the address",
   const rows = page.getByRole("table", { name: "Repositories" }).locator("tbody tr");
   await expect(rows).toHaveCount(2);
   await expect(rows.filter({ hasText: "accounts" })).toHaveCount(0);
-  await expect(page.getByText("2 Repositories of 3")).toBeVisible();
+  await expect(page.getByText("Showing 1–2 of 2 matching Repositories (3 in all)")).toBeVisible();
 
   await search.fill("nothing-matches");
   await search.press("Enter");
@@ -205,7 +207,7 @@ test("the removed claim and DE Console addresses respond as not found, and a for
   await expect(page.getByLabel("Ownership")).toHaveCount(0);
 });
 
-test("keeps every row one height, with or without a Reference", async ({ page, db }) => {
+test("keeps every row one line, with or without a Reference", async ({ page, db }) => {
   buildRepository(db, { name: "orders", gitRef: "main" });
   buildRepository(db, { name: "billing" });
   await page.goto(paths.repositories);
