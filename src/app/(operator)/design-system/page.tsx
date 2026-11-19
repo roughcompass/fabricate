@@ -72,7 +72,7 @@ export default async function DesignSystemPage({ searchParams }: PageProps<"/des
     <ContentTemplate
       header={{
         title: "Design system",
-        description: "Every shared component and page template in its variants and states, in the light and dark themes. docs/design-system.md describes when to use each one.",
+        description: "Every shared component and page template in its variants and states, in both themes, as docs/design-system.md describes them.",
       }}
       alerts={<OutcomeToast outcome={outcome} />}
       navLabel="Components"

@@ -56,7 +56,7 @@ export function previewOutcome(db: Executor, code: string | undefined, previewPu
   const name = packageLabel(preview);
   switch (code) {
     case "queued":
-      return preview.deletedAt ? undefined : { id, tone: "success", title: `The build of ${name} is queued.`, description: "It starts when a worker is free." };
+      return preview.deletedAt ? undefined : { id, tone: "success", title: `The build of ${name} is queued.`, description: "It starts after the builds ahead of it." };
     case "rebuilt":
       return preview.deletedAt ? undefined : { id, tone: "success", title: `Attempt ${preview.attempt} of ${name} is queued.`, description: preview.artifact ? "The current output stays up until the new build is ready." : undefined };
     case "building":

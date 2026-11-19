@@ -32,7 +32,7 @@ export default async function BitbucketTokensPage({ searchParams }: PageProps<"/
     <IndexTemplate
       header={{
         title: "Bitbucket tokens",
-        description: "Access tokens for Bitbucket Server, saved on this server. A token is never shown again after it's saved, only its last four characters.",
+        description: "Access tokens for Bitbucket Server, each shown only by its last four characters once it's saved.",
         primaryAction: add,
       }}
       alerts={<OutcomeToast outcome={tokenOutcome(db, param(query, "notice"), param(query, "token"), param(query, "name"))} strip={TOKEN_OUTCOME_PARAMS} />}

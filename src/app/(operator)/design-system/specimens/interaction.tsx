@@ -249,7 +249,7 @@ export function FeedbackSpecimens() {
               alerts={false}
               headingLevel={3}
               title="Repositories"
-              secondaryActions={[{ href: "#page-header", label: "Add in bulk", icon: "layers" }]}
+              secondaryActions={[{ href: "#page-header", label: "Add Repositories", icon: "layers" }]}
               primaryAction={
                 <Button variant="primary" icon="plus">
                   New Repository

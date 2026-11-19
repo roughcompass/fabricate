@@ -159,7 +159,11 @@ export function PageHeader<T extends TemplateName>(props: PageHeaderProps<T>) {
             ))}
           </div>
         )}
-        {description && <p className={styles.description}>{description}</p>}
+        {description && (
+          <p className={styles.description} data-header-description="">
+            {description}
+          </p>
+        )}
         {tabs && (
           <div className={styles.tabs} data-header-tabs="">
             {tabs}

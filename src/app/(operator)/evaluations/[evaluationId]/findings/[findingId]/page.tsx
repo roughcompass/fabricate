@@ -104,7 +104,6 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
           items={[
             ["Subject", subjectLink],
             ...(typeof subject.commit === "string" ? ([["Commit", <ShortValue key="commit" value={subject.commit} label="commit" />]] as [string, React.ReactNode][]) : []),
-            ["Control key", <Tag key="key">{finding.controlKey}</Tag>],
           ]}
         />
       </Section>
@@ -115,14 +114,7 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
             <ul className={styles.causes} aria-label="Indeterminate causes">
               {causes.map((cause, index) => (
                 <li key={index}>
-                  <strong>{causeSubject(cause)}</strong>
-                  {cause.selector && (
-                    <>
-                      {" "}
-                      <code className={styles.id}>{cause.selector}</code>
-                    </>
-                  )}
-                  : {cause.reason}
+                  <strong>{causeSubject(cause)}</strong>: {cause.reason}
                 </li>
               ))}
             </ul>
@@ -135,10 +127,20 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
       <Section title="Expected state" description={String(control.rationale)}>
         <DescriptionList surface
           items={[
-            ["Applies when", <ExpressionView key="applicability" expression={control.applicability ?? null} />],
-            ["Expected", <ExpressionView key="condition" expression={control.condition ?? null} />],
+            ["Applies when", <ExpressionView key="applicability" expression={control.applicability ?? null} paths={false} />],
+            ["Expected", <ExpressionView key="condition" expression={control.condition ?? null} paths={false} />],
           ]}
         />
+        {/* The second layer: the fields' paths and the Control's key, for whoever writes or debugs Controls. */}
+        <Disclosure summary="Field paths and Control key" variant="plain">
+          <DescriptionList
+            items={[
+              ["Applies when", <ExpressionView key="applicability" expression={control.applicability ?? null} />],
+              ["Expected", <ExpressionView key="condition" expression={control.condition ?? null} />],
+              ["Control key", <Tag key="key">{finding.controlKey}</Tag>],
+            ]}
+          />
+        </Disclosure>
       </Section>
 
       <Section title="What was observed" description="How each part of the Control was read against the Profile or Relationship Map, with the values it saw.">

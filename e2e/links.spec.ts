@@ -33,6 +33,15 @@ function shape(url: string): string {
   return segments.join("/");
 }
 
+/**
+ * How many sentences +text+ has: each ends in a stop before a capital or the
+ * end, so "v1.2", "e.g. a", and the initials in "J.P. Morgan" don't end one
+ * (content standard, "Descriptions").
+ */
+function sentences(text: string): number {
+  return text ? (text.match(/(?<!\b[A-Z])[.!?](?=\s+[A-Z]|$)/g) ?? []).length || 1 : 0;
+}
+
 /** Internal links worth following: pages, not fragments, API routes, or running applications' own routes. */
 function followable(href: string): boolean {
   return href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/api/") && !href.startsWith("/_next/") && !href.startsWith("#");
@@ -50,6 +59,7 @@ async function inspect(page: Page) {
     return {
       title: document.title,
       heading: document.querySelector("h1")?.textContent?.trim() ?? "",
+      description: document.querySelector("[data-header-description]")?.textContent?.trim() ?? "",
       links: [...document.querySelectorAll("a[href]")].map((anchor) => ({ href: anchor.getAttribute("href")!, label: (anchor.getAttribute("aria-label") ?? anchor.textContent ?? "").trim() })),
       text: text.join(" "),
     };
@@ -101,6 +111,7 @@ async function crawl(page: Page, start: string[], depth: number, problems: strin
       const match = pattern.exec(`${found.title} ${found.text}`);
       if (match) problems.push(`${url} shows "${match[0]}"`);
     }
+    if (sentences(found.description) > 1) problems.push(`${url}'s description has ${sentences(found.description)} sentences: "${found.description}"`);
     visited.push(url);
     if (hops >= depth) continue;
     for (const { href, label } of found.links) {

@@ -302,3 +302,14 @@ test.describe("the dashboard", () => {
     await expect(page).toHaveURL(/\/assessments\/new$/);
   });
 });
+
+// page-patterns spec, content standard "One label per destination".
+test("One label for adding Repositories: Home and the Repositories list link the bulk page with one label", async ({ page, db }) => {
+  buildRepository(db, { name: "orders" });
+  const labels = new Set<string>();
+  for (const address of [paths.home, paths.repositories]) {
+    await page.goto(address);
+    for (const link of await page.getByRole("main").locator('a[href="/repositories/bulk"]').all()) labels.add((await link.textContent())!.trim());
+  }
+  expect([...labels]).toEqual(["Add Repositories"]);
+});

@@ -56,7 +56,7 @@ function RepositoryFields({ state, submitLabel, layout, cancelHref }: { state: R
         inputMode="url"
         defaultValue={state.values.cloneUrl}
         errors={state.errors.cloneUrl}
-        description="file://, https://, or ssh:// only. Leave credentials out; the worker's SSH agent or Git credential helper supplies them."
+        description="file://, https://, or ssh:// only; leave credentials out, since the server's SSH agent or Git credential helper supplies them."
         required
         onChange={(event) => {
           if (!typed) setName(repositoryNameFromUrl(event.target.value));

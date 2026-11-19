@@ -82,7 +82,6 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
               ]
             : []),
         ],
-        description: "Each scoped repository is pinned to a commit and profiled without running its code.",
         extraActions: !terminal && !run.cancelRequestedAt ? (
           <ConfirmDialog action={cancelRun.bind(null, run.publicId)} trigger={{ label: "Cancel Run", icon: "slash" }} title={`Cancel ${name}?`} confirmLabel="Cancel Run" tone="danger">
             <p>Repositories that have not finished stop at their next check. Completed Profiles are kept.</p>

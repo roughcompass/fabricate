@@ -37,7 +37,6 @@ export const profilePin = cache((profile: RepositoryProfile): { document: JsonOb
   return { document, commit: profileCommit(document) };
 });
 
-export const PROFILE_DESCRIPTION = "Every fact comes from committed files at this commit, read as data. Nothing in the repository was run.";
 
 
 /** Headings for categories named as their view is, so a view never repeats its tab's name as a heading (page-templates spec, "Largest heading"). */

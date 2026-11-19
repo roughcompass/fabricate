@@ -2,7 +2,7 @@ import Link from "next/link";
 import { isProfileTab } from "@/lib/profiles/tabs";
 import { DetailsTemplate } from "@/components/templates/details-template";
 import { ProgressPoller } from "@/components/progress-poller";
-import { PROFILE_DESCRIPTION, ProfileBody, ProfileTabs, profilePin } from "@/components/profiles/profile-body";
+import { ProfileBody, ProfileTabs, profilePin } from "@/components/profiles/profile-body";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
@@ -98,7 +98,6 @@ export function RepositoryView({
               ]
             : []),
         ],
-        description: pin ? PROFILE_DESCRIPTION : undefined,
         // A Repository's page presents a record, so it has no primary action; Re-profile, maintenance, is in More actions.
         extraActions: (
           <Menu label="More actions" variant="secondary" size="md">

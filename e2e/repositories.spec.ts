@@ -140,7 +140,7 @@ test("asks for the clone URL first and names the Repository after its owner and 
 
 test("adds Repositories in bulk, keeps the refused lines to fix, and shows what is being profiled", async ({ page, db }) => {
   await page.goto(paths.repositories);
-  await page.getByRole("link", { name: "Add in bulk" }).first().click();
+  await page.getByRole("link", { name: "Add Repositories" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "Add Repositories" })).toBeVisible();
 
   await page.getByLabel("Clone URLs").fill(["https://github.com/vickykatoch/helios.git", "git@github.com:acme/scp.git", "https://github.com/openmrs/openmrs-esm-core.git main"].join("\n"));

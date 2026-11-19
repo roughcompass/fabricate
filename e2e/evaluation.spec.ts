@@ -190,3 +190,30 @@ test("Evaluation pages stay readable at mobile width", async ({ page, db }) => {
   await expectNoHorizontalOverflow(page);
   await expectNoOverlappingContent(page);
 });
+
+// page-patterns spec, content standard "Two layers" and "Outcomes and conclusions".
+test("Two layers on a Finding: it leads with the outcome and the observed value in words, and the field path waits in a disclosure", async ({ page, db }) => {
+  const { evaluation } = await seedEvaluation(db);
+  const finding = findingsOf(db, evaluation.id, { controlKey: "has-ci" })[0]!;
+  await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
+  await expect(pageHeader(page).locator("[data-header-status]")).toBeVisible();
+  await expect(page.getByLabel("Condition trace")).toContainText("Observed:");
+  const path = page.getByText("repository.ci_systems", { exact: true });
+  await expect(path).toBeHidden();
+  await expect(page.getByText("has-ci", { exact: true })).toBeHidden();
+  await page.getByText("Field paths and Control key").click();
+  await expect(path.first()).toBeVisible();
+  await expect(page.getByText("has-ci", { exact: true })).toBeVisible();
+});
+
+test("Conclusion and outcomes on an Evaluation: the conclusion is labeled Conclusion, and the Findings' filter Outcome", async ({ page, db }) => {
+  const { evaluation } = await seedEvaluation(db);
+  await page.goto(`/evaluations/${evaluation.publicId}`);
+  // Against two Releases, each Release's conclusion is in its own row, under the column Conclusion.
+  const summary = page.getByRole("table", { name: "Summary by Release" });
+  await expect(summary.getByRole("columnheader", { name: "Conclusion" })).toBeVisible();
+  await expect(summary.getByRole("cell").filter({ hasText: "Gaps found" }).first()).toBeVisible();
+  const outcome = page.getByRole("form", { name: "Filter Findings" }).getByLabel("Outcome", { exact: true });
+  const options = await outcome.locator("option").allTextContents();
+  for (const label of ["Meets", "Gap", "Indeterminate"]) expect(options).toContain(label);
+});

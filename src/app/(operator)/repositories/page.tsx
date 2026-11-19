@@ -18,6 +18,7 @@ import { Primary, RowActions, Table, Td, Th } from "@/components/ui/table";
 import { Select } from "@/components/ui/form";
 import { RECIPE_STATES, type RecipeState, recipeStates } from "@/lib/catalog/updates";
 import { getConfig } from "@/lib/config";
+import { PRODUCT } from "@/lib/product";
 import { listRepositories } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
 import { type ProfileSummary, ACTIVE_STATES, profileSummaries, profilingActivity } from "@/lib/profiling/versions";
@@ -70,8 +71,8 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
     <IndexTemplate
       header={{
         title: "Repositories",
-        description: "Git repositories available to Assessments, each profiled in the background whenever it changes. Edits apply to Runs started afterward.",
-        secondaryActions: [{ href: "/repositories/bulk", label: "Add in bulk", icon: "layers" }],
+        description: `Every Git repository registered with the ${PRODUCT.name}, and its newest Profile.`,
+        secondaryActions: [{ href: "/repositories/bulk", label: "Add Repositories", icon: "layers" }],
         primaryAction: create,
       }}
       alerts={<OutcomeToast outcome={repositoryOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"))} />}
@@ -106,7 +107,7 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
               action: (
                 <>
                   <ButtonLink href="/repositories/bulk" icon="layers">
-                    Add in bulk
+                    Add Repositories
                   </ButtonLink>
                   {create}
                 </>

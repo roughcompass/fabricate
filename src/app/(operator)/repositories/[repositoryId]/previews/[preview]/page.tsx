@@ -155,7 +155,7 @@ export default async function RepositoryPreviewPage({ params, searchParams }: Pa
 
 /** The latest attempt in a sentence: its number, and when it started or finished. */
 function attemptLine(preview: PreviewBuild): React.ReactNode {
-  if (preview.attemptState === "queued") return `Attempt ${preview.attempt}, waiting for a worker.`;
+  if (preview.attemptState === "queued") return `Attempt ${preview.attempt}, waiting to start.`;
   if (preview.attemptState === "building")
     return (
       <>
@@ -201,7 +201,7 @@ function PreviewAlerts({ preview, entry, base }: { preview: PreviewBuild; entry:
 
 /** What stands in the frame's place until an attempt publishes. */
 function NothingPublished({ state }: { state: PreviewBuild["attemptState"] }) {
-  if (state === "queued") return <EmptyState title="Waiting for a worker" icon="clock">The build starts when a worker is free. Its log appears below.</EmptyState>;
+  if (state === "queued") return <EmptyState title="Waiting to build" icon="clock">The build starts after the builds ahead of it. Its log appears below.</EmptyState>;
   if (state === "building") return <EmptyState title="Building" icon="clock">The preview appears here when the build is ready.</EmptyState>;
   return (
     <EmptyState title="Nothing to preview" icon="alert">

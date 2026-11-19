@@ -85,7 +85,7 @@ test.describe("on a wide viewport", () => {
     await expect(pageHeader(page).getByRole("link", { name: "New Assessment" })).toBeVisible();
     await page.goto(paths.repositories);
     await expect(pageHeader(page).getByRole("link", { name: "New Repository" })).toBeVisible();
-    await expect(pageHeader(page).getByRole("link", { name: "Add in bulk" })).toBeVisible();
+    await expect(pageHeader(page).getByRole("link", { name: "Add Repositories" })).toBeVisible();
     await page.goto("/standards");
     await expect(pageHeader(page).getByRole("link", { name: "New Standard" })).toBeVisible();
   });

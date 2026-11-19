@@ -98,7 +98,6 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
               ]
             : []),
         ],
-        description: "A diagnostic comparison of one Run with the Standard Releases pinned when the Evaluation started.",
       }}
       alerts={
         <>
@@ -193,7 +192,7 @@ function FindingsSection({ evaluationId, releases, findings, terminal }: { evalu
   const { all, controls, subjects, filters, filtered, shown } = findings;
   const base = routes.evaluation(evaluationId);
   return (
-    <Section id="findings" title="Findings" description="One Finding per Control and subject, grouped by Release and Control. Open a Finding for what was expected, what was observed, and why.">
+    <Section id="findings" title="Findings" description="One Finding per Control and subject, grouped by Release and Control; each says what was expected, what was observed, and why.">
       <FilterBar key={JSON.stringify(filters)} action={base} label="Filter Findings" filtered={filtered} clearHref={base}>
         <Select id="filter-release" name="release" label="Release" size="sm" defaultValue={filters.release ?? ""} options={[{ value: "", label: "Any Release" }, ...releases.map(({ pinned, label }) => ({ value: String(pinned.position), label }))]} />
         <Select id="filter-outcome" name="outcome" label="Outcome" size="sm" defaultValue={filters.outcome ?? ""} options={[{ value: "", label: "Any outcome" }, ...OUTCOME_ORDER.map((outcome) => ({ value: outcome, label: outcomeLabel(outcome) }))]} />
