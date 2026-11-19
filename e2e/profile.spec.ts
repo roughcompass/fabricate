@@ -479,8 +479,12 @@ test("numbers a Repository's versions for good and says why each ran (Stable num
 
   // A fifth survey takes the next number; the first four keep theirs, and their addresses.
   await seedSurvey(db, web, { trigger: "manual" });
+  // A new Reference Catalog entry re-surveys it too, and the header says so among the reasons.
+  await seedSurvey(db, web, { trigger: "catalog" });
   await page.reload();
   await expect(row(5)).toContainText("Re-profiled");
+  await expect(row(6)).toContainText("Reference Catalog update");
+  await expect(pageHeader(page)).toContainText("when Surveyor is upgraded or the Reference Catalog entries it's compared against change");
   await expect(row(1).getByRole("link", { name: "Version 1" })).toHaveAttribute("href", first!);
   await page.goto(first!);
   await expect(page.getByRole("heading", { level: 1, name: "Version 1" })).toBeVisible();

@@ -42,7 +42,7 @@ export default async function VersionsPage({ params, searchParams }: PageProps<"
           { href: routes.repository(repository.publicId), label: repository.name },
         ],
         title: `Versions of ${repository.name}`,
-        description: `${countLabel(total, "version")}, each one survey of a commit, made when the repository is added, edited, or re-profiled, when its reference changes, when Surveyor is upgraded, or when a Run or preview needs a commit.`,
+        description: `${countLabel(total, "version")}, each one survey of a commit, made when the repository is added, edited, or re-profiled, when its reference changes, when Surveyor is upgraded or the Reference Catalog entries it's compared against change, or when a Run or preview needs a commit.`,
         primaryAction: <ReprofileForm repository={repository} />,
       }}
     >
