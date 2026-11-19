@@ -4,7 +4,6 @@ import { StructuredParseError, parseYaml } from "@repo-facts/contract";
 import { z } from "zod";
 import { getConfig } from "@/lib/config";
 import { PRODUCT } from "@/lib/product";
-import frontendRegistryPackage from "../../../package.json";
 import { type RenderedDoc, renderMarkdown } from "./render";
 
 /*
@@ -152,9 +151,9 @@ export function pageMarkdown(site: DocsSite, page: DocsPage): string {
 
 /** The release +page+ describes: the Frontend Registry's own for its docs, and the installed package's for Surveyor's. */
 export function pageRelease(site: DocsSite, page: DocsPage): Release {
-  if (page.source.kind === "docs") return { name: PRODUCT.name, version: frontendRegistryPackage.version };
-  const manifest = JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ path.join(site.packageDirectory(page.source.package), "package.json"), "utf8")) as { version: string };
-  return { name: PRODUCT.surveyor, version: manifest.version };
+  const directory = page.source.kind === "docs" ? site.root : site.packageDirectory(page.source.package);
+  const manifest = JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ path.join(directory, "package.json"), "utf8")) as { version: string };
+  return { name: page.source.kind === "docs" ? PRODUCT.name : PRODUCT.surveyor, version: manifest.version };
 }
 
 /**

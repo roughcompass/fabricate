@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import type { Page } from "@playwright/test";
 import { storeEntry } from "../src/lib/catalog/entries";
+import { loadDocsSite } from "../src/lib/docs/site";
 import { buildRepository } from "../test/support/builders";
 import { saltEntry } from "../test/support/catalog";
 import { seedSurvey } from "../test/support/scenarios";
@@ -284,6 +285,19 @@ test.describe("accessibility", () => {
     // Without the scroll padding that keeps focus below the header, tabbing back up the page hides links under it.
     await page.addStyleTag({ content: "html { scroll-padding-top: 0 !important; }" });
     expect((await obscuredFocus(page)).length).toBeGreaterThan(0);
+  });
+
+  test("every docs page passes the WCAG 2.2 A and AA rules, target size included, at desktop and phone widths", async ({ page, db: _db }) => {
+    test.setTimeout(300_000);
+    const problems: string[] = [];
+    for (const docsPage of loadDocsSite(process.cwd()).pages) {
+      for (const viewport of [{ width: 1280, height: 900 }, { width: 375, height: 812 }]) {
+        await page.setViewportSize(viewport);
+        await page.goto(docsPage.href);
+        for (const violation of await axeViolations(page)) problems.push(`${docsPage.href} at ${viewport.width}px: ${violation}`);
+      }
+    }
+    expect(problems).toEqual([]);
   });
 
   for (const url of ["/about", "/docs/get-started/what-it-is", "/docs/reference/configuration", "/docs/reference/fact-document"]) {
