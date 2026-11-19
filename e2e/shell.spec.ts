@@ -135,8 +135,8 @@ test.describe("the shell header", () => {
   });
 
   test("Title appears once: the page content does not repeat an Initiative's name", async ({ page, db }) => {
-    const { initiative } = await seedResults(db);
-    await page.goto(paths.assessment(initiative.publicId));
+    const { assessment } = await seedResults(db);
+    await page.goto(paths.assessment(assessment.publicId));
     await expect(header(page).getByRole("heading", { level: 1 })).toHaveText("Fleet assessment");
     await expect(pageHeader(page)).not.toContainText("Fleet assessment");
   });

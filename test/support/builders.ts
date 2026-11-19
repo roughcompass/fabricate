@@ -7,7 +7,7 @@ import { type RepositorySource, insertSource, listSources } from "@/lib/catalog/
 import { getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { type Standard, type StandardRelease, blankDraftDocument, createStandard, insertRelease } from "@/lib/standards/standard-records";
-import { type Initiative, createInitiative } from "@/lib/initiatives/initiative-records";
+import { type Assessment, createAssessment } from "@/lib/assessments/assessment-records";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
 
 const suffix = () => crypto.randomBytes(3).toString("hex");
@@ -24,10 +24,10 @@ export function buildSource(db: Executor, overrides: Partial<{ name: string; clo
  * An Assessment over +sources+ (default: every source), written directly without launching jobs.
  * Like a launched one, it records the pinned bundle's release and configuration.
  */
-export function buildRun(db: Executor, options: { initiative?: Initiative; sources?: readonly RepositorySource[]; limits?: Budgets } = {}) {
+export function buildRun(db: Executor, options: { assessment?: Assessment; sources?: readonly RepositorySource[]; limits?: Budgets } = {}) {
   const sources = options.sources ?? listSources(db);
   return createRun(db, {
-    initiative: options.initiative ?? buildInitiative(db),
+    assessment: options.assessment ?? buildAssessment(db),
     launchToken: crypto.randomUUID(),
     surveyorRelease: SURVEYOR_RELEASE,
     configuration: detectorConfiguration(options.limits ?? getConfig().analysis).configuration,
@@ -43,9 +43,9 @@ export function buildRelease(db: Executor, options: { standard?: Standard; docum
   return insertRelease(db, { standard, document: options.document ?? { ...blankDraftDocument(), controls: [] }, draftLockVersion: 0 });
 }
 
-export function buildInitiative(db: Executor, options: { name?: string; sources?: readonly RepositorySource[] } = {}): Initiative {
-  return createInitiative(db, {
-    name: options.name ?? `Initiative ${suffix()}`,
+export function buildAssessment(db: Executor, options: { name?: string; sources?: readonly RepositorySource[] } = {}): Assessment {
+  return createAssessment(db, {
+    name: options.name ?? `Assessment ${suffix()}`,
     objective: "Assess the fleet",
     selectionMode: options.sources ? "explicit" : "all",
     sourcePublicIds: options.sources?.map((source) => source.publicId),

@@ -6,50 +6,50 @@ import { Panel } from "@/components/ui/panel";
 import { listRuns } from "@/lib/runs/run-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
-import { selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
-import { deleteInitiative, updateInitiative } from "../../actions";
+import { selectedReleases, selectedSources } from "@/lib/assessments/assessment-records";
+import { deleteAssessment, updateAssessment } from "../../actions";
 import { releaseChoices, sourceChoices } from "../../choices";
-import { InitiativeForm } from "../../initiative-form";
+import { AssessmentForm } from "../../assessment-form";
 import { routes } from "@/lib/web/routes";
 import { loadAssessment } from "../load";
 
-export async function generateMetadata({ params }: PageProps<"/assessments/[initiativeId]/edit">): Promise<Metadata> {
-  const initiative = loadAssessment((await params).initiativeId);
-  return { title: initiative ? `Edit ${initiative.name}` : "Assessment not found" };
+export async function generateMetadata({ params }: PageProps<"/assessments/[assessmentId]/edit">): Promise<Metadata> {
+  const assessment = loadAssessment((await params).assessmentId);
+  return { title: assessment ? `Edit ${assessment.name}` : "Assessment not found" };
 }
 
-export default async function EditInitiativePage({ params }: PageProps<"/assessments/[initiativeId]/edit">) {
-  const { initiativeId } = await params;
+export default async function EditAssessmentPage({ params }: PageProps<"/assessments/[assessmentId]/edit">) {
+  const { assessmentId } = await params;
   const db = getDb();
-  const initiative = loadAssessment(initiativeId);
-  if (!initiative) notFound();
+  const assessment = loadAssessment(assessmentId);
+  if (!assessment) notFound();
 
-  const sourceIds = selectedSources(db, initiative.id).map((source) => source.publicId);
-  const releaseIds = selectedReleases(db, initiative.id).map(({ release }) => release.publicId);
-  const assessed = listRuns(db, initiative.id).length > 0;
+  const sourceIds = selectedSources(db, assessment.id).map((source) => source.publicId);
+  const releaseIds = selectedReleases(db, assessment.id).map(({ release }) => release.publicId);
+  const assessed = listRuns(db, assessment.id).length > 0;
 
   return (
     <Page width="form">
       <PageHeader
         breadcrumbs={[
           { href: "/assessments", label: "Assessments" },
-          { href: routes.assessment(initiative.publicId), label: initiative.name },
+          { href: routes.assessment(assessment.publicId), label: assessment.name },
         ]}
         title="Edit Assessment"
         description="Changes apply to future Runs and Evaluations only."
       />
-      <InitiativeForm
-        action={updateInitiative.bind(null, initiative.publicId)}
+      <AssessmentForm
+        action={updateAssessment.bind(null, assessment.publicId)}
         initial={{
-          values: { name: initiative.name, objective: initiative.objective, selectionMode: initiative.selectionMode, sourcePublicIds: sourceIds, standardReleasePublicIds: releaseIds },
+          values: { name: assessment.name, objective: assessment.objective, selectionMode: assessment.selectionMode, sourcePublicIds: sourceIds, standardReleasePublicIds: releaseIds },
           errors: {},
         }}
-        lockVersion={initiative.lockVersion}
+        lockVersion={assessment.lockVersion}
         sourceCount={listSources(db).length}
         sourceChoices={sourceChoices(db)}
         releaseChoices={releaseChoices(db)}
         submitLabel="Save changes"
-        cancelHref={routes.assessment(initiative.publicId)}
+        cancelHref={routes.assessment(assessment.publicId)}
       />
       {!assessed && (
         <Panel
@@ -58,10 +58,10 @@ export default async function EditInitiativePage({ params }: PageProps<"/assessm
           tone="danger"
           footer={
             <ConfirmDialog
-              action={deleteInitiative}
-              fields={{ publicId: initiative.publicId }}
+              action={deleteAssessment}
+              fields={{ publicId: assessment.publicId }}
               trigger={{ label: "Delete Assessment", icon: "trash", variant: "danger" }}
-              title={`Delete ${initiative.name}?`}
+              title={`Delete ${assessment.name}?`}
               confirmLabel="Delete Assessment"
               tone="danger"
             >

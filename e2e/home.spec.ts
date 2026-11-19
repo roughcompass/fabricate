@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { buildRun, buildInitiative, buildSource } from "../test/support/builders";
+import { buildRun, buildAssessment, buildSource } from "../test/support/builders";
 import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -16,10 +16,10 @@ type Db = Parameters<typeof buildSource>[0];
 
 /** An Assessment over one new Repository whose latest Run ends in +run+, evaluated to +conclusion+ when given. */
 function assessment(db: Db, name: string, run: "complete" | "failed", conclusion?: "gaps" | "conforms" | "undetermined") {
-  const initiative = buildInitiative(db, { name, sources: [buildSource(db)] });
-  const finished = driveRun(db, buildRun(db, { initiative }).run, run);
-  if (conclusion) driveEvaluation(db, buildEvaluation(db, initiative, finished), "complete", conclusion);
-  return { initiative, run: finished };
+  const assessment = buildAssessment(db, { name, sources: [buildSource(db)] });
+  const finished = driveRun(db, buildRun(db, { assessment }).run, run);
+  if (conclusion) driveEvaluation(db, buildEvaluation(db, assessment, finished), "complete", conclusion);
+  return { assessment, run: finished };
 }
 
 /** Home shows the primary menu, with Home current. */

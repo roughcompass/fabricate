@@ -13,13 +13,13 @@ import type { RepositorySource } from "@/lib/catalog/source-records";
 import { getConfig } from "@/lib/config";
 import { type Db, immediate } from "@/lib/db/client";
 import type { SurveyTrigger } from "@/lib/db/schema";
-import { type Initiative, getInitiative, selectedSources, updateInitiative } from "@/lib/initiatives/initiative-records";
+import { type Assessment, getAssessment, selectedSources, updateAssessment } from "@/lib/assessments/assessment-records";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { finalizeRelationshipMap, resolveMapDocument } from "@/lib/relationships/finalize";
 import { insertRelationshipMap } from "@/lib/relationships/map-records";
 import { publishDraft } from "@/lib/standards/publish";
 import { type StandardRelease, createStandard, saveDraft } from "@/lib/standards/standard-records";
-import { buildInitiative, buildSource } from "./builders";
+import { buildAssessment, buildSource } from "./builders";
 import { manifest, memoryProfile, sha1 } from "./profiles";
 import { standardDocument } from "./standards";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
@@ -84,9 +84,9 @@ export const STOREFRONT = {
  * as orchestration would. No Git is involved, so evidence excerpts are not
  * available for these snapshots.
  */
-export async function seedRun(db: Db, initiative: Initiative, sources: readonly RepositorySource[], outcomes: readonly Outcome[], options: RunOptions = {}): Promise<Run> {
+export async function seedRun(db: Db, assessment: Assessment, sources: readonly RepositorySource[], outcomes: readonly Outcome[], options: RunOptions = {}): Promise<Run> {
   const { run, targets } = createRun(db, {
-    initiative,
+    assessment,
     launchToken: crypto.randomUUID(),
     surveyorRelease: SURVEYOR_RELEASE,
     configuration: detectorConfiguration(getConfig().analysis).configuration,
@@ -208,13 +208,13 @@ export const MAP_STATE_OUTCOMES: Readonly<Record<string, Outcome>> = {
 };
 
 /** Seeds the Run of MAP_STATE_OUTCOMES, and +also+ after it, with legacy-ui in the catalog outside the Run. */
-export async function seedMapStates(db: Db, options: { initiativeName?: string; also?: Readonly<Record<string, Outcome>> } = {}) {
+export async function seedMapStates(db: Db, options: { assessmentName?: string; also?: Readonly<Record<string, Outcome>> } = {}) {
   const outcomes = { ...MAP_STATE_OUTCOMES, ...options.also };
   const sources = Object.keys(outcomes).map((name) => buildSource(db, { name }));
   buildSource(db, { name: "legacy-ui" });
-  const initiative = buildInitiative(db, { name: options.initiativeName ?? "Fleet assessment", sources });
-  const run = await seedRun(db, initiative, sources, Object.values(outcomes));
-  return { initiative, sources, run };
+  const assessment = buildAssessment(db, { name: options.assessmentName ?? "Fleet assessment", sources });
+  const run = await seedRun(db, assessment, sources, Object.values(outcomes));
+  return { assessment, sources, run };
 }
 
 /** Publishes a Standard with +controls+, reading Repository Profile +profileVersions+, and returns its Release. */
@@ -224,9 +224,9 @@ export function publishStandard(db: Db, name: string, controls: readonly JsonObj
   return publishDraft(db, standard.publicId, saved.lockVersion);
 }
 
-export function selectReleases(db: Db, initiative: Initiative, releases: readonly StandardRelease[]): Initiative {
-  const current = getInitiative(db, initiative.publicId);
-  return updateInitiative(db, current.publicId, current.lockVersion, {
+export function selectReleases(db: Db, assessment: Assessment, releases: readonly StandardRelease[]): Assessment {
+  const current = getAssessment(db, assessment.publicId);
+  return updateAssessment(db, current.publicId, current.lockVersion, {
     name: current.name,
     objective: current.objective,
     selectionMode: current.selectionMode,

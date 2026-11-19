@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { buildInitiative } from "../test/support/builders";
+import { buildAssessment } from "../test/support/builders";
 import { expect, test } from "./support/fixtures";
 import { waitForHydration, toasts } from "./support/shell";
 import { paths } from "./support/paths";
@@ -160,12 +160,12 @@ test("moves focus to the first invalid field, or to the form alert", async ({ pa
 });
 
 test("shows the destination's skeleton while a navigation waits, then the page", async ({ page, db }) => {
-  const initiative = buildInitiative(db, { name: "Checkout platform migration" });
+  const assessment = buildAssessment(db, { name: "Checkout platform migration" });
   await page.goto(paths.assessments);
   // Hold the navigation's server request so the skeleton is observable.
   let release: () => void = () => {};
   const held = new Promise<void>((resolve) => (release = resolve));
-  await page.route((url) => url.pathname === paths.assessment(initiative.publicId), async (route) => {
+  await page.route((url) => url.pathname === paths.assessment(assessment.publicId), async (route) => {
     await held;
     await route.continue();
   });
@@ -183,8 +183,8 @@ test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
   test("renders a large page in full on first load", async ({ page, db }) => {
-    const initiative = buildInitiative(db, { name: "Checkout platform migration" });
-    await page.goto(paths.assessment(initiative.publicId));
+    const assessment = buildAssessment(db, { name: "Checkout platform migration" });
+    await page.goto(paths.assessment(assessment.publicId));
     await expect(page.getByRole("heading", { level: 1, name: "Checkout platform migration" })).toBeVisible();
     await expect(page.getByLabel("Loading")).toHaveCount(0);
   });

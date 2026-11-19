@@ -5,7 +5,7 @@ import { runStatus, evaluationStatus } from "@/lib/runs/status";
 import { requestCancellation, transitionTarget } from "@/lib/runs/transitions";
 import { createEvaluation } from "@/lib/evaluations/evaluation-records";
 import { transitionEvaluation } from "@/lib/evaluations/transitions";
-import { buildRun, buildInitiative, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildRelease, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 
 describe("progress status", () => {
@@ -31,9 +31,9 @@ describe("progress status", () => {
 
   it("reports an Evaluation and each pinned Release's state", () => {
     const db = createTestDb();
-    const initiative = buildInitiative(db);
-    const { run } = buildRun(db, { initiative, sources: [buildSource(db)] });
-    const { evaluation } = createEvaluation(db, { initiative, run, launchToken: crypto.randomUUID(), evaluatorVersion: "1", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [], releases: [buildRelease(db), buildRelease(db)] });
+    const assessment = buildAssessment(db);
+    const { run } = buildRun(db, { assessment, sources: [buildSource(db)] });
+    const { evaluation } = createEvaluation(db, { assessment, run, launchToken: crypto.randomUUID(), evaluatorVersion: "1", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [], releases: [buildRelease(db), buildRelease(db)] });
     const queued = evaluationStatus(db, evaluation);
     expect(queued).toMatchObject({ terminal: false, evaluation: { state: "queued" }, releases: [{ position: 0, state: "pending" }, { position: 1, state: "pending" }] });
 

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { initiatives } from "./catalog";
+import { assessments } from "./catalog";
 import { createdAt, id, lockVersion, publicId, timestamp, updatedAt } from "./columns";
 
 /**
@@ -75,20 +75,20 @@ export const standardReleases = sqliteTable(
 );
 
 /** The published Releases an Initiative currently selects. */
-export const initiativeStandardReleases = sqliteTable(
+export const assessmentStandardReleases = sqliteTable(
   "initiative_standard_releases",
   {
     id: id(),
-    initiativeId: integer("initiative_id")
+    assessmentId: integer("initiative_id")
       .notNull()
-      .references(() => initiatives.id, { onDelete: "cascade" }),
+      .references(() => assessments.id, { onDelete: "cascade" }),
     standardReleaseId: integer("standard_release_id")
       .notNull()
       .references(() => standardReleases.id, { onDelete: "restrict" }),
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex("initiative_standard_releases_selection").on(t.initiativeId, t.standardReleaseId),
+    uniqueIndex("initiative_standard_releases_selection").on(t.assessmentId, t.standardReleaseId),
     index("initiative_standard_releases_release").on(t.standardReleaseId),
   ],
 );

@@ -9,10 +9,10 @@ import { detectorConfiguration } from "@repo-facts/bundle";
 import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { parseCanonical, sha256 } from "@repo-facts/contract";
 import { getConfig } from "@/lib/config";
-import { selectedReleases } from "@/lib/initiatives/initiative-records";
+import { selectedReleases } from "@/lib/assessments/assessment-records";
 import { jobPayload } from "@/lib/jobs/queue";
 import { drainJobs } from "@/lib/jobs/worker";
-import { buildInitiative, buildSource } from "../support/builders";
+import { buildAssessment, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 
 describe("assessment launch", () => {
@@ -30,9 +30,9 @@ describe("assessment launch", () => {
   it("commits the immutable scope and its coordinator job together", async () => {
     buildSource(db, { name: "orders", gitRef: "main" });
     buildSource(db, { name: "billing" });
-    const initiative = buildInitiative(db);
+    const assessment = buildAssessment(db);
 
-    const { run, targets, duplicate } = launchRun(db, initiative.publicId, crypto.randomUUID());
+    const { run, targets, duplicate } = launchRun(db, assessment.publicId, crypto.randomUUID());
 
     expect(duplicate).toBe(false);
     expect(targets.map((target) => [target.sourceName, target.gitRef])).toEqual([
@@ -58,19 +58,19 @@ describe("assessment launch", () => {
 
   it("is valid without a selected Standard Release", () => {
     buildSource(db);
-    const initiative = buildInitiative(db);
+    const assessment = buildAssessment(db);
 
-    expect(selectedReleases(db, initiative.id)).toEqual([]);
-    expect(launchRun(db, initiative.publicId, crypto.randomUUID()).run.state).toBe("queued");
+    expect(selectedReleases(db, assessment.id)).toEqual([]);
+    expect(launchRun(db, assessment.publicId, crypto.randomUUID()).run.state).toBe("queued");
   });
 
   it("creates nothing and enqueues nothing when the scope cannot be resolved", () => {
     // An Assessment of all Repositories, while there are none.
-    const initiative = buildInitiative(db);
+    const assessment = buildAssessment(db);
 
     let error: unknown;
     try {
-      launchRun(db, initiative.publicId, crypto.randomUUID());
+      launchRun(db, assessment.publicId, crypto.randomUUID());
     } catch (caught) {
       error = caught;
     }
@@ -81,11 +81,11 @@ describe("assessment launch", () => {
 
   it("returns the existing assessment when the same launch is submitted twice", () => {
     buildSource(db);
-    const initiative = buildInitiative(db);
+    const assessment = buildAssessment(db);
     const token = crypto.randomUUID();
 
-    const first = launchRun(db, initiative.publicId, token);
-    const second = launchRun(db, initiative.publicId, token);
+    const first = launchRun(db, assessment.publicId, token);
+    const second = launchRun(db, assessment.publicId, token);
 
     expect(second).toMatchObject({ duplicate: true });
     expect(second.run.id).toBe(first.run.id);
@@ -95,9 +95,9 @@ describe("assessment launch", () => {
 
   it("starts a new assessment for a new launch token", () => {
     buildSource(db);
-    const initiative = buildInitiative(db);
-    launchRun(db, initiative.publicId, crypto.randomUUID());
-    launchRun(db, initiative.publicId, "not-a-token");
+    const assessment = buildAssessment(db);
+    launchRun(db, assessment.publicId, crypto.randomUUID());
+    launchRun(db, assessment.publicId, "not-a-token");
 
     expect(counts()).toEqual({ runs: 2, targets: 2, jobs: 2 });
   });

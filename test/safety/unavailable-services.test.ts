@@ -13,7 +13,7 @@ import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
 import type { MapDocument } from "@/lib/relationships/schema";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildInitiative } from "../support/builders";
+import { buildAssessment } from "../support/builders";
 import { type Repo } from "../support/git-fixture";
 import { manifest } from "../support/profiles";
 import { NO_NETWORK_CALLS, NetworkTrap, countNetworkCalls } from "../support/traps";
@@ -84,7 +84,7 @@ describe("Assessment of unavailable Service Dependencies", () => {
     for (const [file, content] of Object.entries(files(trap.url))) work.write(file, content);
     work.commit();
     treeBefore = listTree(work.path);
-    const initiative = buildInitiative(world.db, { sources: [registerLocalSource(world.db, world.config, "storefront", work.path)] });
+    const assessment = buildAssessment(world.db, { sources: [registerLocalSource(world.db, world.config, "storefront", work.path)] });
 
     // A credential, a configured destination, and a proxy in the environment, all pointing at the trap.
     for (const key of ["PAYMENTS_TOKEN", "ORDERS_URL", ...PROXY_KEYS]) saved[key] = process.env[key];
@@ -96,7 +96,7 @@ describe("Assessment of unavailable Service Dependencies", () => {
 
     try {
       calls = await countNetworkCalls(async () => {
-        runId = launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config).run.publicId;
+        runId = launchRun(world.db, assessment.publicId, crypto.randomUUID(), world.config).run.publicId;
         await drainJobs(world.db, jobHandlers(world.db, world.config));
       });
       proxyAfter = proxyState();

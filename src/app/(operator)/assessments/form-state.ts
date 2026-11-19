@@ -1,7 +1,7 @@
 import type { FormState } from "@/components/ui/form";
 import type { SelectionMode } from "@/lib/db/schema";
 
-export interface InitiativeFormValues {
+export interface AssessmentFormValues {
   name: string;
   objective: string;
   selectionMode: SelectionMode;
@@ -9,7 +9,7 @@ export interface InitiativeFormValues {
   standardReleasePublicIds: string[];
 }
 
-export type InitiativeFormState = FormState<InitiativeFormValues>;
+export type AssessmentFormState = FormState<AssessmentFormValues>;
 
 export interface LaunchState {
   problems: string[];

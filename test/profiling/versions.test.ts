@@ -8,7 +8,7 @@ import type { RepositorySource } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { type SurveyTrigger, runs } from "@/lib/db/schema";
-import { listInitiatives } from "@/lib/initiatives/initiative-records";
+import { listAssessments } from "@/lib/assessments/assessment-records";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { requestPreparation } from "@/lib/previews/preparation";
@@ -20,7 +20,7 @@ import { surveyRepository } from "@/lib/surveys/background";
 import { type Survey, currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey } from "@/lib/surveys/records";
 import { finishSurvey } from "@/lib/surveys/run";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildInitiative, buildSource } from "../support/builders";
+import { buildAssessment, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { manifest, memoryProfile, sha1 } from "../support/profiles";
 
@@ -165,7 +165,7 @@ describe("background profiling", () => {
     await drainJobs(world.db, jobHandlers(world.db, world.config));
 
     expect(currentProfile(world.db, web.id)).toMatchObject({ version: 1 });
-    expect(listInitiatives(world.db)).toEqual([]);
+    expect(listAssessments(world.db)).toEqual([]);
     expect(world.db.select().from(runs).all()).toEqual([]);
   });
 
@@ -182,8 +182,8 @@ describe("background profiling", () => {
     await drain();
 
     work.write("README.md", "three\n").commit("third");
-    const initiative = buildInitiative(world.db, { name: "Checkout platform migration", sources: [web] });
-    const { run } = launchRun(world.db, initiative.publicId, crypto.randomUUID(), config);
+    const assessment = buildAssessment(world.db, { name: "Checkout platform migration", sources: [web] });
+    const { run } = launchRun(world.db, assessment.publicId, crypto.randomUUID(), config);
     await drain();
 
     work.git("checkout", "--quiet", "-b", "feature");

@@ -18,8 +18,8 @@ test.use({ viewport: { width: 1440, height: 900 } });
 
 test("Initiative overview on a surface: the list is white, its heading on the canvas", async ({ page, db, baseURL }) => {
   await useTheme(page.context(), "light", baseURL!);
-  const { initiative } = await seedResults(db);
-  await page.goto(paths.assessment(initiative.publicId));
+  const { assessment } = await seedResults(db);
+  await page.goto(paths.assessment(assessment.publicId));
   const overview = page.locator("section").filter({ has: page.getByRole("heading", { name: "Overview", exact: true }) });
   expect(await background(overview.locator("dl[data-panel]"))).toBe(SURFACE.light);
   expect(await background(overview)).toBe(TRANSPARENT);

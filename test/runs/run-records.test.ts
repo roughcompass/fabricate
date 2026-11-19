@@ -11,9 +11,9 @@ import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
-import { deleteInitiative } from "@/lib/initiatives/initiative-records";
+import { deleteAssessment } from "@/lib/assessments/assessment-records";
 import { type Survey, requestSurvey } from "@/lib/surveys/records";
-import { buildRun, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 
 const sha = (seed: string) => crypto.createHash("sha1").update(seed).digest("hex");
@@ -65,19 +65,19 @@ describe("assessment records", () => {
   });
 
   it("finds an assessment by its launch token and rejects a reused token", () => {
-    const initiative = buildInitiative(db);
+    const assessment = buildAssessment(db);
     const source = buildSource(db);
-    const input = { initiative, launchToken: crypto.randomUUID(), surveyorRelease: "test", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [source] };
+    const input = { assessment, launchToken: crypto.randomUUID(), surveyorRelease: "test", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [source] };
     const { run } = createRun(db, input);
 
-    expect(findRunByLaunchToken(db, initiative.id, input.launchToken)?.id).toBe(run.id);
+    expect(findRunByLaunchToken(db, assessment.id, input.launchToken)?.id).toBe(run.id);
     expect(() => createRun(db, input)).toThrow(/UNIQUE constraint failed: assessments.launch_token/);
   });
 
   it("requires a scope, a Surveyor release, and a UUID launch token", () => {
     const error = (() => {
       try {
-        createRun(db, { initiative: buildInitiative(db), launchToken: "again", surveyorRelease: " ", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [] });
+        createRun(db, { assessment: buildAssessment(db), launchToken: "again", surveyorRelease: " ", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [] });
       } catch (caught) {
         return caught as ValidationError;
       }
@@ -87,12 +87,12 @@ describe("assessment records", () => {
   });
 
   it("retains an initiative that has assessments", () => {
-    const initiative = buildInitiative(db);
-    buildRun(db, { initiative, sources: [buildSource(db)] });
+    const assessment = buildAssessment(db);
+    buildRun(db, { assessment, sources: [buildSource(db)] });
 
-    expect(() => deleteInitiative(db, initiative.publicId)).toThrow(/retained/);
-    const unassessed = buildInitiative(db);
-    deleteInitiative(db, unassessed.publicId);
+    expect(() => deleteAssessment(db, assessment.publicId)).toThrow(/retained/);
+    const unassessed = buildAssessment(db);
+    deleteAssessment(db, unassessed.publicId);
   });
 
   describe("survey links", () => {

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { initiatives, repositorySources } from "./catalog";
+import { assessments, repositorySources } from "./catalog";
 import { surveys } from "./surveys";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
 
@@ -23,9 +23,9 @@ export const runs = sqliteTable(
   {
     id: id(),
     publicId: publicId(),
-    initiativeId: integer("initiative_id")
+    assessmentId: integer("initiative_id")
       .notNull()
-      .references(() => initiatives.id, { onDelete: "restrict" }),
+      .references(() => assessments.id, { onDelete: "restrict" }),
     state: text("state", { enum: RUN_STATES }).notNull().default("queued"),
     launchToken: text("launch_token").notNull().unique(),
     surveyorRelease: text("detector_release").notNull(),
@@ -42,7 +42,7 @@ export const runs = sqliteTable(
     updatedAt: updatedAt(),
   },
   (t) => [
-    index("assessments_initiative").on(t.initiativeId),
+    index("assessments_initiative").on(t.assessmentId),
     check("assessments_public_id", sql`${t.publicId} GLOB 'asm_*'`),
     check("assessments_state", sql.raw(`state IN (${sqlList(RUN_STATES)})`)),
     check("assessments_configuration_digest", sql`length(${t.configurationDigest}) = 64`),

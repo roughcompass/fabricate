@@ -4,10 +4,10 @@ import { resolveCloneUrl } from "../src/lib/catalog/catalog";
 import { SourceBoundary } from "../src/lib/catalog/source-boundary";
 import { insertSource } from "../src/lib/catalog/source-records";
 import { loadConfig } from "../src/lib/config";
-import { listInitiatives } from "../src/lib/initiatives/initiative-records";
+import { listAssessments } from "../src/lib/assessments/assessment-records";
 import { jobHandlers } from "../src/lib/jobs/registry";
 import { drainJobs } from "../src/lib/jobs/worker";
-import { buildInitiative } from "../test/support/builders";
+import { buildAssessment } from "../test/support/builders";
 import { E2E_ENV } from "./support/env";
 import { expect, gitRepo, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -22,9 +22,9 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
     const repository = gitRepo(path.join(sourcesDir, name), { "package.json": `{ "name": "${name}", "version": "1.0.0" }\n` });
     insertSource(db, { name, ...resolveCloneUrl(`file://${repository}`, boundary), gitRef: null });
   }
-  buildInitiative(db, { name: "Fleet assessment" });
+  buildAssessment(db, { name: "Fleet assessment" });
 
-  await page.goto(paths.assessment(listInitiatives(db)[0]!.publicId));
+  await page.goto(paths.assessment(listAssessments(db)[0]!.publicId));
   await page.getByRole("button", { name: "Start Run" }).click();
   const started = page.getByRole("region", { name: "Notifications" }).getByText("Run #1 was started.");
   await expect(started).toBeVisible();
@@ -67,7 +67,7 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
   await expect(page.getByText("was started")).toHaveCount(0);
 
   // The status payload carries states and codes only: no clone URL, path, or failure message.
-  const run = listRuns(db, listInitiatives(db)[0]!.id)[0]!;
+  const run = listRuns(db, listAssessments(db)[0]!.id)[0]!;
   const status = await (await page.request.get(paths.runStatus(run.publicId))).json();
   expect(status).toMatchObject({ terminal: true, run: { state: "complete", cancel_requested: false }, targets: [{ state: "complete", profile: true }, { state: "complete", profile: true }] });
   expect(JSON.stringify(status)).not.toContain(sourcesDir);

@@ -43,14 +43,14 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
   const db = getDb();
   const found = loadRun(runId);
   if (!found) notFound();
-  const { run, initiative, context } = found;
+  const { run, assessment, context } = found;
   const { name } = context;
 
   const targets = targetsOf(db, run.id);
   const profiles = new Map(profilesOf(db, run.id).map(({ profile, target }) => [target.id, profile]));
   const map = mapOf(db, run.id);
   const coverage = map ? (mapDocument(map) as unknown as MapDocument).coverage : null;
-  const evaluationNumber = evaluationNumbers(db, initiative.id);
+  const evaluationNumber = evaluationNumbers(db, assessment.id);
   const evaluations = listEvaluations(db, { runId: run.id });
   const status = runStatus(db, run);
   const terminal = isTerminal(RUN_MACHINE, run.state);

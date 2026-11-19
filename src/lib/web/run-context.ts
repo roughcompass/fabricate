@@ -1,4 +1,4 @@
-import type { Initiative } from "@/lib/initiatives/initiative-records";
+import type { Assessment } from "@/lib/assessments/assessment-records";
 import { routes } from "@/lib/web/routes";
 
 export interface RunContext {
@@ -11,13 +11,13 @@ export interface RunContext {
 }
 
 /** How pages under a Run name it and lead back to it. */
-export function runContext(initiative: Pick<Initiative, "publicId" | "name">, number: number): RunContext {
+export function runContext(assessment: Pick<Assessment, "publicId" | "name">, number: number): RunContext {
   return {
     name: `Run #${number}`,
     parents: [
       { href: "/assessments", label: "Assessments" },
-      { href: routes.assessment(initiative.publicId), label: initiative.name },
+      { href: routes.assessment(assessment.publicId), label: assessment.name },
     ],
-    owner: initiative.name,
+    owner: assessment.name,
   };
 }

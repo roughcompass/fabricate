@@ -22,7 +22,7 @@ import { surveyRepository } from "@/lib/surveys/background";
 import { type Survey, surveyById } from "@/lib/surveys/records";
 import { RUN_SURVEY } from "@/lib/surveys/run";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildInitiative } from "../support/builders";
+import { buildAssessment } from "../support/builders";
 import { withSharedFileDb } from "../support/db";
 
 describe("Assessment orchestration", () => {
@@ -36,8 +36,8 @@ describe("Assessment orchestration", () => {
   }
 
   function launch(sources: RepositorySource[], database: Db = world.db) {
-    const initiative = buildInitiative(database, { sources });
-    return launchRun(database, initiative.publicId, crypto.randomUUID(), world.config).run;
+    const assessment = buildAssessment(database, { sources });
+    return launchRun(database, assessment.publicId, crypto.randomUUID(), world.config).run;
   }
 
   const drain = (handlersConfig = world.config, limit?: number) => drainJobs(world.db, jobHandlers(world.db, handlersConfig), limit ? { limit } : {});

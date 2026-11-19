@@ -1,4 +1,4 @@
-import { buildInitiative, buildSource } from "../test/support/builders";
+import { buildAssessment, buildSource } from "../test/support/builders";
 import { expect, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 
@@ -6,7 +6,7 @@ import { paths } from "./support/paths";
 // than 30 days ago open the not-found page (operator-interface/page-patterns
 // spec, "Links open the pages they name"). Redirects apply before routing, so
 // these IDs only need the right shape.
-const INITIATIVE = "ini_aaaaaaaaaaaaaaaa";
+const ASSESSMENT = "ini_aaaaaaaaaaaaaaaa";
 const SOURCE = "src_cccccccccccccccc";
 
 /** The path and query a redirect's Location names. */
@@ -26,18 +26,18 @@ for (const [from, to] of REDIRECTS) {
 }
 
 test("Retired address: an Initiative address opens the not-found page without redirecting", async ({ request, page }) => {
-  for (const address of [`/initiatives/${INITIATIVE}`, "/sources/new"]) {
+  for (const address of [`/initiatives/${ASSESSMENT}`, "/sources/new"]) {
     const response = await request.get(address, { maxRedirects: 0 });
     expect(response.status(), address).toBe(404);
     expect(response.headers().location, address).toBeUndefined();
   }
-  await page.goto(`/initiatives/${INITIATIVE}`);
+  await page.goto(`/initiatives/${ASSESSMENT}`);
   await expect(page.getByText("This page does not exist", { exact: false })).toBeVisible();
 });
 
 test("serves the new Assessment addresses without redirecting", async ({ request, db }) => {
-  const initiative = buildInitiative(db, { name: "Redirect check", sources: [buildSource(db, { name: "redirect-check" })] });
-  for (const path of [paths.assessments, paths.newAssessment, paths.assessment(initiative.publicId), paths.assessmentEdit(initiative.publicId)]) {
+  const assessment = buildAssessment(db, { name: "Redirect check", sources: [buildSource(db, { name: "redirect-check" })] });
+  for (const path of [paths.assessments, paths.newAssessment, paths.assessment(assessment.publicId), paths.assessmentEdit(assessment.publicId)]) {
     expect((await request.get(path, { maxRedirects: 0 })).status(), path).toBe(200);
   }
 });

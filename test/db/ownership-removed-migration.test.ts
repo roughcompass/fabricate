@@ -25,14 +25,14 @@ describe("ownership removed migration", () => {
   const count = (table: string) => (db.$client.prepare(`select count(*) as n from ${table}`).get() as { n: number }).n;
   const objects = (type: string) => (all("select name from sqlite_master where type = ?", type) as { name: string }[]).map((row) => row.name);
 
-  /** A Run of +initiative+ over +source+ with one acquired target, numbered +n+ for its public IDs. */
-  function seedRun(initiative: number, source: number, n: number) {
+  /** A Run of the Assessment +assessmentId+ over +source+ with one acquired target, numbered +n+ for its public IDs. */
+  function seedRun(assessmentId: number, source: number, n: number) {
     const suffix = String(n).padStart(16, "0");
     const assessment = Number(
       run(
         "insert into assessments (public_id, initiative_id, launch_token, detector_release, configuration, configuration_digest, profile_schema_version, relationship_schema_version, created_at, updated_at) values (?, ?, ?, 'r1', '{}', ?, 2, 1, ?, ?)",
         `asm_${suffix}`,
-        initiative,
+        assessmentId,
         `4a6e3b0c-6a43-4e0f-9a59-${String(n).padStart(12, "0")}`,
         "d".repeat(64),
         T0,

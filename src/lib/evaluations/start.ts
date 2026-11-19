@@ -5,7 +5,7 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { isUniqueViolation } from "@/lib/db/errors";
 import { DocumentIntegrityError } from "@/lib/documents/digested";
 import { readableBy } from "@/lib/documents/schemas";
-import { getInitiative, selectedReleases } from "@/lib/initiatives/initiative-records";
+import { getAssessment, selectedReleases } from "@/lib/assessments/assessment-records";
 import { enqueue } from "@/lib/jobs/queue";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { profileCommit } from "@/lib/profiles/schema";
@@ -48,22 +48,22 @@ export interface StartResult {
  * id, instead of the initiative's current selection: a template re-check
  * evaluates against the Releases its acceptance used.
  */
-export function startEvaluation(db: Executor, initiativePublicId: string, runPublicId: string, launchToken: string, options: { releaseIds?: readonly string[] } = {}): StartResult {
+export function startEvaluation(db: Executor, assessmentPublicId: string, runPublicId: string, launchToken: string, options: { releaseIds?: readonly string[] } = {}): StartResult {
   const token = LAUNCH_TOKEN.test(launchToken) ? launchToken : crypto.randomUUID();
   try {
     return immediate(db, (tx) => {
-      const initiative = getInitiative(tx, initiativePublicId);
-      const previous = findEvaluationByLaunchToken(tx, initiative.id, token);
+      const assessment = getAssessment(tx, assessmentPublicId);
+      const previous = findEvaluationByLaunchToken(tx, assessment.id, token);
       if (previous) return { evaluation: previous, releases: [], duplicate: true };
 
       const run = getRun(tx, runPublicId);
       const problems: string[] = [];
-      if (run.initiativeId !== initiative.id) problems.push("The Run belongs to a different Assessment.");
+      if (run.assessmentId !== assessment.id) problems.push("The Run belongs to a different Assessment.");
       if (run.state !== "complete" && run.state !== "complete_with_issues") problems.push(`The Run is ${run.state.replaceAll("_", " ")}; evaluate a finished Assessment.`);
       if (profilesOf(tx, run.id).length === 0) problems.push("The Run has no Repository Profile, so there is no current-state evidence to evaluate.");
       if (!mapOf(tx, run.id)) problems.push("The Run has no Relationship Map.");
 
-      const selected = options.releaseIds ? pinnedReleases(tx, options.releaseIds, problems) : selectedReleases(tx, initiative.id);
+      const selected = options.releaseIds ? pinnedReleases(tx, options.releaseIds, problems) : selectedReleases(tx, assessment.id);
       if (selected.length === 0 && !options.releaseIds) problems.push("Select at least one published Standard Release for the Assessment.");
       for (const { release, standard } of selected) {
         const label = releaseLabel(standard, release);
@@ -84,7 +84,7 @@ export function startEvaluation(db: Executor, initiativePublicId: string, runPub
       if (problems.length) throw new EvaluationStartError(problems);
 
       const { evaluation, releases } = createEvaluation(tx, {
-        initiative,
+        assessment,
         run,
         launchToken: token,
         evaluatorVersion: EVALUATOR_VERSION,
@@ -101,8 +101,8 @@ export function startEvaluation(db: Executor, initiativePublicId: string, runPub
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      const initiative = getInitiative(db, initiativePublicId);
-      const previous = findEvaluationByLaunchToken(db, initiative.id, token);
+      const assessment = getAssessment(db, assessmentPublicId);
+      const previous = findEvaluationByLaunchToken(db, assessment.id, token);
       if (previous) return { evaluation: previous, releases: [], duplicate: true };
     }
     throw error;

@@ -3,7 +3,7 @@ import type { Db } from "@/lib/db/client";
 import { StaleRecordError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
 import { sha256 } from "@repo-facts/contract";
-import { createInitiative, selectedReleases, updateInitiative } from "@/lib/initiatives/initiative-records";
+import { createAssessment, selectedReleases, updateAssessment } from "@/lib/assessments/assessment-records";
 import {
   blankDraftDocument,
   createStandard,
@@ -16,7 +16,7 @@ import {
   startDraftFromRelease,
   updateStandardMetadata,
 } from "@/lib/standards/standard-records";
-import { buildInitiative, buildRelease } from "../support/builders";
+import { buildAssessment, buildRelease } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { captureValidation } from "../support/validation";
 
@@ -89,15 +89,15 @@ describe("standard records", () => {
     it("selects published Releases from several Standards independently", () => {
       const first = buildRelease(db);
       const second = buildRelease(db);
-      const initiative = createInitiative(db, { name: "Two Standards", selectionMode: "all", standardReleasePublicIds: [first.publicId, second.publicId] });
+      const assessment = createAssessment(db, { name: "Two Standards", selectionMode: "all", standardReleasePublicIds: [first.publicId, second.publicId] });
 
-      expect(selectedReleases(db, initiative.id).map((selection) => selection.release.id).sort()).toEqual([first.id, second.id].sort());
+      expect(selectedReleases(db, assessment.id).map((selection) => selection.release.id).sort()).toEqual([first.id, second.id].sort());
     });
 
     it("rejects a draft Standard and an unknown Release with one message each", () => {
       const { standard } = createStandard(db, { name: "Draft only", purpose: "Not yet published" });
       const error = captureValidation(() =>
-        createInitiative(db, { name: "Draft", selectionMode: "all", standardReleasePublicIds: [standard.publicId, "rel_unknownunknownu"] }),
+        createAssessment(db, { name: "Draft", selectionMode: "all", standardReleasePublicIds: [standard.publicId, "rel_unknownunknownu"] }),
       );
 
       expect(error.messagesFor("standardReleases")).toEqual([
@@ -109,13 +109,13 @@ describe("standard records", () => {
     it("replaces selections on update and allows none", () => {
       const first = buildRelease(db);
       const second = buildRelease(db);
-      const initiative = buildInitiative(db);
-      updateInitiative(db, initiative.publicId, 0, { name: initiative.name, selectionMode: "all", standardReleasePublicIds: [first.publicId] });
-      updateInitiative(db, initiative.publicId, 1, { name: initiative.name, selectionMode: "all", standardReleasePublicIds: [second.publicId] });
+      const assessment = buildAssessment(db);
+      updateAssessment(db, assessment.publicId, 0, { name: assessment.name, selectionMode: "all", standardReleasePublicIds: [first.publicId] });
+      updateAssessment(db, assessment.publicId, 1, { name: assessment.name, selectionMode: "all", standardReleasePublicIds: [second.publicId] });
 
-      expect(selectedReleases(db, initiative.id).map((selection) => selection.release.id)).toEqual([second.id]);
-      updateInitiative(db, initiative.publicId, 2, { name: initiative.name, selectionMode: "all", standardReleasePublicIds: [] });
-      expect(selectedReleases(db, initiative.id)).toEqual([]);
+      expect(selectedReleases(db, assessment.id).map((selection) => selection.release.id)).toEqual([second.id]);
+      updateAssessment(db, assessment.publicId, 2, { name: assessment.name, selectionMode: "all", standardReleasePublicIds: [] });
+      expect(selectedReleases(db, assessment.id)).toEqual([]);
     });
   });
 
@@ -146,9 +146,9 @@ describe("standard records", () => {
 
     it("rejects repointing a Release selection", () => {
       const release = buildRelease(db);
-      const initiative = createInitiative(db, { name: "Selector", selectionMode: "all", standardReleasePublicIds: [release.publicId] });
+      const assessment = createAssessment(db, { name: "Selector", selectionMode: "all", standardReleasePublicIds: [release.publicId] });
 
-      expect(() => rawRun(db, "update initiative_standard_releases set standard_release_id = ? where initiative_id = ?", buildRelease(db).id, initiative.id)).toThrow(
+      expect(() => rawRun(db, "update initiative_standard_releases set standard_release_id = ? where initiative_id = ?", buildRelease(db).id, assessment.id)).toThrow(
         /cannot be changed in place/,
       );
     });

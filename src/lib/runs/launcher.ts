@@ -6,7 +6,7 @@ import { detectorConfiguration } from "@repo-facts/bundle";
 import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
 import { JOB_PRIORITIES } from "@/lib/db/schema";
-import { getInitiative } from "@/lib/initiatives/initiative-records";
+import { getAssessment } from "@/lib/assessments/assessment-records";
 import { enqueue } from "@/lib/jobs/queue";
 import { type Run, type RunTarget, LAUNCH_TOKEN, createRun, findRunByLaunchToken } from "./run-records";
 import { resolveScope } from "./scope-resolver";
@@ -35,16 +35,16 @@ export interface LaunchResult {
 /** The priority of a Run's jobs, and of the surveys it joins: ahead of background surveying. */
 export const RUN_PRIORITY = JOB_PRIORITIES.normal;
 
-export function launchRun(db: Executor, initiativePublicId: string, launchToken: string, config: FrontendRegistryConfig = getConfig()): LaunchResult {
+export function launchRun(db: Executor, assessmentPublicId: string, launchToken: string, config: FrontendRegistryConfig = getConfig()): LaunchResult {
   const token = LAUNCH_TOKEN.test(launchToken) ? launchToken : crypto.randomUUID();
   try {
     return immediate(db, (tx) => {
-      const initiative = getInitiative(tx, initiativePublicId);
-      const previous = findRunByLaunchToken(tx, initiative.id, token);
+      const assessment = getAssessment(tx, assessmentPublicId);
+      const previous = findRunByLaunchToken(tx, assessment.id, token);
       if (previous) return { run: previous, targets: [], duplicate: true };
-      const sources = resolveScope(tx, initiative);
+      const sources = resolveScope(tx, assessment);
       const { run, targets } = createRun(tx, {
-        initiative,
+        assessment,
         launchToken: token,
         surveyorRelease: SURVEYOR_RELEASE,
         // The bundle's configuration under this deployment's analysis limits; its digest is the Assessment's.
@@ -59,8 +59,8 @@ export function launchRun(db: Executor, initiativePublicId: string, launchToken:
   } catch (error) {
     // A concurrent submission with the same token committed first.
     if (isUniqueViolation(error)) {
-      const initiative = getInitiative(db, initiativePublicId);
-      const previous = findRunByLaunchToken(db, initiative.id, token);
+      const assessment = getAssessment(db, assessmentPublicId);
+      const previous = findRunByLaunchToken(db, assessment.id, token);
       if (previous) return { run: previous, targets: [], duplicate: true };
     }
     throw error;

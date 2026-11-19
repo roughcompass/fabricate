@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, ValidationError } from "@/lib/db/errors";
-import { runTargets, initiativeTargets, initiatives, repositorySources } from "@/lib/db/schema";
+import { runTargets, assessmentTargets, assessments, repositorySources } from "@/lib/db/schema";
 import { CloneUrl, InvalidCloneUrl } from "./clone-url";
 import { repositoryNameFromUrl } from "./repository-name";
 import { BoundaryViolation, SourceBoundary } from "./source-boundary";
@@ -85,11 +85,11 @@ export interface DeletionEffects {
 /** What deleting +source+ changes, for the confirmation to state. */
 export function deletionEffects(db: Executor, source: RepositorySource): DeletionEffects {
   const selecting = db
-    .select({ name: initiatives.name })
-    .from(initiativeTargets)
-    .innerJoin(initiatives, eq(initiatives.id, initiativeTargets.initiativeId))
-    .where(eq(initiativeTargets.repositorySourceId, source.id))
-    .orderBy(sql`lower(${initiatives.name})`)
+    .select({ name: assessments.name })
+    .from(assessmentTargets)
+    .innerJoin(assessments, eq(assessments.id, assessmentTargets.assessmentId))
+    .where(eq(assessmentTargets.repositorySourceId, source.id))
+    .orderBy(sql`lower(${assessments.name})`)
     .all();
   return { versions: versionCount(db, source.id), assessments: selecting.map((row) => row.name), runs: runCounts(db).get(source.id) ?? 0, previews: previewCount(db, source) };
 }
@@ -106,7 +106,7 @@ export function deleteSource(db: Executor, publicId: string, confirmation: strin
   const { deleted, previews } = immediate(db, (tx) => {
     const source = getSource(tx, publicId);
     if (confirmation.trim() !== source.name) throw new ValidationError([{ field: "confirmation", message: `Type ${source.name} to confirm` }]);
-    tx.delete(initiativeTargets).where(eq(initiativeTargets.repositorySourceId, source.id)).run();
+    tx.delete(assessmentTargets).where(eq(assessmentTargets.repositorySourceId, source.id)).run();
     const now = new Date();
     return {
       previews: deleteRepositoryPreviews(tx, source.id),

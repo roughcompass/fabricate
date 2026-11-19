@@ -6,7 +6,7 @@ import { listSources } from "../../src/lib/catalog/source-records";
 import { loadConfig } from "../../src/lib/config";
 import { openDatabase } from "../../src/lib/db/client";
 import { findingDocument, findingsOf, listEvaluations } from "../../src/lib/evaluations/evaluation-records";
-import { listInitiatives } from "../../src/lib/initiatives/initiative-records";
+import { listAssessments } from "../../src/lib/assessments/assessment-records";
 import { jobHandlers } from "../../src/lib/jobs/registry";
 import { drainJobs } from "../../src/lib/jobs/worker";
 import { profileDocument, profilesOf } from "../../src/lib/profiles/profile-records";
@@ -77,12 +77,12 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await expect(toast(page, "Run #1 was started.")).toBeVisible();
     await run();
     await expect(pageHeader(page)).toContainText("Complete");
-    const baseline = listRuns(db, listInitiatives(db)[0]!.id)[0]!;
+    const baseline = listRuns(db, listAssessments(db)[0]!.id)[0]!;
     expect(targetsOf(db, baseline.id).map((target) => [target.sourceName, target.state]).sort()).toEqual(REPOSITORIES.map((name) => [name, "complete"]));
   });
 
   await test.step("represent discovered analytics calls statically", async () => {
-    const run = listRuns(db, listInitiatives(db)[0]!.id)[0]!;
+    const run = listRuns(db, listAssessments(db)[0]!.id)[0]!;
     const profiles = new Map(profilesOf(db, run.id).map(({ profile, target }) => [target.sourceName, profile]));
     for (const name of ANALYTICS_CONSUMERS) {
       const services = (profileDocument(profiles.get(name)!).fact_document as JsonObject).service_dependencies as JsonObject[];
@@ -158,8 +158,8 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
   });
 
   await test.step("run a diagnostic Evaluation of the baseline Assessment", async () => {
-    const initiative = listInitiatives(db)[0]!;
-    await page.goto(paths.assessmentEdit(initiative.publicId));
+    const assessment = listAssessments(db)[0]!;
+    await page.goto(paths.assessmentEdit(assessment.publicId));
     const releases = page.getByRole("group", { name: "Standard Releases" });
     await releases.getByLabel("Fleet engineering baseline v1").check();
     await releases.getByLabel("Fleet relationships v1").check();
@@ -172,7 +172,7 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
   });
 
   await test.step("keep evidence and uncertainty in every Finding", async () => {
-    const evaluation = listEvaluations(db, { initiativeId: listInitiatives(db)[0]!.id })[0]!;
+    const evaluation = listEvaluations(db, { assessmentId: listAssessments(db)[0]!.id })[0]!;
     const findings = findingsOf(db, evaluation.id).map((finding) => ({ finding, document: findingDocument(finding) }));
     // Two repository Controls for eight repositories, and one relationship Control.
     expect(findings).toHaveLength(REPOSITORIES.length * 2 + 1);

@@ -7,9 +7,9 @@ import {
   SELECTION_MODES,
   type SelectionMode,
   runs,
-  initiativeStandardReleases,
-  initiativeTargets,
-  initiatives,
+  assessmentStandardReleases,
+  assessmentTargets,
+  assessments,
   repositorySources,
   standardReleases,
   standards,
@@ -33,9 +33,9 @@ export { SELECTION_MODES } from "@/lib/db/schema";
  * none takes precedence over another.
  */
 
-export type Initiative = typeof initiatives.$inferSelect;
+export type Assessment = typeof assessments.$inferSelect;
 
-export interface InitiativeInput {
+export interface AssessmentInput {
   name: string;
   objective?: string;
   selectionMode: SelectionMode;
@@ -48,25 +48,25 @@ interface Selections {
   releases: StandardRelease[];
 }
 
-export function createInitiative(db: Executor, input: InitiativeInput): Initiative {
+export function createAssessment(db: Executor, input: AssessmentInput): Assessment {
   return immediate(db, (tx) => {
     const values = normalize(input);
     const selections = validate(tx, values);
     const now = new Date();
-    const initiative = tx
-      .insert(initiatives)
+    const assessment = tx
+      .insert(assessments)
       .values({ publicId: generatePublicId("ini"), name: values.name, objective: values.objective, selectionMode: values.selectionMode, createdAt: now, updatedAt: now })
       .returning()
       .get();
-    replaceSourceSelections(tx, initiative, selections.sources);
-    replaceReleaseSelections(tx, initiative, selections.releases);
-    return initiative;
+    replaceSourceSelections(tx, assessment, selections.sources);
+    replaceReleaseSelections(tx, assessment, selections.releases);
+    return assessment;
   });
 }
 
-export function updateInitiative(db: Executor, publicId: string, expectedLockVersion: number, input: InitiativeInput): Initiative {
+export function updateAssessment(db: Executor, publicId: string, expectedLockVersion: number, input: AssessmentInput): Assessment {
   return immediate(db, (tx) => {
-    const current = getInitiative(tx, publicId);
+    const current = getAssessment(tx, publicId);
     if (current.lockVersion !== expectedLockVersion) throw new StaleRecordError(`${current.name} was changed by someone else`);
 
     const values = normalize(input);
@@ -74,7 +74,7 @@ export function updateInitiative(db: Executor, publicId: string, expectedLockVer
 
     // Clear selections before the mode changes so the all-Repositories trigger holds.
     if (values.selectionMode === "all") replaceSourceSelections(tx, current, []);
-    const updated = updateLocked(tx, initiatives, current, { name: values.name, objective: values.objective, selectionMode: values.selectionMode, updatedAt: new Date() }, `${current.name} was changed by someone else`);
+    const updated = updateLocked(tx, assessments, current, { name: values.name, objective: values.objective, selectionMode: values.selectionMode, updatedAt: new Date() }, `${current.name} was changed by someone else`);
     if (values.selectionMode === "explicit") replaceSourceSelections(tx, updated, selections.sources);
     replaceReleaseSelections(tx, updated, selections.releases);
     return updated;
@@ -82,67 +82,67 @@ export function updateInitiative(db: Executor, publicId: string, expectedLockVer
 }
 
 /** Deletes an initiative that has never been assessed. */
-export function deleteInitiative(db: Executor, publicId: string): void {
+export function deleteAssessment(db: Executor, publicId: string): void {
   immediate(db, (tx) => {
-    const initiative = getInitiative(tx, publicId);
-    const assessed = tx.select({ id: runs.id }).from(runs).where(eq(runs.initiativeId, initiative.id)).limit(1).get();
+    const assessment = getAssessment(tx, publicId);
+    const assessed = tx.select({ id: runs.id }).from(runs).where(eq(runs.assessmentId, assessment.id)).limit(1).get();
     if (assessed) {
-      throw new ValidationError([{ field: "base", message: `${initiative.name} has Runs and is retained so their history stays reviewable` }]);
+      throw new ValidationError([{ field: "base", message: `${assessment.name} has Runs and is retained so their history stays reviewable` }]);
     }
-    tx.delete(initiatives).where(eq(initiatives.id, initiative.id)).run();
+    tx.delete(assessments).where(eq(assessments.id, assessment.id)).run();
   });
 }
 
-export function findInitiative(db: Executor, publicId: string): Initiative | undefined {
-  return db.select().from(initiatives).where(eq(initiatives.publicId, publicId)).get();
+export function findAssessment(db: Executor, publicId: string): Assessment | undefined {
+  return db.select().from(assessments).where(eq(assessments.publicId, publicId)).get();
 }
 
-export function getInitiative(db: Executor, publicId: string): Initiative {
-  const initiative = findInitiative(db, publicId);
-  if (!initiative) throw new NotFoundError(`Initiative ${publicId} does not exist`);
-  return initiative;
+export function getAssessment(db: Executor, publicId: string): Assessment {
+  const assessment = findAssessment(db, publicId);
+  if (!assessment) throw new NotFoundError(`Assessment ${publicId} does not exist`);
+  return assessment;
 }
 
-export function initiativeById(db: Executor, id: number): Initiative {
-  const initiative = db.select().from(initiatives).where(eq(initiatives.id, id)).get();
-  if (!initiative) throw new NotFoundError(`Initiative ${id} does not exist`);
-  return initiative;
+export function assessmentById(db: Executor, id: number): Assessment {
+  const assessment = db.select().from(assessments).where(eq(assessments.id, id)).get();
+  if (!assessment) throw new NotFoundError(`Assessment ${id} does not exist`);
+  return assessment;
 }
 
-export function listInitiatives(db: Executor): Initiative[] {
-  return db.select().from(initiatives).orderBy(sql`lower(${initiatives.name})`, asc(initiatives.publicId)).all();
+export function listAssessments(db: Executor): Assessment[] {
+  return db.select().from(assessments).orderBy(sql`lower(${assessments.name})`, asc(assessments.publicId)).all();
 }
 
 /** The explicit selections of an initiative, in catalog order. */
-export function selectedSources(db: Executor, initiativeId: number): RepositorySource[] {
+export function selectedSources(db: Executor, assessmentId: number): RepositorySource[] {
   return db
     .select({ source: repositorySources })
-    .from(initiativeTargets)
-    .innerJoin(repositorySources, eq(repositorySources.id, initiativeTargets.repositorySourceId))
-    .where(eq(initiativeTargets.initiativeId, initiativeId))
+    .from(assessmentTargets)
+    .innerJoin(repositorySources, eq(repositorySources.id, assessmentTargets.repositorySourceId))
+    .where(eq(assessmentTargets.assessmentId, assessmentId))
     .orderBy(sql`lower(${repositorySources.name})`, asc(repositorySources.publicId))
     .all()
     .map((row) => row.source);
 }
 
 /** The Releases an initiative currently selects, by Standard name then version. */
-export function selectedReleases(db: Executor, initiativeId: number): { release: StandardRelease; standard: Standard }[] {
+export function selectedReleases(db: Executor, assessmentId: number): { release: StandardRelease; standard: Standard }[] {
   return db
     .select({ release: standardReleases, standard: standards })
-    .from(initiativeStandardReleases)
-    .innerJoin(standardReleases, eq(standardReleases.id, initiativeStandardReleases.standardReleaseId))
+    .from(assessmentStandardReleases)
+    .innerJoin(standardReleases, eq(standardReleases.id, assessmentStandardReleases.standardReleaseId))
     .innerJoin(standards, eq(standards.id, standardReleases.standardId))
-    .where(eq(initiativeStandardReleases.initiativeId, initiativeId))
+    .where(eq(assessmentStandardReleases.assessmentId, assessmentId))
     .orderBy(sql`lower(${standards.name})`, asc(standardReleases.version))
     .all();
 }
 
-export function scopeLabel(initiative: Initiative, selectedCount: number): string {
-  if (initiative.selectionMode === "all") return "All Repositories";
+export function scopeLabel(assessment: Assessment, selectedCount: number): string {
+  if (assessment.selectionMode === "all") return "All Repositories";
   return countLabel(selectedCount, "selected Repository", "selected Repositories");
 }
 
-function normalize(input: InitiativeInput): Required<InitiativeInput> {
+function normalize(input: AssessmentInput): Required<AssessmentInput> {
   const ids = (values: readonly string[] | undefined) => [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))];
   return {
     name: input.name.replace(/\s+/g, " ").trim(),
@@ -153,7 +153,7 @@ function normalize(input: InitiativeInput): Required<InitiativeInput> {
   };
 }
 
-function validate(db: Executor, input: Required<InitiativeInput>): Selections {
+function validate(db: Executor, input: Required<AssessmentInput>): Selections {
   const issues = new IssueCollector();
   if (!input.name) issues.add("name", "Enter a name");
   else if (input.name.length > 120) issues.add("name", "Name must be 120 characters or fewer");
@@ -190,36 +190,36 @@ function validate(db: Executor, input: Required<InitiativeInput>): Selections {
   return { sources, releases: releaseIds.flatMap((publicId) => releasesByPublicId.get(publicId) ?? []) };
 }
 
-function replaceSourceSelections(db: Executor, initiative: Initiative, sources: readonly RepositorySource[]): void {
+function replaceSourceSelections(db: Executor, assessment: Assessment, sources: readonly RepositorySource[]): void {
   const wanted = new Set(sources.map((source) => source.id));
-  const existing = db.select().from(initiativeTargets).where(eq(initiativeTargets.initiativeId, initiative.id)).all();
+  const existing = db.select().from(assessmentTargets).where(eq(assessmentTargets.assessmentId, assessment.id)).all();
   const existingIds = new Set(existing.map((target) => target.repositorySourceId));
 
   const removed = existing.filter((target) => !wanted.has(target.repositorySourceId)).map((target) => target.id);
-  if (removed.length) db.delete(initiativeTargets).where(inArray(initiativeTargets.id, removed)).run();
+  if (removed.length) db.delete(assessmentTargets).where(inArray(assessmentTargets.id, removed)).run();
 
   const added = sources.filter((source) => !existingIds.has(source.id));
   const now = new Date();
   if (added.length) {
-    db.insert(initiativeTargets)
-      .values(added.map((source) => ({ initiativeId: initiative.id, repositorySourceId: source.id, createdAt: now })))
+    db.insert(assessmentTargets)
+      .values(added.map((source) => ({ assessmentId: assessment.id, repositorySourceId: source.id, createdAt: now })))
       .run();
   }
 }
 
-function replaceReleaseSelections(db: Executor, initiative: Initiative, releases: readonly StandardRelease[]): void {
+function replaceReleaseSelections(db: Executor, assessment: Assessment, releases: readonly StandardRelease[]): void {
   const wanted = new Set(releases.map((release) => release.id));
-  const existing = db.select().from(initiativeStandardReleases).where(eq(initiativeStandardReleases.initiativeId, initiative.id)).all();
+  const existing = db.select().from(assessmentStandardReleases).where(eq(assessmentStandardReleases.assessmentId, assessment.id)).all();
   const existingIds = new Set(existing.map((selection) => selection.standardReleaseId));
 
   const removed = existing.filter((selection) => !wanted.has(selection.standardReleaseId)).map((selection) => selection.id);
-  if (removed.length) db.delete(initiativeStandardReleases).where(inArray(initiativeStandardReleases.id, removed)).run();
+  if (removed.length) db.delete(assessmentStandardReleases).where(inArray(assessmentStandardReleases.id, removed)).run();
 
   const added = releases.filter((release) => !existingIds.has(release.id));
   const now = new Date();
   if (added.length) {
-    db.insert(initiativeStandardReleases)
-      .values(added.map((release) => ({ initiativeId: initiative.id, standardReleaseId: release.id, createdAt: now })))
+    db.insert(assessmentStandardReleases)
+      .values(added.map((release) => ({ assessmentId: assessment.id, standardReleaseId: release.id, createdAt: now })))
       .run();
   }
 }

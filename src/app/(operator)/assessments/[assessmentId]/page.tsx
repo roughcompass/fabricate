@@ -19,19 +19,19 @@ import { type Run, runNumbers, type RunTarget, listRuns, targetsOf } from "@/lib
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { type Evaluation, evaluationNumbers, evaluationReleasesOf, listEvaluations } from "@/lib/evaluations/evaluation-records";
-import { type Initiative, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
+import { type Assessment, scopeLabel, selectedReleases, selectedSources } from "@/lib/assessments/assessment-records";
 import { releaseById, releaseLabel, standardById } from "@/lib/standards/standard-records";
 import { startEvaluationAction } from "../../evaluations/actions";
 import { startRun } from "../actions";
 import { LaunchForm } from "../launch-form";
-import { initiativeOutcome } from "../outcomes";
+import { assessmentOutcome } from "../outcomes";
 import { routes } from "@/lib/web/routes";
 import { loadAssessment } from "./load";
 
 // One lookup per request, shared by the page and its metadata.
-export async function generateMetadata({ params }: PageProps<"/assessments/[initiativeId]">): Promise<Metadata> {
-  const initiative = loadAssessment((await params).initiativeId);
-  return { title: initiative?.name ?? "Assessment not found" };
+export async function generateMetadata({ params }: PageProps<"/assessments/[assessmentId]">): Promise<Metadata> {
+  const assessment = loadAssessment((await params).assessmentId);
+  return { title: assessment?.name ?? "Assessment not found" };
 }
 
 const reusable = (state: string) => state === "complete" || state === "complete_with_issues";
@@ -49,22 +49,22 @@ interface EvaluationRow {
   releases: string[];
 }
 
-export default async function InitiativePage({ params, searchParams }: PageProps<"/assessments/[initiativeId]">) {
-  const [{ initiativeId }, query] = await Promise.all([params, searchParams]);
+export default async function AssessmentPage({ params, searchParams }: PageProps<"/assessments/[assessmentId]">) {
+  const [{ assessmentId }, query] = await Promise.all([params, searchParams]);
   const db = getDb();
-  const initiative = loadAssessment(initiativeId);
-  if (!initiative) notFound();
+  const assessment = loadAssessment(assessmentId);
+  if (!assessment) notFound();
 
-  const sources = selectedSources(db, initiative.id);
-  const releases = selectedReleases(db, initiative.id);
-  const runNumber = runNumbers(db, initiative.id);
-  const evaluationNumber = evaluationNumbers(db, initiative.id);
-  const runs = listRuns(db, initiative.id).map((run) => ({
+  const sources = selectedSources(db, assessment.id);
+  const releases = selectedReleases(db, assessment.id);
+  const runNumber = runNumbers(db, assessment.id);
+  const evaluationNumber = evaluationNumbers(db, assessment.id);
+  const runs = listRuns(db, assessment.id).map((run) => ({
     run,
     number: runNumber.get(run.id)!,
     targets: targetsOf(db, run.id),
   }));
-  const evaluations = listEvaluations(db, { initiativeId: initiative.id }).map((evaluation) => ({
+  const evaluations = listEvaluations(db, { assessmentId: assessment.id }).map((evaluation) => ({
     evaluation,
     number: evaluationNumber.get(evaluation.id)!,
     run: runs.find(({ run }) => run.id === evaluation.runId)!,
@@ -73,23 +73,23 @@ export default async function InitiativePage({ params, searchParams }: PageProps
       return releaseLabel(standardById(db, release.standardId), release);
     }),
   }));
-  const scope = initiative.selectionMode === "all" ? `${scopeLabel(initiative, 0)} (${listSources(db).length} now)` : scopeLabel(initiative, sources.length);
-  const editHref = routes.assessmentEdit(initiative.publicId);
+  const scope = assessment.selectionMode === "all" ? `${scopeLabel(assessment, 0)} (${listSources(db).length} now)` : scopeLabel(assessment, sources.length);
+  const editHref = routes.assessmentEdit(assessment.publicId);
 
   return (
     <Page>
       <PageHeader
         breadcrumbs={[{ href: "/assessments", label: "Assessments" }]}
-        title={initiative.name}
+        title={assessment.name}
         meta={[
           <span key="created">
-            Created <RelativeTime value={initiative.createdAt} />
+            Created <RelativeTime value={assessment.createdAt} />
           </span>,
         ]}
-        description={initiative.objective || undefined}
+        description={assessment.objective || undefined}
         secondaryActions={[{ href: editHref, label: "Edit", icon: "edit" }]}
-        primaryAction={<LaunchForm action={startRun.bind(null, initiative.publicId)} launchToken={crypto.randomUUID()} label="Start Run" failure="The Run was not started because its scope could not be resolved." />}
-        alerts={<OutcomeToast outcome={initiativeOutcome(param(query, "notice"), initiative)} />}
+        primaryAction={<LaunchForm action={startRun.bind(null, assessment.publicId)} launchToken={crypto.randomUUID()} label="Start Run" failure="The Run was not started because its scope could not be resolved." />}
+        alerts={<OutcomeToast outcome={assessmentOutcome(param(query, "notice"), assessment)} />}
       />
 
       <Section title="Overview">
@@ -97,7 +97,7 @@ export default async function InitiativePage({ params, searchParams }: PageProps
           layout="columns"
           items={[
             ["Repositories", scope],
-            ...(initiative.selectionMode === "explicit"
+            ...(assessment.selectionMode === "explicit"
               ? ([
                   [
                     "Selected Repositories",
@@ -125,7 +125,7 @@ export default async function InitiativePage({ params, searchParams }: PageProps
                 </span>
               ) : (
                 <span key="releases">
-                  None selected. <Link href={routes.assessmentEdit(initiative.publicId, "initiative-releases")}>Select a Release</Link> to run Evaluations.
+                  None selected. <Link href={routes.assessmentEdit(assessment.publicId, "initiative-releases")}>Select a Release</Link> to run Evaluations.
                 </span>
               ),
             ],
@@ -133,7 +133,7 @@ export default async function InitiativePage({ params, searchParams }: PageProps
         />
       </Section>
 
-      <RunsSection initiative={initiative} runs={runs} hasReleases={releases.length > 0} />
+      <RunsSection assessment={assessment} runs={runs} hasReleases={releases.length > 0} />
 
       <EvaluationsSection evaluations={evaluations} hasReleases={releases.length > 0} />
 
@@ -143,11 +143,11 @@ export default async function InitiativePage({ params, searchParams }: PageProps
             [
               "ID",
               <Tag key="id" copy label="ID">
-                {initiative.publicId}
+                {assessment.publicId}
               </Tag>,
             ],
-            ["Created", <RelativeTime key="created" value={initiative.createdAt} />],
-            ["Updated", <RelativeTime key="updated" value={initiative.updatedAt} />],
+            ["Created", <RelativeTime key="created" value={assessment.createdAt} />],
+            ["Updated", <RelativeTime key="updated" value={assessment.updatedAt} />],
           ]}
         />
       </Disclosure>
@@ -156,7 +156,7 @@ export default async function InitiativePage({ params, searchParams }: PageProps
 }
 
 /** Every Run of the Assessment, each with what it can do next: wait, be evaluated, or have a Release selected first. */
-function RunsSection({ initiative, runs, hasReleases }: { initiative: Initiative; runs: RunRow[]; hasReleases: boolean }) {
+function RunsSection({ assessment, runs, hasReleases }: { assessment: Assessment; runs: RunRow[]; hasReleases: boolean }) {
   return (
     <Section title="Runs" description="Each Run keeps the scope it started with; a finished one can be evaluated again after the Release selection changes.">
       <Panel flush>
@@ -200,10 +200,10 @@ function RunsSection({ initiative, runs, hasReleases }: { initiative: Initiative
                       {!reusable(run.state) ? (
                         <Secondary>{run.state === "failed" || run.state === "canceled" ? "No results to evaluate" : "Evaluate once finished"}</Secondary>
                       ) : !hasReleases ? (
-                        <Link href={routes.assessmentEdit(initiative.publicId, "initiative-releases")}>Select a Release to evaluate</Link>
+                        <Link href={routes.assessmentEdit(assessment.publicId, "initiative-releases")}>Select a Release to evaluate</Link>
                       ) : (
                         <LaunchForm
-                          action={startEvaluationAction.bind(null, initiative.publicId, run.publicId)}
+                          action={startEvaluationAction.bind(null, assessment.publicId, run.publicId)}
                           launchToken={crypto.randomUUID()}
                           label="Start Evaluation"
                           accessibleName={`Start Evaluation of Run #${number}`}

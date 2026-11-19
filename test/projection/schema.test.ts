@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { PROJECTED_EDGE_STATES, PROJECTED_EDGE_TYPES, PROJECTED_NODE_KINDS } from "@/lib/db/schema";
 import { EDGE_TYPES, NODE_KINDS, RESOLUTION_STATES } from "@/lib/relationships/schema";
-import { buildInitiative, buildSource } from "../support/builders";
+import { buildAssessment, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { PROJECTION_TABLES, count, pinnedRepository } from "../support/projection";
 import { manifest } from "../support/profiles";
@@ -22,9 +22,9 @@ describe("projection rows", () => {
   beforeEach(async () => {
     db = createTestDb();
     const sources = ["web", "client", "ui-a", "ui-b", "billing"].map((name) => buildSource(db, { name }));
-    const initiative = buildInitiative(db, { sources });
+    const assessment = buildAssessment(db, { sources });
     // Two repositories produce @acme/ui, so web's dependency on it is ambiguous.
-    await seedRun(db, initiative, sources, [
+    await seedRun(db, assessment, sources, [
       pinnedRepository("web", { "@acme/client": "1.0.0", "@acme/ui": "2.0.0", react: "16.14.0" }),
       pinnedRepository("@acme/client", { react: "18.3.1" }),
       { "package.json": manifest({ name: "@acme/ui", version: "2.0.0" }) },

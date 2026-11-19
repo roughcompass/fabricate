@@ -94,9 +94,9 @@ test("groups Findings under their Control, and a Gap filter shows only Controls 
 });
 
 test("shows one Release's conclusion with the combined counts and no per-Release table", async ({ page, db }) => {
-  const { initiative, run, baseline } = await seedResults(db);
-  selectReleases(db, initiative, [baseline]);
-  const evaluation = await evaluate(db, initiative.publicId, run.publicId);
+  const { assessment, run, baseline } = await seedResults(db);
+  selectReleases(db, assessment, [baseline]);
+  const evaluation = await evaluate(db, assessment.publicId, run.publicId);
   await page.goto(`/evaluations/${evaluation.publicId}`);
 
   const outcomes = page.getByLabel("Outcomes", { exact: true });
@@ -106,7 +106,7 @@ test("shows one Release's conclusion with the combined counts and no per-Release
 });
 
 test("explains a Gap: expected state, observed facts, evidence, reasoning, and guidance that is not an action", async ({ page, db }) => {
-  const { initiative, evaluation } = await seedEvaluation(db);
+  const { assessment, evaluation } = await seedEvaluation(db);
   await page.goto(`/evaluations/${evaluation.publicId}?control=services-configurable`);
   await page.getByRole("table", { name: "Service destinations are configurable or contracted Findings" }).getByRole("link", { name: "orders" }).click();
 
@@ -114,7 +114,7 @@ test("explains a Gap: expected state, observed facts, evidence, reasoning, and g
   // The outcome appears once, in the header.
   await expect(pageHeader(page)).toContainText("Gap");
   await expect(page.locator("main").getByText("Gap", { exact: true })).toHaveCount(1);
-  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Assessments", initiative.name, "Evaluation #1"]);
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Assessments", assessment.name, "Evaluation #1"]);
   const result = page.getByRole("region", { name: "Result" });
   await expect(result).toContainText("The Control applies, and the evidence shows the expected condition does not hold.");
   // A Control that reads only Service Dependencies links to the top of the Profile.

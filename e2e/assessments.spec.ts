@@ -1,9 +1,9 @@
 import type { Page } from "@playwright/test";
 import { listRuns } from "../src/lib/runs/run-records";
 import { jobs } from "../src/lib/db/schema";
-import { listInitiatives, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
+import { listAssessments, selectedReleases, selectedSources } from "../src/lib/assessments/assessment-records";
 import { createStandard } from "../src/lib/standards/standard-records";
-import { buildRun, buildInitiative, buildRelease, buildSource } from "../test/support/builders";
+import { buildRun, buildAssessment, buildRelease, buildSource } from "../test/support/builders";
 import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -32,9 +32,9 @@ test("creates an Initiative of all Repositories with two Releases, then narrows 
   await expect(overview(page)).toContainText("All Repositories (3 now)");
   await expect(overview(page)).toContainText("Frontend baseline v1");
   await expect(overview(page)).toContainText("Security baseline v1");
-  const [initiative] = listInitiatives(db);
-  expect(selectedReleases(db, initiative!.id)).toHaveLength(2);
-  expect(selectedSources(db, initiative!.id)).toEqual([]);
+  const [assessment] = listAssessments(db);
+  expect(selectedReleases(db, assessment!.id)).toHaveLength(2);
+  expect(selectedSources(db, assessment!.id)).toEqual([]);
 
   await page.getByRole("link", { name: "Edit" }).click();
   await page.getByRole("radio", { name: /Selected Repositories/ }).check();
@@ -48,7 +48,7 @@ test("creates an Initiative of all Repositories with two Releases, then narrows 
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(toast(page, "Modernize the fleet was updated.")).toBeVisible();
   await expect(overview(page)).toContainText("2 selected Repositories");
-  expect(selectedSources(db, initiative!.id).map((source) => source.name)).toEqual(["accounts", "orders"]);
+  expect(selectedSources(db, assessment!.id).map((source) => source.name)).toEqual(["accounts", "orders"]);
 });
 
 test("shows a rejected field once and focuses it", async ({ page, db: _db }) => {
@@ -81,24 +81,24 @@ test("refuses a draft Standard submitted as a Release selection", async ({ page,
   await page.getByRole("button", { name: "Create Assessment" }).click();
 
   await expect(page.getByRole("group", { name: "Standard Releases" })).toContainText("Unpublished is a draft Standard; select one of its published Releases");
-  expect(listInitiatives(db)).toEqual([]);
+  expect(listAssessments(db)).toEqual([]);
 });
 
 test("starts an Assessment once and lists it in the Initiative's history", async ({ page, db }) => {
   buildSource(db, { name: "orders", gitRef: "main" });
   buildSource(db, { name: "billing" });
-  const initiative = buildInitiative(db, { name: "Assess me" });
+  const assessment = buildAssessment(db, { name: "Assess me" });
 
-  await page.goto(paths.assessment(initiative.publicId));
+  await page.goto(paths.assessment(assessment.publicId));
   await expect(overview(page)).toContainText("None selected");
   await page.getByRole("button", { name: "Start Run" }).dblclick();
 
   await expect(page.getByRole("heading", { level: 1, name: "Run #1" })).toBeVisible();
   await expect(page.getByText("billing").first()).toBeVisible();
-  expect(listRuns(db, initiative.id)).toHaveLength(1);
+  expect(listRuns(db, assessment.id)).toHaveLength(1);
   expect(db.select().from(jobs).all().map((job) => job.kind)).toEqual(["assessment.coordinate"]);
 
-  await page.goto(paths.assessment(initiative.publicId));
+  await page.goto(paths.assessment(assessment.publicId));
   const history = page.getByRole("table", { name: "Run history" });
   await expect(history.getByRole("link", { name: "Run #1" })).toBeVisible();
   await expect(history).toContainText("2 Repositories");
@@ -106,9 +106,9 @@ test("starts an Assessment once and lists it in the Initiative's history", async
 
 test("explains a scope that blocks an Assessment, below the header", async ({ page, db }) => {
   // An Assessment of all Repositories, while there are none.
-  const initiative = buildInitiative(db);
+  const assessment = buildAssessment(db);
 
-  await page.goto(paths.assessment(initiative.publicId));
+  await page.goto(paths.assessment(assessment.publicId));
   await page.getByRole("button", { name: "Start Run" }).click();
 
   const problems = page.locator("#page-alerts").getByRole("alert");
@@ -116,12 +116,12 @@ test("explains a scope that blocks an Assessment, below the header", async ({ pa
   await expect(problems.getByRole("listitem")).toHaveCount(1);
   await expect(problems).toContainText("there are no Repositories");
   await expect(page.locator("header").getByRole("alert")).toHaveCount(0);
-  expect(listRuns(db, initiative.id)).toEqual([]);
+  expect(listRuns(db, assessment.id)).toEqual([]);
 });
 
 test("deletes an Initiative without Assessments through a confirmation dialog", async ({ page, db }) => {
-  const initiative = buildInitiative(db, { name: "Short-lived" });
-  await page.goto(paths.assessmentEdit(initiative.publicId));
+  const assessment = buildAssessment(db, { name: "Short-lived" });
+  await page.goto(paths.assessmentEdit(assessment.publicId));
 
   const danger = page.getByRole("region", { name: "Delete Assessment" });
   await danger.getByRole("button", { name: "Delete Assessment" }).click();
@@ -131,28 +131,28 @@ test("deletes an Initiative without Assessments through a confirmation dialog", 
 
   await expect(page).toHaveURL(/\/assessments$/);
   await expect(toast(page, "The Assessment was deleted.")).toBeVisible();
-  expect(listInitiatives(db)).toEqual([]);
+  expect(listAssessments(db)).toEqual([]);
 });
 
 test("Link to a field: Select a Release opens the edit form at its Standard Releases field", async ({ page, db }) => {
-  const initiative = buildInitiative(db, { name: "No Releases yet" });
-  await page.goto(paths.assessment(initiative.publicId));
+  const assessment = buildAssessment(db, { name: "No Releases yet" });
+  await page.goto(paths.assessment(assessment.publicId));
   await page.getByRole("link", { name: "Select a Release" }).click();
-  await expect(page).toHaveURL(new RegExp(`${paths.assessmentEdit(initiative.publicId)}#initiative-releases$`));
+  await expect(page).toHaveURL(new RegExp(`${paths.assessmentEdit(assessment.publicId)}#initiative-releases$`));
   await expect(page.getByRole("group", { name: /Standard Releases/ })).toBeInViewport();
 });
 
 test("Initiative pages stay usable at mobile width", async ({ page, db }) => {
   buildSource(db, { name: "a-source-with-a-long-name-for-layout-testing" });
   buildRelease(db);
-  const initiative = buildInitiative(db, { name: "An initiative with a long descriptive name for layout" });
+  const assessment = buildAssessment(db, { name: "An initiative with a long descriptive name for layout" });
   await page.setViewportSize({ width: 375, height: 812 });
 
-  for (const path of [paths.assessments, paths.assessment(initiative.publicId), paths.newAssessment, paths.assessmentEdit(initiative.publicId)]) {
+  for (const path of [paths.assessments, paths.assessment(assessment.publicId), paths.newAssessment, paths.assessmentEdit(assessment.publicId)]) {
     await page.goto(path);
     await expectNoHorizontalOverflow(page);
   }
-  await page.goto(paths.assessment(initiative.publicId));
+  await page.goto(paths.assessment(assessment.publicId));
   await expect(page.getByRole("button", { name: "Start Run" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Edit" })).toBeHidden();
   await page.getByRole("button", { name: "More actions" }).click();
@@ -165,8 +165,8 @@ test.describe("conclusion tabs", () => {
   test("Gaps found tab lists only Assessments whose latest completed Evaluation found Gaps", async ({ page, db }) => {
     const source = buildSource(db, { name: "orders" });
     const evaluated = (name: string, conclusion: "gaps" | "conforms") => {
-      const initiative = buildInitiative(db, { name, sources: [source] });
-      return driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildRun(db, { initiative }).run, "complete")), "complete", conclusion);
+      const assessment = buildAssessment(db, { name, sources: [source] });
+      return driveEvaluation(db, buildEvaluation(db, assessment, driveRun(db, buildRun(db, { assessment }).run, "complete")), "complete", conclusion);
     };
     const gaps = evaluated("Checkout platform migration", "gaps");
     evaluated("Payments baseline", "conforms");
@@ -183,8 +183,8 @@ test.describe("conclusion tabs", () => {
   });
 
   test("Not evaluated tab lists an Assessment with Runs but no completed Evaluation", async ({ page, db }) => {
-    const initiative = buildInitiative(db, { name: "Checkout platform migration", sources: [buildSource(db)] });
-    driveRun(db, buildRun(db, { initiative }).run, "complete");
+    const assessment = buildAssessment(db, { name: "Checkout platform migration", sources: [buildSource(db)] });
+    driveRun(db, buildRun(db, { assessment }).run, "complete");
 
     await page.goto(`${paths.assessments}?conclusion=none`);
     await expect(rows(page)).toHaveCount(1);

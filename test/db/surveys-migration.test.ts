@@ -75,14 +75,14 @@ describe("surveys migration", () => {
     );
   }
 
-  /** A Run named +name+ of +initiative+, created at +time+ under +configurationDigest+, over +scope+ (repository and reference), moved to acquiring. */
-  function startRun(name: string, initiative: number, time: number, configurationDigest: string, scope: readonly (readonly [number, string | null])[]): Run {
+  /** A Run named +name+ of the Assessment +assessmentId+, created at +time+ under +configurationDigest+, over +scope+ (repository and reference), moved to acquiring. */
+  function startRun(name: string, assessmentId: number, time: number, configurationDigest: string, scope: readonly (readonly [number, string | null])[]): Run {
     const asm = publicId("asm", name);
     const id = Number(
       run(
         "insert into assessments (public_id, initiative_id, launch_token, detector_release, configuration, configuration_digest, profile_schema_version, relationship_schema_version, created_at, updated_at) values (?, ?, ?, ?, '{}', ?, 2, 1, ?, ?)",
         asm,
-        initiative,
+        assessmentId,
         crypto.randomUUID(),
         RELEASE,
         configurationDigest,

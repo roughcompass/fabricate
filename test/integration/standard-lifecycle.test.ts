@@ -2,14 +2,14 @@ import crypto from "node:crypto";
 import type { JsonObject } from "@repo-facts/contract";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { createInitiative } from "@/app/(operator)/assessments/actions";
-import type { InitiativeFormState } from "@/app/(operator)/assessments/form-state";
+import { createAssessment } from "@/app/(operator)/assessments/actions";
+import type { AssessmentFormState } from "@/app/(operator)/assessments/form-state";
 import { createStandard, publishStandard, reviseStandard, saveDraft } from "@/app/(operator)/standards/actions";
 import { ControlList } from "@/app/(operator)/standards/control-view";
 import type { DraftSaveState } from "@/app/(operator)/standards/form-state";
 import { findingDocument, findingsOf, getEvaluation } from "@/lib/evaluations/evaluation-records";
 import { startEvaluation } from "@/lib/evaluations/start";
-import { getInitiative, listInitiatives, selectedReleases } from "@/lib/initiatives/initiative-records";
+import { getAssessment, listAssessments, selectedReleases } from "@/lib/assessments/assessment-records";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { draftOf, getStandard, listStandards, releaseDocument, releasesOf } from "@/lib/standards/standard-records";
@@ -136,19 +136,19 @@ describe("Standard lifecycle", () => {
   it("is selected by an Initiative and evaluated against an Assessment without running any Control content", async () => {
     const [v1] = releasesOf(app.db, getStandard(app.db, standardId).id);
     const storefront = buildSource(app.db, { name: "storefront" });
-    const blank: InitiativeFormState = { values: { name: "", objective: "", selectionMode: "all", sourcePublicIds: [], standardReleasePublicIds: [] }, errors: {} };
-    await redirectOf(createInitiative(blank, formData({ name: "Offline readiness", objective: "Work without live services", selectionMode: "explicit", sourcePublicIds: [storefront.publicId], standardReleasePublicIds: [v1!.publicId] })));
-    const initiative = listInitiatives(app.db)[0]!;
-    expect(selectedReleases(app.db, initiative.id).map(({ release }) => release.publicId)).toEqual([v1!.publicId]);
+    const blank: AssessmentFormState = { values: { name: "", objective: "", selectionMode: "all", sourcePublicIds: [], standardReleasePublicIds: [] }, errors: {} };
+    await redirectOf(createAssessment(blank, formData({ name: "Offline readiness", objective: "Work without live services", selectionMode: "explicit", sourcePublicIds: [storefront.publicId], standardReleasePublicIds: [v1!.publicId] })));
+    const assessment = listAssessments(app.db)[0]!;
+    expect(selectedReleases(app.db, assessment.id).map(({ release }) => release.publicId)).toEqual([v1!.publicId]);
 
-    const run = await seedRun(app.db, getInitiative(app.db, initiative.publicId), [storefront], [
+    const run = await seedRun(app.db, getAssessment(app.db, assessment.publicId), [storefront], [
       {
         "package.json": manifest({ name: "storefront", version: "1.0.0" }),
         "src/payments.ts": 'export const charge = () => fetch("https://payments.invalid/v1/charges", { method: "POST" }).then((res) => res.json()).then((body) => body.status);\n',
         "src/orders.ts": "export const orders = () => fetch(`${process.env.ORDERS_URL}/orders`).then((res) => res.json()).then((body) => body.orders);\n",
       },
     ]);
-    const { evaluation } = startEvaluation(app.db, initiative.publicId, run.publicId, crypto.randomUUID());
+    const { evaluation } = startEvaluation(app.db, assessment.publicId, run.publicId, crypto.randomUUID());
     await drainJobs(app.db, jobHandlers(app.db));
     expect(getEvaluation(app.db, evaluation.publicId).state).toBe("complete");
 
@@ -182,6 +182,6 @@ describe("Standard lifecycle", () => {
     expect({ digest: original!.digest, document: original!.document }).toEqual(published);
     expect(releaseDocument(v2!).controls).toHaveLength(1);
     // The Initiative keeps the Release it selected until someone changes the selection.
-    expect(selectedReleases(app.db, listInitiatives(app.db)[0]!.id).map(({ release }) => release.version)).toEqual([1]);
+    expect(selectedReleases(app.db, listAssessments(app.db)[0]!.id).map(({ release }) => release.version)).toEqual([1]);
   });
 });

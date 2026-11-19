@@ -7,11 +7,11 @@ import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { fleetSummary } from "@/lib/home/summary";
-import { selectedSources } from "@/lib/initiatives/initiative-records";
+import { selectedSources } from "@/lib/assessments/assessment-records";
 import { deletePreview } from "@/lib/previews/lifecycle";
 import { versionsOf } from "@/lib/profiling/versions";
 import { requestSurvey } from "@/lib/surveys/records";
-import { buildRun, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { queuedPreview } from "../support/previews";
 
@@ -34,7 +34,7 @@ describe("deleting a Repository", () => {
     const boundary = new SourceBoundary(getConfig());
     const orders = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "" }, boundary);
     surveyQueued(orders);
-    buildInitiative(db, { name: "Checkout", sources: [orders] });
+    buildAssessment(db, { name: "Checkout", sources: [orders] });
     buildRun(db, { sources: [orders] });
 
     expect(deletionEffects(db, orders)).toEqual({ versions: 1, assessments: ["Checkout"], runs: 1, previews: 0 });
@@ -55,7 +55,7 @@ describe("deleting a Repository", () => {
     const orders = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "" }, boundary);
     const survey = surveyQueued(orders);
     const billing = buildSource(db, { name: "billing" });
-    const checkout = buildInitiative(db, { name: "Checkout", sources: [orders, billing] });
+    const checkout = buildAssessment(db, { name: "Checkout", sources: [orders, billing] });
     const { run } = buildRun(db, { sources: [orders, billing] });
 
     deleteSource(db, orders.publicId, " orders ");
@@ -64,7 +64,7 @@ describe("deleting a Repository", () => {
     expect(findSourceIncludingDeleted(db, orders.publicId)?.deletedAt).toBeInstanceOf(Date);
     expect(listSources(db).map((source) => source.name)).toEqual(["billing"]);
     expect(fleetSummary(db).repositories).toMatchObject({ total: 1 });
-    expect(resolveScope(db, buildInitiative(db)).map((source) => source.name)).toEqual(["billing"]);
+    expect(resolveScope(db, buildAssessment(db)).map((source) => source.name)).toEqual(["billing"]);
     expect(selectedSources(db, checkout.id).map((source) => source.name)).toEqual(["billing"]);
     expect(versionsOf(db, orders.id).map((version) => version.survey)).toEqual([survey]);
     expect(db.$client.prepare("select source_name from assessment_targets where assessment_id = ? order by source_name").all(run.id)).toEqual([{ source_name: "billing" }, { source_name: "orders" }]);

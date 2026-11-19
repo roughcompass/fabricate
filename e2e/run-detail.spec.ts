@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { buildRun, buildInitiative, buildSource } from "../test/support/builders";
+import { buildRun, buildAssessment, buildSource } from "../test/support/builders";
 import { manifest } from "../test/support/profiles";
 import { seedRun } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
@@ -24,10 +24,10 @@ for (const viewport of [
     await page.setViewportSize(viewport);
     const orders = buildSource(db, { name: "orders" });
     const billing = buildSource(db, { name: "billing" });
-    const initiative = buildInitiative(db, { name: "Fleet assessment", sources: [orders, billing] });
+    const assessment = buildAssessment(db, { name: "Fleet assessment", sources: [orders, billing] });
     const sources = [orders, billing];
 
-    const complete = await seedRun(db, initiative, sources, [files("orders"), files("billing")]);
+    const complete = await seedRun(db, assessment, sources, [files("orders"), files("billing")]);
     await page.goto(paths.run(complete.publicId));
     await expect(pageHeader(page)).toContainText("Complete");
     await expect(page.getByRole("heading", { level: 1, name: "Run #1" })).toBeVisible();
@@ -40,7 +40,7 @@ for (const viewport of [
     await expect(page.getByRole("button", { name: "Cancel Run" })).toHaveCount(0);
     await expectLaidOut(page);
 
-    const partial = await seedRun(db, initiative, sources, [files("orders"), "failed"]);
+    const partial = await seedRun(db, assessment, sources, [files("orders"), "failed"]);
     await page.goto(paths.run(partial.publicId));
     await expect(pageHeader(page)).toContainText("Complete with issues");
     await expect(page.getByText("1 of 2 repositories could not be assessed")).toBeVisible();
@@ -51,7 +51,7 @@ for (const viewport of [
     await expect(page.getByRole("link", { name: "orders Profile" })).toBeVisible();
     await expectLaidOut(page);
 
-    const failed = await seedRun(db, initiative, sources, ["failed", "failed"]);
+    const failed = await seedRun(db, assessment, sources, ["failed", "failed"]);
     await page.goto(paths.run(failed.publicId));
     await expect(pageHeader(page)).toContainText("Failed");
     await expect(page.getByText("No repository could be assessed")).toBeVisible();
@@ -59,7 +59,7 @@ for (const viewport of [
     await expect(page.getByRole("link", { name: /Profile$/ })).toHaveCount(0);
     await expectLaidOut(page);
 
-    const canceled = await seedRun(db, initiative, sources, [files("orders"), "canceled"], { cancel: true });
+    const canceled = await seedRun(db, assessment, sources, [files("orders"), "canceled"], { cancel: true });
     await page.goto(paths.run(canceled.publicId));
     await expect(pageHeader(page)).toContainText("Canceled");
     await expect(page.getByText("1 completed Profile remains reviewable.", { exact: false })).toBeVisible();
@@ -68,7 +68,7 @@ for (const viewport of [
     await expectLaidOut(page);
 
     // Every Assessment of the Initiative stays reachable from it.
-    await page.goto(paths.assessment(initiative.publicId));
+    await page.goto(paths.assessment(assessment.publicId));
     for (const [index, run] of [complete, partial, failed, canceled].entries()) {
       await expect(page.getByRole("link", { name: `Run #${index + 1}` })).toHaveAttribute("href", paths.run(run.publicId));
     }

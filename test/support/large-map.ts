@@ -2,7 +2,7 @@ import type { MemoryFile } from "@repo-facts/contract";
 import type { Run } from "@/lib/runs/run-records";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
-import { buildInitiative, buildSource } from "./builders";
+import { buildAssessment, buildSource } from "./builders";
 import { manifest } from "./profiles";
 import { seedRun } from "./scenarios";
 
@@ -64,7 +64,7 @@ export async function seedLargeMap(db: Db): Promise<LargeMap> {
 
   const names = [...trees.keys()];
   const sources = new Map(names.map((name) => [name, buildSource(db, { name })]));
-  const initiative = buildInitiative(db, { name: "Large map", sources: [...sources.values()] });
-  const run = await seedRun(db, initiative, [...sources.values()], names.map((name) => trees.get(name)!));
+  const assessment = buildAssessment(db, { name: "Large map", sources: [...sources.values()] });
+  const run = await seedRun(db, assessment, [...sources.values()], names.map((name) => trees.get(name)!));
   return { run, sources };
 }

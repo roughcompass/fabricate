@@ -11,11 +11,11 @@ import { evaluationReleasesOf, findingDocument, findingsOf, getEvaluation } from
 import { finalizeEvaluation, runEvaluationRelease } from "@/lib/evaluations/jobs";
 import { EVALUATE_RELEASE, EvaluationStartError, startEvaluation } from "@/lib/evaluations/start";
 import { GitRunner } from "@/lib/git/runner";
-import { type Initiative, updateInitiative } from "@/lib/initiatives/initiative-records";
+import { type Assessment, updateAssessment } from "@/lib/assessments/assessment-records";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { type StandardRelease, createStandard, insertRelease } from "@/lib/standards/standard-records";
-import { buildInitiative, buildSource } from "../support/builders";
+import { buildAssessment, buildSource } from "../support/builders";
 import { createTestDb, withSharedFileDb } from "../support/db";
 import { manifest } from "../support/profiles";
 import { publishStandard, seedRun } from "../support/scenarios";
@@ -32,16 +32,16 @@ describe("Evaluation pipeline", () => {
     db = createTestDb();
   });
 
-  function select(initiative: Initiative, releases: StandardRelease[]): Initiative {
-    return updateInitiative(db, initiative.publicId, initiative.lockVersion, { name: initiative.name, objective: initiative.objective, selectionMode: "all", standardReleasePublicIds: releases.map((release) => release.publicId) });
+  function select(assessment: Assessment, releases: StandardRelease[]): Assessment {
+    return updateAssessment(db, assessment.publicId, assessment.lockVersion, { name: assessment.name, objective: assessment.objective, selectionMode: "all", standardReleasePublicIds: releases.map((release) => release.publicId) });
   }
 
   async function scenario() {
     const npm = buildSource(db, { name: "npm-app" });
     const pnpm = buildSource(db, { name: "pnpm-app" });
-    const initiative = buildInitiative(db);
-    const run = await seedRun(db, initiative, [npm, pnpm], [NPM, PNPM]);
-    return { initiative, run };
+    const assessment = buildAssessment(db);
+    const run = await seedRun(db, assessment, [npm, pnpm], [NPM, PNPM]);
+    return { assessment, run };
   }
 
   const summaryOf = (publicId: string) => parseCanonical(getEvaluation(db, publicId).summary!) as JsonObject;
@@ -49,10 +49,10 @@ describe("Evaluation pipeline", () => {
   describe("starting", () => {
     it("pins the selected Releases by digest, records coverage gaps, and enqueues one job per Release in one transaction", async () => {
       const failing = buildSource(db, { name: "billing" });
-      const { initiative } = await scenario();
-      const partial = await seedRun(db, initiative, [buildSource(db, { name: "orders" }), failing], [NPM, "failed"]);
+      const { assessment } = await scenario();
+      const partial = await seedRun(db, assessment, [buildSource(db, { name: "orders" }), failing], [NPM, "failed"]);
       const [a, b] = [publishStandard(db, "Tooling A", [control({ key: "uses-pnpm", condition: manager("pnpm") })]), publishStandard(db, "Tooling B", [control({ key: "uses-npm", condition: manager("npm") })])];
-      const updated = select(initiative, [a!, b!]);
+      const updated = select(assessment, [a!, b!]);
 
       const token = crypto.randomUUID();
       const { evaluation, releases, duplicate } = startEvaluation(db, updated.publicId, partial.publicId, token);
@@ -69,11 +69,11 @@ describe("Evaluation pipeline", () => {
     });
 
     it("refuses unfinished Assessments, Assessments without Profiles, missing selections, and incompatible Releases, creating nothing", async () => {
-      const { initiative, run } = await scenario();
-      const expectRefusal = (initiativeId: string, runId: string, problem: RegExp) => {
+      const { assessment, run } = await scenario();
+      const expectRefusal = (assessmentId: string, runId: string, problem: RegExp) => {
         const error = (() => {
           try {
-            startEvaluation(db, initiativeId, runId, crypto.randomUUID());
+            startEvaluation(db, assessmentId, runId, crypto.randomUUID());
           } catch (caught) {
             return caught;
           }
@@ -83,11 +83,11 @@ describe("Evaluation pipeline", () => {
         expect((error as EvaluationStartError).problems.join(" ")).toMatch(problem);
       };
 
-      expectRefusal(initiative.publicId, run.publicId, /Select at least one published Standard Release/);
-      const selected = select(initiative, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]);
+      expectRefusal(assessment.publicId, run.publicId, /Select at least one published Standard Release/);
+      const selected = select(assessment, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]);
       const failedOnly = await (async () => {
         const source = buildSource(db, { name: "down" });
-        const { run, targets } = createRun(db, { initiative: selected, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [source] });
+        const { run, targets } = createRun(db, { assessment: selected, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [source] });
         transitionTarget(db, transitionTarget(db, targets[0]!, "acquiring"), "failed", { failureCode: "source_unavailable", failureMessage: "x" });
         return transitionRun(db, transitionRun(db, run, "finalizing"), "failed");
       })();
@@ -95,7 +95,7 @@ describe("Evaluation pipeline", () => {
 
       // A Release that reads only Profile v2 cannot evaluate an Assessment from Surveyor release 0.1.0, with Profile v1.
       const v2Only = select(selected, [publishStandard(db, "Design system", [control({ key: "uses-pnpm", condition: manager("pnpm") })], { profileVersions: [2] })]);
-      const v1 = createRun(db, { initiative: v2Only, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [buildSource(db, { name: "earlier" })] }).run;
+      const v1 = createRun(db, { assessment: v2Only, launchToken: crypto.randomUUID(), surveyorRelease: "0.1.0", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, sources: [buildSource(db, { name: "earlier" })] }).run;
       expectRefusal(v2Only.publicId, v1.publicId, /supports Repository Profile v2, but the Assessment has v1/);
       expect(db.select().from(jobs).all().filter((job) => job.kind === EVALUATE_RELEASE)).toEqual([]);
     });
@@ -103,10 +103,10 @@ describe("Evaluation pipeline", () => {
 
   describe("jobs and finalization", () => {
     it("evaluate each Release independently, keeping contradictory expectations as separate Findings, and finalize once", async () => {
-      const { initiative, run } = await scenario();
+      const { assessment, run } = await scenario();
       const pnpmRelease = publishStandard(db, "Prefers pnpm", [control({ key: "package-manager", condition: manager("pnpm") })]);
       const npmRelease = publishStandard(db, "Prefers npm", [control({ key: "package-manager", condition: manager("npm") })]);
-      const selected = select(initiative, [pnpmRelease, npmRelease]);
+      const selected = select(assessment, [pnpmRelease, npmRelease]);
       const { evaluation } = startEvaluation(db, selected.publicId, run.publicId, crypto.randomUUID());
 
       await drainJobs(db, jobHandlers(db));
@@ -133,8 +133,8 @@ describe("Evaluation pipeline", () => {
       await withSharedFileDb(async (shared, other) => {
         // The suite's helpers read its database.
         db = shared;
-        const { initiative, run } = await scenario();
-        const selected = select(initiative, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]);
+        const { assessment, run } = await scenario();
+        const selected = select(assessment, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]);
         const { evaluation } = startEvaluation(db, selected.publicId, run.publicId, crypto.randomUUID());
 
         await Promise.all([runEvaluationRelease(db, { evaluation: evaluation.publicId, position: 0 }), runEvaluationRelease(other, { evaluation: evaluation.publicId, position: 0 })]);
@@ -151,13 +151,13 @@ describe("Evaluation pipeline", () => {
     });
 
     it("fail a Release whose Controls exceed the evaluation limits, and fail the Evaluation with the reason", async () => {
-      const { initiative, run } = await scenario();
+      const { assessment, run } = await scenario();
       let deep: JsonObject = { op: "always" };
       for (let level = 0; level < 9; level++) deep = { op: "not", item: deep };
       // Written directly, as validation would never publish it.
       const { standard } = createStandard(db, { name: "Too deep", purpose: "Limits" });
       const release = insertRelease(db, { standard, document: standardDocument([control({ key: "deep", condition: deep })]), draftLockVersion: 0 });
-      const selected = select(initiative, [release]);
+      const selected = select(assessment, [release]);
       const { evaluation } = startEvaluation(db, selected.publicId, run.publicId, crypto.randomUUID());
 
       await drainJobs(db, jobHandlers(db));
@@ -174,8 +174,8 @@ describe("Evaluation pipeline", () => {
     });
 
     it("reuse one Assessment after only the Release selection changes, without Git, processes, DNS, or the network", async () => {
-      const { initiative, run } = await scenario();
-      const first = startEvaluation(db, select(initiative, [publishStandard(db, "Tooling A", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]).publicId, run.publicId, crypto.randomUUID()).evaluation;
+      const { assessment, run } = await scenario();
+      const first = startEvaluation(db, select(assessment, [publishStandard(db, "Tooling A", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]).publicId, run.publicId, crypto.randomUUID()).evaluation;
       await drainJobs(db, jobHandlers(db));
 
       traps = [
@@ -184,7 +184,7 @@ describe("Evaluation pipeline", () => {
         vi.spyOn(dns, "lookup"),
         vi.spyOn(globalThis, "fetch"),
       ];
-      const current = (await import("@/lib/initiatives/initiative-records")).getInitiative(db, initiative.publicId);
+      const current = (await import("@/lib/assessments/assessment-records")).getAssessment(db, assessment.publicId);
       const second = startEvaluation(db, select(current, [publishStandard(db, "Tooling B", [control({ key: "uses-npm", condition: manager("npm") })])]).publicId, run.publicId, crypto.randomUUID()).evaluation;
       await drainJobs(db, jobHandlers(db));
 
@@ -196,9 +196,9 @@ describe("Evaluation pipeline", () => {
     });
 
     it("never fold Indeterminate or Not applicable into Gap, and never conclude conformance under uncertainty", async () => {
-      const initiative = buildInitiative(db);
-      const partial = await seedRun(db, initiative, [buildSource(db, { name: "pnpm-app" }), buildSource(db, { name: "billing" })], [PNPM, "failed"]);
-      const selected = select(initiative, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") }), control({ key: "typescript-only", applicability: { op: "contains", selector: "repository.languages", mode: "any", values: ["TypeScript"] }, condition: { op: "always" } })])]);
+      const assessment = buildAssessment(db);
+      const partial = await seedRun(db, assessment, [buildSource(db, { name: "pnpm-app" }), buildSource(db, { name: "billing" })], [PNPM, "failed"]);
+      const selected = select(assessment, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") }), control({ key: "typescript-only", applicability: { op: "contains", selector: "repository.languages", mode: "any", values: ["TypeScript"] }, condition: { op: "always" } })])]);
       const { evaluation } = startEvaluation(db, selected.publicId, partial.publicId, crypto.randomUUID());
       await drainJobs(db, jobHandlers(db));
 
@@ -212,8 +212,8 @@ describe("Evaluation pipeline", () => {
     });
 
     it("produce identical normalized results for identical inputs", async () => {
-      const { initiative, run } = await scenario();
-      const selected = select(initiative, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]);
+      const { assessment, run } = await scenario();
+      const selected = select(assessment, [publishStandard(db, "Tooling", [control({ key: "uses-pnpm", condition: manager("pnpm") })])]);
       const runs = [];
       for (let attempt = 0; attempt < 2; attempt++) {
         const { evaluation } = startEvaluation(db, selected.publicId, run.publicId, crypto.randomUUID());

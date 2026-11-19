@@ -15,8 +15,8 @@ export const routes = {
 
   assessments: "/assessments",
   newAssessment: "/assessments/new",
-  assessment: (initiativeId: string, query?: Query) => withQuery(`/assessments/${initiativeId}`, query),
-  assessmentEdit: (initiativeId: string, fragment?: string) => withQuery(`/assessments/${initiativeId}/edit`, {}, fragment),
+  assessment: (assessmentId: string, query?: Query) => withQuery(`/assessments/${assessmentId}`, query),
+  assessmentEdit: (assessmentId: string, fragment?: string) => withQuery(`/assessments/${assessmentId}/edit`, {}, fragment),
 
   run: (runId: string, query?: Query) => withQuery(`/runs/${runId}`, query),
   runMap: (runId: string, query?: Query) => withQuery(`/runs/${runId}/map`, query),

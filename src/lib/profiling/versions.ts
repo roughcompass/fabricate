@@ -1,6 +1,6 @@
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { type SurveyState, type SurveyTrigger, runs, initiatives, repositoryProfiles, surveys } from "@/lib/db/schema";
+import { type SurveyState, type SurveyTrigger, runs, assessments, repositoryProfiles, surveys } from "@/lib/db/schema";
 import type { JsonValue } from "@repo-facts/contract";
 import { statusVersion } from "@/lib/runs/status";
 import { SURVEY_MACHINE, activeStates } from "@/lib/db/state-machines";
@@ -50,11 +50,11 @@ export function isActive(version: Pick<ProfileVersion, "survey">): boolean {
 /** The versions of the repository +sourceId+, newest first: at most +limit+, after skipping +offset+. One query. */
 export function versionsOf(db: Executor, sourceId: number, limit = -1, offset = 0): ProfileVersion[] {
   return db
-    .select({ survey: surveys, profileId: repositoryProfiles.id, profilePublicId: repositoryProfiles.publicId, profileCreatedAt: repositoryProfiles.createdAt, runPublicId: runs.publicId, initiativeName: initiatives.name })
+    .select({ survey: surveys, profileId: repositoryProfiles.id, profilePublicId: repositoryProfiles.publicId, profileCreatedAt: repositoryProfiles.createdAt, runPublicId: runs.publicId, assessmentName: assessments.name })
     .from(surveys)
     .leftJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, surveys.id))
     .leftJoin(runs, eq(runs.id, surveys.requestedByRunId))
-    .leftJoin(initiatives, eq(initiatives.id, runs.initiativeId))
+    .leftJoin(assessments, eq(assessments.id, runs.assessmentId))
     .where(eq(surveys.repositorySourceId, sourceId))
     .orderBy(desc(surveys.number))
     .limit(limit)
@@ -68,7 +68,7 @@ export function versionsOf(db: Executor, sourceId: number, limit = -1, offset = 
       profile: found.profileId === null ? null : { id: found.profileId, publicId: found.profilePublicId!, createdAt: found.profileCreatedAt! },
       commit: found.survey.commitSha,
       failure: found.survey.state === "failed" ? { code: found.survey.failureCode ?? "analysis_failed", message: found.survey.failureMessage ?? "" } : null,
-      requestedBy: found.runPublicId === null ? null : { runPublicId: found.runPublicId, name: found.initiativeName ?? "" },
+      requestedBy: found.runPublicId === null ? null : { runPublicId: found.runPublicId, name: found.assessmentName ?? "" },
     }));
 }
 

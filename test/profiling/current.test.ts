@@ -12,7 +12,7 @@ import { repositoryProfiling } from "@/lib/profiling/versions";
 import { surveyRepository } from "@/lib/surveys/background";
 import { currentRecipe, latestSurvey, requestSurvey } from "@/lib/surveys/records";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildInitiative, buildSource } from "../support/builders";
+import { buildAssessment, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import type { Repo } from "../support/git-fixture";
 import { manifest, sha1 } from "../support/profiles";
@@ -37,8 +37,8 @@ describe("a repository's current Profile", () => {
   }
   /** Launches a Run of an Assessment over web, as it's configured now, and runs it to the end. */
   async function runAssessment(): Promise<void> {
-    const initiative = buildInitiative(world.db, { sources: [getSource(world.db, web.publicId)] });
-    launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config);
+    const assessment = buildAssessment(world.db, { sources: [getSource(world.db, web.publicId)] });
+    launchRun(world.db, assessment.publicId, crypto.randomUUID(), world.config);
     await run();
   }
 
@@ -58,7 +58,7 @@ describe("a repository's current Profile", () => {
     const feature = work.write("feature.txt", "feature\n").commit("feature");
     work.checkout("main");
     const named = updateSource(world.db, web.publicId, web.lockVersion, { gitRef: "feature" });
-    launchRun(world.db, buildInitiative(world.db, { sources: [named] }).publicId, crypto.randomUUID(), world.config);
+    launchRun(world.db, buildAssessment(world.db, { sources: [named] }).publicId, crypto.randomUUID(), world.config);
     updateSource(world.db, web.publicId, named.lockVersion, { gitRef: null });
     await run();
     return feature;
@@ -145,7 +145,7 @@ describe("reading current Profiles", () => {
   it("reads several repositories, or every one, in one query", async () => {
     const billing = buildSource(db, { name: "billing" });
     const ledger = buildSource(db, { name: "ledger" });
-    await seedRun(db, buildInitiative(db, { sources: [orders, billing, ledger] }), [orders, billing, ledger], [profiled("orders"), profiled("billing"), "failed"]);
+    await seedRun(db, buildAssessment(db, { sources: [orders, billing, ledger] }), [orders, billing, ledger], [profiled("orders"), profiled("billing"), "failed"]);
 
     const some = statementsOf(db, () => currentProfiles(db, [orders.id, ledger.id]));
     const every = statementsOf(db, () => currentProfiles(db));
@@ -157,7 +157,7 @@ describe("reading current Profiles", () => {
   });
 
   it("reads what the Repository page shows in two queries, however many versions there are", async () => {
-    for (let index = 0; index < 3; index++) await seedRun(db, buildInitiative(db, { sources: [orders] }), [orders], [profiled("orders")]);
+    for (let index = 0; index < 3; index++) await seedRun(db, buildAssessment(db, { sources: [orders] }), [orders], [profiled("orders")]);
     requestSurvey(db, { repositorySourceId: orders.id, commitSha: sha1("commit:queued"), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", ...currentRecipe(getConfig()) });
 
     const { result, statements } = statementsOf(db, () => repositoryProfiling(db, orders.id));

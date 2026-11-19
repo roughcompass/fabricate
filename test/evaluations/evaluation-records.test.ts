@@ -43,7 +43,7 @@ describe("evaluation records", () => {
     target = built.targets[0]!;
     rawRun(db, "update assessments set state = 'acquiring' where id = ?", built.run.id);
     ({ evaluation, releases: pinned } = createEvaluation(db, {
-      initiative: { id: built.run.initiativeId } as never,
+      assessment: { id: built.run.assessmentId } as never,
       run: built.run,
       launchToken: crypto.randomUUID(),
       evaluatorVersion: "test",
@@ -71,7 +71,7 @@ describe("evaluation records", () => {
   });
 
   it("rejects duplicate pinned Releases and an empty selection", () => {
-    const base = { initiative: { id: evaluation.initiativeId } as never, run: { id: evaluation.runId } as never, evaluatorVersion: "test", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [] };
+    const base = { assessment: { id: evaluation.assessmentId } as never, run: { id: evaluation.runId } as never, evaluatorVersion: "test", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [] };
 
     expect(() => createEvaluation(db, { ...base, launchToken: crypto.randomUUID(), releases: [first, first] })).toThrow(ValidationError);
     expect(() => createEvaluation(db, { ...base, launchToken: crypto.randomUUID(), releases: [] })).toThrow(ValidationError);

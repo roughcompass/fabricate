@@ -4,7 +4,7 @@ import { surveyRefFor } from "@/lib/acquisition/mirror";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { profileProblems } from "@/lib/profiles/schema";
 import { moveSurvey, pinSurvey, requestSurvey } from "@/lib/surveys/records";
-import { buildRun, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { memoryProfile } from "../support/profiles";
 import { count, pinnedRepository } from "../support/projection";
@@ -42,10 +42,10 @@ describe("projection writes", () => {
   it("stores neither the map nor any of its rows when projecting it fails", async () => {
     const db = createTestDb();
     const sources = [buildSource(db, { name: "web" })];
-    const initiative = buildInitiative(db, { sources });
+    const assessment = buildAssessment(db, { sources });
     failInsertsInto(db, "graph_edges");
 
-    await expect(seedRun(db, initiative, sources, [pinnedRepository("web", { react: "16.14.0" })])).rejects.toThrow(/projection failed/);
+    await expect(seedRun(db, assessment, sources, [pinnedRepository("web", { react: "16.14.0" })])).rejects.toThrow(/projection failed/);
     expect(count(db, "relationship_maps")).toBe(0);
     expect(count(db, "graph_nodes")).toBe(0);
     expect(count(db, "repository_profiles")).toBe(1);

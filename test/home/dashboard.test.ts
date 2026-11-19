@@ -6,7 +6,7 @@ import { attentionItems } from "@/lib/home/attention";
 import { currentRecipe, moveSurvey, requestSurvey } from "@/lib/surveys/records";
 import { finishSurvey } from "@/lib/surveys/run";
 import { getConfig } from "@/lib/config";
-import { buildRun, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 
@@ -43,9 +43,9 @@ describe("figures over seven days", () => {
   it("counts an Assessment's conclusion from Evaluations completed by then, and states no change for an Assessment created earlier (No change)", () => {
     const db = createTestDb();
     const source = buildSource(db);
-    const initiative = buildInitiative(db, { sources: [source] });
-    backdate(db, "initiatives", "created_at", initiative.id, 10);
-    const evaluation = driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildRun(db, { initiative }).run, "complete")), "complete", "gaps");
+    const assessment = buildAssessment(db, { sources: [source] });
+    backdate(db, "initiatives", "created_at", assessment.id, 10);
+    const evaluation = driveEvaluation(db, buildEvaluation(db, assessment, driveRun(db, buildRun(db, { assessment }).run, "complete")), "complete", "gaps");
     expect(figuresAt(db, new Date(NOW - WEEK_MS)).assessments).toMatchObject({ total: 1, byConclusion: { gaps: 0, none: 1 } });
     expect(changes(db)).toMatchObject({ assessments: "No change this week" });
     backdate(db, "evaluations", "finished_at", evaluation.id, 9);
@@ -58,8 +58,8 @@ describe("Assessment trend", () => {
     const db = createTestDb();
     const source = buildSource(db);
     const evaluate = (conclusion: "gaps" | "conforms") => {
-      const initiative = buildInitiative(db, { sources: [source] });
-      return driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildRun(db, { initiative }).run, "complete")), "complete", conclusion);
+      const assessment = buildAssessment(db, { sources: [source] });
+      return driveEvaluation(db, buildEvaluation(db, assessment, driveRun(db, buildRun(db, { assessment }).run, "complete")), "complete", conclusion);
     };
     evaluate("gaps");
     evaluate("gaps");
@@ -80,10 +80,10 @@ describe("recent activity", () => {
   it("leads with the newest finished Run, linking to it, and leaves background surveys out", () => {
     const db = createTestDb();
     const source = buildSource(db);
-    const orders = buildInitiative(db, { name: "Orders review", sources: [source] });
-    const older = driveRun(db, buildRun(db, { initiative: orders }).run, "complete");
+    const orders = buildAssessment(db, { name: "Orders review", sources: [source] });
+    const older = driveRun(db, buildRun(db, { assessment: orders }).run, "complete");
     backdate(db, "assessments", "finished_at", older.id, 1);
-    const failed = driveRun(db, buildRun(db, { initiative: orders }).run, "failed");
+    const failed = driveRun(db, buildRun(db, { assessment: orders }).run, "failed");
     // A background survey that failed is a version of the Repository, not a Run.
     const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...currentRecipe(getConfig()) });
     finishSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { failure: { code: "source_unavailable", message: "The repository could not be reached" } });
@@ -97,8 +97,8 @@ describe("recent activity", () => {
 
   it("lists at most ten", () => {
     const db = createTestDb();
-    const initiative = buildInitiative(db, { sources: [buildSource(db)] });
-    for (let index = 0; index < 12; index++) driveRun(db, buildRun(db, { initiative }).run, "complete");
+    const assessment = buildAssessment(db, { sources: [buildSource(db)] });
+    for (let index = 0; index < 12; index++) driveRun(db, buildRun(db, { assessment }).run, "complete");
     expect(recentActivity(db)).toHaveLength(10);
   });
 });

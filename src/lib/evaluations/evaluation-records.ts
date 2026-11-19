@@ -17,7 +17,7 @@ import {
 } from "@/lib/db/schema";
 import { type JsonObject, type JsonValue, digestOf, parseCanonical } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
-import type { Initiative } from "@/lib/initiatives/initiative-records";
+import type { Assessment } from "@/lib/assessments/assessment-records";
 import type { StandardRelease } from "@/lib/standards/standard-records";
 import { sequenceNumber, sequenceNumbers } from "@/lib/db/sequence";
 
@@ -34,7 +34,7 @@ export type EvaluationRelease = typeof evaluationReleases.$inferSelect;
 export type Finding = typeof findings.$inferSelect;
 
 export interface NewEvaluation {
-  initiative: Initiative;
+  assessment: Assessment;
   run: Run;
   launchToken: string;
   evaluatorVersion: string;
@@ -62,7 +62,7 @@ export function createEvaluation(db: Executor, input: NewEvaluation): { evaluati
       .insert(evaluations)
       .values({
         publicId: generatePublicId("evl"),
-        initiativeId: input.initiative.id,
+        assessmentId: input.assessment.id,
         runId: input.run.id,
         launchToken: input.launchToken,
         evaluatorVersion: input.evaluatorVersion,
@@ -105,13 +105,13 @@ export function getEvaluation(db: Executor, publicId: string): Evaluation {
   return evaluation;
 }
 
-export function findEvaluationByLaunchToken(db: Executor, initiativeId: number, launchToken: string): Evaluation | undefined {
-  return db.select().from(evaluations).where(and(eq(evaluations.initiativeId, initiativeId), eq(evaluations.launchToken, launchToken))).get();
+export function findEvaluationByLaunchToken(db: Executor, assessmentId: number, launchToken: string): Evaluation | undefined {
+  return db.select().from(evaluations).where(and(eq(evaluations.assessmentId, assessmentId), eq(evaluations.launchToken, launchToken))).get();
 }
 
-export function listEvaluations(db: Executor, filter: { initiativeId?: number; runId?: number }): Evaluation[] {
+export function listEvaluations(db: Executor, filter: { assessmentId?: number; runId?: number }): Evaluation[] {
   const conditions = [];
-  if (filter.initiativeId !== undefined) conditions.push(eq(evaluations.initiativeId, filter.initiativeId));
+  if (filter.assessmentId !== undefined) conditions.push(eq(evaluations.assessmentId, filter.assessmentId));
   if (filter.runId !== undefined) conditions.push(eq(evaluations.runId, filter.runId));
   return db
     .select()
@@ -122,13 +122,13 @@ export function listEvaluations(db: Executor, filter: { initiativeId?: number; r
 }
 
 /** An Evaluation's sequence number within its Assessment: "Evaluation #2" (src/lib/db/sequence.ts). */
-export function evaluationNumber(db: Executor, evaluation: Pick<Evaluation, "id" | "initiativeId">): number {
+export function evaluationNumber(db: Executor, evaluation: Pick<Evaluation, "id" | "assessmentId">): number {
   return sequenceNumber(db, evaluations, evaluation);
 }
 
 /** The sequence number of each of an Initiative's Evaluations, by id. */
-export function evaluationNumbers(db: Executor, initiativeId: number): Map<number, number> {
-  return sequenceNumbers(db, evaluations, initiativeId);
+export function evaluationNumbers(db: Executor, assessmentId: number): Map<number, number> {
+  return sequenceNumbers(db, evaluations, assessmentId);
 }
 
 export function evaluationReleasesOf(db: Executor, evaluationId: number): EvaluationRelease[] {

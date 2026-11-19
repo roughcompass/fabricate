@@ -20,11 +20,11 @@ export type Surface = [name: string, url: string];
 
 /** Seeds an Initiative with an Assessment, an Evaluation, Standards, and a draft, and returns the operator surfaces. */
 export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<Surface[]> {
-  const { initiative, sources, run } = await seedMapStates(db, { initiativeName: "Checkout platform migration", also: { orders: ORDERS } });
+  const { assessment, sources, run } = await seedMapStates(db, { assessmentName: "Checkout platform migration", also: { orders: ORDERS } });
   const baseline = publishStandard(db, "Engineering baseline", BASELINE_CONTROLS);
   const services = publishStandard(db, "Service readiness", SERVICE_CONTROLS);
-  selectReleases(db, initiative, [baseline, services]);
-  const evaluation = await evaluate(db, initiative.publicId, run.publicId);
+  selectReleases(db, assessment, [baseline, services]);
+  const evaluation = await evaluate(db, assessment.publicId, run.publicId);
   const orders = profilesOf(db, run.id).find(({ target }) => target.sourceName === "orders")!.profile;
   const evidenceId = Object.keys((profileDocument(orders).fact_document as JsonObject).evidence as JsonObject)[0]!;
   const gap = findingsOf(db, evaluation.id, { controlKey: "services-configurable", outcomes: ["gap"] })[0]!;
@@ -38,9 +38,9 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
   return [
     ["00-home", paths.home],
     ["01-assessments", paths.assessments],
-    ["02-initiative", paths.assessment(initiative.publicId)],
+    ["02-initiative", paths.assessment(assessment.publicId)],
     ["02-initiative-new", paths.newAssessment],
-    ["02-initiative-edit", paths.assessmentEdit(initiative.publicId)],
+    ["02-initiative-edit", paths.assessmentEdit(assessment.publicId)],
     ["03-sources", paths.repositories],
     ["03-source-new", paths.newRepository],
     ["03-source-settings", paths.repositorySettings(sources[0]!.publicId)],

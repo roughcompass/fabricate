@@ -24,13 +24,13 @@ describe("Salt Patterns removed migration", () => {
   const columns = (table: string) => (all(`select name from pragma_table_info('${table}')`) as { name: string }[]).map((column) => column.name);
   const triggers = () => (all("select name from sqlite_master where type = 'trigger'") as { name: string }[]).map((row) => row.name);
 
-  /** A queued Run of +initiative+ numbered +n+, and its id. */
-  function startRun(initiative: number, n: number): number {
+  /** A queued Run of the Assessment +assessmentId+ numbered +n+, and its id. */
+  function startRun(assessmentId: number, n: number): number {
     return Number(
       run(
         "insert into assessments (public_id, initiative_id, launch_token, detector_release, configuration, configuration_digest, profile_schema_version, relationship_schema_version, created_at, updated_at) values (?, ?, ?, 'r1', '{}', ?, 2, 1, ?, ?)",
         `asm_${String(n).padStart(16, "0")}`,
-        initiative,
+        assessmentId,
         `4a6e3b0c-6a43-4e0f-9a59-${String(n).padStart(12, "0")}`,
         "d".repeat(64),
         T0,

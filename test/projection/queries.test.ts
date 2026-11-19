@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Run } from "@/lib/runs/run-records";
 import type { Db } from "@/lib/db/client";
 import { missingTargets } from "@/lib/projection/queries";
-import { buildInitiative, buildSource } from "../support/builders";
+import { buildAssessment, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { pinnedRepository } from "../support/projection";
 import { seedRun } from "../support/scenarios";
@@ -28,7 +28,7 @@ describe("projection queries", () => {
     guard.forbid = false;
     db = createTestDb();
     const sources = [buildSource(db, { name: "web" }), buildSource(db, { name: "client" }), buildSource(db, { name: "admin" }), buildSource(db, { name: "billing" })];
-    run = await seedRun(db, buildInitiative(db, { sources }), sources, [
+    run = await seedRun(db, buildAssessment(db, { sources }), sources, [
       pinnedRepository("web", { "@acme/client": "1.0.0", react: "16.14.0" }),
       pinnedRepository("@acme/client", { react: "18.3.1" }),
       pinnedRepository("admin", { react: "16.8.6" }),

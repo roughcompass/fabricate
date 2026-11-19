@@ -6,7 +6,7 @@ import { generatePublicId } from "@/lib/db/ids";
 import { sequenceNumber, sequenceNumbers } from "@/lib/db/sequence";
 import { type RefKind, runTargets, runs } from "@/lib/db/schema";
 import { type JsonObject, digestOf } from "@repo-facts/contract";
-import type { Initiative } from "@/lib/initiatives/initiative-records";
+import type { Assessment } from "@/lib/assessments/assessment-records";
 import { transitionTarget } from "./transitions";
 import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
@@ -21,7 +21,7 @@ export type RunTarget = typeof runTargets.$inferSelect;
 
 export const LAUNCH_TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export interface NewRun {
-  initiative: Initiative;
+  assessment: Assessment;
   launchToken: string;
   surveyorRelease: string;
   configuration: JsonObject;
@@ -49,7 +49,7 @@ export function createRun(db: Executor, input: NewRun): { run: Run; targets: Run
       .insert(runs)
       .values({
         publicId: generatePublicId("asm"),
-        initiativeId: input.initiative.id,
+        assessmentId: input.assessment.id,
         launchToken: input.launchToken,
         surveyorRelease: input.surveyorRelease,
         configuration: configuration.text,
@@ -96,22 +96,22 @@ export function getRun(db: Executor, publicId: string): Run {
   return run;
 }
 
-export function findRunByLaunchToken(db: Executor, initiativeId: number, launchToken: string): Run | undefined {
-  return db.select().from(runs).where(and(eq(runs.initiativeId, initiativeId), eq(runs.launchToken, launchToken))).get();
+export function findRunByLaunchToken(db: Executor, assessmentId: number, launchToken: string): Run | undefined {
+  return db.select().from(runs).where(and(eq(runs.assessmentId, assessmentId), eq(runs.launchToken, launchToken))).get();
 }
 
-export function listRuns(db: Executor, initiativeId: number): Run[] {
-  return db.select().from(runs).where(eq(runs.initiativeId, initiativeId)).orderBy(desc(runs.createdAt), desc(runs.id)).all();
+export function listRuns(db: Executor, assessmentId: number): Run[] {
+  return db.select().from(runs).where(eq(runs.assessmentId, assessmentId)).orderBy(desc(runs.createdAt), desc(runs.id)).all();
 }
 
 /** A Run's sequence number within its Assessment: "Run #3" (src/lib/db/sequence.ts). */
-export function runNumber(db: Executor, run: Pick<Run, "id" | "initiativeId">): number {
+export function runNumber(db: Executor, run: Pick<Run, "id" | "assessmentId">): number {
   return sequenceNumber(db, runs, run);
 }
 
 /** The sequence number of each of an Initiative's Runs, by id. */
-export function runNumbers(db: Executor, initiativeId: number): Map<number, number> {
-  return sequenceNumbers(db, runs, initiativeId);
+export function runNumbers(db: Executor, assessmentId: number): Map<number, number> {
+  return sequenceNumbers(db, runs, assessmentId);
 }
 
 export function targetsOf(db: Executor, runId: number): RunTarget[] {

@@ -2,12 +2,12 @@ import { type JsonObject, sha256 } from "@repo-facts/contract";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { StaleRecordError, ValidationError } from "@/lib/db/errors";
-import { selectedReleases, updateInitiative } from "@/lib/initiatives/initiative-records";
+import { selectedReleases, updateAssessment } from "@/lib/assessments/assessment-records";
 import { standardDigest } from "@/lib/standards/canonical";
 import { previewPublication, publishDraft, reviseRelease } from "@/lib/standards/publish";
 import * as standardRecords from "@/lib/standards/standard-records";
 import { createStandard, draftDocument, draftOf, getStandard, releaseDocument, releasesOf, saveDraft } from "@/lib/standards/standard-records";
-import { buildInitiative } from "../support/builders";
+import { buildAssessment } from "../support/builders";
 import { createTestDb, rawRun, withSharedFileDb } from "../support/db";
 import { captureValidation } from "../support/validation";
 import { sampleStandard } from "../support/standards";
@@ -96,9 +96,9 @@ describe("publication", () => {
   it("never updates or deletes a published Release, including one an Initiative selects", () => {
     const { standard, draft } = draftWith(sampleStandard());
     const release = publishDraft(db, standard.publicId, draft.lockVersion);
-    const initiative = buildInitiative(db);
-    updateInitiative(db, initiative.publicId, initiative.lockVersion, { name: initiative.name, objective: initiative.objective, selectionMode: "all", standardReleasePublicIds: [release.publicId] });
-    expect(selectedReleases(db, initiative.id).map((selected) => selected.release.id)).toEqual([release.id]);
+    const assessment = buildAssessment(db);
+    updateAssessment(db, assessment.publicId, assessment.lockVersion, { name: assessment.name, objective: assessment.objective, selectionMode: "all", standardReleasePublicIds: [release.publicId] });
+    expect(selectedReleases(db, assessment.id).map((selected) => selected.release.id)).toEqual([release.id]);
 
     expect(() => rawRun(db, "update standard_releases set document = ? where id = ?", "{}", release.id)).toThrow(/immutable/);
     expect(() => rawRun(db, "delete from standard_releases where id = ?", release.id)).toThrow(/retained/);

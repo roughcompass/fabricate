@@ -8,7 +8,7 @@ import type { Db } from "@/lib/db/client";
 import { fleetSummary } from "@/lib/home/summary";
 import { currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey } from "@/lib/surveys/records";
 import { finishSurvey } from "@/lib/surveys/run";
-import { buildRun, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildAssessment, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 import { manifest, memoryProfile, sha1 } from "../support/profiles";
@@ -33,7 +33,7 @@ describe("fleet summary", () => {
     await backgroundSurvey(db, queued, "queued");
     await backgroundSurvey(db, failed, "failed");
     // An operator's Run profiles a repository too.
-    await seedRun(db, buildInitiative(db, { sources: [assessed] }), [assessed], [{ "package.json": manifest({ name: "assessed", version: "1.0.0" }) }]);
+    await seedRun(db, buildAssessment(db, { sources: [assessed] }), [assessed], [{ "package.json": manifest({ name: "assessed", version: "1.0.0" }) }]);
     deleteSource(db, deleted.publicId, "deleted");
 
     expect(fleetSummary(db).repositories).toEqual({ empty: false, total: 4, profiled: 2 });
@@ -43,13 +43,13 @@ describe("fleet summary", () => {
     const db = createTestDb();
     const source = buildSource(db);
     const evaluated = (conclusion: "gaps" | "conforms") => {
-      const initiative = buildInitiative(db, { sources: [source] });
-      driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildRun(db, { initiative }).run, "complete")), "complete", conclusion);
+      const assessment = buildAssessment(db, { sources: [source] });
+      driveEvaluation(db, buildEvaluation(db, assessment, driveRun(db, buildRun(db, { assessment }).run, "complete")), "complete", conclusion);
     };
     evaluated("gaps");
     evaluated("gaps");
     evaluated("conforms");
-    buildInitiative(db, { sources: [source] });
+    buildAssessment(db, { sources: [source] });
 
     const { assessments } = fleetSummary(db);
     expect(assessments).toEqual({ empty: false, total: 4, byConclusion: { gaps: 2, undetermined: 0, conforms: 1, not_applicable: 0, none: 1 } });

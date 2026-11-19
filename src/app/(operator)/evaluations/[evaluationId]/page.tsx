@@ -31,7 +31,7 @@ import { getDb } from "@/lib/db/client";
 import type { Outcome } from "@/lib/evaluations/controls";
 import { coverageGapsOf, evaluationNumber, type EvaluationRelease, evaluationReleasesOf, findEvaluation, outcomeLabel, SEVERITIES } from "@/lib/evaluations/evaluation-records";
 import { type Conclusion, OUTCOME_ORDER } from "@/lib/evaluations/summary";
-import { initiativeById } from "@/lib/initiatives/initiative-records";
+import { assessmentById } from "@/lib/assessments/assessment-records";
 import { releaseById, standardById } from "@/lib/standards/standard-records";
 import { evaluationOutcome } from "../outcomes";
 import styles from "./evaluation.module.css";
@@ -45,12 +45,12 @@ const load = cache((publicId: string) => {
   const evaluation = findEvaluation(db, publicId);
   if (!evaluation) return undefined;
   const run = runById(db, evaluation.runId);
-  return { evaluation, run, initiative: initiativeById(db, evaluation.initiativeId), number: evaluationNumber(db, evaluation), runNumber: runNumber(db, run) };
+  return { evaluation, run, assessment: assessmentById(db, evaluation.assessmentId), number: evaluationNumber(db, evaluation), runNumber: runNumber(db, run) };
 });
 
 export async function generateMetadata({ params }: PageProps<"/evaluations/[evaluationId]">): Promise<Metadata> {
   const found = load((await params).evaluationId);
-  return { title: found ? `Evaluation #${found.number} · ${found.initiative.name}` : "Evaluation not found" };
+  return { title: found ? `Evaluation #${found.number} · ${found.assessment.name}` : "Evaluation not found" };
 }
 
 export default async function EvaluationPage({ params, searchParams }: PageProps<"/evaluations/[evaluationId]">) {
@@ -58,7 +58,7 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
   const db = getDb();
   const found = load(evaluationId);
   if (!found) notFound();
-  const { evaluation, run, initiative, number } = found;
+  const { evaluation, run, assessment, number } = found;
   const name = `Evaluation #${number}`;
   const status = evaluationStatus(db, evaluation);
   const gaps = coverageGapsOf(evaluation);
@@ -81,7 +81,7 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
       <PageHeader
         breadcrumbs={[
           { href: "/assessments", label: "Assessments" },
-          { href: routes.assessment(initiative.publicId), label: initiative.name },
+          { href: routes.assessment(assessment.publicId), label: assessment.name },
         ]}
         title={name}
         status={<Status state={evaluation.state} />}

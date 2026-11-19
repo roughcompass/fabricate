@@ -42,7 +42,7 @@ export const repositorySources = sqliteTable(
 );
 
 /** A long-lived objective that scopes repositories and selects Standard Releases. */
-export const initiatives = sqliteTable(
+export const assessments = sqliteTable(
   "initiatives",
   {
     id: id(),
@@ -63,20 +63,20 @@ export const initiatives = sqliteTable(
 );
 
 /** An explicit repository selection. Only explicit initiatives have rows. */
-export const initiativeTargets = sqliteTable(
+export const assessmentTargets = sqliteTable(
   "initiative_targets",
   {
     id: id(),
-    initiativeId: integer("initiative_id")
+    assessmentId: integer("initiative_id")
       .notNull()
-      .references(() => initiatives.id, { onDelete: "cascade" }),
+      .references(() => assessments.id, { onDelete: "cascade" }),
     repositorySourceId: integer("repository_source_id")
       .notNull()
       .references(() => repositorySources.id, { onDelete: "restrict" }),
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex("initiative_targets_selection").on(t.initiativeId, t.repositorySourceId),
+    uniqueIndex("initiative_targets_selection").on(t.assessmentId, t.repositorySourceId),
     index("initiative_targets_source").on(t.repositorySourceId),
   ],
 );

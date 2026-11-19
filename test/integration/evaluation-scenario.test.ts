@@ -8,14 +8,14 @@ import { launchRun } from "@/lib/runs/launcher";
 import { type Evaluation, evaluationReleasesOf, findingDocument, findingsOf, getEvaluation } from "@/lib/evaluations/evaluation-records";
 import { startEvaluation } from "@/lib/evaluations/start";
 import { GitRunner } from "@/lib/git/runner";
-import { type Initiative, getInitiative } from "@/lib/initiatives/initiative-records";
+import { type Assessment, getAssessment } from "@/lib/assessments/assessment-records";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { SnapshotReader } from "@/lib/snapshot/reader";
 import { publishDraft, reviseRelease } from "@/lib/standards/publish";
 import { type StandardRelease, saveDraft } from "@/lib/standards/standard-records";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildInitiative } from "../support/builders";
+import { buildAssessment } from "../support/builders";
 import { manifest } from "../support/profiles";
 import { publishStandard, selectReleases } from "../support/scenarios";
 import { NO_NETWORK_CALLS, countNetworkCalls } from "../support/traps";
@@ -59,7 +59,7 @@ const RELATIONSHIPS = [
 
 describe("Evaluation scenario", () => {
   const world = useAcquisitionWorld("evaluation-scenario", { once: true });
-  let initiative: Initiative;
+  let assessment: Assessment;
   let run: Run;
   let releases: { repository: StandardRelease; services: StandardRelease; relationships: StandardRelease };
   const trapped: Record<string, number>[] = [];
@@ -70,7 +70,7 @@ describe("Evaluation scenario", () => {
     const reader = vi.spyOn(SnapshotReader, "open");
     let evaluation!: Evaluation;
     const network = await countNetworkCalls(async () => {
-      evaluation = startEvaluation(world.db, initiative.publicId, run.publicId, crypto.randomUUID()).evaluation;
+      evaluation = startEvaluation(world.db, assessment.publicId, run.publicId, crypto.randomUUID()).evaluation;
       await drainJobs(world.db, jobHandlers(world.db, world.config));
     });
     trapped.push({ ...network, git: git.mock.calls.length, reader: reader.mock.calls.length });
@@ -102,8 +102,8 @@ describe("Evaluation scenario", () => {
       return registerLocalSource(world.db, world.config, name, work.path);
     });
     fs.rmSync(path.join(world.fixture.root, "fleet/billing"), { recursive: true, force: true });
-    initiative = buildInitiative(world.db, { sources });
-    run = launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config).run;
+    assessment = buildAssessment(world.db, { sources });
+    run = launchRun(world.db, assessment.publicId, crypto.randomUUID(), world.config).run;
     await drainJobs(world.db, jobHandlers(world.db, world.config));
     run = getRun(world.db, run.publicId);
 
@@ -112,7 +112,7 @@ describe("Evaluation scenario", () => {
       services: publishStandard(world.db, "Service readiness", SERVICES),
       relationships: publishStandard(world.db, "Relationships", RELATIONSHIPS),
     };
-    initiative = selectReleases(world.db, initiative, [releases.repository, releases.services, releases.relationships]);
+    assessment = selectReleases(world.db, assessment, [releases.repository, releases.services, releases.relationships]);
   }, 120_000);
 
   let first: Evaluation;
@@ -179,7 +179,7 @@ describe("Evaluation scenario", () => {
       standardDocument([{ ...SERVICES[0]!, condition: { op: "every", collection: "service_dependencies", condition: { op: "in", selector: "service.endpoint_derivation", values: ["configured", "host_provided", "literal"] } } }]),
     );
     const v2 = publishDraft(world.db, (await import("@/lib/standards/standard-records")).standardById(world.db, releases.services.standardId).publicId, revised.lockVersion);
-    initiative = selectReleases(world.db, getInitiative(world.db, initiative.publicId), [releases.repository, v2]);
+    assessment = selectReleases(world.db, getAssessment(world.db, assessment.publicId), [releases.repository, v2]);
 
     const changed = await evaluate();
     expect(changed).toMatchObject({ state: "complete", runId: run.id });

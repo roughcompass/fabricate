@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { runTargets, runs } from "./runs";
-import { initiatives } from "./catalog";
+import { assessments } from "./catalog";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
 import { standardReleases } from "./standards";
 
@@ -29,9 +29,9 @@ export const evaluations = sqliteTable(
   {
     id: id(),
     publicId: publicId(),
-    initiativeId: integer("initiative_id")
+    assessmentId: integer("initiative_id")
       .notNull()
-      .references(() => initiatives.id, { onDelete: "restrict" }),
+      .references(() => assessments.id, { onDelete: "restrict" }),
     runId: integer("assessment_id")
       .notNull()
       .references(() => runs.id, { onDelete: "restrict" }),
@@ -53,7 +53,7 @@ export const evaluations = sqliteTable(
     updatedAt: updatedAt(),
   },
   (t) => [
-    index("evaluations_initiative").on(t.initiativeId),
+    index("evaluations_initiative").on(t.assessmentId),
     index("evaluations_assessment").on(t.runId),
     check("evaluations_public_id", sql`${t.publicId} GLOB 'evl_*'`),
     check("evaluations_state", sql.raw(`state IN (${sqlList(EVALUATION_STATES)})`)),

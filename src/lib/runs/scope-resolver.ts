@@ -1,8 +1,8 @@
 import { asc, eq, isNull, sql } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Executor } from "@/lib/db/client";
-import { initiativeTargets, repositorySources } from "@/lib/db/schema";
-import type { Initiative } from "@/lib/initiatives/initiative-records";
+import { assessmentTargets, repositorySources } from "@/lib/db/schema";
+import type { Assessment } from "@/lib/assessments/assessment-records";
 
 /**
  * Resolves an Initiative's target policy into the ordered catalog sources an
@@ -31,8 +31,8 @@ export class ScopeResolutionError extends Error {
 
 const byCatalogOrder = [sql`lower(${repositorySources.name})`, asc(repositorySources.publicId)] as const;
 
-export function resolveScope(db: Executor, initiative: Initiative): RepositorySource[] {
-  return initiative.selectionMode === "all" ? allSources(db) : explicitSources(db, initiative);
+export function resolveScope(db: Executor, assessment: Assessment): RepositorySource[] {
+  return assessment.selectionMode === "all" ? allSources(db) : explicitSources(db, assessment);
 }
 
 function allSources(db: Executor): RepositorySource[] {
@@ -43,13 +43,13 @@ function allSources(db: Executor): RepositorySource[] {
   return sources;
 }
 
-function explicitSources(db: Executor, initiative: Initiative): RepositorySource[] {
+function explicitSources(db: Executor, assessment: Assessment): RepositorySource[] {
   const rows = db
-    .select({ selection: initiativeTargets, source: repositorySources })
-    .from(initiativeTargets)
-    .leftJoin(repositorySources, eq(repositorySources.id, initiativeTargets.repositorySourceId))
-    .where(eq(initiativeTargets.initiativeId, initiative.id))
-    .orderBy(...byCatalogOrder, asc(initiativeTargets.id))
+    .select({ selection: assessmentTargets, source: repositorySources })
+    .from(assessmentTargets)
+    .leftJoin(repositorySources, eq(repositorySources.id, assessmentTargets.repositorySourceId))
+    .where(eq(assessmentTargets.assessmentId, assessment.id))
+    .orderBy(...byCatalogOrder, asc(assessmentTargets.id))
     .all();
 
   if (rows.length === 0) {

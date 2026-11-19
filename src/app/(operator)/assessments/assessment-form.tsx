@@ -7,11 +7,11 @@ import { ActionForm, type Choice, ChoiceGroup, FormAlert, FormFooter, FormSectio
 import { Panel } from "@/components/ui/panel";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { useHydrated } from "@/components/ui/use-hydrated";
-import type { InitiativeFormState } from "./form-state";
+import type { AssessmentFormState } from "./form-state";
 
-interface InitiativeFormProps {
-  action: (previous: InitiativeFormState, formData: FormData) => Promise<InitiativeFormState>;
-  initial: InitiativeFormState;
+interface AssessmentFormProps {
+  action: (previous: AssessmentFormState, formData: FormData) => Promise<AssessmentFormState>;
+  initial: AssessmentFormState;
   lockVersion?: number;
   sourceCount: number;
   sourceChoices: Choice[];
@@ -20,7 +20,7 @@ interface InitiativeFormProps {
   cancelHref: string;
 }
 
-export function InitiativeForm({ action, initial, lockVersion, sourceCount, sourceChoices, releaseChoices, submitLabel, cancelHref }: InitiativeFormProps) {
+export function AssessmentForm({ action, initial, lockVersion, sourceCount, sourceChoices, releaseChoices, submitLabel, cancelHref }: AssessmentFormProps) {
   const [mode, setMode] = useState(initial.values.selectionMode);
   // Without JavaScript every field stays visible; the server ignores source
   // selections for a scope of all Repositories.

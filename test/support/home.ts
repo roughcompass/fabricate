@@ -8,7 +8,7 @@ import type { RunState, EvaluationState } from "@/lib/db/schema";
 import { type Evaluation, createEvaluation } from "@/lib/evaluations/evaluation-records";
 import { transitionEvaluation } from "@/lib/evaluations/transitions";
 import type { Conclusion } from "@/lib/evaluations/summary";
-import type { Initiative } from "@/lib/initiatives/initiative-records";
+import type { Assessment } from "@/lib/assessments/assessment-records";
 import { buildRelease } from "./builders";
 
 /*
@@ -30,8 +30,8 @@ export function driveRun(db: Executor, run: Run, to: RunState, options: { failed
 }
 
 /** An Evaluation of +run+ against a new Release, written directly without launching jobs. */
-export function buildEvaluation(db: Executor, initiative: Initiative, run: Run): Evaluation {
-  return createEvaluation(db, { initiative, run, launchToken: crypto.randomUUID(), evaluatorVersion: "1", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [], releases: [buildRelease(db)] }).evaluation;
+export function buildEvaluation(db: Executor, assessment: Assessment, run: Run): Evaluation {
+  return createEvaluation(db, { assessment, run, launchToken: crypto.randomUUID(), evaluatorVersion: "1", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [], releases: [buildRelease(db)] }).evaluation;
 }
 
 /** Moves an Evaluation to +to+; a completed one records a summary with +conclusion+. */

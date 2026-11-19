@@ -17,7 +17,7 @@ import { getDb } from "@/lib/db/client";
 import { PRODUCT } from "@/lib/product";
 import { evaluationNumber, findEvaluation, findFinding, findingDocument } from "@/lib/evaluations/evaluation-records";
 import type { TraceNode } from "@/lib/evaluations/interpreter";
-import { initiativeById } from "@/lib/initiatives/initiative-records";
+import { assessmentById } from "@/lib/assessments/assessment-records";
 import { findingCategory } from "@/lib/profiles/links";
 import { profileSectionHref } from "@/lib/profiles/tabs";
 import { releaseById, standardById } from "@/lib/standards/standard-records";
@@ -39,7 +39,7 @@ const load = cache((evaluationId: string, findingId: string) => {
   if (!evaluation) return undefined;
   const finding = findFinding(db, evaluation, findingId);
   if (!finding) return undefined;
-  return { evaluation, finding, document: findingDocument(finding), initiative: initiativeById(db, evaluation.initiativeId), number: evaluationNumber(db, evaluation) };
+  return { evaluation, finding, document: findingDocument(finding), assessment: assessmentById(db, evaluation.assessmentId), number: evaluationNumber(db, evaluation) };
 });
 
 export async function generateMetadata({ params }: PageProps<"/evaluations/[evaluationId]/findings/[findingId]">): Promise<Metadata> {
@@ -54,7 +54,7 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
   const db = getDb();
   const found = load(evaluationId, findingId);
   if (!found) notFound();
-  const { evaluation, finding, document, initiative, number } = found;
+  const { evaluation, finding, document, assessment, number } = found;
   const control = document.control as JsonObject;
   const subject = document.subject as JsonObject;
   const release = releaseById(db, finding.standardReleaseId);
@@ -89,7 +89,7 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
       <PageHeader
         breadcrumbs={[
           { href: "/assessments", label: "Assessments" },
-          { href: routes.assessment(initiative.publicId), label: initiative.name },
+          { href: routes.assessment(assessment.publicId), label: assessment.name },
           { href: routes.evaluation(evaluation.publicId), label: `Evaluation #${number}` },
         ]}
         title={String(control.title)}

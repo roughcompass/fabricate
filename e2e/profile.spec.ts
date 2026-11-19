@@ -7,7 +7,7 @@ import { insertSource } from "../src/lib/catalog/source-records";
 import { jobHandlers } from "../src/lib/jobs/registry";
 import { drainJobs } from "../src/lib/jobs/worker";
 import { profilesOf } from "../src/lib/profiles/profile-records";
-import { buildInitiative, buildSource } from "../test/support/builders";
+import { buildAssessment, buildSource } from "../test/support/builders";
 import { manifest } from "../test/support/profiles";
 import { ORDERS, STOREFRONT, seedRun, seedSurvey } from "../test/support/scenarios";
 import { serverConfig } from "./support/results";
@@ -36,16 +36,16 @@ const openEvidence = async (section: Locator, text: string) => {
 
 async function seedOrders(db: Parameters<typeof seedRun>[0]) {
   const orders = buildSource(db, { name: "orders" });
-  const initiative = buildInitiative(db, { name: "Fleet assessment", sources: [orders] });
-  const run = await seedRun(db, initiative, [orders], [ORDERS]);
-  return { orders, initiative, run, profile: profilesOf(db, run.id)[0]!.profile };
+  const assessment = buildAssessment(db, { name: "Fleet assessment", sources: [orders] });
+  const run = await seedRun(db, assessment, [orders], [ORDERS]);
+  return { orders, assessment, run, profile: profilesOf(db, run.id)[0]!.profile };
 }
 
 async function seedStorefront(db: Parameters<typeof seedRun>[0]) {
   const storefront = buildSource(db, { name: "storefront" });
-  const initiative = buildInitiative(db, { name: "Storefront review", sources: [storefront] });
-  const run = await seedRun(db, initiative, [storefront], [STOREFRONT]);
-  return { storefront, initiative, run, profile: profilesOf(db, run.id)[0]!.profile };
+  const assessment = buildAssessment(db, { name: "Storefront review", sources: [storefront] });
+  const run = await seedRun(db, assessment, [storefront], [STOREFRONT]);
+  return { storefront, assessment, run, profile: profilesOf(db, run.id)[0]!.profile };
 }
 
 test("leads with an overview that answers each question, then what needs attention, with a view for each", async ({ page, db }) => {
@@ -83,7 +83,7 @@ test("leads with an overview that answers each question, then what needs attenti
 
 test("tells a repository that isn't a frontend from one that is, and leaves out the views that don't apply", async ({ page, db }) => {
   const service = buildSource(db, { name: "payments" });
-  const run = await seedRun(db, buildInitiative(db, { name: "Services", sources: [service] }), [service], [{ "package.json": manifest({ name: "payments", dependencies: { express: "^4.21.0" } }), "src/server.js": 'require("express")().listen(3000);\n' }]);
+  const run = await seedRun(db, buildAssessment(db, { name: "Services", sources: [service] }), [service], [{ "package.json": manifest({ name: "payments", dependencies: { express: "^4.21.0" } }), "src/server.js": 'require("express")().listen(3000);\n' }]);
   await open(page, profilesOf(db, run.id)[0]!.profile.publicId);
   await expect(page.getByText("Not a frontend web repository")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Profile views" }).getByRole("link")).toHaveText(["Overview", "Dependencies1", "Services0", "Tooling", /^Diagnostics/]);
@@ -309,8 +309,8 @@ test("summarizes an unresolved Service Dependency by its client and call site, n
 });
 
 test("marks an earlier version and links to the current one", async ({ page, db }) => {
-  const { orders, initiative, profile: earlier } = await seedOrders(db);
-  const later = await seedRun(db, initiative, [orders], [{ ...ORDERS, ".nvmrc": "20\n" }]);
+  const { orders, assessment, profile: earlier } = await seedOrders(db);
+  const later = await seedRun(db, assessment, [orders], [{ ...ORDERS, ".nvmrc": "20\n" }]);
   const newest = profilesOf(db, later.id)[0]!.profile;
 
   await open(page, earlier.publicId, "tooling");
@@ -366,12 +366,12 @@ test("opens verified evidence excerpts from a real snapshot without rendering UR
     "src/payments.ts": 'export async function charge(id: string) {\n  const res = await fetch("https://svc:hunter2@payments.invalid/v1/charges", { method: "POST", body: JSON.stringify({ id }) });\n  return (await res.json()).status;\n}\n',
   });
   const source = insertSource(db, { name: "orders", ...resolveCloneUrl(`file://${repository}`, new SourceBoundary(config)), gitRef: null });
-  const initiative = buildInitiative(db, { name: "Fleet assessment", sources: [source] });
-  await page.goto(paths.assessment(initiative.publicId));
+  const assessment = buildAssessment(db, { name: "Fleet assessment", sources: [source] });
+  await page.goto(paths.assessment(assessment.publicId));
   await page.getByRole("button", { name: "Start Run" }).click();
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("Run #1 was started.")).toBeVisible();
   await drainJobs(db, jobHandlers(db, config));
-  const run = listRuns(db, initiative.id)[0]!;
+  const run = listRuns(db, assessment.id)[0]!;
 
   await page.goto(paths.run(run.publicId));
   await page.getByRole("link", { name: "orders Profile" }).click();
@@ -439,10 +439,10 @@ test("links an evidence record to each ancestor, with no other way back", async 
 
 test("numbers a Repository's versions for good and says why each ran (Stable numbers, Why a version ran)", async ({ page, db }) => {
   const web = buildSource(db, { name: "web" });
-  const initiative = buildInitiative(db, { name: "Checkout platform migration", sources: [web] });
+  const assessment = buildAssessment(db, { name: "Checkout platform migration", sources: [web] });
   await seedSurvey(db, web, { trigger: "added" });
   await seedSurvey(db, web, { trigger: "commit" });
-  await seedRun(db, initiative, [web], [ORDERS]);
+  await seedRun(db, assessment, [web], [ORDERS]);
   await seedSurvey(db, web, { trigger: "preview", reference: "refs/heads/feature/new-nav", fromConfiguredReference: false });
 
   await page.goto(paths.repositoryVersions(web.publicId));
@@ -473,7 +473,7 @@ const SALT_APP = {
 
 test("shows design-system usage in the Interface categories, with each scope's non-zero counts", async ({ page, db }) => {
   const source = buildSource(db, { name: "salt-orders" });
-  const run = await seedRun(db, buildInitiative(db, { name: "Salt adherence", sources: [source] }), [source], [SALT_APP]);
+  const run = await seedRun(db, buildAssessment(db, { name: "Salt adherence", sources: [source] }), [source], [SALT_APP]);
   const profile = profilesOf(db, run.id)[0]!.profile;
   await open(page, profile.publicId);
   await expect(detail(page.getByRole("region", { name: "Design system" }), "Design system")).toContainText("Salt");
@@ -496,7 +496,7 @@ test("shows design-system usage in the Interface categories, with each scope's n
 
 test("shows a version 1 Profile's facts unchanged, with the design-system categories not covered", async ({ page, db }) => {
   const storefront = buildSource(db, { name: "storefront" });
-  const run = await seedRun(db, buildInitiative(db, { name: "Earlier release", sources: [storefront] }), [storefront], [STOREFRONT], { profileVersion1: true });
+  const run = await seedRun(db, buildAssessment(db, { name: "Earlier release", sources: [storefront] }), [storefront], [STOREFRONT], { profileVersion1: true });
   const profile = profilesOf(db, run.id)[0]!.profile;
   expect(profile.schemaVersion).toBe(1);
 

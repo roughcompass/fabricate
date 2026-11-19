@@ -7,7 +7,7 @@ import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, getSource } from "@/lib/catalog/source-records";
 import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
-import { JOB_PRIORITIES, runs, initiatives, jobs, surveys } from "@/lib/db/schema";
+import { JOB_PRIORITIES, runs, assessments, jobs, surveys } from "@/lib/db/schema";
 import { jobPayload } from "@/lib/jobs/queue";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
@@ -136,7 +136,7 @@ describe("background surveying", () => {
     await run();
     expect(currentProfile(world.db, source.id)).toMatchObject({ version: 1, commit: work.head() });
     expect(world.db.select().from(runs).all()).toEqual([]);
-    expect(world.db.select().from(initiatives).all()).toEqual([]);
+    expect(world.db.select().from(assessments).all()).toEqual([]);
   });
 
   it("surveys a new commit of the configured reference that the scheduled check finds", async () => {

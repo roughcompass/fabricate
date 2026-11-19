@@ -3,7 +3,7 @@ import type { JsonObject, MemoryFile } from "@repo-facts/contract";
 import { type Run } from "@/lib/runs/run-records";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
-import { buildInitiative, buildSource } from "./builders";
+import { buildAssessment, buildSource } from "./builders";
 import { manifest } from "./profiles";
 import { seedRun } from "./scenarios";
 
@@ -68,8 +68,8 @@ export interface MapWorldOptions {
 export async function seedMapWorld(db: Db, options: MapWorldOptions = {}): Promise<MapWorld> {
   const names = Object.keys(MAP_WORLD);
   const sources = Object.fromEntries(names.map((name) => [name, buildSource(db, { name })]));
-  const initiative = buildInitiative(db, { name: "Fleet assessment", sources: Object.values(sources) });
-  const run = await seedRun(db, initiative, Object.values(sources), names.map((name) => MAP_WORLD[name]!), options.runtimeContract ? { transformMap: addRuntimeContract } : {});
+  const assessment = buildAssessment(db, { name: "Fleet assessment", sources: Object.values(sources) });
+  const run = await seedRun(db, assessment, Object.values(sources), names.map((name) => MAP_WORLD[name]!), options.runtimeContract ? { transformMap: addRuntimeContract } : {});
   return { run, sources };
 }
 

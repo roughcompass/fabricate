@@ -14,7 +14,7 @@ import { drainJobs } from "@/lib/jobs/worker";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildInitiative } from "../support/builders";
+import { buildAssessment } from "../support/builders";
 import { type Repo } from "../support/git-fixture";
 import { GitLog, NO_NETWORK_CALLS, NetworkTrap, countNetworkCalls } from "../support/traps";
 
@@ -123,11 +123,11 @@ describe("Assessment of a malicious repository", () => {
 
     work = hostileRepository();
     const source = registerLocalSource(world.db, world.config, "hostile", work.path);
-    const initiative = buildInitiative(world.db, { sources: [source] });
+    const assessment = buildAssessment(world.db, { sources: [source] });
 
     spyCalls = await gitLog.during(() =>
       countNetworkCalls(async () => {
-        runId = launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config).run.publicId;
+        runId = launchRun(world.db, assessment.publicId, crypto.randomUUID(), world.config).run.publicId;
         await drainJobs(world.db, jobHandlers(world.db, world.config));
       }),
     );

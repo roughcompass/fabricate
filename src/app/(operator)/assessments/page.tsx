@@ -15,16 +15,16 @@ import { type Run, runNumber, listRuns } from "@/lib/runs/run-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { CONCLUSION_FILTERS, conclusionCounts, type ConclusionFilter, conclusionState, type LatestConclusion, latestConclusions } from "@/lib/evaluations/conclusions";
-import { listInitiatives, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
+import { listAssessments, scopeLabel, selectedReleases, selectedSources } from "@/lib/assessments/assessment-records";
 import { releaseLabel } from "@/lib/standards/standard-records";
 import { assessmentsHref } from "@/lib/web/list-filters";
-import { initiativeListOutcome } from "./outcomes";
+import { assessmentListOutcome } from "./outcomes";
 import { routes } from "@/lib/web/routes";
 
 // The layout's title template applies to child segments only, so the root page sets its full title.
 export const metadata: Metadata = { title: "Assessments" };
 
-export default async function InitiativesPage({ searchParams }: PageProps<"/assessments">) {
+export default async function AssessmentsPage({ searchParams }: PageProps<"/assessments">) {
   const query = await searchParams;
   const conclusion = oneOf(query, "conclusion", CONCLUSION_FILTERS) ?? null;
   const db = getDb();
@@ -32,16 +32,16 @@ export default async function InitiativesPage({ searchParams }: PageProps<"/asse
   // Each Assessment's latest completed Evaluation, in one query; Home counts the same conclusions.
   const conclusions = latestConclusions(db);
   const counts = conclusionCounts(conclusions);
-  const all = listInitiatives(db).map((initiative) => {
-    const latest = listRuns(db, initiative.id)[0];
+  const all = listAssessments(db).map((assessment) => {
+    const latest = listRuns(db, assessment.id)[0];
     return {
-      initiative,
-      scope: initiative.selectionMode === "all" ? `${scopeLabel(initiative, 0)} (${sourceCount})` : scopeLabel(initiative, selectedSources(db, initiative.id).length),
-      releases: selectedReleases(db, initiative.id).map(({ release, standard }) => releaseLabel(standard, release)),
+      assessment,
+      scope: assessment.selectionMode === "all" ? `${scopeLabel(assessment, 0)} (${sourceCount})` : scopeLabel(assessment, selectedSources(db, assessment.id).length),
+      releases: selectedReleases(db, assessment.id).map(({ release, standard }) => releaseLabel(standard, release)),
       latest: latest && { run: latest, number: runNumber(db, latest) },
     };
   });
-  const rows = conclusion ? all.filter(({ initiative }) => conclusions.get(initiative.id)?.conclusion === conclusion) : all;
+  const rows = conclusion ? all.filter(({ assessment }) => conclusions.get(assessment.id)?.conclusion === conclusion) : all;
   const create = (
     <ButtonLink href="/assessments/new" variant="primary" icon="plus">
       New Assessment
@@ -54,7 +54,7 @@ export default async function InitiativesPage({ searchParams }: PageProps<"/asse
         title="Assessments"
         description="Each Assessment scopes repositories for Runs and selects Standard Releases to evaluate them against."
         primaryAction={create}
-        alerts={<OutcomeToast outcome={initiativeListOutcome(param(query, "notice"))} />}
+        alerts={<OutcomeToast outcome={assessmentListOutcome(param(query, "notice"))} />}
       />
 
       <Tabs label="Filter Assessments">
@@ -82,13 +82,13 @@ export default async function InitiativesPage({ searchParams }: PageProps<"/asse
               </>
             }
           >
-            {rows.map(({ initiative, scope, releases, latest }) => (
-              <tr key={initiative.publicId}>
+            {rows.map(({ assessment, scope, releases, latest }) => (
+              <tr key={assessment.publicId}>
                 <Td label="Assessment">
                   <Primary>
-                    <Link href={routes.assessment(initiative.publicId)}>{initiative.name}</Link>
+                    <Link href={routes.assessment(assessment.publicId)}>{assessment.name}</Link>
                   </Primary>
-                  {initiative.objective && <Secondary>{initiative.objective.length > 140 ? `${initiative.objective.slice(0, 140)}…` : initiative.objective}</Secondary>}
+                  {assessment.objective && <Secondary>{assessment.objective.length > 140 ? `${assessment.objective.slice(0, 140)}…` : assessment.objective}</Secondary>}
                 </Td>
                 <Td label="Scope">{scope}</Td>
                 <Td label="Standard Releases">
@@ -98,7 +98,7 @@ export default async function InitiativesPage({ searchParams }: PageProps<"/asse
                   <LatestRun latest={latest} />
                 </Td>
                 <Td label="Conclusion">
-                  <Conclusion latest={conclusions.get(initiative.id)} />
+                  <Conclusion latest={conclusions.get(assessment.id)} />
                 </Td>
               </tr>
             ))}

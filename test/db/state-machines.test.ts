@@ -87,7 +87,7 @@ function newSurvey(db: Db, repositorySourceId: number) {
 function newEvaluation(db: Db) {
   const { run } = buildRun(db, { sources: [buildSource(db)] });
   return createEvaluation(db, {
-    initiative: { id: run.initiativeId } as never,
+    assessment: { id: run.assessmentId } as never,
     run,
     launchToken: crypto.randomUUID(),
     evaluatorVersion: "test",

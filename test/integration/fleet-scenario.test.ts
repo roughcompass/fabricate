@@ -10,7 +10,7 @@ import { requestCancellation } from "@/lib/runs/transitions";
 import { addRepositories } from "@/lib/catalog/bulk-add";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, listSources } from "@/lib/catalog/source-records";
-import { type Initiative, createInitiative } from "@/lib/initiatives/initiative-records";
+import { type Assessment, createAssessment } from "@/lib/assessments/assessment-records";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
@@ -41,8 +41,8 @@ describe("Multi-repository Assessment scenario", () => {
   const networkCalls: (typeof NO_NETWORK_CALLS)[] = [];
   const savedOrdersUrl = process.env.ORDERS_URL;
   let sources: Record<string, RepositorySource>;
-  let wholeFleet: Initiative;
-  let explicit: Initiative;
+  let wholeFleet: Assessment;
+  let explicit: Assessment;
 
   /** Runs every queued job, optionally only +limit+ of them, with the network trapped and Git logged. */
   const drain = (limit?: number) =>
@@ -52,7 +52,7 @@ describe("Multi-repository Assessment scenario", () => {
       });
       networkCalls.push(calls);
     });
-  const launch = (initiative: Initiative) => launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config).run;
+  const launch = (assessment: Assessment) => launchRun(world.db, assessment.publicId, crypto.randomUUID(), world.config).run;
   const refreshed = (run: Run) => getRun(world.db, run.publicId);
   const states = (run: Run) => Object.fromEntries(targetsOf(world.db, run.id).map((target) => [target.sourceName, target.state]));
   const shas = (run: Run) => {
@@ -110,8 +110,8 @@ describe("Multi-repository Assessment scenario", () => {
     expect(Object.keys(sources).sort()).toEqual(["billing", "client", "ui", "web"]);
     for (const source of Object.values(sources)) expect(source.cloneUrl.startsWith(`file://${fleet}/`)).toBe(true);
 
-    wholeFleet = createInitiative(world.db, { name: "Whole fleet", objective: "Current state of every repository", selectionMode: "all" });
-    explicit = createInitiative(world.db, { name: "Shared packages", objective: "The UI and client packages", selectionMode: "explicit", sourcePublicIds: [sources.ui!.publicId, sources.client!.publicId] });
+    wholeFleet = createAssessment(world.db, { name: "Whole fleet", objective: "Current state of every repository", selectionMode: "all" });
+    explicit = createAssessment(world.db, { name: "Shared packages", objective: "The UI and client packages", selectionMode: "explicit", sourcePublicIds: [sources.ui!.publicId, sources.client!.publicId] });
   });
 
   let first: Run;
