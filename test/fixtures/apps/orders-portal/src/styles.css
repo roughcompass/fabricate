@@ -1,0 +1,180 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #1f2328;
+  background: #f6f8fa;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 12px 32px;
+  background: #0f2a44;
+  color: #ffffff;
+}
+
+.brand {
+  margin: 0;
+  font-weight: 700;
+}
+
+.nav {
+  display: flex;
+  gap: 20px;
+}
+
+.nav a {
+  color: #ffffff;
+  text-decoration: none;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+}
+
+.nav a[aria-current="page"] {
+  border-bottom-color: #ffffff;
+}
+
+.main {
+  max-width: 960px;
+  padding: 24px 32px 64px;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 28px;
+}
+
+.lead {
+  margin: 0 0 24px;
+  color: #474e57;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filter {
+  width: 220px;
+  padding: 6px 8px;
+  border: 1px solid #6e7781;
+  border-radius: 4px;
+  font: inherit;
+}
+
+button {
+  padding: 6px 14px;
+  border: 1px solid #0b57d0;
+  border-radius: 4px;
+  background: #0b57d0;
+  color: #ffffff;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #ffffff;
+  color: #0b57d0;
+}
+
+.total {
+  margin: 0 0 16px;
+  font-weight: 600;
+}
+
+.accounts {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.accounts caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 8px;
+}
+
+.accounts th,
+.accounts td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #d0d7de;
+  text-align: left;
+}
+
+.accounts tr[aria-current="true"] {
+  background: #eaf1fb;
+}
+
+a {
+  color: #0b57d0;
+}
+
+.detail {
+  margin-top: 24px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+}
+
+.detail h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.settings {
+  display: grid;
+  gap: 8px;
+  max-width: 360px;
+}
+
+.settings input:not([type="checkbox"]) {
+  padding: 6px 8px;
+  border: 1px solid #6e7781;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.saved {
+  margin: 0;
+  color: #116329;
+}
+
+/* A feedback tab fixed to the middle of the right edge, above everything else. */
+.feedback {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  z-index: 2147483647;
+  transform: translateY(-50%);
+  border-radius: 4px 0 0 4px;
+}
+
+.feedback-note {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  margin: 0;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+}
