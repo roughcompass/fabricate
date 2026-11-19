@@ -1,0 +1,609 @@
+import path from "node:path";
+import semver from "semver";
+import type { JsonObject, JsonValue } from "@repo-facts/contract";
+import type { ArtifactLayout } from "@/lib/db/schema";
+import { type EvidenceLocation, evidenceLocations } from "@/lib/profiles/evidence-locations";
+// Types only: the profile view module pulls in UI components the worker must not bundle.
+import type { Category, Fact, FactDocument } from "@/lib/profiles/states";
+
+/**
+ * Which packages of one commit can be previewed (design decision 3), decided
+ * by pure functions over the commit's fact document and the committed
+ * manifests of install roots, like evaluations. A package qualifies only when
+ * every condition the spec lists passes for it: a browser framework, a
+ * supported build tool, one package manager and lockfile at its install
+ * root, a satisfiable Node requirement or none, and a build script.
+ *
+ * Facts are attributed to a package by manifest identity and evidence path,
+ * never by repository-wide category presence, so a signal in an unrelated
+ * package neither qualifies nor disqualifies it. A deciding fact that is
+ * unknown or conflicting for the package refuses it, naming why.
+ *
+ * A Vite package also needs its page, `index.html`, committed at the root its
+ * build reads, since Vite builds no page without one; preparation reads that
+ * through the snapshot reader (readPage). Other tools are checked after the
+ * build, when their output must contain `index.html` (output.ts).
+ */
+
+export const CONDITIONS = ["framework", "build_tool", "package_manager", "node", "build_script", "page"] as const;
+export type ConditionId = (typeof CONDITIONS)[number];
+
+/** Browser frameworks a preview can run (design decision 3). */
+const BROWSER_FRAMEWORKS: Readonly<Record<string, string>> = { react: "React", preact: "Preact", vue: "Vue", angular: "Angular", svelte: "Svelte", solid: "Solid", lit: "Lit" };
+/** Frameworks that serve requests, and meta-frameworks whose static export the profile doesn't establish. */
+const SERVER_FRAMEWORKS = new Set(["express", "fastify", "koa", "hono", "nestjs", "next", "remix", "nuxt", "sveltekit", "astro", "gatsby"]);
+/** Build tools with a preview base-path adapter (design decision 5). */
+export const BUILD_TOOLS = ["vite", "webpack", "rspack", "rsbuild"] as const;
+export type BuildTool = (typeof BUILD_TOOLS)[number];
+const PACKAGE_MANAGERS = ["npm", "pnpm", "yarn"] as const;
+type PackageManager = (typeof PACKAGE_MANAGERS)[number];
+
+/*
+ * Which skipped inputs could change a decision. A category lists every input
+ * it couldn't read, including other ecosystems' manifests it doesn't analyze,
+ * such as go.mod or a .csproj; those can't declare a JavaScript package's
+ * workspace, lockfile, build tool, or Node version.
+ */
+const WORKSPACE_INPUTS = new Set(["package.json", "pnpm-workspace.yaml"]);
+const LOCKFILE_INPUTS = new Set(["package.json", "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb", "deno.lock"]);
+const TOOL_CONFIG = /^(?:package\.json|(?:vite|webpack|rspack|rsbuild)\.config\.[cm]?[jt]s)$/;
+const NODE_INPUTS = new Set(["package.json", ".nvmrc", ".node-version", ".tool-versions", "Dockerfile", "Jenkinsfile", ".gitlab-ci.yml", "mise.toml", ".mise.toml", ".prototools"]);
+const declaresNode = (input: string) => {
+  const name = path.posix.basename(input);
+  return NODE_INPUTS.has(name) || name.endsWith(".Dockerfile") || input.startsWith(".github/workflows/");
+};
+/** How many paths a reason names before counting the rest. */
+const NAMED = 3;
+
+/** A fact behind a condition, with the evidence it cites. A null key is the category as a whole. */
+export interface DecidingFact {
+  category: string;
+  key: string | null;
+  state: string;
+  value: JsonValue;
+  evidence: EvidenceLocation[];
+  candidates?: { value: JsonValue; evidence: EvidenceLocation[] }[];
+}
+
+export interface Condition {
+  condition: ConditionId;
+  passed: boolean;
+  reason: string;
+  facts: DecidingFact[];
+}
+
+/** What a build of a qualifying package needs. */
+export interface BuildPlan {
+  /** Where dependencies install: the package itself, or the workspace root it belongs to. */
+  installRoot: string;
+  packageManager: { name: PackageManager; version: string | null; lockfile: string };
+  buildTool: BuildTool;
+  buildScript: string;
+  /** The Node version to build with, and the declared ranges it satisfies; none when nothing is declared. */
+  node: { version: string; ranges: string[] };
+  /**
+   * What kind of package it is, for display: a Module Federation remote or
+   * single-spa application previews through its own page like any other
+   * application (design decision 7), so it never changes how it's served.
+   */
+  layout: ArtifactLayout;
+  /** The Module Federation or single-spa fact that decided the layout, if any. */
+  composition: JsonValue;
+}
+
+export interface PackageVerdict {
+  /** The package's directory, `.` for the repository root. */
+  directory: string;
+  manifest: string;
+  name: string | null;
+  qualifies: boolean;
+  conditions: Condition[];
+  plan: BuildPlan | null;
+}
+
+export interface Refusal {
+  reason: string;
+  /** Each failed condition, with the package it failed for, or null when no package exists. */
+  conditions: (Condition & { package: string | null })[];
+}
+
+export interface Eligibility {
+  packages: PackageVerdict[];
+  refusal: Refusal | null;
+}
+
+/** A committed manifest read through the snapshot reader. */
+export type ManifestRead = { state: "read"; manifest: JsonObject } | { state: "missing" } | { state: "unreadable"; reason: string };
+
+export interface EligibilityInput {
+  document: FactDocument;
+  /** Committed package.json of each install root, by directory (see installRootManifests). */
+  manifests: ReadonlyMap<string, ManifestRead>;
+  /** Configured Node versions, the keys of previews.nodeVersions. */
+  nodeVersions: readonly string[];
+  /** Each Vite package's page as the commit has it, by directory (see vitePackages and readPage). */
+  pages: ReadonlyMap<string, PageRead>;
+}
+
+/** Decides every package of the commit, and the refusal when none qualifies. */
+export function evaluateEligibility(input: EligibilityInput): Eligibility {
+  const repository = new Repository(input.document);
+  const packages = repository.packages.map((directory) => evaluatePackage(repository, directory, input));
+  if (packages.some((verdict) => verdict.qualifies)) return { packages, refusal: null };
+  if (packages.length === 0) return { packages, refusal: { reason: "No package declares a browser framework", conditions: [{ ...noPackage(repository), package: null }] } };
+  return {
+    packages,
+    refusal: { reason: "No package qualifies for a preview", conditions: packages.flatMap((verdict) => verdict.conditions.filter((condition) => !condition.passed).map((condition) => ({ ...condition, package: verdict.directory }))) },
+  };
+}
+
+/** The directories whose committed package.json evaluation reads: every package's install root. */
+export function installRootManifests(document: FactDocument): string[] {
+  const repository = new Repository(document);
+  return [...new Set(repository.packages.map((directory) => repository.membership(directory).root ?? directory))].sort();
+}
+
+export function manifestPath(directory: string): string {
+  return directory === "." ? "package.json" : `${directory}/package.json`;
+}
+
+function evaluatePackage(repository: Repository, directory: string, input: EligibilityInput): PackageVerdict {
+  const membership = repository.membership(directory);
+  const installRoot = membership.root ?? directory;
+  const framework = frameworkCondition(repository, directory);
+  const tool = buildToolCondition(repository, directory);
+  const manager = packageManagerCondition(repository, directory, membership, input.manifests);
+  const node = nodeCondition(repository, directory, installRoot, input.nodeVersions);
+  const script = buildScriptCondition(repository, directory);
+  const page = pageCondition(directory, tool, input.pages);
+  const conditions = [framework.condition, tool.condition, manager.condition, node.condition, script.condition, page];
+  const qualifies = conditions.every((condition) => condition.passed);
+  const plan =
+    qualifies && tool.tool && manager.plan && node.plan && script.command !== null
+      ? { installRoot, packageManager: manager.plan, buildTool: tool.tool, buildScript: script.command, node: node.plan, ...layoutOf(repository, directory) }
+      : null;
+  return { directory, manifest: manifestPath(directory), name: repository.packageName(directory), qualifies: plan !== null, conditions, plan };
+}
+
+// -- Conditions ---------------------------------------------------------------
+
+function frameworkCondition(repository: Repository, directory: string): { condition: Condition } {
+  const manifest = manifestPath(directory);
+  const facts = repository.facts("frameworks").filter((fact) => manifestOfFact(fact) === manifest);
+  const deciding = facts.map((fact) => repository.decidingFact("frameworks", fact));
+  const unknown = repository.unknownReason("frameworks", (input) => input === manifest);
+  const server = facts.filter((fact) => SERVER_FRAMEWORKS.has(frameworkId(fact)));
+  const browser = facts.filter((fact) => frameworkId(fact) in BROWSER_FRAMEWORKS);
+  const fail = (reason: string, extra: DecidingFact[] = []) => ({ condition: { condition: "framework" as const, passed: false, reason, facts: [...deciding, ...extra] } });
+
+  if (server.length) {
+    return fail(`${list(server.map(frameworkLabel))} ${server.length > 1 ? "render" : "renders"} on a server. Previews need a client-rendered single-page application whose build produces static files.`);
+  }
+  if (browser.length) return { condition: { condition: "framework", passed: true, reason: `${list(browser.map(frameworkLabel))} ${browser.length > 1 ? "run" : "runs"} in the browser`, facts: deciding } };
+  if (unknown) return fail(`Its frameworks couldn't be decided: ${unknown}`, [repository.categoryFact("frameworks")]);
+  return fail(`No browser framework is declared in ${manifest}. Previews need ${list(Object.values(BROWSER_FRAMEWORKS), "or")}.`);
+}
+
+function buildToolCondition(repository: Repository, directory: string): { condition: Condition; tool: BuildTool | null } {
+  const applicable = repository.facts("build_tools").filter((fact) => fact.evidence.some((id) => repository.owner(repository.evidencePath(id)) === directory));
+  const supported = applicable.filter((fact) => (BUILD_TOOLS as readonly string[]).includes(toolId(fact)));
+  // A tool is reported once for the whole repository, so only this package's evidence is kept.
+  const owned = (input: string) => repository.owner(input) === directory;
+  const deciding = applicable.map((fact) => repository.decidingFact("build_tools", fact, owned));
+  const fail = (reason: string, extra: DecidingFact[] = []) => ({ condition: { condition: "build_tool" as const, passed: false, reason, facts: [...deciding, ...extra] }, tool: null });
+
+  if (supported.length === 1) return { condition: { condition: "build_tool", passed: true, reason: `Builds with ${toolLabel(supported[0]!)}`, facts: deciding }, tool: toolId(supported[0]!) as BuildTool };
+  if (supported.length > 1) return fail(`${list(supported.map(toolLabel))} ${supported.length === 2 ? "both" : "all"} apply to this package, so which one builds it can't be decided.`);
+  const relevant = (input: string) => owned(input) && TOOL_CONFIG.test(path.posix.basename(input));
+  const unknown = repository.unknownReason("build_tools", relevant);
+  if (unknown) return fail(`Its build tools couldn't be decided: ${unknown}`, [repository.categoryFact("build_tools", relevant)]);
+  const found = applicable.length ? ` It declares ${list(applicable.map(toolLabel))}.` : "";
+  return fail(`No supported build tool applies to this package.${found} Previews support Vite, webpack, Rspack, and Rsbuild.`);
+}
+
+function packageManagerCondition(repository: Repository, directory: string, membership: Membership, manifests: ReadonlyMap<string, ManifestRead>): { condition: Condition; plan: BuildPlan["packageManager"] | null } {
+  const fail = (reason: string, facts: DecidingFact[]) => ({ condition: { condition: "package_manager" as const, passed: false, reason, facts }, plan: null });
+  if (membership.unknown) return fail(`Whether it belongs to a workspace couldn't be decided: ${membership.unknown}`, membership.facts);
+
+  const root = membership.root ?? directory;
+  const at = place(root);
+  const managers = repository.facts("package_managers");
+  const fact = managers.find((candidate) => candidate.key === root);
+  const facts = [...membership.facts, ...(fact ? [repository.decidingFact("package_managers", fact)] : [])];
+
+  // A workspace member installs from its root, so a lockfile of its own leaves two that could apply.
+  const own = membership.root !== null && membership.root !== directory ? managers.find((candidate) => candidate.key === directory) : undefined;
+  if (own) {
+    return fail(`It has its own lockfile, but installs from the workspace at ${at}, so which one applies can't be decided.`, [...facts, repository.decidingFact("package_managers", own)]);
+  }
+  if (!fact) {
+    const relevant = (input: string) => path.posix.dirname(input) === root && LOCKFILE_INPUTS.has(path.posix.basename(input));
+    const unknown = repository.unknownReason("package_managers", relevant);
+    if (unknown) return fail(`Its package manager at ${at} couldn't be decided: ${unknown}`, [...facts, repository.categoryFact("package_managers", relevant)]);
+    return fail(`No lockfile applies to its install root, ${at}. Previews install from a lockfile without changing it.`, facts);
+  }
+  if (fact.state === "conflicting") {
+    const named = (fact.candidates ?? []).map((candidate) => `${String(candidate.value)} (${paths(candidate.evidence.map((id) => repository.evidencePath(id)), ", ")})`);
+    return fail(`The package manager at ${at} conflicts: ${list(named, "or")}.`, facts);
+  }
+  if (fact.state === "unknown" || typeof fact.value !== "string") return fail(`Its package manager at ${at} couldn't be decided.`, facts);
+  const name = fact.value;
+  if (!(PACKAGE_MANAGERS as readonly string[]).includes(name)) return fail(`${name} isn't a supported package manager. Previews support npm, pnpm, and Yarn.`, facts);
+  const lockfiles = [...new Set(fact.evidence.filter((id) => repository.evidenceRule(id) === "lockfile.package-manager").map((id) => repository.evidencePath(id)))];
+  if (lockfiles.length !== 1) return fail(lockfiles.length ? `Several lockfiles apply at ${at}: ${paths(lockfiles)}.` : `${name} is declared at ${at}, but no lockfile is committed there. Previews install from a lockfile without changing it.`, facts);
+
+  // The version comes from the root's own packageManager declaration, not from a resolved dependency.
+  const read = manifests.get(root) ?? { state: "unreadable", reason: "it wasn't read" };
+  if (read.state === "unreadable") return fail(`Its package manager version at ${at} couldn't be decided: ${manifestPath(root)} couldn't be read (${read.reason}).`, facts);
+  const declared = read.state === "read" && typeof read.manifest.packageManager === "string" ? read.manifest.packageManager : null;
+  let version: string | null = null;
+  if (declared !== null) {
+    const match = /^(npm|pnpm|yarn)@([^+]+)(?:\+.*)?$/.exec(declared.trim());
+    if (!match || match[1] !== name || !semver.valid(match[2]!)) return fail(`${manifestPath(root)} declares packageManager ${JSON.stringify(declared)}, which isn't an exact ${name} version.`, facts);
+    version = semver.valid(match[2]!);
+  }
+  const plan = { name: name as PackageManager, version, lockfile: lockfiles[0]! };
+  return { condition: { condition: "package_manager", passed: true, reason: `Installs with ${name}${version ? ` ${version}` : ""} from ${lockfiles[0]} at ${at}`, facts }, plan };
+}
+
+function nodeCondition(repository: Repository, directory: string, installRoot: string, configured: readonly string[]): { condition: Condition; plan: BuildPlan["node"] | null } {
+  const category = categoryOf(repository.document, "runtime_requirements");
+  const scope = repository.nodeScope(directory, installRoot);
+  const applicable = (input: string) => {
+    const owner = repository.owner(input);
+    return owner === null || scope.has(owner);
+  };
+  const relevant = (input: string) => applicable(input) && declaresNode(input);
+  const fail = (reason: string, facts: DecidingFact[]) => ({ condition: { condition: "node" as const, passed: false, reason, facts }, plan: null });
+  if (!category) return fail(`Its Node requirement couldn't be decided: detector release ${repository.document.detector_release} doesn't report runtime requirements.`, [repository.categoryFact("runtime_requirements")]);
+
+  const skipped = category.search.skipped.filter(relevant);
+  const missingAnalysis = !category.search.complete || skipped.length > 0;
+  const missingReason = skipped.length ? `${paths(skipped)} could not be read or understood` : "its search was incomplete";
+  const fact = category.facts.find((candidate) => candidate.key === "node");
+  const facts = fact ? [repository.decidingFact("runtime_requirements", fact, applicable)] : [repository.categoryFact("runtime_requirements", relevant)];
+  const choose = (ranges: string[]) => {
+    const selected = selectNode(configured, ranges);
+    if (selected.version === null) return fail(selected.reason, facts);
+    return { condition: { condition: "node" as const, passed: true, reason: selected.reason, facts }, plan: { version: selected.version, ranges } };
+  };
+  // Missing analysis is not the same as no declaration.
+  const undeclared = () => (missingAnalysis ? fail(`Its Node requirement couldn't be decided: ${missingReason}.`, facts) : choose([]));
+  const rangeOf = (value: JsonValue) => {
+    const range = value && typeof value === "object" && !Array.isArray(value) && typeof value.range === "string" ? semver.validRange(value.range) : null;
+    return range;
+  };
+
+  if (!fact) return undeclared();
+  if (missingAnalysis) return fail(`Its Node requirement couldn't be decided: ${missingReason}.`, facts);
+  if (fact.state === "conflicting") {
+    // The repository's declarations conflict; the ones that apply to this package may still agree.
+    const candidates = (fact.candidates ?? []).filter((candidate) => candidate.evidence.some((id) => applicable(repository.evidencePath(id))));
+    if (candidates.length === 0) return undeclared();
+    const ranges = candidates.map((candidate) => rangeOf(candidate.value));
+    if (ranges.some((range) => range === null)) return fail("Its Node requirement couldn't be decided: a declared range isn't valid.", facts);
+    const valid = ranges as string[];
+    if (valid.every((range) => valid.every((other) => semver.intersects(range, other)))) return choose(valid);
+    const named = candidates.map((candidate, index) => `${valid[index]} (${paths(candidate.evidence.map((id) => repository.evidencePath(id)).filter(applicable), ", ")})`);
+    return fail(`Its Node declarations conflict: ${list(named, "or")}.`, facts);
+  }
+  if (fact.state === "unknown") return fail("Its Node requirement couldn't be decided.", facts);
+  const declared = fact.evidence.map((id) => repository.evidencePath(id));
+  if (declared.every((input) => !applicable(input))) return undeclared();
+  const range = rangeOf(fact.value);
+  if (!range) return fail("Its Node requirement couldn't be decided: the declared range isn't valid.", facts);
+  if (declared.every(applicable)) return choose([range]);
+  // The profile merged these declarations with other packages' into one range that satisfies them all, so
+  // a version in it satisfies the ones that apply here. It's only a bound: when no configured version is
+  // in it, the range that applies to this package alone can't be separated.
+  const others = paths(declared.filter((input) => !applicable(input)));
+  const chosen = choose([range]);
+  if (!chosen.plan) return fail(`Its Node requirement couldn't be decided: the profile merges the Node declarations that apply to it with ones from packages its install doesn't include, such as ${others}, and no configured version satisfies them all.`, facts);
+  return { ...chosen, condition: { ...chosen.condition, reason: `${chosen.condition.reason}, the range the profile merged from its declarations and ones from packages its install doesn't include, such as ${others}` } };
+}
+
+/**
+ * The highest configured Node version that satisfies every one of +ranges+,
+ * or why none does (design decision 4, step 2). Preparation decides with it,
+ * and a build decides again under the settings it runs with, so both apply
+ * one rule.
+ */
+export function selectNode(configured: readonly string[], ranges: readonly string[]): { version: string; reason: string } | { version: null; reason: string } {
+  const sorted = [...configured].sort(semver.rcompare);
+  if (sorted.length === 0) return { version: null, reason: "No Node versions are configured for previews (previews.nodeVersions)." };
+  const version = sorted.find((candidate) => ranges.every((range) => semver.satisfies(candidate, range)));
+  const wanted = list(ranges);
+  if (!version) return { version: null, reason: `No configured Node version satisfies ${wanted}. Configured: ${sorted.join(", ")}.` };
+  return { version, reason: ranges.length === 0 ? `No Node version is declared, so the highest configured, ${version}, is used` : `Node ${version} satisfies ${wanted}` };
+}
+
+function buildScriptCondition(repository: Repository, directory: string): { condition: Condition; command: string | null } {
+  const manifest = manifestPath(directory);
+  const fact = repository.facts("scripts").find((candidate) => manifestOfFact(candidate) === manifest && objectValue(candidate)?.name === "build");
+  if (fact && fact.state !== "conflicting" && typeof objectValue(fact)?.command === "string") {
+    const command = objectValue(fact)!.command as string;
+    return { condition: { condition: "build_script", passed: true, reason: `Runs its build script: ${command}`, facts: [repository.decidingFact("scripts", fact)] }, command };
+  }
+  const unknown = repository.unknownReason("scripts", (input) => input === manifest);
+  const facts = fact ? [repository.decidingFact("scripts", fact)] : [repository.categoryFact("scripts")];
+  const reason = unknown ? `Its scripts couldn't be decided: ${unknown}` : `${manifest} declares no build script.`;
+  return { condition: { condition: "build_script", passed: false, reason, facts }, command: null };
+}
+
+/**
+ * Whether the package has a page to build: for Vite, `index.html` committed
+ * at the root its build reads. Other tools are checked once the build has
+ * run, when the output must contain `index.html`.
+ */
+function pageCondition(directory: string, tool: { condition: Condition; tool: BuildTool | null }, pages: ReadonlyMap<string, PageRead>): Condition {
+  if (tool.tool !== "vite") return { condition: "page", passed: true, reason: tool.tool ? `Its build must emit ${PAGE_FILE}, which is checked once it has run` : "Depends on its build tool", facts: [] };
+  const facts = tool.condition.facts;
+  const read = pages.get(directory);
+  const fail = (reason: string) => ({ condition: "page" as const, passed: false, reason, facts });
+  if (!read) return fail(`Whether it has a page couldn't be decided: its ${PAGE_FILE} wasn't looked for.`);
+  if (read.state === "undecided") return fail(`Whether it has a page couldn't be decided: ${read.reason}.`);
+  const root = read.config ? `, in the root ${read.config} sets` : "";
+  if (read.state === "missing") return fail(`No ${PAGE_FILE} is committed at ${read.page}, the page Vite builds from${root}. Previews need a page that loads the application on its own.`);
+  return { condition: "page", passed: true, reason: `Vite builds its page from ${read.page}${root}`, facts };
+}
+
+/** The commit-level refusal when no package manifest exists, as in a Scala, Go, or Java repository. */
+function noPackage(repository: Repository): Condition {
+  const unknown = repository.unknownReason("frameworks", () => true);
+  const languages = repository.facts("languages").map((fact) => repository.decidingFact("languages", fact));
+  const reason = unknown
+    ? `No browser framework was found, and its frameworks couldn't be decided: ${unknown}. Previews need a client-rendered single-page application with ${list(Object.values(BROWSER_FRAMEWORKS), "or")}.`
+    : `No package declares a browser framework. Previews need a client-rendered single-page application with ${list(Object.values(BROWSER_FRAMEWORKS), "or")}.`;
+  return { condition: "framework", passed: false, reason, facts: [repository.categoryFact("frameworks"), ...languages] };
+}
+
+/** What kind of package it is: a Module Federation remote, a single-spa application, or else a standalone app. Only for display. */
+function layoutOf(repository: Repository, directory: string): { layout: ArtifactLayout; composition: JsonValue } {
+  const owned = repository.facts("composition").filter((fact) => fact.state !== "conflicting" && fact.evidence.some((id) => repository.owner(repository.evidencePath(id)) === directory));
+  const remote = owned.find((fact) => objectValue(fact)?.mechanism === "module-federation" && Array.isArray(objectValue(fact)?.exposes) && (objectValue(fact)!.exposes as JsonValue[]).length > 0);
+  if (remote) return { layout: "module_federation", composition: remote.value };
+  const application = owned.find((fact) => objectValue(fact)?.mechanism === "single-spa" && objectValue(fact)?.role === "application");
+  if (application) return { layout: "single_spa", composition: application.value };
+  return { layout: "standalone", composition: null };
+}
+
+// -- Pages ----------------------------------------------------------------------
+
+/** The page a preview opens, which Vite builds from and every build must emit. */
+const PAGE_FILE = "index.html";
+/** The configuration files Vite loads from a package's directory, in the order it looks for them. */
+const VITE_CONFIGS = ["vite.config.js", "vite.config.mjs", "vite.config.ts", "vite.config.cjs", "vite.config.mts", "vite.config.cts"];
+/** A `root` key, quoted or not, as an object literal names it. */
+const ROOT_KEY = /(?<![\w$.])(["']?)root\1\s*:\s*/g;
+/** A root named literally: a string, `__dirname` or `process.cwd()`, or `path.resolve` or `path.join` of `__dirname` and a string. */
+const LITERAL_ROOTS = [/^(["'`])([^"'`$\n]*)\1/, /^(?:__dirname|process\.cwd\(\))(?![\w$.])()()/, /^(?:path\.)?(?:resolve|join)\(\s*__dirname\s*(?:,\s*(["'`])([^"'`$\n]*)\1\s*)?\)/];
+
+/** A Vite package's page, as preparation found it in the commit. */
+export type PageRead = { state: "found" | "missing"; page: string; config: string | null } | { state: "undecided"; config: string; reason: string };
+
+/** What preparation can tell about the commit's files: whether a path is committed, and a file's text; null when it can't be read. */
+export interface CommittedFiles {
+  has(file: string): boolean;
+  text(file: string): string | null;
+}
+
+/** The packages that build with Vite, whose page preparation looks for before deciding. */
+export function vitePackages(document: FactDocument): string[] {
+  const repository = new Repository(document);
+  return repository.packages.filter((directory) => buildToolCondition(repository, directory).tool === "vite");
+}
+
+/** The configuration Vite loads from +directory+: the first of its default names that's committed, if any. */
+export function viteConfig(directory: string, files: Pick<CommittedFiles, "has">): string | null {
+  return VITE_CONFIGS.map((name) => (directory === "." ? name : `${directory}/${name}`)).find((file) => files.has(file)) ?? null;
+}
+
+/**
+ * Where Vite in +directory+ reads its page, and whether it's committed:
+ * index.html in the package's directory, or in the root its configuration
+ * names literally. A root set in code, or several, can't be decided.
+ */
+export function readPage(directory: string, files: CommittedFiles): PageRead {
+  const config = viteConfig(directory, files);
+  let root = ".";
+  if (config !== null) {
+    const text = files.text(config);
+    if (text === null) return { state: "undecided", config, reason: `${config} couldn't be read` };
+    const roots = new Set<string>();
+    for (const match of text.matchAll(ROOT_KEY)) {
+      const value = text.slice(match.index + match[0].length, match.index + match[0].length + 300);
+      const literal = LITERAL_ROOTS.map((pattern) => pattern.exec(value)).find((found) => found !== null);
+      if (!literal) return { state: "undecided", config, reason: `${config} sets Vite's root in code, so where its page is can't be read` };
+      roots.add(path.posix.normalize(literal[2] || "."));
+    }
+    if (roots.size > 1) return { state: "undecided", config, reason: `${config} names several roots, ${list([...roots])}, so which one Vite reads can't be decided` };
+    root = [...roots][0] ?? ".";
+  }
+  const page = path.posix.normalize(path.posix.join(directory, root, PAGE_FILE));
+  if (path.posix.isAbsolute(root) || page.startsWith("../")) return { state: "undecided", config: config!, reason: `${config} names a root outside the repository` };
+  return { state: files.has(page) ? "found" : "missing", page, config: root === "." ? null : config };
+}
+
+// -- The repository as the fact document describes it --------------------------
+
+interface Membership {
+  /** The workspace root the package installs from, or null when it isn't a member of one. */
+  root: string | null;
+  unknown: string | null;
+  facts: DecidingFact[];
+}
+
+class Repository {
+  /** Every package directory, from its package.json manifest, in path order. */
+  readonly packages: string[];
+  private readonly owners = new Map<string, string | null>();
+  private readonly memberships = new Map<string, Membership>();
+
+  constructor(readonly document: FactDocument) {
+    const manifests = new Set<string>();
+    for (const fact of this.facts("package_identity")) manifests.add(manifestOfFact(fact));
+    for (const fact of [...this.facts("frameworks"), ...this.facts("scripts")]) manifests.add(manifestOfFact(fact));
+    this.packages = [...manifests]
+      .filter((manifest) => path.posix.basename(manifest) === "package.json")
+      .map((manifest) => (manifest === "package.json" ? "." : path.posix.dirname(manifest)))
+      .sort();
+  }
+
+  facts(category: string): Fact[] {
+    return categoryOf(this.document, category)?.facts ?? [];
+  }
+
+  packageName(directory: string): string | null {
+    const fact = this.facts("package_identity").find((candidate) => manifestOfFact(candidate) === manifestPath(directory));
+    const name = fact ? objectValue(fact)?.name : null;
+    return typeof name === "string" ? name : null;
+  }
+
+  /** The deepest package directory containing +input+, or null when it's outside every package. */
+  owner(input: string): string | null {
+    const known = this.owners.get(input);
+    if (known !== undefined) return known;
+    let owner: string | null = null;
+    for (const directory of this.packages) if (contains(directory, input) && (owner === null || owner === "." || directory.length > owner.length)) owner = directory;
+    this.owners.set(input, owner);
+    return owner;
+  }
+
+  evidencePath(id: string): string {
+    const record = this.document.evidence[id] as JsonObject | undefined;
+    return typeof record?.path === "string" ? record.path : "";
+  }
+
+  evidenceRule(id: string): string | null {
+    const record = this.document.evidence[id] as JsonObject | undefined;
+    return typeof record?.rule === "string" ? record.rule : null;
+  }
+
+  /**
+   * +fact+ with its evidence, or only the evidence at paths +keep+ selects
+   * for a fact reported once for the whole repository; `elsewhere` counts
+   * the rest, so a verdict never copies every package's evidence.
+   */
+  decidingFact(category: string, fact: Fact, keep?: (input: string) => boolean): DecidingFact {
+    let elsewhere = 0;
+    const locate = (ids: readonly string[]) => {
+      const kept = keep ? ids.filter((id) => keep(this.evidencePath(id))) : ids;
+      elsewhere += ids.length - kept.length;
+      return evidenceLocations(kept, this.document.evidence);
+    };
+    const evidence = locate(fact.evidence);
+    const candidates = fact.candidates?.map((candidate) => ({ value: candidate.value, evidence: locate(candidate.evidence) }));
+    return { category, key: fact.key, state: fact.state, value: fact.value, evidence, ...(candidates && { candidates }), ...(elsewhere > 0 && { elsewhere }) };
+  }
+
+  /** A category as a whole, when no fact of it decides: its state and the skipped inputs +relevant+ selects. */
+  categoryFact(id: string, relevant: (input: string) => boolean = () => true): DecidingFact {
+    const category = categoryOf(this.document, id);
+    if (!category) return { category: id, key: null, state: "not_covered", value: null, evidence: [] };
+    const skipped = category.search.skipped.filter(relevant);
+    return { category: id, key: null, state: category.state, value: { complete: category.search.complete, skipped: skipped.slice(0, 20), skippedCount: skipped.length }, evidence: [] };
+  }
+
+  /** Why +category+ can't be trusted for the inputs +relevant+ selects, or null when its search covered them. */
+  unknownReason(id: string, relevant: (input: string) => boolean): string | null {
+    const category: Category | undefined = categoryOf(this.document, id);
+    if (!category) return `detector release ${this.document.detector_release} doesn't report it`;
+    const skipped = category.search.skipped.filter(relevant);
+    if (skipped.length) return `${paths(skipped)} could not be read or understood`;
+    if (!category.search.complete) return "its search was incomplete";
+    return null;
+  }
+
+  /** Whether +directory+ is a member of a workspace, and which root declares it. */
+  membership(directory: string): Membership {
+    let membership = this.memberships.get(directory);
+    if (!membership) this.memberships.set(directory, (membership = this.decideMembership(directory)));
+    return membership;
+  }
+
+  private decideMembership(directory: string): Membership {
+    const category = categoryOf(this.document, "workspaces");
+    if (!category) return { root: null, unknown: `detector release ${this.document.detector_release} doesn't report workspaces`, facts: [this.categoryFact("workspaces")] };
+    const fact = category.facts.find((candidate) => candidate.key === directory);
+    if (!fact) {
+      // A workspace declaration in an enclosing directory that couldn't be read might include it.
+      const declaring = (input: string) => WORKSPACE_INPUTS.has(path.posix.basename(input)) && contains(path.posix.dirname(input), directory) && path.posix.dirname(input) !== directory;
+      const skipped = category.search.skipped.filter(declaring);
+      if (skipped.length) return { root: null, unknown: `${paths(skipped)} could not be read or understood`, facts: [this.categoryFact("workspaces", declaring)] };
+      if (!category.search.complete) return { root: null, unknown: "its search was incomplete", facts: [this.categoryFact("workspaces")] };
+      return { root: null, unknown: null, facts: [] };
+    }
+    const facts = [this.decidingFact("workspaces", fact)];
+    if (fact.state === "conflicting" || fact.state === "unknown") return { root: null, unknown: `its workspace membership is ${fact.state}`, facts };
+    const own = manifestPath(directory);
+    const roots = [...new Set(fact.evidence.map((id) => this.evidencePath(id)).filter((input) => input !== own).map((input) => path.posix.dirname(input)))];
+    if (roots.length !== 1 || !contains(roots[0]!, directory)) return { root: null, unknown: roots.length ? `${paths(roots.map(place))} each declare it` : "no workspace declaration names it", facts };
+    return { root: roots[0]!, unknown: null, facts };
+  }
+
+  /**
+   * The packages whose Node declarations apply to building +directory+ from
+   * +installRoot+: its enclosing packages and, for a workspace install, every
+   * member the install includes.
+   */
+  nodeScope(directory: string, installRoot: string): Set<string> {
+    const scope = new Set(this.packages.filter((candidate) => contains(candidate, directory)));
+    scope.add(installRoot);
+    for (const member of this.packages) if (this.membership(member).root === installRoot) scope.add(member);
+    return scope;
+  }
+}
+
+// -- Helpers ----------------------------------------------------------------------
+
+function categoryOf(document: FactDocument, id: string): Category | undefined {
+  return Object.hasOwn(document.categories, id) ? document.categories[id] : undefined;
+}
+
+function contains(directory: string, input: string): boolean {
+  return directory === "." || input === directory || input.startsWith(`${directory}/`);
+}
+
+function objectValue(fact: Fact): JsonObject | null {
+  return fact.value && typeof fact.value === "object" && !Array.isArray(fact.value) ? (fact.value as JsonObject) : null;
+}
+
+function manifestOfFact(fact: Fact): string {
+  const manifest = objectValue(fact)?.manifest;
+  return typeof manifest === "string" ? manifest : fact.key.split("#")[0]!;
+}
+
+function frameworkId(fact: Fact): string {
+  return String(objectValue(fact)?.id ?? fact.key.split("#")[1] ?? "");
+}
+
+function frameworkLabel(fact: Fact): string {
+  return String(objectValue(fact)?.label ?? frameworkId(fact));
+}
+
+function toolId(fact: Fact): string {
+  return String(objectValue(fact)?.id ?? fact.key);
+}
+
+function toolLabel(fact: Fact): string {
+  return String(objectValue(fact)?.label ?? toolId(fact));
+}
+
+/** A directory as a sentence names it. */
+function place(directory: string): string {
+  return directory === "." ? "the repository root" : directory;
+}
+
+/** Paths as a sentence names them: the first few, then how many more. */
+function paths(items: readonly string[], separator?: ", "): string {
+  const named = items.slice(0, NAMED);
+  const rest = items.length - named.length;
+  if (separator) return rest > 0 ? `${named.join(separator)}, and ${rest} more` : named.join(separator);
+  return rest > 0 ? `${named.join(", ")}, and ${rest} more` : list(named);
+}
+
+function list(items: readonly string[], conjunction = "and"): string {
+  if (items.length <= 1) return items.join("");
+  if (items.length === 2) return `${items[0]} ${conjunction} ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, ${conjunction} ${items.at(-1)}`;
+}

@@ -4,6 +4,8 @@ import { type Executor, getDb } from "@/lib/db/client";
 import { FINALIZE_EVALUATION, finalizeEvaluation, runEvaluationRelease } from "@/lib/evaluations/jobs";
 import { EVALUATE_RELEASE } from "@/lib/evaluations/start";
 import { READ_DE_CONSOLE, runScheduledDeConsoleRead } from "@/lib/ownership/de-console-schedule";
+import { runPreparation } from "@/lib/previews/preparation";
+import { PREPARE_PREVIEW } from "@/lib/previews/records";
 import { CHECK_PROFILES, runScheduledProfileCheck } from "@/lib/profiling/check";
 import type { HandlerRegistry } from "./worker";
 
@@ -17,5 +19,7 @@ export function jobHandlers(db: Executor = getDb(), config: FabricateConfig = ge
     [FINALIZE_EVALUATION]: (payload) => void finalizeEvaluation(db, String(payload.evaluation)),
     [READ_DE_CONSOLE]: (_payload, context) => runScheduledDeConsoleRead(db, config, { signal: context.signal }),
     [CHECK_PROFILES]: async (_payload, context) => void (await runScheduledProfileCheck(db, config, { signal: context.signal, log: (message) => console.log(`[worker] ${message}`) })),
+    // Fails the preparation, rather than running it, while previews are off or the Repository isn't enrolled.
+    [PREPARE_PREVIEW]: async (payload, context) => void (await runPreparation(db, { preparation: String(payload.preparation), requested: Number(payload.requested) }, { config, signal: context.signal })),
   };
 }

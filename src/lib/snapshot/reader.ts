@@ -41,11 +41,16 @@ export class SnapshotReader extends PolicyReader {
   }
 
   /**
-   * Opens the commit named by a pinned internal ref. +expectedCommit+ guards
-   * against a ref that no longer names the recorded snapshot.
+   * Opens the commit named by a pinned internal ref: a snapshot's, or a
+   * preview's pin of its own commit (`refs/fabricate/previews/<sha>`).
+   * +expectedCommit+ guards against a ref that no longer names the recorded
+   * snapshot.
    */
   static async open(runner: GitRunner, gitDir: string, internalRef: string, expectedCommit: string, budgets: Budgets, options: SnapshotReaderOptions = {}): Promise<SnapshotReader> {
-    if (!/^refs\/fabricate\/snapshots\/snp_[a-z0-9]{16}$/.test(internalRef)) throw new GitError("command_rejected", "Snapshots are read only through pinned internal refs");
+    const previewPin = OBJECT_ID.test(expectedCommit) && internalRef === `refs/fabricate/previews/${expectedCommit}`;
+    if (!/^refs\/fabricate\/snapshots\/snp_[a-z0-9]{16}$/.test(internalRef) && !previewPin) {
+      throw new GitError("command_rejected", "Snapshots are read only through pinned internal refs");
+    }
     const commitSha = await runner.revParse(gitDir, `${internalRef}^{commit}`);
     if (commitSha !== expectedCommit) throw new GitError("command_rejected", `The pinned ref ${internalRef} no longer names commit ${expectedCommit}`);
 
