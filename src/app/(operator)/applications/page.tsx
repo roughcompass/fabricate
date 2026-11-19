@@ -13,7 +13,7 @@ import { Panel } from "@/components/ui/panel";
 import { SearchField } from "@/components/ui/search-field";
 import { Tag } from "@/components/ui/tag";
 import { requireApplications } from "@/lib/applications/availability";
-import { EMPTY_QUERY, applicationsHref, listApplications, parseApplicationQuery, statusSnapshot } from "@/lib/applications/records";
+import { EMPTY_QUERY, applicationsHref, findApplication, listApplications, parseApplicationQuery, statusSnapshot } from "@/lib/applications/records";
 import { getDb } from "@/lib/db/client";
 import { param } from "@/lib/web/query";
 import { routes } from "@/lib/web/routes";
@@ -24,6 +24,12 @@ import styles from "./applications.module.css";
 import { APPLICATION_STATUS_LABELS, STATUS_FILTER_LABELS } from "@/lib/applications/status";
 
 export const metadata: Metadata = { title: "Applications" };
+
+/** The application onboarding just created, which its outcome names. */
+function created(params: Record<string, string | string[] | undefined>) {
+  const slug = param(params, "application");
+  return slug ? findApplication(getDb(), slug) : undefined;
+}
 
 /**
  * The Applications page (applications/catalog spec), on the Index template
@@ -53,7 +59,7 @@ export default async function ApplicationsPage({ searchParams }: PageProps<"/app
   return (
     <IndexTemplate
       header={{ title: "Applications", description: "Frontend applications built from a branch of a repository, kept up to date as the branch moves.", primaryAction: newApplication }}
-      alerts={<OutcomeToast outcome={applicationOutcome(param(params, "notice"))} />}
+      alerts={<OutcomeToast outcome={applicationOutcome(param(params, "notice"), created(params))} strip={["notice", "application"]} />}
       empty={
         listing.total === 0
           ? { title: "No applications yet", icon: "frame", children: "Applications are built from repositories: choose a repository, the branch to track, and its package, and the Frontend Registry builds it.", action: newApplication }

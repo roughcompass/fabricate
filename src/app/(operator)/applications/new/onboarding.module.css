@@ -1,0 +1,19 @@
+@layer pages {
+  .step { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+  .lead { color: var(--color-text); }
+  .muted { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .search { display: flex; flex-direction: column; gap: var(--space-3); }
+  /* Inside the step's panel, so divided rather than bordered: surfaces never nest. */
+  .choices { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border-block: 1px solid var(--color-border-subtle); }
+  .choice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; }
+  .choice + .choice { border-top: 1px solid var(--color-border-subtle); }
+  .choiceText { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+  .choiceName { font-weight: var(--font-weight-medium); }
+  .choiceText .muted { overflow-wrap: anywhere; }
+  .part { display: flex; flex-direction: column; gap: var(--space-3); }
+  .partTitle { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .chosen { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
+  .chosen strong { color: var(--color-text); font-weight: var(--font-weight-medium); }
+  .checking { display: flex; flex-direction: column; gap: var(--space-2); }
+  .changeable { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); }
+}

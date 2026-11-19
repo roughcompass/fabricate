@@ -56,10 +56,11 @@ export type SeededState = "building" | "ready" | "failed" | "unavailable" | "cap
  * with a screenshot, failed, published without one, or published with its
  * screenshot still pending. Its jobs never run.
  */
-export function seeded(db: Db, name: string, options: { state?: SeededState; framework?: string; branch?: string; description?: string; repository?: Repository } = {}): ApplicationRow {
+export function seeded(db: Db, name: string, options: { state?: SeededState; framework?: string; branch?: string; description?: string; repository?: Repository; packageDir?: string } = {}): ApplicationRow {
   const config = serverConfig();
   const repository = options.repository ?? insertRepository(db, { name: `spa-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, cloneUrl: `https://git.example.com/acme/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.git`, canonicalUrl: `https://git.example.com/acme/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, gitRef: null });
-  const created = onboard(db, config, repository, { name, description: options.description ?? "", framework: options.framework, branch: options.branch, preparation: decidedPreparation(db, repository, [qualifyingVerdict(".", { framework: options.framework })]) });
+  const packageDir = options.packageDir ?? ".";
+  const created = onboard(db, config, repository, { name, description: options.description ?? "", framework: options.framework, branch: options.branch, packageDir, preparation: decidedPreparation(db, repository, [qualifyingVerdict(packageDir, { framework: options.framework })]) });
   const preview = db.select().from(previewBuilds).where(eq(previewBuilds.id, created.latestPreviewId!)).get()!;
   const state = options.state ?? "ready";
   if (state === "failed") failAttempt(db, preview.publicId, { attempt: 1 }, "The install failed: npm ci exited with code 1.");

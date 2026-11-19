@@ -105,7 +105,8 @@ test("every operator page has exactly one h1, in its page header, and none in th
       await expect(page.locator("h1"), name).toHaveCount(1);
       await expect(page.locator("[data-shell-header] h1"), name).toHaveCount(0);
       // A focused page, such as preview mode, has no page header: its title is the h1 of its content, for assistive technology only.
-      if (await page.locator("[data-focused-page]").count()) await expect(page.locator("[data-focused-page] > h1.visually-hidden"), name).toHaveCount(1);
+      // A focused flow, such as onboarding, keeps its page header.
+      if (await page.locator("[data-focused-page]:not([data-focused-flow])").count()) await expect(page.locator("[data-focused-page] > h1.visually-hidden"), name).toHaveCount(1);
       else await expect(pageHeader(page).locator("h1"), name).toHaveCount(1);
     });
   }

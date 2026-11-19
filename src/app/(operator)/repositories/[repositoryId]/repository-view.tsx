@@ -22,7 +22,8 @@ import { PREVIEW_OUTCOME_PARAMS, previewOutcome, repositoryOutcome } from "../ou
 import { PreviewsSection } from "./previews-section";
 import { VersionStatus } from "./version-parts";
 import { failureSentence } from "@/lib/runs/failures";
-import { Menu, MenuAction } from "@/components/ui/menu";
+import { Menu, MenuAction, MenuItem } from "@/components/ui/menu";
+import { applicationsAvailable } from "@/lib/applications/availability";
 import { reprofileRepository } from "../actions";
 import styles from "@/components/profiles/profile-body.module.css";
 import { routes } from "@/lib/web/routes";
@@ -104,6 +105,12 @@ export function RepositoryView({
             <MenuAction action={reprofileRepository} fields={{ publicId: repository.publicId }} icon="refresh">
               Re-profile
             </MenuAction>
+            {/* Onboarding with this Repository chosen, whose back button returns here (applications/onboarding spec). */}
+            {applicationsAvailable() && (
+              <MenuItem href={routes.newApplication({ repository: repository.publicId, from: "repository" })} icon="plus">
+                Create application
+              </MenuItem>
+            )}
           </Menu>
         ),
         secondaryActions: [

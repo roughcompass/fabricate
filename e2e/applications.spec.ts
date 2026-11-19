@@ -9,7 +9,7 @@ import { onboarded, registered, seeded } from "./support/applications";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect as baseExpect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { runJobs, serverConfig } from "./support/results";
-import { pageHeader, pageTitle } from "./support/shell";
+import { expectCurrentItem, pageHeader, pageTitle } from "./support/shell";
 import { paths } from "./support/paths";
 
 /*
@@ -38,6 +38,7 @@ test.describe("the Applications page", () => {
     await page.goto(paths.applications);
     await expect(page).toHaveTitle("Applications · Frontend Registry");
     await expect(pageTitle(page)).toHaveText("Applications");
+    await expectCurrentItem(page, "Applications");
     await expect(pageHeader(page).getByRole("link", { name: "New application" })).toHaveAttribute("href", "/applications/new");
     await expect(page.getByRole("searchbox", { name: "Search applications" })).toBeVisible();
     await expect(rail(page).getByRole("heading", { name: "Filter applications" })).toBeVisible();
@@ -204,6 +205,7 @@ test.describe("an application's page", () => {
     const crumbs = page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
     await expect(crumbs).toHaveText(["Applications"]);
     await expect(crumbs.first()).toHaveAttribute("href", "/applications");
+    await expectCurrentItem(page, "Applications", "true");
     const header = pageHeader(page);
     await expect(header).toContainText("Building");
     await expect(header.getByRole("button", { name: "Preview application" })).toBeDisabled();

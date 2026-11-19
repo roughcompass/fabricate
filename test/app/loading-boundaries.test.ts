@@ -43,6 +43,7 @@ describe("navigation skeletons", () => {
     ["/standards/std_abc/draft", "editor"],
     ["/standards/std_abc/releases/rel_1", "details"],
     ["/applications", "cards"],
+    ["/applications/new", "focused-flow"],
     ["/applications/orders-portal", "details"],
     ["/applications/orders-portal/settings", "settings"],
     ["/applications/orders-portal/preview", "focused"],

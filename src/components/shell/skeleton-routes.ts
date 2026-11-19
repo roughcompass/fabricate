@@ -3,7 +3,7 @@
  * Each is a template's skeleton (src/components/templates/), shaped as that
  * page lays out its template's zones.
  */
-export type SkeletonKind = "dashboard" | "index" | "index-tabs" | "repositories" | "cards" | "details" | "details-tabs" | "analysis" | "form" | "editor" | "settings" | "focused" | "content";
+export type SkeletonKind = "dashboard" | "index" | "index-tabs" | "repositories" | "cards" | "details" | "details-tabs" | "analysis" | "form" | "editor" | "settings" | "focused" | "focused-flow" | "content";
 
 const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/((admin\/system|adoption)\/?)?$/, "dashboard"],
@@ -30,6 +30,8 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "details"],
   // Applications: the gallery's cards, an application's page and settings, and preview mode, a focused page.
   [/^\/applications\/?$/, "cards"],
+  // Onboarding is a focused flow: its skeleton hides the sidebar as soon as the navigation starts.
+  [/^\/applications\/new\/?$/, "focused-flow"],
   [/^\/applications\/[^/]+\/settings\/?$/, "settings"],
   [/^\/applications\/[^/]+\/preview\/?$/, "focused"],
   [/^\/applications\/(?!new\/?$)[^/]+\/?$/, "details"],

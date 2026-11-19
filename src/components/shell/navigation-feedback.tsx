@@ -7,6 +7,7 @@ import { ContentSkeleton } from "@/components/templates/content-template";
 import { DashboardSkeleton } from "@/components/templates/dashboard-template";
 import { DetailsSkeleton } from "@/components/templates/details-template";
 import { EditorSkeleton } from "@/components/templates/editor-template";
+import { FlowSkeleton } from "@/components/templates/flow-template";
 import { FormSkeleton } from "@/components/templates/form-template";
 import { IndexSkeleton } from "@/components/templates/index-template";
 import { SettingsSkeleton } from "@/components/templates/settings-template";
@@ -27,6 +28,7 @@ const SKELETONS: Record<SkeletonKind, () => React.ReactNode> = {
   editor: () => <EditorSkeleton />,
   settings: () => <SettingsSkeleton />,
   focused: () => <EditorSkeleton focused />,
+  "focused-flow": () => <FlowSkeleton focused />,
   content: () => <ContentSkeleton />,
 };
 /** Fast navigations finish before this, so they never flash a skeleton. */
