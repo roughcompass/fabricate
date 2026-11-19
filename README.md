@@ -44,6 +44,8 @@ npm run db:vacuum                                               # give back the 
 
 Local data can also start over instead: move `storage/fabricate.sqlite3` aside, run `npm run db:migrate`, and add the Repositories again.
 
+Surveyor 0.7.0 knows no design system on its own: surveys compare repositories with the Reference Catalog entries the Frontend Registry stores. After upgrading to it, run `npm run db:migrate` and `npm run projection:rebuild` (projection version 4 adds design-system usage), then start the worker with access to the registry `catalog.registry` names. It builds the entries every version in use needs before it surveys any Repository again under the new release, and the Repositories' Profiles from Surveyor 0.6.0 stay current until then.
+
 ## Run the checks
 
 ```sh
@@ -93,6 +95,9 @@ Environment variables override the file:
 | `analysis.maxTotalBytes` | `FRONTEND_REGISTRY_MAX_TOTAL_BYTES` | 67108864 |
 | `demo.enabled` | `FRONTEND_REGISTRY_DEMO` | `false`; `true` in development and test |
 | `profiling.checkMinutes` | `FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES` | 60; how often the worker checks every Repository for new commits and a new Surveyor release, see [docs/profiling.md](docs/profiling.md) |
+| `catalog.registry` | `FRONTEND_REGISTRY_CATALOG_REGISTRY` | `https://registry.npmjs.org/`; the npm registry Catalog builds download published packages from, such as CIB's internal mirror, see [docs/profiling.md](docs/profiling.md#the-reference-catalog). The things the Reference Catalog describes are in `config/catalog.yaml`, and the team's rules in `config/catalog-rules/` |
+| `adoption.snapshotDays` | `FRONTEND_REGISTRY_ADOPTION_SNAPSHOT_DAYS` | 7; days between adoption snapshots |
+| `adoption.rarelyUsedPercentile` | `FRONTEND_REGISTRY_ADOPTION_RARELY_USED_PERCENTILE` | 25; the share of used components, by fewest usages, that Adoption Analytics calls rarely used |
 | `previews.enabled` | `FRONTEND_REGISTRY_PREVIEWS` | `false`; whether Repository previews exist, see [docs/previews.md](docs/previews.md) |
 | `previews.trustedSources` | `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` | none; the clone URLs of the remotes enrolled for previews |
 | `previews.nodeVersions` | `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` | none; each Node version a preview build may use, mapped to its binary directory |
