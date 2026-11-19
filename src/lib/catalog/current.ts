@@ -1,7 +1,8 @@
 import { ENTRY_FORMAT_VERSION } from "@repo-facts/contract";
 import type { Executor } from "@/lib/db/client";
 import type { StoredEntryPackage } from "@/lib/db/schema";
-import { type CatalogConfiguration, type DescribedThing, thingKey } from "./configuration";
+import type { FrontendRegistryConfig } from "@/lib/config";
+import { type CatalogConfiguration, type DescribedThing, catalogConfiguration, thingKey } from "./configuration";
 import { type StoredEntry, storedEntries } from "./entries";
 
 /*
@@ -66,4 +67,14 @@ export function currentCatalog(db: Executor, catalog: CatalogConfiguration, stor
 
 function summaryOf(entry: StoredEntry): EntrySummary {
   return { kind: entry.kind, id: entry.entryId, version: entry.version, format_version: entry.formatVersion, digest: entry.digest, built_at: entry.builtAt.toISOString(), packages: entry.packages };
+}
+
+/**
+ * The current entry of each version of each described thing, as stored, newest stored first.
+ * @public The system status page lists the entries in use through this.
+ */
+export function entriesInUse(db: Executor, config: FrontendRegistryConfig): StoredEntry[] {
+  const stored = storedEntries(db);
+  const current = new Set(currentCatalog(db, catalogConfiguration(config), stored).entries.map((entry) => entry.digest));
+  return stored.filter((entry) => current.has(entry.digest)).reverse();
 }

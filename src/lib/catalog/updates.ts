@@ -1,9 +1,11 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { jobs, repositories, surveys } from "@/lib/db/schema";
 import { REQUEST_SURVEY, requestBackgroundSurvey } from "@/lib/surveys/background";
-import { latestSurvey } from "@/lib/surveys/records";
-import type { CurrentCatalog } from "./current";
+import { type Recipe, currentRecipe, latestSurvey, sameRecipe } from "@/lib/surveys/records";
+import { catalogConfiguration } from "./configuration";
+import { type CurrentCatalog, currentCatalog } from "./current";
 import { catalogIsCurrent } from "./recipe";
 
 /*
@@ -45,4 +47,44 @@ function requestedRepositories(db: Executor): string[] {
     .where(and(eq(jobs.kind, REQUEST_SURVEY), eq(jobs.state, "queued")))
     .all()
     .map((row) => row.repository);
+}
+
+/** How a registered Repository's newest version stands against the current recipe: made with it, waiting to be surveyed under it, or failed. */
+export const RECIPE_STATES = ["current", "waiting", "failed"] as const;
+export type RecipeState = (typeof RECIPE_STATES)[number];
+
+/**
+ * Each registered Repository's recipe state, by Repository id. Its newest
+ * version is current when it succeeded with the current Surveyor release,
+ * configuration, and Profile version, and with Catalog entries a survey
+ * would still pick; waiting when it's queued or running, when it's made with
+ * an older recipe, or when there is none yet; and failed when it failed.
+ * @public The system status page counts re-survey progress, and the Repositories list filters by recipe, through this.
+ */
+export function recipeStates(db: Executor, config: FrontendRegistryConfig, recipe: Recipe = currentRecipe(config)): Map<number, RecipeState> {
+  const registered = db.select({ id: repositories.id }).from(repositories).where(isNull(repositories.deletedAt)).all();
+  const states = new Map<number, RecipeState>(registered.map((repository) => [repository.id, "waiting"]));
+  const catalog = currentCatalog(db, catalogConfiguration(config));
+  const newest = new Map<number, typeof surveys.$inferSelect>();
+  const ids = [...states.keys()];
+  for (let start = 0; start < ids.length; start += 500) {
+    for (const survey of db.select().from(surveys).where(inArray(surveys.repositoryId, ids.slice(start, start + 500))).all()) {
+      if ((newest.get(survey.repositoryId)?.number ?? 0) < survey.number) newest.set(survey.repositoryId, survey);
+    }
+  }
+  for (const [repositoryId, survey] of newest) {
+    if (survey.state === "failed") states.set(repositoryId, "failed");
+    else if (survey.state === "succeeded" && sameRecipe(survey, recipe) && catalogIsCurrent(survey.catalog, catalog)) states.set(repositoryId, "current");
+  }
+  return states;
+}
+
+/**
+ * How many registered Repositories are in each recipe state.
+ * @public The system status page shows re-survey progress through this.
+ */
+export function recipeProgress(db: Executor, config: FrontendRegistryConfig): Record<RecipeState, number> {
+  const counts: Record<RecipeState, number> = { current: 0, waiting: 0, failed: 0 };
+  for (const state of recipeStates(db, config).values()) counts[state] += 1;
+  return counts;
 }
