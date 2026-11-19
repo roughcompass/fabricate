@@ -1,5 +1,6 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
+import { sentences } from "./support/page-rules";
 import { paths } from "./support/paths";
 import { seedOperatorSurfaces } from "./support/surfaces";
 import { useTheme } from "./support/shell";
@@ -33,15 +34,6 @@ function shape(url: string): string {
   const segments = pathname!.split("/").map((segment) => (/^[a-z]{2,4}_[a-z0-9]{6,}$/.test(segment) ? ":id" : segment));
   if (segments[1] === "templates" && segments[2]) segments[2] = ":slug";
   return segments.join("/");
-}
-
-/**
- * How many sentences +text+ has: each ends in a stop before a capital or the
- * end, so "v1.2", "e.g. a", and the initials in "J.P. Morgan" don't end one
- * (content standard, "Descriptions").
- */
-function sentences(text: string): number {
-  return text ? (text.match(/(?<!\b[A-Z])[.!?](?=\s+[A-Z]|$)/g) ?? []).length || 1 : 0;
 }
 
 /** Internal links worth following: pages, not fragments, API routes, or running applications' own routes. */

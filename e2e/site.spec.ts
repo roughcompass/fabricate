@@ -7,6 +7,7 @@ import { buildRepository } from "../test/support/builders";
 import { saltEntry } from "../test/support/catalog";
 import { seedSurvey } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
+import { sentences, sharedLinkTexts } from "./support/page-rules";
 import { paths } from "./support/paths";
 import { pageHeader, pageTitle, useTheme } from "./support/shell";
 
@@ -239,6 +240,38 @@ test.describe("without JavaScript", () => {
     await expect(page).toHaveURL("/docs/get-started/what-it-is");
     await page.getByRole("link", { name: "View as Markdown" }).click();
     expect(await page.content()).toContain("# What the Frontend Registry is");
+  });
+});
+
+/**
+ * The link check leaves the product site's pages to this spec. The site
+ * states one of its rules itself, a docs page's one-sentence summary ("Every
+ * docs page has the same frame"), and the marketing hero's one sentence on
+ * what the Frontend Registry is ("Hero"); it keeps two of the operator
+ * interface's, since a reader's tabs and links work the same way there: the
+ * browser title begins with the page's title, and links that share a text
+ * open one page. Read as the server renders them, as the link check reads.
+ */
+test.describe("the site's page rules", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("every site page: its browser title begins with its title, links that share a text open one page, and its summary is one sentence", async ({ page, db }) => {
+    test.setTimeout(180_000);
+    // A Repository brings the marketing page's figures, and their links, onto the page.
+    await seedSurvey(db, buildRepository(db, { name: "web" }));
+    const problems: string[] = [];
+    for (const url of ["/about", ...loadDocsSite(process.cwd()).pages.map((docsPage) => docsPage.href)]) {
+      await page.goto(url);
+      const title = await page.title();
+      const headings = (await page.locator("h1").allTextContents()).map((heading) => heading.trim());
+      // A docs page's summary is its header's description; the marketing page's is the hero's lead, under its title.
+      const summary = ((await pageHeader(page).locator("[data-header-description], h1 + p").allTextContents())[0] ?? "").trim();
+      if (headings.length !== 1) problems.push(`${url} has ${headings.length} titles`);
+      else if (!title.startsWith(headings[0]!)) problems.push(`${url}'s browser title "${title}" doesn't begin with its title "${headings[0]}"`);
+      if (sentences(summary) !== 1) problems.push(`${url}'s summary has ${sentences(summary)} sentences: "${summary}"`);
+      for (const shared of await sharedLinkTexts(page)) problems.push(`${url}: ${shared}`);
+    }
+    expect(problems).toEqual([]);
   });
 });
 
