@@ -118,7 +118,6 @@ export interface BuildOptions extends RefOptions {
  * commit already built successfully is used as it is, unless +force+; one
  * whose build failed is built again. Throws ApplicationBuildError while an
  * attempt is active, and the pinning's errors when the branch can't be read.
- * @public The automatic check uses this (add-applications task 3.1).
  */
 export async function buildApplication(db: Executor, publicId: string, options: BuildOptions = {}): Promise<ApplicationRow> {
   const config = options.config ?? getConfig();

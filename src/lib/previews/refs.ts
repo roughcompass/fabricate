@@ -82,14 +82,23 @@ export function configuredRequest(repository: Pick<Repository, "gitRef">): RefRe
   return repository.gitRef && FULL_SHA.test(repository.gitRef) ? { kind: "commit", sha: repository.gitRef } : { kind: "ref", name: repository.gitRef };
 }
 
+/**
+ * What the remote advertises, read live with `ls-remote` under the
+ * acquisition code's protocol and credential rules and a short timeout.
+ * Throws when it can't be read; see normalizeAcquisitionError.
+ */
+export async function readRemote(repository: Pick<Repository, "cloneUrl">, options: RefOptions = {}): Promise<Advertisement> {
+  const config = options.config ?? getConfig();
+  const { url, protocol } = gitSource(repository, new SourceBoundary(config));
+  const runner = options.runner ?? new GitRunner({ config, timeoutMs: Math.min(LIST_TIMEOUT_MS, config.gitTimeoutSeconds * 1_000) });
+  return parseLsRemote(await runner.lsRemote(url, protocol, options.signal));
+}
+
 /** The remote's branches and tags, the configured reference first; the configured reference alone when the remote can't be read. */
 export async function listRemoteRefs(repository: Pick<Repository, "cloneUrl" | "gitRef">, options: RefOptions = {}): Promise<RefListing> {
-  const config = options.config ?? getConfig();
   const configured = { label: repository.gitRef ?? "Default branch", request: configuredRequest(repository) };
   try {
-    const { url, protocol } = gitSource(repository, new SourceBoundary(config));
-    const runner = options.runner ?? new GitRunner({ config, timeoutMs: Math.min(LIST_TIMEOUT_MS, config.gitTimeoutSeconds * 1_000) });
-    const advertised = parseLsRemote(await runner.lsRemote(url, protocol, options.signal));
+    const advertised = await readRemote(repository, options);
     const configuredName = configuredRef(advertised, repository.gitRef);
     const refs = [...advertised.refs.keys()]
       .filter((name) => name.startsWith("refs/heads/") || name.startsWith("refs/tags/"))

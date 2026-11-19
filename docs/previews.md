@@ -4,7 +4,7 @@ A repository preview builds one client-rendered single-page application, or a mi
 
 Previews are the one place the Frontend Registry builds repository code. Assessments and Profiles stay strictly static, and a preview never adds facts to a Profile.
 
-> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications' builds are in place below the pages that show them, which add-applications builds next.
+> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications' builds and automatic rebuilds are in place below the pages that show them, which add-applications builds next.
 
 ## Turn previews on
 
@@ -230,6 +230,17 @@ A worker that stops in the middle of a build gives the attempt back to the queue
 ## Applications
 
 An application (add-applications) is a Repository's package that the Frontend Registry keeps built from one branch. Its builds are ordinary previews of that Repository, commit, and package, made by the pipeline above, so a commit is built once whether an application or an operator asked for it. An application points at two of them: its current build, the last that succeeded, and its latest attempt. A newer commit's build becomes current only when it succeeds, so a failed or refused commit leaves the last good build serving.
+
+### Automatic rebuilds
+
+The worker reads every application's tracked branch on the profiling check's schedule: once per `profiling.checkMinutes` (default 60, `FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES`), and once when it starts, in the same `profiling.check` job, after the Repositories are checked ([profiling.md](profiling.md)). For each application with no attempt under way, it reads the remote with `git ls-remote`, four remotes at a time and once per remote however many of its packages are applications. When the tracked branch names a commit other than the latest attempt's, it starts an attempt at that commit: it pins the commit, prepares it, and builds the package once the commit's Profile says it can be previewed, as [Preparing a commit](#preparing-a-commit) describes.
+
+- **A commit isn't tried twice.** A commit whose build failed, or which couldn't be previewed, is the latest attempt's, so the check leaves it alone until the branch moves again or an operator rebuilds the application.
+- **A remote that can't be read** is logged by the worker and skipped. Its applications keep their state, and the next check reads it again. So is a tracked branch the remote no longer has.
+- **Rebuild** builds the tracked branch's current commit again, even one that was built or failed before. It isn't offered while an attempt is under way.
+- **Switching branch** starts an attempt at the new branch's head, replacing any under way. The current build stays in use until the new branch's build succeeds.
+
+Checks need previews on and the Repository enrolled. While previews are off, nothing is read or built, and applications keep their state.
 
 ## Tested repositories
 

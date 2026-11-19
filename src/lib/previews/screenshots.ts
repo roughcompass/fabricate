@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { previewScreenshots } from "@/lib/db/schema";
+import { jobs, previewScreenshots } from "@/lib/db/schema";
+import { failureText } from "@/lib/git/redact";
 import { enqueue } from "@/lib/jobs/queue";
 import type { PreviewBuild } from "./records";
 
@@ -54,4 +55,37 @@ function screenshotJob(previewPublicId: string, screenshot: Pick<PreviewScreensh
 
 function screenshotJobKey(previewPublicId: string, screenshot: Pick<PreviewScreenshot, "requestedAt">): string {
   return `${CAPTURE_SCREENSHOT}:${previewPublicId}:${screenshot.requestedAt.getTime()}`;
+}
+
+/** Records why the request +requested+ couldn't be captured, unless it was since requested again. */
+export function failScreenshot(db: Executor, previewId: number, requested: number, reason: string, now = new Date()): boolean {
+  return (
+    db
+      .update(previewScreenshots)
+      .set({ state: "unavailable", directory: null, reason: failureText(reason, 1_000) || "The screenshot couldn't be captured", capturedAt: null, updatedAt: now })
+      .where(and(eq(previewScreenshots.previewId, previewId), eq(previewScreenshots.state, "pending"), eq(previewScreenshots.requestedAt, new Date(requested))))
+      .run().changes === 1
+  );
+}
+
+/**
+ * Marks unavailable every pending screenshot whose job can no longer capture
+ * it: the job failed, for example after the worker stopped on every try, or
+ * no longer exists. Without this such a screenshot would stay pending, and
+ * its application's image would show the placeholder forever.
+ */
+export function settleAbandonedScreenshots(db: Executor, now = new Date()): number {
+  const key = sql`${`${CAPTURE_SCREENSHOT}:`} || (SELECT b.public_id FROM preview_builds b WHERE b.id = ${previewScreenshots.previewId}) || ':' || ${previewScreenshots.requestedAt}`;
+  const rows = db
+    .select({ previewId: previewScreenshots.previewId, requestedAt: previewScreenshots.requestedAt, job: jobs.id, state: jobs.state, tries: jobs.attempts, maxTries: jobs.maxAttempts, leaseExpiresAt: jobs.leaseExpiresAt })
+    .from(previewScreenshots)
+    .leftJoin(jobs, eq(jobs.idempotencyKey, key))
+    .where(eq(previewScreenshots.state, "pending"))
+    .all();
+  let settled = 0;
+  for (const row of rows) {
+    const abandoned = row.job === null || row.state === "failed" || row.state === "succeeded" || (row.state === "running" && row.leaseExpiresAt !== null && row.leaseExpiresAt <= now && row.tries! >= row.maxTries!);
+    if (abandoned && failScreenshot(db, row.previewId, row.requestedAt.getTime(), "The capture stopped before it finished: the worker running it stopped or lost the job.", now)) settled += 1;
+  }
+  return settled;
 }
