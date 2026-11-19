@@ -65,7 +65,8 @@ describe("the marketing page's claims", () => {
     expect(demoOnly("/repositories/src_x/profile.json")).toBe(false);
     expect(demoOnly("/docs/get-started/what-it-is")).toBe(false);
     expect(demoOnly("/templates")).toBe(true);
-    expect(demoOnly("/run/ref-market-watch/watch")).toBe(true);
+    // Running applications are served while previews are on, demo or not.
+    expect(demoOnly("/run/orders-portal/accounts")).toBe(false);
     expect(routes.some((route) => route.pattern.test("/no-such-page"))).toBe(false);
   });
 

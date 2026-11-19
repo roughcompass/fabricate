@@ -57,6 +57,8 @@ export const routes = {
   application: (slug: string) => `/applications/${slug}`,
   /** An application's current screenshot, or its card image, at +version+ (Application.screenshot.version) so a new one loads anew. */
   applicationScreenshot: (slug: string, version: string, size: "full" | "card" = "full") => withQuery(`/applications/${slug}/screenshot`, { ...(size === "card" && { size }), v: version }),
+  /** The application running full screen under the toolbar, at its own +route+ (`/accounts/42`), with +query+ such as a share link's token. */
+  runningApplication: (slug: string, route = "/", query?: Query) => withQuery(`/run/${slug}${route === "/" ? "" : route}`, query),
 
   /** Adoption Analytics: the tracked design systems and packages. */
   adoption: "/adoption",

@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { desc, eq } from "drizzle-orm";
 import type { Db } from "../../src/lib/db/client";
+import { buildApplication, createApplication } from "../../src/lib/applications/pipeline";
+import { type Application, getApplication } from "../../src/lib/applications/records";
 import { previewBuilds } from "../../src/lib/db/schema";
 import { requestPreparation } from "../../src/lib/previews/preparation";
 import type { PreviewBuild } from "../../src/lib/previews/records";
@@ -9,6 +11,7 @@ import { cacheDirectory } from "../../src/lib/previews/storage";
 import { resolveCloneUrl } from "../../src/lib/repositories/registration";
 import { type Repository, findRepositoryByCanonicalUrl, insertRepository } from "../../src/lib/repositories/repository-records";
 import { SourceBoundary } from "../../src/lib/repositories/source-boundary";
+import { routes } from "../../src/lib/web/routes";
 import { git } from "../../test/support/git-fixture";
 import { E2E_FIXTURE_APP_REMOTE, E2E_PACKAGE_CACHE } from "./env";
 import { runJobs, serverConfig } from "./results";
@@ -23,17 +26,14 @@ import { runJobs, serverConfig } from "./results";
  * everything else.
  *
  * Setup turns it into a local Git repository at an enrolled remote and
- * builds it through the real preview pipeline: preparation, its survey, the
- * eligibility check, `npm ci`, and `vite build`, served under /previews/.
- * Packages come from the public npm registry the first time and from the
- * package cache kept under the e2e storage directory after that, so later
- * runs install offline.
- *
- * Onboarding (tasks 5.x) is the seam still to come: once application records
- * exist, `onboardOrdersPortal(db)` registers the remote with
- * `ordersPortalRepository`, creates the application through onboarding's
- * create, which enrolls the remote and starts the first build through the
- * same pipeline, and settles it with `settle`, in place of `buildOrdersPortal`.
+ * onboards it as the application Orders portal through the application
+ * records and pipeline (src/lib/applications): preparation, its survey, the
+ * eligibility check, then `npm ci` and `vite build`, served under /previews/,
+ * and a screenshot of the current build. Packages come from the public npm
+ * registry the first time and from the package cache kept under the e2e
+ * storage directory after that, so later runs install offline. Onboarding's
+ * pages (tasks 5.x) aren't involved: `buildOrdersPortal` calls what their
+ * Create does.
  */
 
 const SOURCE = path.resolve("test/fixtures/apps/orders-portal");
@@ -116,29 +116,74 @@ export async function settle(db: Db): Promise<void> {
   await runJobs(db);
 }
 
-export interface FixtureBuild {
-  readonly repository: Repository;
-  readonly preview: PreviewBuild;
-  /** Where it's served: `/previews/<preview>/`. */
-  readonly base: string;
-}
-
 /**
- * Builds the remote's +ref+ (its default branch unless named) through the
- * preview pipeline, and fails unless the build is Ready. Call
- * `ordersPortalRemote` first.
+ * Builds the remote's +ref+ (its default branch unless named) as a plain
+ * repository preview, through preparation and the build, and fails unless it
+ * is Ready. Call `ordersPortalRemote` first.
  */
-export async function buildOrdersPortal(db: Db, options: { ref?: string } = {}): Promise<FixtureBuild> {
+export async function previewOrdersPortal(db: Db, options: { ref?: string } = {}): Promise<PreviewBuild> {
   const repository = ordersPortalRepository(db);
   linkKeptPackageCache();
   const preparation = await requestPreparation(db, repository.publicId, { kind: "ref", name: options.ref ?? null }, { config: serverConfig() });
   await settle(db);
   const preview = db.select().from(previewBuilds).where(eq(previewBuilds.preparationId, preparation.id)).orderBy(desc(previewBuilds.id)).get();
-  if (!preview || preview.attemptState !== "ready") throw new Error(`The orders portal didn't build: ${preview ? `${preview.attemptState}, ${preview.attemptReason}` : "no preview was started"}. Its log is under ${cacheDirectory(serverConfig())}/..`);
-  return { repository, preview, base: `/previews/${preview.publicId}/` };
+  if (!preview || preview.attemptState !== "ready") throw new Error(`The orders portal didn't build: ${preview ? `${preview.attemptState}, ${preview.attemptReason}` : "no preview was started"}.`);
+  return preview;
 }
 
-/** The test page that frames a build under the toolbar, until `/run/<application>` replaces it (add-applications, task 8.1). */
-export function framedRun(build: Pick<FixtureBuild, "preview">, route = "/"): string {
-  return `/test/run/${build.preview.publicId}${route === "/" ? "" : route}`;
+/** The orders portal as an application, with its current build. */
+export interface FixtureApplication {
+  readonly repository: Repository;
+  readonly application: Application;
+  /** Its current build. */
+  readonly preview: PreviewBuild;
+  /** Where its current build is served: `/previews/<preview>/`. */
+  readonly base: string;
+}
+
+export const ORDERS_PORTAL_NAME = "Orders portal";
+
+/** The application named +name+ as it stands, with its current build, failing unless it's Ready with a screenshot. */
+function readyApplication(db: Db, slug: string): FixtureApplication {
+  const application = getApplication(db, slug);
+  if (application.status !== "ready" || !application.current) throw new Error(`${application.name} isn't Ready: ${application.status}, ${application.latest.reasons.map((reason) => reason.text).join(" ")}`);
+  if (!application.screenshot) throw new Error(`${application.name} has no screenshot of its current build`);
+  const preview = db.select().from(previewBuilds).where(eq(previewBuilds.publicId, application.current.preview)).get()!;
+  return { repository: ordersPortalRepository(db), application, preview, base: `/previews/${preview.publicId}/` };
+}
+
+/**
+ * Onboards the remote's main branch as the application Orders portal, as
+ * onboarding does: prepares the branch's commit, which decides it can be
+ * previewed, then creates the application from that preparation with the
+ * operator's trust confirmed, which enrolls the remote and starts the first
+ * build. Settles every job, so it returns the application Ready, with its
+ * current build and its screenshot. Call `ordersPortalRemote` first.
+ */
+export async function buildOrdersPortal(db: Db, options: { name?: string } = {}): Promise<FixtureApplication> {
+  const config = serverConfig();
+  const repository = ordersPortalRepository(db);
+  linkKeptPackageCache();
+  const preparation = await requestPreparation(db, repository.publicId, { kind: "ref", name: "main" }, { config });
+  await settle(db);
+  const created = createApplication(db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: preparation.publicId, name: options.name ?? ORDERS_PORTAL_NAME, description: "Accounts, orders, and settings for the orders team.", trusted: true }, config);
+  await settle(db);
+  return readyApplication(db, created.slug);
+}
+
+/**
+ * Builds the head of +application+'s tracked branch, as the automatic check
+ * does after a push, and returns it once that build is current. Commit to the
+ * remote first with `commitToOrdersPortal`.
+ */
+export async function rebuildOrdersPortal(db: Db, application: Pick<Application, "publicId" | "slug">): Promise<FixtureApplication> {
+  linkKeptPackageCache();
+  await buildApplication(db, application.publicId, { config: serverConfig() });
+  await settle(db);
+  return readyApplication(db, application.slug);
+}
+
+/** The application's running address at +route+: its current build under the toolbar. */
+export function framedRun(build: { application: Pick<Application, "slug"> }, route = "/"): string {
+  return routes.runningApplication(build.application.slug, route);
 }

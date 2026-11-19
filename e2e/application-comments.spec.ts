@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import { expectToolbarOnTop, openTool, startComment } from "./support/demo";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
-import { buildOrdersPortal, commitToOrdersPortal } from "./support/fixture-app";
+import { commitToOrdersPortal, rebuildOrdersPortal } from "./support/fixture-app";
 import { application, openBuild, runOrdersPortal, waitForPage } from "./support/running-app";
 import { useTheme } from "./support/shell";
 
@@ -110,7 +110,7 @@ test("keeps a pin on a newer build that still renders its element, and lists one
 
   // The next commit renames Export orders, so the first thread's element is gone.
   const renamed = commitToOrdersPortal({ "src/accounts.jsx": (source) => source.replace("Export orders", "Download orders") }, { message: "Rename Export orders" });
-  const second = await buildOrdersPortal(db);
+  const second = await rebuildOrdersPortal(db, first.application);
   expect(second.preview.commitSha).toBe(renamed);
   expect(second.preview.publicId).not.toBe(first.preview.publicId);
   await openBuild(page, second);
@@ -193,7 +193,7 @@ test.describe("the composer", () => {
   });
 
   test("formats the selected word, storing the marker and showing the style", async ({ page, db }) => {
-    const { repository } = await runOrdersPortal(page, db);
+    const { application: running } = await runOrdersPortal(page, db);
     await startComment(page);
     await exportOrders(page).click();
     await composer(page).getByLabel("Your name").fill("Sam Rivera");
@@ -216,7 +216,7 @@ test.describe("the composer", () => {
     const thread = page.getByRole("dialog", { name: "Comment 1" });
     await expect(thread.locator("strong", { hasText: "primary" })).toBeVisible();
     await expect(thread).not.toContainText("**");
-    const stored = await page.evaluate((key) => JSON.parse(window.sessionStorage.getItem(key)!) as { threads: { route: string; commit: string; anchor: { tag: string; fingerprint: string }; comments: { body: string }[] }[] }, `frontend-registry:test-run:threads:${repository.publicId}`);
+    const stored = await page.evaluate((key) => JSON.parse(window.sessionStorage.getItem(key)!) as { threads: { route: string; commit: string; anchor: { tag: string; fingerprint: string }; comments: { body: string }[] }[] }, `frontend-registry:threads:${running.publicId}`);
     expect(stored.threads[0]!.comments[0]!.body).toBe("Make this **primary**");
     expect(stored.threads[0]).toMatchObject({ route: "/accounts", anchor: { tag: "button", fingerprint: "Export orders" } });
   });

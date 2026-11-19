@@ -1,7 +1,7 @@
 import type { FrameLocator, Page } from "@playwright/test";
 import type { Db } from "../../src/lib/db/client";
 import { expect } from "./fixtures";
-import { type FixtureBuild, buildOrdersPortal, framedRun, ordersPortalRemote } from "./fixture-app";
+import { type FixtureApplication, buildOrdersPortal, framedRun, ordersPortalRemote } from "./fixture-app";
 
 /** Helpers for the fixture application running under the toolbar, in its frame. */
 
@@ -20,16 +20,16 @@ export async function waitForPage(page: Page, heading: string): Promise<void> {
   await expect.poll(() => frame!.evaluate(() => Symbol.for("frontend-registry.inspector") in window)).toBe(true);
 }
 
-/** Builds the orders portal on a fresh remote and opens it under the toolbar at +route+. */
-export async function runOrdersPortal(page: Page, db: Db, route = "/accounts"): Promise<FixtureBuild> {
+/** Onboards the orders portal from a fresh remote and opens it running under the toolbar at +route+. */
+export async function runOrdersPortal(page: Page, db: Db, route = "/accounts"): Promise<FixtureApplication> {
   ordersPortalRemote();
   const build = await buildOrdersPortal(db);
   await openBuild(page, build, route);
   return build;
 }
 
-/** Opens +build+ under the toolbar at +route+, on Accounts or Settings. */
-export async function openBuild(page: Page, build: FixtureBuild, route = "/accounts"): Promise<void> {
+/** Opens +build+'s application running under the toolbar at +route+, on Accounts or Settings. */
+export async function openBuild(page: Page, build: FixtureApplication, route = "/accounts"): Promise<void> {
   await page.goto(framedRun(build, route));
   await waitForPage(page, route.startsWith("/settings") ? "Settings" : "Accounts");
 }

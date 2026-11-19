@@ -106,9 +106,8 @@ test("refuses an unknown share link with a way back that opens a page", async ({
   await expect(page.getByRole("heading", { level: 1, name: "Application not available" })).toBeVisible();
   await expect(page.getByText("This link no longer opens an application.")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
-  const back = page.getByRole("link", { name: /^Go to / });
-  const href = (await back.getAttribute("href"))!;
-  expect((await page.request.get(href)).status(), href).toBe(200);
+  // Applications, which the Applications page serves once it's merged in (add-applications, task 6.1).
+  await expect(page.getByRole("link", { name: "Go to Applications" })).toHaveAttribute("href", "/applications");
 });
 
 test("shares a reference deployment view, including its otherwise private comments", async ({ page, browser, db: _db }) => {

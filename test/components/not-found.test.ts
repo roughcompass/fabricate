@@ -54,3 +54,20 @@ describe("not-found pages", () => {
     expect(html).not.toContain("Template not found");
   });
 });
+
+// page-patterns spec, "Share links that no longer resolve lead back to Applications".
+describe("a running application that isn't available", () => {
+  const render = async () => renderToStaticMarkup(createElement((await import("@/app/(runtime)/run/not-found")).default));
+
+  it("leads back to Applications while previews are on (Share link to a deleted application)", async () => {
+    setConfig(withOverrides(original, { previews: { enabled: true } }));
+    const html = await render();
+    expect(html).toContain("This link no longer opens an application.");
+    expect(html).toMatch(/<a [^>]*href="\/applications"[^>]*>Go to Applications<\/a>/);
+  });
+
+  it("leads Home while previews are off (Share link while previews are disabled)", async () => {
+    setConfig(withOverrides(original, { previews: { enabled: false } }));
+    expect(await render()).toMatch(/<a [^>]*href="\/"[^>]*>Go to Home<\/a>/);
+  });
+});

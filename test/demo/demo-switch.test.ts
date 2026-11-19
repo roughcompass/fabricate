@@ -42,11 +42,12 @@ describe("demo switch off", () => {
     expect(await redirectOf(Preview({ params: Promise.resolve({ templateSlug: "market-watch" }), searchParams: Promise.resolve({}) }))).toBe("not-found");
   });
 
-  it("renders the not-found page for a running reference deployment", async () => {
-    const { default: RunLayout } = await import("@/app/(runtime)/run/[applicationId]/layout");
-    const { default: RunRoute } = await import("@/app/(runtime)/run/[applicationId]/[[...path]]/page");
-    expect(await redirectOf(RunLayout({ children: null, params: Promise.resolve({ applicationId }) }))).toBe("not-found");
-    expect(await redirectOf(RunRoute({ params: Promise.resolve({ applicationId, path: ["watch"] }), searchParams: Promise.resolve({}) }))).toBe("not-found");
+  it("renders the not-found page for a running reference deployment, which is then no application either", async () => {
+    const { default: RunLayout } = await import("@/app/(runtime)/run/[slug]/layout");
+    const { default: RunRoute } = await import("@/app/(runtime)/run/[slug]/[[...path]]/page");
+    // Without the demo, the layout leaves the address to the page, which finds no application by that name.
+    expect(await RunLayout({ children: null, params: Promise.resolve({ slug: applicationId }) })).toBeNull();
+    expect(await redirectOf(RunRoute({ params: Promise.resolve({ slug: applicationId, path: ["watch"] }), searchParams: Promise.resolve({}) }))).toBe("not-found");
   });
 
   it("answers 404 for a share link and every demo endpoint", async () => {
