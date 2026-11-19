@@ -4,7 +4,7 @@ A repository preview builds one client-rendered single-page application, or a mi
 
 Previews are the one place DE FabLab builds repository code. Assessments and Profiles stay strictly static, and a preview never adds facts to a Profile.
 
-> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place. The checks against the seeded fleet aren't done yet, so keep `previews.enabled` off outside development.
+> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories).
 
 ## Turn previews on
 
@@ -226,3 +226,21 @@ After each successful build, DE FabLab keeps the stored output of every preview,
 The package caches are kept to half of `previews.maxStorageBytes`. When a build succeeds and the caches hold more, the build empties its own package manager's cache with that manager's command, at the build's Node and manager version, before it publishes: `npm cache clean --force`, `pnpm store prune`, or `yarn cache clean` (`--mirror` after Yarn 1). It skips this while another preview is building, whose install it could break, and a cache that fails to prune never fails the build. Another manager's cache is pruned when a build that uses that manager next succeeds, and corepack's cache of package manager releases isn't pruned.
 
 A worker that stops in the middle of a build gives the attempt back to the queue, and another worker runs it again. When the job runs out of tries that way, or its job is otherwise gone, the attempt is marked Failed with the reason the next time any preview build starts, the preview is rebuilt, or previews are pruned, so a preview never stays Building forever.
+
+## Tested repositories
+
+On 2026-11-19, the worktree's development web server and worker ran with previews on, Node 20.20.2, 22.23.5, and 24.22.0 from mise (`npm run previews:doctor` passed), the repositories below enrolled by clone URL, the seeded fleet registry their `.npmrc` and `.yarnrc` name on `127.0.0.1:4873`, and `previews.storage` outside the checkout. Each default branch was prepared from its Repository page's Previews section, and each Ready preview was opened at `/previews/<preview>/` in headless Chrome.
+
+| Repository | Package | Node and package manager | Outcome |
+|---|---|---|---|
+| `fleet/mf-billing`, `main` at `fae0386` | The repository root: Vite, a Module Federation remote | Node 20.20.2, Yarn 1.22.22 | **Ready.** Its own `index.html` renders the billing panel, built under the preview's base path. Its analytics call answers 404, since no collector runs. |
+| `fleet/mf-admin`, `main` at `cccbc40` | The repository root: Rspack, a Module Federation remote | Node 22.23.5, pnpm 11.21.0 | **Ready.** Its own `index.html` renders the exposed module through its async bootstrap, and its Access and Audit tabs switch. |
+| `fleet/spa-orders`, `main` at `b9eddcf` | The repository root: Vite, a single-spa application | Node 22, pnpm 11.21.0 | **Not previewable**, before anything ran: no `index.html` is committed at the root Vite builds from. |
+| `fleet/spa-reports`, `main` at `346e2fa` | The repository root: webpack, a single-spa application | Node 20.20.2, npm | **Failed.** The build succeeded but emitted only its lifecycle bundle: "The output has no index.html." Nothing was published. |
+| `fleet/spa-root`, `main` at `658f47e` | The repository root: webpack, a single-spa root config | Node 20.20.2, npm | **Ready**, but the page stays empty. Its import map loads the root config and the applications from its local development servers on `127.0.0.1:9000` to `9002`, which its `src/index.html` and webpack `publicPath` name. The page was served rebased. |
+| `fleet/mf-shell`, `main` at `3b4eb13` | The repository root: webpack, a Module Federation host | Node 20.20.2, npm | **Ready**, but the page stays empty. It loads its remotes from local development servers on `127.0.0.1:9101` to `9103`, and previews don't compose a host with remotes. `@mf/shell-bus` doesn't qualify, since it has no browser framework. |
+| `fleet/legacy-portal`, `main` at `6ddba8a` | The repository root: webpack 4 | Node 16, from `.nvmrc` and `engines`; npm | **Not previewable**, before anything ran: no configured Node version satisfies `>=16.0.0 <17.0.0-0`. |
+| `fleet/acme-platform`, `main` at `d53b15d` | The repository root and `packages/analytics` | Node 22, pnpm 11.21.0 | **Not previewable**, before anything ran: neither package declares a browser framework or a supported build tool, only the TypeScript compiler. |
+| `github.com/hmrc/pertax-frontend`, `main` at `eaeda77` | None: a Scala and Play service | None | **Not previewable**, before anything ran: no package declares a browser framework, and `build.sbt` and `project/plugins.sbt` couldn't be decided. |
+
+Yarn 1 first failed `mf-billing`'s install with `previews.storage` at its default inside the checkout, reading the checkout's own `.npmrc`. Such a build now fails before installing, naming the file; see [The build's environment](#the-builds-environment).
