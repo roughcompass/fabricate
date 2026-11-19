@@ -27,3 +27,5 @@
 /public/prototype-runtime
 /.workflow-data
 /.swc
+# A production release assembled by `npm run release`.
+/release

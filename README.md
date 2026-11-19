@@ -12,7 +12,6 @@ DE FabLab implements the OpenSpec change `repository-assessment-foundation`: the
 - Git 2.32 or newer, on `PATH`
 - The address of the internal npm registry that serves the `@repo-facts` packages, in `REPO_FACTS_NPM_REGISTRY`
 - Google Chrome, for browser tests. Playwright uses the installed Chrome instead of downloading a browser.
-- Docker, only to build the production image
 
 ## Set up a development environment
 
@@ -107,23 +106,25 @@ DE FabLab never stores credentials. It rejects clone URLs that embed a password 
 - **HTTPS:** set `gitCredentialHelper` to a Git credential helper available to the worker, such as `osxkeychain` or `store`. DE FabLab ignores the system and global Git configuration, so a helper configured only there is not used.
 - **SSH:** load the key into an SSH agent that the worker can reach through `SSH_AUTH_SOCK`. Git runs in batch mode, so a missing or locked key fails the acquisition instead of prompting.
 
-## Run the production image
+## Run in production
+
+Fabricate runs as two Node.js processes, the web server and the worker, with no container. Build a release on a machine that can reach the `@repo-facts` registry, then run it with Node.js 24, Git, and an SSH client for `ssh://` sources:
 
 ```sh
-docker build \
-  --secret id=repo_facts_registry,env=REPO_FACTS_NPM_REGISTRY \
-  --secret id=repo_facts_token,env=REPO_FACTS_NPM_TOKEN \
-  -t fabricate .
-REPO_FACTS_NPM_TOKEN=<the same token> node scripts/verify-image.mjs fabricate
-docker volume create fabricate_storage
-docker run --rm -v fabricate_storage:/app/storage fabricate node dist/migrate.cjs
-docker run -d -p 3000:3000 -v fabricate_storage:/app/storage fabricate
-docker run -d -v fabricate_storage:/app/storage fabricate node dist/worker.cjs
+REPO_FACTS_NPM_REGISTRY=<registry> npm ci && npm run build
+npm run release                       # assembles release/
+REPO_FACTS_NPM_TOKEN=<token used for the install> node scripts/verify-release.mjs
+
+cd release
+export NODE_ENV=production FABRICATE_ENV=production
+node dist/migrate.cjs                 # before the first start and after each upgrade
+PORT=3000 HOSTNAME=0.0.0.0 node server.js
+node dist/worker.cjs
 ```
 
-The registry address and its token reach the build only as Docker build secrets. Omit the token secret for a registry that allows anonymous reads. Neither the address nor the token enters a build argument, a layer, or the image environment. `scripts/verify-image.mjs` checks the built image. It scans the image's history, configuration, and every file for the token and for any literal npm token. It also requires the image's `@repo-facts` packages to match the versions the lockfile pins. A registry on the build machine's loopback address is reachable from the build as `host.docker.internal`; pass `--add-host=host.docker.internal:host-gateway` if Docker doesn't define it.
+`release/` holds the standalone web server, its static files, the worker and migration bundles, the migrations, `config/`, and the native SQLite binding. It installs nothing and carries no npm configuration, so neither the registry address nor its token reaches it. `scripts/verify-release.mjs` checks that: it scans every file for the token, any literal npm `_authToken`, and any `REPO_FACTS_NPM_TOKEN` assignment, and requires the release's `@repo-facts` packages to match the versions the lockfile pins, with their release provenance. Omit the token for a registry that allows anonymous reads.
 
-The image runs the web server by default. The worker and the migration command use the same image with a different command. The runtime stage has Node.js, Git, and the SSH client, but no npm, npx, Corepack, pnpm, or Yarn. Both processes run as the unprivileged `node` user. Pass settings as environment variables, for example `-e FABRICATE_ALLOWED_ROOTS=/repositories` together with a read-only bind mount.
+Data lives in `release/storage/` unless `FABRICATE_DATABASE` and `FABRICATE_REPOSITORY_STORAGE` point elsewhere. Keep it outside the release directory so an upgrade can replace the release. Pass other settings as environment variables, for example `FABRICATE_ALLOWED_ROOTS=/repositories`. Run both processes under the host's own supervisor, such as systemd or launchd, as an unprivileged user. Assessments never run a package manager or repository code, so the processes need none beyond Node.js itself.
 
 ## What an assessment does and does not do
 
