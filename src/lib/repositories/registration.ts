@@ -1,3 +1,4 @@
+import { deleteRepositoryApplications } from "@/lib/applications/records";
 import { eq, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, ValidationError } from "@/lib/db/errors";
@@ -107,6 +108,8 @@ export function deleteRepository(db: Executor, publicId: string, confirmation: s
     const repository = getRepository(tx, publicId);
     if (confirmation.trim() !== repository.name) throw new ValidationError([{ field: "confirmation", message: `Type ${repository.name} to confirm` }]);
     tx.delete(assessmentTargets).where(eq(assessmentTargets.repositoryId, repository.id)).run();
+    // Its applications go with it, releasing their previews, which are deleted next (add-applications, catalog spec).
+    deleteRepositoryApplications(tx, repository.id);
     const now = new Date();
     return {
       previews: deleteRepositoryPreviews(tx, repository.id),

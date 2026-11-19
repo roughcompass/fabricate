@@ -22,7 +22,11 @@ import { type RefOptions, type RefRequest, pinCommit, previewPinRef } from "./re
 /**
  * Prepares a pinned commit for previews before any build exists (design
  * decision 3). A request checks the feature switch and the Repository's
- * enrollment, pins the commit, and queues a `preview.prepare` job. The job
+ * enrollment, pins the commit, and queues a `preview.prepare` job. Deciding
+ * reads the commit statically, as a survey does, so the job decides it even
+ * for a remote that isn't enrolled, as onboarding asks before the operator
+ * confirms trust (add-applications); only an enrolled remote's package is
+ * built. The job
  * decides from the Profile of the commit's survey under the current recipe,
  * starting the survey when there's none and waiting for it, so a commit any
  * Run, check, or preview already surveyed isn't surveyed again. It then reads the install roots' committed manifests, and looks
@@ -34,7 +38,7 @@ import { type RefOptions, type RefRequest, pinCommit, previewPinRef } from "./re
 export async function requestPreparation(db: Executor, repositoryPublicId: string, request: RefRequest, options: RefOptions = {}): Promise<PreviewPreparation> {
   const config = options.config ?? getConfig();
   const repository = getRepository(db, repositoryPublicId);
-  assertEnrolled(config, repository);
+  assertEnrolled(db, config, repository);
   const pinned = await pinCommit(db, repository, request, { ...options, config });
   // A request for the configured reference says which commit it names now (unify-surveys, design decision 4).
   if (request.kind === "ref" && request.name === repository.gitRef) recordConfiguredResolution(db, repository.id, pinned.commitSha, new Date());
@@ -61,7 +65,7 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
   if (!preparation || preparation.state !== "profiling" || preparation.requestedAt.getTime() !== job.requested) return null;
   const repository = db.select().from(repositories).where(eq(repositories.id, preparation.repositoryId)).get()!;
   if (!config.previews.enabled) return failPreparation(db, job.preparation, job.requested, "Previews were turned off before the commit was prepared");
-  if (!isEnrolled(config, repository)) return failPreparation(db, job.preparation, job.requested, `${repository.name} is not enrolled for previews`);
+  if (repository.deletedAt !== null) return failPreparation(db, job.preparation, job.requested, `${repository.name} was deleted before the commit was prepared`);
 
   try {
     const runner = options.runner ?? new GitRunner({ config });
@@ -83,9 +87,9 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
     const eligibility = evaluateEligibility({ document: facts, manifests, nodeVersions: Object.keys(config.previews.nodeVersions), pages });
     return immediate(db, (tx) => {
       const decided = decidePreparation(tx, job.preparation, job.requested, profile, eligibility);
-      // With exactly one qualifying package there's nothing to choose.
+      // With exactly one qualifying package there's nothing to choose; it's built only for an enrolled remote.
       const qualifying = eligibility.packages.filter((verdict) => verdict.qualifies);
-      if (decided?.state === "ready" && qualifying.length === 1) startPreview(tx, decided.publicId, qualifying[0]!.directory);
+      if (decided?.state === "ready" && qualifying.length === 1 && isEnrolled(tx, config, repository)) startPreview(tx, decided.publicId, qualifying[0]!.directory);
       return decided;
     });
   } catch (error) {

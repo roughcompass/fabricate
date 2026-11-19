@@ -53,7 +53,7 @@ const restrictedSyntax = [
 
 // Record addresses are built in one module, so an address change lands in one place (prune-and-consolidate-code, design decision 8).
 const recordLinks = {
-  selector: "TemplateLiteral[quasis.0.value.raw=/^\\/(runs|standards|assessments|evaluations|profiles|repositories)\\//]",
+  selector: "TemplateLiteral[quasis.0.value.raw=/^\\/(runs|standards|assessments|evaluations|profiles|repositories|applications)\\//]",
   message: "Build record addresses with routes from @/lib/web/routes, not by hand.",
 };
 

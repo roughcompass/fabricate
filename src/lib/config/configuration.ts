@@ -70,8 +70,16 @@ const settingsSchema = z.strictObject({
   // listed in trustedSources, by clone URL, can be previewed; nodeVersions
   // maps each Node version a build may use to its binary directory. Builds,
   // their logs, published output, and package caches live under storage.
+  // browser is what captures applications' screenshots: Playwright's
+  // Chromium when null, else a Playwright channel or a browser's path.
   previews: z.strictObject({
     enabled: z.boolean(),
+    browser: z
+      .string()
+      .trim()
+      .min(1, "the preview browser must not be blank")
+      .refine((value) => path.isAbsolute(value) || /^[a-z][a-z0-9-]*$/.test(value), "the preview browser must be a Playwright channel, such as chrome, or an absolute path")
+      .nullable(),
     trustedSources: z.array(z.string().trim().min(1, "trusted sources must not be blank")),
     nodeVersions: z.record(z.string(), pathSetting),
     storage: pathSetting,
@@ -120,6 +128,7 @@ export const ENV_KEYS = {
   adoptionSnapshotDays: "FRONTEND_REGISTRY_ADOPTION_SNAPSHOT_DAYS",
   adoptionRarelyUsedPercentile: "FRONTEND_REGISTRY_ADOPTION_RARELY_USED_PERCENTILE",
   previewsEnabled: "FRONTEND_REGISTRY_PREVIEWS",
+  previewsBrowser: "FRONTEND_REGISTRY_PREVIEWS_BROWSER",
   previewsTrustedSources: "FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES",
   previewsNodeVersions: "FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS",
   previewsStorage: "FRONTEND_REGISTRY_PREVIEWS_STORAGE",
@@ -139,6 +148,8 @@ export interface AnalysisBudgets {
 /** Repository previews (docs/previews.md). */
 export interface PreviewSettings {
   readonly enabled: boolean;
+  /** What captures screenshots: Playwright's Chromium when null, else a Playwright channel such as chrome, or a browser executable's absolute path. */
+  readonly browser: string | null;
   /** Enrolled remotes, as canonical clone URL identities; a Repository is enrolled only when its canonical URL is listed. */
   readonly trustedSources: readonly string[];
   /** Configured Node installs: normalized version → binary directory, resolved from the app root. */
@@ -289,6 +300,7 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
     adoption: { ...settings.adoption },
     previews: {
       enabled: settings.previews.enabled,
+      browser: settings.previews.browser,
       trustedSources: unique(settings.previews.trustedSources.map(trustedSource)),
       nodeVersions: nodeVersions(settings.previews.nodeVersions, resolve),
       storage: resolve(settings.previews.storage),
@@ -384,6 +396,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [adoption, "snapshotDays", integer(ENV_KEYS.adoptionSnapshotDays)],
     [adoption, "rarelyUsedPercentile", integer(ENV_KEYS.adoptionRarelyUsedPercentile)],
     [previews, "enabled", boolean(ENV_KEYS.previewsEnabled)],
+    [previews, "browser", text(ENV_KEYS.previewsBrowser)],
     [previews, "trustedSources", urls(ENV_KEYS.previewsTrustedSources)],
     [previews, "nodeVersions", versions(ENV_KEYS.previewsNodeVersions)],
     [previews, "storage", text(ENV_KEYS.previewsStorage)],
@@ -403,7 +416,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
 }
 
 /** Variables added after the rename, which never had an old name to fall back to. */
-const NEW_SINCE_RENAME: ReadonlySet<string> = new Set([ENV_KEYS.catalogRegistry, ENV_KEYS.adoptionSnapshotDays, ENV_KEYS.adoptionRarelyUsedPercentile]);
+const NEW_SINCE_RENAME: ReadonlySet<string> = new Set([ENV_KEYS.catalogRegistry, ENV_KEYS.adoptionSnapshotDays, ENV_KEYS.adoptionRarelyUsedPercentile, ENV_KEYS.previewsBrowser]);
 
 /**
  * The environment with each variable's name from before the rename read where its

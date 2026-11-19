@@ -4,7 +4,7 @@ A repository preview builds one client-rendered single-page application, or a mi
 
 Previews are the one place the Frontend Registry builds repository code. Assessments and Profiles stay strictly static, and a preview never adds facts to a Profile.
 
-> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories).
+> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications' builds, automatic rebuilds, and screenshots are in place below the pages that show them, which add-applications builds next.
 
 ## Turn previews on
 
@@ -14,6 +14,7 @@ Previews are off by default. While `previews.enabled` is off, no Repository page
 |---|---|---|
 | `previews.enabled` (`FRONTEND_REGISTRY_PREVIEWS`) | `false` | Turns previews on. |
 | `previews.trustedSources` | none | The remotes enrolled for previews, by clone URL. |
+| `previews.browser` (`FRONTEND_REGISTRY_PREVIEWS_BROWSER`) | none | The headless browser that captures applications' screenshots: Playwright's Chromium when unset, or a Playwright channel such as `chrome`, or a browser's absolute path. See [Screenshots](#screenshots). |
 | `previews.nodeVersions` | none | Each Node version a build may use, mapped to the directory that holds its `node` binary. |
 | `previews.storage` (`FRONTEND_REGISTRY_PREVIEWS_STORAGE`) | `storage/previews` | Where builds run and keep their logs, published output, and package caches. Yarn builds need it outside any directory with Yarn's configuration; see [The build's environment](#the-builds-environment). |
 | `previews.concurrency` | 1 | How many preview builds run at once, apart from the worker's other jobs. |
@@ -47,10 +48,10 @@ npm run previews:doctor
 
 In a release (see the README's Run in production), run `node dist/previews-doctor.cjs` from the release directory instead.
 
-For each `previews.nodeVersions` entry, the doctor checks that the directory's `node` reports that version and that its corepack runs pnpm and Yarn. They run in the environment a build's install gets: corepack's and the package managers' caches under `.cache/` in `previews.storage`, and a throwaway `HOME` and `TMPDIR`, so your own are never read or changed. The first run downloads corepack's default pnpm and Yarn, as a build would, so the registry must be reachable. It also checks `git` on the worker's `PATH` and `tar` where extraction looks for it. It prints a line for each check, names anything missing or wrong, and exits with a non-zero status if any check fails. With no Node versions configured, it says previews can't build anything and fails.
+For each `previews.nodeVersions` entry, the doctor checks that the directory's `node` reports that version and that its corepack runs pnpm and Yarn. They run in the environment a build's install gets: corepack's and the package managers' caches under `.cache/` in `previews.storage`, and a throwaway `HOME` and `TMPDIR`, so your own are never read or changed. The first run downloads corepack's default pnpm and Yarn, as a build would, so the registry must be reachable. It also checks `git` on the worker's `PATH`, `tar` where extraction looks for it, and that the [screenshot browser](#screenshots) launches headless, naming a missing one and how to install it. It prints a line for each check, names anything missing or wrong, and exits with a non-zero status if any check fails. With no Node versions configured, it says previews can't build anything and fails.
 
 ```text
-Preview toolchain: previews.nodeVersions, git, and tar. Package manager caches: /srv/frontend-registry/storage/previews/.cache
+Preview toolchain: previews.nodeVersions, git, tar, and the screenshot browser. Package manager caches: /srv/frontend-registry/storage/previews/.cache
 FAIL Node 20.18.1: /home/frontend-registry/.local/share/mise/installs/node/20.18.1/bin has no node executable
 skip Node 20.18.1 pnpm: needs Node 20.18.1's node to run
 skip Node 20.18.1 Yarn: needs Node 20.18.1's node to run
@@ -59,14 +60,15 @@ ok   Node 22.11.0 pnpm: corepack runs pnpm 10.4.1
 ok   Node 22.11.0 Yarn: corepack runs Yarn 1.22.22
 ok   git: /usr/bin/git, git version 2.50.1
 ok   tar: /usr/bin/tar, bsdtar 3.5.3 - libarchive 3.7.4
-1 of 8 checks failed: Node 20.18.1.
+ok   Screenshot browser: Playwright's Chromium 159.0.8154.6 launches headless
+1 of 9 checks failed: Node 20.18.1.
 ```
 
 The web server needs none of this.
 
 ### Enrolling a remote
 
-Only enrolled remotes can be previewed. Add each remote's clone URL to `previews.trustedSources`:
+Only enrolled remotes can be previewed. A remote is enrolled in one of two ways: its clone URL is listed in `previews.trustedSources`, or an operator created an [application](#applications) from it after confirming they trust its code. To enroll remotes in the configuration, add each clone URL to `previews.trustedSources`:
 
 ```json
 "previews": {
@@ -76,7 +78,11 @@ Only enrolled remotes can be previewed. Add each remote's clone URL to `previews
 }
 ```
 
-The Frontend Registry compares remotes by the same canonical identity it uses to detect duplicate Repositories: it ignores the SSH user, default ports, host case, a trailing slash, and a trailing `.git`. A Repository's name or ID never enrolls it, and neither does adding the Repository or assessing it. Renaming a Repository keeps its enrollment, and pointing it at another remote ends it. The Frontend Registry checks enrollment again before queued work runs, so removing a remote from the list stops its pending previews.
+The Frontend Registry compares remotes by the same canonical identity it uses to detect duplicate Repositories: it ignores the SSH user, default ports, host case, a trailing slash, and a trailing `.git`. A Repository's name or ID never enrolls it, and neither does adding the Repository or assessing it. Renaming a Repository keeps its enrollment, and pointing it at another remote ends it. The Frontend Registry checks enrollment again before queued work runs, so removing a remote from the list stops its pending builds.
+
+Creating an application enrolls its remote in the same step that records the application and queues its first build, if the remote isn't enrolled already. The operator must first confirm that they trust the repository's code to be built and served. The Frontend Registry records the enrollment in its database, by the remote's canonical identity, with when it was made and which application made it, by that application's ID and name then. Removing the remote from `previews.trustedSources` doesn't end an enrollment an application made, and neither does deleting that application or every application of the remote: the remote stays enrolled until the record is removed from the database.
+
+Deciding whether a commit can be previewed reads it statically, as a survey does, so onboarding decides a commit before its remote is enrolled. Only an enrolled remote's packages are built.
 
 ## Security
 
@@ -214,6 +220,7 @@ Everything lives under `previews.storage`:
 | `<preview>/staging/<attempt>-<claim>/` | One worker's scratch while it builds: the extracted commit, `HOME`, and `TMPDIR`. Deleted when the build ends. |
 | `<preview>/logs/<attempt>-<claim>.log` | The latest attempt's log. |
 | `<preview>/out/<attempt>-<claim>/` | The published artifact. |
+| `<preview>/screenshots/<attempt>-<claim>/` | The screenshot and card image of that artifact, for an application's current build. Never served under `/previews/`. |
 | `.cache/<manager>/` | Package caches every build shares, one for each package manager and one for corepack. |
 | `.trash/` | Directories of deleted previews, moved aside to be removed. |
 
@@ -221,11 +228,36 @@ Everything lives under `previews.storage`:
 
 Deleting a preview, or the Repository it belongs to, deletes it at once: its paths answer 404 and it leaves every list. Its directory is moved to `.trash/` in one step and then removed. A build still running for it can neither publish to it nor bring it back, and when that build stops, whatever it wrote since is removed too. Deleting doesn't need previews to be on or the remote to be enrolled, so storage can always be reclaimed.
 
-After each successful build, the Frontend Registry keeps the stored output of every preview, its published artifact and latest log, under `previews.maxStorageBytes`. It deletes Ready and Failed previews, least recently used first, until the rest fit. A preview was last used when it was last opened or, if later, when its latest attempt finished, so a build nobody has opened yet isn't the first to go. A queued or building preview, and the one that build just published, are never deleted; if they alone pass the limit, the total stays over it. Each prune also removes whatever no undeleted preview owns, such as the trash and the directories of deleted previews.
+After each successful build, the Frontend Registry keeps the stored output of every preview, its published artifact and latest log, under `previews.maxStorageBytes`. It deletes Ready and Failed previews, least recently used first, until the rest fit. A preview was last used when it was last opened or, if later, when its latest attempt finished, so a build nobody has opened yet isn't the first to go. A queued or building preview, the one that build just published, and an [application](#applications)'s current build or latest attempt are never deleted; if they alone pass the limit, the total stays over it. Once an application is deleted, or moves on to another build, its earlier previews are pruned like any other. Deleting an application's build from its preview page is refused, naming the application. Each prune also removes whatever no undeleted preview owns, such as the trash and the directories of deleted previews.
 
 The package caches are kept to half of `previews.maxStorageBytes`. When a build succeeds and the caches hold more, the build empties its own package manager's cache with that manager's command, at the build's Node and manager version, before it publishes: `npm cache clean --force`, `pnpm store prune`, or `yarn cache clean` (`--mirror` after Yarn 1). It skips this while another preview is building, whose install it could break, and a cache that fails to prune never fails the build. Another manager's cache is pruned when a build that uses that manager next succeeds, and corepack's cache of package manager releases isn't pruned.
 
 A worker that stops in the middle of a build gives the attempt back to the queue, and another worker runs it again. When the job runs out of tries that way, or its job is otherwise gone, the attempt is marked Failed with the reason the next time any preview build starts, the preview is rebuilt, or previews are pruned, so a preview never stays Building forever.
+
+## Applications
+
+An application (add-applications) is a Repository's package that the Frontend Registry keeps built from one branch. Its builds are ordinary previews of that Repository, commit, and package, made by the pipeline above, so a commit is built once whether an application or an operator asked for it. An application points at two of them: its current build, the last that succeeded, and its latest attempt. It also keeps a history of every attempt it starts: its first build, those the automatic check starts, a Rebuild, and a branch switch, each with its commit, the preview and attempt that built it, and how it ended. Previews of other branches and tags that preview mode builds aren't in it. A newer commit's build becomes current only when it succeeds, so a failed or refused commit leaves the last good build serving and its screenshot shown.
+
+### Automatic rebuilds
+
+The worker reads every application's tracked branch on the profiling check's schedule: once per `profiling.checkMinutes` (default 60, `FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES`), and once when it starts, in the same `profiling.check` job, after the Repositories are checked ([profiling.md](profiling.md)). For each application with no attempt under way, it reads the remote with `git ls-remote`, four remotes at a time and once per remote however many of its packages are applications. When the tracked branch names a commit other than the latest attempt's, it starts an attempt at that commit: it pins the commit, prepares it, and builds the package once the commit's Profile says it can be previewed, as [Preparing a commit](#preparing-a-commit) describes.
+
+- **A commit isn't tried twice.** A commit whose build failed, or which couldn't be previewed, is the latest attempt's, so the check leaves it alone until the branch moves again or an operator rebuilds the application.
+- **A remote that can't be read** is logged by the worker and skipped. Its applications keep their state, and the next check reads it again. A tracked branch the remote no longer has is logged and skipped the same way.
+- **Rebuild** builds the tracked branch's current commit again, even one that was built or failed before. It isn't offered while an attempt is under way.
+- **Switching branch** starts an attempt at the new branch's head, replacing any under way. The current build stays in use until the new branch's build succeeds.
+
+Checks need previews on and the Repository enrolled. While previews are off, nothing is read or built, and applications keep their state.
+
+### Screenshots
+
+After an application's build publishes, a `preview.screenshot` job captures it, one at a time across the worker. The worker starts a static server of its own on `127.0.0.1` at a free port, which serves `/previews/<preview>/` through the same serving module as the web server, with the same checks, and opens the build's page in a headless browser at the Desktop size, 1440 by 900 pixels. It waits for the page's load event and then for 500 milliseconds without network requests, up to 20 seconds in all, and captures what's shown then, so a page still loading at the limit is captured as it is. It writes `screenshot.webp` and a 720-pixel-wide `card.webp` under `screenshots/<attempt>-<claim>/` in the preview's storage directory, beside the build's output and never under its served path, and removes the preview's earlier captures. The web server serves them only through the application's address, `/applications/<slug>/screenshot` and `?size=card`.
+
+A capture that fails, because the browser can't start or the page can't be opened, records the screenshot as unavailable with the reason, and never fails the build: the build stays current, and the card says no screenshot is available. The next successful build is captured again.
+
+The browser is `previews.browser`: Playwright's Chromium by default, installed on the worker's host as the worker's user with `npx playwright install chromium`, or a Playwright channel such as `chrome` or `msedge` for an installed browser, or a Chromium-based browser's absolute path. `npm run previews:doctor` checks that it launches. The web server needs no browser.
+
+Like a preview's page, the browser runs the application's own scripts, with the worker's network access, so a screenshot is subject to the same trust as enrollment ([Security](#security)).
 
 ## Tested repositories
 

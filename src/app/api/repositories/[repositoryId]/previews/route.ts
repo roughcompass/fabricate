@@ -11,7 +11,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ repo
   const { repositoryId } = await params;
   const db = getDb();
   const repository = isPublicId(repositoryId, "src") ? findRepository(db, repositoryId) : undefined;
-  if (!repository || !isEnrolled(getConfig(), repository)) return Response.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+  if (!repository || !isEnrolled(db, getConfig(), repository)) return Response.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
   settlePreviewWork(db);
   const preparation = new URL(request.url).searchParams.get("preparation") ?? undefined;
   return Response.json(previewActivity(db, repository, preparation), { headers: { "Cache-Control": "no-store" } });

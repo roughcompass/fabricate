@@ -2,7 +2,9 @@ import { countLabel } from "@/components/ui/count";
 import type { Outcome } from "@/components/ui/outcome-toast";
 import { findRepository, findRepositoryIncludingDeleted } from "@/lib/repositories/repository-records";
 import type { Executor } from "@/lib/db/client";
+import { applicationsUsing } from "@/lib/previews/lifecycle";
 import { findPreviewIncludingDeleted, packageLabel } from "@/lib/previews/views";
+import { list } from "@/lib/previews/wording";
 import { versionsOf } from "@/lib/profiling/versions";
 
 /**
@@ -61,6 +63,10 @@ export function previewOutcome(db: Executor, code: string | undefined, previewPu
       return preview.deletedAt ? undefined : { id, tone: "success", title: `Attempt ${preview.attempt} of ${name} is queued.`, description: preview.artifact ? "The current output stays up until the new build is ready." : undefined };
     case "building":
       return preview.deletedAt ? undefined : { id, tone: "info", title: `${name} is already building.`, description: "It can be rebuilt once this attempt finishes." };
+    case "in-use": {
+      const users = applicationsUsing(db, preview.id);
+      return preview.deletedAt || users.length === 0 ? undefined : { id, tone: "error", title: `The preview of ${name} wasn't deleted.`, description: `${list(users)} ${users.length === 1 ? "builds" : "build"} from it. Delete the application, or let it build another commit, first.` };
+    }
     case "preview-deleted":
       return preview.deletedAt ? { id, tone: "success", title: `The preview of ${name} at ${preview.commitSha.slice(0, 12)} was deleted.`, description: "Its published output and build log were removed." } : undefined;
     default:

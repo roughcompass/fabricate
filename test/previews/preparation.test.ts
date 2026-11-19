@@ -349,7 +349,7 @@ describe("preview preparation", () => {
       nothingStarted(repository);
     });
 
-    it("fails a queued preparation when previews are turned off or enrollment is revoked before it runs, and prepares it again on request", async () => {
+    it("fails a queued preparation when previews are turned off before it runs, and prepares it again on request", async () => {
       const { repository } = enrolledRepository(VITE_REACT_APP);
       const enrolled = config;
       const first = await request(repository);
@@ -358,13 +358,17 @@ describe("preview preparation", () => {
       expect(findPreparation(world.db, first.publicId)).toMatchObject({ state: "failed", failure: "Previews were turned off before the commit was prepared" });
 
       config = enrolled;
-      await request(repository);
+      expect(await prepared(repository)).toMatchObject({ publicId: first.publicId, state: "ready" });
+    });
+
+    it("decides a commit whose remote is no longer enrolled when its job runs, statically, but builds nothing", async () => {
+      const { repository } = enrolledRepository(VITE_REACT_APP);
+      const first = await request(repository);
       config = settings(repository, { trustedSources: [] });
       await runPreparations();
-      expect(findPreparation(world.db, first.publicId)).toMatchObject({ state: "failed", failure: "orders is not enrolled for previews" });
-
-      config = enrolled;
-      expect(await prepared(repository)).toMatchObject({ publicId: first.publicId, state: "ready" });
+      expect(findPreparation(world.db, first.publicId)).toMatchObject({ state: "ready" });
+      expect(builds()).toEqual([]);
+      expect(buildJobs()).toEqual([]);
     });
 
     it("queues no preparation for a commit prefix several commits share", async () => {

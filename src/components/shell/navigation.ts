@@ -29,7 +29,10 @@ export interface MenuGroup {
 export const HOME = { id: "home", label: "Home", href: "/", icon: "home", match: [/^\/$/] } as const satisfies NavItem;
 
 /** The Registry: its records, the Repositories, with their create pages, versions, and Profiles (every page of a Repository marks Repositories). */
-const REGISTRY_ITEMS: readonly NavItem[] = [{ id: "repositories", label: "Repositories", href: "/repositories", icon: "git", match: [/^\/repositories(\/.*)?$/, /^\/profiles\/[^/]+(\/.*)?$/] }];
+const REPOSITORIES = { id: "repositories", label: "Repositories", href: "/repositories", icon: "git", match: [/^\/repositories(\/.*)?$/, /^\/profiles\/[^/]+(\/.*)?$/] } as const satisfies NavItem;
+
+/** Applications (add-applications), after Repositories: the gallery, onboarding, each application's page, and its preview mode. */
+export const APPLICATIONS = { id: "applications", label: "Applications", href: "/applications", icon: "frame", match: [/^\/applications(\/.*)?$/] } as const satisfies NavItem;
 
 /** Assessments' pages, each list with its create pages and its records. */
 const ASSESSMENT_ITEMS: readonly NavItem[] = [
@@ -52,20 +55,23 @@ export const SALT_PATTERNS = { id: "salt-patterns", label: "Salt Patterns", href
 export interface NavFlags {
   /** The template demo: Salt Patterns. */
   readonly demo: boolean;
+  /** Applications, which are offered while previews are enabled (applications/onboarding spec). */
+  readonly applications: boolean;
 }
 
-export const NO_OPTIONAL_AREAS: NavFlags = { demo: false };
+export const NO_OPTIONAL_AREAS: NavFlags = { demo: false, applications: false };
 
 /**
  * The primary menu's groups (page-patterns spec, "The primary menu leads
- * with the Registry"): Home; the Registry, with Repositories; Assessments;
- * Salt Patterns, under Templates, while the demo is enabled; Insights; and
- * Admin last.
+ * with the Registry and its Applications"): Home; the Registry, with
+ * Repositories, and Applications while applications are offered;
+ * Assessments; Salt Patterns, under Templates, while the demo is enabled;
+ * Insights; and Admin last.
  */
 export function visibleGroups(flags: NavFlags): readonly MenuGroup[] {
   return [
     { id: "main", items: [HOME] },
-    { id: "registry", heading: "Registry", items: REGISTRY_ITEMS },
+    { id: "registry", heading: "Registry", items: flags.applications ? [REPOSITORIES, APPLICATIONS] : [REPOSITORIES] },
     { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS },
     ...(flags.demo ? [{ id: "build", heading: "Templates", items: [SALT_PATTERNS] } as const] : []),
     { id: "insights", heading: "Insights", items: INSIGHTS_ITEMS },

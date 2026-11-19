@@ -52,6 +52,12 @@ export const routes = {
   /** One of its previews (docs/previews.md): its device frame, state, and build log, with +query+ such as its device. */
   repositoryPreview: (repositoryId: string, previewId: string, query?: Query) => withQuery(`/repositories/${repositoryId}/previews/${previewId}`, query),
 
+  /** Applications (add-applications): the gallery, and each application's page by its slug. */
+  applications: "/applications",
+  application: (slug: string) => `/applications/${slug}`,
+  /** An application's current screenshot, or its card image, at +version+ (Application.screenshot.version) so a new one loads anew. */
+  applicationScreenshot: (slug: string, version: string, size: "full" | "card" = "full") => withQuery(`/applications/${slug}/screenshot`, { ...(size === "card" && { size }), v: version }),
+
   /** Adoption Analytics: the tracked design systems and packages. */
   adoption: "/adoption",
   adoptionDesignSystem: (designSystemId: string, query?: Query) => withQuery(`/adoption/design-systems/${designSystemId}`, query),

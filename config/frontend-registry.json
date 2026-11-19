@@ -29,6 +29,7 @@
     },
     "previews": {
       "enabled": false,
+      "browser": null,
       "trustedSources": [],
       "nodeVersions": {},
       "storage": "storage/previews",

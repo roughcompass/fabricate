@@ -104,6 +104,7 @@ Environment variables override the file:
 | `adoption.rarelyUsedPercentile` | `FRONTEND_REGISTRY_ADOPTION_RARELY_USED_PERCENTILE` | 25; the share of used components, by fewest usages, that Adoption Analytics calls rarely used |
 | `previews.enabled` | `FRONTEND_REGISTRY_PREVIEWS` | `false`; whether Repository previews exist, see [docs/previews.md](docs/previews.md) |
 | `previews.trustedSources` | `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` | none; the clone URLs of the remotes enrolled for previews |
+| `previews.browser` | `FRONTEND_REGISTRY_PREVIEWS_BROWSER` | none, for Playwright's Chromium, installed with `npx playwright install chromium`; the headless browser that captures applications' screenshots, as a Playwright channel such as `chrome` or `msedge`, or a browser's absolute path |
 | `previews.nodeVersions` | `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` | none; each Node version a preview build may use, mapped to its binary directory |
 | `previews.storage` | `FRONTEND_REGISTRY_PREVIEWS_STORAGE` | `storage/previews`; where preview builds run and keep their logs, published output, and package caches, outside any directory with a `.npmrc`, `.yarnrc`, or `.yarnrc.yml` for Yarn builds |
 | `previews.concurrency` | `FRONTEND_REGISTRY_PREVIEWS_CONCURRENCY` | 1; preview builds that run at once |
@@ -124,7 +125,13 @@ mise install node@22.11.0
 FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS="22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin" npm run previews:doctor
 ```
 
-The doctor checks that each configured directory's `node` reports its version and that its corepack runs pnpm and Yarn, and that `git` and `tar` are where the worker finds them. It prints a line for each check, names anything missing or wrong, and exits non-zero if any check fails. In a release, run `node dist/previews-doctor.cjs` from the release directory, with the worker's settings. See [docs/previews.md](docs/previews.md#the-workers-toolchain).
+Applications' screenshots are captured with a headless Chromium on the worker's host. Install Playwright's, the default, as the worker's user, or set `previews.browser` to an installed browser:
+
+```sh
+npx playwright install chromium
+```
+
+The doctor checks that each configured directory's `node` reports its version and that its corepack runs pnpm and Yarn, that `git` and `tar` are where the worker finds them, and that the screenshot browser launches. It prints a line for each check, names anything missing or wrong, and exits non-zero if any check fails. In a release, run `node dist/previews-doctor.cjs` from the release directory, with the worker's settings. See [docs/previews.md](docs/previews.md#the-workers-toolchain).
 
 ### Template demo
 
@@ -173,7 +180,7 @@ PORT=3000 HOSTNAME=0.0.0.0 node server.js
 node dist/worker.cjs
 ```
 
-`release/` holds the standalone web server, its static files, the worker and migration bundles, the migrations, `config/`, and the native SQLite binding. It installs nothing and carries no npm configuration, so neither the registry address nor its token reaches it. `scripts/verify-release.mjs` checks that: it scans every file for the token, any literal npm `_authToken`, and any `SURVEYOR_NPM_TOKEN` assignment (or one of its old name), and requires the release's `@repo-facts` packages to match the versions the lockfile pins, with their release provenance. Omit the token for a registry that allows anonymous reads.
+`release/` holds the standalone web server, its static files, the worker and migration bundles, the migrations, `config/`, the native SQLite binding, and `playwright-core`, which the worker drives screenshots with. It installs nothing and carries no npm configuration, so neither the registry address nor its token reaches it. `scripts/verify-release.mjs` checks that: it scans every file for the token, any literal npm `_authToken`, and any `SURVEYOR_NPM_TOKEN` assignment (or one of its old name), and requires the release's `@repo-facts` packages to match the versions the lockfile pins, with their release provenance. Omit the token for a registry that allows anonymous reads.
 
 Data lives in `release/storage/` unless `FRONTEND_REGISTRY_DATABASE` and `FRONTEND_REGISTRY_REPOSITORY_STORAGE` point elsewhere. Keep it outside the release directory so an upgrade can replace the release. Pass other settings as environment variables, for example `FRONTEND_REGISTRY_ALLOWED_ROOTS=/repositories`. Run both processes under the host's own supervisor, such as systemd or launchd, as an unprivileged user. Run one worker per database: it serializes Git updates to each repository in its own memory, and runs `workerConcurrency` jobs on different repositories at once. A second worker refuses to start while the first holds `worker.lock` beside the database, and names its process. A worker killed without releasing the lock leaves the file behind, and the next worker takes it over once that process is gone. Assessments never run a package manager or repository code, so the processes need none beyond Node.js itself. Repository previews, which are off by default, are the exception: with them on, the worker builds enrolled repositories with the Node versions its host provides, which `node dist/previews-doctor.cjs` checks (see [Preview toolchain](#preview-toolchain)).
 

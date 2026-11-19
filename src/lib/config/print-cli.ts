@@ -26,4 +26,5 @@ console.log(`Previews:           ${previews.enabled ? "enabled" : "disabled"}`);
 console.log(`Preview sources:    ${list(previews.trustedSources)}`);
 console.log(`Preview Node:       ${list(Object.entries(previews.nodeVersions).map(([version, directory]) => `${version}=${directory}`))}`);
 console.log(`Preview storage:    ${previews.storage}`);
+console.log(`Preview browser:    ${previews.browser ?? "Playwright's Chromium"}`);
 console.log(`Preview limits:     concurrency=${previews.concurrency}, timeoutMinutes=${previews.timeoutMinutes}, maxOutputBytes=${previews.maxOutputBytes}, maxStorageBytes=${previews.maxStorageBytes}`);

@@ -27,6 +27,7 @@ Settings live in `config/frontend-registry.json`. Its `shared` section applies e
 | `adoption.rarelyUsedPercentile` | `FRONTEND_REGISTRY_ADOPTION_RARELY_USED_PERCENTILE` | 25; the share of used components, by fewest usages, called rarely used |
 | `previews.enabled` | `FRONTEND_REGISTRY_PREVIEWS` | `false`; whether repository previews exist |
 | `previews.trustedSources` | `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` | None; the clone URLs enrolled for previews |
+| `previews.browser` | `FRONTEND_REGISTRY_PREVIEWS_BROWSER` | None, for Playwright's Chromium; the browser that captures applications' screenshots, as a Playwright channel such as `chrome` or a browser's absolute path |
 | `previews.nodeVersions` | `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` | None; each Node version a preview build may use, with its binary directory |
 | `previews.storage` | `FRONTEND_REGISTRY_PREVIEWS_STORAGE` | `storage/previews` |
 | `previews.concurrency` | `FRONTEND_REGISTRY_PREVIEWS_CONCURRENCY` | 1 |

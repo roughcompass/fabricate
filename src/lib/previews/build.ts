@@ -78,7 +78,7 @@ export async function runPreviewBuild(db: Executor, job: BuildJob, options: Buil
   const repository = db.select().from(repositories).where(eq(repositories.id, preview.repositoryId)).get()!;
   const refuse = (reason: string): BuildOutcome => (failAttempt(db, preview.publicId, { attempt: job.attempt }, reason) ? "failed" : "skipped");
   if (!config.previews.enabled) return refuse("Previews were turned off before the build ran");
-  if (!isEnrolled(config, repository)) return refuse(`${repository.name} is not enrolled for previews`);
+  if (!isEnrolled(db, config, repository)) return refuse(`${repository.name} is not enrolled for previews`);
 
   const files = claimFiles(config, preview.publicId, job.attempt, crypto.randomBytes(5).toString("hex"));
   const identity: AttemptIdentity = { attempt: job.attempt, claim: options.claim };
@@ -299,7 +299,7 @@ function publish(db: Executor, config: FrontendRegistryConfig, publicId: string,
     const current = findPreview(tx, publicId);
     if (!current) return { state: "not_current" };
     const repository = tx.select().from(repositories).where(eq(repositories.id, current.repositoryId)).get()!;
-    if (!isEnrolled(config, repository)) {
+    if (!isEnrolled(tx, config, repository)) {
       const reason = config.previews.enabled ? `${repository.name} is no longer enrolled for previews, so the output wasn't published` : "Previews were turned off before the output was published";
       return failAttempt(tx, publicId, identity, reason) ? { state: "revoked", reason } : { state: "not_current" };
     }

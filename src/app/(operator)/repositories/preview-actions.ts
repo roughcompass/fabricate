@@ -39,7 +39,7 @@ export async function preparePreview(repositoryPublicId: string, _previous: Prep
   const db = getDb();
   const config = getConfig();
   const repository = findRepository(db, repositoryPublicId);
-  if (!repository || !isEnrolled(config, repository)) notFound();
+  if (!repository || !isEnrolled(db, config, repository)) notFound();
   const values = { ref: text(formData, "ref", 300), commit: text(formData, "commit", 100).trim() };
 
   let request: RefRequest;
@@ -99,7 +99,13 @@ export async function rebuildPreview(formData: FormData): Promise<void> {
 
 /** Deletes the preview and its files, and returns to its Repository's previews. */
 export async function deletePreviewAction(formData: FormData): Promise<void> {
-  const { preview, repository } = openedFrom(formData);
-  await deletePreview(getDb(), preview.publicId, getConfig());
+  const { preview, repository, device } = openedFrom(formData);
+  try {
+    await deletePreview(getDb(), preview.publicId, getConfig());
+  } catch (error) {
+    // An application's build stays until the application is deleted or builds another commit.
+    if (error instanceof PreviewRequestError && error.code === "in_use") redirect(routes.repositoryPreview(repository.publicId, preview.publicId, { ...device, notice: "in-use" }));
+    throw error;
+  }
   redirect(withQuery(routes.repository(repository.publicId), { notice: "preview-deleted", preview: preview.publicId }, "previews"));
 }

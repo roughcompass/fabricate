@@ -140,6 +140,32 @@ export function evaluateEligibility(input: EligibilityInput): Eligibility {
   };
 }
 
+/** What a package is built with, as an application's card and filters name it (add-applications, design decision 9). */
+export interface PackageTraits {
+  /** Its browser frameworks, such as React, when its framework condition passed. */
+  frameworks: string[];
+  /** Its build tool, such as Vite, when one was decided. */
+  buildTool: string | null;
+  /** Its package manager, such as pnpm, when one was decided. */
+  packageManager: string | null;
+}
+
+const BUILD_TOOL_LABELS: Readonly<Record<BuildTool, string>> = { vite: "Vite", webpack: "webpack", rspack: "Rspack", rsbuild: "Rsbuild" };
+const PACKAGE_MANAGER_LABELS: Readonly<Record<PackageManager, string>> = { npm: "npm", pnpm: "pnpm", yarn: "Yarn" };
+
+/** A verdict's traits: from its build plan when it qualifies, else from the conditions that passed. */
+export function packageTraits(verdict: PackageVerdict): PackageTraits {
+  const passed = (id: ConditionId) => verdict.conditions.find((condition) => condition.condition === id && condition.passed);
+  const value = (fact: DecidingFact) => (fact.value && typeof fact.value === "object" && !Array.isArray(fact.value) ? (fact.value as JsonObject) : {});
+  const ids = (passed("framework")?.facts ?? []).filter((fact) => fact.category === "frameworks").map((fact) => String(value(fact).id ?? fact.key?.split("#")[1] ?? ""));
+  const tool = passed("build_tool")?.facts.find((fact) => fact.category === "build_tools");
+  return {
+    frameworks: [...new Set(ids.filter((id) => id in BROWSER_FRAMEWORKS).map((id) => BROWSER_FRAMEWORKS[id]!))],
+    buildTool: verdict.plan ? BUILD_TOOL_LABELS[verdict.plan.buildTool] : tool ? String(value(tool).label ?? value(tool).id ?? tool.key) : null,
+    packageManager: verdict.plan ? PACKAGE_MANAGER_LABELS[verdict.plan.packageManager.name] : null,
+  };
+}
+
 /** The directories whose committed package.json evaluation reads: every package's install root. */
 export function installRootManifests(document: FactDocument): string[] {
   const repository = new ProfiledRepository(document);

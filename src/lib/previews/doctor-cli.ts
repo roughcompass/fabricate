@@ -2,14 +2,15 @@
 // or `node dist/previews-doctor.cjs` in a release. Prints one line per check,
 // and exits non-zero when any fails.
 import { getConfig } from "@/lib/config";
-import { checkToolchain, formatCheck, summarize } from "./doctor";
+import { checkBrowser, checkToolchain, formatCheck, summarize } from "./doctor";
 import { cacheDirectory } from "./storage";
 
 // No top-level await: the release bundles this as CommonJS, like the worker.
 async function main(): Promise<boolean> {
   const config = getConfig();
-  console.log(`Preview toolchain: previews.nodeVersions, git, and tar. Package manager caches: ${cacheDirectory(config)}`);
-  const checks = await checkToolchain(config, { onCheck: (check) => console.log(formatCheck(check)) });
+  console.log(`Preview toolchain: previews.nodeVersions, git, tar, and the screenshot browser. Package manager caches: ${cacheDirectory(config)}`);
+  const onCheck = (check: Parameters<typeof formatCheck>[0]) => console.log(formatCheck(check));
+  const checks = [...(await checkToolchain(config, { onCheck })), await checkBrowser(config, { onCheck })];
   console.log(summarize(checks));
   return checks.every((check) => check.status !== "failed");
 }

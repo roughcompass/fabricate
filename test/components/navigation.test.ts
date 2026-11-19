@@ -9,7 +9,9 @@ import { HOME, NO_OPTIONAL_AREAS, type NavFlags, locate, visibleGroups } from "@
 const OPERATOR = path.resolve("src/app/(operator)");
 
 const BASE = NO_OPTIONAL_AREAS;
-const ALL: NavFlags = { demo: true };
+const ALL: NavFlags = { demo: true, applications: true };
+/** Previews enabled without the template demo: the menu add-applications ends with. */
+const PREVIEWS: NavFlags = { demo: false, applications: true };
 
 /** Every operator page, as its route template ("/standards/[standardId]/draft"). */
 function routes(directory = OPERATOR): string[] {
@@ -52,6 +54,10 @@ const EXPECTED: Record<string, string | null> = {
   "/standards/[standardId]/draft": "standards",
   "/standards/[standardId]/publish": "standards",
   "/standards/[standardId]/releases/[releaseId]": "standards",
+  "/applications": "applications",
+  "/applications/new": "applications",
+  "/applications/[slug]": "applications",
+  "/applications/[slug]/preview": "applications",
   "/templates": "salt-patterns",
   "/templates/[templateSlug]": "salt-patterns",
   "/templates/[templateSlug]/preview": "salt-patterns",
@@ -91,10 +97,18 @@ describe("primary menu", () => {
     for (const [route, expected] of Object.entries(EXPECTED)) expect(current(sample(route), ALL), route).toEqual(expected);
   });
 
-  it("lists Home, then the Registry, Assessments, Templates, Insights, and Admin groups under their headings (Full menu)", () => {
+  it("lists Home, then the Registry with Repositories and Applications, Assessments, Insights, and Admin under their headings (Full menu)", () => {
+    expect(shape(PREVIEWS)).toEqual([
+      [null, ["Home"]],
+      ["Registry", ["Repositories", "Applications"]],
+      ["Assessments", ["All Assessments", "Standards"]],
+      ["Insights", ["Adoption"]],
+      ["Admin", ["System", "Bitbucket tokens"]],
+    ]);
+    // Until the template demo is removed, it keeps its own group while it's enabled.
     expect(shape(ALL)).toEqual([
       [null, ["Home"]],
-      ["Registry", ["Repositories"]],
+      ["Registry", ["Repositories", "Applications"]],
       ["Assessments", ["All Assessments", "Standards"]],
       ["Templates", ["Salt Patterns"]],
       ["Insights", ["Adoption"]],
@@ -102,6 +116,17 @@ describe("primary menu", () => {
     ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
     for (const item of visibleGroups(ALL).flatMap((group) => group.items)) expect(item.icon, item.id).toBeTruthy();
+  });
+
+  it("has no Applications item while applications aren't offered, and leaves their pages outside the menu (Previews disabled)", () => {
+    const off: NavFlags = { demo: true, applications: false };
+    expect(shape(off)[1]).toEqual(["Registry", ["Repositories"]]);
+    for (const route of ["/applications", "/applications/new", "/applications/orders-portal", "/applications/orders-portal/preview"]) expect(locate(route, off), route).toBeNull();
+  });
+
+  it("marks Applications current on onboarding, an application's page, and its preview mode (Application page)", () => {
+    for (const route of ["/applications", "/applications/new", "/applications/orders-portal", "/applications/orders-portal/preview"]) expect(current(route, PREVIEWS), route).toBe("applications");
+    expect(locate("/applications/orders-portal", PREVIEWS)?.group.id).toBe("registry");
   });
 
   it("has no Templates group while the demo is disabled, and leaves its pages outside the menu (Demo disabled)", () => {
@@ -122,7 +147,7 @@ describe("primary menu", () => {
     expect(current("/standards/new", ALL)).toBe("standards");
   });
 
-  it("marks nothing on the removed Applications, Portals, and Prototypes addresses", () => {
-    for (const path of ["/applications", "/portals", "/portals/ptl_0123456789abcdef/editor/frame-zones", "/runtime-configuration", "/prototypes", "/prototypes/personas"]) expect(current(path, ALL), path).toBeNull();
+  it("marks nothing on the removed Portals and Prototypes addresses", () => {
+    for (const path of ["/portals", "/portals/ptl_0123456789abcdef/editor/frame-zones", "/runtime-configuration", "/prototypes", "/prototypes/personas"]) expect(current(path, ALL), path).toBeNull();
   });
 });

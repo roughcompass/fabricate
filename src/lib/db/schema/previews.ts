@@ -167,3 +167,68 @@ export const previewBuilds = sqliteTable(
     check("preview_builds_sizes", sql`(${t.outputBytes} IS NULL OR ${t.outputBytes} >= 0) AND (${t.buildMs} IS NULL OR ${t.buildMs} >= 0)`),
   ],
 );
+
+/** Pending until the capture runs, then Ready with its images, or Unavailable with the reason (add-applications, design decision 4). */
+export const SCREENSHOT_STATES = ["pending", "ready", "unavailable"] as const;
+export type ScreenshotState = (typeof SCREENSHOT_STATES)[number];
+
+/**
+ * The screenshot of a preview's published artifact, taken for applications
+ * (add-applications, design decision 4): one per preview, retaken whenever
+ * a new artifact publishes. Kept apart from preview_builds, whose rows the
+ * build pipeline's triggers guard, so a capture never touches a build. Its
+ * images sit beside the artifact, under screenshots/ in the preview's
+ * storage directory, and are served only through application routes.
+ */
+export const previewScreenshots = sqliteTable(
+  "preview_screenshots",
+  {
+    id: id(),
+    previewId: integer("preview_id")
+      .notNull()
+      .unique()
+      .references(() => previewBuilds.id, { onDelete: "restrict" }),
+    /** The published artifact it shows, as preview_builds.artifact named it when it was requested. */
+    artifact: text("artifact").notNull(),
+    state: text("state", { enum: SCREENSHOT_STATES }).notNull().default("pending"),
+    /** Its images' directory, relative to the preview's storage directory, once captured. */
+    directory: text("directory"),
+    /** Why it couldn't be captured. */
+    reason: text("reason"),
+    /** When the capture was last requested, so a new request queues a job of its own. */
+    requestedAt: timestamp("requested_at").notNull(),
+    capturedAt: timestamp("captured_at"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check("preview_screenshots_state", sql.raw(`state IN (${sqlList(SCREENSHOT_STATES)})`)),
+    check("preview_screenshots_artifact", sql`length(${t.artifact}) BETWEEN 1 AND 255`),
+    check("preview_screenshots_ready", sql`(${t.state} = 'ready') = (${t.directory} IS NOT NULL AND ${t.capturedAt} IS NOT NULL)`),
+    check("preview_screenshots_unavailable", sql`(${t.state} = 'unavailable') = (${t.reason} IS NOT NULL AND length(${t.reason}) > 0)`),
+  ],
+);
+
+/**
+ * A remote enrolled for previews by creating an application from it, after
+ * the operator confirmed they trust its code to be built and served
+ * (add-applications, applications/onboarding spec). One per canonical remote
+ * identity, as previews.trustedSources lists them; a remote is enrolled when
+ * either lists it. It records when, and which application, enrolled it, by
+ * the application's id and name then, and stays when that application, or
+ * every application of the remote, is deleted.
+ */
+export const previewEnrollments = sqliteTable(
+  "preview_enrollments",
+  {
+    id: id(),
+    canonicalUrl: text("canonical_url").notNull().unique(),
+    applicationPublicId: text("application_public_id").notNull(),
+    applicationName: text("application_name").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check("preview_enrollments_canonical_url", sql`length(${t.canonicalUrl}) > 0`),
+    check("preview_enrollments_application", sql`${t.applicationPublicId} GLOB 'app_*' AND length(trim(${t.applicationName})) BETWEEN 1 AND 80`),
+  ],
+);

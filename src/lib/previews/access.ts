@@ -3,7 +3,7 @@ import type { Repository } from "@/lib/repositories/repository-records";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
-import { previewBuilds, repositories } from "@/lib/db/schema";
+import { previewBuilds, previewEnrollments, repositories } from "@/lib/db/schema";
 
 /**
  * Whether previews are on and a Repository's remote is enrolled for them
@@ -11,6 +11,8 @@ import { previewBuilds, repositories } from "@/lib/db/schema";
  * previewed"). Enrollment is by canonical remote identity, never by name or
  * id: adding a Repository, or its availability for assessment, enrolls
  * nothing, and the check is repeated wherever queued work could outlive it.
+ * A remote is enrolled by `previews.trustedSources`, or by an application
+ * created from it after the operator confirmed they trust its code.
  */
 
 export class PreviewAccessError extends Error {
@@ -24,14 +26,43 @@ export class PreviewAccessError extends Error {
   }
 }
 
-export function isEnrolled(config: FrontendRegistryConfig, repository: Pick<Repository, "canonicalUrl" | "deletedAt">): boolean {
-  return config.previews.enabled && repository.deletedAt === null && config.previews.trustedSources.includes(repository.canonicalUrl);
+/**
+ * Whether previews are on and +repository+'s remote is enrolled: listed in
+ * `previews.trustedSources`, or enrolled by creating an application from it
+ * (add-applications), by canonical remote identity either way.
+ */
+export function isEnrolled(db: Executor, config: FrontendRegistryConfig, repository: Pick<Repository, "canonicalUrl" | "deletedAt">): boolean {
+  if (!config.previews.enabled || repository.deletedAt !== null) return false;
+  return config.previews.trustedSources.includes(repository.canonicalUrl) || findEnrollment(db, repository.canonicalUrl) !== undefined;
 }
 
 /** Throws unless previews are on and +repository+ is enrolled. */
-export function assertEnrolled(config: FrontendRegistryConfig, repository: Pick<Repository, "name" | "canonicalUrl" | "deletedAt">): void {
+export function assertEnrolled(db: Executor, config: FrontendRegistryConfig, repository: Pick<Repository, "name" | "canonicalUrl" | "deletedAt">): void {
   if (!config.previews.enabled) throw new PreviewAccessError("disabled", "Previews are turned off");
-  if (!isEnrolled(config, repository)) throw new PreviewAccessError("not_enrolled", `${repository.name} is not enrolled for previews`);
+  if (!isEnrolled(db, config, repository)) throw new PreviewAccessError("not_enrolled", `${repository.name} is not enrolled for previews`);
+}
+
+export type PreviewEnrollment = typeof previewEnrollments.$inferSelect;
+
+/** The enrollment an application recorded for the remote +canonicalUrl+, if any. */
+export function findEnrollment(db: Executor, canonicalUrl: string): PreviewEnrollment | undefined {
+  return db.select().from(previewEnrollments).where(eq(previewEnrollments.canonicalUrl, canonicalUrl)).get();
+}
+
+/**
+ * Enrolls +repository+'s remote for previews on behalf of +application+,
+ * after the operator confirmed they trust its code, unless it's enrolled
+ * already. Deleting the application, or every application of the remote,
+ * leaves the enrollment. Returns whether this enrolled it.
+ */
+export function enrollRemote(db: Executor, repository: Pick<Repository, "canonicalUrl">, application: { publicId: string; name: string }, now = new Date()): boolean {
+  const inserted = db
+    .insert(previewEnrollments)
+    .values({ canonicalUrl: repository.canonicalUrl, applicationPublicId: application.publicId, applicationName: application.name, createdAt: now })
+    .onConflictDoNothing({ target: previewEnrollments.canonicalUrl })
+    .returning()
+    .get();
+  return inserted !== undefined;
 }
 
 /** A preview that may be shown, with its Repository. */
@@ -51,5 +82,5 @@ export function openPreview(db: Executor, config: FrontendRegistryConfig, public
   const preview = db.select().from(previewBuilds).where(eq(previewBuilds.publicId, publicId)).get();
   if (!preview || preview.deletedAt !== null) return null;
   const repository = db.select().from(repositories).where(eq(repositories.id, preview.repositoryId)).get();
-  return repository && isEnrolled(config, repository) ? { preview, repository } : null;
+  return repository && isEnrolled(db, config, repository) ? { preview, repository } : null;
 }

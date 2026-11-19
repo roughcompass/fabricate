@@ -49,8 +49,8 @@ const CONDITION_LABELS: Record<ConditionId, string> = {
  */
 export async function PreviewsSection({ repository, query }: { repository: Repository; query: Record<string, string | string[] | undefined> }) {
   const config = getConfig();
-  if (!isEnrolled(config, repository)) return null;
   const db = getDb();
+  if (!isEnrolled(db, config, repository)) return null;
   settlePreviewWork(db);
   const preparation = preparationOf(db, repository, param(query, "preparation"));
   const total = previewCount(db, repository);
