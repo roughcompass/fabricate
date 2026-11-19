@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { scheduleCatalogChecks } from "@/lib/catalog/check";
 import { storeEntry } from "@/lib/catalog/entries";
 import { entriesInUse } from "@/lib/catalog/current";
-import { recipeProgress, recipeStates } from "@/lib/catalog/updates";
+import { newestSurveys, recipeProgress, recipeStates } from "@/lib/catalog/updates";
 import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { nextScheduledChecks, scheduleProfileChecks } from "@/lib/profiling/check";
@@ -67,9 +67,26 @@ describe("system status", () => {
     );
     expect(recipeProgress(db, config)).toEqual({ current: 1, waiting: 2, failed: 1 });
 
+    // Only each Repository's newest survey counts, and only those are read: one row per registered Repository, however long its history.
+    const histories = [];
+    for (let repository = 0; repository < 4; repository++) {
+      const history = buildRepository(db, { name: `history-${repository}` });
+      for (let version = 0; version < 5; version++) await seedSurvey(db, history, { files: SALT_APP });
+      histories.push(await seedSurvey(db, history, { files: SALT_APP }));
+    }
+    const long = buildRepository(db, { name: "long" });
+    for (let version = 0; version < 6; version++) await seedSurvey(db, long, { files: SALT_APP });
+    const newestFailing = requestSurvey(db, { repositoryId: long.id, commitSha: sha1("long-newest"), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "commit", ...currentRecipe(config) }).survey;
+    moveSurvey(db, newestFailing, "failed", { failureCode: "source_unavailable", failureMessage: "The remote is down" });
+    const pair = (survey: { repositoryId: number; number: number }) => [survey.repositoryId, survey.number];
+    const byRepository = (a: number[], b: number[]) => a[0]! - b[0]!;
+    expect(newestSurveys(db).map(pair).sort(byRepository)).toEqual([current, older, failing, ...histories, newestFailing].map(pair).sort(byRepository));
+    expect(recipeStates(db, config).get(long.id)).toBe("failed");
+    expect(recipeProgress(db, config)).toEqual({ current: 5, waiting: 2, failed: 2 });
+
     // A rebuilt entry the current survey used puts it back to waiting.
     const { digest: _digest, ...unsealed } = saltEntry();
     storeEntry(db, sealEntry({ ...unsealed, built_at: "2026-11-20T00:00:00.000Z", content: { ...unsealed.content, neutral_tags: [...unsealed.content.neutral_tags!, "figure"].sort() } } as never));
-    expect(recipeProgress(db, config)).toEqual({ current: 0, waiting: 3, failed: 1 });
+    expect(recipeProgress(db, config)).toEqual({ current: 0, waiting: 7, failed: 2 });
   });
 });

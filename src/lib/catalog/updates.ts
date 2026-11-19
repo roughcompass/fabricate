@@ -1,4 +1,5 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, max, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { jobs, repositories, surveys } from "@/lib/db/schema";
@@ -65,18 +66,27 @@ export function recipeStates(db: Executor, config: FrontendRegistryConfig, recip
   const registered = db.select({ id: repositories.id }).from(repositories).where(isNull(repositories.deletedAt)).all();
   const states = new Map<number, RecipeState>(registered.map((repository) => [repository.id, "waiting"]));
   const catalog = currentCatalog(db, catalogConfiguration(config));
-  const newest = new Map<number, typeof surveys.$inferSelect>();
-  const ids = [...states.keys()];
-  for (let start = 0; start < ids.length; start += 500) {
-    for (const survey of db.select().from(surveys).where(inArray(surveys.repositoryId, ids.slice(start, start + 500))).all()) {
-      if ((newest.get(survey.repositoryId)?.number ?? 0) < survey.number) newest.set(survey.repositoryId, survey);
-    }
-  }
-  for (const [repositoryId, survey] of newest) {
-    if (survey.state === "failed") states.set(repositoryId, "failed");
-    else if (survey.state === "succeeded" && sameRecipe(survey, recipe) && catalogIsCurrent(survey.catalog, catalog)) states.set(repositoryId, "current");
+  for (const survey of newestSurveys(db)) {
+    if (survey.state === "failed") states.set(survey.repositoryId, "failed");
+    else if (survey.state === "succeeded" && sameRecipe(survey, recipe) && catalogIsCurrent(survey.catalog, catalog)) states.set(survey.repositoryId, "current");
   }
   return states;
+}
+
+/**
+ * The newest survey of each registered Repository, and no other: one row per
+ * Repository whatever its history, found through the survey number index.
+ * @public The recipe states read only these, and a test checks it.
+ */
+export function newestSurveys(db: Executor): (typeof surveys.$inferSelect)[] {
+  const newest = alias(surveys, "newest");
+  return db
+    .select({ survey: surveys })
+    .from(repositories)
+    .innerJoin(surveys, eq(surveys.repositoryId, repositories.id))
+    .where(and(isNull(repositories.deletedAt), eq(surveys.number, db.select({ number: max(newest.number) }).from(newest).where(eq(newest.repositoryId, repositories.id)))))
+    .all()
+    .map((row) => row.survey);
 }
 
 /**
