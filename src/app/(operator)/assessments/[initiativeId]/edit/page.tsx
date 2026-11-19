@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
-import { listAssessments } from "@/lib/assessments/assessment-records";
+import { listRuns } from "@/lib/runs/run-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
@@ -26,7 +26,7 @@ export default async function EditInitiativePage({ params }: PageProps<"/assessm
 
   const sourceIds = selectedSources(db, initiative.id).map((source) => source.publicId);
   const releaseIds = selectedReleases(db, initiative.id).map(({ release }) => release.publicId);
-  const assessed = listAssessments(db, initiative.id).length > 0;
+  const assessed = listRuns(db, initiative.id).length > 0;
 
   return (
     <Page width="form">

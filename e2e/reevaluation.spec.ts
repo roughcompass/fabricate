@@ -1,6 +1,6 @@
-import { listAssessments } from "../src/lib/assessments/assessment-records";
+import { listRuns } from "../src/lib/runs/run-records";
 import { buildInitiative, buildSource } from "../test/support/builders";
-import { ORDERS, seedAssessment } from "../test/support/scenarios";
+import { ORDERS, seedRun } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { seedResults, runJobs } from "./support/results";
 import { paths } from "./support/paths";
@@ -9,17 +9,17 @@ import { pageHeader } from "./support/shell";
 // The page header: status, meta, and actions; the title is in the shell header.
 
 test("starts a second Evaluation against the same Assessment after changing only the Release selection", async ({ page, db }) => {
-  const { initiative, assessment } = await seedResults(db);
+  const { initiative, run } = await seedResults(db);
 
   await page.goto(paths.assessment(initiative.publicId));
   const selected = page.getByRole("region", { name: "Overview" });
   await expect(selected).toContainText("Engineering baseline v1");
   await expect(selected).toContainText("Service readiness v1");
-  const assessments = page.getByRole("table", { name: "Run history" });
-  await expect(assessments.locator("tbody tr")).toHaveCount(1);
+  const runs = page.getByRole("table", { name: "Run history" });
+  await expect(runs.locator("tbody tr")).toHaveCount(1);
   await expect(page.getByText("No Evaluations yet")).toBeVisible();
 
-  await assessments.getByRole("button", { name: "Start Evaluation of Run #1" }).click();
+  await runs.getByRole("button", { name: "Start Evaluation of Run #1" }).click();
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("Evaluation #1 was started.")).toBeVisible();
   await expect(pageHeader(page)).toContainText("Queued");
   const first = page.url().split("/evaluations/")[1]!.split("?")[0]!;
@@ -35,14 +35,14 @@ test("starts a second Evaluation against the same Assessment after changing only
   await expect(selected).not.toContainText("Service readiness v1");
 
   // The finished Assessment is reused, not repeated.
-  await expect(assessments.locator("tbody tr")).toHaveCount(1);
-  await assessments.getByRole("button", { name: "Start Evaluation of Run #1" }).click();
+  await expect(runs.locator("tbody tr")).toHaveCount(1);
+  await runs.getByRole("button", { name: "Start Evaluation of Run #1" }).click();
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("Evaluation #2 was started.")).toBeVisible();
   const second = page.url().split("/evaluations/")[1]!.split("?")[0]!;
   expect(second).not.toBe(first);
   await runJobs(db);
   await expect(pageHeader(page)).toContainText("Complete");
-  await expect(pageHeader(page).getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(assessment.publicId));
+  await expect(pageHeader(page).getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(run.publicId));
   const findings = page.getByRole("region", { name: "Findings", exact: true });
   await expect(findings).toContainText("Engineering baseline v1");
   await expect(findings).not.toContainText("Service readiness v1");
@@ -60,20 +60,20 @@ test("starts a second Evaluation against the same Assessment after changing only
   await expect(newest).not.toContainText("Service readiness v1");
   await expect(earlier).toContainText("Run #1");
   await expect(earlier).toContainText("Service readiness v1");
-  expect(listAssessments(db, initiative.id)).toHaveLength(1);
+  expect(listRuns(db, initiative.id)).toHaveLength(1);
   await expectNoHorizontalOverflow(page);
 });
 
 test("offers Evaluation only for finished Assessments and explains what is missing", async ({ page, db }) => {
   const orders = buildSource(db, { name: "orders" });
   const initiative = buildInitiative(db, { name: "Unscored", sources: [orders] });
-  const finished = await seedAssessment(db, initiative, [orders], [ORDERS]);
-  const failed = await seedAssessment(db, initiative, [orders], ["failed"]);
+  const finished = await seedRun(db, initiative, [orders], [ORDERS]);
+  const failed = await seedRun(db, initiative, [orders], ["failed"]);
 
   await page.goto(paths.assessment(initiative.publicId));
-  const assessments = page.getByRole("table", { name: "Run history" });
-  await expect(assessments.getByRole("row").filter({ hasText: "Run #1" }).getByRole("link", { name: "Select a Release to evaluate" })).toBeVisible();
-  await expect(assessments.getByRole("row").filter({ hasText: "Run #2" })).toContainText("No results to evaluate");
+  const runs = page.getByRole("table", { name: "Run history" });
+  await expect(runs.getByRole("row").filter({ hasText: "Run #1" }).getByRole("link", { name: "Select a Release to evaluate" })).toBeVisible();
+  await expect(runs.getByRole("row").filter({ hasText: "Run #2" })).toContainText("No results to evaluate");
   expect([finished.publicId, failed.publicId]).toHaveLength(2);
   await expect(page.getByRole("button", { name: "Start Evaluation" })).toHaveCount(0);
   await expect(page.getByText("Select a published Standard Release, then evaluate a finished Run.")).toBeVisible();

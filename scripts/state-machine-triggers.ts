@@ -8,7 +8,7 @@
 // The first version is drizzle/0010_state_machines.sql. Each breakpoint chunk
 // holds exactly one statement, as Drizzle's migrator requires.
 import {
-  ASSESSMENT_MACHINE,
+  RUN_MACHINE,
   EVALUATION_MACHINE,
   EVALUATION_RELEASE_MACHINE,
   SURVEY_MACHINE,
@@ -51,7 +51,7 @@ END;`,
 }
 
 const statements = [
-  ...triggers("assessments", "assessments", ASSESSMENT_MACHINE),
+  ...triggers("assessments", "assessments", RUN_MACHINE),
   ...triggers("assessment_targets", "targets", TARGET_MACHINE),
   ...triggers("evaluations", "evaluations", EVALUATION_MACHINE),
   ...triggers("evaluation_releases", "evaluation releases", EVALUATION_RELEASE_MACHINE),

@@ -1,8 +1,8 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { JsonObject } from "@repo-facts/contract";
-import type { Assessment } from "@/lib/assessments/assessment-records";
+import type { Run } from "@/lib/runs/run-records";
 import type { Executor } from "@/lib/db/client";
-import { assessmentTargets, evidenceIndex, graphEdgeCandidates, graphEdges, graphNodes, relationshipMaps, repositoryProfiles, type EdgeKind } from "@/lib/db/schema";
+import { runTargets, evidenceIndex, graphEdgeCandidates, graphEdges, graphNodes, relationshipMaps, repositoryProfiles, type EdgeKind } from "@/lib/db/schema";
 import { type MissingTarget, missingTargets } from "@/lib/projection/queries";
 import type { DiagramEdge } from "./diagram";
 import type { RelationshipMap } from "./map-records";
@@ -31,7 +31,7 @@ export interface ViewRepository {
 }
 
 export interface MapView {
-  assessment: Assessment;
+  run: Run;
   map: RelationshipMap;
   base: string;
   repositories: Map<string, ViewRepository>;
@@ -41,20 +41,20 @@ export interface MapView {
 }
 
 /** The map record of an Assessment, without its document. */
-function mapRecordOf(db: Executor, assessmentId: number): RelationshipMap | undefined {
-  return db.select().from(relationshipMaps).where(eq(relationshipMaps.assessmentId, assessmentId)).get();
+function mapRecordOf(db: Executor, runId: number): RelationshipMap | undefined {
+  return db.select().from(relationshipMaps).where(eq(relationshipMaps.runId, runId)).get();
 }
 
-export function loadMapView(db: Executor, assessment: Assessment): MapView | undefined {
-  const map = mapRecordOf(db, assessment.id);
+export function loadMapView(db: Executor, run: Run): MapView | undefined {
+  const map = mapRecordOf(db, run.id);
   if (!map) return undefined;
 
   const nodes = db
-    .select({ nodeId: graphNodes.nodeId, label: graphNodes.label, sourceId: graphNodes.repositorySourceId, target: assessmentTargets.publicId, profile: repositoryProfiles.publicId })
+    .select({ nodeId: graphNodes.nodeId, label: graphNodes.label, sourceId: graphNodes.repositorySourceId, target: runTargets.publicId, profile: repositoryProfiles.publicId })
     .from(graphNodes)
-    .innerJoin(assessmentTargets, eq(assessmentTargets.id, graphNodes.assessmentTargetId))
+    .innerJoin(runTargets, eq(runTargets.id, graphNodes.runTargetId))
     // A completed target's Profile is its survey's.
-    .leftJoin(repositoryProfiles, and(eq(repositoryProfiles.surveyId, assessmentTargets.surveyId), eq(assessmentTargets.state, "complete")))
+    .leftJoin(repositoryProfiles, and(eq(repositoryProfiles.surveyId, runTargets.surveyId), eq(runTargets.state, "complete")))
     .where(and(eq(graphNodes.mapId, map.id), eq(graphNodes.kind, "repository")))
     .orderBy(asc(graphNodes.label))
     .all();
@@ -68,7 +68,7 @@ export function loadMapView(db: Executor, assessment: Assessment): MapView | und
     nodes.map((node) => [node.nodeId, { nodeId: node.nodeId, label: node.label, target: node.target, profile: node.profile, sourceId: node.sourceId!, system: systemOf.get(node.nodeId)! }]),
   );
 
-  return { assessment, map, base: routes.runMap(assessment.publicId), repositories, systems: new Map(systems.map((system) => [system.id, system])), missing: missingTargets(db, assessment.id) };
+  return { run, map, base: routes.runMap(run.publicId), repositories, systems: new Map(systems.map((system) => [system.id, system])), missing: missingTargets(db, run.id) };
 }
 
 /** Composition, iframe, and runtime-contract links between repositories, which tie them into runtime systems. */
@@ -158,10 +158,10 @@ export function nodesOf(db: Executor, view: MapView, nodes: readonly string[]): 
 }
 
 /** Evidence records for +ids+, shaped as the evidence list reads them, from the evidence index. */
-export function evidenceRecords(db: Executor, assessmentId: number, ids: readonly string[]): JsonObject {
+export function evidenceRecords(db: Executor, runId: number, ids: readonly string[]): JsonObject {
   const records: Record<string, JsonObject> = {};
   for (const chunk of chunked([...new Set(ids)])) {
-    for (const row of db.select().from(evidenceIndex).where(and(inArray(evidenceIndex.profileId, runProfileIds(db, assessmentId)), inArray(evidenceIndex.evidenceId, chunk))).all()) {
+    for (const row of db.select().from(evidenceIndex).where(and(inArray(evidenceIndex.profileId, runProfileIds(db, runId)), inArray(evidenceIndex.evidenceId, chunk))).all()) {
       if (records[row.evidenceId]) continue;
       const location: JsonObject =
         row.locationKind === "lines" ? { kind: "lines", start: row.lineStart!, end: row.lineEnd! } : row.locationKind === "pointer" ? { kind: "pointer", format: row.pointerFormat, pointer: row.pointer! } : { kind: "entry" };

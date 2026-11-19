@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { buildInitiative, buildSource } from "../test/support/builders";
 import { seedMapWorld } from "../test/support/map-world";
 import { manifest } from "../test/support/profiles";
-import { seedAssessment, seedMapStates } from "../test/support/scenarios";
+import { seedRun, seedMapStates } from "../test/support/scenarios";
 import type { Db } from "../src/lib/db/client";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -12,12 +12,12 @@ import { pageHeader } from "./support/shell";
 async function seedWide(db: Db) {
   const source = buildSource(db, { name: "wide-app" });
   const dependencies = Object.fromEntries(Array.from({ length: 64 }, (_, index) => [`lib-${String(index).padStart(2, "0")}`, "^1.0.0"]));
-  return seedAssessment(db, buildInitiative(db, { sources: [source] }), [source], [{ "package.json": manifest({ name: "wide-app", version: "1.0.0", dependencies }) }]);
+  return seedRun(db, buildInitiative(db, { sources: [source] }), [source], [{ "package.json": manifest({ name: "wide-app", version: "1.0.0", dependencies }) }]);
 }
 
 /** The node ID of the repository named +label+, which is also the ID of the runtime system it names. */
 const nodeOf = (db: Db, label: string) => (db.$client.prepare("select node_id from graph_nodes where kind = 'repository' and label = ?").get(label) as { node_id: string }).node_id;
-const systemPath = (db: Db, assessmentId: string, label: string) => `${paths.runMap(assessmentId)}/systems/${nodeOf(db, label)}`;
+const systemPath = (db: Db, runId: string, label: string) => `${paths.runMap(runId)}/systems/${nodeOf(db, label)}`;
 
 const table = (page: Page, name: string) => page.getByRole("table", { name, exact: true });
 const relationships = (page: Page) => table(page, "Relationships");
@@ -28,7 +28,7 @@ const focus = (page: Page) => page.getByRole("complementary", { name: /^Focus: /
 
 test("opens on the Run's runtime systems, and descends to one whose address can be shared (Opening the map, Shared level address)", async ({ page, db }) => {
   const world = await seedMapWorld(db);
-  await page.goto(paths.run(world.assessment.publicId));
+  await page.goto(paths.run(world.run.publicId));
   await page.getByRole("link", { name: /Review the Relationship Map/ }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: "Relationship Map" })).toBeVisible();
@@ -51,7 +51,7 @@ test("opens on the Run's runtime systems, and descends to one whose address can 
 
 test("opens a former Nodes or filter address at the Run level, and a removed level as not found (Map tabs)", async ({ page, db }) => {
   const world = await seedMapWorld(db);
-  await page.goto(`${paths.runMap(world.assessment.publicId)}?view=nodes&direction=incoming&type=composition&state=ambiguous`);
+  await page.goto(`${paths.runMap(world.run.publicId)}?view=nodes&direction=incoming&type=composition&state=ambiguous`);
 
   await expect(page.getByRole("heading", { level: 1, name: "Relationship Map" })).toBeVisible();
   await expect(table(page, "Runtime system")).toBeVisible();
@@ -59,14 +59,14 @@ test("opens a former Nodes or filter address at the Run level, and a removed lev
   await expect(page.getByRole("navigation", { name: "Relationship Map views" })).toHaveCount(0);
 
   for (const removed of ["unassigned", "portal/ptl_aaaaaaaaaaaaaaaa", "applications/wap_aaaaaaaaaaaaaaaa", "lob/lob_aaaaaaaaaaaaaaaa", "systems/missing"]) {
-    const response = await page.goto(`${paths.runMap(world.assessment.publicId)}/${removed}`);
+    const response = await page.goto(`${paths.runMap(world.run.publicId)}/${removed}`);
     expect(response?.status(), removed).toBe(404);
   }
 });
 
 test("draws a runtime system's host above what it loads, with one arrow for two signals and the third-party packages left out (Host above the repositories it loads, Two rules, one arrow, Third-party packages omitted)", async ({ page, db }) => {
   const world = await seedMapWorld(db);
-  await page.goto(systemPath(db, world.assessment.publicId, "access-shell"));
+  await page.goto(systemPath(db, world.run.publicId, "access-shell"));
 
   const diagram = page.locator('svg[data-diagram="system-diagram"]');
   await expect(diagram).toHaveAttribute("role", "img");
@@ -81,14 +81,14 @@ test("draws a runtime system's host above what it loads, with one arrow for two 
 
 test("lists the library a runtime system's repositories share (Shared library in a runtime system)", async ({ page, db }) => {
   const world = await seedMapWorld(db);
-  await page.goto(systemPath(db, world.assessment.publicId, "access-shell"));
+  await page.goto(systemPath(db, world.run.publicId, "access-shell"));
 
   await expect(groupRow(page, "Shared libraries and services", "design-tokens")).toContainText("3");
 });
 
 test("leads a focus with what a change affects, keeps it in the address, and opens each relationship's evidence (Leading count, Shared focus address, Evidence one step away)", async ({ page, db }) => {
   const world = await seedMapWorld(db);
-  await page.goto(paths.runMap(world.assessment.publicId));
+  await page.goto(paths.runMap(world.run.publicId));
   await table(page, "Shared libraries and services").getByRole("link", { name: "design-tokens" }).click();
 
   await expect(page).toHaveURL(/focus=node_/);
@@ -108,7 +108,7 @@ test("leads a focus with what a change affects, keeps it in the address, and ope
 
 test("lists a runtime contract among both a repository's dependents and its dependencies (Runtime contract both ways)", async ({ page, db }) => {
   const world = await seedMapWorld(db, { runtimeContract: true });
-  await page.goto(paths.runMap(world.assessment.publicId));
+  await page.goto(paths.runMap(world.run.publicId));
   await page.getByRole("search", { name: "Search the map" }).getByLabel("Search the map").fill("payee-hub");
   await page.keyboard.press("Enter");
 
@@ -119,7 +119,7 @@ test("lists a runtime contract among both a repository's dependents and its depe
 
 test("focuses a package by search: a third-party package with its declared ranges, and a package built in the Run (Searching for a package, Third-party package, Package built in the Run)", async ({ page, db }) => {
   const world = await seedMapWorld(db);
-  await page.goto(paths.runMap(world.assessment.publicId));
+  await page.goto(paths.runMap(world.run.publicId));
   const search = page.getByRole("search", { name: "Search the map" }).getByLabel("Search the map");
   await search.fill("react");
   await page.keyboard.press("Enter");
@@ -135,8 +135,8 @@ test("focuses a package by search: a third-party package with its declared range
 });
 
 test("pages the relationships of a runtime system, and of a focus (Paged relationships, Long relationship list)", async ({ page, db }) => {
-  const assessment = await seedWide(db);
-  await page.goto(systemPath(db, assessment.publicId, "wide-app"));
+  const run = await seedWide(db);
+  await page.goto(systemPath(db, run.publicId, "wide-app"));
   const status = page.getByRole("status").filter({ hasText: "relationships" });
 
   await expect(status).toHaveText(/^1–50 of 6\d relationships$/);
@@ -154,8 +154,8 @@ test("pages the relationships of a runtime system, and of a focus (Paged relatio
 });
 
 test("reviews every resolution state and the coverage gap", async ({ page, db }) => {
-  const { assessment } = await seedMapStates(db);
-  await page.goto(paths.runMap(assessment.publicId));
+  const { run } = await seedMapStates(db);
+  await page.goto(paths.runMap(run.publicId));
   const coverage = page.locator("#page-alerts");
   await expect(coverage).toContainText("1 repository did not contribute");
   await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).toContainText("Failed");
@@ -182,8 +182,8 @@ test("reviews every resolution state and the coverage gap", async ({ page, db })
 });
 
 test("navigates from a relationship to its evidence with the keyboard", async ({ page, db }) => {
-  const { assessment } = await seedMapStates(db);
-  await page.goto(paths.runMap(assessment.publicId));
+  const { run } = await seedMapStates(db);
+  await page.goto(paths.runMap(run.publicId));
   const evidence = relationshipRow(page, "legacy-ui").getByRole("link", { name: /^package\.json / });
   await evidence.focus();
   await page.keyboard.press("Enter");
@@ -198,14 +198,14 @@ test("opens a repository's focus from its Profile (From a Profile to its focus)"
   await page.goto(`/profiles/${profile}`);
   await pageHeader(page).getByRole("link", { name: "Relationship Map" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/runs/${world.assessment.publicId}/map\\?focus=node_`));
+  await expect(page).toHaveURL(new RegExp(`/runs/${world.run.publicId}/map\\?focus=node_`));
   await expect(focus(page)).toHaveAttribute("aria-label", "Focus: fx-board");
 });
 
 test("the map stays readable at mobile width, with each diagram's text equivalent in place of the drawing (Narrow content area)", async ({ page, db }) => {
   const world = await seedMapWorld(db);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto(systemPath(db, world.assessment.publicId, "access-shell"));
+  await page.goto(systemPath(db, world.run.publicId, "access-shell"));
 
   await expect(page.locator('svg[data-diagram="system-diagram"]')).toBeHidden();
   await expect(page.getByRole("list", { name: "Diagram as a list" })).toBeVisible();
@@ -213,7 +213,7 @@ test("the map stays readable at mobile width, with each diagram's text equivalen
   await expectNoHorizontalOverflow(page);
   await expectNoOverlappingContent(page);
 
-  for (const address of [paths.runMap(world.assessment.publicId), `${paths.runMap(world.assessment.publicId)}?focus=package%3Areact`, systemPath(db, world.assessment.publicId, "orphan-shell")]) {
+  for (const address of [paths.runMap(world.run.publicId), `${paths.runMap(world.run.publicId)}?focus=package%3Areact`, systemPath(db, world.run.publicId, "orphan-shell")]) {
     await page.goto(address);
     await expectNoHorizontalOverflow(page);
     await expectNoOverlappingContent(page);
@@ -225,7 +225,7 @@ test.describe("without JavaScript", () => {
 
   test("searches for repositories and opens one in its runtime system (Searching without JavaScript)", async ({ page, db }) => {
     const world = await seedMapWorld(db);
-    await page.goto(paths.runMap(world.assessment.publicId));
+    await page.goto(paths.runMap(world.run.publicId));
     await page.getByRole("search", { name: "Search the map" }).getByLabel("Search the map").fill("shell");
     await page.keyboard.press("Enter");
 

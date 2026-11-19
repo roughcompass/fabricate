@@ -3,7 +3,7 @@ import type { Db } from "@/lib/db/client";
 import { attentionItems } from "@/lib/home/attention";
 import { WEEK_MS, assessmentTrend, figuresAt, recentActivity } from "@/lib/home/dashboard";
 import { fleetSummary } from "@/lib/home/summary";
-import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 
@@ -13,7 +13,7 @@ function seed(repositories: number, assessments: number): Db {
   const sources = Array.from({ length: repositories }, () => buildSource(db));
   for (let index = 0; index < assessments; index++) {
     const initiative = buildInitiative(db, { sources: [sources[index % sources.length]!] });
-    const run = driveRun(db, buildAssessment(db, { initiative }).assessment, index % 3 === 0 ? "failed" : "complete");
+    const run = driveRun(db, buildRun(db, { initiative }).run, index % 3 === 0 ? "failed" : "complete");
     if (run.state === "complete") driveEvaluation(db, buildEvaluation(db, initiative, run), index % 2 === 0 ? "complete" : "failed", "gaps");
   }
   return db;

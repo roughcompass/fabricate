@@ -4,7 +4,7 @@ import type { Executor } from "@/lib/db/client";
 import {
   EVIDENCE_LOCATION_KINDS,
   type EdgeKind,
-  assessmentTargets,
+  runTargets,
   dependencyFacts,
   evidenceIndex,
   graphEdgeCandidates,
@@ -37,7 +37,7 @@ type NodeRow = typeof graphNodes.$inferInsert;
 type EdgeRow = typeof graphEdges.$inferInsert;
 type CandidateRow = typeof graphEdgeCandidates.$inferInsert;
 /** The columns every map row shares, filled in by `projectMap`. */
-type MapColumns = "mapId" | "assessmentId" | "documentDigest" | "projectionVersion";
+type MapColumns = "mapId" | "runId" | "documentDigest" | "projectionVersion";
 
 export function projectProfile(db: Executor, profile: RepositoryProfile, document: JsonObject): void {
   const facts = asObject(document.fact_document);
@@ -52,7 +52,7 @@ export function projectProfile(db: Executor, profile: RepositoryProfile, documen
 }
 
 export function projectMap(db: Executor, map: RelationshipMap, document: JsonObject): void {
-  const common = { mapId: map.id, assessmentId: map.assessmentId, documentDigest: map.digest, projectionVersion: PROJECTION_VERSION };
+  const common = { mapId: map.id, runId: map.runId, documentDigest: map.digest, projectionVersion: PROJECTION_VERSION };
   const nodes: NodeRow[] = nodeRows(db, map, asArray(document.nodes).filter(isJsonObject)).map((row) => ({ ...common, ...row }));
   for (const chunk of chunked(nodes, CHUNK)) db.insert(graphNodes).values(chunk).run();
 
@@ -65,9 +65,9 @@ export function projectMap(db: Executor, map: RelationshipMap, document: JsonObj
 function nodeRows(db: Executor, map: RelationshipMap, nodes: readonly JsonObject[]): Omit<NodeRow, MapColumns>[] {
   const targets = new Map(
     db
-      .select({ id: assessmentTargets.id, publicId: assessmentTargets.publicId, repositorySourceId: assessmentTargets.repositorySourceId })
-      .from(assessmentTargets)
-      .where(eq(assessmentTargets.assessmentId, map.assessmentId))
+      .select({ id: runTargets.id, publicId: runTargets.publicId, repositorySourceId: runTargets.repositorySourceId })
+      .from(runTargets)
+      .where(eq(runTargets.runId, map.runId))
       .all()
       .map((target) => [target.publicId, target]),
   );
@@ -93,7 +93,7 @@ function nodeRows(db: Executor, map: RelationshipMap, nodes: readonly JsonObject
       const targetId = stringOf(node.target);
       const target = targetId ? targets.get(targetId) : undefined;
       if (!target) throw new Error(`Relationship Map ${map.publicId} names repository target ${targetId ?? "(none)"}, which isn't in its Assessment`);
-      row.assessmentTargetId = target.id;
+      row.runTargetId = target.id;
       row.repositorySourceId = target.repositorySourceId;
     } else if (kind === "out_of_scope_source") {
       row.repositorySourceId = sources.get(stringOf(asObject(node.source)?.public_id) ?? "") ?? null;

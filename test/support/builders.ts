@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { detectorConfiguration } from "@repo-facts/bundle";
 import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import type { Budgets, JsonObject } from "@repo-facts/contract";
-import { createAssessment } from "@/lib/assessments/assessment-records";
+import { createRun } from "@/lib/runs/run-records";
 import { type RepositorySource, insertSource, listSources } from "@/lib/catalog/source-records";
 import { getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
@@ -24,9 +24,9 @@ export function buildSource(db: Executor, overrides: Partial<{ name: string; clo
  * An Assessment over +sources+ (default: every source), written directly without launching jobs.
  * Like a launched one, it records the pinned bundle's release and configuration.
  */
-export function buildAssessment(db: Executor, options: { initiative?: Initiative; sources?: readonly RepositorySource[]; limits?: Budgets } = {}) {
+export function buildRun(db: Executor, options: { initiative?: Initiative; sources?: readonly RepositorySource[]; limits?: Budgets } = {}) {
   const sources = options.sources ?? listSources(db);
-  return createAssessment(db, {
+  return createRun(db, {
     initiative: options.initiative ?? buildInitiative(db),
     launchToken: crypto.randomUUID(),
     surveyorRelease: SURVEYOR_RELEASE,

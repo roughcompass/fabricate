@@ -6,7 +6,7 @@ import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { PROJECTION_TABLES, count, pinnedRepository } from "../support/projection";
 import { manifest } from "../support/profiles";
-import { seedAssessment } from "../support/scenarios";
+import { seedRun } from "../support/scenarios";
 
 describe("projection schema", () => {
   it("mirrors the Relationship Map's node kinds, edge types, and resolution states", () => {
@@ -24,7 +24,7 @@ describe("projection rows", () => {
     const sources = ["web", "client", "ui-a", "ui-b", "billing"].map((name) => buildSource(db, { name }));
     const initiative = buildInitiative(db, { sources });
     // Two repositories produce @acme/ui, so web's dependency on it is ambiguous.
-    await seedAssessment(db, initiative, sources, [
+    await seedRun(db, initiative, sources, [
       pinnedRepository("web", { "@acme/client": "1.0.0", "@acme/ui": "2.0.0", react: "16.14.0" }),
       pinnedRepository("@acme/client", { react: "18.3.1" }),
       { "package.json": manifest({ name: "@acme/ui", version: "2.0.0" }) },

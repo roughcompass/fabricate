@@ -1,9 +1,9 @@
 import type { JsonObject } from "@repo-facts/contract";
 import { and, eq, inArray } from "drizzle-orm";
-import type { AssessmentTarget } from "@/lib/assessments/assessment-records";
+import type { RunTarget } from "@/lib/runs/run-records";
 import { sourceById } from "@/lib/catalog/source-records";
 import type { Executor } from "@/lib/db/client";
-import { assessmentTargets, evidenceIndex, repositoryProfiles, surveys } from "@/lib/db/schema";
+import { runTargets, evidenceIndex, repositoryProfiles, surveys } from "@/lib/db/schema";
 import type { Survey } from "@/lib/surveys/records";
 import { type RepositoryProfile, findProfile, profileDocument } from "./profile-records";
 
@@ -24,12 +24,12 @@ export interface FoundEvidence {
 }
 
 /** The ids of the Profiles the completed targets of Run +assessmentId+ use, as a subquery. */
-export function runProfileIds(db: Executor, assessmentId: number) {
+export function runProfileIds(db: Executor, runId: number) {
   return db
     .select({ id: repositoryProfiles.id })
-    .from(assessmentTargets)
-    .innerJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, assessmentTargets.surveyId))
-    .where(and(eq(assessmentTargets.assessmentId, assessmentId), eq(assessmentTargets.state, "complete")));
+    .from(runTargets)
+    .innerJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, runTargets.surveyId))
+    .where(and(eq(runTargets.runId, runId), eq(runTargets.state, "complete")));
 }
 
 function recordOf(profile: RepositoryProfile, evidenceId: string): { facts: JsonObject; record: JsonObject } | undefined {
@@ -39,14 +39,14 @@ function recordOf(profile: RepositoryProfile, evidenceId: string): { facts: Json
 }
 
 /** Evidence +evidenceId+ of a completed target of Run +assessmentId+. */
-export function runEvidence(db: Executor, assessmentId: number, evidenceId: string): (FoundEvidence & { target: AssessmentTarget }) | undefined {
+export function runEvidence(db: Executor, runId: number, evidenceId: string): (FoundEvidence & { target: RunTarget }) | undefined {
   const row = db
-    .select({ profile: repositoryProfiles, survey: surveys, target: assessmentTargets })
+    .select({ profile: repositoryProfiles, survey: surveys, target: runTargets })
     .from(evidenceIndex)
     .innerJoin(repositoryProfiles, eq(repositoryProfiles.id, evidenceIndex.profileId))
     .innerJoin(surveys, eq(surveys.id, repositoryProfiles.surveyId))
-    .innerJoin(assessmentTargets, and(eq(assessmentTargets.surveyId, surveys.id), eq(assessmentTargets.assessmentId, assessmentId), eq(assessmentTargets.state, "complete")))
-    .where(and(eq(evidenceIndex.evidenceId, evidenceId), inArray(evidenceIndex.profileId, runProfileIds(db, assessmentId))))
+    .innerJoin(runTargets, and(eq(runTargets.surveyId, surveys.id), eq(runTargets.runId, runId), eq(runTargets.state, "complete")))
+    .where(and(eq(evidenceIndex.evidenceId, evidenceId), inArray(evidenceIndex.profileId, runProfileIds(db, runId))))
     .get();
   const found = row && recordOf(row.profile, evidenceId);
   return row && found ? { ...row, ...found, repository: { publicId: row.target.sourcePublicId, name: row.target.sourceName } } : undefined;

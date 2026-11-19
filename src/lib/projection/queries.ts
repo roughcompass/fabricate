@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { assessmentTargets } from "@/lib/db/schema";
+import { runTargets } from "@/lib/db/schema";
 
 /*
  * Questions answered from the projection and the Run's own records. None of
@@ -22,11 +22,11 @@ export interface MissingTarget {
  * failure codes, so no answer reads their absence as
  * "no". They're the gaps its Relationship Map records.
  */
-export function missingTargets(db: Executor, assessmentId: number): MissingTarget[] {
+export function missingTargets(db: Executor, runId: number): MissingTarget[] {
   return db
-    .select({ target: assessmentTargets.publicId, source: assessmentTargets.sourceName, state: assessmentTargets.state, reason: assessmentTargets.failureCode })
-    .from(assessmentTargets)
-    .where(and(eq(assessmentTargets.assessmentId, assessmentId), inArray(assessmentTargets.state, ["failed", "canceled"])))
-    .orderBy(asc(assessmentTargets.position))
+    .select({ target: runTargets.publicId, source: runTargets.sourceName, state: runTargets.state, reason: runTargets.failureCode })
+    .from(runTargets)
+    .where(and(eq(runTargets.runId, runId), inArray(runTargets.state, ["failed", "canceled"])))
+    .orderBy(asc(runTargets.position))
     .all() as MissingTarget[];
 }

@@ -1,4 +1,4 @@
-import { COORDINATE_ASSESSMENT, FINALIZE_ASSESSMENT, PROCESS_TARGET, coordinateAssessment, finalizeAssessment, processTarget } from "@/lib/assessments/orchestration";
+import { COORDINATE_RUN, FINALIZE_RUN, PROCESS_TARGET, coordinateRun, finalizeRun, processTarget } from "@/lib/runs/orchestration";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, getDb } from "@/lib/db/client";
 import { FINALIZE_EVALUATION, finalizeEvaluation, runEvaluationRelease } from "@/lib/evaluations/jobs";
@@ -15,10 +15,11 @@ import type { HandlerRegistry } from "./worker";
 
 /** Every job kind the worker runs, bound to +db+ and +config+. */
 export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConfig = getConfig()): HandlerRegistry {
+  // Job kinds and payloads are stored with each job, so they keep their stored names: a Run's payload key is `assessment`.
   return {
-    [COORDINATE_ASSESSMENT]: (payload) => coordinateAssessment(db, String(payload.assessment)),
+    [COORDINATE_RUN]: (payload) => coordinateRun(db, String(payload.assessment)),
     [PROCESS_TARGET]: async (payload, context) => void (await processTarget(db, String(payload.target), { config, signal: context.signal })),
-    [FINALIZE_ASSESSMENT]: (payload) => void finalizeAssessment(db, String(payload.assessment)),
+    [FINALIZE_RUN]: (payload) => void finalizeRun(db, String(payload.assessment)),
     [EVALUATE_RELEASE]: async (payload) => void (await runEvaluationRelease(db, { evaluation: String(payload.evaluation), position: Number(payload.position) })),
     [FINALIZE_EVALUATION]: (payload) => void finalizeEvaluation(db, String(payload.evaluation)),
     [CHECK_PROFILES]: (payload) => void runScheduledProfileCheck(db, config, { slot: String(payload.slot), log: (message) => console.log(`[worker] ${message}`) }),

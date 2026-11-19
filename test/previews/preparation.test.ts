@@ -5,7 +5,7 @@ import { mirrorPath, surveyRefFor } from "@/lib/acquisition/mirror";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type FrontendRegistryConfig, withOverrides } from "@/lib/config";
 import { immediate } from "@/lib/db/client";
-import { assessments, jobs, previewBuilds, previewPreparations, repositoryProfiles, surveys } from "@/lib/db/schema";
+import { runs, jobs, previewBuilds, previewPreparations, repositoryProfiles, surveys } from "@/lib/db/schema";
 import { jobPayload } from "@/lib/jobs/queue";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
@@ -97,7 +97,7 @@ describe("preview preparation", () => {
     surveys: world.db.select().from(surveys).all().length,
     profiles: world.db.select().from(repositoryProfiles).all().length,
     surveyJobs: world.db.select().from(jobs).where(eq(jobs.kind, RUN_SURVEY)).all().length,
-    runs: world.db.select().from(assessments).all().length,
+    runs: world.db.select().from(runs).all().length,
   });
   /** Surveys +source+ as background surveying does: version 1, of its configured reference. */
   async function profile(source: RepositorySource): Promise<void> {
@@ -121,7 +121,7 @@ describe("preview preparation", () => {
 
       // Decided from the Profile of this commit's own survey, a preview survey under the current recipe.
       const survey = surveyOf(decided);
-      expect(survey).toMatchObject({ number: 2, commitSha: next, reference: "refs/heads/feature/next", fromConfiguredReference: false, trigger: "preview", state: "succeeded", requestedByAssessmentId: null, ...currentRecipe(config) });
+      expect(survey).toMatchObject({ number: 2, commitSha: next, reference: "refs/heads/feature/next", fromConfiguredReference: false, trigger: "preview", state: "succeeded", requestedByRunId: null, ...currentRecipe(config) });
       const stored = profileOfSurvey(world.db, survey.id)!;
       expect(decided).toMatchObject({ state: "refused", profileDigest: stored.digest });
       expect(profileDocument(stored)).toMatchObject({ commit: next, source: { public_id: source.publicId }, detector_configuration_digest: currentRecipe(config).configurationDigest });

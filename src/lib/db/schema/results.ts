@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { assessments } from "./assessments";
+import { runs } from "./runs";
 import { surveys } from "./surveys";
 import { createdAt, id, publicId } from "./columns";
 
@@ -33,10 +33,10 @@ export const relationshipMaps = sqliteTable(
   {
     id: id(),
     publicId: publicId(),
-    assessmentId: integer("assessment_id")
+    runId: integer("assessment_id")
       .notNull()
       .unique()
-      .references(() => assessments.id, { onDelete: "restrict" }),
+      .references(() => runs.id, { onDelete: "restrict" }),
     schemaVersion: integer("schema_version").notNull(),
     resolverVersion: text("resolver_version").notNull(),
     document: text("document").notNull(),

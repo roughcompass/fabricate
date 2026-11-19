@@ -1,13 +1,13 @@
 import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { surveyRefFor } from "@/lib/acquisition/mirror";
-import { launchAssessment } from "@/lib/assessments/launcher";
+import { launchRun } from "@/lib/runs/launcher";
 import { registerSource } from "@/lib/catalog/catalog";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
-import { type SurveyTrigger, assessments } from "@/lib/db/schema";
+import { type SurveyTrigger, runs } from "@/lib/db/schema";
 import { listInitiatives } from "@/lib/initiatives/initiative-records";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
@@ -166,7 +166,7 @@ describe("background profiling", () => {
 
     expect(currentProfile(world.db, web.id)).toMatchObject({ version: 1 });
     expect(listInitiatives(world.db)).toEqual([]);
-    expect(world.db.select().from(assessments).all()).toEqual([]);
+    expect(world.db.select().from(runs).all()).toEqual([]);
   });
 
   it("names what started each version: adding the repository, a new commit, a Run of an Assessment, and a preview", async () => {
@@ -174,23 +174,23 @@ describe("background profiling", () => {
     work.write("package.json", manifest({ name: "web", version: "1.0.0" })).commit("first");
     const web = registerSource(world.db, { name: "web", cloneUrl: work.url, gitRef: "" }, new SourceBoundary(world.config));
     const config = withOverrides(world.config, { previews: { enabled: true, trustedSources: [web.canonicalUrl] } });
-    const run = () => drainJobs(world.db, jobHandlers(world.db, config));
-    await run();
+    const drain = () => drainJobs(world.db, jobHandlers(world.db, config));
+    await drain();
 
     work.write("README.md", "two\n").commit("second");
     checkProfiles(world.db, "2026-11-18T09:00:00.000Z");
-    await run();
+    await drain();
 
     work.write("README.md", "three\n").commit("third");
     const initiative = buildInitiative(world.db, { name: "Checkout platform migration", sources: [web] });
-    const { assessment } = launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), config);
-    await run();
+    const { run } = launchRun(world.db, initiative.publicId, crypto.randomUUID(), config);
+    await drain();
 
     work.git("checkout", "--quiet", "-b", "feature");
     const feature = work.write("feature.txt", "feature\n").commit("feature");
     work.checkout("main");
     await requestPreparation(world.db, web.publicId, { kind: "ref", name: "feature" }, { config });
-    await run();
+    await drain();
 
     const versions = versionsOf(world.db, web.id);
     expect(versions.map((version) => [version.version, version.trigger, TRIGGER_LABELS[version.trigger], version.survey.state])).toEqual([
@@ -199,7 +199,7 @@ describe("background profiling", () => {
       [2, "commit", "New commit", "succeeded"],
       [1, "added", "Added", "succeeded"],
     ]);
-    expect(versions.map((version) => version.requestedBy)).toEqual([null, { assessmentPublicId: assessment.publicId, name: "Checkout platform migration" }, null, null]);
+    expect(versions.map((version) => version.requestedBy)).toEqual([null, { runPublicId: run.publicId, name: "Checkout platform migration" }, null, null]);
     expect(versions[0]).toMatchObject({ commit: feature, survey: { reference: "refs/heads/feature", fromConfiguredReference: false } });
     // The preview's survey of a branch is a version, but the Run's survey of the reference stays current.
     expect(currentProfile(world.db, web.id)?.version).toBe(3);

@@ -6,7 +6,7 @@ import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { type MapWorld, seedMapWorld } from "../support/map-world";
 import { manifest } from "../support/profiles";
-import { seedAssessment } from "../support/scenarios";
+import { seedRun } from "../support/scenarios";
 
 const node = (view: MapView, label: string) => [...view.repositories.values()].find((repository) => repository.label === label)!.nodeId;
 const labelOf = (view: MapView, id: string) => view.repositories.get(id)?.label ?? id;
@@ -19,7 +19,7 @@ describe("map levels", () => {
   beforeAll(async () => {
     db = createTestDb();
     world = await seedMapWorld(db, { runtimeContract: true });
-    view = loadMapView(db, world.assessment)!;
+    view = loadMapView(db, world.run)!;
   });
 
   it("opens on the Run's runtime systems and lone repositories, each with its repositories, and the relationships between them (Opening the map)", () => {
@@ -138,13 +138,13 @@ describe("indirect dependents", () => {
   it("counts each repository in a cycle once, never the focused library itself (Cycle among dependents)", async () => {
     const db = createTestDb();
     const sources = ["lib", "a", "b", "c"].map((name) => buildSource(db, { name }));
-    const assessment = await seedAssessment(db, buildInitiative(db, { sources }), sources, [
+    const run = await seedRun(db, buildInitiative(db, { sources }), sources, [
       { "package.json": manifest({ name: "@acme/lib", version: "1.0.0", dependencies: { "@acme/a": "^1.0.0" } }) },
       { "package.json": manifest({ name: "@acme/a", version: "1.0.0", dependencies: { "@acme/lib": "^1.0.0", "@acme/b": "^1.0.0" } }) },
       { "package.json": manifest({ name: "@acme/b", version: "1.0.0", dependencies: { "@acme/lib": "^1.0.0", "@acme/a": "^1.0.0" } }) },
       { "package.json": manifest({ name: "@acme/c", version: "1.0.0", dependencies: { "@acme/a": "^1.0.0" } }) },
     ]);
-    const view = loadMapView(db, assessment)!;
+    const view = loadMapView(db, run)!;
     const focus = focusOf(db, view, view.base, node(view, "lib"))!;
 
     expect(focus.dependents.total).toBe(2);

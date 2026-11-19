@@ -17,7 +17,7 @@ import { buildSource } from "../support/builders";
 import { rawRun } from "../support/db";
 import { redirectOf, useAppDb, formData } from "../support/next";
 import { manifest } from "../support/profiles";
-import { seedAssessment } from "../support/scenarios";
+import { seedRun } from "../support/scenarios";
 import { standardDocument } from "../support/standards";
 
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
@@ -141,14 +141,14 @@ describe("Standard lifecycle", () => {
     const initiative = listInitiatives(app.db)[0]!;
     expect(selectedReleases(app.db, initiative.id).map(({ release }) => release.publicId)).toEqual([v1!.publicId]);
 
-    const assessment = await seedAssessment(app.db, getInitiative(app.db, initiative.publicId), [storefront], [
+    const run = await seedRun(app.db, getInitiative(app.db, initiative.publicId), [storefront], [
       {
         "package.json": manifest({ name: "storefront", version: "1.0.0" }),
         "src/payments.ts": 'export const charge = () => fetch("https://payments.invalid/v1/charges", { method: "POST" }).then((res) => res.json()).then((body) => body.status);\n',
         "src/orders.ts": "export const orders = () => fetch(`${process.env.ORDERS_URL}/orders`).then((res) => res.json()).then((body) => body.orders);\n",
       },
     ]);
-    const { evaluation } = startEvaluation(app.db, initiative.publicId, assessment.publicId, crypto.randomUUID());
+    const { evaluation } = startEvaluation(app.db, initiative.publicId, run.publicId, crypto.randomUUID());
     await drainJobs(app.db, jobHandlers(app.db));
     expect(getEvaluation(app.db, evaluation.publicId).state).toBe("complete");
 

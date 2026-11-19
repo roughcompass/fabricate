@@ -5,7 +5,7 @@ import type { FrontendRegistryConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { type SurveyState, type SurveyTrigger, assessmentTargets, repositorySources, surveys } from "@/lib/db/schema";
+import { type SurveyState, type SurveyTrigger, runTargets, repositorySources, surveys } from "@/lib/db/schema";
 import { SURVEY_MACHINE, assertTransition } from "@/lib/db/state-machines";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
 
@@ -38,7 +38,7 @@ export interface SurveyRequest extends Recipe {
   reference: string;
   fromConfiguredReference: boolean;
   trigger: SurveyTrigger;
-  requestedByAssessmentId?: number | null;
+  requestedByRunId?: number | null;
   resolvedAt?: Date;
 }
 
@@ -75,7 +75,7 @@ export function requestSurvey(db: Executor, request: SurveyRequest): Requested {
         configurationDigest: request.configurationDigest,
         profileSchemaVersion: request.profileSchemaVersion,
         trigger: request.trigger,
-        requestedByAssessmentId: request.requestedByAssessmentId ?? null,
+        requestedByRunId: request.requestedByRunId ?? null,
         createdAt: now,
       })
       .returning()
@@ -158,8 +158,8 @@ export function getSurvey(db: Executor, publicId: string): Survey {
 }
 
 /** The commit each target of Run +assessmentId+ resolved to, once it joined its survey, by target id. */
-export function targetCommits(db: Executor, assessmentId: number): Map<number, string> {
-  const rows = db.select({ targetId: assessmentTargets.id, commit: surveys.commitSha }).from(assessmentTargets).innerJoin(surveys, eq(surveys.id, assessmentTargets.surveyId)).where(eq(assessmentTargets.assessmentId, assessmentId)).all();
+export function targetCommits(db: Executor, runId: number): Map<number, string> {
+  const rows = db.select({ targetId: runTargets.id, commit: surveys.commitSha }).from(runTargets).innerJoin(surveys, eq(surveys.id, runTargets.surveyId)).where(eq(runTargets.runId, runId)).all();
   return new Map(rows.map((row) => [row.targetId, row.commit]));
 }
 

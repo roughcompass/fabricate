@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type Assessment, getAssessment, targetsOf } from "@/lib/assessments/assessment-records";
-import { launchAssessment } from "@/lib/assessments/launcher";
-import { requestCancellation } from "@/lib/assessments/transitions";
+import { type Run, getRun, targetsOf } from "@/lib/runs/run-records";
+import { launchRun } from "@/lib/runs/launcher";
+import { requestCancellation } from "@/lib/runs/transitions";
 import { addRepositories } from "@/lib/catalog/bulk-add";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, listSources } from "@/lib/catalog/source-records";
@@ -45,22 +45,22 @@ describe("Multi-repository Assessment scenario", () => {
   let explicit: Initiative;
 
   /** Runs every queued job, optionally only +limit+ of them, with the network trapped and Git logged. */
-  const run = (limit?: number) =>
+  const drain = (limit?: number) =>
     gitLog.during(async () => {
       const calls = await countNetworkCalls(async () => {
         await drainJobs(world.db, jobHandlers(world.db, world.config), limit ? { limit } : {});
       });
       networkCalls.push(calls);
     });
-  const launch = (initiative: Initiative) => launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), world.config).assessment;
-  const refreshed = (assessment: Assessment) => getAssessment(world.db, assessment.publicId);
-  const states = (assessment: Assessment) => Object.fromEntries(targetsOf(world.db, assessment.id).map((target) => [target.sourceName, target.state]));
-  const shas = (assessment: Assessment) => {
-    const commits = targetCommits(world.db, assessment.id);
-    return Object.fromEntries(targetsOf(world.db, assessment.id).map((target) => [target.sourceName, commits.get(target.id) ?? null]));
+  const launch = (initiative: Initiative) => launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config).run;
+  const refreshed = (run: Run) => getRun(world.db, run.publicId);
+  const states = (run: Run) => Object.fromEntries(targetsOf(world.db, run.id).map((target) => [target.sourceName, target.state]));
+  const shas = (run: Run) => {
+    const commits = targetCommits(world.db, run.id);
+    return Object.fromEntries(targetsOf(world.db, run.id).map((target) => [target.sourceName, commits.get(target.id) ?? null]));
   };
-  const profiles = (assessment: Assessment) => Object.fromEntries(profilesOf(world.db, assessment.id).map(({ profile, target }) => [target.sourceName, profile]));
-  const map = (assessment: Assessment) => mapDocument(mapOf(world.db, assessment.id)!) as unknown as MapDocument;
+  const profiles = (run: Run) => Object.fromEntries(profilesOf(world.db, run.id).map(({ profile, target }) => [target.sourceName, profile]));
+  const map = (run: Run) => mapDocument(mapOf(world.db, run.id)!) as unknown as MapDocument;
   /** A map without its per-run target identifiers, which are the only run identity it records. */
   const withoutTargets = (value: JsonValue): JsonValue => (Array.isArray(value) ? value.map(withoutTargets) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== "target").map(([key, item]) => [key, withoutTargets(item)])) : value);
 
@@ -114,12 +114,12 @@ describe("Multi-repository Assessment scenario", () => {
     explicit = createInitiative(world.db, { name: "Shared packages", objective: "The UI and client packages", selectionMode: "explicit", sourcePublicIds: [sources.ui!.publicId, sources.client!.publicId] });
   });
 
-  let first: Assessment;
+  let first: Run;
 
   it("assesses every source independently when one becomes unavailable", async () => {
     fs.rmSync(path.join(fleet, "billing"), { recursive: true, force: true });
     first = launch(wholeFleet);
-    await run();
+    await drain();
 
     first = refreshed(first);
     expect(first.state).toBe("complete_with_issues");
@@ -151,7 +151,7 @@ describe("Multi-repository Assessment scenario", () => {
     repos.web!.write("src/inventory.ts", 'export const items = () => fetch("https://inventory.example/items").then((res) => res.json()).then((body) => body.items);\n').commit("Call inventory");
 
     const second = launch(wholeFleet);
-    await run();
+    await drain();
     expect(shas(second).web).toBe(repos.web!.head());
     expect(shas(second).web).not.toBe(pinned.web);
     expect(shas(second).ui).toBe(pinned.ui);
@@ -164,7 +164,7 @@ describe("Multi-repository Assessment scenario", () => {
 
   it("produces identical Profiles and relationships when unchanged repositories are assessed again", async () => {
     const [one, two] = [launch(explicit), launch(explicit)];
-    await run();
+    await drain();
     expect(refreshed(one).state).toBe("complete");
     expect(refreshed(two).state).toBe("complete");
     expect(Object.fromEntries(Object.entries(profiles(two)).map(([name, profile]) => [name, profile.digest]))).toEqual(Object.fromEntries(Object.entries(profiles(one)).map(([name, profile]) => [name, profile.digest])));
@@ -174,12 +174,12 @@ describe("Multi-repository Assessment scenario", () => {
   });
 
   it("cancels a running Assessment, keeping the Profile that finished", async () => {
-    const assessment = launch(explicit);
-    await run(2); // the coordinator, then the first target
-    requestCancellation(world.db, assessment.id);
-    await run();
+    const run = launch(explicit);
+    await drain(2); // the coordinator, then the first target
+    requestCancellation(world.db, run.id);
+    await drain();
 
-    const done = refreshed(assessment);
+    const done = refreshed(run);
     expect(done.state).toBe("canceled");
     expect(Object.values(states(done)).sort()).toEqual(["canceled", "complete"]);
     expect(Object.keys(profiles(done))).toHaveLength(1);

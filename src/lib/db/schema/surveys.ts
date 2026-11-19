@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { assessments } from "./assessments";
+import { runs } from "./runs";
 import { repositorySources } from "./catalog";
 import { createdAt, id, publicId, sqlList, timestamp } from "./columns";
 
@@ -50,7 +50,7 @@ export const surveys = sqliteTable(
     failureCode: text("failure_code"),
     failureMessage: text("failure_message"),
     trigger: text("trigger", { enum: SURVEY_TRIGGERS }).notNull(),
-    requestedByAssessmentId: integer("requested_by_assessment_id").references(() => assessments.id, { onDelete: "restrict" }),
+    requestedByRunId: integer("requested_by_assessment_id").references(() => runs.id, { onDelete: "restrict" }),
     createdAt: createdAt(),
     finishedAt: timestamp("finished_at"),
   },

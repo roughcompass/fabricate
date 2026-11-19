@@ -1,12 +1,12 @@
 import { CATEGORY_STATES, FACT_STATES } from "@repo-facts/contract";
 import { describe, expect, it } from "vitest";
 import { checkKind, dependencyKind, diagnosticReason, hasStatus, severityLabel, severityOptions, statusOf } from "@/components/ui/status";
-import { ASSESSMENT_STATES, ATTEMPT_STATES, EVALUATION_RELEASE_STATES, EVALUATION_STATES, OUTCOMES, SEVERITIES, TARGET_STATES } from "@/lib/db/schema";
+import { RUN_STATES, ATTEMPT_STATES, EVALUATION_RELEASE_STATES, EVALUATION_STATES, OUTCOMES, SEVERITIES, TARGET_STATES } from "@/lib/db/schema";
 import { RESOLUTION_STATES } from "@/lib/relationships/schema";
 
 describe("status registry", () => {
   it.each([
-    ["Assessment", ASSESSMENT_STATES],
+    ["Assessment", RUN_STATES],
     ["target", TARGET_STATES],
     ["Evaluation", EVALUATION_STATES],
     ["pinned Release", EVALUATION_RELEASE_STATES],

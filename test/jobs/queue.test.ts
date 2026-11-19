@@ -5,7 +5,7 @@ import { JOB_PRIORITIES, jobs } from "@/lib/db/schema";
 import { claimNext, enqueue, fail, renewLease, succeed } from "@/lib/jobs/queue";
 import { jobCounts } from "../support/jobs";
 import { NonRetryableError, Worker, drainJobs, runJob } from "@/lib/jobs/worker";
-import { PROCESS_TARGET } from "@/lib/assessments/orchestration";
+import { PROCESS_TARGET } from "@/lib/runs/orchestration";
 import { getConfig, withOverrides } from "@/lib/config";
 import { jobLimits } from "@/lib/jobs/registry";
 import { BUILD_PREVIEW } from "@/lib/previews/records";
@@ -233,14 +233,14 @@ describe("job queue", () => {
       const gates = new Map<string, () => void>();
       const running = new Set<string>();
       let previewPeak = 0;
-      let assessmentAlongsidePreview = false;
+      let runAlongsidePreview = false;
       const handler = (kind: string) => (payload: JsonObject) =>
         new Promise<void>((resolve) => {
           const key = `${kind}:${String(payload.key)}`;
           running.add(key);
           const previews = [...running].filter((name) => name.startsWith(BUILD_PREVIEW)).length;
           previewPeak = Math.max(previewPeak, previews);
-          if (kind === PROCESS_TARGET && previews > 0) assessmentAlongsidePreview = true;
+          if (kind === PROCESS_TARGET && previews > 0) runAlongsidePreview = true;
           gates.set(key, () => {
             running.delete(key);
             resolve();
@@ -266,7 +266,7 @@ describe("job queue", () => {
       await waitFor(() => jobCounts(db).succeeded === 3);
       await worker.stop();
       expect(previewPeak).toBe(1);
-      expect(assessmentAlongsidePreview).toBe(true);
+      expect(runAlongsidePreview).toBe(true);
     });
 
     it("renews the lease while a long job runs and aborts the handler when the lease is lost", async () => {

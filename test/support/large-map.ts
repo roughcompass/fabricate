@@ -1,10 +1,10 @@
 import type { MemoryFile } from "@repo-facts/contract";
-import type { Assessment } from "@/lib/assessments/assessment-records";
+import type { Run } from "@/lib/runs/run-records";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
 import { buildInitiative, buildSource } from "./builders";
 import { manifest } from "./profiles";
-import { seedAssessment } from "./scenarios";
+import { seedRun } from "./scenarios";
 
 /*
  * A 500-repository Run shaped like the fleet the map is sized for: twenty
@@ -42,7 +42,7 @@ function remote(name: string, dependencies: Record<string, string>): Record<stri
 const libraries = (index: number) => Object.fromEntries([0, 7, 13].map((offset) => [`@fleet/lib-${pad((index + offset) % LIBRARIES)}`, "^1.0.0"]));
 
 export interface LargeMap {
-  assessment: Assessment;
+  run: Run;
   sources: Map<string, RepositorySource>;
 }
 
@@ -65,6 +65,6 @@ export async function seedLargeMap(db: Db): Promise<LargeMap> {
   const names = [...trees.keys()];
   const sources = new Map(names.map((name) => [name, buildSource(db, { name })]));
   const initiative = buildInitiative(db, { name: "Large map", sources: [...sources.values()] });
-  const assessment = await seedAssessment(db, initiative, [...sources.values()], names.map((name) => trees.get(name)!));
-  return { assessment, sources };
+  const run = await seedRun(db, initiative, [...sources.values()], names.map((name) => trees.get(name)!));
+  return { run, sources };
 }

@@ -15,14 +15,14 @@ import { Section } from "@/components/ui/section";
 import { Status } from "@/components/ui/status";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { Tag, TagList } from "@/components/ui/tag";
-import { type Assessment, assessmentNumbers, type AssessmentTarget, listAssessments, targetsOf } from "@/lib/assessments/assessment-records";
+import { type Run, runNumbers, type RunTarget, listRuns, targetsOf } from "@/lib/runs/run-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { type Evaluation, evaluationNumbers, evaluationReleasesOf, listEvaluations } from "@/lib/evaluations/evaluation-records";
 import { type Initiative, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
 import { releaseById, releaseLabel, standardById } from "@/lib/standards/standard-records";
 import { startEvaluationAction } from "../../evaluations/actions";
-import { startAssessment } from "../actions";
+import { startRun } from "../actions";
 import { LaunchForm } from "../launch-form";
 import { initiativeOutcome } from "../outcomes";
 import { routes } from "@/lib/web/routes";
@@ -37,15 +37,15 @@ export async function generateMetadata({ params }: PageProps<"/assessments/[init
 const reusable = (state: string) => state === "complete" || state === "complete_with_issues";
 
 interface RunRow {
-  assessment: Assessment;
+  run: Run;
   number: number;
-  targets: AssessmentTarget[];
+  targets: RunTarget[];
 }
 
 interface EvaluationRow {
   evaluation: Evaluation;
   number: number;
-  assessment: RunRow;
+  run: RunRow;
   releases: string[];
 }
 
@@ -57,17 +57,17 @@ export default async function InitiativePage({ params, searchParams }: PageProps
 
   const sources = selectedSources(db, initiative.id);
   const releases = selectedReleases(db, initiative.id);
-  const assessmentNumber = assessmentNumbers(db, initiative.id);
+  const runNumber = runNumbers(db, initiative.id);
   const evaluationNumber = evaluationNumbers(db, initiative.id);
-  const assessments = listAssessments(db, initiative.id).map((assessment) => ({
-    assessment,
-    number: assessmentNumber.get(assessment.id)!,
-    targets: targetsOf(db, assessment.id),
+  const runs = listRuns(db, initiative.id).map((run) => ({
+    run,
+    number: runNumber.get(run.id)!,
+    targets: targetsOf(db, run.id),
   }));
   const evaluations = listEvaluations(db, { initiativeId: initiative.id }).map((evaluation) => ({
     evaluation,
     number: evaluationNumber.get(evaluation.id)!,
-    assessment: assessments.find(({ assessment }) => assessment.id === evaluation.assessmentId)!,
+    run: runs.find(({ run }) => run.id === evaluation.runId)!,
     releases: evaluationReleasesOf(db, evaluation.id).map((pinned) => {
       const release = releaseById(db, pinned.standardReleaseId);
       return releaseLabel(standardById(db, release.standardId), release);
@@ -88,7 +88,7 @@ export default async function InitiativePage({ params, searchParams }: PageProps
         ]}
         description={initiative.objective || undefined}
         secondaryActions={[{ href: editHref, label: "Edit", icon: "edit" }]}
-        primaryAction={<LaunchForm action={startAssessment.bind(null, initiative.publicId)} launchToken={crypto.randomUUID()} label="Start Run" failure="The Run was not started because its scope could not be resolved." />}
+        primaryAction={<LaunchForm action={startRun.bind(null, initiative.publicId)} launchToken={crypto.randomUUID()} label="Start Run" failure="The Run was not started because its scope could not be resolved." />}
         alerts={<OutcomeToast outcome={initiativeOutcome(param(query, "notice"), initiative)} />}
       />
 
@@ -133,7 +133,7 @@ export default async function InitiativePage({ params, searchParams }: PageProps
         />
       </Section>
 
-      <RunsSection initiative={initiative} runs={assessments} hasReleases={releases.length > 0} />
+      <RunsSection initiative={initiative} runs={runs} hasReleases={releases.length > 0} />
 
       <EvaluationsSection evaluations={evaluations} hasReleases={releases.length > 0} />
 
@@ -175,35 +175,35 @@ function RunsSection({ initiative, runs, hasReleases }: { initiative: Initiative
               </>
             }
           >
-            {runs.map(({ assessment, number, targets }) => {
+            {runs.map(({ run, number, targets }) => {
               const failed = targets.filter((target) => target.state === "failed").length;
               const canceled = targets.filter((target) => target.state === "canceled").length;
               return (
-                <tr key={assessment.publicId}>
+                <tr key={run.publicId}>
                   <Td label="Run">
                     <Primary>
-                      <Link href={routes.run(assessment.publicId)}>{`Run #${number}`}</Link>
+                      <Link href={routes.run(run.publicId)}>{`Run #${number}`}</Link>
                     </Primary>
                     <Secondary>
-                      Started <RelativeTime value={assessment.createdAt} />
+                      Started <RelativeTime value={run.createdAt} />
                     </Secondary>
                   </Td>
                   <Td label="Status">
-                    <Status state={assessment.state} />
+                    <Status state={run.state} />
                   </Td>
                   <Td label="Scope">{[countLabel(targets.length, "Repository", "Repositories"), failed ? `${failed} failed` : null, canceled ? `${canceled} canceled` : null].filter(Boolean).join(" · ")}</Td>
                   <Td label="Finished">
-                    <RelativeTime value={assessment.finishedAt} />
+                    <RelativeTime value={run.finishedAt} />
                   </Td>
                   <Td align="actions">
                     <RowActions>
-                      {!reusable(assessment.state) ? (
-                        <Secondary>{assessment.state === "failed" || assessment.state === "canceled" ? "No results to evaluate" : "Evaluate once finished"}</Secondary>
+                      {!reusable(run.state) ? (
+                        <Secondary>{run.state === "failed" || run.state === "canceled" ? "No results to evaluate" : "Evaluate once finished"}</Secondary>
                       ) : !hasReleases ? (
                         <Link href={routes.assessmentEdit(initiative.publicId, "initiative-releases")}>Select a Release to evaluate</Link>
                       ) : (
                         <LaunchForm
-                          action={startEvaluationAction.bind(null, initiative.publicId, assessment.publicId)}
+                          action={startEvaluationAction.bind(null, initiative.publicId, run.publicId)}
                           launchToken={crypto.randomUUID()}
                           label="Start Evaluation"
                           accessibleName={`Start Evaluation of Run #${number}`}
@@ -244,7 +244,7 @@ function EvaluationsSection({ evaluations, hasReleases }: { evaluations: Evaluat
               </>
             }
           >
-            {evaluations.map(({ evaluation, number, assessment, releases: pinned }) => (
+            {evaluations.map(({ evaluation, number, run, releases: pinned }) => (
               <tr key={evaluation.publicId}>
                 <Td label="Evaluation">
                   <Primary>
@@ -258,7 +258,7 @@ function EvaluationsSection({ evaluations, hasReleases }: { evaluations: Evaluat
                   <Status state={evaluation.state} />
                 </Td>
                 <Td label="Run">
-                  <Link href={routes.run(assessment.assessment.publicId)}>{`Run #${assessment.number}`}</Link>
+                  <Link href={routes.run(run.run.publicId)}>{`Run #${run.number}`}</Link>
                 </Td>
                 <Td label="Standard Releases">
                   <TagList values={pinned} />

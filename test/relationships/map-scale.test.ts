@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import MapPage from "@/app/(operator)/runs/[assessmentId]/map/page";
-import SystemPage from "@/app/(operator)/runs/[assessmentId]/map/systems/[system]/page";
+import MapPage from "@/app/(operator)/runs/[runId]/map/page";
+import SystemPage from "@/app/(operator)/runs/[runId]/map/systems/[system]/page";
 import { type LargeMap, seedLargeMap } from "../support/large-map";
 import { useAppDb } from "../support/next";
 
@@ -60,10 +60,10 @@ describe("Relationship Map at 500 repositories (Large Run)", () => {
     guard.forbid = false;
   });
 
-  const run = () => Promise.resolve({ assessmentId: large.assessment.publicId });
+  const run = () => Promise.resolve({ runId: large.run.publicId });
   const views: [string, () => Promise<React.ReactElement>][] = [
     ["the Run level", () => MapPage({ params: run(), searchParams: Promise.resolve({}) })],
-    ["a runtime system's level", () => SystemPage({ params: Promise.resolve({ assessmentId: large.assessment.publicId, system: nodeOf("shell-03") }), searchParams: Promise.resolve({}) })],
+    ["a runtime system's level", () => SystemPage({ params: Promise.resolve({ runId: large.run.publicId, system: nodeOf("shell-03") }), searchParams: Promise.resolve({}) })],
     ["a library's focus", () => MapPage({ params: run(), searchParams: Promise.resolve({ focus: nodeOf("lib-00") }) })],
   ];
 

@@ -1,15 +1,15 @@
 import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { advanceAssessment, requestCancellation, transitionAssessment, transitionTarget } from "@/lib/assessments/transitions";
+import { advanceRun, requestCancellation, transitionRun, transitionTarget } from "@/lib/runs/transitions";
 import type { Db } from "@/lib/db/client";
 import { TransitionError } from "@/lib/db/errors";
-import { assessmentTargets, assessments, evaluationReleases, evaluations } from "@/lib/db/schema";
-import { activeStates, ASSESSMENT_MACHINE, canTransition, EVALUATION_MACHINE, EVALUATION_RELEASE_MACHINE, isTerminal, pathsFromInitial, SURVEY_MACHINE, TARGET_MACHINE, type StateMachine } from "@/lib/db/state-machines";
+import { runTargets, runs, evaluationReleases, evaluations } from "@/lib/db/schema";
+import { activeStates, RUN_MACHINE, canTransition, EVALUATION_MACHINE, EVALUATION_RELEASE_MACHINE, isTerminal, pathsFromInitial, SURVEY_MACHINE, TARGET_MACHINE, type StateMachine } from "@/lib/db/state-machines";
 import { createEvaluation } from "@/lib/evaluations/evaluation-records";
 import { transitionEvaluation, transitionEvaluationRelease } from "@/lib/evaluations/transitions";
 import { moveSurvey, requestSurvey, surveyById } from "@/lib/surveys/records";
-import { buildAssessment, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildRelease, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { ACTIVE_STATES } from "@/lib/profiling/versions";
 
@@ -31,9 +31,9 @@ const summaryColumns = (state: string) => (state === "complete" ? `, summary = '
 const harnesses: Harness[] = [
   {
     table: "assessments",
-    machine: ASSESSMENT_MACHINE as StateMachine<string>,
-    create: (db) => buildAssessment(db, { sources: [buildSource(db)] }).assessment.id,
-    transition: (db, id, to) => transitionAssessment(db, db.select().from(assessments).where(eq(assessments.id, id)).get()!, to as never),
+    machine: RUN_MACHINE as StateMachine<string>,
+    create: (db) => buildRun(db, { sources: [buildSource(db)] }).run.id,
+    transition: (db, id, to) => transitionRun(db, db.select().from(runs).where(eq(runs.id, id)).get()!, to as never),
   },
   {
     table: "assessment_targets",
@@ -42,7 +42,7 @@ const harnesses: Harness[] = [
     create: (db) => {
       const source = buildSource(db);
       newSurvey(db, source.id);
-      return buildAssessment(db, { sources: [source] }).targets[0]!.id;
+      return buildRun(db, { sources: [source] }).targets[0]!.id;
     },
     // A target moves to analyzing when it links its survey, which completing requires.
     extra: (state) =>
@@ -52,7 +52,7 @@ const harnesses: Harness[] = [
           ? ", failure_code = NULL, ref_kind = 'default_branch', resolved_ref = 'refs/heads/main', resolved_at = 1, survey_id = (select id from surveys where repository_source_id = assessment_targets.repository_source_id)"
           : ", failure_code = NULL",
     transition: (db, id, to) =>
-      transitionTarget(db, db.select().from(assessmentTargets).where(eq(assessmentTargets.id, id)).get()!, to as never, { failureCode: "unexpected" }),
+      transitionTarget(db, db.select().from(runTargets).where(eq(runTargets.id, id)).get()!, to as never, { failureCode: "unexpected" }),
   },
   {
     table: "evaluations",
@@ -85,10 +85,10 @@ function newSurvey(db: Db, repositorySourceId: number) {
 }
 
 function newEvaluation(db: Db) {
-  const { assessment } = buildAssessment(db, { sources: [buildSource(db)] });
+  const { run } = buildRun(db, { sources: [buildSource(db)] });
   return createEvaluation(db, {
-    initiative: { id: assessment.initiativeId } as never,
-    assessment,
+    initiative: { id: run.initiativeId } as never,
+    run,
     launchToken: crypto.randomUUID(),
     evaluatorVersion: "test",
     configuration: {},
@@ -166,16 +166,16 @@ describe("aggregate progress and cancellation", () => {
   });
 
   it("advances the aggregate state forward and never regresses", () => {
-    const { assessment } = buildAssessment(db, { sources: [buildSource(db)] });
+    const { run } = buildRun(db, { sources: [buildSource(db)] });
 
-    expect(advanceAssessment(db, assessment.id, "acquiring").state).toBe("acquiring");
-    expect(advanceAssessment(db, assessment.id, "analyzing").state).toBe("analyzing");
-    expect(advanceAssessment(db, assessment.id, "acquiring").state).toBe("analyzing");
-    expect(advanceAssessment(db, assessment.id, "analyzing").startedAt).toBeInstanceOf(Date);
+    expect(advanceRun(db, run.id, "acquiring").state).toBe("acquiring");
+    expect(advanceRun(db, run.id, "analyzing").state).toBe("analyzing");
+    expect(advanceRun(db, run.id, "acquiring").state).toBe("analyzing");
+    expect(advanceRun(db, run.id, "analyzing").startedAt).toBeInstanceOf(Date);
   });
 
   it("records timestamps on start and on terminal states", () => {
-    const { assessment, targets } = buildAssessment(db, { sources: [buildSource(db)] });
+    const { run, targets } = buildRun(db, { sources: [buildSource(db)] });
     const acquiring = transitionTarget(db, targets[0]!, "acquiring");
     const failed = transitionTarget(db, acquiring, "failed", { failureCode: "source_unavailable", failureMessage: "https://user:secret@example.com unreachable" });
 
@@ -183,24 +183,24 @@ describe("aggregate progress and cancellation", () => {
     expect(failed.finishedAt).toBeInstanceOf(Date);
     expect(failed.failureMessage).not.toContain("secret");
     expect(() => transitionTarget(db, targets[0]!, "failed")).toThrow(TransitionError);
-    expect(transitionAssessment(db, assessment, "failed", { failureReason: "no target" }).finishedAt).toBeInstanceOf(Date);
+    expect(transitionRun(db, run, "failed", { failureReason: "no target" }).finishedAt).toBeInstanceOf(Date);
   });
 
   it("records a durable, idempotent cancellation request and refuses it once terminal", () => {
-    const { assessment } = buildAssessment(db, { sources: [buildSource(db)] });
-    const requested = requestCancellation(db, assessment.id);
+    const { run } = buildRun(db, { sources: [buildSource(db)] });
+    const requested = requestCancellation(db, run.id);
 
     expect(requested.cancelRequestedAt).toBeInstanceOf(Date);
-    expect(requestCancellation(db, assessment.id).cancelRequestedAt).toEqual(requested.cancelRequestedAt);
-    transitionAssessment(db, requestCancellation(db, assessment.id), "canceled");
-    expect(() => requestCancellation(db, assessment.id)).toThrow(/cannot be canceled/);
+    expect(requestCancellation(db, run.id).cancelRequestedAt).toEqual(requested.cancelRequestedAt);
+    transitionRun(db, requestCancellation(db, run.id), "canceled");
+    expect(() => requestCancellation(db, run.id)).toThrow(/cannot be canceled/);
   });
 
   it("refuses a stale write when the state changed underneath the caller", () => {
-    const { assessment } = buildAssessment(db, { sources: [buildSource(db)] });
-    transitionAssessment(db, assessment, "acquiring");
+    const { run } = buildRun(db, { sources: [buildSource(db)] });
+    transitionRun(db, run, "acquiring");
 
-    expect(() => transitionAssessment(db, assessment, "failed")).toThrow(/changed while moving/);
+    expect(() => transitionRun(db, run, "failed")).toThrow(/changed while moving/);
   });
 
   it("requires a summary and result digest to complete an Evaluation", () => {
@@ -213,8 +213,8 @@ describe("aggregate progress and cancellation", () => {
 
 describe("active states", () => {
   it("are derived from the state machine: every state a Run moves on from", () => {
-    expect(activeStates(ASSESSMENT_MACHINE)).toEqual(["queued", "acquiring", "analyzing", "finalizing"]);
-    for (const state of activeStates(ASSESSMENT_MACHINE)) expect(isTerminal(ASSESSMENT_MACHINE, state), state).toBe(false);
+    expect(activeStates(RUN_MACHINE)).toEqual(["queued", "acquiring", "analyzing", "finalizing"]);
+    for (const state of activeStates(RUN_MACHINE)) expect(isTerminal(RUN_MACHINE, state), state).toBe(false);
   });
 
   it("count a survey as on its way while it moves on toward a result: not once it failed, which waits for a retry", () => {

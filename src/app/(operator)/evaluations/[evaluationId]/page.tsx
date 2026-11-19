@@ -24,9 +24,9 @@ import { StatGroup } from "@/components/ui/stat-group";
 import { Severity, Status, severityOptions, statusLabel } from "@/components/ui/status";
 import { Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
-import { assessmentNumber } from "@/lib/assessments/assessment-records";
-import { assessmentById } from "@/lib/assessments/lookups";
-import { evaluationStatus } from "@/lib/assessments/status";
+import { runNumber } from "@/lib/runs/run-records";
+import { runById } from "@/lib/runs/lookups";
+import { evaluationStatus } from "@/lib/runs/status";
 import { getDb } from "@/lib/db/client";
 import type { Outcome } from "@/lib/evaluations/controls";
 import { coverageGapsOf, evaluationNumber, type EvaluationRelease, evaluationReleasesOf, findEvaluation, outcomeLabel, SEVERITIES } from "@/lib/evaluations/evaluation-records";
@@ -44,8 +44,8 @@ const load = cache((publicId: string) => {
   const db = getDb();
   const evaluation = findEvaluation(db, publicId);
   if (!evaluation) return undefined;
-  const assessment = assessmentById(db, evaluation.assessmentId);
-  return { evaluation, assessment, initiative: initiativeById(db, evaluation.initiativeId), number: evaluationNumber(db, evaluation), assessmentNumber: assessmentNumber(db, assessment) };
+  const run = runById(db, evaluation.runId);
+  return { evaluation, run, initiative: initiativeById(db, evaluation.initiativeId), number: evaluationNumber(db, evaluation), runNumber: runNumber(db, run) };
 });
 
 export async function generateMetadata({ params }: PageProps<"/evaluations/[evaluationId]">): Promise<Metadata> {
@@ -58,7 +58,7 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
   const db = getDb();
   const found = load(evaluationId);
   if (!found) notFound();
-  const { evaluation, assessment, initiative, number } = found;
+  const { evaluation, run, initiative, number } = found;
   const name = `Evaluation #${number}`;
   const status = evaluationStatus(db, evaluation);
   const gaps = coverageGapsOf(evaluation);
@@ -86,7 +86,7 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
         title={name}
         status={<Status state={evaluation.state} />}
         meta={[
-          <Link key="assessment" href={routes.run(assessment.publicId)}>{`Run #${found.assessmentNumber}`}</Link>,
+          <Link key="assessment" href={routes.run(run.publicId)}>{`Run #${found.runNumber}`}</Link>,
           countLabel(releases.length, "Release"),
           <span key="started">
             Started <RelativeTime value={evaluation.createdAt} />

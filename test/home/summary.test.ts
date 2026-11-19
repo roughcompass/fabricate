@@ -8,11 +8,11 @@ import type { Db } from "@/lib/db/client";
 import { fleetSummary } from "@/lib/home/summary";
 import { currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey } from "@/lib/surveys/records";
 import { finishSurvey } from "@/lib/surveys/run";
-import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 import { manifest, memoryProfile, sha1 } from "../support/profiles";
-import { seedAssessment } from "../support/scenarios";
+import { seedRun } from "../support/scenarios";
 
 /** A background survey of +source+'s configured reference, still queued, failed, or profiling +files+. */
 async function backgroundSurvey(db: Db, source: RepositorySource, outcome: Readonly<Record<string, MemoryFile>> | "queued" | "failed"): Promise<void> {
@@ -33,7 +33,7 @@ describe("fleet summary", () => {
     await backgroundSurvey(db, queued, "queued");
     await backgroundSurvey(db, failed, "failed");
     // An operator's Run profiles a repository too.
-    await seedAssessment(db, buildInitiative(db, { sources: [assessed] }), [assessed], [{ "package.json": manifest({ name: "assessed", version: "1.0.0" }) }]);
+    await seedRun(db, buildInitiative(db, { sources: [assessed] }), [assessed], [{ "package.json": manifest({ name: "assessed", version: "1.0.0" }) }]);
     deleteSource(db, deleted.publicId, "deleted");
 
     expect(fleetSummary(db).repositories).toEqual({ empty: false, total: 4, profiled: 2 });
@@ -44,7 +44,7 @@ describe("fleet summary", () => {
     const source = buildSource(db);
     const evaluated = (conclusion: "gaps" | "conforms") => {
       const initiative = buildInitiative(db, { sources: [source] });
-      driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildAssessment(db, { initiative }).assessment, "complete")), "complete", conclusion);
+      driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildRun(db, { initiative }).run, "complete")), "complete", conclusion);
     };
     evaluated("gaps");
     evaluated("gaps");

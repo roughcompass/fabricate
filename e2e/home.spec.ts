@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { buildAssessment, buildInitiative, buildSource } from "../test/support/builders";
+import { buildRun, buildInitiative, buildSource } from "../test/support/builders";
 import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -17,7 +17,7 @@ type Db = Parameters<typeof buildSource>[0];
 /** An Assessment over one new Repository whose latest Run ends in +run+, evaluated to +conclusion+ when given. */
 function assessment(db: Db, name: string, run: "complete" | "failed", conclusion?: "gaps" | "conforms" | "undetermined") {
   const initiative = buildInitiative(db, { name, sources: [buildSource(db)] });
-  const finished = driveRun(db, buildAssessment(db, { initiative }).assessment, run);
+  const finished = driveRun(db, buildRun(db, { initiative }).run, run);
   if (conclusion) driveEvaluation(db, buildEvaluation(db, initiative, finished), "complete", conclusion);
   return { initiative, run: finished };
 }
@@ -145,7 +145,7 @@ test.describe("reaching Home", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   test("the product mark opens Home from a Run, with the menu closed", async ({ page, db }) => {
-    const { assessment: run } = await seedResults(db);
+    const { run } = await seedResults(db);
     await page.goto(paths.run(run.publicId));
     await expect(primary(page).getByRole("link", { name: "All Assessments" })).toBeVisible();
     await page.getByRole("link", { name: "Frontend Registry home" }).click();

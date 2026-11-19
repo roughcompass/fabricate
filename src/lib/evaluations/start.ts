@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
-import { type Assessment, LAUNCH_TOKEN, getAssessment, targetsOf } from "@/lib/assessments/assessment-records";
+import { type Run, LAUNCH_TOKEN, getRun, targetsOf } from "@/lib/runs/run-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { isUniqueViolation } from "@/lib/db/errors";
 import { DocumentIntegrityError } from "@/lib/documents/digested";
@@ -48,7 +48,7 @@ export interface StartResult {
  * id, instead of the initiative's current selection: a template re-check
  * evaluates against the Releases its acceptance used.
  */
-export function startEvaluation(db: Executor, initiativePublicId: string, assessmentPublicId: string, launchToken: string, options: { releaseIds?: readonly string[] } = {}): StartResult {
+export function startEvaluation(db: Executor, initiativePublicId: string, runPublicId: string, launchToken: string, options: { releaseIds?: readonly string[] } = {}): StartResult {
   const token = LAUNCH_TOKEN.test(launchToken) ? launchToken : crypto.randomUUID();
   try {
     return immediate(db, (tx) => {
@@ -56,12 +56,12 @@ export function startEvaluation(db: Executor, initiativePublicId: string, assess
       const previous = findEvaluationByLaunchToken(tx, initiative.id, token);
       if (previous) return { evaluation: previous, releases: [], duplicate: true };
 
-      const assessment = getAssessment(tx, assessmentPublicId);
+      const run = getRun(tx, runPublicId);
       const problems: string[] = [];
-      if (assessment.initiativeId !== initiative.id) problems.push("The Run belongs to a different Assessment.");
-      if (assessment.state !== "complete" && assessment.state !== "complete_with_issues") problems.push(`The Run is ${assessment.state.replaceAll("_", " ")}; evaluate a finished Assessment.`);
-      if (profilesOf(tx, assessment.id).length === 0) problems.push("The Run has no Repository Profile, so there is no current-state evidence to evaluate.");
-      if (!mapOf(tx, assessment.id)) problems.push("The Run has no Relationship Map.");
+      if (run.initiativeId !== initiative.id) problems.push("The Run belongs to a different Assessment.");
+      if (run.state !== "complete" && run.state !== "complete_with_issues") problems.push(`The Run is ${run.state.replaceAll("_", " ")}; evaluate a finished Assessment.`);
+      if (profilesOf(tx, run.id).length === 0) problems.push("The Run has no Repository Profile, so there is no current-state evidence to evaluate.");
+      if (!mapOf(tx, run.id)) problems.push("The Run has no Relationship Map.");
 
       const selected = options.releaseIds ? pinnedReleases(tx, options.releaseIds, problems) : selectedReleases(tx, initiative.id);
       if (selected.length === 0 && !options.releaseIds) problems.push("Select at least one published Standard Release for the Assessment.");
@@ -78,20 +78,20 @@ export function startEvaluation(db: Executor, initiativePublicId: string, assess
         const subjects = new Set((Array.isArray(document.controls) ? document.controls : []).map((control) => (control as JsonObject).subject));
         const profileVersions = release.profileSchemaVersions;
         const mapVersions = release.relationshipSchemaVersions;
-        if (subjects.has("repository") && !readableBy("repositoryProfile", assessment.profileSchemaVersion, profileVersions)) problems.push(`${label} supports Repository Profile v${profileVersions.join(", v") || "none"}, but the Assessment has v${assessment.profileSchemaVersion}.`);
-        if (subjects.has("relationship_map") && !readableBy("relationshipMap", assessment.relationshipSchemaVersion, mapVersions)) problems.push(`${label} supports Relationship Map v${mapVersions.join(", v") || "none"}, but the Assessment has v${assessment.relationshipSchemaVersion}.`);
+        if (subjects.has("repository") && !readableBy("repositoryProfile", run.profileSchemaVersion, profileVersions)) problems.push(`${label} supports Repository Profile v${profileVersions.join(", v") || "none"}, but the Assessment has v${run.profileSchemaVersion}.`);
+        if (subjects.has("relationship_map") && !readableBy("relationshipMap", run.relationshipSchemaVersion, mapVersions)) problems.push(`${label} supports Relationship Map v${mapVersions.join(", v") || "none"}, but the Assessment has v${run.relationshipSchemaVersion}.`);
       }
       if (problems.length) throw new EvaluationStartError(problems);
 
       const { evaluation, releases } = createEvaluation(tx, {
         initiative,
-        assessment,
+        run,
         launchToken: token,
         evaluatorVersion: EVALUATOR_VERSION,
         configuration: { evaluator_version: EVALUATOR_VERSION, limits: { ...LIMITS } },
-        profileSchemaVersion: assessment.profileSchemaVersion,
-        relationshipSchemaVersion: assessment.relationshipSchemaVersion,
-        coverageGaps: coverageGaps(tx, assessment),
+        profileSchemaVersion: run.profileSchemaVersion,
+        relationshipSchemaVersion: run.relationshipSchemaVersion,
+        coverageGaps: coverageGaps(tx, run),
         releases: selected.map(({ release }) => release),
       });
       for (const pinned of releases) {
@@ -123,18 +123,18 @@ function pinnedReleases(db: Executor, releaseIds: readonly string[], problems: s
 }
 
 /** Targets without a Profile limit what an Evaluation can conclude. */
-function coverageGaps(db: Executor, assessment: Assessment): JsonValue[] {
-  return targetsOf(db, assessment.id)
+function coverageGaps(db: Executor, run: Run): JsonValue[] {
+  return targetsOf(db, run.id)
     .filter((target) => target.state !== "complete")
     .map((target) => ({ target: target.publicId, source: { public_id: target.sourcePublicId, name: target.sourceName }, state: target.state, reason: target.failureCode }));
 }
 
 /** An Assessment's stored results, verified against their digests: the only inputs an Evaluation reads. */
-export function evaluationInputs(db: Executor, assessmentId: number): EvaluationInputs {
-  const profiles = new Map(profilesOf(db, assessmentId).map(({ profile, target }) => [target.id, profile]));
-  const map = mapOf(db, assessmentId);
+export function evaluationInputs(db: Executor, runId: number): EvaluationInputs {
+  const profiles = new Map(profilesOf(db, runId).map(({ profile, target }) => [target.id, profile]));
+  const map = mapOf(db, runId);
   return {
-    targets: targetsOf(db, assessmentId).map((target) => {
+    targets: targetsOf(db, runId).map((target) => {
       const profile = profiles.get(target.id);
       const document = profile ? profileDocument(profile) : null;
       return {

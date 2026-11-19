@@ -6,7 +6,7 @@ import { isPublicId } from "@/lib/db/ids";
 import { previewBuilds, previewPreparations } from "@/lib/db/schema";
 import { type PreviewBuild, type PreviewPreparation, settleAbandonedAttempts, settleAbandonedPreparations } from "./records";
 import { type RefListing, listRemoteRefs } from "./refs";
-import { statusVersion } from "@/lib/assessments/status";
+import { statusVersion } from "@/lib/runs/status";
 
 /**
  * What the Repository page and the preview page read about previews (spec

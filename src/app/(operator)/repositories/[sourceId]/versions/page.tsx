@@ -64,7 +64,7 @@ export default async function VersionsPage({ params, searchParams }: PageProps<"
                   <Primary>
                     <Link href={routes.repositoryVersion(source.publicId, version.version)}>{`Version ${version.version}`}</Link>
                   </Primary>
-                  <Secondary>{version.requestedBy ? <Link href={routes.run(version.requestedBy.assessmentPublicId)}>{`Run of ${version.requestedBy.name}`}</Link> : TRIGGER_LABELS[version.trigger]}</Secondary>
+                  <Secondary>{version.requestedBy ? <Link href={routes.run(version.requestedBy.runPublicId)}>{`Run of ${version.requestedBy.name}`}</Link> : TRIGGER_LABELS[version.trigger]}</Secondary>
                 </Td>
                 <Td label="Status">
                   <VersionStatus version={version} size="sm" />

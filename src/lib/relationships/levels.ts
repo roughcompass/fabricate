@@ -1,7 +1,7 @@
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import type { JsonObject } from "@repo-facts/contract";
 import type { Executor } from "@/lib/db/client";
-import { assessmentTargets, dependencyFacts, graphEdges, graphNodes, repositoryProfiles } from "@/lib/db/schema";
+import { runTargets, dependencyFacts, graphEdges, graphNodes, repositoryProfiles } from "@/lib/db/schema";
 import { runProfileIds } from "@/lib/profiles/evidence-owners";
 import { type DiagramEdge, type DiagramModel, type Signal, diagramModel } from "./diagram";
 import { type MapView, type ViewRepository, edgesByIds, edgesFrom, edgesInto, evidenceRecords, nodesOf, repositoryRelationships } from "./map-view";
@@ -279,7 +279,7 @@ export function focusOf(db: Executor, view: MapView, levelHref: string, focus: s
     thirdParty: thirdParty.map((name) => ({ name, href: withQuery(levelHref, { focus: focusParam.package(name) }) })),
     producer: null,
     declarations: [],
-    evidence: evidenceRecords(db, view.assessment.id, evidenceIds),
+    evidence: evidenceRecords(db, view.run.id, evidenceIds),
   };
 }
 
@@ -357,11 +357,11 @@ function groupLabelOf(view: MapView, nodeId: string): string {
 
 function packageFocus(db: Executor, view: MapView, levelHref: string, name: string): Focus | undefined {
   const declared = db
-    .select({ targetId: assessmentTargets.id, manifest: dependencyFacts.manifest, specifier: dependencyFacts.specifier, resolvedVersion: dependencyFacts.resolvedVersion })
+    .select({ targetId: runTargets.id, manifest: dependencyFacts.manifest, specifier: dependencyFacts.specifier, resolvedVersion: dependencyFacts.resolvedVersion })
     .from(dependencyFacts)
     .innerJoin(repositoryProfiles, eq(repositoryProfiles.id, dependencyFacts.profileId))
     // A completed target of the Run uses its survey's Profile.
-    .innerJoin(assessmentTargets, and(eq(assessmentTargets.surveyId, repositoryProfiles.surveyId), eq(assessmentTargets.assessmentId, view.assessment.id), eq(assessmentTargets.state, "complete")))
+    .innerJoin(runTargets, and(eq(runTargets.surveyId, repositoryProfiles.surveyId), eq(runTargets.runId, view.run.id), eq(runTargets.state, "complete")))
     .where(and(eq(dependencyFacts.kind, "dependency"), eq(dependencyFacts.packageName, name)))
     .all();
   const producers = db
@@ -374,7 +374,7 @@ function packageFocus(db: Executor, view: MapView, levelHref: string, name: stri
 
   const nodeOfTarget = new Map(
     db
-      .select({ targetId: graphNodes.assessmentTargetId, nodeId: graphNodes.nodeId })
+      .select({ targetId: graphNodes.runTargetId, nodeId: graphNodes.nodeId })
       .from(graphNodes)
       .where(and(eq(graphNodes.mapId, view.map.id), eq(graphNodes.kind, "repository")))
       .all()
@@ -445,7 +445,7 @@ export function searchMap(db: Executor, view: MapView, query: string): SearchMat
   for (const pkg of db
     .select({ name: dependencyFacts.packageName, dependents: count() })
     .from(dependencyFacts)
-    .where(and(inArray(dependencyFacts.profileId, runProfileIds(db, view.assessment.id)), eq(dependencyFacts.kind, "dependency"), sql`instr(lower(${dependencyFacts.packageName}), ${needle}) > 0`))
+    .where(and(inArray(dependencyFacts.profileId, runProfileIds(db, view.run.id)), eq(dependencyFacts.kind, "dependency"), sql`instr(lower(${dependencyFacts.packageName}), ${needle}) > 0`))
     .groupBy(dependencyFacts.packageName)
     .orderBy(asc(dependencyFacts.packageName))
     .all()) {
@@ -522,7 +522,7 @@ export function relationshipPage(db: Executor, view: MapView, scope: Relationshi
       evidence: [...edge.evidence],
     };
   });
-  return { rows, total, page: current, pages, evidence: evidenceRecords(db, view.assessment.id, rows.flatMap((row) => row.evidence)) };
+  return { rows, total, page: current, pages, evidence: evidenceRecords(db, view.run.id, rows.flatMap((row) => row.evidence)) };
 }
 
 function scopedEdgeIds(db: Executor, view: MapView, scope: RelationshipScope): string[] {

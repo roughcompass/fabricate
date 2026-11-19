@@ -5,7 +5,7 @@ import { BULK_LIMIT, parseBulkLines } from "@/lib/catalog/bulk-lines";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { listSources } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
-import { JOB_PRIORITIES, assessments, jobs, surveys } from "@/lib/db/schema";
+import { JOB_PRIORITIES, runs, jobs, surveys } from "@/lib/db/schema";
 import { ValidationError } from "@/lib/db/errors";
 import { jobPayload } from "@/lib/jobs/queue";
 import { REQUEST_SURVEY } from "@/lib/surveys/background";
@@ -66,7 +66,7 @@ describe("adding Repositories in bulk", () => {
     const requests = app.db.select().from(jobs).where(eq(jobs.kind, REQUEST_SURVEY)).all();
     expect(requests.map((job) => [jobPayload(job), job.priority])).toEqual(result.created.map((source) => [{ repository: source.publicId, trigger: "added" }, JOB_PRIORITIES.background]));
     expect(app.db.select().from(surveys).all()).toEqual([]);
-    expect(app.db.select().from(assessments).all()).toEqual([]);
+    expect(app.db.select().from(runs).all()).toEqual([]);
   });
 
   it("refuses nothing to add, and more lines than the limit, before adding any", () => {

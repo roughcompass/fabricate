@@ -20,14 +20,14 @@ describe("A repository's relationships", () => {
 
   it("lists the repositories that use it and those it uses, from the newest Assessment Run that mapped it", () => {
     const tokens = repositoryRelationships(db, world.sources["design-tokens"]!.id);
-    expect(tokens.run?.publicId).toBe(world.assessment.publicId);
+    expect(tokens.run?.publicId).toBe(world.run.publicId);
     expect(tokens.uses).toEqual([]);
     expect(tokens.usedBy.map((repository) => [repository.name, repository.types])).toEqual([
       ["fx-board", ["package_dependency"]],
       ["payee-hub", ["package_dependency"]],
       ["rates", ["package_dependency"]],
     ]);
-    expect(tokens.mapHref).toMatch(new RegExp(`^/runs/${world.assessment.publicId}/map\\?focus=node_`));
+    expect(tokens.mapHref).toMatch(new RegExp(`^/runs/${world.run.publicId}/map\\?focus=node_`));
     const shell = repositoryRelationships(db, world.sources["access-shell"]!.id);
     expect(shell.uses.map((repository) => repository.name)).toContain("fx-board");
     expect(shell.uses.find((repository) => repository.name === "fx-board")!.types).toContain("composition");

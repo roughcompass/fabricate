@@ -4,8 +4,8 @@ import type { Outcome } from "@/components/ui/outcome-toast";
  * Messages for the outcome codes Assessment actions redirect with. Text is
  * built from the record, never from the URL; an unknown code shows nothing.
  */
-export function assessmentOutcome(code: string | undefined, assessment: { publicId: string }, name: string): Outcome | undefined {
-  const id = `${code}:${assessment.publicId}`;
+export function runOutcome(code: string | undefined, run: { publicId: string }, name: string): Outcome | undefined {
+  const id = `${code}:${run.publicId}`;
   switch (code) {
     case "started":
       return { id, tone: "success", title: `${name} was started.` };

@@ -1,15 +1,15 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { assessmentCounts, editSource, registerSource } from "@/lib/catalog/catalog";
+import { runCounts, editSource, registerSource } from "@/lib/catalog/catalog";
 import { jobs } from "@/lib/db/schema";
 import { jobPayload } from "@/lib/jobs/queue";
 import { REQUEST_SURVEY } from "@/lib/surveys/background";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { getSource, listSources } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
-import { targetsOf } from "@/lib/assessments/assessment-records";
+import { targetsOf } from "@/lib/runs/run-records";
 import type { Db } from "@/lib/db/client";
-import { buildAssessment } from "../support/builders";
+import { buildRun } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { GitFixture } from "../support/git-fixture";
 import { captureValidation } from "../support/validation";
@@ -82,13 +82,13 @@ describe("catalog service", () => {
 
   it("preserves assessment history when a source is edited", () => {
     const source = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "main" }, boundary);
-    const { assessment } = buildAssessment(db, { sources: [source] });
+    const { run } = buildRun(db, { sources: [source] });
 
     editSource(db, source.publicId, source.lockVersion, { name: "orders-ui", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "release" }, boundary);
     expect(getSource(db, source.publicId)).toMatchObject({ name: "orders-ui", gitRef: "release" });
-    expect(targetsOf(db, assessment.id)[0]).toMatchObject({ sourceName: "orders", gitRef: "main" });
+    expect(targetsOf(db, run.id)[0]).toMatchObject({ sourceName: "orders", gitRef: "main" });
     // Adding and editing each request a background survey, which is no Run, so only the Assessment's Run is counted.
     expect(db.select().from(jobs).all().filter((job) => job.kind === REQUEST_SURVEY).map((job) => jobPayload(job).trigger)).toEqual(["added", "edited"]);
-    expect(assessmentCounts(db).get(source.id)).toBe(1);
+    expect(runCounts(db).get(source.id)).toBe(1);
   });
 });

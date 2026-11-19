@@ -20,12 +20,12 @@ export type Surface = [name: string, url: string];
 
 /** Seeds an Initiative with an Assessment, an Evaluation, Standards, and a draft, and returns the operator surfaces. */
 export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<Surface[]> {
-  const { initiative, sources, assessment } = await seedMapStates(db, { initiativeName: "Checkout platform migration", also: { orders: ORDERS } });
+  const { initiative, sources, run } = await seedMapStates(db, { initiativeName: "Checkout platform migration", also: { orders: ORDERS } });
   const baseline = publishStandard(db, "Engineering baseline", BASELINE_CONTROLS);
   const services = publishStandard(db, "Service readiness", SERVICE_CONTROLS);
   selectReleases(db, initiative, [baseline, services]);
-  const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
-  const orders = profilesOf(db, assessment.id).find(({ target }) => target.sourceName === "orders")!.profile;
+  const evaluation = await evaluate(db, initiative.publicId, run.publicId);
+  const orders = profilesOf(db, run.id).find(({ target }) => target.sourceName === "orders")!.profile;
   const evidenceId = Object.keys((profileDocument(orders).fact_document as JsonObject).evidence as JsonObject)[0]!;
   const gap = findingsOf(db, evaluation.id, { controlKey: "services-configurable", outcomes: ["gap"] })[0]!;
   const indeterminate = findingsOf(db, evaluation.id, { controlKey: "verified-runtime", outcomes: ["indeterminate"] })[0]!;
@@ -55,11 +55,11 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["04-draft", `/standards/${baselineStandard.publicId}/draft`],
     ["04-publish", `/standards/${baselineStandard.publicId}/publish`],
     ["04-release", `/standards/${servicesStandard.publicId}/releases/${services.publicId}`],
-    ["05-assessment", paths.run(assessment.publicId)],
+    ["05-assessment", paths.run(run.publicId)],
     ["06-profile", `/profiles/${orders.publicId}`],
-    ["06-evidence", paths.evidence({ run: assessment.publicId }, evidenceId)],
-    ["07-map", paths.runMap(assessment.publicId)],
-    ["07-map-system", `${paths.runMap(assessment.publicId)}/systems/${(db.$client.prepare("select node_id from graph_nodes where kind = 'repository' and label = 'web'").get() as { node_id: string }).node_id}`],
+    ["06-evidence", paths.evidence({ run: run.publicId }, evidenceId)],
+    ["07-map", paths.runMap(run.publicId)],
+    ["07-map-system", `${paths.runMap(run.publicId)}/systems/${(db.$client.prepare("select node_id from graph_nodes where kind = 'repository' and label = 'web'").get() as { node_id: string }).node_id}`],
     ["08-evaluation", `/evaluations/${evaluation.publicId}`],
     ["08-finding-gap", `/evaluations/${evaluation.publicId}/findings/${gap.publicId}`],
     ["08-finding-indeterminate", `/evaluations/${evaluation.publicId}/findings/${indeterminate.publicId}`],

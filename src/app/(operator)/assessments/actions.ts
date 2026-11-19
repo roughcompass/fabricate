@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { launchAssessment } from "@/lib/assessments/launcher";
-import { ScopeResolutionError } from "@/lib/assessments/scope-resolver";
+import { launchRun } from "@/lib/runs/launcher";
+import { ScopeResolutionError } from "@/lib/runs/scope-resolver";
 import { getDb } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { requirePublicId } from "@/lib/db/ids";
@@ -56,12 +56,12 @@ export async function deleteInitiative(formData: FormData): Promise<void> {
   redirect(withQuery(routes.assessments, { notice: "deleted" }));
 }
 
-export async function startAssessment(initiativePublicId: string, _previous: LaunchState, formData: FormData): Promise<LaunchState> {
+export async function startRun(initiativePublicId: string, _previous: LaunchState, formData: FormData): Promise<LaunchState> {
   assessmentId(initiativePublicId);
   let location: string;
   try {
-    const result = launchAssessment(getDb(), initiativePublicId, text(formData, "launchToken", 40));
-    location = routes.run(result.assessment.publicId, { notice: result.duplicate ? "already-started" : "started" });
+    const result = launchRun(getDb(), initiativePublicId, text(formData, "launchToken", 40));
+    location = routes.run(result.run.publicId, { notice: result.duplicate ? "already-started" : "started" });
   } catch (error) {
     if (error instanceof ScopeResolutionError) return { problems: error.problems.map((problem) => problem.message) };
     throw error;

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AssessmentTarget } from "@/lib/assessments/assessment-records";
+import type { RunTarget } from "@/lib/runs/run-records";
 import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
@@ -16,7 +16,7 @@ import {
   insertFinding,
 } from "@/lib/evaluations/evaluation-records";
 import type { StandardRelease } from "@/lib/standards/standard-records";
-import { buildAssessment, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildRelease, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 
 const findingDocumentFor = (controlKey: string, subjectKey: string, outcome = "meets", severity = "medium", type = "repository"): JsonObject => ({
@@ -31,7 +31,7 @@ describe("evaluation records", () => {
   let db: Db;
   let first: StandardRelease;
   let second: StandardRelease;
-  let target: AssessmentTarget;
+  let target: RunTarget;
   let evaluation: Evaluation;
   let pinned: EvaluationRelease[];
 
@@ -39,12 +39,12 @@ describe("evaluation records", () => {
     db = createTestDb();
     first = buildRelease(db);
     second = buildRelease(db);
-    const built = buildAssessment(db, { sources: [buildSource(db)] });
+    const built = buildRun(db, { sources: [buildSource(db)] });
     target = built.targets[0]!;
-    rawRun(db, "update assessments set state = 'acquiring' where id = ?", built.assessment.id);
+    rawRun(db, "update assessments set state = 'acquiring' where id = ?", built.run.id);
     ({ evaluation, releases: pinned } = createEvaluation(db, {
-      initiative: { id: built.assessment.initiativeId } as never,
-      assessment: built.assessment,
+      initiative: { id: built.run.initiativeId } as never,
+      run: built.run,
       launchToken: crypto.randomUUID(),
       evaluatorVersion: "test",
       configuration: { schema: "fabricate.evaluator_configuration" },
@@ -71,7 +71,7 @@ describe("evaluation records", () => {
   });
 
   it("rejects duplicate pinned Releases and an empty selection", () => {
-    const base = { initiative: { id: evaluation.initiativeId } as never, assessment: { id: evaluation.assessmentId } as never, evaluatorVersion: "test", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [] };
+    const base = { initiative: { id: evaluation.initiativeId } as never, run: { id: evaluation.runId } as never, evaluatorVersion: "test", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [] };
 
     expect(() => createEvaluation(db, { ...base, launchToken: crypto.randomUUID(), releases: [first, first] })).toThrow(ValidationError);
     expect(() => createEvaluation(db, { ...base, launchToken: crypto.randomUUID(), releases: [] })).toThrow(ValidationError);

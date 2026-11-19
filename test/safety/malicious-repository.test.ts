@@ -5,8 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import type { JsonObject } from "@repo-facts/contract";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getAssessment, targetsOf } from "@/lib/assessments/assessment-records";
-import { launchAssessment } from "@/lib/assessments/launcher";
+import { getRun, targetsOf } from "@/lib/runs/run-records";
+import { launchRun } from "@/lib/runs/launcher";
 import { resolveCloneUrl } from "@/lib/catalog/catalog";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { jobHandlers } from "@/lib/jobs/registry";
@@ -43,7 +43,7 @@ describe("Assessment of a malicious repository", () => {
   const markers = { outside: `OUTSIDE-${crypto.randomUUID()}`, npmrc: `NPMRC-${crypto.randomUUID()}`, env: `DOTENV-${crypto.randomUUID()}` };
   let spyCalls: Record<string, number> = {};
   let work: Repo;
-  let assessmentId: string;
+  let runId: string;
 
   const touch = (name: string) => `touch '${path.join(sentinels, name)}'`;
   const script = (name: string) => `#!/bin/sh\n${touch(name)}\n`;
@@ -127,7 +127,7 @@ describe("Assessment of a malicious repository", () => {
 
     spyCalls = await gitLog.during(() =>
       countNetworkCalls(async () => {
-        assessmentId = launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), world.config).assessment.publicId;
+        runId = launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config).run.publicId;
         await drainJobs(world.db, jobHandlers(world.db, world.config));
       }),
     );
@@ -139,14 +139,14 @@ describe("Assessment of a malicious repository", () => {
     delete (globalThis as { __frontendRegistryModuleTrap?: unknown }).__frontendRegistryModuleTrap;
   });
 
-  const facts = () => profileDocument(profilesOf(world.db, getAssessment(world.db, assessmentId).id)[0]!.profile).fact_document as JsonObject;
+  const facts = () => profileDocument(profilesOf(world.db, getRun(world.db, runId).id)[0]!.profile).fact_document as JsonObject;
   const category = (id: string) => (facts().categories as Record<string, JsonObject>)[id]!;
 
   it("completes the Assessment with a Profile and a Relationship Map", () => {
-    const assessment = getAssessment(world.db, assessmentId);
-    expect(assessment.state).toBe("complete");
-    expect(targetsOf(world.db, assessment.id).map((target) => target.state)).toEqual(["complete"]);
-    expect(mapOf(world.db, assessment.id)).toBeDefined();
+    const run = getRun(world.db, runId);
+    expect(run.state).toBe("complete");
+    expect(targetsOf(world.db, run.id).map((target) => target.state)).toEqual(["complete"]);
+    expect(mapOf(world.db, run.id)).toBeDefined();
   });
 
   it("runs no hook, filter, lifecycle script, CI command, config command, or transport command", () => {
@@ -211,7 +211,7 @@ describe("Assessment of a malicious repository", () => {
     expect(services).toEqual(expect.arrayContaining(["https://payments.invalid"]));
     for (const service of facts().service_dependencies as JsonObject[]) expect(service.access).toMatchObject({ state: "unknown" });
     // The map records the Service Dependencies as endpoints without contacting them.
-    const map = mapDocument(mapOf(world.db, getAssessment(world.db, assessmentId).id)!) as JsonObject;
+    const map = mapDocument(mapOf(world.db, getRun(world.db, runId).id)!) as JsonObject;
     expect(JSON.stringify(map.nodes)).toContain("payments.invalid");
   });
 

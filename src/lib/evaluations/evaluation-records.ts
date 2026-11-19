@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
-import type { Assessment, AssessmentTarget } from "@/lib/assessments/assessment-records";
-import { LAUNCH_TOKEN } from "@/lib/assessments/assessment-records";
+import type { Run, RunTarget } from "@/lib/runs/run-records";
+import { LAUNCH_TOKEN } from "@/lib/runs/run-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
@@ -35,7 +35,7 @@ export type Finding = typeof findings.$inferSelect;
 
 export interface NewEvaluation {
   initiative: Initiative;
-  assessment: Assessment;
+  run: Run;
   launchToken: string;
   evaluatorVersion: string;
   configuration: JsonObject;
@@ -63,7 +63,7 @@ export function createEvaluation(db: Executor, input: NewEvaluation): { evaluati
       .values({
         publicId: generatePublicId("evl"),
         initiativeId: input.initiative.id,
-        assessmentId: input.assessment.id,
+        runId: input.run.id,
         launchToken: input.launchToken,
         evaluatorVersion: input.evaluatorVersion,
         configuration: configuration.text,
@@ -109,10 +109,10 @@ export function findEvaluationByLaunchToken(db: Executor, initiativeId: number, 
   return db.select().from(evaluations).where(and(eq(evaluations.initiativeId, initiativeId), eq(evaluations.launchToken, launchToken))).get();
 }
 
-export function listEvaluations(db: Executor, filter: { initiativeId?: number; assessmentId?: number }): Evaluation[] {
+export function listEvaluations(db: Executor, filter: { initiativeId?: number; runId?: number }): Evaluation[] {
   const conditions = [];
   if (filter.initiativeId !== undefined) conditions.push(eq(evaluations.initiativeId, filter.initiativeId));
-  if (filter.assessmentId !== undefined) conditions.push(eq(evaluations.assessmentId, filter.assessmentId));
+  if (filter.runId !== undefined) conditions.push(eq(evaluations.runId, filter.runId));
   return db
     .select()
     .from(evaluations)
@@ -143,7 +143,7 @@ export interface NewFinding {
   evaluation: Evaluation;
   evaluationRelease: EvaluationRelease;
   /** The subject target of a repository Finding; absent for relationship Findings. */
-  target?: AssessmentTarget;
+  target?: RunTarget;
   position: number;
   document: JsonObject;
 }
@@ -179,7 +179,7 @@ export function insertFinding(db: Executor, input: NewFinding): Finding {
       evaluationId: input.evaluation.id,
       evaluationReleaseId: input.evaluationRelease.id,
       standardReleaseId: input.evaluationRelease.standardReleaseId,
-      assessmentTargetId: input.target?.id ?? null,
+      runTargetId: input.target?.id ?? null,
       controlKey: controlKey as string,
       subjectType: subjectType as SubjectType,
       subjectKey: subjectKey as string,

@@ -5,7 +5,7 @@ import { gitSource, resolveReference, resolveTarget } from "@/lib/acquisition/ac
 import { AcquisitionError } from "@/lib/acquisition/errors";
 import { withSourceLock } from "@/lib/acquisition/source-lease";
 import { Mirror, mirrorPath, surveyRefFor } from "@/lib/acquisition/mirror";
-import { getTarget } from "@/lib/assessments/assessment-records";
+import { getTarget } from "@/lib/runs/run-records";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { FrontendRegistryConfig } from "@/lib/config";

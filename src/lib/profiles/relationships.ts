@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { assessments, graphEdges, graphNodes, repositorySources } from "@/lib/db/schema";
+import { runs, graphEdges, graphNodes, repositorySources } from "@/lib/db/schema";
 import { routes } from "@/lib/web/routes";
 
 /**
@@ -35,9 +35,9 @@ const NONE: RepositoryRelationships = { run: null, uses: [], usedBy: [], mapHref
 export function repositoryRelationships(db: Executor, sourceId: number): RepositoryRelationships {
   // The newest Assessment Run that mapped the repository.
   const node = db
-    .select({ mapId: graphNodes.mapId, nodeId: graphNodes.nodeId, run: assessments.publicId, finishedAt: assessments.finishedAt })
+    .select({ mapId: graphNodes.mapId, nodeId: graphNodes.nodeId, run: runs.publicId, finishedAt: runs.finishedAt })
     .from(graphNodes)
-    .innerJoin(assessments, eq(assessments.id, graphNodes.assessmentId))
+    .innerJoin(runs, eq(runs.id, graphNodes.runId))
     .where(and(eq(graphNodes.repositorySourceId, sourceId), eq(graphNodes.kind, "repository")))
     .orderBy(desc(graphNodes.mapId))
     .limit(1)

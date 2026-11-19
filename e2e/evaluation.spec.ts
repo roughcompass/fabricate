@@ -94,9 +94,9 @@ test("groups Findings under their Control, and a Gap filter shows only Controls 
 });
 
 test("shows one Release's conclusion with the combined counts and no per-Release table", async ({ page, db }) => {
-  const { initiative, assessment, baseline } = await seedResults(db);
+  const { initiative, run, baseline } = await seedResults(db);
   selectReleases(db, initiative, [baseline]);
-  const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+  const evaluation = await evaluate(db, initiative.publicId, run.publicId);
   await page.goto(`/evaluations/${evaluation.publicId}`);
 
   const outcomes = page.getByLabel("Outcomes", { exact: true });

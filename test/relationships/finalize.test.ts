@@ -1,13 +1,13 @@
 import type { JsonObject } from "@repo-facts/contract";
 import { beforeEach, describe, expect, it } from "vitest";
-import { targetsOf } from "@/lib/assessments/assessment-records";
-import { transitionAssessment, transitionTarget } from "@/lib/assessments/transitions";
+import { targetsOf } from "@/lib/runs/run-records";
+import { transitionRun, transitionTarget } from "@/lib/runs/transitions";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
 import { MapNotReadyError, finalizeRelationshipMap } from "@/lib/relationships/finalize";
 import { mapDocument } from "@/lib/relationships/map-records";
 import { type MapDocument, mapProblems } from "@/lib/relationships/schema";
-import { buildAssessment, buildSource } from "../support/builders";
+import { buildRun, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { manifest } from "../support/profiles";
 import { type Outcome, completeTarget, finalizingRun } from "../support/scenarios";
@@ -32,18 +32,18 @@ describe("Relationship Map finalization", () => {
 
   /** An Assessment over +sources+ whose targets end as +outcomes+ (a file tree, or a failure). */
   async function assessed(sources: RepositorySource[], outcomes: Outcome[]) {
-    const { assessment, targets } = buildAssessment(db, { sources });
-    for (const [index, outcome] of outcomes.entries()) await completeTarget(db, assessment, targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!, outcome);
-    return finalizingRun(db, assessment);
+    const { run, targets } = buildRun(db, { sources });
+    for (const [index, outcome] of outcomes.entries()) await completeTarget(db, run, targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!, outcome);
+    return finalizingRun(db, run);
   }
 
   const read = (map: ReturnType<typeof finalizeRelationshipMap>) => mapDocument(map) as unknown as MapDocument;
 
   it("writes one immutable map from the terminal targets, and returns it again on a repeated finalization", async () => {
-    const assessment = await assessed([buildSource(db, { name: "ui" }), buildSource(db, { name: "app" })], [UI, APP]);
+    const run = await assessed([buildSource(db, { name: "ui" }), buildSource(db, { name: "app" })], [UI, APP]);
 
-    const first = finalizeRelationshipMap(db, assessment);
-    const again = finalizeRelationshipMap(db, assessment);
+    const first = finalizeRelationshipMap(db, run);
+    const again = finalizeRelationshipMap(db, run);
     expect(again.id).toBe(first.id);
     expect(again.digest).toBe(first.digest);
     expect(first).toMatchObject({ resolverVersion: "1", schemaVersion: 1 });
@@ -52,22 +52,22 @@ describe("Relationship Map finalization", () => {
   });
 
   it("keeps the package, composition, runtime-contract, and service edges of successful Profiles and records each missing target", async () => {
-    const assessment = await assessed([buildSource(db, { name: "ui" }), buildSource(db, { name: "app" }), buildSource(db, { name: "admin" }), buildSource(db, { name: "billing" })], [UI, APP, ADMIN, "failed"]);
-    const map = read(finalizeRelationshipMap(db, assessment));
+    const run = await assessed([buildSource(db, { name: "ui" }), buildSource(db, { name: "app" }), buildSource(db, { name: "admin" }), buildSource(db, { name: "billing" })], [UI, APP, ADMIN, "failed"]);
+    const map = read(finalizeRelationshipMap(db, run));
     const byType = (type: string) => map.edges.filter((edge) => edge.type === type).map((edge) => edge.state);
 
     expect(byType("package_dependency")).toContain("resolved");
     expect(byType("composition")).toEqual(["resolved"]);
     expect(byType("runtime_contract")).toEqual(["unresolved"]);
     expect(byType("service_call")).toEqual(["resolved"]);
-    const billing = targetsOf(db, assessment.id).find((target) => target.sourceName === "billing")!;
+    const billing = targetsOf(db, run.id).find((target) => target.sourceName === "billing")!;
     expect(map.coverage).toMatchObject({ complete: false, gaps: [{ target: billing.publicId, source: { public_id: billing.sourcePublicId, name: "billing" }, state: "failed", reason: "source_unavailable" }] });
     expect(map.coverage.contributors).toHaveLength(3);
   });
 
   it("finalizes an Assessment whose targets all failed or were canceled, with only coverage gaps", async () => {
-    const assessment = await assessed([buildSource(db, { name: "a" }), buildSource(db, { name: "b" })], ["failed", "canceled"]);
-    const map = read(finalizeRelationshipMap(db, assessment));
+    const run = await assessed([buildSource(db, { name: "a" }), buildSource(db, { name: "b" })], ["failed", "canceled"]);
+    const map = read(finalizeRelationshipMap(db, run));
 
     expect(map.nodes).toEqual([]);
     expect(map.edges).toEqual([]);
@@ -75,12 +75,12 @@ describe("Relationship Map finalization", () => {
   });
 
   it("refuses to write a map before the Assessment is finalizing or while a target is in progress", async () => {
-    const early = buildAssessment(db, { sources: [buildSource(db, { name: "early" })] });
-    expect(() => finalizeRelationshipMap(db, early.assessment)).toThrow(MapNotReadyError);
+    const early = buildRun(db, { sources: [buildSource(db, { name: "early" })] });
+    expect(() => finalizeRelationshipMap(db, early.run)).toThrow(MapNotReadyError);
 
-    const { assessment, targets } = buildAssessment(db, { sources: [buildSource(db, { name: "slow" })] });
+    const { run, targets } = buildRun(db, { sources: [buildSource(db, { name: "slow" })] });
     transitionTarget(db, targets[0]!, "acquiring");
-    const finalizing = transitionAssessment(db, assessment, "finalizing");
+    const finalizing = transitionRun(db, run, "finalizing");
     expect(() => finalizeRelationshipMap(db, finalizing)).toThrow(/still in progress/);
   });
 

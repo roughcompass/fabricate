@@ -1,7 +1,7 @@
 import { withSourceLock } from "@/lib/acquisition/source-lease";
 import { gitSource, normalizeAcquisitionError } from "@/lib/acquisition/acquire";
 import { Mirror, surveyRefFor } from "@/lib/acquisition/mirror";
-import { continueWaitingTargets } from "@/lib/assessments/waiting";
+import { continueWaitingTargets } from "@/lib/runs/waiting";
 import { continuePreparations } from "@/lib/previews/records";
 import { type RepositorySource, sourceById } from "@/lib/catalog/source-records";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";

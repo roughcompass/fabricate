@@ -1,5 +1,5 @@
-import { type AssessmentTarget, getTarget } from "@/lib/assessments/assessment-records";
-import { transitionTarget } from "@/lib/assessments/transitions";
+import { type RunTarget, getTarget } from "@/lib/runs/run-records";
+import { transitionTarget } from "@/lib/runs/transitions";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
 import { BoundaryViolation, SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
@@ -40,14 +40,14 @@ export async function resolveReference(source: { sourcePublicId: string; cloneUr
   }
 }
 
-export type ResolutionOutcome = { ok: true; resolution: Resolution } | { ok: false; error: AcquisitionError; target: AssessmentTarget };
+export type ResolutionOutcome = { ok: true; resolution: Resolution } | { ok: false; error: AcquisitionError; target: RunTarget };
 
 /**
  * Resolves a Run target's reference. A failure is the target's own (design
  * decision 2): it moves only this target to failed, or canceled, with a stable
  * code and a redacted message, and creates no survey.
  */
-export async function resolveTarget(db: Executor, target: AssessmentTarget, options: ResolveOptions = {}): Promise<ResolutionOutcome> {
+export async function resolveTarget(db: Executor, target: RunTarget, options: ResolveOptions = {}): Promise<ResolutionOutcome> {
   try {
     return { ok: true, resolution: await resolveReference(target, options) };
   } catch (caught) {
@@ -62,7 +62,7 @@ export async function resolveTarget(db: Executor, target: AssessmentTarget, opti
 }
 
 /** The URL and transport Git uses for a source, resolving local paths through the boundary. */
-export function gitSource(target: Pick<AssessmentTarget, "cloneUrl">, boundary: SourceBoundary): { url: string; protocol: Protocol } {
+export function gitSource(target: Pick<RunTarget, "cloneUrl">, boundary: SourceBoundary): { url: string; protocol: Protocol } {
   const url = CloneUrl.parse(target.cloneUrl);
   if (!url.isFile) return { url: url.toString(), protocol: url.protocol };
   const location = boundary.check(url.localPath!);

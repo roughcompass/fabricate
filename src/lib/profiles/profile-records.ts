@@ -1,9 +1,9 @@
 import { and, asc, eq } from "drizzle-orm";
-import type { AssessmentTarget } from "@/lib/assessments/assessment-records";
+import type { RunTarget } from "@/lib/runs/run-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { assessmentTargets, repositoryProfiles, repositorySources, surveys } from "@/lib/db/schema";
+import { runTargets, repositoryProfiles, repositorySources, surveys } from "@/lib/db/schema";
 import { type JsonObject, type JsonValue, SKIPPED_INPUT_REASONS } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 import { projectProfile } from "@/lib/projection/project";
@@ -75,13 +75,13 @@ export function profileOfSurvey(db: Executor, surveyId: number): RepositoryProfi
 }
 
 /** Every Profile of an Assessment's completed targets, in scope order. */
-export function profilesOf(db: Executor, assessmentId: number): { profile: RepositoryProfile; target: AssessmentTarget }[] {
+export function profilesOf(db: Executor, runId: number): { profile: RepositoryProfile; target: RunTarget }[] {
   return db
-    .select({ profile: repositoryProfiles, target: assessmentTargets })
-    .from(assessmentTargets)
-    .innerJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, assessmentTargets.surveyId))
-    .where(and(eq(assessmentTargets.assessmentId, assessmentId), eq(assessmentTargets.state, "complete")))
-    .orderBy(asc(assessmentTargets.position))
+    .select({ profile: repositoryProfiles, target: runTargets })
+    .from(runTargets)
+    .innerJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, runTargets.surveyId))
+    .where(and(eq(runTargets.runId, runId), eq(runTargets.state, "complete")))
+    .orderBy(asc(runTargets.position))
     .all();
 }
 

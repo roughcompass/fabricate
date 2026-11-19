@@ -1,5 +1,5 @@
 import { TransitionError } from "./errors";
-import type { AssessmentState, EvaluationReleaseState, EvaluationState, SurveyState, TargetState } from "./schema";
+import type { RunState, EvaluationReleaseState, EvaluationState, SurveyState, TargetState } from "./schema";
 
 /**
  * Allowed state transitions for every run record. These tables are the
@@ -14,7 +14,7 @@ export interface StateMachine<S extends string> {
   readonly terminal: readonly S[];
 }
 
-export const ASSESSMENT_MACHINE: StateMachine<AssessmentState> = {
+export const RUN_MACHINE: StateMachine<RunState> = {
   name: "Assessment",
   initial: "queued",
   transitions: {

@@ -15,7 +15,7 @@ import { SearchField } from "@/components/ui/search-field";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
-import { assessmentCounts } from "@/lib/catalog/catalog";
+import { runCounts } from "@/lib/catalog/catalog";
 import { listSources, sourceReferenceLabel } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { type ProfileSummary, ACTIVE_STATES, profileSummaries, profilingActivity } from "@/lib/profiling/versions";
@@ -34,7 +34,7 @@ export default async function SourcesPage({ searchParams }: PageProps<"/reposito
   const all = listSources(db);
   const needle = search.toLowerCase();
   const sources = needle ? all.filter((source) => source.name.toLowerCase().includes(needle) || source.cloneUrl.toLowerCase().includes(needle)) : all;
-  const counts = assessmentCounts(db);
+  const counts = runCounts(db);
   const profiles = profileSummaries(db);
   const activity = profilingActivity(db);
   const busy = activity.profiling + activity.queued > 0;

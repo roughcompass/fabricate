@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import type { JsonObject } from "@repo-facts/contract";
 import { expect, type Page, test } from "@playwright/test";
-import { listAssessments, targetsOf } from "../../src/lib/assessments/assessment-records";
+import { listRuns, targetsOf } from "../../src/lib/runs/run-records";
 import { listSources } from "../../src/lib/catalog/source-records";
 import { loadConfig } from "../../src/lib/config";
 import { openDatabase } from "../../src/lib/db/client";
@@ -77,13 +77,13 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await expect(toast(page, "Run #1 was started.")).toBeVisible();
     await run();
     await expect(pageHeader(page)).toContainText("Complete");
-    const assessment = listAssessments(db, listInitiatives(db)[0]!.id)[0]!;
-    expect(targetsOf(db, assessment.id).map((target) => [target.sourceName, target.state]).sort()).toEqual(REPOSITORIES.map((name) => [name, "complete"]));
+    const baseline = listRuns(db, listInitiatives(db)[0]!.id)[0]!;
+    expect(targetsOf(db, baseline.id).map((target) => [target.sourceName, target.state]).sort()).toEqual(REPOSITORIES.map((name) => [name, "complete"]));
   });
 
   await test.step("represent discovered analytics calls statically", async () => {
-    const assessment = listAssessments(db, listInitiatives(db)[0]!.id)[0]!;
-    const profiles = new Map(profilesOf(db, assessment.id).map(({ profile, target }) => [target.sourceName, profile]));
+    const run = listRuns(db, listInitiatives(db)[0]!.id)[0]!;
+    const profiles = new Map(profilesOf(db, run.id).map(({ profile, target }) => [target.sourceName, profile]));
     for (const name of ANALYTICS_CONSUMERS) {
       const services = (profileDocument(profiles.get(name)!).fact_document as JsonObject).service_dependencies as JsonObject[];
       expect(services, name).toContainEqual(expect.objectContaining({ key: "package:@acme/analytics", client: { kind: "packaged", package: "@acme/analytics" }, access: expect.objectContaining({ state: "unknown" }) }));

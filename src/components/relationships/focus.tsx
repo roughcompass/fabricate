@@ -19,7 +19,7 @@ const KIND_LABELS: Record<Focus["kind"], string> = { repository: "Repository", s
  * relationships, grouped by application and portal, and each row opens
  * its signals, evidence, and resolver rule.
  */
-export function FocusPanel({ focus, assessmentId, closeHref, pageHref }: { focus: Focus; assessmentId: string; closeHref: string; pageHref: (list: "dependents" | "dependencies", page: number) => string }) {
+export function FocusPanel({ focus, runId, closeHref, pageHref }: { focus: Focus; runId: string; closeHref: string; pageHref: (list: "dependents" | "dependencies", page: number) => string }) {
   return (
     <Panel
       title={focus.label}
@@ -51,8 +51,8 @@ export function FocusPanel({ focus, assessmentId, closeHref, pageHref }: { focus
         <Declarations focus={focus} />
       ) : (
         <div className={styles.stack}>
-          <RelationshipList title="Affected if it changes" empty={`Nothing in this Run depends on ${focus.label}.`} list={focus.dependents} evidence={focus.evidence} assessmentId={assessmentId} href={(page) => pageHref("dependents", page)} />
-          <RelationshipList title="Depends on" empty={`${focus.label} depends on nothing else in this Run.`} list={focus.dependencies} evidence={focus.evidence} assessmentId={assessmentId} href={(page) => pageHref("dependencies", page)} />
+          <RelationshipList title="Affected if it changes" empty={`Nothing in this Run depends on ${focus.label}.`} list={focus.dependents} evidence={focus.evidence} runId={runId} href={(page) => pageHref("dependents", page)} />
+          <RelationshipList title="Depends on" empty={`${focus.label} depends on nothing else in this Run.`} list={focus.dependencies} evidence={focus.evidence} runId={runId} href={(page) => pageHref("dependencies", page)} />
         </div>
       )}
 
@@ -71,7 +71,7 @@ export function FocusPanel({ focus, assessmentId, closeHref, pageHref }: { focus
   );
 }
 
-function RelationshipList({ title, empty, list, evidence, assessmentId, href }: { title: string; empty: string; list: FocusList; evidence: Focus["evidence"]; assessmentId: string; href: (page: number) => string }) {
+function RelationshipList({ title, empty, list, evidence, runId, href }: { title: string; empty: string; list: FocusList; evidence: Focus["evidence"]; runId: string; href: (page: number) => string }) {
   return (
     <section className={styles.list} aria-label={title}>
       <h3 className={styles.listTitle}>{`${title} (${formatNumber(list.total)})`}</h3>
@@ -93,7 +93,7 @@ function RelationshipList({ title, empty, list, evidence, assessmentId, href }: 
                       <li key={signal.edgeId} className={styles.signal}>
                         <span>{`${EDGE_LABELS[signal.type]?.[0] ?? signal.type}, ${edgeBasis(signal.basis).toLowerCase()}`}</span>
                         <span className={styles.rule}>{signal.rule}</span>
-                        <EvidenceList ids={signal.evidence} records={evidence} owner={{ run: assessmentId }} />
+                        <EvidenceList ids={signal.evidence} records={evidence} owner={{ run: runId }} />
                       </li>
                     ))}
                     {row.reason && <li className={styles.muted}>{row.reason}</li>}

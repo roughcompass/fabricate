@@ -2,7 +2,7 @@
 // migrations in drizzle/ are generated from it with `npm run db:generate`;
 // triggers live in custom migrations because Drizzle does not model them.
 export * from "./catalog";
-export * from "./assessments";
+export * from "./runs";
 export * from "./standards";
 export * from "./evaluations";
 export * from "./results";

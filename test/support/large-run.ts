@@ -1,9 +1,9 @@
-import type { Assessment } from "@/lib/assessments/assessment-records";
+import type { Run } from "@/lib/runs/run-records";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
 import { buildInitiative, buildSource } from "./builders";
 import { manifest } from "./profiles";
-import { seedAssessment } from "./scenarios";
+import { seedRun } from "./scenarios";
 
 const name = (index: number) => `repo-${String(index).padStart(3, "0")}`;
 
@@ -12,7 +12,7 @@ const name = (index: number) => `repo-${String(index).padStart(3, "0")}`;
  * each depending on react and on up to two earlier libraries, seeded through
  * the real profiling, resolution, and projection paths.
  */
-export async function seedLargeRun(db: Db, repositories = 500): Promise<{ assessment: Assessment; sources: RepositorySource[] }> {
+export async function seedLargeRun(db: Db, repositories = 500): Promise<{ run: Run; sources: RepositorySource[] }> {
   const sources = Array.from({ length: repositories }, (_, index) => buildSource(db, { name: name(index) }));
   const initiative = buildInitiative(db, { name: "Large Run", sources });
   const outcomes = sources.map((_, index) => {
@@ -21,5 +21,5 @@ export async function seedLargeRun(db: Db, repositories = 500): Promise<{ assess
     if (index > 1) dependencies[`@fleet/${name(Math.floor(index / 2))}`] = "^1.0.0";
     return { "package.json": manifest({ name: `@fleet/${name(index)}`, version: "1.0.0", dependencies }) };
   });
-  return { assessment: await seedAssessment(db, initiative, sources, outcomes), sources };
+  return { run: await seedRun(db, initiative, sources, outcomes), sources };
 }

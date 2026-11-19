@@ -1,8 +1,8 @@
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { type SurveyState, type SurveyTrigger, assessments, initiatives, repositoryProfiles, surveys } from "@/lib/db/schema";
+import { type SurveyState, type SurveyTrigger, runs, initiatives, repositoryProfiles, surveys } from "@/lib/db/schema";
 import type { JsonValue } from "@repo-facts/contract";
-import { statusVersion } from "@/lib/assessments/status";
+import { statusVersion } from "@/lib/runs/status";
 import { SURVEY_MACHINE, activeStates } from "@/lib/db/state-machines";
 import type { Survey } from "@/lib/surveys/records";
 import { type CurrentProfile, currentProfile, currentProfiles } from "./current";
@@ -40,7 +40,7 @@ export interface ProfileVersion {
   /** Why the survey failed, when its latest attempt did. */
   readonly failure: { readonly code: string; readonly message: string } | null;
   /** The Assessment whose Run started it, when one did. */
-  readonly requestedBy: { readonly assessmentPublicId: string; readonly name: string } | null;
+  readonly requestedBy: { readonly runPublicId: string; readonly name: string } | null;
 }
 
 export function isActive(version: Pick<ProfileVersion, "survey">): boolean {
@@ -50,11 +50,11 @@ export function isActive(version: Pick<ProfileVersion, "survey">): boolean {
 /** The versions of the repository +sourceId+, newest first: at most +limit+, after skipping +offset+. One query. */
 export function versionsOf(db: Executor, sourceId: number, limit = -1, offset = 0): ProfileVersion[] {
   return db
-    .select({ survey: surveys, profileId: repositoryProfiles.id, profilePublicId: repositoryProfiles.publicId, profileCreatedAt: repositoryProfiles.createdAt, assessmentPublicId: assessments.publicId, initiativeName: initiatives.name })
+    .select({ survey: surveys, profileId: repositoryProfiles.id, profilePublicId: repositoryProfiles.publicId, profileCreatedAt: repositoryProfiles.createdAt, runPublicId: runs.publicId, initiativeName: initiatives.name })
     .from(surveys)
     .leftJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, surveys.id))
-    .leftJoin(assessments, eq(assessments.id, surveys.requestedByAssessmentId))
-    .leftJoin(initiatives, eq(initiatives.id, assessments.initiativeId))
+    .leftJoin(runs, eq(runs.id, surveys.requestedByRunId))
+    .leftJoin(initiatives, eq(initiatives.id, runs.initiativeId))
     .where(eq(surveys.repositorySourceId, sourceId))
     .orderBy(desc(surveys.number))
     .limit(limit)
@@ -68,7 +68,7 @@ export function versionsOf(db: Executor, sourceId: number, limit = -1, offset = 
       profile: found.profileId === null ? null : { id: found.profileId, publicId: found.profilePublicId!, createdAt: found.profileCreatedAt! },
       commit: found.survey.commitSha,
       failure: found.survey.state === "failed" ? { code: found.survey.failureCode ?? "analysis_failed", message: found.survey.failureMessage ?? "" } : null,
-      requestedBy: found.assessmentPublicId === null ? null : { assessmentPublicId: found.assessmentPublicId, name: found.initiativeName ?? "" },
+      requestedBy: found.runPublicId === null ? null : { runPublicId: found.runPublicId, name: found.initiativeName ?? "" },
     }));
 }
 

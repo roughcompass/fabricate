@@ -57,8 +57,8 @@ test.describe("on a wide viewport", () => {
   });
 
   test("Record page: a Repository Profile marks All Assessments", async ({ page, db }) => {
-    const { assessment } = await seedResults(db);
-    const profile = profilesOf(db, assessment.id)[0]!.profile;
+    const { run } = await seedResults(db);
+    const profile = profilesOf(db, run.id)[0]!.profile;
     await page.goto(`/profiles/${profile.publicId}`);
     await expectCurrent(page, "All Assessments");
   });
@@ -95,8 +95,8 @@ test.describe("on a wide viewport", () => {
   });
 
   test("Product mark opens Home from a Run", async ({ page, db }) => {
-    const { assessment } = await seedResults(db);
-    await page.goto(paths.run(assessment.publicId));
+    const { run } = await seedResults(db);
+    await page.goto(paths.run(run.publicId));
     await page.getByRole("link", { name: "Frontend Registry home" }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Home");
@@ -125,8 +125,8 @@ test.describe("the shell header", () => {
   const header = (page: Page) => page.locator("[data-shell-header]");
 
   test("Title in the header: an Assessment's name, centered, is the page's only h1", async ({ page, db }) => {
-    const { assessment } = await seedResults(db);
-    await page.goto(paths.run(assessment.publicId));
+    const { run } = await seedResults(db);
+    await page.goto(paths.run(run.publicId));
     const title = header(page).getByRole("heading", { level: 1 });
     await expect(title).toHaveText("Run #1");
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { conclusionCounts, latestConclusions } from "@/lib/evaluations/conclusions";
 import { requestSurvey } from "@/lib/surveys/records";
-import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 
@@ -9,7 +9,7 @@ describe("latest conclusions", () => {
   it("reads each Assessment's latest completed Evaluation, so a later failure keeps the earlier conclusion (Conclusion from the latest completed Evaluation)", () => {
     const db = createTestDb();
     const initiative = buildInitiative(db, { sources: [buildSource(db)] });
-    const run = driveRun(db, buildAssessment(db, { initiative }).assessment, "complete");
+    const run = driveRun(db, buildRun(db, { initiative }).run, "complete");
     driveEvaluation(db, buildEvaluation(db, initiative, run), "complete", "conforms");
     const second = driveEvaluation(db, buildEvaluation(db, initiative, run), "complete", "gaps");
     driveEvaluation(db, buildEvaluation(db, initiative, run), "failed");
@@ -22,7 +22,7 @@ describe("latest conclusions", () => {
     const source = buildSource(db);
     const unevaluated = buildInitiative(db, { sources: [source] });
     const pending = buildInitiative(db, { sources: [source] });
-    buildEvaluation(db, pending, driveRun(db, buildAssessment(db, { initiative: pending }).assessment, "complete"));
+    buildEvaluation(db, pending, driveRun(db, buildRun(db, { initiative: pending }).run, "complete"));
 
     const conclusions = latestConclusions(db);
     expect(conclusions.get(unevaluated.id)).toEqual({ evaluation: null, conclusion: "none" });
@@ -43,7 +43,7 @@ describe("latest conclusions", () => {
     vi.useFakeTimers({ toFake: ["Date"], now: Date.UTC(2026, 9, 1) });
     const db = createTestDb();
     const initiative = buildInitiative(db, { sources: [buildSource(db)] });
-    const run = driveRun(db, buildAssessment(db, { initiative }).assessment, "complete");
+    const run = driveRun(db, buildRun(db, { initiative }).run, "complete");
     driveEvaluation(db, buildEvaluation(db, initiative, run), "complete", "conforms");
     vi.setSystemTime(Date.UTC(2026, 9, 10));
     driveEvaluation(db, buildEvaluation(db, initiative, run), "complete", "gaps");

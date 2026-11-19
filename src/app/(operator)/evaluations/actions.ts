@@ -9,12 +9,12 @@ import type { LaunchState } from "../assessments/form-state";
 import { routes } from "@/lib/web/routes";
 
 /** Evaluates an existing Assessment against the Releases the Initiative selects now; resubmitting returns the same Evaluation. */
-export async function startEvaluationAction(initiativePublicId: string, assessmentPublicId: string, _previous: LaunchState, formData: FormData): Promise<LaunchState> {
+export async function startEvaluationAction(initiativePublicId: string, runPublicId: string, _previous: LaunchState, formData: FormData): Promise<LaunchState> {
   requirePublicId(initiativePublicId, "ini", "initiative");
-  requirePublicId(assessmentPublicId, "asm", "assessment");
+  requirePublicId(runPublicId, "asm", "Run");
   let location: string;
   try {
-    const result = startEvaluation(getDb(), initiativePublicId, assessmentPublicId, text(formData, "launchToken", 40));
+    const result = startEvaluation(getDb(), initiativePublicId, runPublicId, text(formData, "launchToken", 40));
     location = routes.evaluation(result.evaluation.publicId, { notice: result.duplicate ? "already-started" : "started" });
   } catch (error) {
     if (error instanceof EvaluationStartError) return { problems: error.problems };

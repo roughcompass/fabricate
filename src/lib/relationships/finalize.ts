@@ -1,4 +1,4 @@
-import { type Assessment, getAssessment, targetsOf } from "@/lib/assessments/assessment-records";
+import { type Run, getRun, targetsOf } from "@/lib/runs/run-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { TARGET_MACHINE, isTerminal } from "@/lib/db/state-machines";
@@ -22,17 +22,17 @@ export class MapNotReadyError extends Error {
   override name = "MapNotReadyError";
 }
 
-export function finalizeRelationshipMap(db: Executor, assessment: Pick<Assessment, "publicId">): RelationshipMap {
+export function finalizeRelationshipMap(db: Executor, run: Pick<Run, "publicId">): RelationshipMap {
   return immediate(db, (tx) => {
-    const current = getAssessment(tx, assessment.publicId);
+    const current = getRun(tx, run.publicId);
     const existing = mapOf(tx, current.id);
     if (existing) return existing;
-    return insertRelationshipMap(tx, { assessment: current, document: resolveMapDocument(tx, current), validate: mapProblems });
+    return insertRelationshipMap(tx, { run: current, document: resolveMapDocument(tx, current), validate: mapProblems });
   });
 }
 
 /** The map document a finalizing Assessment's Profiles resolve to, before it's stored. */
-export function resolveMapDocument(db: Executor, current: Assessment): JsonObject {
+export function resolveMapDocument(db: Executor, current: Run): JsonObject {
   if (current.state !== "finalizing") throw new MapNotReadyError(`Assessment ${current.publicId} is ${current.state}; its map is written while finalizing`);
 
   const targets = targetsOf(db, current.id);

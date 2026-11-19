@@ -12,7 +12,7 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { Section } from "@/components/ui/section";
 import { Severity, Status } from "@/components/ui/status";
 import { ShortValue, Tag } from "@/components/ui/tag";
-import { assessmentById } from "@/lib/assessments/lookups";
+import { runById } from "@/lib/runs/lookups";
 import { getDb } from "@/lib/db/client";
 import { PRODUCT } from "@/lib/product";
 import { evaluationNumber, findEvaluation, findFinding, findingDocument } from "@/lib/evaluations/evaluation-records";
@@ -59,7 +59,7 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
   const subject = document.subject as JsonObject;
   const release = releaseById(db, finding.standardReleaseId);
   const standard = standardById(db, release.standardId);
-  const assessment = assessmentById(db, evaluation.assessmentId);
+  const run = runById(db, evaluation.runId);
   const evidence = (document.evidence ?? {}) as JsonObject;
   const causes = (Array.isArray(document.causes) ? document.causes : []) as unknown as Cause[];
   const applicability = document.applicability as unknown as TraceNode;
@@ -79,7 +79,7 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
         <span>{`${String(subject.name)} (no Profile)`}</span>
       )
     ) : map ? (
-      <Link href={routes.runMap(assessment.publicId)}>Relationship Map</Link>
+      <Link href={routes.runMap(run.publicId)}>Relationship Map</Link>
     ) : (
       <span>Relationship Map (not available)</span>
     );
@@ -144,12 +144,12 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
         <div className={styles.traces}>
           <div>
             <h3>Applicability</h3>
-            <TraceView trace={applicability} records={evidence} owner={{ run: assessment.publicId }} label="Applicability trace" />
+            <TraceView trace={applicability} records={evidence} owner={{ run: run.publicId }} label="Applicability trace" />
           </div>
           <div>
             <h3>Expected condition</h3>
             {condition ? (
-              <TraceView trace={condition} records={evidence} owner={{ run: assessment.publicId }} label="Condition trace" />
+              <TraceView trace={condition} records={evidence} owner={{ run: run.publicId }} label="Condition trace" />
             ) : (
               <p className={styles.muted}>{finding.outcome === "not_applicable" ? "Not evaluated, because the Control does not apply." : "Not evaluated, because whether the Control applies is unknown."}</p>
             )}
@@ -158,7 +158,7 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
       </Section>
 
       <Section title="Evidence" description="Every committed location the observed values came from.">
-        <EvidenceList ids={Object.keys(evidence)} records={evidence} owner={{ run: assessment.publicId }} />
+        <EvidenceList ids={Object.keys(evidence)} records={evidence} owner={{ run: run.publicId }} />
       </Section>
 
       {guidance && (

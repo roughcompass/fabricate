@@ -18,11 +18,11 @@ export const routes = {
   assessment: (initiativeId: string, query?: Query) => withQuery(`/assessments/${initiativeId}`, query),
   assessmentEdit: (initiativeId: string, fragment?: string) => withQuery(`/assessments/${initiativeId}/edit`, {}, fragment),
 
-  run: (assessmentId: string, query?: Query) => withQuery(`/runs/${assessmentId}`, query),
-  runMap: (assessmentId: string, query?: Query) => withQuery(`/runs/${assessmentId}/map`, query),
+  run: (runId: string, query?: Query) => withQuery(`/runs/${runId}`, query),
+  runMap: (runId: string, query?: Query) => withQuery(`/runs/${runId}/map`, query),
   /** Evidence opens under its Run, or, reached from a Profile with no Run, under the Profile. */
   evidence: (owner: EvidenceOwner, evidenceId: string) => ("run" in owner ? `/runs/${owner.run}/evidence/${evidenceId}` : `/profiles/${owner.profile}/evidence/${evidenceId}`),
-  runStatus: (assessmentId: string) => `/api/runs/${assessmentId}/status`,
+  runStatus: (runId: string) => `/api/runs/${runId}/status`,
 
   evaluation: (evaluationId: string, query?: Query) => withQuery(`/evaluations/${evaluationId}`, query),
   finding: (evaluationId: string, findingId: string) => `/evaluations/${evaluationId}/findings/${findingId}`,

@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, ValidationError } from "@/lib/db/errors";
-import { assessmentTargets, initiativeTargets, initiatives, repositorySources } from "@/lib/db/schema";
+import { runTargets, initiativeTargets, initiatives, repositorySources } from "@/lib/db/schema";
 import { CloneUrl, InvalidCloneUrl } from "./clone-url";
 import { repositoryNameFromUrl } from "./repository-name";
 import { BoundaryViolation, SourceBoundary } from "./source-boundary";
@@ -91,7 +91,7 @@ export function deletionEffects(db: Executor, source: RepositorySource): Deletio
     .where(eq(initiativeTargets.repositorySourceId, source.id))
     .orderBy(sql`lower(${initiatives.name})`)
     .all();
-  return { versions: versionCount(db, source.id), assessments: selecting.map((row) => row.name), runs: assessmentCounts(db).get(source.id) ?? 0, previews: previewCount(db, source) };
+  return { versions: versionCount(db, source.id), assessments: selecting.map((row) => row.name), runs: runCounts(db).get(source.id) ?? 0, previews: previewCount(db, source) };
 }
 
 /**
@@ -119,11 +119,11 @@ export function deleteSource(db: Executor, publicId: string, confirmation: strin
 }
 
 /** How many Runs of Assessments included each source, keyed by source row id. */
-export function assessmentCounts(db: Executor): Map<number, number> {
+export function runCounts(db: Executor): Map<number, number> {
   const rows = db
-    .select({ sourceId: assessmentTargets.repositorySourceId, count: sql<number>`count(distinct ${assessmentTargets.assessmentId})` })
-    .from(assessmentTargets)
-    .groupBy(assessmentTargets.repositorySourceId)
+    .select({ sourceId: runTargets.repositorySourceId, count: sql<number>`count(distinct ${runTargets.runId})` })
+    .from(runTargets)
+    .groupBy(runTargets.repositorySourceId)
     .all();
   // Template targets have no source.
   return new Map(rows.flatMap((row) => (row.sourceId === null ? [] : [[row.sourceId, row.count] as const])));

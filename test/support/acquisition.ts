@@ -5,15 +5,15 @@ import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 import { resolveReference } from "@/lib/acquisition/acquire";
 import { currentRecipe, moveSurvey, requestSurvey } from "@/lib/surveys/records";
 import { pinSurveyCommit } from "@/lib/surveys/run";
-import type { AssessmentTarget } from "@/lib/assessments/assessment-records";
-import { transitionTarget } from "@/lib/assessments/transitions";
+import type { RunTarget } from "@/lib/runs/run-records";
+import { transitionTarget } from "@/lib/runs/transitions";
 import { resolveCloneUrl } from "@/lib/catalog/catalog";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, insertSource } from "@/lib/catalog/source-records";
 import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { GitRunner } from "@/lib/git/runner";
-import { buildAssessment } from "./builders";
+import { buildRun } from "./builders";
 import { createTestDb } from "./db";
 import { GitFixture } from "./git-fixture";
 
@@ -58,8 +58,8 @@ export function registerLocalSource(db: Db, config: FrontendRegistryConfig, name
 }
 
 /** A new Assessment over +source+ with its target moved to acquiring. */
-export function acquiringTarget(db: Db, source: RepositorySource): AssessmentTarget {
-  const { targets } = buildAssessment(db, { sources: [source] });
+export function acquiringTarget(db: Db, source: RepositorySource): RunTarget {
+  const { targets } = buildRun(db, { sources: [source] });
   return transitionTarget(db, targets[0]!, "acquiring");
 }
 

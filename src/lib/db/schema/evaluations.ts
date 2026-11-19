@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { assessmentTargets, assessments } from "./assessments";
+import { runTargets, runs } from "./runs";
 import { initiatives } from "./catalog";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
 import { standardReleases } from "./standards";
@@ -32,9 +32,9 @@ export const evaluations = sqliteTable(
     initiativeId: integer("initiative_id")
       .notNull()
       .references(() => initiatives.id, { onDelete: "restrict" }),
-    assessmentId: integer("assessment_id")
+    runId: integer("assessment_id")
       .notNull()
-      .references(() => assessments.id, { onDelete: "restrict" }),
+      .references(() => runs.id, { onDelete: "restrict" }),
     state: text("state", { enum: EVALUATION_STATES }).notNull().default("queued"),
     launchToken: text("launch_token").notNull().unique(),
     evaluatorVersion: text("evaluator_version").notNull(),
@@ -54,7 +54,7 @@ export const evaluations = sqliteTable(
   },
   (t) => [
     index("evaluations_initiative").on(t.initiativeId),
-    index("evaluations_assessment").on(t.assessmentId),
+    index("evaluations_assessment").on(t.runId),
     check("evaluations_public_id", sql`${t.publicId} GLOB 'evl_*'`),
     check("evaluations_state", sql.raw(`state IN (${sqlList(EVALUATION_STATES)})`)),
     check("evaluations_configuration_digest", sql`length(${t.configurationDigest}) = 64`),
@@ -109,7 +109,7 @@ export const findings = sqliteTable(
     standardReleaseId: integer("standard_release_id")
       .notNull()
       .references(() => standardReleases.id, { onDelete: "restrict" }),
-    assessmentTargetId: integer("assessment_target_id").references(() => assessmentTargets.id, { onDelete: "restrict" }),
+    runTargetId: integer("assessment_target_id").references(() => runTargets.id, { onDelete: "restrict" }),
     controlKey: text("control_key").notNull(),
     subjectType: text("subject_type", { enum: SUBJECT_TYPES }).notNull(),
     subjectKey: text("subject_key").notNull(),
@@ -129,13 +129,13 @@ export const findings = sqliteTable(
     index("findings_control").on(t.controlKey),
     index("findings_subject").on(t.subjectKey),
     index("findings_severity").on(t.severity),
-    index("findings_assessment_target").on(t.assessmentTargetId),
+    index("findings_assessment_target").on(t.runTargetId),
     check("findings_public_id", sql`${t.publicId} GLOB 'fnd_*'`),
     check("findings_outcome", sql.raw(`outcome IN (${sqlList(OUTCOMES)})`)),
     check("findings_severity_value", sql.raw(`severity IN (${sqlList(SEVERITIES)})`)),
     check("findings_subject_type", sql.raw(`subject_type IN (${sqlList(SUBJECT_TYPES)})`)),
     // Repository Findings name their target; relationship Findings never do.
-    check("findings_subject_target", sql`(${t.subjectType} = 'repository') = (${t.assessmentTargetId} IS NOT NULL)`),
+    check("findings_subject_target", sql`(${t.subjectType} = 'repository') = (${t.runTargetId} IS NOT NULL)`),
     check("findings_digest", sql`length(${t.digest}) = 64`),
     check("findings_document", sql`json_valid(${t.document}) AND json_type(${t.document}) = 'object'`),
   ],

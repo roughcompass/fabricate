@@ -12,7 +12,7 @@ import { CURRENT_VERSION } from "@/lib/documents/schemas";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { currentRecipe, moveSurvey, pinSurvey, type Recipe, recordConfiguredResolution, requestSurvey, type Survey, surveyOfKey, type SurveyRequest, updateCurrentSurvey } from "@/lib/surveys/records";
 import { finishSurvey, queueSurvey } from "@/lib/surveys/run";
-import { buildAssessment, buildSource } from "../support/builders";
+import { buildRun, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { manifest, memoryProfile, sha1 } from "../support/profiles";
 import { findVersion } from "@/lib/profiling/versions";
@@ -59,11 +59,11 @@ describe("surveys", () => {
 
     it("finds the one survey of a repository, commit, and recipe, whoever asks for it", () => {
       const first = request(web, A);
-      expect(first).toMatchObject({ queued: true, survey: { number: 1, state: "queued", trigger: "added", attempts: 0, requestedByAssessmentId: null, ...recipe } });
+      expect(first).toMatchObject({ queued: true, survey: { number: 1, state: "queued", trigger: "added", attempts: 0, requestedByRunId: null, ...recipe } });
 
       // A Run asking for the same key joins the background survey as it is.
-      const { assessment } = buildAssessment(db, { sources: [web] });
-      expect(request(web, A, { trigger: "run", requestedByAssessmentId: assessment.id })).toEqual({ survey: first.survey, queued: false });
+      const { run } = buildRun(db, { sources: [web] });
+      expect(request(web, A, { trigger: "run", requestedByRunId: run.id })).toEqual({ survey: first.survey, queued: false });
       expect(surveyOfKey(db, web.id, A, recipe)?.id).toBe(first.survey.id);
 
       // Another commit, or the same commit under another recipe, is another survey.

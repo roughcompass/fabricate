@@ -2,13 +2,13 @@ import crypto from "node:crypto";
 import { detectorConfiguration } from "@repo-facts/bundle";
 import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
 import { type JsonObject, type MemoryFile, digestOf } from "@repo-facts/contract";
-import { type Assessment, type AssessmentTarget, createAssessment, getAssessment, linkSurvey } from "@/lib/assessments/assessment-records";
-import { continueWaitingTargets } from "@/lib/assessments/waiting";
+import { type Run, type RunTarget, createRun, getRun, linkSurvey } from "@/lib/runs/run-records";
+import { continueWaitingTargets } from "@/lib/runs/waiting";
 import { surveyRefFor } from "@/lib/acquisition/mirror";
 import { sourceById } from "@/lib/catalog/source-records";
 import { type Survey, currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey, updateCurrentSurvey } from "@/lib/surveys/records";
 import { finishSurvey } from "@/lib/surveys/run";
-import { requestCancellation, transitionAssessment, transitionTarget } from "@/lib/assessments/transitions";
+import { requestCancellation, transitionRun, transitionTarget } from "@/lib/runs/transitions";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { getConfig } from "@/lib/config";
 import { type Db, immediate } from "@/lib/db/client";
@@ -84,8 +84,8 @@ export const STOREFRONT = {
  * as orchestration would. No Git is involved, so evidence excerpts are not
  * available for these snapshots.
  */
-export async function seedAssessment(db: Db, initiative: Initiative, sources: readonly RepositorySource[], outcomes: readonly Outcome[], options: RunOptions = {}): Promise<Assessment> {
-  const { assessment, targets } = createAssessment(db, {
+export async function seedRun(db: Db, initiative: Initiative, sources: readonly RepositorySource[], outcomes: readonly Outcome[], options: RunOptions = {}): Promise<Run> {
+  const { run, targets } = createRun(db, {
     initiative,
     launchToken: crypto.randomUUID(),
     surveyorRelease: SURVEYOR_RELEASE,
@@ -94,7 +94,7 @@ export async function seedAssessment(db: Db, initiative: Initiative, sources: re
     relationshipSchemaVersion: 1,
     sources,
   });
-  return completeRun(db, assessment, targets, sources, outcomes, options);
+  return completeRun(db, run, targets, sources, outcomes, options);
 }
 
 /** How a seeded Run ends: canceled, with Profile version 1 documents, or with its resolved map document adjusted before it's stored. */
@@ -107,20 +107,20 @@ export interface RunOptions {
 /** Drives the queued Run +assessment+ to its end: each target, in +sources+ order, ends as its outcome; then the map and outcome. */
 export async function completeRun(
   db: Db,
-  assessment: Assessment,
-  targets: readonly AssessmentTarget[],
+  run: Run,
+  targets: readonly RunTarget[],
   sources: readonly Pick<RepositorySource, "publicId">[],
   outcomes: readonly Outcome[],
   options: RunOptions = {},
-): Promise<Assessment> {
-  if (options.cancel) requestCancellation(db, assessment.id);
-  for (const [index, outcome] of outcomes.entries()) await completeTarget(db, assessment, targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!, outcome, options);
-  const finalizing = finalizingRun(db, assessment);
-  if (options.transformMap) insertRelationshipMap(db, { assessment: finalizing, document: options.transformMap(resolveMapDocument(db, finalizing)) });
+): Promise<Run> {
+  if (options.cancel) requestCancellation(db, run.id);
+  for (const [index, outcome] of outcomes.entries()) await completeTarget(db, run, targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!, outcome, options);
+  const finalizing = finalizingRun(db, run);
+  if (options.transformMap) insertRelationshipMap(db, { run: finalizing, document: options.transformMap(resolveMapDocument(db, finalizing)) });
   else finalizeRelationshipMap(db, finalizing);
   const profiles = outcomes.filter((outcome) => typeof outcome === "object").length;
   const state = options.cancel ? "canceled" : profiles === outcomes.length ? "complete" : profiles > 0 ? "complete_with_issues" : "failed";
-  return transitionAssessment(db, finalizing, state, state === "failed" ? { failureReason: "No repository could be assessed" } : {});
+  return transitionRun(db, finalizing, state, state === "failed" ? { failureReason: "No repository could be assessed" } : {});
 }
 
 let surveyed = 0;
@@ -142,9 +142,9 @@ export async function seedSurvey(db: Db, source: Pick<RepositorySource, "id" | "
 }
 
 /** The Run +assessment+ moved to finalizing, unless its last survey already moved it there, as it does when it completes the last target. */
-export function finalizingRun(db: Db, assessment: Pick<Assessment, "publicId">): Assessment {
-  const current = getAssessment(db, assessment.publicId);
-  return current.state === "finalizing" ? current : transitionAssessment(db, current, "finalizing");
+export function finalizingRun(db: Db, run: Pick<Run, "publicId">): Run {
+  const current = getRun(db, run.publicId);
+  return current.state === "finalizing" ? current : transitionRun(db, current, "finalizing");
 }
 
 /**
@@ -153,7 +153,7 @@ export function finalizingRun(db: Db, assessment: Pick<Assessment, "publicId">):
  * recipe, which pins it, profiles its files with the pinned bundle, and
  * succeeds, completing the target as a real survey does.
  */
-export async function completeTarget(db: Db, assessment: Assessment, target: AssessmentTarget, outcome: Outcome, options: Pick<RunOptions, "profileVersion1"> = {}): Promise<void> {
+export async function completeTarget(db: Db, run: Run, target: RunTarget, outcome: Outcome, options: Pick<RunOptions, "profileVersion1"> = {}): Promise<void> {
   if (outcome === "canceled") {
     transitionTarget(db, target, "canceled");
     return;
@@ -171,10 +171,10 @@ export async function completeTarget(db: Db, assessment: Assessment, target: Ass
     reference: "refs/heads/main",
     fromConfiguredReference: configured,
     trigger: "run",
-    requestedByAssessmentId: assessment.id,
-    surveyorRelease: assessment.surveyorRelease,
-    configurationDigest: assessment.configurationDigest,
-    profileSchemaVersion: assessment.profileSchemaVersion,
+    requestedByRunId: run.id,
+    surveyorRelease: run.surveyorRelease,
+    configurationDigest: run.configurationDigest,
+    profileSchemaVersion: run.profileSchemaVersion,
   });
   if (configured) recordConfiguredResolution(db, target.repositorySourceId, commitSha, new Date());
   linkSurvey(db, acquiring, { refKind: "default_branch", resolvedRef: "refs/heads/main", surveyId: survey.id });
@@ -213,8 +213,8 @@ export async function seedMapStates(db: Db, options: { initiativeName?: string; 
   const sources = Object.keys(outcomes).map((name) => buildSource(db, { name }));
   buildSource(db, { name: "legacy-ui" });
   const initiative = buildInitiative(db, { name: options.initiativeName ?? "Fleet assessment", sources });
-  const assessment = await seedAssessment(db, initiative, sources, Object.values(outcomes));
-  return { initiative, sources, assessment };
+  const run = await seedRun(db, initiative, sources, Object.values(outcomes));
+  return { initiative, sources, run };
 }
 
 /** Publishes a Standard with +controls+, reading Repository Profile +profileVersions+, and returns its Release. */

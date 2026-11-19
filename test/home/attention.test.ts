@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { attentionItems } from "@/lib/home/attention";
-import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 
@@ -13,8 +13,8 @@ describe("Needs attention", () => {
     const db = createTestDb();
     const source = buildSource(db);
     const initiative = buildInitiative(db, { name: "Checkout platform migration", sources: [source] });
-    for (let i = 0; i < 3; i++) driveRun(db, buildAssessment(db, { initiative }).assessment, "complete");
-    const failed = driveRun(db, buildAssessment(db, { initiative }).assessment, "failed");
+    for (let i = 0; i < 3; i++) driveRun(db, buildRun(db, { initiative }).run, "complete");
+    const failed = driveRun(db, buildRun(db, { initiative }).run, "failed");
 
     expect(attentionItems(db)).toEqual([
       { kind: "run_failed", since: failed.finishedAt, assessment: { publicId: initiative.publicId, name: "Checkout platform migration" }, run: { publicId: failed.publicId, number: 4 } },
@@ -24,8 +24,8 @@ describe("Needs attention", () => {
   it("drops a failure that a later Run replaced (Failure replaced by a later Run)", () => {
     const db = createTestDb();
     const initiative = buildInitiative(db, { sources: [buildSource(db)] });
-    driveRun(db, buildAssessment(db, { initiative }).assessment, "failed");
-    driveRun(db, buildAssessment(db, { initiative }).assessment, "complete");
+    driveRun(db, buildRun(db, { initiative }).run, "failed");
+    driveRun(db, buildRun(db, { initiative }).run, "complete");
 
     expect(attentionItems(db)).toEqual([]);
   });
@@ -34,7 +34,7 @@ describe("Needs attention", () => {
     const db = createTestDb();
     const sources = Array.from({ length: 5 }, () => buildSource(db));
     const initiative = buildInitiative(db, { sources });
-    driveRun(db, buildAssessment(db, { initiative }).assessment, "complete_with_issues", { failedTargets: 3 });
+    driveRun(db, buildRun(db, { initiative }).run, "complete_with_issues", { failedTargets: 3 });
 
     expect(attentionItems(db)).toMatchObject([{ kind: "run_with_issues", unassessed: 3, run: { number: 1 } }]);
   });
@@ -42,7 +42,7 @@ describe("Needs attention", () => {
   it("lists a failed latest Evaluation", () => {
     const db = createTestDb();
     const initiative = buildInitiative(db, { sources: [buildSource(db)] });
-    const run = driveRun(db, buildAssessment(db, { initiative }).assessment, "complete");
+    const run = driveRun(db, buildRun(db, { initiative }).run, "complete");
     driveEvaluation(db, buildEvaluation(db, initiative, run), "complete", "gaps");
     const failed = driveEvaluation(db, buildEvaluation(db, initiative, run), "failed");
 
@@ -53,10 +53,10 @@ describe("Needs attention", () => {
     const db = createTestDb();
     vi.useFakeTimers({ toFake: ["Date"], now: Date.UTC(2026, 9, 15, 12, 0) });
     const failing = buildInitiative(db, { sources: [buildSource(db)] });
-    driveRun(db, buildAssessment(db, { initiative: failing }).assessment, "failed");
+    driveRun(db, buildRun(db, { initiative: failing }).run, "failed");
     vi.setSystemTime(Date.UTC(2026, 9, 15, 12, 1));
     const evaluated = buildInitiative(db, { sources: [buildSource(db)] });
-    const run = driveRun(db, buildAssessment(db, { initiative: evaluated }).assessment, "complete");
+    const run = driveRun(db, buildRun(db, { initiative: evaluated }).run, "complete");
     driveEvaluation(db, buildEvaluation(db, evaluated, run), "failed");
 
     expect(attentionItems(db).map((item) => item.kind)).toEqual(["evaluation_failed", "run_failed"]);
@@ -66,7 +66,7 @@ describe("Needs attention", () => {
     const db = createTestDb();
     vi.useFakeTimers({ toFake: ["Date"], now: Date.UTC(2026, 9, 15, 12, 0) });
     const names = ["Assessment 04", "Assessment 05"];
-    for (const name of names) driveRun(db, buildAssessment(db, { initiative: buildInitiative(db, { name, sources: [buildSource(db)] }) }).assessment, "failed");
+    for (const name of names) driveRun(db, buildRun(db, { initiative: buildInitiative(db, { name, sources: [buildSource(db)] }) }).run, "failed");
 
     expect(attentionItems(db).map((item) => item.assessment.name)).toEqual(["Assessment 05", "Assessment 04"]);
   });

@@ -4,7 +4,7 @@ import { rebuildProjection } from "@/lib/projection/rebuild";
 import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { count, pinnedRepository, projectionRows } from "../support/projection";
-import { seedAssessment } from "../support/scenarios";
+import { seedRun } from "../support/scenarios";
 
 describe("projection rebuild", () => {
   let db: Db;
@@ -12,7 +12,7 @@ describe("projection rebuild", () => {
   beforeEach(async () => {
     db = createTestDb();
     const sources = [buildSource(db, { name: "web" }), buildSource(db, { name: "client" }), buildSource(db, { name: "billing" })];
-    await seedAssessment(db, buildInitiative(db, { sources }), sources, [pinnedRepository("web", { "@acme/client": "1.0.0", react: "16.14.0" }), pinnedRepository("@acme/client", { react: "18.3.1" }), "failed"]);
+    await seedRun(db, buildInitiative(db, { sources }), sources, [pinnedRepository("web", { "@acme/client": "1.0.0", react: "16.14.0" }), pinnedRepository("@acme/client", { react: "18.3.1" }), "failed"]);
   });
 
   it("produces the same rows on every rebuild, and the same rows the writes produced (Repeatable rebuild)", () => {

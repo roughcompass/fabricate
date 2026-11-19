@@ -2,16 +2,16 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resolveTarget } from "@/lib/acquisition/acquire";
-import { type AssessmentTarget, getTarget } from "@/lib/assessments/assessment-records";
-import { processTarget } from "@/lib/assessments/orchestration";
-import { transitionTarget } from "@/lib/assessments/transitions";
+import { type RunTarget, getTarget } from "@/lib/runs/run-records";
+import { processTarget } from "@/lib/runs/orchestration";
+import { transitionTarget } from "@/lib/runs/transitions";
 import { type RepositorySource, insertSource } from "@/lib/catalog/source-records";
 import { surveys } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
 import { surveyById } from "@/lib/surveys/records";
 import { runSurvey } from "@/lib/surveys/run";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildAssessment } from "../support/builders";
+import { buildRun } from "../support/builders";
 import { fakeExecutable } from "../support/fake-git";
 
 const realGit = execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim();
@@ -32,8 +32,8 @@ describe("acquisition failures", () => {
   });
 
   /** An assessment over [failing, healthy] with both targets acquiring. */
-  const pair = (failing: RepositorySource): [AssessmentTarget, AssessmentTarget] => {
-    const { targets } = buildAssessment(world.db, { sources: [failing, healthy] });
+  const pair = (failing: RepositorySource): [RunTarget, RunTarget] => {
+    const { targets } = buildRun(world.db, { sources: [failing, healthy] });
     const byName = new Map(targets.map((target) => [target.sourceName, transitionTarget(world.db, target, "acquiring")]));
     return [byName.get(failing.name)!, byName.get("healthy")!];
   };
@@ -127,7 +127,7 @@ describe("acquisition failures", () => {
     const work = world.fixture.repo("fleet/private");
     work.commit();
     const source = registerLocalSource(world.db, world.config, "private", work.path);
-    const { targets } = buildAssessment(world.db, { sources: [source] });
+    const { targets } = buildRun(world.db, { sources: [source] });
     const waiting = await processTarget(world.db, targets[0]!.publicId, { config: world.config });
     expect(waiting).toMatchObject({ state: "analyzing", surveyId: expect.any(Number) });
     const runner = wrappedRunner(`echo "fatal: unable to access 'https://deploy:s3cr3t-token@git.example.com/acme/private.git/': The requested URL returned error: 403" >&2; exit 128`, { command: "fetch" });

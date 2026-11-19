@@ -2,8 +2,8 @@ import fs from "node:fs";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { mirrorPath, surveyRefFor } from "@/lib/acquisition/mirror";
-import { getAssessment, getTarget } from "@/lib/assessments/assessment-records";
-import { processTarget } from "@/lib/assessments/orchestration";
+import { getRun, getTarget } from "@/lib/runs/run-records";
+import { processTarget } from "@/lib/runs/orchestration";
 import { type RepositorySource, sourceById } from "@/lib/catalog/source-records";
 import { withOverrides } from "@/lib/config";
 import { dependencyFacts, jobs, surveys } from "@/lib/db/schema";
@@ -16,7 +16,7 @@ import { surveyRepository } from "@/lib/surveys/background";
 import { type SurveyRequest, currentRecipe, getSurvey, requestSurvey, surveyById } from "@/lib/surveys/records";
 import { RUN_SURVEY, queueSurvey, runSurvey } from "@/lib/surveys/run";
 import { acquire, registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
-import { buildAssessment } from "../support/builders";
+import { buildRun } from "../support/builders";
 import { type BareRepo, type Repo, git } from "../support/git-fixture";
 import { manifest } from "../support/profiles";
 
@@ -45,10 +45,10 @@ describe("the survey job", () => {
 
   /** A Run over +source+ whose target has resolved its reference and waits on the survey of its commit. */
   async function waitingRun(source: RepositorySource) {
-    const { assessment, targets } = buildAssessment(world.db, { sources: [source] });
+    const { run, targets } = buildRun(world.db, { sources: [source] });
     const target = await processTarget(world.db, targets[0]!.publicId, { config: world.config });
     expect(target).toMatchObject({ state: "analyzing", surveyId: expect.any(Number) });
-    return { assessment, target };
+    return { run, target };
   }
 
   describe("success", () => {
@@ -85,13 +85,13 @@ describe("the survey job", () => {
     it("fails with invalid_ref when the remote doesn't have its commit, and fails the target waiting on it", async () => {
       const unpushed = work.write("late.txt", "late\n").commit("late");
       const web = register(unpushed);
-      const { assessment, target } = await waitingRun(web);
+      const { run, target } = await waitingRun(web);
       await drain();
 
       const survey = surveyById(world.db, target.surveyId!);
       expect(survey).toMatchObject({ state: "failed", attempts: 1, failureCode: "invalid_ref", failureMessage: expect.stringContaining(unpushed), internalRef: null, finishedAt: expect.any(Date) });
       expect(getTarget(world.db, target.publicId)).toMatchObject({ state: "failed", failureCode: "invalid_ref", failureMessage: survey.failureMessage });
-      expect(getAssessment(world.db, assessment.publicId).state).toBe("failed");
+      expect(getRun(world.db, run.publicId).state).toBe("failed");
       expect(profileOfSurvey(world.db, survey.id)).toBeUndefined();
       expect(sourceById(world.db, web.id).currentSurveyId).toBeNull();
     });
@@ -104,9 +104,9 @@ describe("the survey job", () => {
       await drain();
 
       expect(surveyById(world.db, first.target.surveyId!)).toMatchObject({ state: "failed", failureCode: "source_unavailable" });
-      for (const { assessment, target } of [first, second]) {
+      for (const { run, target } of [first, second]) {
         expect(getTarget(world.db, target.publicId)).toMatchObject({ state: "failed", failureCode: "source_unavailable" });
-        expect(getAssessment(world.db, assessment.publicId).state).toBe("failed");
+        expect(getRun(world.db, run.publicId).state).toBe("failed");
       }
     });
 

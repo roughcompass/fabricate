@@ -28,7 +28,7 @@ type Endpoint = NonNullable<RelationshipRow["to"]>;
  * (design decision 10). Repositories and services link to their focus;
  * every row keeps its evidence one step away.
  */
-export function RelationshipsTable({ page, assessmentId, focusHref, pageHref, coverageComplete, description }: { page: RelationshipPage; assessmentId: string; focusHref: (nodeId: string) => string; pageHref: (page: number) => string; coverageComplete: boolean; description: string }) {
+export function RelationshipsTable({ page, runId, focusHref, pageHref, coverageComplete, description }: { page: RelationshipPage; runId: string; focusHref: (nodeId: string) => string; pageHref: (page: number) => string; coverageComplete: boolean; description: string }) {
   const node = (endpoint: Endpoint) => (endpoint.kind === "repository" || endpoint.kind === "external_service" ? <Link href={focusHref(endpoint.nodeId)}>{endpoint.label}</Link> : <Tag>{endpoint.label}</Tag>);
   const first = (page.page - 1) * PAGE_SIZE + 1;
   const last = Math.min(page.total, page.page * PAGE_SIZE);
@@ -80,7 +80,7 @@ export function RelationshipsTable({ page, assessmentId, focusHref, pageHref, co
                   {row.state === "unresolved" && !coverageComplete && <Secondary>A repository that was not assessed might resolve it.</Secondary>}
                 </Td>
                 <Td label="Evidence">
-                  <EvidenceList ids={row.evidence} records={page.evidence} owner={{ run: assessmentId }} />
+                  <EvidenceList ids={row.evidence} records={page.evidence} owner={{ run: runId }} />
                 </Td>
               </tr>
             ))}

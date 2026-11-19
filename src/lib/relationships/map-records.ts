@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { Assessment } from "@/lib/assessments/assessment-records";
+import type { Run } from "@/lib/runs/run-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
@@ -13,7 +13,7 @@ import { projectMap } from "@/lib/projection/project";
 export type RelationshipMap = typeof relationshipMaps.$inferSelect;
 
 export interface NewRelationshipMap {
-  assessment: Assessment;
+  run: Run;
   document: JsonValue | string;
   /** Structural validation of the document contract; returns problems. */
   validate?: (document: JsonObject) => string[];
@@ -33,7 +33,7 @@ export function insertRelationshipMap(db: Executor, input: NewRelationshipMap): 
       .insert(relationshipMaps)
       .values({
         publicId: generatePublicId("map"),
-        assessmentId: input.assessment.id,
+        runId: input.run.id,
         schemaVersion: prepared.schemaVersion,
         resolverVersion: resolverVersion as string,
         document: prepared.text,
@@ -47,8 +47,8 @@ export function insertRelationshipMap(db: Executor, input: NewRelationshipMap): 
   });
 }
 
-export function mapOf(db: Executor, assessmentId: number): RelationshipMap | undefined {
-  return db.select().from(relationshipMaps).where(eq(relationshipMaps.assessmentId, assessmentId)).get();
+export function mapOf(db: Executor, runId: number): RelationshipMap | undefined {
+  return db.select().from(relationshipMaps).where(eq(relationshipMaps.runId, runId)).get();
 }
 
 /** The map document, verified against its digest. */

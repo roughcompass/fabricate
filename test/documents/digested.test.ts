@@ -9,7 +9,7 @@ import { profileDocument, insertProfile, profileOfSurvey } from "@/lib/profiles/
 import { insertRelationshipMap, mapDocument } from "@/lib/relationships/map-records";
 import { releaseDocument } from "@/lib/standards/standard-records";
 import { type Survey, moveSurvey, pinSurvey, requestSurvey } from "@/lib/surveys/records";
-import { buildAssessment, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildRelease, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { captureValidation } from "../support/validation";
 
@@ -61,7 +61,7 @@ describe("digested documents", () => {
   describe("stored results", () => {
     let db: Db;
     let survey: Survey;
-    let assessment: ReturnType<typeof buildAssessment>["assessment"];
+    let run: ReturnType<typeof buildRun>["run"];
 
     const profileBody = (overrides: Record<string, unknown> = {}) => ({
       schema: "fabricate.repository_profile",
@@ -76,17 +76,17 @@ describe("digested documents", () => {
     beforeEach(() => {
       db = createTestDb();
       const source = buildSource(db);
-      assessment = buildAssessment(db, { sources: [source] }).assessment;
+      run = buildRun(db, { sources: [source] }).run;
       const { survey: queued } = requestSurvey(db, {
         repositorySourceId: source.id,
         commitSha: sha1("c"),
         reference: "refs/heads/main",
         fromConfiguredReference: true,
         trigger: "run",
-        requestedByAssessmentId: assessment.id,
-        surveyorRelease: assessment.surveyorRelease,
-        configurationDigest: assessment.configurationDigest,
-        profileSchemaVersion: assessment.profileSchemaVersion,
+        requestedByRunId: run.id,
+        surveyorRelease: run.surveyorRelease,
+        configurationDigest: run.configurationDigest,
+        profileSchemaVersion: run.profileSchemaVersion,
       });
       survey = pinSurvey(db, moveSurvey(db, queued, "running", { attempts: 1 }), { treeSha: sha1("t"), internalRef: surveyRefFor(queued.publicId) });
     });
@@ -120,12 +120,12 @@ describe("digested documents", () => {
 
     it("stores one immutable Relationship Map per Assessment, written while finalizing", () => {
       const document = { schema: "fabricate.relationship_map", schema_version: 1, resolver_version: "1", nodes: [], edges: [] };
-      expect(() => insertRelationshipMap(db, { assessment, document })).toThrow(/while the assessment is finalizing/);
+      expect(() => insertRelationshipMap(db, { run, document })).toThrow(/while the assessment is finalizing/);
 
-      rawRun(db, "update assessments set state = 'finalizing' where id = ?", assessment.id);
-      const map = insertRelationshipMap(db, { assessment, document });
+      rawRun(db, "update assessments set state = 'finalizing' where id = ?", run.id);
+      const map = insertRelationshipMap(db, { run, document });
       expect(mapDocument(map)).toEqual(document);
-      expect(() => insertRelationshipMap(db, { assessment, document })).toThrow(/UNIQUE constraint failed/);
+      expect(() => insertRelationshipMap(db, { run, document })).toThrow(/UNIQUE constraint failed/);
       expect(() => rawRun(db, "update relationship_maps set resolver_version = '2' where id = ?", map.id)).toThrow(/immutable/);
     });
 

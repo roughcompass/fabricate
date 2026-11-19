@@ -1,5 +1,5 @@
 import path from "node:path";
-import { listAssessments } from "../src/lib/assessments/assessment-records";
+import { listRuns } from "../src/lib/runs/run-records";
 import { resolveCloneUrl } from "../src/lib/catalog/catalog";
 import { SourceBoundary } from "../src/lib/catalog/source-boundary";
 import { insertSource } from "../src/lib/catalog/source-records";
@@ -67,9 +67,9 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
   await expect(page.getByText("was started")).toHaveCount(0);
 
   // The status payload carries states and codes only: no clone URL, path, or failure message.
-  const assessment = listAssessments(db, listInitiatives(db)[0]!.id)[0]!;
-  const status = await (await page.request.get(paths.runStatus(assessment.publicId))).json();
-  expect(status).toMatchObject({ terminal: true, assessment: { state: "complete", cancel_requested: false }, targets: [{ state: "complete", profile: true }, { state: "complete", profile: true }] });
+  const run = listRuns(db, listInitiatives(db)[0]!.id)[0]!;
+  const status = await (await page.request.get(paths.runStatus(run.publicId))).json();
+  expect(status).toMatchObject({ terminal: true, run: { state: "complete", cancel_requested: false }, targets: [{ state: "complete", profile: true }, { state: "complete", profile: true }] });
   expect(JSON.stringify(status)).not.toContain(sourcesDir);
   expect(JSON.stringify(status)).not.toContain("file://");
 });

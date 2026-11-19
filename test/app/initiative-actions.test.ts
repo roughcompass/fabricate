@@ -1,12 +1,12 @@
 import crypto from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { createInitiative, deleteInitiative, startAssessment, updateInitiative } from "@/app/(operator)/assessments/actions";
+import { createInitiative, deleteInitiative, startRun, updateInitiative } from "@/app/(operator)/assessments/actions";
 import type { InitiativeFormState } from "@/app/(operator)/assessments/form-state";
-import { listAssessments, targetsOf } from "@/lib/assessments/assessment-records";
+import { listRuns, targetsOf } from "@/lib/runs/run-records";
 import { jobs } from "@/lib/db/schema";
 import { getInitiative, listInitiatives, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
 import { createStandard } from "@/lib/standards/standard-records";
-import { buildAssessment, buildInitiative, buildRelease, buildSource } from "../support/builders";
+import { buildRun, buildInitiative, buildRelease, buildSource } from "../support/builders";
 import { redirectOf, useAppDb, formData } from "../support/next";
 
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
@@ -59,7 +59,7 @@ describe("initiative Server Actions", () => {
 
   it("deletes an unassessed initiative and retains an assessed one", async () => {
     const assessed = buildInitiative(app.db);
-    buildAssessment(app.db, { initiative: assessed, sources: [buildSource(app.db)] });
+    buildRun(app.db, { initiative: assessed, sources: [buildSource(app.db)] });
     const fresh = buildInitiative(app.db);
 
     expect(await redirectOf(deleteInitiative(formData({ publicId: assessed.publicId })))).toBe(`/assessments/${assessed.publicId}?notice=retained`);
@@ -72,13 +72,13 @@ describe("initiative Server Actions", () => {
     const initiative = buildInitiative(app.db);
     const token = crypto.randomUUID();
 
-    const first = await redirectOf(startAssessment(initiative.publicId, { problems: [] }, formData({ launchToken: token })));
-    const [assessment] = listAssessments(app.db, initiative.id);
-    expect(first).toBe(`/runs/${assessment!.publicId}?notice=started`);
-    expect(targetsOf(app.db, assessment!.id).map((target) => target.sourceName)).toEqual(["orders"]);
+    const first = await redirectOf(startRun(initiative.publicId, { problems: [] }, formData({ launchToken: token })));
+    const [run] = listRuns(app.db, initiative.id);
+    expect(first).toBe(`/runs/${run!.publicId}?notice=started`);
+    expect(targetsOf(app.db, run!.id).map((target) => target.sourceName)).toEqual(["orders"]);
 
-    expect(await redirectOf(startAssessment(initiative.publicId, { problems: [] }, formData({ launchToken: token })))).toBe(`/runs/${assessment!.publicId}?notice=already-started`);
-    expect(listAssessments(app.db, initiative.id)).toHaveLength(1);
+    expect(await redirectOf(startRun(initiative.publicId, { problems: [] }, formData({ launchToken: token })))).toBe(`/runs/${run!.publicId}?notice=already-started`);
+    expect(listRuns(app.db, initiative.id)).toHaveLength(1);
     expect(app.db.select().from(jobs).all()).toHaveLength(1);
   });
 
@@ -86,9 +86,9 @@ describe("initiative Server Actions", () => {
     // An Assessment of all Repositories, while there are none.
     const initiative = buildInitiative(app.db);
 
-    const state = await startAssessment(initiative.publicId, { problems: [] }, formData({ launchToken: crypto.randomUUID() }));
+    const state = await startRun(initiative.publicId, { problems: [] }, formData({ launchToken: crypto.randomUUID() }));
     expect(state.problems).toEqual(["The scope is empty: there are no Repositories. Add one before starting a Run."]);
-    expect(listAssessments(app.db, initiative.id)).toEqual([]);
+    expect(listRuns(app.db, initiative.id)).toEqual([]);
     expect(app.db.select().from(jobs).all()).toEqual([]);
   });
 });

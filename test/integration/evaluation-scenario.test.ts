@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import type { JsonObject } from "@repo-facts/contract";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { type Assessment, getAssessment } from "@/lib/assessments/assessment-records";
-import { launchAssessment } from "@/lib/assessments/launcher";
+import { type Run, getRun } from "@/lib/runs/run-records";
+import { launchRun } from "@/lib/runs/launcher";
 import { type Evaluation, evaluationReleasesOf, findingDocument, findingsOf, getEvaluation } from "@/lib/evaluations/evaluation-records";
 import { startEvaluation } from "@/lib/evaluations/start";
 import { GitRunner } from "@/lib/git/runner";
@@ -60,7 +60,7 @@ const RELATIONSHIPS = [
 describe("Evaluation scenario", () => {
   const world = useAcquisitionWorld("evaluation-scenario", { once: true });
   let initiative: Initiative;
-  let assessment: Assessment;
+  let run: Run;
   let releases: { repository: StandardRelease; services: StandardRelease; relationships: StandardRelease };
   const trapped: Record<string, number>[] = [];
 
@@ -70,7 +70,7 @@ describe("Evaluation scenario", () => {
     const reader = vi.spyOn(SnapshotReader, "open");
     let evaluation!: Evaluation;
     const network = await countNetworkCalls(async () => {
-      evaluation = startEvaluation(world.db, initiative.publicId, assessment.publicId, crypto.randomUUID()).evaluation;
+      evaluation = startEvaluation(world.db, initiative.publicId, run.publicId, crypto.randomUUID()).evaluation;
       await drainJobs(world.db, jobHandlers(world.db, world.config));
     });
     trapped.push({ ...network, git: git.mock.calls.length, reader: reader.mock.calls.length });
@@ -103,9 +103,9 @@ describe("Evaluation scenario", () => {
     });
     fs.rmSync(path.join(world.fixture.root, "fleet/billing"), { recursive: true, force: true });
     initiative = buildInitiative(world.db, { sources });
-    assessment = launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), world.config).assessment;
+    run = launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config).run;
     await drainJobs(world.db, jobHandlers(world.db, world.config));
-    assessment = getAssessment(world.db, assessment.publicId);
+    run = getRun(world.db, run.publicId);
 
     releases = {
       repository: publishStandard(world.db, "Repository baseline", REPOSITORY),
@@ -118,7 +118,7 @@ describe("Evaluation scenario", () => {
   let first: Evaluation;
 
   it("evaluates a partially covered Assessment against independent Releases, producing every outcome", async () => {
-    expect(assessment.state).toBe("complete_with_issues");
+    expect(run.state).toBe("complete_with_issues");
     first = await evaluate();
     expect(first.state).toBe("complete");
     // Releases are pinned in Standard name order: Relationships (0), Repository baseline (1), Service readiness (2).
@@ -182,7 +182,7 @@ describe("Evaluation scenario", () => {
     initiative = selectReleases(world.db, getInitiative(world.db, initiative.publicId), [releases.repository, v2]);
 
     const changed = await evaluate();
-    expect(changed).toMatchObject({ state: "complete", assessmentId: assessment.id });
+    expect(changed).toMatchObject({ state: "complete", runId: run.id });
     expect(outcomes(changed).filter((line) => line.includes("services-configurable"))).toEqual(["1 services-configurable billing indeterminate", "1 services-configurable ui not_applicable", "1 services-configurable web meets"]);
     expect(outcomes(changed).some((line) => line.includes("full-coverage"))).toBe(false);
     expect({ digest: getEvaluation(world.db, first.publicId).resultDigest, findings: findingsOf(world.db, first.id).map((finding) => finding.digest) }).toEqual(before);

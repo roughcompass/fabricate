@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { assessmentTargets, assessments } from "./assessments";
+import { runTargets, runs } from "./runs";
 import { repositorySources } from "./catalog";
 import { id, sqlList } from "./columns";
 import { relationshipMaps, repositoryProfiles } from "./results";
@@ -76,14 +76,14 @@ export const graphNodes = sqliteTable(
     mapId: integer("map_id")
       .notNull()
       .references(() => relationshipMaps.id, { onDelete: "restrict" }),
-    assessmentId: integer("assessment_id")
+    runId: integer("assessment_id")
       .notNull()
-      .references(() => assessments.id, { onDelete: "restrict" }),
+      .references(() => runs.id, { onDelete: "restrict" }),
     nodeId: text("node_id").notNull(),
     kind: text("kind", { enum: PROJECTED_NODE_KINDS }).notNull(),
     label: text("label").notNull(),
     repositorySourceId: integer("repository_source_id").references(() => repositorySources.id, { onDelete: "restrict" }),
-    assessmentTargetId: integer("assessment_target_id").references(() => assessmentTargets.id, { onDelete: "restrict" }),
+    runTargetId: integer("assessment_target_id").references(() => runTargets.id, { onDelete: "restrict" }),
     documentDigest: text("document_digest").notNull(),
     projectionVersion: integer("projection_version").notNull(),
   },
@@ -91,10 +91,10 @@ export const graphNodes = sqliteTable(
     uniqueIndex("graph_nodes_map_node").on(t.mapId, t.nodeId),
     index("graph_nodes_map_kind").on(t.mapId, t.kind),
     index("graph_nodes_repository_source").on(t.repositorySourceId),
-    index("graph_nodes_assessment_target").on(t.assessmentTargetId),
+    index("graph_nodes_assessment_target").on(t.runTargetId),
     check("graph_nodes_kind", sql.raw(`kind IN (${sqlList(PROJECTED_NODE_KINDS)})`)),
     // A repository node always names the target it was assessed as, and that target's catalog source.
-    check("graph_nodes_repository_target", sql`(${t.kind} = 'repository') = (${t.assessmentTargetId} IS NOT NULL)`),
+    check("graph_nodes_repository_target", sql`(${t.kind} = 'repository') = (${t.runTargetId} IS NOT NULL)`),
     check("graph_nodes_repository_source", sql`${t.kind} <> 'repository' OR ${t.repositorySourceId} IS NOT NULL`),
     digestCheck("graph_nodes_document_digest", t.documentDigest),
     versionCheck("graph_nodes_projection_version", t.projectionVersion),
@@ -109,9 +109,9 @@ export const graphEdges = sqliteTable(
     mapId: integer("map_id")
       .notNull()
       .references(() => relationshipMaps.id, { onDelete: "restrict" }),
-    assessmentId: integer("assessment_id")
+    runId: integer("assessment_id")
       .notNull()
-      .references(() => assessments.id, { onDelete: "restrict" }),
+      .references(() => runs.id, { onDelete: "restrict" }),
     edgeId: text("edge_id").notNull(),
     type: text("type", { enum: PROJECTED_EDGE_TYPES }).notNull(),
     state: text("state", { enum: PROJECTED_EDGE_STATES }).notNull(),
@@ -154,9 +154,9 @@ export const graphEdgeCandidates = sqliteTable(
     mapId: integer("map_id")
       .notNull()
       .references(() => relationshipMaps.id, { onDelete: "restrict" }),
-    assessmentId: integer("assessment_id")
+    runId: integer("assessment_id")
       .notNull()
-      .references(() => assessments.id, { onDelete: "restrict" }),
+      .references(() => runs.id, { onDelete: "restrict" }),
     edgeId: text("edge_id").notNull(),
     candidateNode: text("candidate_node").notNull(),
     documentDigest: text("document_digest").notNull(),

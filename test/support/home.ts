@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
-import type { Assessment } from "@/lib/assessments/assessment-records";
-import { transitionAssessment, transitionTarget } from "@/lib/assessments/transitions";
-import { targetsOf } from "@/lib/assessments/assessment-records";
+import type { Run } from "@/lib/runs/run-records";
+import { transitionRun, transitionTarget } from "@/lib/runs/transitions";
+import { targetsOf } from "@/lib/runs/run-records";
 import type { Executor } from "@/lib/db/client";
-import { ASSESSMENT_MACHINE, EVALUATION_MACHINE, pathsFromInitial } from "@/lib/db/state-machines";
-import type { AssessmentState, EvaluationState } from "@/lib/db/schema";
+import { RUN_MACHINE, EVALUATION_MACHINE, pathsFromInitial } from "@/lib/db/state-machines";
+import type { RunState, EvaluationState } from "@/lib/db/schema";
 import { type Evaluation, createEvaluation } from "@/lib/evaluations/evaluation-records";
 import { transitionEvaluation } from "@/lib/evaluations/transitions";
 import type { Conclusion } from "@/lib/evaluations/summary";
@@ -16,22 +16,22 @@ import { buildRelease } from "./builders";
  * through their state machines.
  */
 
-const RUN_PATHS = pathsFromInitial(ASSESSMENT_MACHINE);
+const RUN_PATHS = pathsFromInitial(RUN_MACHINE);
 const EVALUATION_PATHS = pathsFromInitial(EVALUATION_MACHINE);
 
 /** Moves a Run through its state machine to +to+. With complete_with_issues, the first +failedTargets+ targets fail first. */
-export function driveRun(db: Executor, run: Assessment, to: AssessmentState, options: { failedTargets?: number } = {}): Assessment {
+export function driveRun(db: Executor, run: Run, to: RunState, options: { failedTargets?: number } = {}): Run {
   for (const target of targetsOf(db, run.id).slice(0, options.failedTargets ?? 0)) {
     transitionTarget(db, target, "failed", { failureCode: "authentication_failed", failureMessage: "Could not read the repository" });
   }
   let current = run;
-  for (const state of RUN_PATHS.get(to)!.slice(1)) current = transitionAssessment(db, current, state);
+  for (const state of RUN_PATHS.get(to)!.slice(1)) current = transitionRun(db, current, state);
   return current;
 }
 
 /** An Evaluation of +run+ against a new Release, written directly without launching jobs. */
-export function buildEvaluation(db: Executor, initiative: Initiative, run: Assessment): Evaluation {
-  return createEvaluation(db, { initiative, assessment: run, launchToken: crypto.randomUUID(), evaluatorVersion: "1", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [], releases: [buildRelease(db)] }).evaluation;
+export function buildEvaluation(db: Executor, initiative: Initiative, run: Run): Evaluation {
+  return createEvaluation(db, { initiative, run, launchToken: crypto.randomUUID(), evaluatorVersion: "1", configuration: {}, profileSchemaVersion: 1, relationshipSchemaVersion: 1, coverageGaps: [], releases: [buildRelease(db)] }).evaluation;
 }
 
 /** Moves an Evaluation to +to+; a completed one records a summary with +conclusion+. */

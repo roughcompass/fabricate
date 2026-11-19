@@ -6,7 +6,7 @@ import { startEvaluation } from "../../src/lib/evaluations/start";
 import { jobHandlers } from "../../src/lib/jobs/registry";
 import { drainJobs } from "../../src/lib/jobs/worker";
 import { buildInitiative, buildSource } from "../../test/support/builders";
-import { ORDERS, publishStandard, seedAssessment, selectReleases } from "../../test/support/scenarios";
+import { ORDERS, publishStandard, seedRun, selectReleases } from "../../test/support/scenarios";
 import { control } from "../../test/support/standards";
 import { E2E_ENV } from "./env";
 
@@ -56,19 +56,19 @@ export async function seedResults(db: Db) {
   const orders = buildSource(db, { name: "orders" });
   const billing = buildSource(db, { name: "billing" });
   const initiative = buildInitiative(db, { name: "Fleet assessment", sources: [orders, billing] });
-  const assessment = await seedAssessment(db, initiative, [orders, billing], [ORDERS, "failed"]);
+  const run = await seedRun(db, initiative, [orders, billing], [ORDERS, "failed"]);
   const baseline = publishStandard(db, "Engineering baseline", BASELINE_CONTROLS);
   const services = publishStandard(db, "Service readiness", SERVICE_CONTROLS);
   selectReleases(db, initiative, [baseline, services]);
-  return { initiative, assessment, baseline, services };
+  return { initiative, run, baseline, services };
 }
 
 /** Runs every queued job with the server's configuration. */
 export const runJobs = (db: Db) => drainJobs(db, jobHandlers(db, serverConfig()));
 
 /** Starts an Evaluation of the seeded Assessment and runs its jobs to completion. */
-export async function evaluate(db: Db, initiativeId: string, assessmentId: string) {
-  const { evaluation } = startEvaluation(db, initiativeId, assessmentId, crypto.randomUUID());
+export async function evaluate(db: Db, initiativeId: string, runId: string) {
+  const { evaluation } = startEvaluation(db, initiativeId, runId, crypto.randomUUID());
   await runJobs(db);
   return evaluation;
 }
@@ -76,5 +76,5 @@ export async function evaluate(db: Db, initiativeId: string, assessmentId: strin
 /** seedResults, with the Initiative's Evaluation of the Assessment run to completion. */
 export async function seedEvaluation(db: Db) {
   const seeded = await seedResults(db);
-  return { ...seeded, evaluation: await evaluate(db, seeded.initiative.publicId, seeded.assessment.publicId) };
+  return { ...seeded, evaluation: await evaluate(db, seeded.initiative.publicId, seeded.run.publicId) };
 }

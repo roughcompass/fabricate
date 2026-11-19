@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import { launchAssessment } from "@/lib/assessments/launcher";
+import { launchRun } from "@/lib/runs/launcher";
 import { type RepositorySource, getSource, updateSource } from "@/lib/catalog/source-records";
 import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
@@ -16,7 +16,7 @@ import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import type { Repo } from "../support/git-fixture";
 import { manifest, sha1 } from "../support/profiles";
-import { seedAssessment } from "../support/scenarios";
+import { seedRun } from "../support/scenarios";
 
 describe("a repository's current Profile", () => {
   const world = useAcquisitionWorld("current-profile");
@@ -36,9 +36,9 @@ describe("a repository's current Profile", () => {
     await run();
   }
   /** Launches a Run of an Assessment over web, as it's configured now, and runs it to the end. */
-  async function launchRun(): Promise<void> {
+  async function runAssessment(): Promise<void> {
     const initiative = buildInitiative(world.db, { sources: [getSource(world.db, web.publicId)] });
-    launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), world.config);
+    launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config);
     await run();
   }
 
@@ -58,7 +58,7 @@ describe("a repository's current Profile", () => {
     const feature = work.write("feature.txt", "feature\n").commit("feature");
     work.checkout("main");
     const named = updateSource(world.db, web.publicId, web.lockVersion, { gitRef: "feature" });
-    launchAssessment(world.db, buildInitiative(world.db, { sources: [named] }).publicId, crypto.randomUUID(), world.config);
+    launchRun(world.db, buildInitiative(world.db, { sources: [named] }).publicId, crypto.randomUUID(), world.config);
     updateSource(world.db, web.publicId, named.lockVersion, { gitRef: null });
     await run();
     return feature;
@@ -87,7 +87,7 @@ describe("a repository's current Profile", () => {
   it("becomes a Run's survey of a newer commit of the configured reference", async () => {
     await surveyInBackground();
     const newer = work.write("README.md", "two\n").commit("second");
-    await launchRun();
+    await runAssessment();
 
     expect(currentProfile(world.db, web.id)).toMatchObject({ version: 2, commit: newer, survey: { trigger: "run", fromConfiguredReference: true } });
   });
@@ -145,7 +145,7 @@ describe("reading current Profiles", () => {
   it("reads several repositories, or every one, in one query", async () => {
     const billing = buildSource(db, { name: "billing" });
     const ledger = buildSource(db, { name: "ledger" });
-    await seedAssessment(db, buildInitiative(db, { sources: [orders, billing, ledger] }), [orders, billing, ledger], [profiled("orders"), profiled("billing"), "failed"]);
+    await seedRun(db, buildInitiative(db, { sources: [orders, billing, ledger] }), [orders, billing, ledger], [profiled("orders"), profiled("billing"), "failed"]);
 
     const some = statementsOf(db, () => currentProfiles(db, [orders.id, ledger.id]));
     const every = statementsOf(db, () => currentProfiles(db));
@@ -157,7 +157,7 @@ describe("reading current Profiles", () => {
   });
 
   it("reads what the Repository page shows in two queries, however many versions there are", async () => {
-    for (let index = 0; index < 3; index++) await seedAssessment(db, buildInitiative(db, { sources: [orders] }), [orders], [profiled("orders")]);
+    for (let index = 0; index < 3; index++) await seedRun(db, buildInitiative(db, { sources: [orders] }), [orders], [profiled("orders")]);
     requestSurvey(db, { repositorySourceId: orders.id, commitSha: sha1("commit:queued"), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", ...currentRecipe(getConfig()) });
 
     const { result, statements } = statementsOf(db, () => repositoryProfiling(db, orders.id));

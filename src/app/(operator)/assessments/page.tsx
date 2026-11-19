@@ -11,7 +11,7 @@ import { Status, statusLabel } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { TagList } from "@/components/ui/tag";
-import { type Assessment, assessmentNumber, listAssessments } from "@/lib/assessments/assessment-records";
+import { type Run, runNumber, listRuns } from "@/lib/runs/run-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { CONCLUSION_FILTERS, conclusionCounts, type ConclusionFilter, conclusionState, type LatestConclusion, latestConclusions } from "@/lib/evaluations/conclusions";
@@ -33,12 +33,12 @@ export default async function InitiativesPage({ searchParams }: PageProps<"/asse
   const conclusions = latestConclusions(db);
   const counts = conclusionCounts(conclusions);
   const all = listInitiatives(db).map((initiative) => {
-    const latest = listAssessments(db, initiative.id)[0];
+    const latest = listRuns(db, initiative.id)[0];
     return {
       initiative,
       scope: initiative.selectionMode === "all" ? `${scopeLabel(initiative, 0)} (${sourceCount})` : scopeLabel(initiative, selectedSources(db, initiative.id).length),
       releases: selectedReleases(db, initiative.id).map(({ release, standard }) => releaseLabel(standard, release)),
-      latest: latest && { assessment: latest, number: assessmentNumber(db, latest) },
+      latest: latest && { run: latest, number: runNumber(db, latest) },
     };
   });
   const rows = conclusion ? all.filter(({ initiative }) => conclusions.get(initiative.id)?.conclusion === conclusion) : all;
@@ -116,13 +116,13 @@ export default async function InitiativesPage({ searchParams }: PageProps<"/asse
   );
 }
 
-function LatestRun({ latest }: { latest: { assessment: Assessment; number: number } | undefined }) {
+function LatestRun({ latest }: { latest: { run: Run; number: number } | undefined }) {
   if (!latest) return <Secondary>Not assessed yet</Secondary>;
   return (
     <>
-      <Link href={routes.run(latest.assessment.publicId)}>{`Run #${latest.number}`}</Link>
+      <Link href={routes.run(latest.run.publicId)}>{`Run #${latest.number}`}</Link>
       <Secondary>
-        <Status state={latest.assessment.state} size="sm" /> · <RelativeTime value={latest.assessment.createdAt} />
+        <Status state={latest.run.state} size="sm" /> · <RelativeTime value={latest.run.createdAt} />
       </Secondary>
     </>
   );

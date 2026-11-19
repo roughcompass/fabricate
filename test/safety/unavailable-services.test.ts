@@ -5,8 +5,8 @@ import https from "node:https";
 import path from "node:path";
 import type { JsonObject } from "@repo-facts/contract";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getAssessment, targetsOf } from "@/lib/assessments/assessment-records";
-import { launchAssessment } from "@/lib/assessments/launcher";
+import { getRun, targetsOf } from "@/lib/runs/run-records";
+import { launchRun } from "@/lib/runs/launcher";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
@@ -36,7 +36,7 @@ describe("Assessment of unavailable Service Dependencies", () => {
   let trap: NetworkTrap;
   let work: Repo;
   let calls: typeof NO_NETWORK_CALLS;
-  let assessmentId: string;
+  let runId: string;
   let treeBefore: string[];
   let proxyState: () => unknown[];
   let proxyBefore: unknown[];
@@ -96,7 +96,7 @@ describe("Assessment of unavailable Service Dependencies", () => {
 
     try {
       calls = await countNetworkCalls(async () => {
-        assessmentId = launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), world.config).assessment.publicId;
+        runId = launchRun(world.db, initiative.publicId, crypto.randomUUID(), world.config).run.publicId;
         await drainJobs(world.db, jobHandlers(world.db, world.config));
       });
       proxyAfter = proxyState();
@@ -112,14 +112,14 @@ describe("Assessment of unavailable Service Dependencies", () => {
     await trap.close();
   });
 
-  const facts = () => profileDocument(profilesOf(world.db, getAssessment(world.db, assessmentId).id)[0]!.profile).fact_document as JsonObject;
+  const facts = () => profileDocument(profilesOf(world.db, getRun(world.db, runId).id)[0]!.profile).fact_document as JsonObject;
   const service = (key: string) => (facts().service_dependencies as JsonObject[]).find((item) => item.key === key)!;
   const fact = (key: string, name: string) => service(key)[name] as JsonObject;
 
   it("completes the Assessment: an unavailable service is not a source failure", () => {
-    const assessment = getAssessment(world.db, assessmentId);
-    expect(assessment.state).toBe("complete");
-    expect(targetsOf(world.db, assessment.id)).toMatchObject([{ state: "complete", failureCode: null }]);
+    const run = getRun(world.db, runId);
+    expect(run.state).toBe("complete");
+    expect(targetsOf(world.db, run.id)).toMatchObject([{ state: "complete", failureCode: null }]);
   });
 
   it("resolves no hostname, opens no socket, and loads no remote schema", () => {
@@ -190,7 +190,7 @@ describe("Assessment of unavailable Service Dependencies", () => {
   });
 
   it("puts every destination in the Relationship Map without contacting it", () => {
-    const map = mapDocument(mapOf(world.db, getAssessment(world.db, assessmentId).id)!) as unknown as MapDocument;
+    const map = mapDocument(mapOf(world.db, getRun(world.db, runId).id)!) as unknown as MapDocument;
     const calls = map.edges.filter((edge) => edge.type === "service_call");
     expect(calls).toHaveLength(5);
     expect(calls.filter((edge) => edge.state === "unresolved").map((edge) => edge.reason)).toEqual(expect.arrayContaining(["The call's destination is not determined statically"]));

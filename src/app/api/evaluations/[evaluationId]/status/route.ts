@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
 import { findEvaluation } from "@/lib/evaluations/evaluation-records";
-import { evaluationStatus } from "@/lib/assessments/status";
+import { evaluationStatus } from "@/lib/runs/status";
 
 // Progress for pages that poll while an Evaluation is running.
 export async function GET(_request: Request, { params }: { params: Promise<{ evaluationId: string }> }) {

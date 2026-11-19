@@ -1,5 +1,5 @@
 import { type JsonObject, digestOf, dump } from "@repo-facts/contract";
-import { targetsOf } from "@/lib/assessments/assessment-records";
+import { targetsOf } from "@/lib/runs/run-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { EVALUATION_RELEASE_MACHINE, isTerminal } from "@/lib/db/state-machines";
 import { enqueue } from "@/lib/jobs/queue";
@@ -48,7 +48,7 @@ export async function runEvaluationRelease(db: Executor, payload: { evaluation: 
       // Another run already wrote this Release's Findings, or the Evaluation ended.
       if (isTerminal(EVALUATION_RELEASE_MACHINE, release.state) || current.state !== "evaluating") return;
       if (release.state === "pending") release = transitionEvaluationRelease(tx, release, "evaluating");
-      const targets = new Map(targetsOf(tx, current.assessmentId).map((target) => [target.publicId, target]));
+      const targets = new Map(targetsOf(tx, current.runId).map((target) => [target.publicId, target]));
       findings.forEach((document, position) => {
         const subject = document.subject as JsonObject;
         const target = subject.type === "repository" ? targets.get(String(subject.target)) : undefined;
@@ -78,7 +78,7 @@ function evaluatePinned(db: Executor, evaluation: Evaluation, pinned: Evaluation
   const standard = standardById(db, release.standardId);
   return evaluateReleaseControls(
     { public_id: release.publicId, digest: release.digest, version: release.version, standard: standard.name, document: releaseDocument(release) },
-    evaluationInputs(db, evaluation.assessmentId),
+    evaluationInputs(db, evaluation.runId),
   );
 }
 

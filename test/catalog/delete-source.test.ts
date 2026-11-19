@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { resolveScope } from "@/lib/assessments/scope-resolver";
+import { resolveScope } from "@/lib/runs/scope-resolver";
 import { deleteSource, deletionEffects, registerSource } from "@/lib/catalog/catalog";
 import { type RepositorySource, findSource, findSourceIncludingDeleted, listSources } from "@/lib/catalog/source-records";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
@@ -11,7 +11,7 @@ import { selectedSources } from "@/lib/initiatives/initiative-records";
 import { deletePreview } from "@/lib/previews/lifecycle";
 import { versionsOf } from "@/lib/profiling/versions";
 import { requestSurvey } from "@/lib/surveys/records";
-import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
+import { buildRun, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { queuedPreview } from "../support/previews";
 
@@ -35,7 +35,7 @@ describe("deleting a Repository", () => {
     const orders = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "" }, boundary);
     surveyQueued(orders);
     buildInitiative(db, { name: "Checkout", sources: [orders] });
-    buildAssessment(db, { sources: [orders] });
+    buildRun(db, { sources: [orders] });
 
     expect(deletionEffects(db, orders)).toEqual({ versions: 1, assessments: ["Checkout"], runs: 1, previews: 0 });
   });
@@ -56,7 +56,7 @@ describe("deleting a Repository", () => {
     const survey = surveyQueued(orders);
     const billing = buildSource(db, { name: "billing" });
     const checkout = buildInitiative(db, { name: "Checkout", sources: [orders, billing] });
-    const { assessment } = buildAssessment(db, { sources: [orders, billing] });
+    const { run } = buildRun(db, { sources: [orders, billing] });
 
     deleteSource(db, orders.publicId, " orders ");
 
@@ -67,7 +67,7 @@ describe("deleting a Repository", () => {
     expect(resolveScope(db, buildInitiative(db)).map((source) => source.name)).toEqual(["billing"]);
     expect(selectedSources(db, checkout.id).map((source) => source.name)).toEqual(["billing"]);
     expect(versionsOf(db, orders.id).map((version) => version.survey)).toEqual([survey]);
-    expect(db.$client.prepare("select source_name from assessment_targets where assessment_id = ? order by source_name").all(assessment.id)).toEqual([{ source_name: "billing" }, { source_name: "orders" }]);
+    expect(db.$client.prepare("select source_name from assessment_targets where assessment_id = ? order by source_name").all(run.id)).toEqual([{ source_name: "billing" }, { source_name: "orders" }]);
   });
 
   it("frees its clone URL for a new Repository, and stays deleted", () => {

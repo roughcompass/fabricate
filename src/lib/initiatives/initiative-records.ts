@@ -6,7 +6,7 @@ import { generatePublicId } from "@/lib/db/ids";
 import {
   SELECTION_MODES,
   type SelectionMode,
-  assessments,
+  runs,
   initiativeStandardReleases,
   initiativeTargets,
   initiatives,
@@ -85,7 +85,7 @@ export function updateInitiative(db: Executor, publicId: string, expectedLockVer
 export function deleteInitiative(db: Executor, publicId: string): void {
   immediate(db, (tx) => {
     const initiative = getInitiative(tx, publicId);
-    const assessed = tx.select({ id: assessments.id }).from(assessments).where(eq(assessments.initiativeId, initiative.id)).limit(1).get();
+    const assessed = tx.select({ id: runs.id }).from(runs).where(eq(runs.initiativeId, initiative.id)).limit(1).get();
     if (assessed) {
       throw new ValidationError([{ field: "base", message: `${initiative.name} has Runs and is retained so their history stays reviewable` }]);
     }

@@ -1,9 +1,9 @@
 import type { Page } from "@playwright/test";
-import { listAssessments } from "../src/lib/assessments/assessment-records";
+import { listRuns } from "../src/lib/runs/run-records";
 import { jobs } from "../src/lib/db/schema";
 import { listInitiatives, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
 import { createStandard } from "../src/lib/standards/standard-records";
-import { buildAssessment, buildInitiative, buildRelease, buildSource } from "../test/support/builders";
+import { buildRun, buildInitiative, buildRelease, buildSource } from "../test/support/builders";
 import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -95,7 +95,7 @@ test("starts an Assessment once and lists it in the Initiative's history", async
 
   await expect(page.getByRole("heading", { level: 1, name: "Run #1" })).toBeVisible();
   await expect(page.getByText("billing").first()).toBeVisible();
-  expect(listAssessments(db, initiative.id)).toHaveLength(1);
+  expect(listRuns(db, initiative.id)).toHaveLength(1);
   expect(db.select().from(jobs).all().map((job) => job.kind)).toEqual(["assessment.coordinate"]);
 
   await page.goto(paths.assessment(initiative.publicId));
@@ -116,7 +116,7 @@ test("explains a scope that blocks an Assessment, below the header", async ({ pa
   await expect(problems.getByRole("listitem")).toHaveCount(1);
   await expect(problems).toContainText("there are no Repositories");
   await expect(page.locator("header").getByRole("alert")).toHaveCount(0);
-  expect(listAssessments(db, initiative.id)).toEqual([]);
+  expect(listRuns(db, initiative.id)).toEqual([]);
 });
 
 test("deletes an Initiative without Assessments through a confirmation dialog", async ({ page, db }) => {
@@ -166,7 +166,7 @@ test.describe("conclusion tabs", () => {
     const source = buildSource(db, { name: "orders" });
     const evaluated = (name: string, conclusion: "gaps" | "conforms") => {
       const initiative = buildInitiative(db, { name, sources: [source] });
-      return driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildAssessment(db, { initiative }).assessment, "complete")), "complete", conclusion);
+      return driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildRun(db, { initiative }).run, "complete")), "complete", conclusion);
     };
     const gaps = evaluated("Checkout platform migration", "gaps");
     evaluated("Payments baseline", "conforms");
@@ -184,7 +184,7 @@ test.describe("conclusion tabs", () => {
 
   test("Not evaluated tab lists an Assessment with Runs but no completed Evaluation", async ({ page, db }) => {
     const initiative = buildInitiative(db, { name: "Checkout platform migration", sources: [buildSource(db)] });
-    driveRun(db, buildAssessment(db, { initiative }).assessment, "complete");
+    driveRun(db, buildRun(db, { initiative }).run, "complete");
 
     await page.goto(`${paths.assessments}?conclusion=none`);
     await expect(rows(page)).toHaveCount(1);
