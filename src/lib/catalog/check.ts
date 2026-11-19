@@ -7,7 +7,8 @@ import { dependencyFacts, repositories, repositoryProfiles, surveys } from "@/li
 import { type Job, enqueue } from "@/lib/jobs/queue";
 import { type BuildReason, queueBuild } from "./build";
 import { type CatalogConfiguration, type DescribedThing, catalogConfiguration } from "./configuration";
-import { entriesByVersion, rulesVersionOf } from "./current";
+import { type CurrentCatalog, entriesByVersion, rulesVersionOf } from "./current";
+import type { CatalogRecipe } from "@/lib/db/schema";
 import { storedEntries } from "./entries";
 
 /*
@@ -19,6 +20,7 @@ import { storedEntries } from "./entries";
  *   exactly, from the projection's dependency facts;
  * - for a declared range, the highest published version it allows;
  * - the thing's newest published version.
+ * A survey that wanted a version with no entry queues a check at once.
  * It also rebuilds each version whose entries all predate the team's rules
  * as they stand. Versions in use are queued before the registry is read, so
  * an unreachable registry delays only the versions that need it; the check
@@ -47,6 +49,28 @@ export function scheduleCatalogChecks(db: Executor, now = new Date()): Job[] {
 /** Queues a check right after the profiling check of +profilingSlot+. */
 export function queueCatalogCheckAfter(db: Executor, profilingSlot: string, now = new Date()): Job {
   return enqueue(db, { kind: CHECK_CATALOG, payload: { after: profilingSlot }, idempotencyKey: `${CHECK_CATALOG}:after:${profilingSlot}`, runAfter: now, maxAttempts: 1 });
+}
+
+/**
+ * Queues a check right away for each version +recipe+'s survey wanted that
+ * no entry in +catalog+, the entries it was given, was built for: a version
+ * no entry is at or before, or one between entries, compared against the
+ * nearest earlier. The check builds it within minutes, rather than after the
+ * next profiling check, and the Repository is surveyed again once it's
+ * stored. One check is queued per thing, wanted version, and day, and builds
+ * once per thing, version, rules, and day, so a registry that can't be read,
+ * or a version it doesn't have, is tried again the next day, never in a loop.
+ */
+export function queueChecksForMissingEntries(db: Executor, recipe: CatalogRecipe, catalog: CurrentCatalog, now = new Date()): Job[] {
+  const day = now.toISOString().slice(0, 10);
+  return recipe.entries.flatMap((entry) => {
+    const version = entry.wanted.version === null ? null : semver.valid(entry.wanted.version);
+    if (!version) return [];
+    const exact = catalog.entries.some((candidate) => candidate.kind === entry.kind && candidate.id === entry.id && candidate.packages.some((item) => item.name === entry.wanted.package && semver.valid(item.version) === version));
+    if (exact) return [];
+    const missing = `${entry.kind}:${entry.id}:${entry.wanted.package}@${version}`;
+    return [enqueue(db, { kind: CHECK_CATALOG, payload: { missing }, idempotencyKey: `${CHECK_CATALOG}:missing:${missing}:${day}`, runAfter: now, maxAttempts: 1 })];
+  });
 }
 
 /** What the current Profiles of registered Repositories say about one package: the exact versions in use, and the ranges declared without a resolved version. */

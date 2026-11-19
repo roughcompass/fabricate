@@ -16,6 +16,8 @@ import { type Job, enqueue } from "@/lib/jobs/queue";
 import { surveyDocument } from "@/lib/profiles/analyze";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { profileProblems } from "@/lib/profiles/schema";
+import { queueChecksForMissingEntries } from "@/lib/catalog/check";
+import type { CurrentCatalog } from "@/lib/catalog/current";
 import { catalogRecipe, recipeDigest } from "@/lib/catalog/recipe";
 import { suppliedEntries } from "@/lib/catalog/supply";
 import { type Survey, getSurvey, moveSurvey, pinSurvey, surveyById, updateCurrentSurvey } from "./records";
@@ -26,7 +28,8 @@ import { type Survey, getSurvey, moveSurvey, pinSurvey, surveyById, updateCurren
  * run Surveyor on it with every current Reference Catalog entry, and store
  * the Profile. Finishing is one transaction: the Profile and its projection,
  * the survey's state and the Catalog part of its recipe, the Repository's
- * current survey, and every Run target and preview preparation waiting on it.
+ * current survey, a Catalog check for any version it wanted without an entry,
+ * and every Run target and preview preparation waiting on it.
  */
 
 export const RUN_SURVEY = "survey.run";
@@ -58,7 +61,7 @@ export async function runSurvey(db: Executor, publicId: string, options: RunSurv
     phase = "analysis";
     const supplied = suppliedEntries(db, config);
     const document = await surveyDocument({ survey, repository, config, runner, entries: supplied.entries, ...(options.signal && { signal: options.signal }) });
-    return finishSurvey(db, survey, { document, things: supplied.catalog.things });
+    return finishSurvey(db, survey, { document, catalog: supplied.catalog });
   } catch (error) {
     // A stopping worker leaves the survey running; its job runs again.
     if (options.signal?.aborted) throw error;
@@ -115,8 +118,12 @@ export function settleAbandonedSurveys(db: Executor, now = new Date()): Survey[]
 }
 
 type Outcome =
-  /** Its Profile, and the described things it was given entries of; without them, the things its fact document names entries of. */
-  | { document: JsonObject; things?: readonly string[] }
+  /**
+   * Its Profile, and the Catalog it was given: its described things and their
+   * entries. Without it, the things its fact document names entries of are
+   * taken as given, and no entry it lacked is looked for.
+   */
+  | { document: JsonObject; catalog?: CurrentCatalog }
   | { failure: { code: string; message: string } };
 
 /** Finishes a running survey in one transaction: its Profile, state, the current pointer, and everything waiting on it. */
@@ -127,9 +134,11 @@ export function finishSurvey(db: Executor, survey: Survey, outcome: Outcome): Su
     let finished: Survey;
     if ("document" in outcome) {
       insertProfile(tx, { survey: current, document: outcome.document, validate: profileProblems });
-      const catalog = catalogRecipe(outcome.document.fact_document, outcome.things);
+      const catalog = catalogRecipe(outcome.document.fact_document, outcome.catalog?.things);
       finished = moveSurvey(tx, current, "succeeded", { failureCode: null, failureMessage: null, catalog, catalogDigest: recipeDigest(catalog) });
       updateCurrentSurvey(tx, finished);
+      // A version it wanted that no entry was built for is built now, not after the next profiling check.
+      if (outcome.catalog) queueChecksForMissingEntries(tx, catalog, outcome.catalog);
     } else {
       finished = moveSurvey(tx, current, "failed", { failureCode: outcome.failure.code, failureMessage: outcome.failure.message });
     }

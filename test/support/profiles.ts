@@ -14,9 +14,9 @@ export const sha1 = (seed: string) => crypto.createHash("sha1").update(seed).dig
  * exactly as the worker analyzes a snapshot, without Git, against the Salt
  * 1.75.0 Reference Catalog entry.
  */
-export async function memoryProfile(files: Readonly<Record<string, MemoryFile>>, source: { public_id: string; name: string }, commit = sha1(`commit:${source.public_id}`)): Promise<{ document: JsonObject; digest: string }> {
+export async function memoryProfile(files: Readonly<Record<string, MemoryFile>>, source: { public_id: string; name: string }, commit = sha1(`commit:${source.public_id}`), entries: readonly JsonObject[] = [saltEntry() as unknown as JsonObject]): Promise<{ document: JsonObject; digest: string }> {
   const limits = getConfig().analysis;
-  const factDocument = await analyze(MemoryReader.fromFiles(files, { commit, budgets: limits }), { entries: [saltEntry()] });
+  const factDocument = await analyze(MemoryReader.fromFiles(files, { commit, budgets: limits }), { entries: entries as never });
   const document = buildProfile({
     repository: source.public_id,
     commit,

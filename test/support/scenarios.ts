@@ -1,3 +1,4 @@
+import type { CurrentCatalog } from "@/lib/catalog/current";
 import crypto from "node:crypto";
 import { detectorConfiguration } from "@repo-facts/bundle";
 import { SURVEYOR_RELEASE } from "@/lib/surveys/surveyor-release";
@@ -129,16 +130,18 @@ let surveyed = 0;
  * A background or preview survey of a new synthetic commit of +repository+,
  * succeeded with a Profile of +files+, as the survey job writes one. A
  * survey of the configured reference records that reference's resolution,
- * as background surveying does.
+ * as background surveying does. Surveyor is given +entries+, the fixture
+ * Salt 1.75.0 entry by default. With +catalog+, the entries the survey was
+ * given, a version it wanted without an entry queues a Catalog check.
  */
-export async function seedSurvey(db: Db, repository: Pick<Repository, "id" | "publicId" | "name">, options: { trigger?: SurveyTrigger; reference?: string; fromConfiguredReference?: boolean; files?: Readonly<Record<string, MemoryFile>> } = {}): Promise<Survey> {
+export async function seedSurvey(db: Db, repository: Pick<Repository, "id" | "publicId" | "name">, options: { trigger?: SurveyTrigger; reference?: string; fromConfiguredReference?: boolean; files?: Readonly<Record<string, MemoryFile>>; catalog?: CurrentCatalog; entries?: readonly JsonObject[] } = {}): Promise<Survey> {
   const commitSha = sha1(`survey:${repository.publicId}:${++surveyed}`);
   const configured = options.fromConfiguredReference ?? true;
   const { survey } = requestSurvey(db, { repositoryId: repository.id, commitSha, reference: options.reference ?? "refs/heads/main", fromConfiguredReference: configured, trigger: options.trigger ?? "added", ...currentRecipe(getConfig()) });
   if (configured) recordConfiguredResolution(db, repository.id, commitSha, new Date());
   const running = pinSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { treeSha: sha1(`tree:${commitSha}`), internalRef: surveyRefFor(survey.publicId) });
-  const { document } = await memoryProfile(options.files ?? { "package.json": manifest({ name: repository.name, version: "1.0.0" }) }, { public_id: repository.publicId, name: repository.name }, commitSha);
-  return finishSurvey(db, running, { document });
+  const { document } = await memoryProfile(options.files ?? { "package.json": manifest({ name: repository.name, version: "1.0.0" }) }, { public_id: repository.publicId, name: repository.name }, commitSha, options.entries);
+  return finishSurvey(db, running, { document, ...(options.catalog && { catalog: options.catalog }) });
 }
 
 /** The Run +assessment+ moved to finalizing, unless its last survey already moved it there, as it does when it completes the last target. */

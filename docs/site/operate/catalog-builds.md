@@ -4,7 +4,7 @@ The worker builds Reference Catalog entries for every version in use, from the r
 
 ## What's built
 
-The things described are listed in `config/catalog.yaml`, Salt to start. For each, once a day, when the worker starts, and after each profiling check, the Catalog check queues a build of:
+The things described are listed in `config/catalog.yaml`, Salt to start. For each, once a day, when the worker starts, after each profiling check, and as soon as a survey wants a version that has no entry, the Catalog check queues a build of:
 
 - each version a registered repository's current Profile resolves in a lockfile, or declares exactly, that has no entry;
 - for a declared range with no lockfile, the highest published version the range allows;
@@ -12,6 +12,8 @@ The things described are listed in `config/catalog.yaml`, Salt to start. For eac
 - each version whose entries were all built before the team's rules changed.
 
 Versions in use are queued before the registry is read, so they're built even when it can't list versions.
+
+A survey that wants a version with no entry of its own queues a check at once, so the entry is built, and the repository surveyed again against it, within minutes. That check runs once per version a day, and each build once per version a day, so a registry that can't be reached is tried again the next day, never in a loop.
 
 ## A build
 

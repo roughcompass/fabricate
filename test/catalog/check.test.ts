@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BUILD_ENTRY, buildRequest } from "@/lib/catalog/build";
-import { CHECK_CATALOG, checkCatalog, packageUse, runCatalogCheck, scheduleCatalogChecks } from "@/lib/catalog/check";
+import { CHECK_CATALOG, checkCatalog, packageUse, queueChecksForMissingEntries, runCatalogCheck, scheduleCatalogChecks } from "@/lib/catalog/check";
 import { catalogConfiguration } from "@/lib/catalog/configuration";
+import { currentCatalog } from "@/lib/catalog/current";
 import { storeEntry } from "@/lib/catalog/entries";
+import { catalogRecipe } from "@/lib/catalog/recipe";
 import { type FrontendRegistryConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { jobs } from "@/lib/db/schema";
@@ -12,10 +14,11 @@ import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { runScheduledProfileCheck } from "@/lib/profiling/check";
 import { deleteRepository } from "@/lib/repositories/registration";
+import { REQUEST_SURVEY } from "@/lib/surveys/background";
 import { type FakeRegistry, fakeRegistry, saltCore, saltEntry, saltPackages, unreachable } from "../support/catalog";
 import { buildRepository } from "../support/builders";
 import { createTestDb } from "../support/db";
-import { manifest } from "../support/profiles";
+import { manifest, memoryProfile } from "../support/profiles";
 import { seedSurvey } from "../support/scenarios";
 
 /*
@@ -129,6 +132,49 @@ describe("the Catalog check", () => {
 
     await expect(runCatalogCheck(db, config, { slot: "2026-11-19T00:00:00.000Z" }, { fetch: unreachable, now: NOW })).rejects.toThrow(/The registry couldn't be read for salt: registry_unreachable: Couldn't reach https:\/\/registry\.test/);
     expect(builds().map((build) => build.version)).toEqual(["1.76.0"]);
+  });
+
+  it("checks as soon as a survey wants a version with no entry, so the entry is built and the Repository surveyed again within minutes (New version appears)", async () => {
+    vi.stubGlobal("fetch", registry.fetch);
+    storeEntry(db, saltEntry());
+    const given = () => currentCatalog(db, catalogConfiguration(config));
+    const checks = () => db.select().from(jobs).where(eq(jobs.kind, CHECK_CATALOG)).all();
+    const today = new Date().toISOString().slice(0, 10);
+
+    // web resolves 1.76.0, so it's compared against 1.75.0 for now, and a check is queued for 1.76.0.
+    const web = buildRepository(db, { name: "web" });
+    await seedSurvey(db, web, { files: saltApp("web", { declared: "^1.75.0", resolved: "1.76.0" }), catalog: given() });
+    expect(checks().map((job) => [job.idempotencyKey, jobPayload(job)])).toEqual([[`${CHECK_CATALOG}:missing:design_system:salt:@salt-ds/core@1.76.0:${today}`, { missing: "design_system:salt:@salt-ds/core@1.76.0" }]]);
+    // Another Repository on 1.76.0 the same day queues no second check, and one on 1.75.0, which has its entry, queues none.
+    await seedSurvey(db, buildRepository(db, { name: "shop" }), { files: saltApp("shop", { declared: "1.76.0" }), catalog: given() });
+    await seedSurvey(db, buildRepository(db, { name: "orders" }), { files: saltApp("orders", { declared: "1.75.0" }), catalog: given() });
+    expect(checks()).toHaveLength(1);
+
+    // The check builds 1.76.0, whose new entry requests web's second survey.
+    await drainJobs(db, jobHandlers(db, config));
+    expect(builds()).toContainEqual({ kind: "design_system", id: "salt", version: "1.76.0", reason: "in_use" });
+    expect(given().entries.map((entry) => entry.version)).toContain("1.76.0");
+    expect(db.select().from(jobs).where(eq(jobs.kind, REQUEST_SURVEY)).all().map((job) => jobPayload(job).repository)).toContain(web.publicId);
+  });
+
+  it("checks for a missing entry once a day, so a registry that can't be reached makes no loop", async () => {
+    vi.stubGlobal("fetch", unreachable);
+    storeEntry(db, saltEntry());
+    const given = () => currentCatalog(db, catalogConfiguration(config));
+    for (const name of ["web", "shop"]) await seedSurvey(db, buildRepository(db, { name }), { files: saltApp(name, { declared: "1.76.0" }), catalog: given() });
+    await drainJobs(db, jobHandlers(db, config));
+    const checks = () => db.select().from(jobs).where(eq(jobs.kind, CHECK_CATALOG)).all();
+    expect(checks().map((job) => job.state)).toEqual(["failed"]);
+    // The build it queued fails too, and is tried at most three times today; another survey today queues nothing more.
+    await seedSurvey(db, buildRepository(db, { name: "orders" }), { files: saltApp("orders", { declared: "1.76.0" }), catalog: given() });
+    await drainJobs(db, jobHandlers(db, config));
+    expect(checks()).toHaveLength(1);
+    expect(builds().map((build) => build.version)).toEqual(["1.76.0"]);
+    // Tomorrow's survey checks again.
+    const tomorrow = new Date(Date.now() + 86_400_000);
+    const recipe = catalogRecipe((await memoryProfile(saltApp("later", { declared: "1.76.0" }), { public_id: "src_later", name: "later" })).document.fact_document, given().things);
+    expect(queueChecksForMissingEntries(db, recipe, given(), tomorrow)).toHaveLength(1);
+    expect(checks()).toHaveLength(2);
   });
 
   it("runs once a day, from when the worker starts, and after each profiling check", async () => {
