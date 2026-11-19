@@ -3,10 +3,15 @@ import { takeSnapshots } from "../../src/lib/adoption/snapshots";
 import { storeEntry } from "../../src/lib/catalog/entries";
 import { loadConfig } from "../../src/lib/config";
 import { openDatabase } from "../../src/lib/db/client";
-import { buildRepository } from "../../test/support/builders";
+import crypto from "node:crypto";
+import { startEvaluation } from "../../src/lib/evaluations/start";
+import { jobHandlers } from "../../src/lib/jobs/registry";
+import { drainJobs } from "../../src/lib/jobs/worker";
+import { buildAssessment, buildRepository } from "../../test/support/builders";
+import { control } from "../../test/support/standards";
 import { saltEntry } from "../../test/support/catalog";
 import { manifest } from "../../test/support/profiles";
-import { seedSurvey } from "../../test/support/scenarios";
+import { publishStandard, seedRun, seedSurvey, selectReleases } from "../../test/support/scenarios";
 import { FLEET_DATABASE, FLEET_ENV } from "./env";
 
 /**
@@ -39,12 +44,39 @@ test.describe.configure({ mode: "serial" });
 
 const db = openDatabase(FLEET_DATABASE);
 
+/** Eight repository Controls, so an Evaluation of the 500 holds 4,000 Findings across every outcome. */
+const CONTROLS = [
+  control({ key: "has-ci", title: "Runs continuous integration", severity: "high", condition: { op: "exists", selector: "repository.ci_systems" } }),
+  control({ key: "has-tests", title: "Has a test framework", severity: "high", condition: { op: "exists", selector: "repository.test_frameworks" } }),
+  control({ key: "has-languages", title: "Declares its languages", severity: "medium", condition: { op: "exists", selector: "repository.languages" } }),
+  control({ key: "declares-framework", title: "Declares a UI framework", severity: "medium", condition: { op: "exists", selector: "repository.frameworks" } }),
+  control({ key: "has-package-manager", title: "Declares its package manager", severity: "low", condition: { op: "exists", selector: "repository.package_managers" } }),
+  control({ key: "has-build-tool", title: "Has a build tool", severity: "low", condition: { op: "exists", selector: "repository.build_tools" } }),
+  control({ key: "no-submodules", title: "Declares no submodules", severity: "info", condition: { op: "equals", selector: "repository.submodule_count", value: 0 } }),
+  control({ key: "single-workspace", title: "Has one workspace", severity: "info", condition: { op: "equals", selector: "repository.workspace_count", value: 0 } }),
+];
+
+/** The Evaluation of a Run over the 500, for the Evaluation page's timing. */
+let evaluationId = "";
+
 test.beforeAll(async () => {
   const config = loadConfig({ env: { ...process.env, ...FLEET_ENV } });
   storeEntry(db, saltEntry());
-  for (let index = 0; index < COUNT; index++) await seedSurvey(db, buildRepository(db, { name: `scale-${String(index).padStart(3, "0")}` }), { files: files(index) });
+  const repositories = [];
+  for (let index = 0; index < COUNT; index++) {
+    const repository = buildRepository(db, { name: `scale-${String(index).padStart(3, "0")}` });
+    repositories.push(repository);
+    await seedSurvey(db, repository, { files: files(index) });
+  }
   takeSnapshots(db, config, "2026-11-12T00:00:00.000Z", new Date("2026-11-12T00:00:00.000Z"));
   takeSnapshots(db, config, "2026-11-19T00:00:00.000Z", new Date("2026-11-19T00:00:00.000Z"));
+
+  // A Run over the 500 and its Evaluation against the eight Controls.
+  const assessment = buildAssessment(db, { name: "Fleet-scale baseline", repositories });
+  const run = await seedRun(db, assessment, repositories, repositories.map((_, index) => files(index)));
+  selectReleases(db, assessment, [publishStandard(db, "Fleet-scale baseline", CONTROLS)]);
+  evaluationId = startEvaluation(db, assessment.publicId, run.publicId, crypto.randomUUID()).evaluation.publicId;
+  await drainJobs(db, jobHandlers(db, config));
 });
 
 // page-patterns spec, "Long lists are paged".
@@ -75,7 +107,31 @@ test("Filtering a later page: searching from the third page returns to the first
   await expect(page.getByRole("navigation", { name: "Repositories pages" }).getByRole("link", { name: "Page 1", exact: true })).toHaveAttribute("aria-current", "page");
 });
 
-test("Five hundred repositories: every adoption page renders in under one second and reads no Profile document", async ({ page, request }) => {
+// page-patterns spec, "Long lists are paged", and design-system spec, "Filters apply in place".
+test("An Evaluation of 500 repositories: a Control opens with its first 50 Findings and its page in the address, and the subject filter suggests names", async ({ page }) => {
+  await page.goto(`/evaluations/${evaluationId}`);
+  await expect(page.getByRole("status").filter({ hasText: "Finding" })).toHaveText("4,000 Findings");
+  // 500 subjects are suggestions for a text field, not a select's options.
+  const subject = page.getByRole("form", { name: "Filter Findings" }).getByLabel("Subject", { exact: true });
+  await expect(subject).toHaveAttribute("list", "filter-subject-names");
+  await expect(page.locator("datalist#filter-subject-names option")).toHaveCount(COUNT);
+  // A collapsed Control carries no Findings until it opens.
+  const control = page.locator("#control-0-has-ci");
+  await expect(control.locator("tbody tr")).toHaveCount(0);
+  await control.locator("summary").click();
+  await expect(page).toHaveURL(/[?&]page_0_has-ci=1#control-0-has-ci$/);
+  await expect(control.getByRole("table", { name: "Runs continuous integration Findings" }).locator("tbody tr")).toHaveCount(50);
+  await control.getByRole("navigation", { name: "Runs continuous integration Findings pages" }).getByRole("link", { name: "Next" }).click();
+  await expect(page).toHaveURL(/[?&]page_0_has-ci=2#control-0-has-ci$/);
+  await expect(control.locator("tbody tr").first()).toContainText("scale-050");
+
+  await subject.fill("scale-04");
+  await subject.press("Enter");
+  await expect(page).toHaveURL(/[?&]subject=scale-04(&|$)/);
+  await expect(page.getByRole("status").filter({ hasText: "Finding" })).toHaveText("Showing 80 of 4,000 Findings");
+});
+
+test("Five hundred repositories: every adoption page and an Evaluation of them render in under one second and read no Profile document", async ({ page, request }) => {
   // Every Profile document, the fleet's and these, becomes unreadable: an empty object, which fails its digest, so a page that read one would fail.
   db.$client.exec("DROP TRIGGER repository_profiles_immutable; UPDATE repository_profiles SET document = '{}';");
 
@@ -89,6 +145,11 @@ test("Five hundred repositories: every adoption page renders in under one second
     ["/adoption/design-systems/salt/components/Button", "Button"],
     ["/adoption/design-systems/salt/components/Button?view=repositories", "Button"],
     ["/adoption/packages/@salt-ds/core", "@salt-ds/core"],
+    // The Evaluation of the 500 against eight Controls: 4,000 Findings, fifty to a Control's page.
+    [`/evaluations/${evaluationId}`, "Evaluation #1"],
+    [`/evaluations/${evaluationId}?outcome=gap`, "Evaluation #1"],
+    [`/evaluations/${evaluationId}?subject=scale-04`, "Evaluation #1"],
+    [`/evaluations/${evaluationId}?page_0_has-ci=5`, "Evaluation #1"],
   ];
   const timings: string[] = [];
   for (const [address, title] of pages) {

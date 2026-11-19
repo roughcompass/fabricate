@@ -8,6 +8,8 @@
   .controlItem { scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
   /* A Control's pages, under its Findings. */
   .pages { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-border-subtle); }
+  /* A collapsed Control of a large Evaluation: the link that opens its Findings. */
+  .opener { margin: 0; padding: var(--space-3) var(--space-4); }
   .control[open] > .summary { border-bottom: 1px solid var(--color-border-subtle); background: var(--color-bg-subtle); }
 
   .summary {

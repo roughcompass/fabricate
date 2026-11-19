@@ -63,8 +63,14 @@ test("summarizes each Release separately and filters Findings by Release, outcom
 
   await clearFilters(page, total);
   await applyFilter(page, "Control", "verified-runtime");
-  const billing = await page.getByLabel("Subject", { exact: true }).locator("option", { hasText: "billing" }).getAttribute("value");
-  await applyFilter(page, "Subject", billing!);
+  // The subject is a text field that suggests the subjects' names, since a fleet has too many for a select.
+  const subject = page.getByRole("form", { name: "Filter Findings" }).getByLabel("Subject", { exact: true });
+  await expect(page.locator("datalist#filter-subject-names option")).toHaveCount(3);
+  expect(await page.locator("datalist#filter-subject-names option").evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value))).toEqual(["billing", "orders", "Relationship Map"]);
+  await subject.fill("bill");
+  await subject.press("Enter");
+  await expect(page).toHaveURL(/[?&]subject=bill(&|$)/);
+  await expect(page).toHaveURL(/[?&]control=verified-runtime(&|$)/);
   await expect(findingRows(page)).toHaveCount(1);
   await expect(page.getByRole("table", { name: "Verified on a current runtime Findings" })).toBeVisible();
   await expect(findingRows(page)).toContainText("billing");
@@ -290,4 +296,21 @@ test("pages a Control's Findings fifty at a time, keeps the page in the address,
   expect(page.url()).not.toContain("page_0_has-ci");
   await expect(rows).toHaveCount(50);
   await expect(pages).toContainText("Page 1 of 2");
+});
+
+// page-patterns spec, "Filters apply in place": without JavaScript, the subject field applies with Apply and keeps its value in the address.
+test.describe("without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("filters Findings by text the subject's name contains", async ({ page, db }) => {
+    const { evaluation } = await seedEvaluation(db);
+    await page.goto(`/evaluations/${evaluation.publicId}`);
+    const form = page.getByRole("form", { name: "Filter Findings" });
+    await form.getByLabel("Subject", { exact: true }).fill("ORD");
+    await form.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/[?&]subject=ORD(&|$)/);
+    await expect(form.getByLabel("Subject", { exact: true })).toHaveValue("ORD");
+    for (const row of await findingRows(page).all()) await expect(row).toContainText("orders");
+    await expect(page.getByRole("status").filter({ hasText: "Finding" })).toHaveText(/^Showing \d+ of 13 Findings$/);
+  });
 });
