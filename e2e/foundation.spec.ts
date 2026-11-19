@@ -12,19 +12,19 @@ const LIGHT = "rgb(250, 250, 250)";
 const DARK = "rgb(0, 0, 0)";
 
 test("renders text in Geist Sans and identifiers in Geist Mono, served by the application", async ({ page, db }) => {
-  const repository = buildRepository(db, { name: "orders" });
+  const repository = buildRepository(db, { name: "orders", gitRef: "release/2026-11" });
   const fonts: string[] = [];
   page.on("request", (request) => {
     if (request.resourceType() === "font") fonts.push(request.url());
   });
 
-  await page.goto(paths.repositories);
+  await page.goto(paths.repository(repository.publicId));
   await page.evaluate(() => document.fonts.ready);
 
   const firstFamily = (locator: ReturnType<Page["locator"]>) => locator.first().evaluate((element) => getComputedStyle(element).fontFamily.split(",")[0]!.trim());
   expect(await firstFamily(page.locator("body"))).toMatch(/geist/i);
-  // The clone URL is an identifier, shown as a Tag.
-  expect(await firstFamily(page.getByRole("table").getByText(repository.cloneUrl, { exact: true }))).toMatch(/geist.*mono|mono.*geist/i);
+  // The reference is an identifier, shown as a Tag in the meta row. (The Repositories list keeps the clone URL in a tooltip.)
+  expect(await firstFamily(page.getByText("release/2026-11", { exact: true }))).toMatch(/geist.*mono|mono.*geist/i);
 
   const loaded = await page.evaluate(() => [...document.fonts].filter((face) => face.status === "loaded").map((face) => face.family));
   expect(loaded.some((family) => /geist/i.test(family))).toBe(true);
