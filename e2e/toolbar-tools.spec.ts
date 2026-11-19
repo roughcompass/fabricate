@@ -114,7 +114,7 @@ test.describe("timing tool", () => {
     await expect(vitals.locator('[data-vital="INP"]')).toHaveAttribute("data-rating", "poor");
   });
 
-  test("rates the planted interaction poor, attributes it, and ranks its region first", async ({ page, db: _db }) => {
+  test("rates the planted interaction poor and attributes it", async ({ page, db: _db }) => {
     await open(page, "payments-workspace");
     await region(page, "payment-activity").getByRole("button", { name: "Recalculate totals" }).click();
     await openPanel(page, "timing", "Timing");
@@ -125,10 +125,6 @@ test.describe("timing tool", () => {
     await expect(interaction).toContainText("Payment activity");
     await expect(timing.locator("[data-slowest-interaction]")).toContainText("Poor");
     await expect(timing.locator("[data-slowest-interaction]")).toContainText("Payment activity");
-
-    await timing.getByRole("checkbox", { name: /^Hot spots/ }).check();
-    await expect(timing.getByRole("list", { name: "Costliest regions" }).locator("[data-hot-spot]").first()).toHaveAttribute("data-hot-spot", "payment-activity");
-    await expect(page.locator('[data-hot-spot-tint="payment-activity"]')).toHaveAttribute("data-level", "high");
     // Interactions with the toolbar are never recorded.
     expect(await timing.locator("[data-interaction-member]").count()).toBe(1);
   });

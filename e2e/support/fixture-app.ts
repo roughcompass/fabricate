@@ -137,3 +137,8 @@ export async function buildOrdersPortal(db: Db, options: { ref?: string } = {}):
   if (!preview || preview.attemptState !== "ready") throw new Error(`The orders portal didn't build: ${preview ? `${preview.attemptState}, ${preview.attemptReason}` : "no preview was started"}. Its log is under ${cacheDirectory(serverConfig())}/..`);
   return { repository, preview, base: `/previews/${preview.publicId}/` };
 }
+
+/** The test page that frames a build under the toolbar, until `/run/<application>` replaces it (add-applications, task 8.1). */
+export function framedRun(build: Pick<FixtureBuild, "preview">, route = "/"): string {
+  return `/test/run/${build.preview.publicId}${route === "/" ? "" : route}`;
+}

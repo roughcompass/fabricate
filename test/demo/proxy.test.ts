@@ -69,7 +69,7 @@ describe("demo workspace proxy", () => {
     },
   );
 
-  it.each(["/_next/static/chunks/app.js", "/_next/image?url=x", "/demo/previews/market-watch.jpg", "/icon.svg"])("never runs on the asset %s", (url) => {
+  it.each(["/_next/static/chunks/app.js", "/_next/image?url=x", "/demo/previews/market-watch.jpg", "/icon.svg", "/toolbar/inspector.js", "/toolbar/axe.js"])("never runs on the asset %s", (url) => {
     expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false);
   });
 });

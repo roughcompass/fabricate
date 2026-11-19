@@ -57,6 +57,6 @@ export function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Every request except Next's assets, the public files, and repository previews.
-  matcher: ["/((?!_next/static|_next/image|demo/|previews/|icon\\.svg|favicon\\.ico).*)"],
+  // Every request except Next's assets, the public files, the scripts the toolbar adds to a running application, and repository previews.
+  matcher: ["/((?!_next/static|_next/image|demo/|toolbar/|previews/|icon\\.svg|favicon\\.ico).*)"],
 };

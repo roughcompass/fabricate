@@ -1,7 +1,7 @@
 /**
  * The timing tool's model (template-demo/toolbar spec): interaction ratings,
- * the load waterfall, hot-spot costs, and Web Vitals. No React or browser
- * dependencies, so the rules can be tested directly.
+ * the load waterfall, and Web Vitals. No React or browser dependencies, so
+ * the rules can be tested directly.
  */
 
 export type Rating = "good" | "needs-improvement" | "poor";
@@ -36,17 +36,23 @@ export interface WaterfallLoad {
   readonly from?: string;
 }
 
-export interface WaterfallRow extends WaterfallLoad {
+/** What a waterfall row needs: when a load began, and how long it took, or null while it's still loading. */
+interface Timed {
+  readonly startMs: number;
+  readonly durationMs: number | null;
+}
+
+export type WaterfallRow<L extends Timed = WaterfallLoad> = L & {
   readonly slowest: boolean;
   /** Bar position as fractions of the whole waterfall. */
   readonly offset: number;
   readonly width: number;
-}
+};
 
 /** The loads in the order they started, the slowest finished one flagged, scaled to the latest finish. */
-export function waterfall(loads: readonly WaterfallLoad[]): WaterfallRow[] {
+export function waterfall<L extends Timed>(loads: readonly L[]): WaterfallRow<L>[] {
   const end = Math.max(1, ...loads.map((load) => load.startMs + (load.durationMs ?? 0)));
-  const slowest = loads.reduce<WaterfallLoad | null>((worst, load) => (load.durationMs !== null && (!worst || load.durationMs > worst.durationMs!) ? load : worst), null);
+  const slowest = loads.reduce<L | null>((worst, load) => (load.durationMs !== null && (!worst || load.durationMs > worst.durationMs!) ? load : worst), null);
   // A stable sort keeps the script's order for loads that start together.
   return [...loads]
     .map((load, index) => ({ load, index }))
@@ -54,33 +60,8 @@ export function waterfall(loads: readonly WaterfallLoad[]): WaterfallRow[] {
     .map(({ load }) => ({ ...load, slowest: load === slowest, offset: load.startMs / end, width: Math.max((load.durationMs ?? 0) / end, 0.01) }));
 }
 
-export function slowestInteraction(interactions: readonly Interaction[]): Interaction | null {
-  return interactions.reduce<Interaction | null>((worst, interaction) => (!worst || interaction.durationMs > worst.durationMs ? interaction : worst), null);
-}
-
-export interface HotSpot {
-  readonly member: string;
-  readonly loadMs: number;
-  readonly interactionMs: number;
-  readonly costMs: number;
-  /** How the region is tinted: the costliest is high; others by their share of it. */
-  readonly level: "high" | "medium" | "low";
-}
-
-/**
- * Each member's cost: its latest load's duration plus its slowest interaction,
- * costliest first. Only `members` (the regions on the page) are ranked.
- */
-export function hotSpots(members: readonly string[], loads: readonly WaterfallLoad[], interactions: readonly Interaction[]): HotSpot[] {
-  const spots = members.map((member) => {
-    const memberLoads = loads.filter((load) => load.member === member);
-    const loadMs = memberLoads.at(-1)?.durationMs ?? 0;
-    const interactionMs = Math.max(0, ...interactions.filter((interaction) => interaction.member === member).map((interaction) => interaction.durationMs));
-    return { member, loadMs, interactionMs, costMs: loadMs + interactionMs };
-  });
-  spots.sort((left, right) => right.costMs - left.costMs || members.indexOf(left.member) - members.indexOf(right.member));
-  const top = spots[0]?.costMs ?? 0;
-  return spots.map((spot, index) => ({ ...spot, level: index === 0 && top > 0 ? "high" : top > 0 && spot.costMs / top >= 0.5 ? "medium" : "low" }));
+export function slowestInteraction<I extends Pick<Interaction, "durationMs">>(interactions: readonly I[]): I | null {
+  return interactions.reduce<I | null>((worst, interaction) => (!worst || interaction.durationMs > worst.durationMs ? interaction : worst), null);
 }
 
 export function formatMs(ms: number): string {
@@ -91,7 +72,7 @@ export function formatMs(ms: number): string {
  * Interaction to Next Paint over the given interactions: the slowest, less one
  * outlier for every 50, as browsers report it. Null before any interaction.
  */
-export function interactionToNextPaint(interactions: readonly Interaction[]): number | null {
+export function interactionToNextPaint(interactions: readonly Pick<Interaction, "durationMs">[]): number | null {
   if (!interactions.length) return null;
   const durations = interactions.map((interaction) => interaction.durationMs).sort((left, right) => right - left);
   return durations[Math.min(durations.length - 1, Math.floor(durations.length / 50))]!;

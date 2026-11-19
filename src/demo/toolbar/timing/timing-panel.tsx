@@ -2,28 +2,24 @@
 
 import { ToolPanel } from "@/components/toolbar/tool-panel";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/form";
 import { Tooltip } from "@/components/ui/tooltip";
 import { memberById } from "@/lib/demo/catalog";
-import { useActivity, useCurrentRoute, useRuntime } from "../../runtime/runtime-context";
-import { RATING_LABELS, VITALS, formatMs, formatVital, hotSpots, rate, rateVital, slowestInteraction, waterfall } from "./timing";
+import { useActivity, useRuntime } from "../../runtime/runtime-context";
+import { RATING_LABELS, VITALS, formatMs, formatVital, rate, rateVital, slowestInteraction, waterfall } from "./timing";
 import { useTiming } from "./timing-state";
 import styles from "./timing.module.css";
 
 /**
  * The Timing tool: the page load's Web Vitals, how long each microfrontend
- * took to load and paint, how long each interaction took to paint, and the
- * regions that cost the most.
+ * took to load and paint, and how long each interaction took to paint.
  */
 export function TimingPanel() {
   const { app } = useRuntime();
   const { loads } = useActivity();
-  const route = useCurrentRoute();
   const timing = useTiming();
   const name = (member: string) => memberById(app, member)?.name ?? member;
   const rows = waterfall(loads);
   const slowest = slowestInteraction(timing.interactions);
-  const spots = timing.hotSpots ? hotSpots(route.regions.map((region) => region.member), loads, timing.interactions) : [];
 
   const vitalRows = VITALS.map((vital) => {
     const value = vital.name === "INP" ? timing.inpMs : (timing.vitals[vital.name]?.value ?? null);
@@ -31,7 +27,7 @@ export function TimingPanel() {
   });
 
   return (
-    <ToolPanel title="Timing" description="Web Vitals, module load times, interaction timing, and performance hot spots for this page." wide>
+    <ToolPanel title="Timing" description="Web Vitals, module load times, and interaction timing for this page." wide>
       <section className={styles.section} aria-labelledby="timing-vitals">
         <h3 id="timing-vitals" className={styles.sectionTitle}>
           Web Vitals
@@ -119,23 +115,6 @@ export function TimingPanel() {
               </Button>
             </div>
           </>
-        )}
-      </section>
-
-      <section className={styles.section} aria-labelledby="timing-hot-spots">
-        <h3 id="timing-hot-spots" className={styles.sectionTitle}>
-          Hot spots
-        </h3>
-        <Checkbox id="timing-hot-spots-toggle" label="Hot spots" description="Tint each region by its cost: its load time plus its slowest interaction." checked={timing.hotSpots} onChange={(event) => timing.setHotSpots(event.currentTarget.checked)} />
-        {spots.length > 0 && (
-          <ol className={styles.spots} aria-label="Costliest regions">
-            {spots.map((spot) => (
-              <li key={spot.member} className={styles.spot} data-hot-spot={spot.member} data-level={spot.level}>
-                <span>{name(spot.member)}</span>
-                <span className={styles.meta}>{`${formatMs(spot.costMs)} (load ${formatMs(spot.loadMs)} + interaction ${formatMs(spot.interactionMs)})`}</span>
-              </li>
-            ))}
-          </ol>
         )}
       </section>
     </ToolPanel>

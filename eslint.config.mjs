@@ -72,8 +72,9 @@ const actionState = {
 const config = [
   {
     // src/demo/runtime/generated/ is the heroes' committed generated code, checked by test/lint/generated-heroes.test.ts.
+    // public/toolbar/inspector.js is the timing inspector's committed bundle, checked by test/lint/inspector-bundle.test.ts.
     // public/prototype-runtime/ is local output the removed Prototypes left behind, until the operator deletes it; .gitignore keeps it out of Git.
-    ignores: ["src/demo/runtime/generated/**", ".next/**", ".next-*/**", "dist/**", "public/prototype-runtime/**", ".swc/**", ".vercel/**", "node_modules/**", "storage/**", "tmp/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
+    ignores: ["src/demo/runtime/generated/**", "public/toolbar/inspector.js", ".next/**", ".next-*/**", "dist/**", "public/prototype-runtime/**", ".swc/**", ".vercel/**", "node_modules/**", "storage/**", "tmp/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
   },
   ...nextVitals,
   ...nextTypeScript,

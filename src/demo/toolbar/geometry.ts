@@ -4,7 +4,7 @@ import { useEffect, useEffectEvent, useState } from "react";
 
 /**
  * Where page elements are on screen, for the toolbar's overlays: region
- * outlines, debug labels, audit outlines, comment pins, and hot spots. Rects
+ * outlines, debug labels, audit outlines, and comment pins. Rects
  * are viewport coordinates, recomputed on scroll, resize, and DOM changes,
  * at most once per animation frame.
  */

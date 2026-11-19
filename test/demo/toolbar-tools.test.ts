@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type RawViolation, guidanceLines, summarize } from "@/demo/toolbar/accessibility/audit";
 import { parsePayload, topicError } from "@/demo/toolbar/bus-publish";
-import { type Interaction, type WaterfallLoad, formatVital, hotSpots, interactionToNextPaint, rate, rateVital, slowestInteraction, waterfall } from "@/demo/toolbar/timing/timing";
+import { type Interaction, type WaterfallLoad, formatVital, interactionToNextPaint, rate, rateVital, slowestInteraction, waterfall } from "@/demo/toolbar/timing/timing";
 
 const violation = (id: string, impact: string, nodes: string[]): RawViolation => ({
   id,
@@ -71,24 +71,12 @@ describe("timing tool", () => {
     expect(slowestInteraction([interaction(1, "payee-list", 40), interaction(2, "payment-activity", 656), interaction(3, "transfer-form", 24)])!.id).toBe(2);
   });
 
-  it("ranks hot spots by load plus slowest interaction, costliest first", () => {
-    const spots = hotSpots(["payee-list", "transfer-form", "payment-activity"], loads, [interaction(1, "payment-activity", 656), interaction(2, "payee-list", 32), interaction(3, "payee-list", 48)]);
-    expect(spots.map((spot) => [spot.member, spot.costMs, spot.level])).toEqual([
-      ["payment-activity", 1956, "high"],
-      ["payee-list", 648, "low"],
-      ["transfer-form", 380, "low"],
-    ]);
-    // The latest load counts, so a swap replaces the original load's duration.
-    expect(spots[1]!.loadMs).toBe(600);
-  });
-
-  it("keeps a load still in progress in order, unflagged, and costing nothing yet", () => {
+  it("keeps a load still in progress in order and unflagged", () => {
     const pending: WaterfallLoad[] = [...loads.slice(0, 3), { member: "payment-activity", version: "2.3.0", startMs: 340, durationMs: null, kind: "load" }];
     const rows = waterfall(pending);
     expect(rows.map((row) => row.member)).toEqual(["shell", "payee-list", "transfer-form", "payment-activity"]);
     expect(rows.filter((row) => row.slowest).map((row) => row.member)).toEqual(["payee-list"]);
     expect(rows[3]!.width).toBe(0.01);
-    expect(hotSpots(["payment-activity"], pending, [])[0]!.loadMs).toBe(0);
   });
 
   it("computes INP as the slowest interaction, less one outlier for every 50", () => {

@@ -150,7 +150,7 @@ describe("template catalog", () => {
       for (const member of app.members.filter((other) => other !== slow[0])) expect(member.loadMs, member.id).toBeLessThan(slow[0]!.loadMs);
     });
 
-    it("loads the slow member on its start route, so the first waterfall shows the hot spot", () => {
+    it("loads the slow member on its start route, so the first waterfall shows it", () => {
       const slow = app.members.find((member) => member.slowInteraction)!;
       expect(startRoute(app).regions.some((region) => region.member === slow.id)).toBe(true);
     });

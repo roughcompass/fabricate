@@ -14,7 +14,6 @@ import { MicrofrontendsPanel } from "../toolbar/microfrontends-panel";
 import { SessionPanel } from "../toolbar/session-panel";
 import { SettingsPanel } from "../toolbar/settings-panel";
 import { SharePanel } from "../toolbar/share-panel";
-import { HotSpotsOverlay } from "../toolbar/timing/hot-spots-overlay";
 import { TimingPanel } from "../toolbar/timing/timing-panel";
 import { TimingProvider } from "../toolbar/timing/timing-state";
 import { useEmbedded, useRuntime } from "./runtime-context";
@@ -55,7 +54,6 @@ function Toolbar() {
         }}
         overlays={
           <>
-            <HotSpotsOverlay />
             <AuditOverlay />
             <SelectOverlay onChoose={setSelectedMember} />
             <ZoneIndicator />

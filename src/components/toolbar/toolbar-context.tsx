@@ -40,7 +40,7 @@ export const TOOLBAR_ITEMS: readonly ToolbarItem[] = [
   { id: "share", name: "Share", icon: "link", group: "Collaboration", key: "l", aliases: ["link", "invite", "copy", "send"], action: { kind: "tool", tool: "share" }, shortcutRow: true },
   { id: "microfrontends", name: "Microfrontends", icon: "layers", group: "Inspect", key: "m", aliases: ["mfe", "zones", "versions", "routing", "override"], action: { kind: "tool", tool: "microfrontends" }, shortcutRow: true },
   { id: "accessibility", name: "Accessibility", icon: "accessibility", group: "Inspect", key: "a", aliases: ["a11y", "audit", "axe", "wcag"], action: { kind: "tool", tool: "accessibility" }, shortcutRow: true },
-  { id: "timing", name: "Timing", icon: "clock", group: "Inspect", key: "t", aliases: ["performance", "web vitals", "core web vitals", "lcp", "inp", "cls", "hot spots", "waterfall", "speed"], action: { kind: "tool", tool: "timing" }, shortcutRow: true },
+  { id: "timing", name: "Timing", icon: "clock", group: "Inspect", key: "t", aliases: ["performance", "web vitals", "core web vitals", "lcp", "inp", "cls", "waterfall", "load order", "speed"], action: { kind: "tool", tool: "timing" }, shortcutRow: true },
   { id: "session", name: "Session", icon: "user", group: "Runtime", key: "p", aliases: ["persona", "profile", "role", "user", "sign in"], action: { kind: "tool", tool: "session" }, shortcutRow: true },
   { id: "settings", name: "Settings", icon: "settings", group: "Runtime", key: "s", aliases: ["theme", "dark", "bus", "events", "publish"], action: { kind: "tool", tool: "settings" }, shortcutRow: true },
   { id: "shortcuts", name: "Keyboard shortcuts", icon: "keyboard", group: "More", key: "?", aliases: ["keys", "hotkeys", "preferences"], action: { kind: "tool", tool: "shortcuts" }, shortcutRow: false },
@@ -99,17 +99,6 @@ export interface ToolbarApi {
 }
 
 export const ToolbarContext = createContext<ToolbarApi | null>(null);
-
-// Key presses the toolbar acted on, such as its shortcuts, so the Timing tool leaves them out of the application's interactions.
-const handledKeys = new WeakSet<Event>();
-
-export function markToolbarKey(event: Event): void {
-  handledKeys.add(event);
-}
-
-export function isToolbarKey(event: Event): boolean {
-  return handledKeys.has(event);
-}
 
 export function useToolbar(): ToolbarApi {
   const toolbar = use(ToolbarContext);

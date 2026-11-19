@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, use, useEffect, useState, useSyncExternalStore } from "react";
-import { isToolbarKey } from "@/components/toolbar/toolbar-context";
+import { isToolbarEvent } from "@/components/toolbar/inspector/protocol";
 import { subscribeNever } from "@/components/ui/use-hydrated";
 import { shellOf } from "@/lib/demo/catalog";
 import { useRuntime } from "../../runtime/runtime-context";
@@ -27,8 +27,6 @@ interface TimingState {
   readonly inpMs: number | null;
   readonly vitals: Vitals;
   readonly eventTiming: boolean;
-  readonly hotSpots: boolean;
-  setHotSpots(show: boolean): void;
   clear(): void;
 }
 
@@ -84,7 +82,6 @@ export function TimingProvider({ children }: { children: React.ReactNode }) {
   const [clearedThrough, setClearedThrough] = useState(0);
   const eventTiming = useSyncExternalStore(subscribeNever, supportsEventTiming, () => false);
   const vitals = useSyncExternalStore(subscribeVitals, getVitals, getServerVitals);
-  const [hotSpots, setHotSpots] = useState(false);
   const shell = shellOf(app).id;
 
   useEffect(() => {
@@ -94,7 +91,7 @@ export function TimingProvider({ children }: { children: React.ReactNode }) {
     const unmatched = new Map<number, number>();
 
     const commit = (draft: Draft) => {
-      if (isToolbarKey(draft.event)) return;
+      if (isToolbarEvent(draft.event)) return;
       const durationMs = draft.exactMs ?? draft.fallbackMs ?? 0;
       const interaction: Interaction = { id: draft.id, kind: draft.kind, target: draft.target, member: draft.member, durationMs, approximate: draft.exactMs === null };
       setHistory((previous) => {
@@ -162,5 +159,5 @@ export function TimingProvider({ children }: { children: React.ReactNode }) {
 
   const interactions = history.filter((interaction) => interaction.id > clearedThrough).slice(-LIMIT);
   const inpMs = interactionToNextPaint(history);
-  return <TimingContext value={{ interactions, inpMs, vitals, eventTiming, hotSpots, setHotSpots, clear: () => setClearedThrough(history.at(-1)?.id ?? clearedThrough) }}>{children}</TimingContext>;
+  return <TimingContext value={{ interactions, inpMs, vitals, eventTiming, clear: () => setClearedThrough(history.at(-1)?.id ?? clearedThrough) }}>{children}</TimingContext>;
 }

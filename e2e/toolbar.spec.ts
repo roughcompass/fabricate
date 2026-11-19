@@ -336,14 +336,6 @@ test.describe("nothing overlays the toolbar", () => {
       },
     ],
     [
-      "hot spots",
-      async (page) => {
-        await openTool(page, "timing");
-        await page.getByRole("dialog", { name: "Timing" }).getByRole("checkbox", { name: "Hot spots" }).check();
-        await expect(page.locator("[data-hot-spot-tint]").first()).toBeVisible();
-      },
-    ],
-    [
       "Select mode",
       async (page) => {
         await openTool(page, "microfrontends");

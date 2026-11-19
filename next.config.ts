@@ -16,7 +16,9 @@ const nextConfig: NextConfig = {
   // Loaded from node_modules, never bundled: the native SQLite binding, and the
   // pinned Surveyor release, which ships in a release as its
   // published packages with their provenance. The worker bundle loads the same copy.
-  serverExternalPackages: ["better-sqlite3", ...SURVEYOR_PACKAGES],
+  // axe-core too, whose `source`, the text the toolbar adds to a running
+  // application's page, is only its own when Node loads it (src/app/toolbar/axe.js).
+  serverExternalPackages: ["better-sqlite3", "axe-core", ...SURVEYOR_PACKAGES],
   outputFileTracingRoot: root,
   turbopack: { root },
   poweredByHeader: false,

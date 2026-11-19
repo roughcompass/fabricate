@@ -3,10 +3,12 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { boundRef, remeasureToolbarBounds } from "@/demo/toolbar/toolbar-bounds";
+import { markToolbarEvent } from "./inspector/protocol";
 import { ShortcutsPanel } from "./shortcuts-panel";
+import { useOptionalTargetDocument } from "./target-document";
 import { ToolPanel } from "./tool-panel";
 import { type MenuContext, ToolbarMenu } from "./toolbar-menu";
-import { type ToolId, type ToolbarApi, ToolbarContext, type ToolbarItem, type ToolbarMode, activeItemFor, isTyping, itemForKey, keyLabel, markToolbarKey } from "./toolbar-context";
+import { type ToolId, type ToolbarApi, ToolbarContext, type ToolbarItem, type ToolbarMode, activeItemFor, isTyping, itemForKey, keyLabel } from "./toolbar-context";
 import { setToolbarPrefs, useToolbarPrefs } from "./toolbar-prefs";
 import { ToolbarTooltip, tooltipFor, useTooltip } from "./toolbar-tooltip";
 import styles from "./toolbar.module.css";
@@ -109,7 +111,8 @@ export function DemoToolbar({ panels, overlays, commentCount = 0, context }: { p
   const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
     const prevented = event.defaultPrevented;
     handleKey(event);
-    if (!prevented && event.defaultPrevented) markToolbarKey(event);
+    // Key presses the toolbar acted on, such as its shortcuts, are left out of the application's interactions.
+    if (!prevented && event.defaultPrevented) markToolbarEvent(event);
   });
 
   useEffect(() => {
@@ -117,6 +120,15 @@ export function DemoToolbar({ panels, overlays, commentCount = 0, context }: { p
     document.addEventListener("keydown", listener);
     return () => document.removeEventListener("keydown", listener);
   }, []);
+
+  // Over a framed application, shortcuts also work while focus is in its page.
+  const framed = useOptionalTargetDocument()?.document ?? null;
+  useEffect(() => {
+    if (!framed) return;
+    const listener = (event: KeyboardEvent) => onKeyDown(event);
+    framed.addEventListener("keydown", listener);
+    return () => framed.removeEventListener("keydown", listener);
+  }, [framed]);
 
   // The controls enter the top layer on mount, and go back on top whenever another top-layer element opens.
   useEffect(() => {
