@@ -178,18 +178,28 @@ test.describe("on a touch device", () => {
   });
 });
 
-for (const width of [1280, 375]) {
-  test(`keeps table rows one height with and without actions at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto("/design-system");
-    const table = light(page, "Table");
-    // clientHeight leaves out the collapsed row border, which only the first row has.
-    const inner = (row: string) => table.locator(`[data-row-sample="${row}"] td`).first().evaluate((cell) => cell.clientHeight);
-    const withActions = await inner("actions");
-    const withoutActions = await inner("plain");
-    expect(withActions).toBe(withoutActions);
-  });
-}
+test("keeps table rows one height with and without actions at 1280px", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/design-system");
+  const table = light(page, "Table");
+  // clientHeight leaves out the collapsed row border, which only the first row has.
+  const inner = (row: string) => table.locator(`[data-row-sample="${row}"] td`).first().evaluate((cell) => cell.clientHeight);
+  const withActions = await inner("actions");
+  const withoutActions = await inner("plain");
+  expect(withActions).toBe(withoutActions);
+});
+
+// page-patterns spec, "Layouts adapt to narrow viewports": a stacked row's actions are at its top, not orphaned at its bottom.
+test("puts a stacked row's actions at its top, beside its first cell and no taller than it, at 375px", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto("/design-system");
+  const row = light(page, "Table").locator('[data-row-sample="actions"]');
+  const box = (cell: string) => row.locator(cell).evaluate((element) => element.getBoundingClientRect().toJSON() as DOMRect);
+  const [first, actions] = await Promise.all([box("td:first-child"), box("td:last-child")]);
+  expect(Math.abs(actions.top - first.top)).toBeLessThanOrEqual(1);
+  expect(actions.bottom).toBeLessThanOrEqual(first.bottom + 1);
+  expect(actions.left).toBeGreaterThanOrEqual(first.right);
+});
 
 for (const [width, narrow] of [[1280, false], [375, true]] as const) {
   test(`lays out the page header at ${width}px`, async ({ page }) => {

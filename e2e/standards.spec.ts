@@ -6,7 +6,7 @@ import { sampleStandard } from "../test/support/standards";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { pageHeader, pageTitle, toasts, waitForHydration } from "./support/shell";
 
-const control = (page: Page, number: number) => page.getByRole("region", { name: new RegExp(`^Control ${number}\\b`) });
+const control = (page: Page, number: number) => page.getByRole("article", { name: new RegExp(`^Control ${number}\\b`) });
 const builder = (scope: ReturnType<typeof control>, legend: string) => scope.getByRole("group", { name: legend, exact: true });
 const controlAction = async (page: Page, number: number, action: string) => {
   await page.getByRole("button", { name: `Actions for Control ${number}` }).click();

@@ -51,7 +51,11 @@
   @container content (max-width: 767px) {
     .table {
       & thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-      & tr { display: block; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
+      /* A row's actions sit at the top of its stack, beside its first cell, never orphaned at the bottom. */
+      & tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
+      & td { grid-column: 1 / -1; }
+      & td:first-child { grid-column: 1; }
+      & td.actions { grid-row: 1; grid-column: 2; align-self: start; }
       & tbody tr:last-child { border-bottom: 0; }
       & td { display: grid; grid-template-columns: minmax(min-content, 2fr) minmax(0, 5fr); gap: var(--space-3); padding: var(--space-1) 0; border: 0; }
       & td::before { content: attr(data-label); color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
@@ -59,12 +63,10 @@
       & td:not([data-label]) { display: block; }
       & td.actions { width: auto; }
       & th.numeric, & td.numeric { text-align: left; }
-      & td.actions { padding-top: var(--space-2); }
     }
     /* A scrolling table collapses too, so its cells wrap again instead of being clipped. */
     .scroll .table { width: 100%; }
     .scroll .table :is(th, td), .scroll .cell { white-space: normal; overflow-wrap: break-word; }
-    .rowActions { justify-content: flex-start; margin-block: 0; }
     .emptyRow td { display: block; }
   }
 }

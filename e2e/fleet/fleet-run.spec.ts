@@ -30,7 +30,7 @@ const ANALYTICS_CONSUMERS = ["mf-admin", "mf-billing", "mf-shell", "spa-orders",
 
 // The page header: status, meta, and actions; the title is in the shell header.
 const toast = (page: Page, text: string | RegExp) => page.getByRole("region", { name: "Notifications" }).getByText(text);
-const control = (page: Page, number: number) => page.getByRole("region", { name: new RegExp(`^Control ${number}\\b`) });
+const control = (page: Page, number: number) => page.getByRole("article", { name: new RegExp(`^Control ${number}\\b`) });
 const builder = (scope: ReturnType<typeof control>, legend: string) => scope.getByRole("group", { name: legend, exact: true });
 
 async function newStandard(page: Page, name: string, purpose: string) {
@@ -97,7 +97,7 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await page.getByRole("link", { name: "mf-billing Profile" }).click();
     await page.getByRole("navigation", { name: "Profile views" }).getByRole("link", { name: /^Services/ }).click();
     // A Service Dependency's summary names its endpoint and client; its key is in its details.
-    const analytics = page.locator("#services").getByRole("region", { name: /^Same origin \/__analytics · Packaged client from @acme\/analytics/ });
+    const analytics = page.getByRole("list", { name: "Service Dependencies" }).getByRole("listitem", { name: /^Same origin \/__analytics · Packaged client from @acme\/analytics/ });
     await expect(analytics).toContainText("called through Packaged client from @acme/analytics");
     await expect(page.getByText("Static discovery does not prove entitlement, reachability, or integrated behavior", { exact: false })).toBeVisible();
   });

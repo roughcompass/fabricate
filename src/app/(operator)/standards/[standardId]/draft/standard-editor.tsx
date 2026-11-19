@@ -178,7 +178,8 @@ function ControlPanel({ control, index, last, expanded, issueCount, vocabulary, 
   const bodyId = useId();
   const field = fieldProps(id, path, errorsFor);
   return (
-    <section className={styles.control} aria-label={`${name}${control.title ? `: ${control.title}` : ""}`} data-issue-path={path} data-invalid={issueCount > 0 || undefined}>
+    // An article, not a region: one landmark per Control would crowd the page's landmarks.
+    <article className={styles.control} aria-label={`${name}${control.title ? `: ${control.title}` : ""}`} data-issue-path={path} data-invalid={issueCount > 0 || undefined}>
       <div className={styles.controlHeader}>
         <button type="button" className={styles.toggle} aria-expanded={expanded} aria-controls={bodyId} onClick={() => onExpand(!expanded)}>
           <Icon name="chevronRight" size={14} className={styles.chevron} />
@@ -232,6 +233,6 @@ function ControlPanel({ control, index, last, expanded, issueCount, vocabulary, 
         <ExpressionEditor node={control.condition} scope={control.subject} path={`${path}.condition`} depth={1} label="Expected condition" vocabulary={vocabulary} idPrefix={`${id}-condition`} errorsFor={errorsFor} onChange={(condition) => onUpdate({ condition })} />
         <TextArea {...field("guidance")} label="Guidance" optional description="Shown with Findings as advice; never run." rows={2} value={control.guidance} onChange={(event) => onUpdate({ guidance: event.target.value })} />
       </div>
-    </section>
+    </article>
   );
 }

@@ -20,7 +20,7 @@ const category = (page: Page, id: string) => page.locator(`#${id}`);
 const open = (page: Page, publicId: string, tab?: string) => page.goto(`/profiles/${publicId}${tab ? `?tab=${tab}` : ""}`);
 const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** A Service Dependency's panel, by the start of its summary: its endpoint. */
-const service = (page: Page, endpoint: string) => page.locator("#services").getByRole("region", { name: new RegExp(`^${escaped(endpoint)}`) });
+const service = (page: Page, endpoint: string) => page.getByRole("list", { name: "Service Dependencies" }).getByRole("listitem", { name: new RegExp(`^${escaped(endpoint)}`) });
 /** Opens a Service Dependency's panel. */
 const expand = async (region: Locator) => {
   await region.locator("summary").click();

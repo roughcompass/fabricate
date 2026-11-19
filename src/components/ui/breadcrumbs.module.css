@@ -9,4 +9,10 @@
     overflow-wrap: anywhere;
     &:hover { color: var(--color-text); text-decoration-line: underline; }
   }
+
+  @container content (max-width: 767px) {
+    /* Narrow: one link, to the parent, marked as the way back. */
+    .item:not(:last-child) { display: none; }
+    .item:last-child::before { content: "‹" / ""; }
+  }
 }

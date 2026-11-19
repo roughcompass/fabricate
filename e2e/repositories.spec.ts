@@ -3,6 +3,7 @@ import { buildRepository } from "../test/support/builders";
 import { listRepositories } from "../src/lib/repositories/repository-records";
 import { versionsOf } from "../src/lib/profiling/versions";
 import { moveSurvey, requestSurvey } from "../src/lib/surveys/records";
+import { seedSurvey } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { pageHeader, pageTitle, toasts } from "./support/shell";
@@ -277,4 +278,71 @@ test("Version that failed on a Surveyor release mismatch: the reason says it nee
   await expect(row.getByText("analysis_failed")).toBeHidden();
   await row.getByText("Details", { exact: true }).click();
   await expect(row.getByText("analysis_failed")).toBeVisible();
+});
+
+// page-patterns spec, "Narrow Repository".
+test.describe("390px wide", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("Narrow Repository: its view tabs stay on one scrolling row, the breadcrumbs show one link to Repositories, and no meta line begins with a separator", async ({ page, db }) => {
+    const repository = buildRepository(db, { name: "checkout-platform-web", cloneUrl: "https://git.example.com/acme/checkout-platform-web.git", gitRef: "release/2026-11" });
+    await seedSurvey(db, repository);
+    await page.goto(`${paths.repository(repository.publicId)}?tab=tooling`);
+
+    const tabs = page.getByRole("navigation", { name: "Profile views" });
+    const tops = await tabs.getByRole("link").evaluateAll((links) => [...new Set(links.map((link) => Math.round(link.getBoundingClientRect().top)))]);
+    expect(tops).toHaveLength(1);
+    expect(await tabs.evaluate((row) => row.scrollWidth > row.clientWidth)).toBe(true);
+    // The current view's tab scrolls into view.
+    await expect(tabs.getByRole("link", { name: "Tooling" })).toBeInViewport({ ratio: 1 });
+
+    const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
+    await expect(breadcrumbs.getByRole("link")).toHaveText(["Repositories"]);
+    await page.goto(paths.repositoryVersions(repository.publicId));
+    // A deeper page shows only its parent.
+    await expect(breadcrumbs.getByRole("link").filter({ visible: true })).toHaveText(["checkout-platform-web"]);
+
+    await page.goto(paths.repository(repository.publicId));
+    const lines = await pageHeader(page)
+      .locator("[data-meta-item]")
+      .evaluateAll((items) => {
+        const header = items[0]!.closest("header")!.getBoundingClientRect();
+        const starts = new Map<number, { left: number; item: Element }>();
+        for (const item of items) {
+          const range = document.createRange();
+          range.selectNodeContents(item);
+          const box = range.getBoundingClientRect();
+          // The facts on a line are centered on it.
+          const bounds = item.getBoundingClientRect();
+          const line = Math.round((bounds.top + bounds.bottom) / 2);
+          if (!starts.has(line) || box.left < starts.get(line)!.left) starts.set(line, { left: box.left, item });
+        }
+        // Each line's first fact starts at the header's edge, and nothing of its own, such as a separator, is drawn before it.
+        return [...starts.values()].map(({ left, item }) => {
+          const box = item.getBoundingClientRect();
+          const before = document.elementFromPoint(left - 4, box.top + box.height / 2);
+          return { atEdge: Math.abs(left - header.left) <= 1, separatorShown: Boolean(before && item.contains(before)) };
+        });
+      });
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) expect(line).toEqual({ atEdge: true, separatorShown: false });
+    await expectNoHorizontalOverflow(page);
+  });
+});
+
+// design-system spec, "Relative times in a list".
+test("Relative times in a list: Tab moves between links and controls, never to a relative time, and each time's full date is available to assistive technology", async ({ page, db }) => {
+  for (const name of ["orders", "billing"]) await seedSurvey(db, buildRepository(db, { name }));
+  await page.goto(paths.repositories);
+  const times = page.getByRole("table", { name: "Repositories" }).locator("time");
+  await expect(times.first()).toBeVisible();
+  const focusable = await times.evaluateAll((elements) => elements.filter((time) => time.closest("[tabindex]:not([tabindex='-1']), a, button")).length);
+  expect(focusable).toBe(0);
+  // Its text for assistive technology names the full date.
+  expect(await times.first().textContent()).toMatch(/\(\w{3} \d{1,2}, \d{4}/);
+  for (let index = 0; index < 30; index++) {
+    await page.keyboard.press("Tab");
+    // Neither a time nor a wrapper that exists only to make one focusable.
+    expect(await page.evaluate(() => document.activeElement?.tagName === "TIME" || (document.activeElement?.tagName === "SPAN" && Boolean(document.activeElement.querySelector("time"))))).toBe(false);
+  }
 });

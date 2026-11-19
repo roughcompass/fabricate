@@ -38,13 +38,18 @@ export function ServiceDependencies({ services, total = services.length, context
   return (
     <Section id="services" level={level} title="Service Dependencies" description="Outbound calls found in committed source and configuration. Static discovery does not prove entitlement, reachability, or integrated behavior, so access is unknown for every service.">
       {total === 0 && <p className={styles.muted}>No Service Dependency was found.</p>}
-      {services.map((summary) => (
-        <section key={summary.key} aria-label={serviceName(summary, context.records)}>
-          <Disclosure summary={<ServiceSummaryLine summary={summary} context={context} />} aside={<Status state={summary.characterized ? "characterized" : "incomplete"} />}>
-            <ServiceDetails summary={summary} context={context} />
-          </Disclosure>
-        </section>
-      ))}
+      {/* A list of items, not a landmark each: the Services view adds one region, its section. */}
+      {services.length > 0 && (
+        <ul className={styles.services} aria-label="Service Dependencies">
+          {services.map((summary) => (
+            <li key={summary.key} aria-label={serviceName(summary, context.records)}>
+              <Disclosure summary={<ServiceSummaryLine summary={summary} context={context} />} aside={<Status state={summary.characterized ? "characterized" : "incomplete"} />}>
+                <ServiceDetails summary={summary} context={context} />
+              </Disclosure>
+            </li>
+          ))}
+        </ul>
+      )}
       {pagination}
     </Section>
   );

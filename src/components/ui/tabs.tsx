@@ -1,17 +1,19 @@
 import Link from "next/link";
 import styles from "./tabs.module.css";
+import { TabRow } from "./tab-row";
 import { formatNumber } from "@/components/ui/count";
 
 /**
  * Links between views of one page, such as filters or sub-views; the current
- * tab is marked. `aside` holds a control that belongs to the views, such as a search.
+ * tab is marked. They stay on one row, which scrolls sideways when they don't
+ * fit. `aside` holds a control that belongs to the views, such as a search.
  */
 export function Tabs({ label, aside, children }: { label: string; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className={styles.bar}>
-      <nav className={styles.tabs} aria-label={label} data-scroll-x="">
+      <TabRow className={styles.tabs} label={label}>
         {children}
-      </nav>
+      </TabRow>
       {aside && <div className={styles.aside}>{aside}</div>}
     </div>
   );

@@ -107,6 +107,36 @@ test("every operator page has exactly one h1, in its page header, and none in th
   }
 });
 
+// page-patterns spec, the shell header requirement and finding 26: one banner, one main, and no landmark per item.
+test("Landmarks on every page: one banner outside one main, and no region for an item of a list or table", async ({ page, db, sourcesDir }) => {
+  test.setTimeout(300_000);
+  const pages = await everyPage(db, sourcesDir);
+  const profile = pages.find(([name]) => name === "06-profile")![1];
+  const problems: string[] = [];
+  const views = ["composition", "dependencies", "design-system", "services", "tooling", "diagnostics"].map((tab) => [`10-profile-${tab}`, `${profile}?tab=${tab}`] as const);
+  for (const [name, url] of [...pages, ...views]) {
+    await page.goto(url);
+    const found = await page.evaluate(() => {
+      const named = (element: Element) => element.hasAttribute("aria-label") || element.hasAttribute("aria-labelledby");
+      const regions = [...document.querySelectorAll("section, [role=region]")].filter((element) => element.matches("[role=region]") || named(element));
+      return {
+        banners: document.querySelectorAll("header[data-shell-header], [role=banner]").length,
+        mains: document.querySelectorAll("main, [role=main]").length,
+        bannerInMain: Boolean(document.querySelector("main [data-shell-header]")),
+        perItem: regions.filter((region) => region.closest("li, tr, [role=listitem], [role=row]")).map((region) => region.getAttribute("aria-label") ?? region.id),
+        regions: regions.length,
+      };
+    });
+    if (found.banners !== 1) problems.push(`${name}: ${found.banners} banners`);
+    if (found.mains !== 1) problems.push(`${name}: ${found.mains} main landmarks`);
+    if (found.bannerInMain) problems.push(`${name}: the banner is inside the main landmark`);
+    for (const region of found.perItem) problems.push(`${name}: a region for an item, ${region}`);
+    // A page's regions are its sections; a dozen or more means its items became landmarks. The gallery's specimens are examples.
+    if (found.regions > 12 && name !== "09-design-system") problems.push(`${name}: ${found.regions} regions`);
+  }
+  expect(problems).toEqual([]);
+});
+
 test("Limits on every page: one primary action, three secondary actions, four meta facts, seven tabs, and five key figures", async ({ page, db, sourcesDir }) => {
   test.setTimeout(300_000);
   const problems: string[] = [];
