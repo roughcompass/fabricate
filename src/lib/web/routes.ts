@@ -60,12 +60,10 @@ export const routes = {
   applicationPreview: (slug: string, query?: Query) => withQuery(`/applications/${slug}/preview`, query),
   /** The status of the applications a page shows, which it polls while one is building. */
   applicationsStatus: (publicIds: readonly string[]) => withQuery("/api/applications/status", { ids: publicIds.join(",") }),
-  /** An application running full screen under the toolbar, at +path+ within it (add-applications task 8.1). */
-  runningApplication: (slug: string, path = "") => `/run/${slug}${path ? `/${path.replace(/^\/+/, "")}` : ""}`,
+  /** An application running full screen under the toolbar, at +path+ within it (add-applications task 8.1): `accounts/42` or `/accounts/42`, with +query+ such as a share link's token. */
+  runningApplication: (slug: string, path = "", query?: Query) => withQuery(`/run/${slug}${path.replace(/^\/+/, "") ? `/${path.replace(/^\/+/, "")}` : ""}`, query),
   /** An application's current screenshot, or its card image, at +version+ (Application.screenshot.version) so a new one loads anew. */
   applicationScreenshot: (slug: string, version: string, size: "full" | "card" = "full") => withQuery(`/applications/${slug}/screenshot`, { ...(size === "card" && { size }), v: version }),
-  /** The application running full screen under the toolbar, at its own +route+ (`/accounts/42`), with +query+ such as a share link's token. */
-  runningApplication: (slug: string, route = "/", query?: Query) => withQuery(`/run/${slug}${route === "/" ? "" : route}`, query),
 
   /** Adoption Analytics: the tracked design systems and packages. */
   adoption: "/adoption",
