@@ -1,3 +1,4 @@
+import { queueCatalogCheckAfter } from "@/lib/catalog/check";
 import { listRepositories } from "@/lib/repositories/repository-records";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
@@ -57,12 +58,14 @@ export function checkProfiles(db: Executor, slot: string): CheckResult {
   return { checked: repositories.length, requested };
 }
 
-/** The job handler: queues the next slot, then checks. */
+/** The job handler: queues the next slot, then checks, then queues a Catalog check for the versions the check's surveys may bring. */
 export function runScheduledProfileCheck(db: Executor, config: FrontendRegistryConfig, options: { slot?: string; now?: Date; log?: (message: string) => void } = {}): CheckResult {
   const now = options.now ?? new Date();
   const next = slotOf(config, now, 1);
   enqueueSlot(db, next, next);
-  const result = checkProfiles(db, options.slot ?? slotOf(config, now).toISOString());
+  const slot = options.slot ?? slotOf(config, now).toISOString();
+  const result = checkProfiles(db, slot);
+  queueCatalogCheckAfter(db, slot, now);
   options.log?.(`profiling check: ${result.checked} repositories, ${result.requested} survey requests queued`);
   return result;
 }

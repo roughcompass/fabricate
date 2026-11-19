@@ -1,10 +1,11 @@
-// Frontend Registry worker: runs acquisition, analysis, evaluation, profiling check, and preview jobs outside
+// Frontend Registry worker: runs acquisition, analysis, evaluation, profiling check, Catalog build, and preview jobs outside
 // the web server. Started with `npm run dev:worker` or `npm run worker`.
 import path from "node:path";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { jobHandlers, jobLimits } from "@/lib/jobs/registry";
 import { Worker } from "@/lib/jobs/worker";
+import { scheduleCatalogChecks } from "@/lib/catalog/check";
 import { scheduleProfileChecks } from "@/lib/profiling/check";
 import { verifyStartup } from "@/lib/startup";
 import { WorkerLockError, claimWorkerLock } from "./lock";
@@ -23,6 +24,8 @@ async function main(): Promise<void> {
     limits: jobLimits(),
     log: (message) => console.log(`[worker] ${message}`),
   });
+  // The Catalog check runs first, so the entries surveys need are queued before the profiling check queues surveys.
+  scheduleCatalogChecks(getDb());
   // The profiling check reschedules itself; this starts it, and it also queues the first version of every repository without one.
   scheduleProfileChecks(getDb(), getConfig());
   worker.start();

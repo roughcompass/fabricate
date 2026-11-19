@@ -351,6 +351,13 @@
       "when": 1795070818378,
       "tag": "0049_surveys",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1795096014118,
+      "tag": "0050_catalog_entries",
+      "breakpoints": true
     }
   ]
 }
