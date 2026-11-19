@@ -17,8 +17,9 @@ export function closeDrawer(): void {
 
 /**
  * The sidebar's navigation (operator-interface/page-patterns spec). The
- * primary menu lists Home, then the Assessments and Templates groups, each
- * under a heading and set apart by a divider, with every page listed inline.
+ * primary menu lists Home, then the Registry, Assessments, Templates,
+ * Insights, and Admin groups, each under a heading and set apart by a
+ * divider, with every page listed inline.
  */
 export function SidebarNav({ nav }: { nav: NavFlags }) {
   const pathname = usePathname();

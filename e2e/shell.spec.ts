@@ -9,8 +9,8 @@ import { paths } from "./support/paths";
 import { pageHeader, pageTitle, useTheme } from "./support/shell";
 
 // operator-interface/page-patterns spec: the application shell, and the
-// primary menu: Home, then the Assessments and Templates groups under
-// headings and dividers. The narrow-viewport drawer has its own cases below.
+// primary menu, which leads with the Registry. The narrow-viewport drawer
+// has its own cases below.
 
 const primary = (page: Page) => page.getByRole("navigation", { name: "Primary" });
 
@@ -35,13 +35,15 @@ test.describe("on a wide viewport", () => {
     await expectCurrent(page, "All Assessments");
   });
 
-  test("Full menu: Home, then the Assessments, Templates, and Admin groups under headings and dividers", async ({ page, db: _db }) => {
+  test("Full menu: Home; Registry; Assessments; Templates; Insights; and Admin, under headings and dividers", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
     await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Salt Patterns", "Adoption", "System", "Bitbucket tokens"]);
-    await expect(nav.locator("hr")).toHaveCount(4);
-    await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["Repositories", "All Assessments", "Standards"]);
+    await expect(nav.locator("hr")).toHaveCount(5);
+    await expect(nav.getByRole("list", { name: "Registry" }).getByRole("link")).toHaveText(["Repositories"]);
+    await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["All Assessments", "Standards"]);
     await expect(nav.getByRole("list", { name: "Templates" }).getByRole("link")).toHaveText(["Salt Patterns"]);
+    await expect(nav.getByRole("list", { name: "Insights" }).getByRole("link")).toHaveText(["Adoption"]);
     await expect(nav.getByRole("list", { name: "Admin" }).getByRole("link")).toHaveText(["System", "Bitbucket tokens"]);
     // Every item has one icon.
     for (const link of await nav.getByRole("link").all()) await expect(link.locator("svg")).toHaveCount(1);
@@ -56,11 +58,11 @@ test.describe("on a wide viewport", () => {
     await expectCurrent(page, "Repositories");
   });
 
-  test("Record page: a Repository Profile marks All Assessments", async ({ page, db }) => {
+  test("Record page: a Repository's Profile, one of its pages, marks Repositories", async ({ page, db }) => {
     const { run } = await seedResults(db);
     const profile = profilesOf(db, run.id)[0]!.profile;
     await page.goto(`/profiles/${profile.publicId}`);
-    await expectCurrent(page, "All Assessments");
+    await expectCurrent(page, "Repositories");
   });
 
   test("Current section on a deep page: a Finding marks All Assessments", async ({ page, db }) => {

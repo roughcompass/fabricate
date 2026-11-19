@@ -271,10 +271,11 @@ Every page is built from one of ten page templates (below), each composing `Page
 
 `AppShell` (`src/components/shell/app-shell.tsx`) frames every page, in the manner of Vercel's dashboard: a skip link; a full-height sidebar on the canvas; and the content column, which holds the shell header above the main region. The sidebar holds the product mark, the navigation, and, in its footer, the theme switcher. The sidebar is fixed to the viewport over its reserved grid column, so it never shifts at the end of a long page.
 
-**The primary menu groups areas.** `SidebarNav` (`sidebar-nav.tsx`, client) shows the primary menu, built from `navigation.ts`. `visibleGroups()` returns its groups. Each later group is set apart by a divider (`<hr>`) and has a caption heading that names its list for assistive technology.
+**The primary menu leads with the Registry.** `SidebarNav` (`sidebar-nav.tsx`, client) shows the primary menu, built from `navigation.ts`. `visibleGroups()` returns its groups. Each group after Home is set apart by a divider (`<hr>`) and has a caption heading that names its list for assistive technology.
 
 - First, Home, with no heading.
-- **Assessments:** Repositories, All Assessments, and Standards.
+- **Registry:** Repositories.
+- **Assessments:** All Assessments and Standards.
 - **Templates:** Salt Patterns, while the template demo is enabled.
 - **Insights:** Adoption.
 - **Admin:** System, then Bitbucket tokens, last.
@@ -283,8 +284,9 @@ Every page is built from one of ten page templates (below), each composing `Page
 
 Every page marks one item current, and a record's pages mark the item for their list:
 
-- A Run, an Evaluation, or a Profile marks All Assessments.
-- A Repository's Settings, New Repository, and Add Repositories mark Repositories.
+- A Run or an Evaluation marks All Assessments.
+- Every page of a Repository marks Repositories: its versions, Profiles and their evidence, Settings, and previews, and New Repository and Add Repositories.
+- Every adoption page marks Adoption.
 - A template preview marks Salt Patterns, and a repository preview marks Repositories.
 
 The create pages, Add Repositories included, aren't in the menu; their list pages offer them. `locate()` resolves a path to its group and item. Its patterns never overlap, and a unit test checks every operator route against it. A page outside every item, such as this gallery, shows the primary menu with nothing current. The product mark in the sidebar opens Home. The current item takes `--color-bg-selected` and the medium weight, and is exposed as `aria-current`.

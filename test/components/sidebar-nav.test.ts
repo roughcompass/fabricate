@@ -41,7 +41,7 @@ describe("primary menu", () => {
 
   it("sets the groups apart with dividers and names each group's list by its heading (Full menu)", () => {
     const html = render("/", { demo: true });
-    expect(html.match(/<hr/g)).toHaveLength(4);
+    expect(html.match(/<hr/g)).toHaveLength(5);
     expect(html).toContain('<p id="sidebar-group-assessments"');
     expect(html).toContain('aria-labelledby="sidebar-group-assessments"');
     expect(html).toContain(">Templates</p>");

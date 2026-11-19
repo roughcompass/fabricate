@@ -24,7 +24,7 @@ const shellOf = (tree: ReactNode) => elements(tree).find((element) => "data-side
 // operator-interface/page-patterns spec: the application shell, and the
 // sidebar that can be resized and hidden.
 describe("application shell", () => {
-  it("shows Home, the Assessments group, and Admin when the demo is disabled (Demo disabled)", () => {
+  it("shows Home, the Registry, Assessments, Insights, and Admin groups when the demo is disabled (Demo disabled)", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
     const flags = nav.props.nav as NavFlags;
     expect(visibleGroups(flags).flatMap((group) => group.items).map((entry) => entry.label)).toEqual(["Home", "Repositories", "All Assessments", "Standards", "Adoption", "System", "Bitbucket tokens"]);
@@ -35,7 +35,8 @@ describe("application shell", () => {
     const groups = visibleGroups(nav.props.nav as NavFlags);
     expect(groups.map((group) => [group.heading ?? null, group.items[0]!.href])).toEqual([
       [null, "/"],
-      ["Assessments", "/repositories"],
+      ["Registry", "/repositories"],
+      ["Assessments", "/assessments"],
       ["Templates", "/templates"],
       ["Insights", "/adoption"],
       ["Admin", "/admin/system"],
