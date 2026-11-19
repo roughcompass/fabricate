@@ -92,7 +92,7 @@ mise install node@22.11.0
 FABRICATE_PREVIEWS_NODE_VERSIONS="22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin" npm run previews:doctor
 ```
 
-The doctor checks that each configured directory's `node` reports its version and that its corepack runs pnpm and Yarn, and that `git` and `tar` are where the worker finds them. It prints a line for each check, names anything missing or wrong, and exits non-zero if any check fails. See [docs/previews.md](docs/previews.md#the-workers-toolchain).
+The doctor checks that each configured directory's `node` reports its version and that its corepack runs pnpm and Yarn, and that `git` and `tar` are where the worker finds them. It prints a line for each check, names anything missing or wrong, and exits non-zero if any check fails. In a release, run `node dist/previews-doctor.cjs` from the release directory, with the worker's settings. See [docs/previews.md](docs/previews.md#the-workers-toolchain).
 
 ### Template demo
 
@@ -143,7 +143,7 @@ node dist/worker.cjs
 
 `release/` holds the standalone web server, its static files, the worker and migration bundles, the migrations, `config/`, and the native SQLite binding. It installs nothing and carries no npm configuration, so neither the registry address nor its token reaches it. `scripts/verify-release.mjs` checks that: it scans every file for the token, any literal npm `_authToken`, and any `REPO_FACTS_NPM_TOKEN` assignment, and requires the release's `@repo-facts` packages to match the versions the lockfile pins, with their release provenance. Omit the token for a registry that allows anonymous reads.
 
-Data lives in `release/storage/` unless `FABRICATE_DATABASE` and `FABRICATE_REPOSITORY_STORAGE` point elsewhere. Keep it outside the release directory so an upgrade can replace the release. Pass other settings as environment variables, for example `FABRICATE_ALLOWED_ROOTS=/repositories`. Run both processes under the host's own supervisor, such as systemd or launchd, as an unprivileged user. Assessments never run a package manager or repository code, so the processes need none beyond Node.js itself.
+Data lives in `release/storage/` unless `FABRICATE_DATABASE` and `FABRICATE_REPOSITORY_STORAGE` point elsewhere. Keep it outside the release directory so an upgrade can replace the release. Pass other settings as environment variables, for example `FABRICATE_ALLOWED_ROOTS=/repositories`. Run both processes under the host's own supervisor, such as systemd or launchd, as an unprivileged user. Assessments never run a package manager or repository code, so the processes need none beyond Node.js itself. Repository previews, which are off by default, are the exception: with them on, the worker builds enrolled repositories with the Node versions its host provides, which `node dist/previews-doctor.cjs` checks (see [Preview toolchain](#preview-toolchain)).
 
 ## What an assessment does and does not do
 

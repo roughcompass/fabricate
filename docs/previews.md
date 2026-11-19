@@ -45,6 +45,8 @@ Then check the toolchain with the worker's settings and environment:
 npm run previews:doctor
 ```
 
+In a release (see the README's Run in production), run `node dist/previews-doctor.cjs` from the release directory instead.
+
 For each `previews.nodeVersions` entry, the doctor checks that the directory's `node` reports that version and that its corepack runs pnpm and Yarn. They run in the environment a build's install gets: corepack's and the package managers' caches under `.cache/` in `previews.storage`, and a throwaway `HOME` and `TMPDIR`, so your own are never read or changed. The first run downloads corepack's default pnpm and Yarn, as a build would, so the registry must be reachable. It also checks `git` on the worker's `PATH` and `tar` where extraction looks for it. It prints a line for each check, names anything missing or wrong, and exits with a non-zero status if any check fails. With no Node versions configured, it says previews can't build anything and fails.
 
 ```text

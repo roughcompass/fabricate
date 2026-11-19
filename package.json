@@ -11,7 +11,7 @@
     "dev:web": "next dev",
     "dev:worker": "node scripts/dev-worker.mjs",
     "build": "next build && npm run build:worker",
-    "build:worker": "esbuild worker=src/worker/main.ts migrate=src/lib/db/migrate-cli.ts projection-rebuild=src/lib/projection/rebuild-cli.ts --bundle --platform=node --target=node24 --format=cjs --external:better-sqlite3 --external:@repo-facts/* --outdir=dist --out-extension:.js=.cjs --log-level=warning",
+    "build:worker": "esbuild worker=src/worker/main.ts migrate=src/lib/db/migrate-cli.ts projection-rebuild=src/lib/projection/rebuild-cli.ts previews-doctor=src/lib/previews/doctor-cli.ts --bundle --platform=node --target=node24 --format=cjs --external:better-sqlite3 --external:@repo-facts/* --outdir=dist --out-extension:.js=.cjs --log-level=warning",
     "start": "next start",
     "release": "node scripts/release.mjs",
     "worker": "node dist/worker.cjs",
