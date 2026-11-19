@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { deleteRepository } from "@/lib/repositories/registration";
 import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
-import { jobs } from "@/lib/db/schema";
+import { deleteApplication, findApplication } from "@/lib/applications/records";
+import { jobs, previewBuilds } from "@/lib/db/schema";
 import { claimNext } from "@/lib/jobs/queue";
 import { type PruneCandidate, cacheBytes, choosePrunable, deletePreview, prunePreviews, requestPreview, requestRebuild } from "@/lib/previews/lifecycle";
 import {
@@ -14,6 +15,7 @@ import {
   PREPARE_PREVIEW,
   type PreviewBuild,
   claimAttempt,
+  failAttempt,
   findPreparation,
   findPreview,
   markOpened,
@@ -27,6 +29,7 @@ import { servePreview } from "@/lib/previews/serving";
 import { cacheDirectory, previewDirectory } from "@/lib/previews/storage";
 import { buildRepository } from "../support/builders";
 import { rawRun } from "../support/db";
+import { decidedPreparation, onboard, qualifyingVerdict } from "../support/applications";
 import { publishFiles, queuedPreview } from "../support/previews";
 import { useAppDb } from "../support/next";
 
@@ -74,6 +77,11 @@ describe("choosing previews to prune", () => {
     expect(choosePrunable(previews, 10, "just-published")).toEqual(["failed", "ready"]);
   });
 
+  it("never deletes a preview an application uses, however long ago it was opened", () => {
+    const previews = [{ ...candidate("current", 50, { opened: 1 }), inUse: true }, { ...candidate("latest", 50, { opened: 2 }, "failed"), inUse: true }, candidate("other", 50, { opened: 3 })];
+    expect(choosePrunable(previews, 0)).toEqual(["other"]);
+  });
+
   it("breaks ties by id, so the choice is stable", () => {
     expect(choosePrunable([candidate("b", 50, { opened: 1 }), candidate("a", 50, { opened: 1 })], 50)).toEqual(["a"]);
   });
@@ -112,6 +120,7 @@ describe("preview lifecycle", () => {
   }
   const serve = (preview: PreviewBuild) => servePreview(new Request(`http://localhost/previews/${preview.publicId}/`, { headers: { "sec-fetch-dest": "document" } }), preview.publicId, [], { db: app.db, config });
   const exists = (preview: PreviewBuild) => fs.existsSync(previewDirectory(config, preview.publicId));
+  const findPreviewById = (id: number) => app.db.select().from(previewBuilds).where(eq(previewBuilds.id, id)).get()!;
   const buildJob = (preview: PreviewBuild, attempt = 1) => app.db.select().from(jobs).where(eq(jobs.idempotencyKey, `${BUILD_PREVIEW}:${preview.publicId}:${attempt}`)).get()!;
 
   describe("pruning", () => {
@@ -163,6 +172,29 @@ describe("preview lifecycle", () => {
       for (const kept of [building, queued, fresh]) expect(findPreview(app.db, kept.publicId)).toBeDefined();
       // The rebuild still publishes over the artifact it kept serving.
       expect(publishAttempt(app.db, building.publicId, { attempt: 2, claim: "worker-a#1.1" }, { directory: "out/2-a", layout: "standalone", entry: {}, outputBytes: 1, buildMs: 1, nodeVersion: "22.11.0", packageManager: "npm" })).toBe(true);
+    });
+
+    it("never deletes an application's current build or latest attempt, and prunes them like any other once it's deleted (Storage limit reached)", async () => {
+      // Orders portal's current build and Admin's failed first attempt are the least recently used.
+      const orders = onboard(app.db, config, repository, { name: "Orders portal" });
+      const current = publishFiles(app.db, config, findPreviewById(orders.latestPreviewId!), { "index.html": "x".repeat(400) });
+      markOpened(app.db, current.publicId, at(1));
+      const admin = onboard(app.db, config, repository, { name: "Admin", packageDir: "apps/admin", preparation: decidedPreparation(app.db, repository, [qualifyingVerdict("apps/admin")]) });
+      const latest = findPreviewById(admin.latestPreviewId!);
+      failAttempt(app.db, latest.publicId, { attempt: 1 }, "The install failed");
+      markOpened(app.db, latest.publicId, at(2));
+      const other = ready(400, 3);
+      const newer = ready(400, 4);
+      configure({ maxStorageBytes: 100 });
+
+      expect((await prunePreviews(app.db, config)).deleted).toEqual([other.publicId, newer.publicId]);
+      expect(findApplication(app.db, "orders-portal")).toMatchObject({ status: "ready", current: { preview: current.publicId } });
+      for (const kept of [current, latest]) expect(findPreview(app.db, kept.publicId)).toBeDefined();
+      expect((await serve(current)).status).toBe(200);
+
+      deleteApplication(app.db, orders.publicId);
+      expect((await prunePreviews(app.db, config)).deleted).toEqual([current.publicId]);
+      expect(findPreview(app.db, latest.publicId)).toBeDefined();
     });
 
     it("sweeps files no undeleted preview owns, and leaves the package caches", async () => {
@@ -262,6 +294,15 @@ describe("preview lifecycle", () => {
       expect((await serve(preview)).status).toBe(404);
       expect(await deletePreview(app.db, preview.publicId, config)).toBe(false);
       expect(fs.readdirSync(path.join(storage, ".trash"))).toEqual([]);
+    });
+
+    it("refuses to delete an application's build, naming the application, until the application is deleted", async () => {
+      const orders = onboard(app.db, config, repository, { name: "Orders portal" });
+      const current = publishFiles(app.db, config, findPreviewById(orders.latestPreviewId!), { "index.html": "orders" });
+      await expect(deletePreview(app.db, current.publicId, config)).rejects.toThrow("Orders portal builds from this preview. Delete the application, or let it build another commit, first.");
+      expect((await serve(current)).status).toBe(200);
+      deleteApplication(app.db, orders.publicId);
+      expect(await deletePreview(app.db, current.publicId, config)).toBe(true);
     });
 
     it("deletes every preview of a deleted Repository, moving its files aside at once", async () => {

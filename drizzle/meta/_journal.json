@@ -379,6 +379,13 @@
       "when": 1795097596260,
       "tag": "0053_adoption_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "6",
+      "when": 1795123365832,
+      "tag": "0054_applications",
+      "breakpoints": true
     }
   ]
 }

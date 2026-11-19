@@ -2,14 +2,15 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
-import { type SQL, and, eq, inArray, isNull } from "drizzle-orm";
+import { type SQL, and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
-import { type AttemptState, previewBuilds, previewPreparations, repositories } from "@/lib/db/schema";
+import { type AttemptState, applications, previewBuilds, previewPreparations, repositories } from "@/lib/db/schema";
 import { assertEnrolled } from "./access";
-import { type PreviewBuild, findPreview, rebuildPreview, settleAbandonedAttempts, startPreview } from "./records";
+import { type PreviewBuild, PreviewRequestError, findPreview, rebuildPreview, settleAbandonedAttempts, startPreview } from "./records";
+import { list } from "./wording";
 import { attemptLogFile, cacheDirectory, previewDirectory } from "./storage";
 
 /**
@@ -68,9 +69,31 @@ function repositoryOf(db: Executor, id: number) {
  * undeleted preview.
  */
 export async function deletePreview(db: Executor, publicId: string, config: FrontendRegistryConfig = getConfig()): Promise<boolean> {
-  const deleted = immediate(db, (tx) => markDeleted(tx, eq(previewBuilds.publicId, publicId)));
+  const deleted = immediate(db, (tx) => {
+    const preview = findPreview(tx, publicId);
+    const users = preview ? applicationsUsing(tx, preview.id) : [];
+    // An application's current build, or its latest attempt, goes only with the application (add-applications, design decision 2).
+    if (users.length > 0) throw new PreviewRequestError("in_use", `${list(users)} ${users.length === 1 ? "builds" : "build"} from this preview. Delete the application, or let it build another commit, first.`);
+    return markDeleted(tx, eq(previewBuilds.publicId, publicId));
+  });
   await discardPreviewFiles(config, deleted);
   return deleted.length > 0;
+}
+
+/** The names of the applications using the preview with row id +previewId+, as their current build or latest attempt. */
+export function applicationsUsing(db: Executor, previewId: number): string[] {
+  return db
+    .select({ name: applications.name })
+    .from(applications)
+    .where(or(eq(applications.currentPreviewId, previewId), eq(applications.latestPreviewId, previewId)))
+    .all()
+    .map((row) => row.name)
+    .sort((a, b) => a.localeCompare(b, "en"));
+}
+
+/** Previews no application uses, as its current build or latest attempt. */
+function notUsed() {
+  return sql`NOT EXISTS (SELECT 1 FROM ${applications} WHERE ${applications.currentPreviewId} = ${previewBuilds.id} OR ${applications.latestPreviewId} = ${previewBuilds.id})`;
 }
 
 /**
@@ -132,23 +155,25 @@ export interface PruneCandidate {
   /** When its latest attempt finished, if it has. */
   readonly finishedAt: Date | null;
   readonly createdAt: Date;
+  /** Whether an application uses it, as its current build or its latest attempt (add-applications, design decision 2). */
+  readonly inUse?: boolean;
 }
 
 /**
  * The previews to delete so the rest fit in +limit+ bytes: Ready and Failed
  * previews, least recently used first, until the total fits, and none that
- * is Queued or Building or is +keep+. A preview was last used when it was
- * last opened or, if later, when its latest attempt finished or it was
- * created, so a build nobody has opened yet isn't the first to go. When the
- * total can't fit without deleting a preview that's building, every
- * deletable preview goes and the total stays over.
+ * is Queued or Building, is +keep+, or an application uses. A preview was
+ * last used when it was last opened or, if later, when its latest attempt
+ * finished or it was created, so a build nobody has opened yet isn't the
+ * first to go. When the total can't fit without deleting a preview that's
+ * building, every deletable preview goes and the total stays over.
  */
 export function choosePrunable(previews: readonly PruneCandidate[], limit: number, keep?: string): string[] {
   let total = previews.reduce((sum, preview) => sum + preview.bytes, 0);
   if (total <= limit) return [];
   const used = (preview: PruneCandidate) => Math.max(preview.lastOpenedAt?.getTime() ?? 0, (preview.finishedAt ?? preview.createdAt).getTime());
   const deletable = previews
-    .filter((preview) => (preview.state === "ready" || preview.state === "failed") && preview.publicId !== keep)
+    .filter((preview) => (preview.state === "ready" || preview.state === "failed") && preview.publicId !== keep && !preview.inUse)
     .sort((a, b) => used(a) - used(b) || (a.publicId < b.publicId ? -1 : 1));
   const chosen: string[] = [];
   for (const preview of deletable) {
@@ -170,8 +195,10 @@ export interface PruneResult {
 /**
  * Deletes the least recently used Ready and Failed previews until the stored
  * output of every preview, their published artifacts and latest logs, fits in
- * `previews.maxStorageBytes`, never one that's building or +keep+, the
- * preview that was just published. Fails abandoned attempts first, so a
+ * `previews.maxStorageBytes`, never one that's building, +keep+, the
+ * preview that was just published, or one an application uses as its
+ * current build or latest attempt. A deleted application's previews are
+ * pruned like any other. Fails abandoned attempts first, so a
  * preview whose worker died isn't held as building forever. A preview whose
  * state or last open changed since it was weighed is left for the next prune.
  * Finally removes files no undeleted preview owns.
@@ -179,15 +206,32 @@ export interface PruneResult {
 export async function prunePreviews(db: Executor, config: FrontendRegistryConfig = getConfig(), options: { keep?: string } = {}): Promise<PruneResult> {
   settleAbandonedAttempts(db);
   const rows = db.select().from(previewBuilds).where(isNull(previewBuilds.deletedAt)).all();
+  const used = new Set(
+    db
+      .select({ current: applications.currentPreviewId, latest: applications.latestPreviewId })
+      .from(applications)
+      .all()
+      .flatMap((row) => [row.current, row.latest]),
+  );
   const candidates = await Promise.all(
-    rows.map(async (row): Promise<PruneCandidate> => ({ publicId: row.publicId, state: row.attemptState, bytes: (row.outputBytes ?? 0) + (await logBytes(config, row)), lastOpenedAt: row.lastOpenedAt, finishedAt: row.finishedAt, createdAt: row.createdAt })),
+    rows.map(
+      async (row): Promise<PruneCandidate> => ({
+        publicId: row.publicId,
+        state: row.attemptState,
+        bytes: (row.outputBytes ?? 0) + (await logBytes(config, row)),
+        lastOpenedAt: row.lastOpenedAt,
+        finishedAt: row.finishedAt,
+        createdAt: row.createdAt,
+        inUse: used.has(row.id),
+      }),
+    ),
   );
   const chosen = new Set(choosePrunable(candidates, config.previews.maxStorageBytes, options.keep));
   const weighed = rows.filter((row) => chosen.has(row.publicId));
   const deleted = weighed.length
     ? immediate(db, (tx) =>
         weighed.flatMap((row) =>
-          markDeleted(tx, and(eq(previewBuilds.id, row.id), inArray(previewBuilds.attemptState, ["ready", "failed"]), row.lastOpenedAt === null ? isNull(previewBuilds.lastOpenedAt) : eq(previewBuilds.lastOpenedAt, row.lastOpenedAt))),
+          markDeleted(tx, and(eq(previewBuilds.id, row.id), inArray(previewBuilds.attemptState, ["ready", "failed"]), row.lastOpenedAt === null ? isNull(previewBuilds.lastOpenedAt) : eq(previewBuilds.lastOpenedAt, row.lastOpenedAt), notUsed())),
         ),
       )
     : [];

@@ -22,7 +22,8 @@ export type PublicIdPrefix =
   | "dpf" // demo profile
   | "bbt" // Bitbucket token
   | "ppr" // preview preparation
-  | "pvw"; // preview build
+  | "pvw" // preview build
+  | "app"; // application
 
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const LENGTH = 16;

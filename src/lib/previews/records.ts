@@ -8,6 +8,7 @@ import { type JsonObject } from "@repo-facts/contract";
 import { enqueue } from "@/lib/jobs/queue";
 import type { Eligibility, PackageVerdict, Refusal } from "./eligibility";
 import { failureText } from "@/lib/git/redact";
+import { afterAttemptFailed, afterAttemptPublished, afterPreparationDecided, afterPreparationFailed, afterRebuildQueued } from "@/lib/applications/hooks";
 
 /**
  * Persistence for repository previews (design decision 1). A preparation is
@@ -41,7 +42,7 @@ export class PreviewRequestError extends Error {
   override name = "PreviewRequestError";
 
   constructor(
-    readonly code: "not_ready" | "not_qualifying",
+    readonly code: "not_ready" | "not_qualifying" | "in_use",
     message: string,
   ) {
     super(message);
@@ -127,35 +128,42 @@ export function continuePreparations(db: Executor, survey: { id: number; state: 
 export function decidePreparation(db: Executor, publicId: string, requested: number, profile: PreparationProfile, eligibility: Eligibility): PreviewPreparation | null {
   const now = new Date();
   const refused = eligibility.packages.every((verdict) => !verdict.qualifies);
-  return (
-    db
-      .update(previewPreparations)
-      .set({
-        state: refused ? "refused" : "ready",
-        surveyId: profile.surveyId,
-        profileDigest: profile.digest,
-        packages: eligibility.packages as unknown as JsonObject[],
-        refusal: refused ? (eligibility.refusal as unknown as JsonObject) : null,
-        updatedAt: now,
-        finishedAt: now,
-      })
-      .where(and(eq(previewPreparations.publicId, publicId), eq(previewPreparations.state, "profiling"), eq(previewPreparations.requestedAt, new Date(requested))))
-      .returning()
-      .get() ?? null
-  );
+  return immediate(db, (tx) => {
+    const decided =
+      tx
+        .update(previewPreparations)
+        .set({
+          state: refused ? "refused" : "ready",
+          surveyId: profile.surveyId,
+          profileDigest: profile.digest,
+          packages: eligibility.packages as unknown as JsonObject[],
+          refusal: refused ? (eligibility.refusal as unknown as JsonObject) : null,
+          updatedAt: now,
+          finishedAt: now,
+        })
+        .where(and(eq(previewPreparations.publicId, publicId), eq(previewPreparations.state, "profiling"), eq(previewPreparations.requestedAt, new Date(requested))))
+        .returning()
+        .get() ?? null;
+    // Applications waiting on the commit start their package's build, or are refused.
+    if (decided) afterPreparationDecided(tx, decided);
+    return decided;
+  });
 }
 
 /** Records why preparation stopped before a decision, unless it was since decided or requested again. */
 export function failPreparation(db: Executor, publicId: string, requested: number, failure: string): PreviewPreparation | null {
   const now = new Date();
-  return (
-    db
-      .update(previewPreparations)
-      .set({ state: "failed", failure: failureText(failure, 1_000) || "Preparation failed", updatedAt: now, finishedAt: now })
-      .where(and(eq(previewPreparations.publicId, publicId), eq(previewPreparations.state, "profiling"), eq(previewPreparations.requestedAt, new Date(requested))))
-      .returning()
-      .get() ?? null
-  );
+  return immediate(db, (tx) => {
+    const failed =
+      tx
+        .update(previewPreparations)
+        .set({ state: "failed", failure: failureText(failure, 1_000) || "Preparation failed", updatedAt: now, finishedAt: now })
+        .where(and(eq(previewPreparations.publicId, publicId), eq(previewPreparations.state, "profiling"), eq(previewPreparations.requestedAt, new Date(requested))))
+        .returning()
+        .get() ?? null;
+    if (failed) afterPreparationFailed(tx, failed);
+    return failed;
+  });
 }
 
 /** Every package's verdict, once decided. */
@@ -243,6 +251,8 @@ export function rebuildPreview(db: Executor, publicId: string): PreviewBuild {
       .returning()
       .get();
     enqueueAttempt(tx, next);
+    // An application whose latest attempt this preview is shows it building again.
+    afterRebuildQueued(tx, next);
     return next;
   });
 }
@@ -291,37 +301,47 @@ export interface AttemptIdentity {
  */
 export function publishAttempt(db: Executor, publicId: string, identity: AttemptIdentity, artifact: PublishedArtifact): boolean {
   const now = new Date();
-  const result = db
-    .update(previewBuilds)
-    .set({
-      attemptState: "ready",
-      attemptReason: null,
-      ...(artifact.log !== undefined && { attemptLog: artifact.log }),
-      artifact: artifact.directory,
-      artifactAttempt: identity.attempt,
-      artifactLayout: artifact.layout,
-      artifactEntry: artifact.entry as JsonObject,
-      outputBytes: artifact.outputBytes,
-      buildMs: artifact.buildMs,
-      nodeVersion: artifact.nodeVersion,
-      packageManager: artifact.packageManager,
-      finishedAt: now,
-      updatedAt: now,
-    })
-    .where(currentAttempt(publicId, identity))
-    .run();
-  return result.changes === 1;
+  return immediate(db, (tx) => {
+    const published = tx
+      .update(previewBuilds)
+      .set({
+        attemptState: "ready",
+        attemptReason: null,
+        ...(artifact.log !== undefined && { attemptLog: artifact.log }),
+        artifact: artifact.directory,
+        artifactAttempt: identity.attempt,
+        artifactLayout: artifact.layout,
+        artifactEntry: artifact.entry as JsonObject,
+        outputBytes: artifact.outputBytes,
+        buildMs: artifact.buildMs,
+        nodeVersion: artifact.nodeVersion,
+        packageManager: artifact.packageManager,
+        finishedAt: now,
+        updatedAt: now,
+      })
+      .where(currentAttempt(publicId, identity))
+      .returning()
+      .get();
+    // It becomes the current build of the applications it's the latest attempt of.
+    if (published) afterAttemptPublished(tx, published);
+    return published !== undefined;
+  });
 }
 
 /** Marks the current attempt Failed with +reason+, keeping the published artifact. Returns false if it's no longer current. */
 export function failAttempt(db: Executor, publicId: string, identity: AttemptIdentity, reason: string, log?: string): boolean {
   const now = new Date();
-  const result = db
-    .update(previewBuilds)
-    .set({ attemptState: "failed", attemptReason: failureText(reason, 1_000) || "The build failed", ...(log !== undefined && { attemptLog: log }), finishedAt: now, updatedAt: now })
-    .where(currentAttempt(publicId, identity))
-    .run();
-  return result.changes === 1;
+  return immediate(db, (tx) => {
+    const failed = tx
+      .update(previewBuilds)
+      .set({ attemptState: "failed", attemptReason: failureText(reason, 1_000) || "The build failed", ...(log !== undefined && { attemptLog: log }), finishedAt: now, updatedAt: now })
+      .where(currentAttempt(publicId, identity))
+      .returning()
+      .get();
+    // The applications it's the latest attempt of keep their current build.
+    if (failed) afterAttemptFailed(tx, failed);
+    return failed !== undefined;
+  });
 }
 
 /**

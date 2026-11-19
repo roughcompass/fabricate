@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { previewOutcome } from "@/app/(operator)/repositories/outcomes";
 import { buildPreview, deletePreviewAction, preparePreview, rebuildPreview } from "@/app/(operator)/repositories/preview-actions";
@@ -16,6 +17,7 @@ import type { PackageVerdict } from "@/lib/previews/eligibility";
 import { previewDirectory } from "@/lib/previews/storage";
 import { requestSurvey } from "@/lib/surveys/records";
 import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
+import { onboard } from "../support/applications";
 import { buildRepository } from "../support/builders";
 import { rawRun } from "../support/db";
 import { type Tree, offlineViteApp } from "../support/preview-trees";
@@ -199,6 +201,17 @@ describe("preview Server Actions", () => {
       expect(previewOutcome(world.db, "queued", preview.publicId)).toBeUndefined();
       expect(previewOutcome(world.db, "preview-deleted", "pvw_0000000000000000")).toBeUndefined();
       await notFound(deletePreviewAction(formData({ preview: preview.publicId })));
+    });
+
+    it("keeps an application's build, and says which application builds from it", async () => {
+      const repository = buildRepository(world.db, { name: "orders" });
+      const config = enroll(repository);
+      const application = onboard(world.db, config, repository, { name: "Orders portal" });
+      const preview = publishFiles(world.db, config, world.db.select().from(previewBuilds).where(eq(previewBuilds.id, application.latestPreviewId!)).get()!, { "index.html": "<h1>Orders</h1>" });
+
+      expect(await redirectOf(deletePreviewAction(formData({ preview: preview.publicId, device: "mobile" })))).toBe(`/repositories/${repository.publicId}/previews/${preview.publicId}?device=mobile&notice=in-use`);
+      expect(findPreview(world.db, preview.publicId)).toBeDefined();
+      expect(previewOutcome(world.db, "in-use", preview.publicId)).toMatchObject({ tone: "error", title: "The preview of orders-portal wasn't deleted.", description: "Orders portal builds from it. Delete the application, or let it build another commit, first." });
     });
   });
 

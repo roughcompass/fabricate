@@ -4,7 +4,7 @@ A repository preview builds one client-rendered single-page application, or a mi
 
 Previews are the one place the Frontend Registry builds repository code. Assessments and Profiles stay strictly static, and a preview never adds facts to a Profile.
 
-> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories).
+> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications' builds are in place below the pages that show them, which add-applications builds next.
 
 ## Turn previews on
 
@@ -221,11 +221,15 @@ Everything lives under `previews.storage`:
 
 Deleting a preview, or the Repository it belongs to, deletes it at once: its paths answer 404 and it leaves every list. Its directory is moved to `.trash/` in one step and then removed. A build still running for it can neither publish to it nor bring it back, and when that build stops, whatever it wrote since is removed too. Deleting doesn't need previews to be on or the remote to be enrolled, so storage can always be reclaimed.
 
-After each successful build, the Frontend Registry keeps the stored output of every preview, its published artifact and latest log, under `previews.maxStorageBytes`. It deletes Ready and Failed previews, least recently used first, until the rest fit. A preview was last used when it was last opened or, if later, when its latest attempt finished, so a build nobody has opened yet isn't the first to go. A queued or building preview, and the one that build just published, are never deleted; if they alone pass the limit, the total stays over it. Each prune also removes whatever no undeleted preview owns, such as the trash and the directories of deleted previews.
+After each successful build, the Frontend Registry keeps the stored output of every preview, its published artifact and latest log, under `previews.maxStorageBytes`. It deletes Ready and Failed previews, least recently used first, until the rest fit. A preview was last used when it was last opened or, if later, when its latest attempt finished, so a build nobody has opened yet isn't the first to go. A queued or building preview, the one that build just published, and an [application](#applications)'s current build or latest attempt are never deleted; if they alone pass the limit, the total stays over it. Once an application is deleted, or moves on to another build, its earlier previews are pruned like any other. Deleting an application's build from its preview page is refused, naming the application. Each prune also removes whatever no undeleted preview owns, such as the trash and the directories of deleted previews.
 
 The package caches are kept to half of `previews.maxStorageBytes`. When a build succeeds and the caches hold more, the build empties its own package manager's cache with that manager's command, at the build's Node and manager version, before it publishes: `npm cache clean --force`, `pnpm store prune`, or `yarn cache clean` (`--mirror` after Yarn 1). It skips this while another preview is building, whose install it could break, and a cache that fails to prune never fails the build. Another manager's cache is pruned when a build that uses that manager next succeeds, and corepack's cache of package manager releases isn't pruned.
 
 A worker that stops in the middle of a build gives the attempt back to the queue, and another worker runs it again. When the job runs out of tries that way, or its job is otherwise gone, the attempt is marked Failed with the reason the next time any preview build starts, the preview is rebuilt, or previews are pruned, so a preview never stays Building forever.
+
+## Applications
+
+An application (add-applications) is a Repository's package that the Frontend Registry keeps built from one branch. Its builds are ordinary previews of that Repository, commit, and package, made by the pipeline above, so a commit is built once whether an application or an operator asked for it. An application points at two of them: its current build, the last that succeeded, and its latest attempt. A newer commit's build becomes current only when it succeeds, so a failed or refused commit leaves the last good build serving.
 
 ## Tested repositories
 
