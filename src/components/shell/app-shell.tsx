@@ -4,6 +4,7 @@ import { SIDEBAR_WIDTH } from "@/lib/web/sidebar";
 import { BrandLink } from "./brand-link";
 import { HOME, NO_OPTIONAL_AREAS, type NavFlags } from "./navigation";
 import { NavigationFeedback } from "./navigation-feedback";
+import { ProductMark } from "./product-mark";
 import { SIDEBAR_ID, ShellHeader } from "./shell-header";
 import { SidebarNav } from "./sidebar-nav";
 import { SidebarResizer } from "./sidebar-resizer";
@@ -41,9 +42,7 @@ export function AppShell({ theme, nav = NO_OPTIONAL_AREAS, sidebar = DEFAULT_SID
         <div id={SIDEBAR_ID} className={styles.sidebar} popover="auto">
           <div className={styles.brandRow}>
             <BrandLink href={HOME.href} className={styles.brand} aria-label={`${PRODUCT.name} home`}>
-              <svg className={styles.mark} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M12 2 22 20H2L12 2z" fill="currentColor" />
-              </svg>
+              <ProductMark className={styles.mark} />
               <span className={styles.name}>{PRODUCT.name}</span>
             </BrandLink>
             <span className={styles.hideSidebar}>

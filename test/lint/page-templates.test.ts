@@ -11,6 +11,8 @@ import { describe, expect, it } from "vitest";
 
 const SRC = path.resolve("src");
 const OPERATOR = path.join(SRC, "app/(operator)");
+/** The product site's pages: the marketing page and the docs. */
+const SITE = path.join(SRC, "app/(site)");
 const TEMPLATE_COMPONENTS = ["DashboardTemplate", "IndexTemplate", "DetailsTemplate", "AnalysisTemplate", "FormTemplate", "FlowTemplate", "EditorTemplate", "SettingsTemplate", "ContentTemplate", "SystemTemplate"];
 
 type Read = (file: string) => string | undefined;
@@ -62,7 +64,7 @@ function filesNamed(directory: string, name: RegExp): string[] {
 const relative = (file: string) => path.relative(process.cwd(), file);
 
 describe("page templates", () => {
-  const pages = filesNamed(OPERATOR, /^page\.tsx$/);
+  const pages = [...filesNamed(OPERATOR, /^page\.tsx$/), ...filesNamed(SITE, /^page\.tsx$/)];
 
   it("finds the operator pages", () => {
     expect(pages.length).toBeGreaterThan(30);

@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnalysisSkeleton } from "@/components/templates/analysis-template";
+import { ContentSkeleton } from "@/components/templates/content-template";
 import { DashboardSkeleton } from "@/components/templates/dashboard-template";
 import { DetailsSkeleton } from "@/components/templates/details-template";
 import { EditorSkeleton } from "@/components/templates/editor-template";
@@ -26,6 +27,7 @@ const SKELETONS: Record<SkeletonKind, () => React.ReactNode> = {
   editor: () => <EditorSkeleton />,
   settings: () => <SettingsSkeleton />,
   focused: () => <EditorSkeleton focused />,
+  content: () => <ContentSkeleton />,
 };
 /** Fast navigations finish before this, so they never flash a skeleton. */
 const DELAY = 150;

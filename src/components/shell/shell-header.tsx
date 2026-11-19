@@ -24,6 +24,9 @@ export interface ShellBack {
  * header does. Its start holds the control that shows a hidden sidebar or,
  * below 1024px, opens it as a drawer, and the product name beside it there.
  *
+ * Its end holds Docs, which opens the docs at their first page (product-site
+ * spec, "Docs from the app").
+ *
  * With `back`, the page is a focused page, as preview mode is: the header
  * holds a back button in place of the sidebar controls, and the shell hides
  * the sidebar while it is on the page (app-shell.module.css). Focused pages
@@ -50,6 +53,11 @@ export function ShellHeader({ back }: { back?: ShellBack }) {
           </BrandLink>
         </>
       )}
+      <span className={styles.end}>
+        <ButtonLink href="/docs" variant="tertiary" size="md" icon="file">
+          Docs
+        </ButtonLink>
+      </span>
     </header>
   );
 }

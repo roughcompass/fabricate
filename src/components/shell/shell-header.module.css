@@ -32,6 +32,9 @@
     &:hover { color: var(--color-text); }
   }
 
+  /* Global controls, such as Docs, at the header's end. */
+  .end { display: flex; flex: none; align-items: center; gap: var(--space-1); margin-inline-start: auto; }
+
   /* Open navigation and the product name exist only where the sidebar is a drawer; Show sidebar only where it is inline and hidden. */
   .openNavigation, .showSidebar { display: none; }
   @media (max-width: 1023px) {

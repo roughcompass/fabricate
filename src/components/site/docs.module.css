@@ -1,0 +1,92 @@
+@layer components {
+  /* The docs navigation and the headings list: quiet lists of links, the current page marked. */
+  .nav { display: flex; flex-direction: column; gap: var(--space-5); }
+  .navSection { display: flex; flex-direction: column; gap: var(--space-1); }
+  .navHeading { color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); line-height: var(--line-height-caption); text-transform: uppercase; letter-spacing: var(--letter-spacing-caps); }
+  .navList { display: flex; flex-direction: column; gap: 2px; padding: 0; list-style: none; }
+  .navLink, .tocLink {
+    display: flex;
+    align-items: center;
+    min-height: var(--size-control-sm);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    text-decoration-line: none;
+    &:hover { background: var(--color-bg-muted); color: var(--color-text); }
+  }
+  .navLink[aria-current="page"] { background: var(--color-bg-selected); color: var(--color-text); font-weight: var(--font-weight-medium); }
+  .toc { display: flex; flex-direction: column; gap: var(--space-1); }
+  .toc li[data-depth="3"] .tocLink { padding-inline-start: var(--space-5); }
+
+  .release { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+
+  /* The article: running text at a readable measure, headings stepping down from the page's title. */
+  .prose {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-width: var(--size-prose);
+    & h2 { font-size: var(--font-size-heading); line-height: var(--line-height-heading); }
+    & h2:not(:first-child) { margin-top: var(--space-6); }
+    & h3:not(:first-child) { margin-top: var(--space-3); }
+    & :is(h2, h3, h4) { scroll-margin-top: var(--space-4); }
+    & :is(ul, ol) { display: flex; flex-direction: column; gap: var(--space-1); padding-inline-start: var(--space-6); }
+    & li > :is(ul, ol) { margin-top: var(--space-1); }
+    & :not(pre) > code { padding: 1px var(--space-1); border-radius: var(--radius-sm); background: var(--color-bg-muted); overflow-wrap: anywhere; }
+    & blockquote { padding-inline-start: var(--space-4); border-inline-start: 2px solid var(--color-border); color: var(--color-text-secondary); }
+  }
+
+  .code { min-width: 0; border: var(--surface-border); border-radius: var(--surface-radius); overflow: hidden; background: var(--surface-background); }
+  .codeCaption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: var(--size-control-sm);
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-caption);
+  }
+  .codeBody { margin: 0; padding: var(--space-3) var(--space-4); line-height: var(--line-height-body); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  /* A wide table scrolls inside its box rather than widening the page. */
+  .tableScroll { min-width: 0; overflow-x: auto; border: var(--surface-border); border-radius: var(--surface-radius); background: var(--surface-background); }
+  .tableScroll:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    & th, & td { padding: var(--space-2) var(--space-4); text-align: left; vertical-align: top; }
+    & th { border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); line-height: var(--line-height-caption); }
+    & td { border-bottom: 1px solid var(--color-border-subtle); }
+    & tbody tr:last-child td { border-bottom: 0; }
+    & td a { color: var(--color-link); text-decoration-line: underline; }
+    /* Names in code keep to one line; a table too wide for them scrolls. */
+    & code { white-space: nowrap; overflow-wrap: normal; }
+  }
+
+  /* Previous and next: two links at the article's end, the next one at the end of the row. */
+  .pager { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-3); padding-top: var(--space-6); border-top: 1px solid var(--color-border); }
+  .pagerLink {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    color: var(--color-text);
+    text-decoration-line: none;
+    &:hover { border-color: var(--color-border-strong); color: var(--color-text); }
+  }
+  .pagerNext { grid-column: 2; text-align: end; }
+  .pagerLabel { color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
+  .pagerTitle { font-weight: var(--font-weight-medium); }
+
+  @container content (max-width: 767px) {
+    .pager { grid-template-columns: minmax(0, 1fr); }
+    .pagerNext { grid-column: 1; }
+  }
+}

@@ -66,7 +66,7 @@ test("No nested bordered containers on any surface", async ({ page, db, sourcesD
   }
 });
 
-/** Every operator page: the captured surfaces, and the routes they leave out, each seeded. */
+/** Every page: the captured operator surfaces, the routes they leave out, each seeded, and the product site's pages. */
 async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sourcesDir: string): Promise<Surface[]> {
   const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...demoSurfaces()];
   addBitbucketToken(db, { name: "Platform team", serverUrl: "https://bitbucket.example.com", token: "BBDC-surface-token-0000" });
@@ -80,6 +80,9 @@ async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sources
     ["10-bitbucket-tokens", "/admin/bitbucket-tokens"],
     ["10-bitbucket-token-new", "/admin/bitbucket-tokens/new"],
     ["10-unknown-address", "/no-such-page"],
+    ["14-docs", "/docs/get-started/add-your-repository"],
+    ["14-docs-surveyor", "/docs/reference/fact-document"],
+    ["14-docs-not-found", "/docs/get-started/nowhere"],
   ];
 }
 

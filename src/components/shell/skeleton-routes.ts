@@ -3,7 +3,7 @@
  * Each is a template's skeleton (src/components/templates/), shaped as that
  * page lays out its template's zones.
  */
-export type SkeletonKind = "dashboard" | "index" | "index-tabs" | "repositories" | "cards" | "details" | "details-tabs" | "analysis" | "form" | "editor" | "settings" | "focused";
+export type SkeletonKind = "dashboard" | "index" | "index-tabs" | "repositories" | "cards" | "details" | "details-tabs" | "analysis" | "form" | "editor" | "settings" | "focused" | "content";
 
 const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/$/, "dashboard"],
@@ -31,6 +31,8 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/templates\/[^/]+\/preview\/?$/, "focused"],
   [/^\/templates\/?$/, "cards"],
   [/^\/templates\/[^/]+\/?$/, "details"],
+  // The docs, on the Content template; the product page has no skeleton.
+  [/^\/docs(\/.*)?$/, "content"],
 ];
 
 export function skeletonFor(pathname: string): SkeletonKind | null {

@@ -1,0 +1,105 @@
+@layer components {
+  .skip {
+    position: absolute;
+    left: var(--space-4);
+    top: calc(-1 * var(--space-12));
+    z-index: var(--z-toast);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    text-decoration-line: none;
+    &:focus { top: var(--space-2); color: var(--color-on-primary); }
+  }
+
+  /* The site's column: page layouts respond to its width, as they do to the operator shell's content column. */
+  .site {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    background: var(--color-canvas);
+    container: content / inline-size;
+  }
+  .main {
+    flex: 1;
+    padding-bottom: var(--space-16);
+    &:focus { outline: none; }
+  }
+
+  /*
+   * The banner: a solid surface across the top, sticky where the site is at
+   * least 768px wide. Narrower, it wraps and scrolls away, so it never covers
+   * what keyboard focus moves to (WCAG 2.2, 2.4.11).
+   */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-6);
+    min-height: var(--size-header);
+    padding: var(--space-2) var(--space-gutter);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    min-height: var(--size-control-md);
+    color: var(--color-text);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-heading);
+    text-decoration-line: none;
+    &:hover { color: var(--color-text); }
+  }
+  .mark { flex: none; width: var(--size-icon-lg); height: var(--size-icon-lg); }
+  .name { white-space: nowrap; }
+  .nav { display: flex; align-items: center; gap: var(--space-1); }
+  .navLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--size-control-md);
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    text-decoration-line: none;
+    &:hover { background: var(--color-bg-muted); color: var(--color-text); }
+    &[aria-current="page"] { color: var(--color-text); font-weight: var(--font-weight-medium); }
+  }
+  .open { margin-inline-start: auto; }
+
+  /* Pages scroll below the sticky banner, so whatever takes focus stays in view. */
+  :global(html:has([data-site-header])) { scroll-padding-top: calc(var(--size-header) + var(--space-4)); }
+
+  @container content (max-width: 767px) {
+    .header { position: static; }
+    .brand { flex-basis: 100%; }
+    .nav { margin-inline-start: calc(-1 * var(--space-3)); }
+  }
+
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3) var(--space-6);
+    padding: var(--space-6) var(--space-gutter);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-secondary);
+    line-height: var(--line-height-secondary);
+  }
+  .footerText { max-width: var(--size-prose); }
+  .footerLinks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    & a { display: inline-flex; align-items: center; min-height: var(--size-control-sm); color: var(--color-text-secondary); }
+    & a:hover { color: var(--color-text); }
+  }
+}

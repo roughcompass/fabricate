@@ -42,6 +42,8 @@ describe("navigation skeletons", () => {
     ["/templates/market-watch/preview", "focused"],
     ["/templates/payments-workspace/preview", "focused"],
     ["/templates/payments-workspace", "details"],
+    ["/docs", "content"],
+    ["/docs/get-started/add-your-repository", "content"],
   ])("shows the %s page's skeleton as %s", (pathname, kind) => {
     expect(skeletonFor(pathname)).toBe(kind);
   });
@@ -53,6 +55,7 @@ describe("navigation skeletons", () => {
     expect(skeletonFor("/s/token")).toBeNull();
     expect(skeletonFor("/applications")).toBeNull();
     expect(skeletonFor("/portals/ptl_abc")).toBeNull();
+    expect(skeletonFor("/about")).toBeNull();
   });
 
   it("has a not-found page for each section", () => {

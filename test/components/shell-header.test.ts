@@ -34,6 +34,13 @@ describe("shell header", () => {
     expect(tree.some((element) => element.props["aria-label"] === "Open navigation")).toBe(false);
   });
 
+  it("ends with Docs, which opens the docs, on every page (Docs from the app)", () => {
+    for (const props of [{}, { back: BACK }]) {
+      const docs = elements(ShellHeader(props)).filter((element) => element.type === ButtonLink).at(-1)!;
+      expect(docs.props).toMatchObject({ href: "/docs", children: "Docs", variant: "tertiary" });
+    }
+  });
+
   it("is a header element, so the shell renders it as the page's banner landmark (Landmarks)", () => {
     expect(elements(ShellHeader({}))[0]!.type).toBe("header");
     expect(elements(ShellHeader({ back: BACK }))[0]!.type).toBe("header");
@@ -48,7 +55,7 @@ describe("shell header", () => {
   it("holds Show sidebar, Open navigation, and the product name, which opens Home (Shell on a narrow viewport)", () => {
     const tree = elements(ShellHeader({}));
     expect(tree[0]!.props["data-shell-header"]).toBe("");
-    expect(tree.some((element) => element.type === ButtonLink)).toBe(false);
+    expect(tree.filter((element) => element.type === ButtonLink).map((element) => element.props.href)).toEqual(["/docs"]);
     expect(tree.find((element) => element.type === SidebarToggle)!.props.to).toBe("shown");
     expect(tree.find((element) => element.props["aria-label"] === "Open navigation")!.props.popoverTarget).toBe("sidebar");
     const product = tree.find((element) => element.type === BrandLink)!;
