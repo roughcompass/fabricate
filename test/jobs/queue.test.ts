@@ -7,6 +7,11 @@ import { type Db, immediate, migrateDatabase, openDatabase } from "@/lib/db/clie
 import { JOB_PRIORITIES, jobs } from "@/lib/db/schema";
 import { claimNext, enqueue, fail, jobCounts, renewLease, succeed } from "@/lib/jobs/queue";
 import { NonRetryableError, Worker, drainJobs, runJob } from "@/lib/jobs/worker";
+import { PROCESS_TARGET } from "@/lib/assessments/orchestration";
+import { getConfig, withOverrides } from "@/lib/config";
+import { jobLimits } from "@/lib/jobs/registry";
+import { BUILD_PREVIEW } from "@/lib/previews/records";
+import type { JsonObject } from "@repo-facts/contract";
 import { createTestDb, rawRun } from "../support/db";
 
 const job = (key: string, extra: Partial<Parameters<typeof enqueue>[1]> = {}) => ({ kind: "test.work", payload: { key }, idempotencyKey: `test.work:${key}`, ...extra });
@@ -152,6 +157,28 @@ describe("job queue", () => {
     expect(jobCounts(db)).toEqual({ succeeded: 3 });
   });
 
+  it("skips a kind while its limit of jobs hold live leases, and counts an expired lease as free", () => {
+    const limits = { "test.limited": 1 };
+    const first = enqueue(db, job("first", { kind: "test.limited", idempotencyKey: "limited:first" }));
+    enqueue(db, job("second", { kind: "test.limited", idempotencyKey: "limited:second" }));
+    enqueue(db, job("other"));
+    const later = (ms: number) => new Date(Date.now() + ms);
+
+    expect(claimNext(db, { workerId: "w", now: later(1), limits })!.id).toBe(first.id);
+    // The second limited job waits, though it's older than the other kind's job.
+    expect(claimNext(db, { workerId: "w", now: later(2), limits })!.kind).toBe("test.work");
+    expect(claimNext(db, { workerId: "w", now: later(3), limits })).toBeUndefined();
+    // Without limits, it's claimable.
+    expect(claimNext(db, { workerId: "w", now: later(4) })!.kind).toBe("test.limited");
+
+    // Once the first job's lease expires it no longer counts, and it's claimable again itself.
+    rawRun(db, "update jobs set state = 'queued', lease_owner = null, lease_expires_at = null, attempts = 0 where idempotency_key = 'limited:second'");
+    expect(claimNext(db, { workerId: "w2", now: later(120_000), limits })!.id).toBe(first.id);
+    // The other kind's expired job is claimable too, but the queued limited job still waits.
+    expect(claimNext(db, { workerId: "w2", now: later(120_001), limits })!.kind).toBe("test.work");
+    expect(claimNext(db, { workerId: "w2", now: later(120_002), limits })).toBeUndefined();
+  });
+
   it("records a failure only while the worker still holds the lease", () => {
     enqueue(db, job("lost"));
     const claimed = claimNext(db, { workerId: "w1" })!;
@@ -190,6 +217,46 @@ describe("job queue", () => {
       }
       await worker.stop();
       expect(peak).toBe(2);
+    });
+
+    it("runs only one preview build at a time, while other jobs keep running", async () => {
+      const gates = new Map<string, () => void>();
+      const running = new Set<string>();
+      let previewPeak = 0;
+      let assessmentAlongsidePreview = false;
+      const handler = (kind: string) => (payload: JsonObject) =>
+        new Promise<void>((resolve) => {
+          const key = `${kind}:${String(payload.key)}`;
+          running.add(key);
+          const previews = [...running].filter((name) => name.startsWith(BUILD_PREVIEW)).length;
+          previewPeak = Math.max(previewPeak, previews);
+          if (kind === PROCESS_TARGET && previews > 0) assessmentAlongsidePreview = true;
+          gates.set(key, () => {
+            running.delete(key);
+            resolve();
+          });
+        });
+      const handlers = { [BUILD_PREVIEW]: handler(BUILD_PREVIEW), [PROCESS_TARGET]: handler(PROCESS_TARGET) };
+      for (const key of ["a", "b"]) enqueue(db, job(key, { kind: BUILD_PREVIEW, idempotencyKey: `${BUILD_PREVIEW}:${key}` }));
+      enqueue(db, job("t", { kind: PROCESS_TARGET, idempotencyKey: `${PROCESS_TARGET}:t` }));
+
+      const config = withOverrides(getConfig(), { previews: { concurrency: 1 } });
+      const worker = new Worker({ db, handlers, concurrency: 3, limits: jobLimits(config), pollIntervalMs: 10 });
+      worker.start();
+      // One preview and the assessment job run; the second preview waits though a slot is free.
+      await waitFor(() => running.size === 2);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect([...running].sort()).toEqual([`${PROCESS_TARGET}:t`, `${BUILD_PREVIEW}:a`]);
+      expect(jobCounts(db)).toMatchObject({ running: 2, queued: 1 });
+
+      gates.get(`${BUILD_PREVIEW}:a`)!();
+      await waitFor(() => running.has(`${BUILD_PREVIEW}:b`));
+      gates.get(`${PROCESS_TARGET}:t`)!();
+      gates.get(`${BUILD_PREVIEW}:b`)!();
+      await waitFor(() => jobCounts(db).succeeded === 3);
+      await worker.stop();
+      expect(previewPeak).toBe(1);
+      expect(assessmentAlongsidePreview).toBe(true);
     });
 
     it("renews the lease while a long job runs and aborts the handler when the lease is lost", async () => {

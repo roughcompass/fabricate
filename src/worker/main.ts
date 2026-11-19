@@ -1,8 +1,8 @@
-// Fabricate worker: runs acquisition, analysis, evaluation, DE Console read, and profiling check jobs outside
+// Fabricate worker: runs acquisition, analysis, evaluation, DE Console read, profiling check, and preview jobs outside
 // the web server. Started with `npm run dev:worker` or `npm run worker`.
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
-import { jobHandlers } from "@/lib/jobs/registry";
+import { jobHandlers, jobLimits } from "@/lib/jobs/registry";
 import { Worker } from "@/lib/jobs/worker";
 import { scheduleDeConsoleReads } from "@/lib/ownership/de-console-schedule";
 import { scheduleProfileChecks } from "@/lib/profiling/check";
@@ -15,6 +15,8 @@ async function main(): Promise<void> {
     db: getDb(),
     handlers: jobHandlers(),
     concurrency: getConfig().workerConcurrency,
+    // Preview builds run at most previews.concurrency at once, across workers, so they can't hold every slot.
+    limits: jobLimits(),
     log: (message) => console.log(`[worker] ${message}`),
   });
   // The DE Console read reschedules itself; this starts it, at most once per slot across workers.

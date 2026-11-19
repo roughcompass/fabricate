@@ -2,12 +2,13 @@ import crypto from "node:crypto";
 import os from "node:os";
 import type { Executor } from "@/lib/db/client";
 import type { JsonObject } from "@repo-facts/contract";
-import { DEFAULT_LEASE_MS, type Job, claimNext, fail, jobPayload, renewLease, succeed } from "./queue";
+import { DEFAULT_LEASE_MS, type Job, type KindLimits, claimNext, fail, jobPayload, renewLease, succeed } from "./queue";
 
 /**
- * Runs queued jobs with bounded concurrency. While a handler runs, its lease
- * is renewed automatically; if the lease is lost, the handler's signal aborts
- * so it can stop before another worker takes over.
+ * Runs queued jobs with bounded concurrency, overall and per limited kind.
+ * While a handler runs, its lease is renewed automatically; if the lease is
+ * lost, the handler's signal aborts so it can stop before another worker
+ * takes over.
  */
 
 interface JobContext {
@@ -82,6 +83,8 @@ export interface WorkerOptions {
   db: Executor;
   handlers: HandlerRegistry;
   concurrency: number;
+  /** Per-kind limits on jobs running at once, enforced where jobs are claimed. */
+  limits?: KindLimits;
   pollIntervalMs?: number;
   leaseMs?: number;
   workerId?: string;
@@ -116,13 +119,13 @@ export class Worker {
   }
 
   private async run(): Promise<void> {
-    const { db, handlers, concurrency, leaseMs } = this.options;
+    const { db, handlers, concurrency, leaseMs, limits } = this.options;
     const pollIntervalMs = this.options.pollIntervalMs ?? 1_000;
 
     while (!this.stopping.signal.aborted) {
       let claimed = false;
       while (this.active.size < concurrency && !this.stopping.signal.aborted) {
-        const job = claimNext(db, { workerId: this.workerId, leaseMs });
+        const job = claimNext(db, { workerId: this.workerId, leaseMs, limits });
         if (!job) break;
         claimed = true;
         const running = runJob(db, job, handlers, { workerId: this.workerId, leaseMs })

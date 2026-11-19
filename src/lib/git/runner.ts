@@ -7,8 +7,9 @@ import { GitError } from "./errors";
 import { redact } from "./redact";
 
 /**
- * The only path from Fabricate to the Git executable, and the only module
- * allowed to import child_process.
+ * The only path from Fabricate to the Git executable. Besides the preview
+ * build runner (src/lib/previews/process.ts), it's the only module allowed to
+ * import child_process.
  *
  * Every invocation is an argv array passed to spawn with `shell: false`, built
  * from an allowlist of subcommands and options. User-derived positional
@@ -39,9 +40,10 @@ const COMMANDS: Readonly<Record<string, readonly string[]>> = {
   "for-each-ref": ["--format=%(objectname) %(refname)"],
   "cat-file": ["--batch", "-t"],
   "ls-tree": ["-r", "-z", "-l", "-t", "--full-tree"],
+  archive: ["--format=tar"],
 };
 
-const REPOSITORY_COMMANDS = new Set(["fetch", "rev-parse", "update-ref", "for-each-ref", "cat-file", "ls-tree"]);
+const REPOSITORY_COMMANDS = new Set(["fetch", "rev-parse", "update-ref", "for-each-ref", "cat-file", "ls-tree", "archive"]);
 const NETWORK_COMMANDS = new Set(["ls-remote", "fetch"]);
 /** Commands whose positionals include a clone URL in the first position. */
 const URL_COMMANDS = new Set(["ls-remote", "fetch"]);
@@ -94,6 +96,8 @@ export interface Invocation {
   input?: string | Buffer;
   signal?: AbortSignal;
   outputLimit?: number;
+  /** Streams standard output here instead of collecting it. */
+  sink?: NodeJS.WritableStream;
 }
 
 export class GitRunner {
@@ -171,6 +175,18 @@ export class GitRunner {
   /** NUL-separated recursive tree listing with object sizes. */
   async lsTree(gitDir: string, treeish: string): Promise<Buffer> {
     return (await this.run({ subcommand: "ls-tree", options: ["-r", "-z", "-l", "-t", "--full-tree"], positionals: [treeish], gitDir, outputLimit: TREE_OUTPUT_LIMIT })).stdout;
+  }
+
+  /**
+   * Streams a commit's tree as a tar archive into +sink+, for a repository
+   * preview to build from (openspec add-repository-previews, design decision
+   * 4). Nothing is checked out and no hook runs. Submodules are left out,
+   * and no filter driver can run, since the constructed configuration
+   * defines none.
+   */
+  async archive(gitDir: string, commit: string, sink: NodeJS.WritableStream, signal?: AbortSignal): Promise<void> {
+    if (!/^[0-9a-f]{40}$/.test(commit)) throw new GitError("command_rejected", "git archive accepts only a full commit id");
+    await this.run({ subcommand: "archive", options: ["--format=tar"], positionals: [commit], gitDir, sink, signal, outputLimit: Number.POSITIVE_INFINITY });
   }
 
   /** Reads objects through `cat-file --batch`; ids are sent on stdin, never as arguments. */
@@ -311,8 +327,9 @@ export class GitRunner {
       child.stdout!.on("data", (chunk: Buffer) => {
         stdoutBytes += chunk.length;
         if (stdoutBytes > outputLimit) return stop(new GitError("output_limit_exceeded", `git ${subcommand} produced more than ${outputLimit} bytes`));
-        stdout.push(chunk);
+        if (!invocation.sink) stdout.push(chunk);
       });
+      if (invocation.sink) child.stdout!.pipe(invocation.sink);
       child.stderr!.setEncoding("utf8").on("data", (chunk: string) => {
         if (stderr.length < STDERR_LIMIT) stderr += chunk;
       });

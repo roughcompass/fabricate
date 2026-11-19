@@ -57,11 +57,14 @@ describe("safety lint rules", () => {
     );
   });
 
-  it("allows child_process only in GitRunner", async () => {
+  it.each(["src/lib/git/runner.ts", "src/lib/previews/process.ts"])("allows child_process only in GitRunner and the preview build's process module: %s", async (filePath) => {
     const code = 'import { spawn } from "node:child_process";\nexport default spawn;';
-    expect(await violations(code, "src/lib/git/runner.ts")).toEqual([]);
-    expect(await violations('import vm from "node:vm";\nexport default vm;', "src/lib/git/runner.ts")).toContainEqual(
-      expect.stringContaining("no-restricted-imports"),
-    );
+    expect(await violations(code, filePath)).toEqual([]);
+    expect(await violations('import vm from "node:vm";\nexport default vm;', filePath)).toContainEqual(expect.stringContaining("no-restricted-imports"));
+  });
+
+  it("keeps child_process out of the rest of the preview code", async () => {
+    const code = 'import { spawn } from "node:child_process";\nexport default spawn;';
+    for (const filePath of ["src/lib/previews/build.ts", "src/lib/previews/toolchain.ts"]) expect(await violations(code, filePath)).toContainEqual(expect.stringContaining("no-restricted-imports"));
   });
 });

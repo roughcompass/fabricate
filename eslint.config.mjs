@@ -5,7 +5,9 @@ const executionMessage =
   "Fabricate never executes, loads, or evaluates data. See design.md, decision 6.";
 
 // Imports that can run code or start processes. child_process is allowed only
-// in GitRunner, the single audited path to the Git executable.
+// in GitRunner, the single audited path to the Git executable, and in the
+// preview build's process module, the one place Fabricate runs repository
+// code, for remotes an operator enrolled (docs/previews.md).
 const executionModules = ["vm", "node:vm", "module", "node:module"];
 const processModules = ["child_process", "node:child_process"];
 
@@ -68,7 +70,7 @@ const config = [
         {
           paths: [
             ...restrictedImports(executionModules, executionMessage).paths,
-            ...restrictedImports(processModules, `Only GitRunner may start processes. ${executionMessage}`).paths,
+            ...restrictedImports(processModules, `Only GitRunner and the preview build's process module may start processes. ${executionMessage}`).paths,
           ],
         },
       ],
@@ -86,7 +88,7 @@ const config = [
         {
           paths: [
             ...restrictedImports(executionModules, executionMessage).paths,
-            ...restrictedImports(processModules, `Only GitRunner may start processes. ${executionMessage}`).paths,
+            ...restrictedImports(processModules, `Only GitRunner and the preview build's process module may start processes. ${executionMessage}`).paths,
             ...restrictedImports(isolatedModules, isolationMessage).paths.map((entry) => ({ ...entry, allowTypeImports: true })),
           ],
           patterns: [{ group: isolatedPatterns, message: isolationMessage, allowTypeImports: true }],
@@ -96,7 +98,7 @@ const config = [
     },
   },
   {
-    files: ["src/lib/git/runner.ts"],
+    files: ["src/lib/git/runner.ts", "src/lib/previews/process.ts"],
     rules: {
       "no-restricted-imports": ["error", restrictedImports(executionModules, executionMessage)],
     },
