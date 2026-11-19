@@ -27,4 +27,15 @@ describe("design system documentation", () => {
     expect(files.length).toBeGreaterThan(15);
     expect(files.filter((file) => !doc.includes(`\`${file}\``))).toEqual([]);
   });
+
+  it("documents every page template, in the order the gallery shows them", () => {
+    const files = fs.readdirSync(path.resolve("src/components/templates")).filter((file) => file.endsWith("-template.tsx"));
+    expect(files).toHaveLength(10);
+    expect(files.filter((file) => !doc.includes(`\`${file}\``))).toEqual([]);
+    const gallery = fs.readFileSync(path.resolve("src/app/(operator)/design-system/specimens/templates.tsx"), "utf8");
+    const shown = [...gallery.matchAll(/\["template-[a-z]+", "(\w+) template"\]/g)].map((match) => match[1]);
+    const documented = [...doc.slice(doc.indexOf("### Page templates")).matchAll(/^\| (\w+) \| `[a-z]+-template\.tsx` \|/gm)].map((match) => match[1]);
+    expect(shown).toHaveLength(10);
+    expect(documented).toEqual(shown);
+  });
 });
