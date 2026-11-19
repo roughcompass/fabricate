@@ -67,6 +67,33 @@ function textOf(node: unknown): string {
   return typeof value === "string" ? value : (children ?? []).map(textOf).join("");
 }
 
+/**
+ * +markdown+ with each link's address replaced as +map+ says, everything
+ * else exactly as written: a new address, or null to leave an inline link's
+ * text alone, as `renderMarkdown` does. A link definition that maps to null
+ * keeps its address, since it has no text of its own.
+ */
+export function rewriteLinks(markdown: string, map: (href: string) => string | null): string {
+  const mdast = unified().use(remarkParse).use(remarkGfm).parse(markdown);
+  const edits: { start: number; end: number; text: string }[] = [];
+  const slice = (start: number | undefined, end: number | undefined) => (start === undefined || end === undefined ? "" : markdown.slice(start, end));
+  visit(mdast, (node) => {
+    if (node.type !== "link" && node.type !== "definition") return;
+    const target = map(node.url);
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+    if (target === node.url || start === undefined || end === undefined) return;
+    const title = node.title ? ` "${node.title}"` : "";
+    if (node.type === "definition") {
+      if (target !== null) edits.push({ start, end, text: `[${node.label ?? node.identifier}]: ${target}${title}` });
+      return;
+    }
+    const label = slice(node.children[0]?.position?.start.offset, node.children.at(-1)?.position?.end.offset);
+    edits.push({ start, end, text: target === null ? label : `[${label}](${target}${title})` });
+  });
+  return edits.sort((a, b) => b.start - a.start).reduce((text, edit) => text.slice(0, edit.start) + edit.text + text.slice(edit.end), markdown);
+}
+
 /** Renders a docs page's Markdown into its title, summary, and article. */
 export function renderMarkdown(markdown: string, options: RenderOptions = {}): RenderedDoc {
   const mdast = unified().use(remarkParse).use(remarkGfm).parse(markdown);

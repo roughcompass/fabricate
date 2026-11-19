@@ -49,7 +49,10 @@ describe("the shipped docs", () => {
     const page = readDocPage(site, "reference/fact-document")!;
     const installed = (JSON.parse(fs.readFileSync("node_modules/@repo-facts/contract/package.json", "utf8")) as { version: string }).version;
     expect(page.release).toEqual({ name: PRODUCT.surveyor, version: installed });
-    expect(page.markdown).toBe(fs.readFileSync("node_modules/@repo-facts/contract/docs/detector-contract.md", "utf8"));
+    // Its Markdown, for Copy page, is the package's, with the links its article has.
+    expect(page.markdown.startsWith(fs.readFileSync("node_modules/@repo-facts/contract/docs/detector-contract.md", "utf8").split("\n")[0]!)).toBe(true);
+    expect(page.markdown).toContain("see [reference-catalog.md](/docs/reference/entry-format.md)");
+    expect(page.markdown).not.toContain("](../packages/");
     // A link to the other page the package ships opens it; a link into Surveyor's repository is left as text.
     const links = page.article.links.map((link) => link.resolved);
     expect(links).toContain("/docs/reference/entry-format");

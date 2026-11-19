@@ -10,7 +10,7 @@ Your agent knows your repository; the Frontend Registry knows the fleet. Point y
 | --- | --- |
 | `/llms.txt` | An index of every docs page, by section, with each page's address and one-sentence summary, in the llms.txt format |
 | `/llms-full.txt` | Every docs page's Markdown, in reading order |
-| `/docs/<page>.md` | One docs page's Markdown, exactly as written, such as `/docs/get-started/add-your-repository.md` |
+| `/docs/<page>.md` | One docs page's Markdown, such as `/docs/get-started/add-your-repository.md`. Its links to other pages open their Markdown |
 | `/docs/<page>` with `Accept: text/markdown` | The same Markdown, at the page's own address |
 | `/repositories/<id>/profile.json` | A repository's current Profile's facts as JSON, with their digest; see [The JSON Profile](../reference/json-profile.md) |
 

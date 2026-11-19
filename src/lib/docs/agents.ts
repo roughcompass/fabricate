@@ -1,5 +1,5 @@
 import { PRODUCT } from "@/lib/product";
-import { type DocsSite, pageMarkdown } from "./site";
+import { type DocsSite, servedMarkdown } from "./site";
 
 /*
  * The docs for agents (establish-frontend-registry, design decision 13; the
@@ -22,7 +22,7 @@ export function llmsTxt(site: DocsSite, origin: string): string {
 
 /** Every page's Markdown, in reading order, each preceded by its address on +origin+. */
 export function llmsFullTxt(site: DocsSite, origin: string): string {
-  return site.pages.map((page) => `<!-- ${origin}${page.href} -->\n\n${pageMarkdown(site, page).trim()}\n`).join("\n");
+  return site.pages.map((page) => `<!-- ${origin}${page.href} -->\n\n${servedMarkdown(site, page).trim()}\n`).join("\n");
 }
 
 /**

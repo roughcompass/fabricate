@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { GET as markdown } from "@/app/api/docs/[[...path]]/route";
 import { GET as llmsFull } from "@/app/llms-full.txt/route";
 import { GET as llms } from "@/app/llms.txt/route";
-import { docsSite } from "@/lib/docs/site";
+import { renderMarkdown } from "@/lib/docs/render";
+import { docsSite, servedMarkdown } from "@/lib/docs/site";
 import { DOCS_REWRITES } from "@/lib/web/rewrites";
 
 /*
@@ -57,6 +58,30 @@ describe("docs for agents", () => {
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
     expect(text).toContain(fs.readFileSync("docs/site/guides/use-with-your-agent.md", "utf8").trim());
+  });
+
+  it("serves a Surveyor page's Markdown with the links its article has: another page's Markdown, or text for a file the docs don't serve", async () => {
+    const text = await (await page(["reference", "fact-document"])).text();
+    expect(text).toContain("](/docs/reference/entry-format.md)");
+    expect(text).toContain("The types live in `packages/contract/src/detectors/contract.ts`, and");
+    expect(text).not.toMatch(/\]\((?!\/|#|https?:)/);
+    // Only the links change.
+    expect(text.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")).toBe(fs.readFileSync("node_modules/@repo-facts/contract/docs/detector-contract.md", "utf8").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1"));
+  });
+
+  it("links each page's Markdown only to pages an agent can read (Markdown version of a page)", () => {
+    const site = docsSite();
+    const served = new Set(site.pages.map((listed) => listed.markdownHref));
+    const broken: string[] = [];
+    for (const listed of site.pages) {
+      for (const { href } of renderMarkdown(servedMarkdown(site, listed)).links) {
+        if (href.startsWith("#") || /^[a-z][a-z0-9+.-]*:/i.test(href)) continue;
+        const target = new URL(href, `${ORIGIN}${listed.markdownHref}`).pathname;
+        // Links into the app, such as /repositories, open its pages; links into the docs open a page's Markdown.
+        if (target.startsWith("/docs/") && !served.has(target)) broken.push(`${listed.markdownHref}: ${href}`);
+      }
+    }
+    expect(broken).toEqual([]);
   });
 
   it("names addresses on the host the request came to, or the one a proxy forwarded", async () => {

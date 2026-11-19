@@ -4,7 +4,7 @@ import { StructuredParseError, parseYaml } from "@repo-facts/contract";
 import { z } from "zod";
 import { getConfig } from "@/lib/config";
 import { PRODUCT } from "@/lib/product";
-import { type RenderedDoc, renderMarkdown } from "./render";
+import { type RenderedDoc, renderMarkdown, rewriteLinks } from "./render";
 
 /*
  * The docs (establish-frontend-registry, design decisions 13 and 15). The
@@ -80,7 +80,7 @@ export interface Release {
 /** A docs page, read and rendered. */
 export interface DocPage {
   readonly page: DocsPage;
-  /** Its Markdown, exactly as written: what its `.md` address serves. */
+  /** Its Markdown as its `.md` address serves it (`servedMarkdown`), for Copy page. */
   readonly markdown: string;
   readonly release: Release;
   readonly article: RenderedDoc;
@@ -181,6 +181,26 @@ export function resolvePageLink(site: DocsSite, page: DocsPage, href: string): s
 }
 
 /**
+ * The Markdown +page+ is served as, at its `.md` address, in `llms-full.txt`,
+ * and by Copy page. A docs file is exactly as written, since `docs/site`
+ * mirrors the addresses and its relative links open the same pages there. A
+ * Surveyor page's links are relative to its package, so they take the
+ * addresses its article gives them: another page's opens that page's
+ * Markdown, and one to a file the docs don't serve is left as its text.
+ */
+export function servedMarkdown(site: DocsSite, page: DocsPage): string {
+  const markdown = pageMarkdown(site, page);
+  if (page.source.kind === "docs") return markdown;
+  return rewriteLinks(markdown, (href) => {
+    const resolved = resolvePageLink(site, page, href);
+    if (resolved === null || resolved === href) return resolved;
+    const [address, anchor] = resolved.split("#", 2);
+    const linked = site.pages.find((candidate) => candidate.href === address);
+    return linked ? `${linked.markdownHref}${anchor === undefined ? "" : `#${anchor}`}` : resolved;
+  });
+}
+
+/**
  * The page at +pagePath+, read and rendered, with the pages before and after it.
  * @public The docs pages render through this.
  */
@@ -191,7 +211,7 @@ export function readDocPage(site: DocsSite, pagePath: string): DocPage | undefin
   const markdown = pageMarkdown(site, page);
   return {
     page,
-    markdown,
+    markdown: servedMarkdown(site, page),
     release: pageRelease(site, page),
     article: renderMarkdown(markdown, { resolveLink: (href) => resolvePageLink(site, page, href), keepSummary: page.source.kind === "package" }),
     previous: site.pages[index - 1] ?? null,
