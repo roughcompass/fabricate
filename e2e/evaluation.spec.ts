@@ -2,10 +2,13 @@ import type { JsonObject } from "@repo-facts/contract";
 import type { Page } from "@playwright/test";
 import { findingDocument, findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { runById } from "../src/lib/runs/lookups";
+import { buildAssessment, buildRepository } from "../test/support/builders";
+import { manifest } from "../test/support/profiles";
+import { publishStandard, seedRun } from "../test/support/scenarios";
 import { targetsOf } from "../src/lib/runs/run-records";
 import { selectReleases } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
-import { evaluate, seedResults, seedEvaluation } from "./support/results";
+import { BASELINE_CONTROLS, evaluate, seedResults, seedEvaluation } from "./support/results";
 import { pageHeader } from "./support/shell";
 
 const releaseGroup = (page: Page, release: string) => page.getByRole("region", { name: release, exact: true });
@@ -146,6 +149,25 @@ test("explains a Gap: expected state, observed facts, evidence, reasoning, and g
   await expect(page.getByText("services.fetch").first()).toBeVisible();
 });
 
+// page-patterns spec, "Breadcrumbs on Evidence": evidence reached from a Run's results leads back through the Run.
+test("Breadcrumbs on Evidence: Assessments / the Assessment / Run #1 / orders, with no other back link", async ({ page, db }) => {
+  const { evaluation, assessment } = await seedEvaluation(db);
+  const run = runById(db, evaluation.runId);
+  const finding = findingsOf(db, evaluation.id, { controlKey: "services-configurable" }).find((candidate) => (findingDocument(candidate).subject as JsonObject).name === "orders")!;
+  await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
+  await page.getByRole("region", { name: "Evidence" }).getByRole("link", { name: "src/payments.ts:2" }).click();
+  await expect(page).toHaveURL(new RegExp(`/runs/${run.publicId}/evidence/`));
+
+  const breadcrumbs = pageHeader(page).getByRole("navigation", { name: "Breadcrumb" });
+  await expect(breadcrumbs.getByRole("link")).toHaveText(["Assessments", "Fleet assessment", "Run #1", "orders"]);
+  const hrefs = await breadcrumbs.getByRole("link").evaluateAll((links) => links.map((link) => link.getAttribute("href")));
+  expect(hrefs.slice(0, 3)).toEqual(["/assessments", `/assessments/${assessment.publicId}`, `/runs/${run.publicId}`]);
+  // The repository's crumb opens its Profile at the category that cites the evidence.
+  expect(hrefs[3]).toMatch(/^\/profiles\/prf_\w+\?tab=services#/);
+  // The breadcrumbs are the only way back: the page itself links nowhere else.
+  await expect(page.getByRole("main").getByRole("link")).toHaveCount(4);
+});
+
 test("lists every Indeterminate cause, including a missing Profile", async ({ page, db }) => {
   const { evaluation } = await seedEvaluation(db);
   const all = findingsOf(db, evaluation.id, { controlKey: "verified-runtime" }).map((finding) => ({ finding, document: findingDocument(finding) }));
@@ -236,3 +258,36 @@ test("Record mentions: the Run's repositories and a Finding's subject link to th
   await expect(page.getByRole("heading", { level: 1, name: "orders" })).toBeVisible();
 });
 
+
+// page-patterns spec, "Long lists are paged": each Control pages its own Findings, with its page in the address.
+test("pages a Control's Findings fifty at a time, keeps the page in the address, and a filter returns to the first page", async ({ page, db }) => {
+  const repositories = Array.from({ length: 51 }, (_, index) => buildRepository(db, { name: `app-${String(index).padStart(2, "0")}` }));
+  const assessment = buildAssessment(db, { name: "Fleet-wide baseline", repositories });
+  const run = await seedRun(db, assessment, repositories, repositories.map((repository) => ({ "package.json": manifest({ name: repository.name, version: "1.0.0" }) })));
+  const release = publishStandard(db, "Engineering baseline", BASELINE_CONTROLS.filter((candidate) => candidate.key === "has-ci"));
+  selectReleases(db, assessment, [release]);
+  const evaluation = await evaluate(db, assessment.publicId, run.publicId);
+
+  await page.goto(`/evaluations/${evaluation.publicId}`);
+  const control = page.locator("#control-0-has-ci");
+  await control.locator("summary").click();
+  const rows = page.getByRole("table", { name: "Runs continuous integration Findings" }).locator("tbody tr");
+  await expect(rows).toHaveCount(50);
+  const pages = page.getByRole("navigation", { name: "Runs continuous integration Findings pages" });
+  await expect(pages).toContainText("Page 1 of 2");
+
+  await pages.getByRole("link", { name: "Next" }).click();
+  await expect(page).toHaveURL(/[?&]page_0_has-ci=2#control-0-has-ci$/);
+  // The address opens the Control at its page.
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText("app-50");
+  await page.reload();
+  await expect(rows).toHaveCount(1);
+
+  // Changing a filter returns to the first page.
+  await page.getByRole("form", { name: "Filter Findings" }).getByLabel("Outcome", { exact: true }).selectOption("gap");
+  await expect(page).toHaveURL(/[?&]outcome=gap(&|$)/);
+  expect(page.url()).not.toContain("page_0_has-ci");
+  await expect(rows).toHaveCount(50);
+  await expect(pages).toContainText("Page 1 of 2");
+});

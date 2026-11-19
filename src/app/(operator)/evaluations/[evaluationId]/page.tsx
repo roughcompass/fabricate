@@ -15,7 +15,8 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { Select } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
-import { param } from "@/lib/web/query";
+import { type Query, type SearchParams, pageOf, pageQuery, param, withQuery } from "@/lib/web/query";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -173,7 +174,7 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
         )}
       </Section>
 
-      <FindingsSection evaluationId={evaluation.publicId} releases={releases} findings={findings} terminal={status.terminal} />
+      <FindingsSection evaluationId={evaluation.publicId} releases={releases} findings={findings} terminal={status.terminal} query={query} />
 
       <Disclosure summary="Details" variant="plain">
         <DescriptionList surface
@@ -189,10 +190,19 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
   );
 }
 
-/** The Findings, filtered by the address and grouped by Release and Control, each opening its own page. */
-function FindingsSection({ evaluationId, releases, findings, terminal }: { evaluationId: string; releases: { pinned: EvaluationRelease; label: string }[]; findings: FilteredFindings; terminal: boolean }) {
+/**
+ * The address parameter of one Control's page of Findings, by the Release's
+ * position in the Evaluation and the Control's key, such as `page_0_has-ci` for the first Release:
+ * both are fixed for the Evaluation, so a paged Control keeps its address.
+ */
+const findingsPageParam = (position: number, controlKey: string) => `page_${position}_${controlKey}`;
+
+/** The Findings, filtered by the address and grouped by Release and Control, each opening its own page; a Control with more than 50 pages its own. */
+function FindingsSection({ evaluationId, releases, findings, terminal, query }: { evaluationId: string; releases: { pinned: EvaluationRelease; label: string }[]; findings: FilteredFindings; terminal: boolean; query: SearchParams }) {
   const { all, controls, subjects, filters, filtered, shown } = findings;
   const base = routes.evaluation(evaluationId);
+  // A page link keeps the filters and every other Control's page; the filter form sends only the filters, so changing one returns each Control to its first page.
+  const current: Query = Object.fromEntries(Object.entries(query).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));
   return (
     <Section id="findings" title="Findings" description="One Finding per Control and subject, grouped by Release and Control; each says what was expected, what was observed, and why.">
       <FilterBar key={JSON.stringify(filters)} action={base} label="Filter Findings" filtered={filtered} clearHref={base}>
@@ -224,9 +234,14 @@ function FindingsSection({ evaluationId, releases, findings, terminal }: { evalu
                   const { finding, document } = items[0]!;
                   const control = document.control as JsonObject;
                   const counts = OUTCOME_ORDER.map((outcome) => [outcome, items.filter((item) => item.finding.outcome === outcome).length] as const).filter(([, count]) => count > 0);
+                  const pageParam = findingsPageParam(pinned.position, finding.controlKey);
+                  const requested = param(query, pageParam);
+                  const { rows, page, pages } = pageOf(items, requested);
+                  const anchor = `control-${pinned.position}-${finding.controlKey}`;
                   return (
-                    <li key={finding.controlKey}>
-                      <details className={styles.control} open={filtered}>
+                    <li key={finding.controlKey} id={anchor} className={styles.controlItem}>
+                      {/* Open while filtered, and on a page the address names, so a page link lands on the Findings it shows. */}
+                      <details className={styles.control} open={filtered || requested !== undefined}>
                         <summary className={styles.summary}>
                           <Icon name="chevronRight" size={14} className={styles.chevron} />
                           <span className={styles.title}>
@@ -249,7 +264,7 @@ function FindingsSection({ evaluationId, releases, findings, terminal }: { evalu
                             </>
                           }
                         >
-                          {items.map((item) => (
+                          {rows.map((item) => (
                             <tr key={item.finding.publicId}>
                               <Td label="Subject">
                                 {/* The link opens the Finding, named by its Control and subject. */}
@@ -263,6 +278,11 @@ function FindingsSection({ evaluationId, releases, findings, terminal }: { evalu
                             </tr>
                           ))}
                         </Table>
+                        {pages > 1 && (
+                          <div className={styles.pages}>
+                            <Pagination label={`${String(control.title)} Findings pages`} page={page} pages={pages} href={(number) => withQuery(base, { ...current, [pageParam]: pageQuery(number) }, anchor)} scrollToTop />
+                          </div>
+                        )}
                       </details>
                     </li>
                   );
