@@ -10,16 +10,22 @@ const nextConfig: NextConfig = {
   // Browser tests build into their own directory, so they can run beside a
   // developer's `npm run dev` without sharing its dev-server lock or output.
   distDir: process.env.FABRICATE_NEXT_DIST_DIR ?? ".next",
-  // The production image runs the standalone server without a package manager.
+  // A release (`npm run release`) runs the standalone server with Node alone.
   output: "standalone",
   // Loaded from node_modules, never bundled: the native SQLite binding, and the
-  // pinned repo-facts detector release, which ships to the image as its
+  // pinned repo-facts detector release, which ships in a release as its
   // published packages with their provenance. The worker bundle loads the same copy.
   serverExternalPackages: ["better-sqlite3", ...REPO_FACTS_PACKAGES],
   outputFileTracingRoot: root,
   turbopack: { root },
   poweredByHeader: false,
   reactStrictMode: true,
+  experimental: {
+    // A dev cache kept across restarts went stale after config and dependency
+    // changes, and the browser then reloaded every page in a loop ("HMR hash
+    // mismatch"). Each `next dev` compiles afresh; builds keep their cache.
+    turbopackFileSystemCacheForDev: false,
+  },
   // A repository preview's root is /previews/<id>/, with its slash, so its page's
   // relative references and a router based at that path resolve inside it.
   // src/proxy.ts removes a trailing slash from every other path, as Next.js
