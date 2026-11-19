@@ -6,9 +6,9 @@ import { type Context, type TraceNode, evaluate, traceEvidence, unknownCauses } 
 import { asObject } from "@/lib/json";
 
 /**
- * Applies one Release's Controls to an Assessment's immutable results.
+ * Applies one Release's Controls to a Run's immutable results.
  *
- * A repository Control produces one Finding per Assessment target; a target
+ * A repository Control produces one Finding per Run target; a target
  * without a Profile is read as unknown, so it is Indeterminate rather than
  * silently skipped. A relationship Control produces one Finding against the
  * Relationship Map. Applicability false is Not applicable and unknown is

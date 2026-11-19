@@ -17,12 +17,12 @@ import { EVALUATOR_VERSION, type EvaluationInputs } from "./controls";
 import { type Evaluation, type EvaluationRelease, createEvaluation, findEvaluationByLaunchToken } from "./evaluation-records";
 
 /**
- * Starts an Evaluation of one immutable Assessment against an Initiative's
+ * Starts an Evaluation of one immutable Run against its Assessment's
  * currently selected published Releases.
  *
- * One immediate transaction checks that the Assessment finished with at least
+ * One immediate transaction checks that the Run finished with at least
  * one Profile and a Relationship Map, verifies each Release against its
- * published digest and the Assessment's schema versions, records coverage
+ * published digest and the Run's schema versions, records coverage
  * gaps, pins each Release by digest, and enqueues one job per Release. Nothing
  * is reacquired or reanalyzed: Evaluation reads only stored documents. The
  * launch token makes submission idempotent.
@@ -45,7 +45,7 @@ export interface StartResult {
 
 /**
  * With +releaseIds+, the Evaluation pins those published Releases, by public
- * id, instead of the initiative's current selection: a template re-check
+ * id, instead of the Assessment's current selection: a template re-check
  * evaluates against the Releases its acceptance used.
  */
 export function startEvaluation(db: Executor, assessmentPublicId: string, runPublicId: string, launchToken: string, options: { releaseIds?: readonly string[] } = {}): StartResult {
@@ -129,7 +129,7 @@ function coverageGaps(db: Executor, run: Run): JsonValue[] {
     .map((target) => ({ target: target.publicId, source: { public_id: target.repositoryPublicId, name: target.repositoryName }, state: target.state, reason: target.failureCode }));
 }
 
-/** An Assessment's stored results, verified against their digests: the only inputs an Evaluation reads. */
+/** A Run's stored results, verified against their digests: the only inputs an Evaluation reads. */
 export function evaluationInputs(db: Executor, runId: number): EvaluationInputs {
   const profiles = new Map(profilesOf(db, runId).map(({ profile, target }) => [target.id, profile]));
   const map = mapOf(db, runId);

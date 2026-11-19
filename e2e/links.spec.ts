@@ -17,8 +17,11 @@ test.use({ javaScriptEnabled: false, viewport: { width: 1440, height: 900 } });
 
 // The component gallery exists only in development and test builds (design-system spec).
 const START = [paths.home, paths.assessments, "/templates", ...(process.env.E2E_PRODUCTION ? [] : ["/design-system"])];
-/** Model terms the interface never shows as record names, and the old product name. */
-const VOCABULARY = [/\bInitiatives?\b/, /\bSources?\b/, /\bAssessment #\d/, /\bFabricate\b/];
+/** Model terms the interface never shows as record names (content standard, "Vocabulary"). */
+const MODEL_TERMS = [/\bInitiatives?\b/, /\bSources?\b/, /\bAssessment #\d/];
+/** Old product names the interface never shows, in any case (content standard, "Product names"). Code elements are exempt. */
+const OLD_PRODUCT_NAMES = [/\bde fablab\b/i, /\bfablab\b/i, /\bfabricate\b/i, /\brepo[-_ ]?facts\b/i, /\bdetector releases?\b/i];
+const VOCABULARY = [...MODEL_TERMS, ...OLD_PRODUCT_NAMES];
 /** Pages per route shape; records of the same kind share one shape. */
 const PER_SHAPE = 2;
 

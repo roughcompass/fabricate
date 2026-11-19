@@ -5,14 +5,14 @@ import { assessmentTargets, repositories } from "@/lib/db/schema";
 import type { Assessment } from "@/lib/assessments/assessment-records";
 
 /**
- * Resolves an Initiative's target policy into the ordered catalog sources an
- * Assessment will copy. Run it inside the launch transaction, which holds
+ * Resolves an Assessment's target policy into the ordered Repositories a Run
+ * will copy. Run it inside the launch transaction, which holds
  * SQLite's write lock, so the rows it reads cannot change before the scope
  * snapshot is written.
  *
  * Resolution never narrows a scope silently: an empty scope, or an explicit
- * selection that names a missing source, fails with one problem
- * per offending source.
+ * selection that names a missing Repository, fails with one problem
+ * per offending Repository.
  */
 
 export interface ScopeProblem {

@@ -9,7 +9,7 @@ import { type Survey, currentRecipe } from "@/lib/surveys/records";
 import { buildProfile } from "./schema";
 
 /**
- * Runs the pinned repo-facts bundle on a survey's pinned commit and returns
+ * Runs the pinned Surveyor bundle on a survey's pinned commit and returns
  * its Profile document. The bundle sees the commit only through a
  * SnapshotReader. The worker must run the recipe the survey records, or the
  * Profile wouldn't be the one its key promises, so analysis refuses to run.

@@ -146,7 +146,7 @@ function readRepository(categories: JsonObject, selector: string, parameter: str
 // Design-system fields (Repository Profile version 2)
 //
 // They read the design_systems, ui_elements, and style_values categories of
-// repo-facts fact document version 2. Counts and shares read the app scope,
+// Surveyor fact document version 2. Counts and shares read the app scope,
 // so stories and tests don't count. Fact keys are compared exactly or by
 // prefix; nothing in a key or a parameter is interpreted as a pattern.
 

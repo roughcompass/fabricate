@@ -11,7 +11,7 @@ The Registry has four parts. Each part has one job, and parts talk to each other
 | **Reference Catalog** | data the Frontend Registry stores | Describes what repositories build on, one entry per thing per version |
 | **Catalog Builder** | a package in the `repo-facts` repository (to be built) | Writes Reference Catalog entries from what each thing publishes |
 
-These are product names. Repositories, npm packages, and code keep their code names: renaming them costs a lot, and nobody using the Registry sees them. Always say "Frontend Registry" in full, so it isn't mistaken for an npm registry. The interface still shows the placeholder name DE FabLab.
+These are product names, and the interface, the documents, and the code all use them. Only the git repositories, their directories, the published npm packages (`@repo-facts/*`), and names that stored data depends on keep their old names: renaming those would break clones, installs, and stored records, and nobody using the Registry sees them. `src/lib/product.ts` holds the product names the interface shows. Always say "Frontend Registry" in full, so it isn't mistaken for an npm registry.
 
 ## Frontend Registry
 
@@ -59,7 +59,7 @@ Its code lives beside Surveyor because they share the entry format. The entries 
 | Agreement | From | To | Status |
 | --- | --- | --- | --- |
 | Entry format | Catalog Builder | Surveyor | To be defined |
-| Fact document (`repo_facts.fact_document`) | Surveyor | Frontend Registry | Exists, version 2 ([repo-facts detector contract](https://github.com/roughcompass/repo-facts/blob/main/docs/detector-contract.md)) |
+| Fact document (`repo_facts.fact_document`) | Surveyor | Frontend Registry | Exists, version 2 ([Surveyor's fact contract](https://github.com/roughcompass/repo-facts/blob/main/docs/detector-contract.md)) |
 | Recipe | Frontend Registry | its own records | Partly exists: each Profile records its Surveyor release and configuration digest, not yet the Catalog entries it used |
 
 Each agreement has a version, and tests on both sides check it. A part may change freely while it keeps its agreements.

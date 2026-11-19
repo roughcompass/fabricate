@@ -6,8 +6,8 @@ import { findPreviewIncludingDeleted, packageLabel } from "@/lib/previews/views"
 import { versionsOf } from "@/lib/profiling/versions";
 
 /**
- * Messages for the outcome codes catalog actions redirect with. The URL carries
- * only a code, a Source ID, and counts; the text is built here from the
+ * Messages for the outcome codes Repository actions redirect with. The URL
+ * carries only a code, a Repository's ID, and counts; the text is built here from the
  * records, so a crafted link cannot inject text. An unknown code shows nothing.
  */
 export function repositoryOutcome(db: Executor, code: string | undefined, repositoryPublicId: string | undefined, count?: string): Outcome | undefined {

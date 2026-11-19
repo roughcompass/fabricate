@@ -28,7 +28,7 @@ export function isEnrolled(config: FrontendRegistryConfig, repository: Pick<Repo
   return config.previews.enabled && repository.deletedAt === null && config.previews.trustedSources.includes(repository.canonicalUrl);
 }
 
-/** Throws unless previews are on and +source+ is enrolled. */
+/** Throws unless previews are on and +repository+ is enrolled. */
 export function assertEnrolled(config: FrontendRegistryConfig, repository: Pick<Repository, "name" | "canonicalUrl" | "deletedAt">): void {
   if (!config.previews.enabled) throw new PreviewAccessError("disabled", "Previews are turned off");
   if (!isEnrolled(config, repository)) throw new PreviewAccessError("not_enrolled", `${repository.name} is not enrolled for previews`);

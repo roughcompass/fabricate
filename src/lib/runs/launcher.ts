@@ -12,16 +12,16 @@ import { type Run, type RunTarget, LAUNCH_TOKEN, createRun, findRunByLaunchToken
 import { resolveScope } from "./scope-resolver";
 
 /**
- * Starts an Assessment for an Initiative.
+ * Starts a Run of an Assessment.
  *
- * One immediate transaction reads the Initiative and catalog, resolves the
- * scope, writes the Assessment and every target copy, and enqueues the
+ * One immediate transaction reads the Assessment and the Repositories, resolves the
+ * scope, writes the Run and every target copy, and enqueues the
  * coordinator job. The job exists only if the scope commits, so no worker can
  * observe a partial scope, and a failed resolution enqueues nothing. Standard
- * selections are deliberately not copied: an Assessment is current state only.
+ * selections are deliberately not copied: a Run is current state only.
  *
  * The launch token makes submission idempotent: repeating it returns the
- * Assessment it already created instead of starting duplicate work.
+ * Run it already created instead of starting duplicate work.
  */
 
 export const COORDINATE_RUN = "assessment.coordinate";
@@ -47,7 +47,7 @@ export function launchRun(db: Executor, assessmentPublicId: string, launchToken:
         assessment,
         launchToken: token,
         surveyorRelease: SURVEYOR_RELEASE,
-        // The bundle's configuration under this deployment's analysis limits; its digest is the Assessment's.
+        // The bundle's configuration under this deployment's analysis limits; its digest is the Run's.
         configuration: detectorConfiguration(config.analysis).configuration,
         profileSchemaVersion: CURRENT_VERSION.repositoryProfile,
         relationshipSchemaVersion: CURRENT_VERSION.relationshipMap,

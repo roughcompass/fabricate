@@ -22,7 +22,7 @@ export interface CurrentProfile {
   version: number;
 }
 
-/** The current Profile of each repository in +sourceIds+, or of every repository, by source id, in one query. */
+/** The current Profile of each repository in +repositoryIds+, or of every repository, by repository id, in one query. */
 export function currentProfiles(db: Executor, repositoryIds?: readonly number[]): Map<number, CurrentProfile> {
   if (repositoryIds?.length === 0) return new Map();
   const rows = db

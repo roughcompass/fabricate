@@ -5,7 +5,7 @@ import type { GitRunner } from "@/lib/git/runner";
  * Processes a repository preview build starts (openspec add-repository-previews,
  * design decision 4): the package manager's install and build, and the `tar`
  * that unpacks `git archive`. Besides GitRunner, it's the only module allowed
- * to import child_process. Previews are the one place Fabricate runs
+ * to import child_process. Previews are the one place the Frontend Registry runs
  * repository code, and only for remotes an operator enrolled as trusted.
  *
  * Every process gets an argv array with `shell: false`, the environment its

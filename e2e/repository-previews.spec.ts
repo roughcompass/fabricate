@@ -64,7 +64,7 @@ function enrolled(db: Db, remote: string, tree: Tree, branches: Record<string, T
   return insertRepository(db, { name: path.basename(remote), ...resolveCloneUrl(`file://${remote}`, new SourceBoundary(serverConfig())), gitRef: null });
 }
 
-/** Prepares the default branch of +source+ and runs its jobs: preparation and, with one package, its build. */
+/** Prepares the default branch of +repository+ and runs its jobs: preparation and, with one package, its build. */
 async function built(db: Db, repository: Repository) {
   await requestPreparation(db, repository.publicId, { kind: "ref", name: null }, { config: serverConfig() });
   await runJobs(db);
@@ -311,7 +311,7 @@ test.describe("microfrontends", () => {
     await page.getByText("Details", { exact: true }).click();
     await expect(page.getByText("A Module Federation remote, shown through its own page")).toBeVisible();
 
-    // Nothing under the preview's path is Fabricate's: __host is a route of the remote's page like any other.
+    // Nothing under the preview's path is the Frontend Registry's: __host is a route of the remote's page like any other.
     const host = await request.get(`${base}__host`, { headers: { "sec-fetch-dest": "document" } });
     expect(host.status()).toBe(200);
     expect(await host.text()).toContain("<title>Admin remote</title>");

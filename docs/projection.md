@@ -37,7 +37,7 @@ Database triggers refuse every update to a projection row. Rows are deleted only
 npm run projection:rebuild
 ```
 
-The command opens the configured database, which `FABRICATE_DATABASE` can override, and refuses to run while migrations are pending. In one transaction it:
+The command opens the configured database, which `FRONTEND_REGISTRY_DATABASE` can override, and refuses to run while migrations are pending. In one transaction it:
 
 1. Removes every projection row.
 2. Reads each Profile and map one at a time, and verifies it against its digest.

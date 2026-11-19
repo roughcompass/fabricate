@@ -33,7 +33,7 @@ interface SurveyOptions {
   fromConfiguredReference?: boolean;
 }
 
-/** A survey of a new commit of +source+ under the current recipe, driven to +end+ as the survey job would. */
+/** A survey of a new commit of +repository+ under the current recipe, driven to +end+ as the survey job would. */
 async function survey(db: Db, repository: Repository, options: SurveyOptions = {}): Promise<Survey> {
   const commitSha = sha1(`commit:${repository.publicId}:${++commits}`);
   const { survey: queued } = requestSurvey(db, {

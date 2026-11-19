@@ -19,7 +19,7 @@ import { type TargetFailureCode, requestCancellation, transitionRun, transitionT
 
 export const FINALIZE_RUN = "assessment.finalize";
 
-/** Moves the Assessment to finalizing and enqueues the finalizer, once every target is terminal. */
+/** Moves the Run to finalizing and enqueues the finalizer, once every target is terminal. */
 export function requestFinalization(db: Executor, runId: number): void {
   immediate(db, (tx) => {
     const run = runById(tx, runId);

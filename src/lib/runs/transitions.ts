@@ -9,7 +9,7 @@ import type { Run, RunTarget } from "./run-records";
 import type { AcquisitionFailureCode } from "@/lib/acquisition/errors";
 
 /**
- * The only writers of Assessment and target state. Each transition is
+ * The only writers of Run and target state. Each transition is
  * checked against the state machine, written only if the row is still in the
  * state the caller read, and refused once the record is terminal.
  */

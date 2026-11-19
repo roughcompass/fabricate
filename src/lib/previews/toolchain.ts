@@ -8,7 +8,7 @@ import type { BuildPlan, BuildTool } from "./eligibility";
  * manager at the version the install root declares, through corepack, in
  * frozen-lockfile mode; the package's `build` script with the preview's base
  * path set the way its build tool expects; and an environment built from an
- * allowlist, never inherited, so no Fabricate credential, token, or setting
+ * allowlist, never inherited, so no Frontend Registry credential, token, or setting
  * reaches the build.
  */
 

@@ -14,7 +14,7 @@ import { type Repository, getRepository, insertRepository, repositoryFieldIssues
 import { updateLocked } from "@/lib/db/optimistic";
 
 /**
- * Catalog operations for the web UI: parse and canonicalize the clone URL,
+ * Repository operations for the web UI: parse and canonicalize the clone URL,
  * confine local paths to the source boundary, then persist. Every problem is
  * reported at once, addressed to its field, and nothing is written unless the
  * whole submission is valid.
@@ -82,7 +82,7 @@ export interface DeletionEffects {
   readonly previews: number;
 }
 
-/** What deleting +source+ changes, for the confirmation to state. */
+/** What deleting +repository+ changes, for the confirmation to state. */
 export function deletionEffects(db: Executor, repository: Repository): DeletionEffects {
   const selecting = db
     .select({ name: assessments.name })
@@ -95,7 +95,7 @@ export function deletionEffects(db: Executor, repository: Repository): DeletionE
 }
 
 /**
- * Deletes +source+ from the catalog, permanently, once +confirmation+ is its
+ * Deletes the Repository +publicId+, permanently, once +confirmation+ is its
  * name exactly. It leaves every list, scope, and profiling check, and its
  * clone URL is free to register again. A survey in progress finishes, and
  * Assessments that select it stop selecting it. Past Runs keep
@@ -118,7 +118,7 @@ export function deleteRepository(db: Executor, publicId: string, confirmation: s
   return deleted;
 }
 
-/** How many Runs of Assessments included each source, keyed by source row id. */
+/** How many Runs of Assessments included each Repository, keyed by its row id. */
 export function runCounts(db: Executor): Map<number, number> {
   const rows = db
     .select({ repositoryId: runTargets.repositoryId, count: sql<number>`count(distinct ${runTargets.runId})` })

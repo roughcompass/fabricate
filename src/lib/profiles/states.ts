@@ -34,7 +34,7 @@ export interface Category {
   search: Search;
 }
 
-/** The embedded repo-facts fact document, as far as the profile view reads it. */
+/** The embedded Surveyor fact document, as far as the profile view reads it. */
 export interface FactDocument {
   detector_release: string;
   categories: Record<string, Category>;

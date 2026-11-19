@@ -1,6 +1,6 @@
-/** Names and supported versions of every versioned document Fabricate stores. */
+/** Names and supported versions of every versioned document the Frontend Registry stores. */
 export const DOCUMENT_SCHEMAS = {
-  // Version 2 embeds repo-facts fact document version 2, which adds the design-system categories.
+  // Version 2 embeds Surveyor fact document version 2, which adds the design-system categories.
   repositoryProfile: { name: "fabricate.repository_profile", versions: [1, 2] },
   relationshipMap: { name: "fabricate.relationship_map", versions: [1] },
   standard: { name: "fabricate.standard", versions: [1] },

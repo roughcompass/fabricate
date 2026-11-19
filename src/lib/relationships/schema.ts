@@ -5,9 +5,9 @@ import { DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
 /**
  * Relationship Map document, version 1.
  *
- * One map per Assessment, resolved from the relationship references in the
- * Assessment's own Profiles. Nodes are repositories (one per Profile),
- * packages, external services, out-of-scope catalog sources, and endpoints
+ * One map per Run, resolved from the relationship references in the Run's
+ * own Profiles. Nodes are repositories (one per Profile),
+ * packages, external services, out-of-scope registered Repositories, and endpoints
  * that could not be resolved. Every edge is directional, keeps the reference
  * that declared it, and has a resolution state: resolved, ambiguous (with every
  * candidate), unresolved, or out of scope. Coverage lists the targets that

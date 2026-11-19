@@ -10,11 +10,12 @@ import { LEGACY_NAMES } from "@/lib/legacy-names";
  *
  * Values come from config/frontend-registry.json (a `shared` section merged
  * with the section for the current environment) and then FRONTEND_REGISTRY_*
- * environment variables. For one release, the old config/fabricate.json and
- * FABRICATE_* names are still read, with a deprecation warning, where the new
- * ones are missing. The harness workspace's fleet-kit/ tree is appended to the denied
- * roots unconditionally: no file setting, environment variable, or override
- * can remove it, and an allowed root inside it is a configuration error.
+ * environment variables. For one release, the file and variables under their
+ * names from before the rename (src/lib/legacy-names.ts) are still read, with a
+ * deprecation warning, where the new ones are missing. The harness
+ * workspace's fleet-kit/ tree is appended to the denied roots
+ * unconditionally: no file setting, environment variable, or override can
+ * remove it, and an allowed root inside it is a configuration error.
  */
 
 export const PROTECTED_DIRECTORY = "fleet-kit";
@@ -274,7 +275,7 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
   });
 }
 
-/** A trusted source's canonical remote identity, as the catalog computes it for duplicate detection. */
+/** A trusted source's canonical remote identity, as registration computes it for duplicate detection. */
 function trustedSource(value: string): string {
   try {
     return CloneUrl.parse(value).canonical;
@@ -369,7 +370,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
 }
 
 /**
- * The environment with each variable's old FABRICATE_* name read where its
+ * The environment with each variable's name from before the rename read where its
  * FRONTEND_REGISTRY_* name is unset, for one release, with a deprecation
  * warning for every old name that's set.
  */
@@ -388,7 +389,7 @@ function withLegacyNames(env: Readonly<Record<string, string | undefined>>, warn
   return result;
 }
 
-/** config/frontend-registry.json, or for one release the old config/fabricate.json when it's the only one. */
+/** config/frontend-registry.json, or for one release the file under its old name when it's the only one. */
 function readConfigFile(appRoot: string, warn: (message: string) => void): { value: unknown; label: string } {
   const directory = path.join(/*turbopackIgnore: true*/ appRoot, "config");
   const current = path.join(/*turbopackIgnore: true*/ directory, CONFIG_FILE);

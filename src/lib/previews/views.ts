@@ -32,7 +32,7 @@ export function previewCount(db: Executor, repository: Pick<Repository, "id">): 
   return db.select({ count: count() }).from(previewBuilds).where(and(eq(previewBuilds.repositoryId, repository.id), isNull(previewBuilds.deletedAt))).get()?.count ?? 0;
 }
 
-/** The preparation +publicId+ of +source+, or undefined for one of another Repository or none. */
+/** The preparation +publicId+ of +repository+, or undefined for one of another Repository or none. */
 export function preparationOf(db: Executor, repository: Pick<Repository, "id">, publicId: string | undefined): PreviewPreparation | undefined {
   if (!isPublicId(publicId, "ppr")) return undefined;
   return db

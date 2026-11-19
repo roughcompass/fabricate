@@ -9,7 +9,7 @@ import styles from "./editor.module.css";
 
 /**
  * A structured builder for one expression node. Every choice comes from the
- * catalog: the kind of condition, the field, the operator, and literal values.
+ * vocabulary: the kind of condition, the field, the operator, and literal values.
  * There is no way to type an expression, so nothing an operator enters is
  * ever code. Nesting is shown by indentation and a guide line.
  */

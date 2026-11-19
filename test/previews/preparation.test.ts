@@ -99,7 +99,7 @@ describe("preview preparation", () => {
     surveyJobs: world.db.select().from(jobs).where(eq(jobs.kind, RUN_SURVEY)).all().length,
     runs: world.db.select().from(runs).all().length,
   });
-  /** Surveys +source+ as background surveying does: version 1, of its configured reference. */
+  /** Surveys +repository+ as background surveying does: version 1, of its configured reference. */
   async function profile(repository: Repository): Promise<void> {
     await surveyRepository(world.db, repository, "added", { config });
     await drainJobs(world.db, jobHandlers(world.db, config));

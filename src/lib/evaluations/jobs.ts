@@ -71,7 +71,7 @@ function requestEvaluationFinalization(db: Executor, evaluationPublicId: string)
   enqueue(db, { kind: FINALIZE_EVALUATION, payload: { evaluation: evaluation.publicId }, idempotencyKey: `${FINALIZE_EVALUATION}:${evaluation.publicId}` });
 }
 
-/** The Findings of one pinned Release, from the Release and the Assessment's stored results alone. */
+/** The Findings of one pinned Release, from the Release and the Run's stored results alone. */
 function evaluatePinned(db: Executor, evaluation: Evaluation, pinned: EvaluationRelease): JsonObject[] {
   const release = releaseById(db, pinned.standardReleaseId);
   if (release.digest !== pinned.releaseDigest) throw new Error("The Release no longer matches the digest pinned when the Evaluation started");

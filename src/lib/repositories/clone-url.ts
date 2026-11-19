@@ -107,7 +107,7 @@ export class CloneUrl {
     return this.isFile ? this.path : null;
   }
 
-  /** The URL Fabricate stores and hands to Git. */
+  /** The URL the Frontend Registry stores and hands to Git. */
   toString(): string {
     if (this.isFile) return `file://${encodePath(this.path)}`;
     return `${this.scheme}://${this.user ? `${this.user}@` : ""}${this.host}${this.port ? `:${this.port}` : ""}${encodePath(this.path)}`;

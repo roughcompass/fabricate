@@ -21,8 +21,8 @@ export const SUBJECT_TYPES = ["repository", "relationship_map"] as const;
 export type SubjectType = (typeof SUBJECT_TYPES)[number];
 
 /**
- * A diagnostic comparison of one immutable Assessment with the published
- * Releases an Initiative had selected when the Evaluation started.
+ * A diagnostic comparison of one immutable Run with the published Releases
+ * its Assessment had selected when the Evaluation started.
  */
 export const evaluations = sqliteTable(
   "evaluations",

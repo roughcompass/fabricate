@@ -126,7 +126,7 @@ export function evaluationNumber(db: Executor, evaluation: Pick<Evaluation, "id"
   return sequenceNumber(db, evaluations, evaluation);
 }
 
-/** The sequence number of each of an Initiative's Evaluations, by id. */
+/** The sequence number of each of an Assessment's Evaluations, by id. */
 export function evaluationNumbers(db: Executor, assessmentId: number): Map<number, number> {
   return sequenceNumbers(db, evaluations, assessmentId);
 }

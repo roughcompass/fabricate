@@ -6,7 +6,7 @@ import type { ValueType } from "./registry";
  * published, a Release's immutable Controls.
  *
  * A Control has a stable key, a title, a rationale, a severity, a subject
- * (each repository, or the assessment-wide Relationship Map), an
+ * (each repository, or the Run-wide Relationship Map), an
  * applicability expression, an expected condition, and optional guidance.
  * Expressions are JSON trees over a closed set of operators and registered
  * selectors, with hard limits on depth and size. A Release also records the

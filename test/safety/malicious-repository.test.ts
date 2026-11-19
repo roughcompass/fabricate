@@ -118,7 +118,7 @@ describe("Assessment of a malicious repository", () => {
     trap = await NetworkTrap.open();
     trapUrl = trap.url;
 
-    // Every Git invocation Fabricate makes goes through this wrapper, which logs its argv and runs the real Git.
+    // Every Git invocation the Frontend Registry makes goes through this wrapper, which logs its argv and runs the real Git.
     gitLog = new GitLog(world.fixture.dir("git-log"));
 
     work = hostileRepository();
@@ -223,7 +223,7 @@ describe("Assessment of a malicious repository", () => {
 
   // Control: the same traps fire when repository behavior does run, so their silence above is meaningful.
   it("detects a hook, a module load, and a connection when they do happen", async () => {
-    // A direct commit in the source repository runs its configured hooks; Fabricate never runs one. The fsmonitor
+    // A direct commit in the source repository runs its configured hooks; the Frontend Registry never runs one. The fsmonitor
     // and long-running filter payloads are removed first, because they make any ordinary Git command in it fail.
     work.git("config", "--unset", "core.fsmonitor");
     work.git("config", "--unset", "filter.evil.process");

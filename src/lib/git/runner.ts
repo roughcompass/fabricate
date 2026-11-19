@@ -7,7 +7,7 @@ import { GitError } from "./errors";
 import { redact } from "./redact";
 
 /**
- * The only path from Fabricate to the Git executable. Besides the preview
+ * The only path from the Frontend Registry to the Git executable. Besides the preview
  * build runner (src/lib/previews/process.ts), it's the only module allowed to
  * import child_process.
  *

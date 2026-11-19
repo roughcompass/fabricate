@@ -4,11 +4,11 @@ import { afterAll, describe, it } from "vitest";
 import { SnapshotFixture } from "../support/snapshot";
 
 /**
- * The repo-facts reader conformance suite. Each case commits its files to a
+ * Surveyor's reader conformance suite. Each case commits its files to a
  * fresh repository, acquires and pins it like a real Assessment target, and
  * requires the SnapshotReader to match the reference reader exactly.
  */
-describe("SnapshotReader conforms to the repo-facts SourceReader contract", () => {
+describe("SnapshotReader conforms to Surveyor's SourceReader contract", () => {
   const fixtures: SnapshotFixture[] = [];
   afterAll(() => {
     for (const fixture of fixtures) fixture.cleanup();
@@ -17,7 +17,7 @@ describe("SnapshotReader conforms to the repo-facts SourceReader contract", () =
   const factory: ReaderFactory = async (files, options) => {
     const fixture = SnapshotFixture.create("conformance");
     fixtures.push(fixture);
-    // The reference reader's default budgets, rather than Fabricate's configured ones, when a case sets none.
+    // The reference reader's default budgets, rather than the Frontend Registry's configured ones, when a case sets none.
     return fixture.open(files, options.budgets ?? DEFAULT_BUDGETS, options.protectedDirectories ? { protectedDirectories: options.protectedDirectories } : {});
   };
 

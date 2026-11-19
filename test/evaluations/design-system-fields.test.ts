@@ -10,7 +10,7 @@ import { control, standardDocument } from "../support/standards";
 
 const SALT = manifest({ name: "orders", dependencies: { "@salt-ds/core": "^1.50.0", "@salt-ds/theme": "^1.33.0", react: "18.3.1" } });
 
-/** The fact document repo-facts 0.2.0 produces for +files+. */
+/** The fact document Surveyor 0.2.0 produces for +files+. */
 async function facts(files: Readonly<Record<string, MemoryFile>>): Promise<JsonObject> {
   const { document } = await memoryProfile(files, { public_id: "src_design", name: "design" });
   return document.fact_document as JsonObject;

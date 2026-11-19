@@ -8,7 +8,7 @@ import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 import { projectMap } from "@/lib/projection/project";
 
-/** Persistence for the immutable Relationship Map, one per Assessment. */
+/** Persistence for the immutable Relationship Map, one per Run. */
 
 export type RelationshipMap = typeof relationshipMaps.$inferSelect;
 

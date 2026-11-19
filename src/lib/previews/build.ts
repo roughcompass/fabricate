@@ -62,7 +62,7 @@ class BuildFailure extends Error {
   override name = "BuildFailure";
 }
 
-/** How much install and build output one log keeps; Fabricate's own step lines are always written. */
+/** How much install and build output one log keeps; the Frontend Registry's own step lines are always written. */
 const LOG_LIMIT = 16 * 1024 * 1024;
 /** How far before the install output may be dated, for clocks that disagree with file times. */
 const CLOCK_SLACK_MS = 2_000;
@@ -325,7 +325,7 @@ async function sweep(config: FrontendRegistryConfig, preview: PreviewBuild, file
   await remove("out", (name) => !earlier(name) || `out/${name}` === preview.artifact);
 }
 
-/** A claim's log: install and build output up to LOG_LIMIT, and Fabricate's own lines, which are always kept. */
+/** A claim's log: install and build output up to LOG_LIMIT, and the Frontend Registry's own lines, which are always kept. */
 class AttemptLog {
   private written = 0;
   private truncated = false;

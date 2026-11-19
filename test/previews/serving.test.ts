@@ -15,7 +15,7 @@ import { useAppDb } from "../support/next";
 
 /*
  * Serving a preview's published artifact under /previews/<id>/ (design
- * decision 6, spec "Previews are served under a Fabricate path"), through the
+ * decision 6, spec "Previews are served under a Frontend Registry path"), through the
  * route handler itself.
  */
 

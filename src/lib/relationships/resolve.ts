@@ -4,12 +4,12 @@ import { type CoverageGap, type EdgeType, MAP_SCHEMA, MAP_SCHEMA_VERSION, type M
 import { asObject, asArray } from "@/lib/json";
 
 /**
- * Resolves one Assessment's relationship references into a Relationship Map.
+ * Resolves one Run's relationship references into a Relationship Map.
  *
- * Resolution reads only the Profiles of this Assessment's targets, plus the
- * identity metadata (name and canonical URL) of catalog sources outside its
+ * Resolution reads only the Profiles of this Run's targets, plus the
+ * identity metadata (name and canonical URL) of registered Repositories outside its
  * scope, which can label an otherwise unmatched reference but are never read.
- * It is pure: no Git, source reader, catalog write, DNS, or network access.
+ * It is pure: no Git, source reader, Repository write, DNS, or network access.
  *
  * - Packages: a consumer resolves to the one other repository that produces
  *   the exact package name.
@@ -36,7 +36,7 @@ export interface ResolverTarget {
   profile: { digest: string; document: JsonObject } | null;
 }
 
-/** A catalog source outside the Assessment's scope: identity metadata only. */
+/** A registered Repository outside the Run's scope: identity metadata only. */
 export interface RegisteredIdentity {
   public_id: string;
   name: string;
@@ -284,7 +284,7 @@ function gitUrlOf(facts: JsonObject, name: string): string | null {
   return null;
 }
 
-/** Labels an unmatched reference with a catalog source outside the scope, from its identity metadata alone. */
+/** Labels an unmatched reference with a registered Repository outside the scope, from its identity metadata alone. */
 class RegisteredLabels {
   constructor(
     private readonly sources: readonly RegisteredIdentity[],

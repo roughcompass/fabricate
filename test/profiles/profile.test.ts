@@ -19,7 +19,7 @@ const APP: FileTree = {
   "src/client.ts": 'export const load = () => fetch("https://api.example.test/orders", { headers: { Authorization: `Bearer ${process.env.ORDERS_TOKEN}` } });\n',
 };
 
-describe("Repository Profiles from the pinned repo-facts bundle", () => {
+describe("Repository Profiles from the pinned Surveyor bundle", () => {
   let snapshots: SnapshotFixture;
   afterEach(() => snapshots.cleanup());
 

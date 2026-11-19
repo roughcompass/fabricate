@@ -5,10 +5,10 @@ import { routes } from "@/lib/web/routes";
 
 /**
  * How a repository relates to the other repositories of the newest
- * Assessment Run that mapped it: the repositories it uses, such as the
+ * Run that mapped it: the repositories it uses, such as the
  * Module Federation remotes it composes or the packages it depends on, and
  * the repositories that use it. Relationships exist only within one Run's
- * Relationship Map (docs/projection.md), so a repository that no Assessment
+ * Relationship Map (docs/projection.md), so a repository that no Run
  * Run has mapped has no known relationships, which isn't the same as none.
  *
  * Reads only the projection, by index: a few queries whatever the Run's size.
@@ -22,7 +22,7 @@ export interface RelatedRepository {
 }
 
 export interface RepositoryRelationships {
-  /** The Run whose map they come from, or null when no Assessment Run has mapped the repository. */
+  /** The Run whose map they come from, or null when no Run has mapped the repository. */
   run: { publicId: string; finishedAt: Date | null } | null;
   uses: RelatedRepository[];
   usedBy: RelatedRepository[];
@@ -33,7 +33,7 @@ export interface RepositoryRelationships {
 const NONE: RepositoryRelationships = { run: null, uses: [], usedBy: [], mapHref: null };
 
 export function repositoryRelationships(db: Executor, repositoryId: number): RepositoryRelationships {
-  // The newest Assessment Run that mapped the repository.
+  // The newest Run that mapped the repository.
   const node = db
     .select({ mapId: graphNodes.mapId, nodeId: graphNodes.nodeId, run: runs.publicId, finishedAt: runs.finishedAt })
     .from(graphNodes)

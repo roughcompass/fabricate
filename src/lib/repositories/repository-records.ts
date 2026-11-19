@@ -6,7 +6,7 @@ import { repositories } from "@/lib/db/schema";
 import { updateLocked } from "@/lib/db/optimistic";
 
 /**
- * Persistence for repository sources. Callers supply an already parsed and
+ * Persistence for Repositories. Callers supply an already parsed and
  * canonicalized clone URL (see clone-url.ts); this layer enforces record rules,
  * the one-entry-per-canonical-URL rule, and optimistic locking. A deleted
  * Repository is left out of every lookup here unless one asks for it.
@@ -98,7 +98,7 @@ function normalize<T extends RepositoryValues>(values: T): T {
   return { ...values, name: values.name.replace(/\s+/g, " ").trim(), gitRef: gitRef ? gitRef : null };
 }
 
-/** Problems with a source's name and reference, checked without the database. */
+/** Problems with a Repository's name and reference, checked without the database. */
 export function repositoryFieldIssues(values: Pick<RepositoryValues, "name" | "gitRef">): Issue[] {
   const { name, gitRef } = normalize({ ...values, cloneUrl: "", canonicalUrl: "" });
   const issues: Issue[] = [];

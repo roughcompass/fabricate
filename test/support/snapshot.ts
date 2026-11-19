@@ -8,7 +8,7 @@ import { acquire, acquisitionConfig, registerLocalRepository } from "./acquisiti
 import { createTestDb } from "./db";
 import { GitFixture, type Repo } from "./git-fixture";
 
-/** Files to commit, in the repo-facts `MemoryFile` shapes: text, bytes, executables, symbolic links, and submodules. */
+/** Files to commit, in Surveyor's `MemoryFile` shapes: text, bytes, executables, symbolic links, and submodules. */
 export type FileTree = Readonly<Record<string, MemoryFile>>;
 
 /**

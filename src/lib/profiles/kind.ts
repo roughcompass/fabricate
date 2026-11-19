@@ -4,7 +4,7 @@ import { type Fact, type FactDocument, categoryOf } from "./states";
 
 /**
  * Whether a Profile describes a frontend web repository, which is what
- * Fabricate profiles, and the facts that decided it. A repository is one when
+ * the Frontend Registry profiles, and the facts that decided it. A repository is one when
  * it uses a UI framework, composes or is composed through a mechanism such as
  * Module Federation, renders UI elements, recognizes a design system, builds
  * with a browser bundler, or is mostly markup and stylesheets. A service,

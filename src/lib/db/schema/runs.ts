@@ -15,8 +15,8 @@ export const REF_KINDS = ["default_branch", "branch", "tag", "commit"] as const;
 export type RefKind = (typeof REF_KINDS)[number];
 
 /**
- * One static assessment run over an immutable scope snapshot. Standard
- * selections are deliberately not part of an Assessment, so one Assessment can
+ * One static Run over an immutable scope snapshot. Standard selections are
+ * deliberately not part of a Run, so one Run can
  * be evaluated against any number of later Release selections.
  */
 export const runs = sqliteTable(
@@ -52,9 +52,9 @@ export const runs = sqliteTable(
 );
 
 /**
- * One immutable scope entry. Source identity, name, clone URL, and configured
- * reference are copied from the catalog when the assessment starts, so later
- * catalog edits affect only future assessments.
+ * One immutable scope entry. Repository identity, name, clone URL, and configured
+ * reference are copied from the Repository when the Run starts, so later
+ * edits to the Repository affect only future Runs.
  */
 export const runTargets = sqliteTable(
   "assessment_targets",

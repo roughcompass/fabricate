@@ -18,7 +18,7 @@ import { asArray, asObject, isJsonObject } from "@/lib/json";
 import { chunked } from "@/lib/db/chunked";
 
 /**
- * The assessment projection: indexed rows copied out of immutable Profile and
+ * The projection: indexed rows copied out of immutable Profile and
  * Relationship Map documents, so pages and tools never parse a whole document
  * to answer a question. Rows are written in the document's own transaction.
  * Stored documents may predate parts of the contract, so every reader here

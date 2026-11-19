@@ -11,7 +11,7 @@ import { routes } from "@/lib/web/routes";
 
 /**
  * The repositories this one uses and the ones that use it, from the newest
- * Assessment Run that mapped it, with the way to its focus in that Run's
+ * Run that mapped it, with the way to its focus in that Run's
  * Relationship Map. Without such a Run they're unknown, and the section says
  * so rather than showing none.
  */

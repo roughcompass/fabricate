@@ -41,7 +41,7 @@ describe("A repository's relationships", () => {
 describe("Package producers across the fleet", () => {
   it("names the repository whose current Profile publishes a package, and never one whose package is private or only on a branch", async () => {
     const db = createTestDb();
-    /** Surveys +source+ at a commit of its configured reference, or of a branch, whose package.json is +packageManifest+. */
+    /** Surveys +repository+ at a commit of its configured reference, or of a branch, whose package.json is +packageManifest+. */
     const surveyed = async (repository: ReturnType<typeof buildRepository>, packageManifest: string, fromConfiguredReference = true) => {
       const commitSha = sha1(`${repository.publicId}:${packageManifest}`);
       const { survey } = requestSurvey(db, { repositoryId: repository.id, commitSha, reference: "refs/heads/main", fromConfiguredReference, trigger: fromConfiguredReference ? "added" : "run", ...currentRecipe(getConfig()) });

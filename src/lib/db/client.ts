@@ -17,7 +17,7 @@ export type Executor = BaseSQLiteDatabase<"sync", Database.RunResult, Schema>;
 export const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 
 /**
- * Opens a SQLite database with the pragmas every Fabricate process relies on:
+ * Opens a SQLite database with the pragmas every Frontend Registry process relies on:
  * write-ahead logging so the web server and worker can read while one writes,
  * enforced foreign keys, and a busy timeout so immediate transactions wait for
  * the single writer instead of failing.

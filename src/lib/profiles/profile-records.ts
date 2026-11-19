@@ -74,7 +74,7 @@ export function profileOfSurvey(db: Executor, surveyId: number): RepositoryProfi
   return db.select().from(repositoryProfiles).where(eq(repositoryProfiles.surveyId, surveyId)).get();
 }
 
-/** Every Profile of an Assessment's completed targets, in scope order. */
+/** Every Profile of a Run's completed targets, in scope order. */
 export function profilesOf(db: Executor, runId: number): { profile: RepositoryProfile; target: RunTarget }[] {
   return db
     .select({ profile: repositoryProfiles, target: runTargets })

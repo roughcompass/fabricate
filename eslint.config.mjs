@@ -6,12 +6,12 @@ const executionMessage =
 
 // Imports that can run code or start processes. child_process is allowed only
 // in GitRunner, the single audited path to the Git executable, and in the
-// preview build's process module, the one place Fabricate runs repository
+// preview build's process module, the one place the Frontend Registry runs repository
 // code, for remotes an operator enrolled (docs/previews.md).
 const executionModules = ["vm", "node:vm", "module", "node:module"];
 const processModules = ["child_process", "node:child_process"];
 
-// Detection runs in the pinned @repo-facts bundle, whose own checks isolate
+// Detection runs in the pinned Surveyor bundle (@repo-facts/bundle), whose own checks isolate
 // it. Profile document validation here is held to the same isolation: no
 // network, filesystem, process environment, Git, configuration, or database
 // access (design.md, decision 7).

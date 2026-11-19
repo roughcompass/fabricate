@@ -74,7 +74,7 @@ export const standardReleases = sqliteTable(
   ],
 );
 
-/** The published Releases an Initiative currently selects. */
+/** The published Releases an Assessment currently selects. */
 export const assessmentStandardReleases = sqliteTable(
   "initiative_standard_releases",
   {

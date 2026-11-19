@@ -13,7 +13,7 @@ import { chunked } from "@/lib/db/chunked";
 import { runProfileIds } from "@/lib/profiles/evidence-owners";
 
 /*
- * Everything a Relationship Map view needs, read from the assessment
+ * Everything a Relationship Map view needs, read from the
  * projection. No view reads the map document: a map of 500 repositories is a
  * handful of indexed queries.
  */
@@ -21,7 +21,7 @@ import { runProfileIds } from "@/lib/profiles/evidence-owners";
 export interface ViewRepository {
   nodeId: string;
   label: string;
-  /** The assessment target's public ID. */
+  /** The Run target's public ID. */
   target: string;
   /** The target's Profile, when one exists. */
   profile: string | null;
@@ -40,7 +40,7 @@ export interface MapView {
   missing: MissingTarget[];
 }
 
-/** The map record of an Assessment, without its document. */
+/** The map record of a Run, without its document. */
 function mapRecordOf(db: Executor, runId: number): RelationshipMap | undefined {
   return db.select().from(relationshipMaps).where(eq(relationshipMaps.runId, runId)).get();
 }

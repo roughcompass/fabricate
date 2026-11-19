@@ -19,7 +19,7 @@ import { advanceRun, transitionRun, transitionTarget } from "./transitions";
 import { FINALIZE_RUN, requestFinalization, settleTarget } from "./waiting";
 
 /**
- * Assessment orchestration: a coordinator, one job per target, and a
+ * Run orchestration: a coordinator, one job per target, and a
  * finalizer job (unify-surveys, design decision 2).
  *
  * A target's job resolves its reference to the commit the remote advertises,
@@ -27,7 +27,7 @@ import { FINALIZE_RUN, requestFinalization, settleTarget } from "./waiting";
  * survey that already succeeded completes the target at once; otherwise the
  * survey continues every waiting target when it finishes. A failure before
  * the commit is known is the target's own and starts no survey. The last
- * target to finish moves the Assessment to finalizing and enqueues the
+ * target to finish moves the Run to finalizing and enqueues the
  * finalizer in the same transaction, so finalization survives a worker
  * restart. The finalizer writes the Relationship Map once and derives the
  * outcome: complete, complete with issues, failed, or canceled.
@@ -138,7 +138,7 @@ export function finalizeRun(db: Executor, runPublicId: string): Run {
 
     const targets = targetsOf(tx, run.id);
     const profiles = profilesOf(tx, run.id).length;
-    // Completed Profiles stay reviewable in the map even when the Assessment was canceled.
+    // Completed Profiles stay reviewable in the map even when the Run was canceled.
     finalizeRelationshipMap(tx, run);
     const outcome: AggregateOutcome = run.cancelRequestedAt ? "canceled" : profiles === targets.length ? "complete" : profiles > 0 ? "complete_with_issues" : "failed";
     const failures = targets.filter((target) => target.state === "failed").map((target) => `${target.repositoryName}: ${target.failureCode}`);

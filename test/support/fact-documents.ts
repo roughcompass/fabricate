@@ -6,7 +6,7 @@ import { memoryProfile } from "./profiles";
 
 const DIRECTORY = path.join(import.meta.dirname, "..", "fixtures", "fact-documents");
 
-/** Golden fact documents copied from repo-facts, as named in `SOURCE.json`. */
+/** Golden fact documents copied from Surveyor's fixtures, as named in `SOURCE.json`. */
 export const FACT_DOCUMENT_FIXTURES = ["federation-shell", "npm-workspace", "salt-application"] as const;
 
 export function factDocumentFixture(name: (typeof FACT_DOCUMENT_FIXTURES)[number]): JsonObject {

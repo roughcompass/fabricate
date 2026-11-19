@@ -126,7 +126,7 @@ export async function completeRun(
 let surveyed = 0;
 
 /**
- * A background or preview survey of a new synthetic commit of +source+,
+ * A background or preview survey of a new synthetic commit of +repository+,
  * succeeded with a Profile of +files+, as the survey job writes one. A
  * survey of the configured reference records that reference's resolution,
  * as background surveying does.

@@ -27,7 +27,7 @@ export interface RuntimeDescriptor {
   readonly profiles: readonly Profile[];
   /** The simulated address shown for the application. */
   readonly url: string;
-  /** Its template's page in Fabricate. */
+  /** Its template's page in the Frontend Registry. */
   readonly pageHref: string;
   /** The brand's shell. */
   readonly shell: "access" | "markets";

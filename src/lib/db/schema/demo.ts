@@ -4,7 +4,7 @@ import { PERSONAS } from "../../demo/catalog/types";
 import { createdAt, id, publicId, sqlList, timestamp, updatedAt } from "./columns";
 
 // Template demo data (design.md, decision 4). These tables never reference
-// catalog, assessment, evaluation, or standard rows, and nothing outside
+// Repository, Assessment, Run, Evaluation, or Standard rows, and nothing outside
 // src/lib/demo reads them. Deleting a workspace removes everything it owns.
 
 export const THREAD_STATUSES = ["open", "resolved"] as const;

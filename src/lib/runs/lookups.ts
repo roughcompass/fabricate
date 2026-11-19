@@ -4,7 +4,7 @@ import { NotFoundError } from "@/lib/db/errors";
 import { runs } from "@/lib/db/schema";
 import type { Run } from "./run-records";
 
-/** An Assessment by its internal id, for jobs that hold a target or Evaluation row. */
+/** A Run by its internal id, for jobs that hold a target or Evaluation row. */
 export function runById(db: Executor, id: number): Run {
   const run = db.select().from(runs).where(eq(runs.id, id)).get();
   if (!run) throw new NotFoundError(`Assessment ${id} does not exist`);

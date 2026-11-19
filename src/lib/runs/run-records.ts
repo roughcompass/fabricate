@@ -11,7 +11,7 @@ import { transitionTarget } from "./transitions";
 import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
 /**
- * Persistence for Assessments, their immutable scope snapshot, and the
+ * Persistence for Runs, their immutable scope snapshot, and the
  * commits their targets were pinned to. State transitions live in
  * transitions.ts.
  */
@@ -32,8 +32,8 @@ export interface NewRun {
 }
 
 /**
- * Writes an Assessment and every target copy. The targets share the
- * Assessment's timestamp, which the database requires of a frozen scope.
+ * Writes a Run and every target copy. The targets share the
+ * Run's timestamp, which the database requires of a frozen scope.
  */
 export function createRun(db: Executor, input: NewRun): { run: Run; targets: RunTarget[] } {
   const issues = new IssueCollector();
@@ -109,7 +109,7 @@ export function runNumber(db: Executor, run: Pick<Run, "id" | "assessmentId">): 
   return sequenceNumber(db, runs, run);
 }
 
-/** The sequence number of each of an Initiative's Runs, by id. */
+/** The sequence number of each of an Assessment's Runs, by id. */
 export function runNumbers(db: Executor, assessmentId: number): Map<number, number> {
   return sequenceNumbers(db, runs, assessmentId);
 }

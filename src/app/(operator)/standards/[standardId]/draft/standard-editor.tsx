@@ -21,7 +21,7 @@ import styles from "./editor.module.css";
 
 /**
  * The structured Standard draft editor. It keeps the draft's Controls in
- * client state, builds every expression from the catalog's choices, and
+ * client state, builds every expression from the vocabulary's choices, and
  * submits the whole structured document to a Server Action, which saves it and
  * returns the complete server-side validation result. The save bar is the one
  * place that reports whether the draft is saved and valid.

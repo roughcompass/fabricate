@@ -1,11 +1,10 @@
 import { type Query, pageQuery, withQuery } from "./query";
 
 /**
- * Every record's address (operator-interface/page-patterns spec). The
- * interface names records differently from the model: a model Initiative is
- * an Assessment, at /assessments; a model Assessment is a Run, at /runs; and
- * a Repository Source is a Repository, at /repositories. Pages, actions, and
- * the end-to-end specs build addresses here, so a change lands in one place.
+ * Every record's address (operator-interface/page-patterns spec): an
+ * Assessment at /assessments, a Run at /runs, and a Repository at
+ * /repositories. Pages, actions, and the end-to-end specs build addresses
+ * here, so a change lands in one place.
  */
 /** What a piece of evidence is reached through: a Run's public ID, or a Profile's. */
 export type EvidenceOwner = { readonly run: string } | { readonly profile: string };

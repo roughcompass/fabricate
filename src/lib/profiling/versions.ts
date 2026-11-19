@@ -102,7 +102,7 @@ export interface ProfileSummary {
   readonly current: { readonly version: number; readonly profilePublicId: string; readonly profiledAt: Date } | null;
 }
 
-/** Each repository's newest version and current Profile, by source id, in two queries, for the Repositories list. */
+/** Each repository's newest version and current Profile, by repository id, in two queries, for the Repositories list. */
 export function profileSummaries(db: Executor): Map<number, ProfileSummary> {
   const rows = db.all<{ source_id: number; number: number; state: SurveyState; created_at: number; profiled: number }>(sql`
     select s.repository_source_id as source_id, s.number, s.state, s.created_at, p.id is not null as profiled

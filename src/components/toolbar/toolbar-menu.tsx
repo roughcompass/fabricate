@@ -10,7 +10,7 @@ import styles from "./toolbar.module.css";
 export interface MenuContext {
   readonly name: string;
   readonly environment: string;
-  /** Its page in Fabricate, opened in a new tab. */
+  /** Its page in the Frontend Registry, opened in a new tab. */
   readonly href: string;
 }
 

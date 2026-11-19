@@ -27,7 +27,7 @@ export const repositoryProfiles = sqliteTable(
   ],
 );
 
-/** The immutable cross-repository relationship graph of one Assessment. */
+/** The immutable cross-repository relationship graph of one Run. */
 export const relationshipMaps = sqliteTable(
   "relationship_maps",
   {

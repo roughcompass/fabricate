@@ -1,28 +1,28 @@
-# DE FabLab
+# Frontend Registry
 
-DE FabLab assesses independently managed Git repositories without running their code. It records evidence-backed facts about each repository and the relationships between repositories. It then compares those facts with published engineering Standards and reports every difference as a Finding.
+The Frontend Registry assesses independently managed Git repositories without running their code. It records evidence-backed facts about each repository and the relationships between repositories. It then compares those facts with published engineering Standards and reports every difference as a Finding.
 
-DE FabLab is the working name of the Frontend Registry, CIB's registry of frontend applications. [docs/architecture.md](docs/architecture.md) describes its parts (the Frontend Registry, Surveyor, the Reference Catalog, and the Catalog Builder), what each owns, and what's left to build.
+The Frontend Registry is CIB's registry of frontend applications. [docs/architecture.md](docs/architecture.md) describes its parts (the Frontend Registry, Surveyor, the Reference Catalog, and the Catalog Builder), what each owns, and what's left to build.
 
-DE FabLab implements the OpenSpec change `repository-assessment-foundation`: the repository catalog, Assessments and their static Runs, Repository Profiles, Relationship Maps, the Standard Library, Evaluations, and the review screens for each. The safety rules below are requirements of that change. The end-to-end suites in `test/safety/` and `test/integration/` verify them against hostile and unavailable-service repositories.
+The Frontend Registry implements the OpenSpec change `repository-assessment-foundation`: Repository registration, Assessments and their static Runs, Repository Profiles, Relationship Maps, the Standard Library, Evaluations, and the review screens for each. The safety rules below are requirements of that change. The end-to-end suites in `test/safety/` and `test/integration/` verify them against hostile and unavailable-service repositories.
 
 ## Requirements
 
 - Node.js 24 or newer
 - Git 2.32 or newer, on `PATH`
-- The address of the internal npm registry that serves the `@repo-facts` packages, in `REPO_FACTS_NPM_REGISTRY`
+- The address of the internal npm registry that serves Surveyor's `@repo-facts` packages, in `SURVEYOR_NPM_REGISTRY`
 - Google Chrome, for browser tests. Playwright uses the installed Chrome instead of downloading a browser.
 
 ## Set up a development environment
 
 ```sh
-export REPO_FACTS_NPM_REGISTRY=<internal registry URL>
+export SURVEYOR_NPM_REGISTRY=<internal registry URL>
 npm ci
 npm run db:migrate
 npm run dev
 ```
 
-The committed `.npmrc` resolves the `@repo-facts` scope only from `REPO_FACTS_NPM_REGISTRY`. If the variable is unset, installation fails rather than falling back to a public registry. The lockfile records each package's SHA-512 integrity but no registry URL. Package lifecycle scripts are disabled for every dependency. If the registry requires authentication, sign in once with `npm login --scope=@repo-facts --registry "$REPO_FACTS_NPM_REGISTRY"`; the token stays in your user npm configuration and never enters this repository. If you develop `repo-facts` on the same machine, its `npm run registry` serves a local registry and prints the value to use.
+The committed `.npmrc` resolves the `@repo-facts` scope only from `SURVEYOR_NPM_REGISTRY`. If the variable is unset, installation fails rather than falling back to a public registry. The lockfile records each package's SHA-512 integrity but no registry URL. Package lifecycle scripts are disabled for every dependency. If the registry requires authentication, sign in once with `npm login --scope=@repo-facts --registry "$SURVEYOR_NPM_REGISTRY"`; the token stays in your user npm configuration and never enters this repository. If you develop Surveyor on the same machine, its `npm run registry` serves a local registry and prints the value to use.
 
 Open <http://localhost:3000>. `npm run dev` starts the web server and the worker together, and stops both if either one stops, so runs never sit queued with no worker to pick them up. The worker restarts when its code or the configuration changes, and after it exits on its own. Use `npm run dev:web` or `npm run dev:worker` to run one of them. If another process already listens on port 3000, including on the IPv6 loopback address, choose a free port with `PORT=3200 npm run dev` or `npm run dev -- --port 3200`. Only one development server can run in a checkout: if one is already running, `npm run dev` stops and names it.
 
@@ -71,128 +71,139 @@ The lint rules forbid `eval`, the `Function` constructor, the `vm` module, compu
 - **Lint** allows no warnings, and its rules keep the shared helpers in use: record links come from `src/lib/web/routes.ts`; dates and numbers are formatted only in `time.ts` and `count.ts`; only `ActionForm` calls `useActionState`; pages and components import Drizzle and the schema for types only; tests open and migrate databases only through `test/support`; specs set the theme and find the page header only through `e2e/support/shell.ts`. A function over 150 lines and a source file over 600 lines fail it.
 - **A unit test** checks that the active-state lists derive from `src/lib/db/state-machines.ts`.
 
-## Configure DE FabLab
+## Configure the Frontend Registry
 
-Settings live in `config/fabricate.json`. The `shared` section applies everywhere, and the `development`, `test`, and `production` sections override it. `FABRICATE_ENV` selects the environment, falling back to `NODE_ENV` and then `development`. Relative paths resolve from the `fabricate/` directory.
+Settings live in `config/frontend-registry.json`. The `shared` section applies everywhere, and the `development`, `test`, and `production` sections override it. `FRONTEND_REGISTRY_ENV` selects the environment, falling back to `NODE_ENV` and then `development`. Relative paths resolve from the `fabricate/` directory.
 
 Environment variables override the file:
 
 | Setting | Environment variable | Default |
 |---|---|---|
-| `allowedRoots` | `FABRICATE_ALLOWED_ROOTS` | none; `../fleet` in development |
-| `deniedRoots` | `FABRICATE_DENIED_ROOTS` | none, plus the protected `fleet-kit/` tree |
-| `gitTimeoutSeconds` | `FABRICATE_GIT_TIMEOUT` | 120 |
-| `gitLockTimeoutSeconds` | `FABRICATE_GIT_LOCK_TIMEOUT` | 300 |
-| `workerConcurrency` | `FABRICATE_WORKER_CONCURRENCY` | 3 |
-| `database` | `FABRICATE_DATABASE` | `storage/fabricate.sqlite3` |
-| `repositoryStorage` | `FABRICATE_REPOSITORY_STORAGE` | `storage/repositories` |
-| `gitCredentialHelper` | `FABRICATE_GIT_CREDENTIAL_HELPER` | none |
-| `analysis.maxBlobBytes` | `FABRICATE_MAX_BLOB_BYTES` | 1048576 |
-| `analysis.maxLockfileBytes` | `FABRICATE_MAX_LOCKFILE_BYTES` | 33554432 |
-| `analysis.maxFiles` | `FABRICATE_MAX_FILES` | 4000 |
-| `analysis.maxTotalBytes` | `FABRICATE_MAX_TOTAL_BYTES` | 67108864 |
-| `demo.enabled` | `FABRICATE_DEMO` | `false`; `true` in development and test |
-| `profiling.checkMinutes` | `FABRICATE_PROFILING_CHECK_MINUTES` | 60; how often the worker checks every Repository for new commits and a new detector, see [docs/profiling.md](docs/profiling.md) |
-| `previews.enabled` | `FABRICATE_PREVIEWS` | `false`; whether Repository previews exist, see [docs/previews.md](docs/previews.md) |
-| `previews.trustedSources` | `FABRICATE_PREVIEWS_TRUSTED_SOURCES` | none; the clone URLs of the remotes enrolled for previews |
-| `previews.nodeVersions` | `FABRICATE_PREVIEWS_NODE_VERSIONS` | none; each Node version a preview build may use, mapped to its binary directory |
-| `previews.storage` | `FABRICATE_PREVIEWS_STORAGE` | `storage/previews`; where preview builds run and keep their logs, published output, and package caches, outside any directory with a `.npmrc`, `.yarnrc`, or `.yarnrc.yml` for Yarn builds |
-| `previews.concurrency` | `FABRICATE_PREVIEWS_CONCURRENCY` | 1; preview builds that run at once |
-| `previews.timeoutMinutes` | `FABRICATE_PREVIEWS_TIMEOUT_MINUTES` | 15 |
-| `previews.maxOutputBytes` | `FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES` | 209715200 (200 MiB); the largest output one build can publish |
-| `previews.maxStorageBytes` | `FABRICATE_PREVIEWS_MAX_STORAGE_BYTES` | 5368709120 (5 GiB); the published output and latest logs of every preview together, kept under it by deleting the least recently used; the package caches are pruned past half of it |
+| `allowedRoots` | `FRONTEND_REGISTRY_ALLOWED_ROOTS` | none; `../fleet` in development |
+| `deniedRoots` | `FRONTEND_REGISTRY_DENIED_ROOTS` | none, plus the protected `fleet-kit/` tree |
+| `gitTimeoutSeconds` | `FRONTEND_REGISTRY_GIT_TIMEOUT` | 120 |
+| `gitLockTimeoutSeconds` | `FRONTEND_REGISTRY_GIT_LOCK_TIMEOUT` | 300 |
+| `workerConcurrency` | `FRONTEND_REGISTRY_WORKER_CONCURRENCY` | 3 |
+| `database` | `FRONTEND_REGISTRY_DATABASE` | `storage/fabricate.sqlite3` |
+| `repositoryStorage` | `FRONTEND_REGISTRY_REPOSITORY_STORAGE` | `storage/repositories` |
+| `gitCredentialHelper` | `FRONTEND_REGISTRY_GIT_CREDENTIAL_HELPER` | none |
+| `analysis.maxBlobBytes` | `FRONTEND_REGISTRY_MAX_BLOB_BYTES` | 1048576 |
+| `analysis.maxLockfileBytes` | `FRONTEND_REGISTRY_MAX_LOCKFILE_BYTES` | 33554432 |
+| `analysis.maxFiles` | `FRONTEND_REGISTRY_MAX_FILES` | 4000 |
+| `analysis.maxTotalBytes` | `FRONTEND_REGISTRY_MAX_TOTAL_BYTES` | 67108864 |
+| `demo.enabled` | `FRONTEND_REGISTRY_DEMO` | `false`; `true` in development and test |
+| `profiling.checkMinutes` | `FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES` | 60; how often the worker checks every Repository for new commits and a new Surveyor release, see [docs/profiling.md](docs/profiling.md) |
+| `previews.enabled` | `FRONTEND_REGISTRY_PREVIEWS` | `false`; whether Repository previews exist, see [docs/previews.md](docs/previews.md) |
+| `previews.trustedSources` | `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` | none; the clone URLs of the remotes enrolled for previews |
+| `previews.nodeVersions` | `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` | none; each Node version a preview build may use, mapped to its binary directory |
+| `previews.storage` | `FRONTEND_REGISTRY_PREVIEWS_STORAGE` | `storage/previews`; where preview builds run and keep their logs, published output, and package caches, outside any directory with a `.npmrc`, `.yarnrc`, or `.yarnrc.yml` for Yarn builds |
+| `previews.concurrency` | `FRONTEND_REGISTRY_PREVIEWS_CONCURRENCY` | 1; preview builds that run at once |
+| `previews.timeoutMinutes` | `FRONTEND_REGISTRY_PREVIEWS_TIMEOUT_MINUTES` | 15 |
+| `previews.maxOutputBytes` | `FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES` | 209715200 (200 MiB); the largest output one build can publish |
+| `previews.maxStorageBytes` | `FRONTEND_REGISTRY_PREVIEWS_MAX_STORAGE_BYTES` | 5368709120 (5 GiB); the published output and latest logs of every preview together, kept under it by deleting the least recently used; the package caches are pruned past half of it |
 
-List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_PREVIEWS_TRUSTED_SOURCES` separates clone URLs with spaces or newlines instead, and `FABRICATE_PREVIEWS_NODE_VERSIONS` lists `version=directory` pairs, such as `22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin`. `FABRICATE_DEMO` and `FABRICATE_PREVIEWS` accept `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+List variables use the platform path separator, which is `:` on macOS and Linux. `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` separates clone URLs with spaces or newlines instead, and `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` lists `version=directory` pairs, such as `22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin`. `FRONTEND_REGISTRY_DEMO` and `FRONTEND_REGISTRY_PREVIEWS` accept `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+
+The settings had other names before the product took its name. Until the next release, each old name is still read when its new one is missing, and prints a deprecation warning: `FABRICATE_*` variables for `FRONTEND_REGISTRY_*`, and `config/fabricate.json` for `config/frontend-registry.json`. `npm run release` and `scripts/verify-release.mjs` likewise still read `REPO_FACTS_NPM_REGISTRY` and `REPO_FACTS_NPM_TOKEN` for `SURVEYOR_NPM_REGISTRY` and `SURVEYOR_NPM_TOKEN`; the committed `.npmrc` reads only the new name. Preference cookies and the template demo's local storage move to their new names on the next visit; the demo workspace and share-view cookies keep theirs.
 
 ### Preview toolchain
 
-Repository previews are off by default. When they're on, the worker builds enrolled repositories with Node versions its host provides; DE FabLab installs none. Install each version with [mise](https://mise.jdx.dev), set its `previews.nodeVersions` entry to that version's `bin` directory, written out in full, and check the result:
+Repository previews are off by default. When they're on, the worker builds enrolled repositories with Node versions its host provides; the Frontend Registry installs none. Install each version with [mise](https://mise.jdx.dev), set its `previews.nodeVersions` entry to that version's `bin` directory, written out in full, and check the result:
 
 ```sh
 mise install node@22.11.0
-FABRICATE_PREVIEWS_NODE_VERSIONS="22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin" npm run previews:doctor
+FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS="22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin" npm run previews:doctor
 ```
 
 The doctor checks that each configured directory's `node` reports its version and that its corepack runs pnpm and Yarn, and that `git` and `tar` are where the worker finds them. It prints a line for each check, names anything missing or wrong, and exits non-zero if any check fails. In a release, run `node dist/previews-doctor.cjs` from the release directory, with the worker's settings. See [docs/previews.md](docs/previews.md#the-workers-toolchain).
 
 ### Template demo
 
-The template demo is an interactive demonstration of starting an application from a template, inside DE FabLab. Its deployments are simulated: each template has one reference deployment that runs inside DE FabLab, and the demo never builds or deploys code, runs a repository's commands, or contacts Bitbucket or any other service. When `demo.enabled` is on, the sidebar adds Salt Patterns under a Templates heading. When it is off, every demo page, running application, share link, and demo endpoint answers not found, and no other part of DE FabLab changes.
+The template demo is an interactive demonstration of starting an application from a template, inside the Frontend Registry. Its deployments are simulated: each template has one reference deployment that runs inside the Frontend Registry, and the demo never builds or deploys code, runs a repository's commands, or contacts Bitbucket or any other service. When `demo.enabled` is on, the sidebar adds Salt Patterns under a Templates heading. When it is off, every demo page, running application, share link, and demo endpoint answers not found, and no other part of the Frontend Registry changes.
 
 To run the demo locally, start the web server with the switch on, then open Salt Patterns:
 
 ```sh
-FABRICATE_DEMO=true npm run dev
+FRONTEND_REGISTRY_DEMO=true npm run dev
 ```
 
-For a hosted demo that self-serve visitors can reach, start the release's web server with `FABRICATE_DEMO=true` (see [Run in production](#run-in-production)). To turn the demo off again, restart without the override.
+For a hosted demo that self-serve visitors can reach, start the release's web server with `FRONTEND_REGISTRY_DEMO=true` (see [Run in production](#run-in-production)). To turn the demo off again, restart without the override.
 
-Each visitor gets an anonymous workspace, which is tied to their browser by an httpOnly cookie and needs no sign-in. A workspace holds the visitor's comments, share links, and session profiles, and other visitors cannot see it except through a share link. DE FabLab stores only a digest of the cookie. A workspace can hold 20 custom session profiles, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted, together with their comments, share links, and session profiles. The demo's tables are separate from catalog, assessment, evaluation, and standard data. See [docs/template-demo.md](docs/template-demo.md) for the presenter script.
+Each visitor gets an anonymous workspace, which is tied to their browser by an httpOnly cookie and needs no sign-in. A workspace holds the visitor's comments, share links, and session profiles, and other visitors cannot see it except through a share link. The Frontend Registry stores only a digest of the cookie. A workspace can hold 20 custom session profiles, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted, together with their comments, share links, and session profiles. The demo's tables are separate from Repository, Assessment, Run, Evaluation, and Standard data. See [docs/template-demo.md](docs/template-demo.md) for the presenter script.
 
 ### Source roots
 
 A local repository is registered as a `file://` URL. After every symbolic link is resolved, its path must fall inside an allowed root and outside every denied root. Development allows the workspace's `fleet/` directory.
 
-The workspace's `fleet-kit/` directory holds evaluation data that DE FabLab must never read. It is always denied, including when it is reached through a symbolic link. No setting, environment variable, or override can remove it, and an allowed root inside it stops startup with a configuration error.
+The workspace's `fleet-kit/` directory holds evaluation data that the Frontend Registry must never read. It is always denied, including when it is reached through a symbolic link. No setting, environment variable, or override can remove it, and an allowed root inside it stops startup with a configuration error.
 
 ### Storage
 
-The SQLite database and the managed Git object databases share one directory. In development it is `storage/`, and tests use `tmp/test/`. DE FabLab keeps every acquired commit so historical results stay reviewable, and it has no deletion workflow yet. Watch disk use for large or frequently assessed repositories.
+The SQLite database and the managed Git object databases share one directory. In development it is `storage/`, and tests use `tmp/test/`. The Frontend Registry keeps every acquired commit so historical results stay reviewable, and it has no deletion workflow yet. Watch disk use for large or frequently assessed repositories.
 
 ### Git credentials
 
-DE FabLab never stores credentials. It rejects clone URLs that embed a password or access token, and it never shows credentials in the catalog or in assessment records.
+The Frontend Registry never stores credentials. It rejects clone URLs that embed a password or access token, and it never shows credentials on Repositories or in Run records.
 
-- **HTTPS:** set `gitCredentialHelper` to a Git credential helper available to the worker, such as `osxkeychain` or `store`. DE FabLab ignores the system and global Git configuration, so a helper configured only there is not used.
+- **HTTPS:** set `gitCredentialHelper` to a Git credential helper available to the worker, such as `osxkeychain` or `store`. The Frontend Registry ignores the system and global Git configuration, so a helper configured only there is not used.
 - **SSH:** load the key into an SSH agent that the worker can reach through `SSH_AUTH_SOCK`. Git runs in batch mode, so a missing or locked key fails the acquisition instead of prompting.
 
 ## Run in production
 
-Fabricate runs as two Node.js processes, the web server and the worker, with no container. Build a release on a machine that can reach the `@repo-facts` registry, then run it with Node.js 24, Git, and an SSH client for `ssh://` sources:
+The Frontend Registry runs as two Node.js processes, the web server and the worker, with no container. Build a release on a machine that can reach the `@repo-facts` registry, then run it with Node.js 24, Git, and an SSH client for `ssh://` sources:
 
 ```sh
-REPO_FACTS_NPM_REGISTRY=<registry> npm ci && npm run build
-npm run release                       # assembles release/
-REPO_FACTS_NPM_TOKEN=<token used for the install> node scripts/verify-release.mjs
+SURVEYOR_NPM_REGISTRY=<registry> npm ci && npm run build
+npm run release                       # assembles release/, the frontend-registry release
+SURVEYOR_NPM_TOKEN=<token used for the install> node scripts/verify-release.mjs
 
 cd release
-export NODE_ENV=production FABRICATE_ENV=production
+export NODE_ENV=production FRONTEND_REGISTRY_ENV=production
 node dist/migrate.cjs                 # before the first start and after each upgrade; copy the database first
 PORT=3000 HOSTNAME=0.0.0.0 node server.js
 node dist/worker.cjs
 ```
 
-`release/` holds the standalone web server, its static files, the worker and migration bundles, the migrations, `config/`, and the native SQLite binding. It installs nothing and carries no npm configuration, so neither the registry address nor its token reaches it. `scripts/verify-release.mjs` checks that: it scans every file for the token, any literal npm `_authToken`, and any `REPO_FACTS_NPM_TOKEN` assignment, and requires the release's `@repo-facts` packages to match the versions the lockfile pins, with their release provenance. Omit the token for a registry that allows anonymous reads.
+`release/` holds the standalone web server, its static files, the worker and migration bundles, the migrations, `config/`, and the native SQLite binding. It installs nothing and carries no npm configuration, so neither the registry address nor its token reaches it. `scripts/verify-release.mjs` checks that: it scans every file for the token, any literal npm `_authToken`, and any `SURVEYOR_NPM_TOKEN` assignment (or one of its old name), and requires the release's `@repo-facts` packages to match the versions the lockfile pins, with their release provenance. Omit the token for a registry that allows anonymous reads.
 
-Data lives in `release/storage/` unless `FABRICATE_DATABASE` and `FABRICATE_REPOSITORY_STORAGE` point elsewhere. Keep it outside the release directory so an upgrade can replace the release. Pass other settings as environment variables, for example `FABRICATE_ALLOWED_ROOTS=/repositories`. Run both processes under the host's own supervisor, such as systemd or launchd, as an unprivileged user. Run one worker per database: it serializes Git updates to each repository in its own memory, and runs `workerConcurrency` jobs on different repositories at once. A second worker refuses to start while the first holds `worker.lock` beside the database, and names its process. A worker killed without releasing the lock leaves the file behind, and the next worker takes it over once that process is gone. Assessments never run a package manager or repository code, so the processes need none beyond Node.js itself. Repository previews, which are off by default, are the exception: with them on, the worker builds enrolled repositories with the Node versions its host provides, which `node dist/previews-doctor.cjs` checks (see [Preview toolchain](#preview-toolchain)).
+Data lives in `release/storage/` unless `FRONTEND_REGISTRY_DATABASE` and `FRONTEND_REGISTRY_REPOSITORY_STORAGE` point elsewhere. Keep it outside the release directory so an upgrade can replace the release. Pass other settings as environment variables, for example `FRONTEND_REGISTRY_ALLOWED_ROOTS=/repositories`. Run both processes under the host's own supervisor, such as systemd or launchd, as an unprivileged user. Run one worker per database: it serializes Git updates to each repository in its own memory, and runs `workerConcurrency` jobs on different repositories at once. A second worker refuses to start while the first holds `worker.lock` beside the database, and names its process. A worker killed without releasing the lock leaves the file behind, and the next worker takes it over once that process is gone. Assessments never run a package manager or repository code, so the processes need none beyond Node.js itself. Repository previews, which are off by default, are the exception: with them on, the worker builds enrolled repositories with the Node versions its host provides, which `node dist/previews-doctor.cjs` checks (see [Preview toolchain](#preview-toolchain)).
+
+### Upgrade from a release named fabricate
+
+A release is named `frontend-registry` from this version on. Data doesn't move with the name: point the new release at the storage directory the old one used, and it keeps every Repository, Assessment, Run, and Profile. The default database file is still `storage/fabricate.sqlite3`, so nothing in the directory needs renaming.
+
+1. Stop the old release's web server and worker, and copy the database, as before any upgrade.
+2. Rename the old release's settings: `FABRICATE_*` variables become `FRONTEND_REGISTRY_*`, and a `config/fabricate.json` of your own becomes `config/frontend-registry.json`. The old names still work for this release, with a warning.
+3. Point the new release at the existing storage, with `FRONTEND_REGISTRY_DATABASE=<storage>/fabricate.sqlite3`, `FRONTEND_REGISTRY_REPOSITORY_STORAGE=<storage>/repositories`, and, with previews on, `FRONTEND_REGISTRY_PREVIEWS_STORAGE=<storage>/previews`. When the storage was the old release's own `storage/` directory, move it beside the new release first, or point at it where it is.
+4. Run `node dist/migrate.cjs`, then start the web server and the worker.
 
 ## What an assessment does and does not do
 
-DE FabLab uses Git only to fetch and read committed objects. Each Git command comes from a fixed list and runs without a shell. Repository hooks are disabled, submodules are not cloned, and only the `file`, `https`, and `ssh` transports are allowed.
+The Frontend Registry uses Git only to fetch and read committed objects. Each Git command comes from a fixed list and runs without a shell. Repository hooks are disabled, submodules are not cloned, and only the `file`, `https`, and `ssh` transports are allowed.
 
-Detectors come from one pinned release of `@repo-facts/bundle`, currently 0.6.0, which reports design-system usage; `package.json` names its exact version. Each Run records that version as its detector release, along with the digest of the bundle's configuration under DE FabLab's analysis limits. A Repository Profile embeds, unchanged, the fact document the bundle produced. A commit is surveyed once for each release, configuration, and Profile version, and every Run, check, and preview that needs it shares that survey's Profile. Upgrading detectors means pinning a newer exact release. Earlier Profiles keep the release that produced them: Runs from 0.1.0 keep Repository Profile version 1, and Runs from 0.2.0 or later record version 2. 0.3.0 leaves neutral values such as `margin: 0` out of the Salt token share, and counts an element a Salt component renders through its `render` prop as that component, so the same commit can score higher than under 0.2.0. 0.6.0 records the package and API each Module Federation build's plugin came from, which tell Module Federation 1, 1.5, and 2 apart; reports the Next.js and Rsbuild plugins, the Module Federation runtime, and Native Federation; and names only published packages as produced for other repositories, so a private workspace's name, such as a workspace called `cypress`, no longer matches another repository's dependency. A Run still queued from an earlier release fails with a release mismatch; launch it again. See [Standards](docs/standards.md#repository-profile-versions-1-and-2) for which Releases read which Profile versions.
+Surveyor, which analyzes each repository, is one pinned release of `@repo-facts/bundle`, currently 0.6.0, which reports design-system usage; `package.json` names its exact version. Each Run records that version as its Surveyor release, along with the digest of the bundle's configuration under the Frontend Registry's analysis limits. A Repository Profile embeds, unchanged, the fact document the bundle produced. A commit is surveyed once for each release, configuration, and Profile version, and every Run, check, and preview that needs it shares that survey's Profile. Upgrading Surveyor means pinning a newer exact release. Earlier Profiles keep the release that produced them: Runs from 0.1.0 keep Repository Profile version 1, and Runs from 0.2.0 or later record version 2. 0.3.0 leaves neutral values such as `margin: 0` out of the Salt token share, and counts an element a Salt component renders through its `render` prop as that component, so the same commit can score higher than under 0.2.0. 0.6.0 records the package and API each Module Federation build's plugin came from, which tell Module Federation 1, 1.5, and 2 apart; reports the Next.js and Rsbuild plugins, the Module Federation runtime, and Native Federation; and names only published packages as produced for other repositories, so a private workspace's name, such as a workspace called `cypress`, no longer matches another repository's dependency. A Run still queued from an earlier release fails with a release mismatch; launch it again. See [Standards](docs/standards.md#repository-profile-versions-1-and-2) for which Releases read which Profile versions.
 
-Analysis reads the exact commit recorded for each repository. It never checks out a working tree, so uncommitted edits in a local repository never appear in results. DE FabLab never runs anything a repository defines: hooks, Git filters, package lifecycle scripts, CI commands, builds, or tests. JavaScript and TypeScript files are parsed into syntax trees and never executed. Symbolic links are recorded without being followed. A file that exceeds an analysis budget is listed as skipped, and the facts it could affect are reported as unknown.
+Analysis reads the exact commit recorded for each repository. It never checks out a working tree, so uncommitted edits in a local repository never appear in results. The Frontend Registry never runs anything a repository defines: hooks, Git filters, package lifecycle scripts, CI commands, builds, or tests. JavaScript and TypeScript files are parsed into syntax trees and never executed. Symbolic links are recorded without being followed. A file that exceeds an analysis budget is listed as skipped, and the facts it could affect are reported as unknown.
 
 ## Limits of Service Dependency discovery
 
-Service Dependencies are the outbound HTTP, WebSocket, GraphQL, and client-library calls that DE FabLab finds in committed source and configuration. Discovery is static. DE FabLab never resolves a hostname, opens a connection, sends a request, loads a remote schema, reads a secret, or changes proxy settings. An assessment completes even when every service it finds is unreachable.
+Service Dependencies are the outbound HTTP, WebSocket, GraphQL, and client-library calls that the Frontend Registry finds in committed source and configuration. Discovery is static. The Frontend Registry never resolves a hostname, opens a connection, sends a request, loads a remote schema, reads a secret, or changes proxy settings. An assessment completes even when every service it finds is unreachable.
 
-Authentication, certificate, network-zone, and proxy settings found in source are reported as signals of what the code expects. They are not evidence that anyone has access, so every dependency's access state stays unknown. DE FabLab reports existing contracts, mocks, and fixtures with the evidence that ties them to a dependency. It never generates a substitute and never treats a mock as equivalent to the real service.
+Authentication, certificate, network-zone, and proxy settings found in source are reported as signals of what the code expects. They are not evidence that anyone has access, so every dependency's access state stays unknown. The Frontend Registry reports existing contracts, mocks, and fixtures with the evidence that ties them to a dependency. It never generates a substitute and never treats a mock as equivalent to the real service.
 
 ## Terms
 
-The interface names three records differently from the code, which keeps the model's names in its modules, tables, and public ID prefixes:
+The code names records as the interface does. The database keeps the names its tables and public ID prefixes had before, and the code maps them where it reads them:
 
-| Interface name | Model name | Public ID prefix |
+| Record | Table | Public ID prefix |
 |---|---|---|
-| Assessment | Initiative | `ini_` |
-| Run | Assessment | `asm_` |
-| Repository | Repository Source | `src_` |
+| Assessment | `initiatives` | `ini_` |
+| Run | `assessments` | `asm_` |
+| Repository | `repository_sources` | `src_` |
 
 | Term | Meaning |
 |---|---|
-| Repository | A catalog entry for one clonable Git repository: a `file://`, `https://`, or `ssh://` URL and an optional branch, tag, or commit |
+| Repository | One registered, clonable Git repository: a `file://`, `https://`, or `ssh://` URL and an optional branch, tag, or commit |
 | Assessment | A long-lived objective that selects repositories, either all Repositories or an explicit subset, and optionally published Standard Releases |
 | Run | One run over an Assessment's repositories, frozen when it starts, that pins each repository to a commit and analyzes it |
 | Repository Profile | The immutable, evidence-backed facts about one repository at one commit. Each fact is observed, inferred, unknown, or conflicting. |

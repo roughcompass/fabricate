@@ -6,7 +6,7 @@ import { FLEET_ENV, FLEET_ROOT } from "../../e2e/fleet/env";
 import { PROTECTED_DIRECTORY, loadConfig } from "@/lib/config";
 
 /**
- * Fabricate never refers to the harness fleet-kit/ data. Its source, scripts,
+ * The Frontend Registry never refers to the harness fleet-kit/ data. Its source, scripts,
  * and configuration, including the synthetic-fleet run's settings, name the
  * protected directory only to deny it; none points at anything inside it.
  * (Unit tests create their own throwaway fleet-kit directories to prove the

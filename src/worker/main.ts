@@ -1,4 +1,4 @@
-// Fabricate worker: runs acquisition, analysis, evaluation, profiling check, and preview jobs outside
+// Frontend Registry worker: runs acquisition, analysis, evaluation, profiling check, and preview jobs outside
 // the web server. Started with `npm run dev:worker` or `npm run worker`.
 import path from "node:path";
 import { getConfig } from "@/lib/config";

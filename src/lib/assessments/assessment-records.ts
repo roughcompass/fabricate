@@ -22,12 +22,12 @@ import { updateLocked } from "@/lib/db/optimistic";
 export { SELECTION_MODES } from "@/lib/db/schema";
 
 /**
- * Persistence for initiatives, their explicit repository selections, and
+ * Persistence for Assessments, their explicit repository selections, and
  * their selected Standard Releases.
  *
- * An initiative of all Repositories records only its policy, never the
- * catalog's current membership. An explicit initiative records exactly its
- * selected sources, each of which must exist.
+ * An Assessment of all Repositories records only its policy, never which
+ * Repositories exist now. An Assessment of selected Repositories records
+ * exactly its selection, each of which must exist.
  *
  * Only published Releases can be selected. Each selection is independent;
  * none takes precedence over another.
@@ -81,7 +81,7 @@ export function updateAssessment(db: Executor, publicId: string, expectedLockVer
   });
 }
 
-/** Deletes an initiative that has never been assessed. */
+/** Deletes an Assessment that has never had a Run. */
 export function deleteAssessment(db: Executor, publicId: string): void {
   immediate(db, (tx) => {
     const assessment = getAssessment(tx, publicId);
@@ -113,7 +113,7 @@ export function listAssessments(db: Executor): Assessment[] {
   return db.select().from(assessments).orderBy(sql`lower(${assessments.name})`, asc(assessments.publicId)).all();
 }
 
-/** The explicit selections of an initiative, in catalog order. */
+/** The explicit selections of an Assessment, by name. */
 export function selectedRepositories(db: Executor, assessmentId: number): Repository[] {
   return db
     .select({ source: repositories })
@@ -125,7 +125,7 @@ export function selectedRepositories(db: Executor, assessmentId: number): Reposi
     .map((row) => row.source);
 }
 
-/** The Releases an initiative currently selects, by Standard name then version. */
+/** The Releases an Assessment currently selects, by Standard name then version. */
 export function selectedReleases(db: Executor, assessmentId: number): { release: StandardRelease; standard: Standard }[] {
   return db
     .select({ release: standardReleases, standard: standards })

@@ -18,7 +18,7 @@ import { requestSurvey } from "@/lib/surveys/records";
 
 let commits = 0;
 
-/** A queued preview of a new commit of +source+, of a package of kind +layout+. */
+/** A queued preview of a new commit of +repository+, of a package of kind +layout+. */
 export function queuedPreview(db: Db, repository: Repository, layout: ArtifactLayout = "standalone"): PreviewBuild {
   const commitSha = (++commits).toString(16).padStart(40, "0");
   const { preparation } = openPreparation(db, repository, { commitSha, refName: "refs/heads/main", refKind: "branch" });

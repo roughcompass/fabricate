@@ -51,7 +51,7 @@ export class PreviewRequestError extends Error {
 // -- Preparations -----------------------------------------------------------------
 
 /**
- * The preparation of +pinned+ for +source+: a new one profiling, or the one
+ * The preparation of +pinned+ for +repository+: a new one profiling, or the one
  * that exists for that commit. One still profiling or Ready is returned as it
  * is, unless its job was abandoned. A Refused or Failed one is prepared
  * again, so it's decided under the current settings, such as newly

@@ -1,4 +1,4 @@
-// Recreates the assessment projection from stored documents: `npm run projection:rebuild`.
+// Recreates the projection from stored documents: `npm run projection:rebuild`.
 import { getConfig } from "@/lib/config";
 import { openDatabase, pendingMigrationCount } from "@/lib/db/client";
 import { rebuildProjection } from "./rebuild";

@@ -11,14 +11,14 @@ import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
  * identity, commit, Surveyor release, and detector configuration digest, and
  * embeds the fact document unchanged, with its own digest. The fact document
  * carries every fact, evidence record, search, diagnostic, and Service
- * Dependency under the repo-facts contract.
+ * Dependency under Surveyor's contract.
  *
  * Run identity and times live on the Profile record, not in the document, so
  * identical snapshots analyzed with the same release and configuration
  * produce identical Profile documents.
  *
- * Version 2 embeds fact document version 2 (repo-facts 0.2.0), which adds the
- * design-system categories. Version 1 Profiles, from repo-facts 0.1.0, are
+ * Version 2 embeds fact document version 2 (Surveyor 0.2.0), which adds the
+ * design-system categories. Version 1 Profiles, from Surveyor 0.1.0, are
  * kept as stored; version 2 extends version 1, so readers of version 1 read
  * either.
  */
@@ -74,7 +74,7 @@ const envelope = z.strictObject({
   source: z.strictObject({ public_id: z.string().min(1), name: z.string().min(1), clone_url: z.string().min(1), git_ref: z.string().min(1).nullable() }),
   commit: z.string().regex(OBJECT_ID),
 });
-/** Every problem with a Profile document: its envelope, and the embedded fact document under the repo-facts contract. */
+/** Every problem with a Profile document: its envelope, and the embedded fact document under Surveyor's contract. */
 export function profileProblems(document: JsonObject): string[] {
   const parsed = envelope.safeParse(document);
   if (!parsed.success) return parsed.error.issues.map((issue) => `${issue.path.join(".") || "(document)"}: ${issue.message}`);

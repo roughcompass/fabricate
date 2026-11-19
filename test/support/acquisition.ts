@@ -57,14 +57,14 @@ export function registerLocalRepository(db: Db, config: FrontendRegistryConfig, 
   return insertRepository(db, { name, ...url, gitRef });
 }
 
-/** A new Assessment over +source+ with its target moved to acquiring. */
+/** A new Assessment over +repository+ with its target moved to acquiring. */
 export function acquiringTarget(db: Db, repository: Repository): RunTarget {
   const { targets } = buildRun(db, { repositories: [repository] });
   return transitionTarget(db, targets[0]!, "acquiring");
 }
 
 /**
- * Resolves +source+'s reference and pins its commit for a survey, as the
+ * Resolves +repository+'s reference and pins its commit for a survey, as the
  * survey job does, without surveying it. Returns the survey, and the pin as
  * readers open it.
  */

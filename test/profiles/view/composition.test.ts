@@ -62,7 +62,7 @@ describe("Profile composition", () => {
     expect(JSON.stringify(cellsOf(fact("module-federation:chrome", container())))).not.toMatch(/complete|properties|kind/);
   });
 
-  it("names each build's federation generation from the package and API its plugin came from, or from its rule before repo-facts 0.5.0", () => {
+  it("names each build's federation generation from the package and API its plugin came from, or from its rule before Surveyor 0.5.0", () => {
     const unit = (overrides: Record<string, JsonValue>, rule = "architecture.module-federation.webpack") => cellsOf({ ...fact("module-federation:chrome", container(overrides)), rule })[0];
     expect(unit({ package: "@rspack/core", api: "ModuleFederationPluginV1", plugin: "architecture.module-federation.rspack" }, "architecture.module-federation.rspack")).toMatchObject({ secondary: "Module Federation 1 · Rspack" });
     expect(unit({ package: "@rspack/core", api: "ModuleFederationPlugin", plugin: "architecture.module-federation.rspack" }, "architecture.module-federation.rspack")).toMatchObject({ secondary: "Module Federation 1.5 · Rspack" });

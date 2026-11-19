@@ -78,7 +78,7 @@ function related(repositories: readonly RelatedRepository[]): OverviewValue[] {
 
 function runtimeRows(document: FactDocument, rows: readonly OverviewRow[], context: SummaryContext): OverviewRow[] {
   const { relationships } = context;
-  // Relationships exist only within an Assessment Run's map; without one they're unknown, not none.
+  // Relationships exist only within a Run's map; without one they're unknown, not none.
   const unmapped: NoValue = { state: "unknown", reason: "No Assessment Run has mapped it with other repositories" };
   const none: NoValue = { state: "absent", reason: "None in its newest Assessment Run" };
   const relationshipRow = (label: string, repositories: readonly RelatedRepository[]) =>

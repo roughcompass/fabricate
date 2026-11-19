@@ -7,7 +7,7 @@ import { vi } from "vitest";
 
 /**
  * A `git` wrapper placed first on PATH that logs each invocation's argv and
- * then runs the real Git, so a test can inspect every Git command Fabricate
+ * then runs the real Git, so a test can inspect every Git command the Frontend Registry
  * makes, including those of the job handlers' own runners.
  */
 export class GitLog {

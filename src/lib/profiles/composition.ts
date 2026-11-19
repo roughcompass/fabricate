@@ -34,7 +34,7 @@ interface Federation {
   tool: string | null;
 }
 
-// The package a plugin or API came from (repo-facts 0.5.0 and later), and the class it constructs where a package has two generations.
+// The package a plugin or API came from (Surveyor 0.5.0 and later), and the class it constructs where a package has two generations.
 const FEDERATION_PACKAGES: Record<string, Federation | ((api: string | null) => Federation)> = {
   webpack: { generation: "1", tool: "webpack" },
   "@rspack/core": (api) => (api === "ModuleFederationPluginV1" ? { generation: "1", tool: "Rspack" } : { generation: "1.5", tool: "Rspack" }),
@@ -50,7 +50,7 @@ const FEDERATION_PACKAGES: Record<string, Federation | ((api: string | null) => 
   "@module-federation/runtime": { generation: "2", tool: "runtime API" },
   "@module-federation/enhanced/runtime": { generation: "2", tool: "runtime API" },
 };
-// Before repo-facts 0.5.0 a fact named only its rule, and two rules each matched plugins of two generations.
+// Before Surveyor 0.5.0 a fact named only its rule, and two rules each matched plugins of two generations.
 const FEDERATION_RULES: Record<string, Federation> = {
   "architecture.module-federation.webpack": { generation: "1", tool: "webpack" },
   "architecture.module-federation.rspack": { generation: null, tool: "Rspack" },

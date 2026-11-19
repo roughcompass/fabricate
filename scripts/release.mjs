@@ -8,7 +8,8 @@
 // Uncommitted changes are left out. Dependencies install with `npm ci` and
 // lifecycle scripts disabled (see .npmrc), as in development.
 //
-// The directory (default `release/`) holds the standalone web server, its
+// The release is named frontend-registry, after package.json. The directory
+// (default `release/`) holds the standalone web server, its
 // static files, the worker and migration bundles, the migrations, the
 // settings, and the native SQLite binding the worker loads. Run it with:
 //
@@ -67,4 +68,4 @@ try {
   fs.rmSync(work, { recursive: true, force: true });
 }
 
-console.log(`Release of ${commit.slice(0, 12)} assembled in ${path.relative(root, target) || "."}. Check it with \`node scripts/verify-release.mjs ${path.relative(root, target)}\`.`);
+console.log(`Frontend Registry release of ${commit.slice(0, 12)} assembled in ${path.relative(root, target) || "."}. Check it with \`node scripts/verify-release.mjs ${path.relative(root, target)}\`.`);

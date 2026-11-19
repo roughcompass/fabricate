@@ -1,12 +1,12 @@
 # Template demo
 
-The template demo shows how a team could start an application from a pre-built solution: pick a template, preview it at a device's size, open its running reference deployment, and inspect it with a Vercel-style toolbar. It runs inside DE FabLab, behind the `demo.enabled` setting (see [Configure DE FabLab](../README.md#template-demo)).
+The template demo shows how a team could start an application from a pre-built solution: pick a template, preview it at a device's size, open its running reference deployment, and inspect it with a Vercel-style toolbar. It runs inside the Frontend Registry, behind the `demo.enabled` setting (see [Configure the Frontend Registry](../README.md#template-demo)).
 
 Everything in the demo is simulated. See [What is simulated](#what-is-simulated) before you present it.
 
 ## Before you present
 
-1. Start DE FabLab with the demo on: `FABRICATE_DEMO=true npm run dev`, or use the hosted demo.
+1. Start the Frontend Registry with the demo on: `FRONTEND_REGISTRY_DEMO=true npm run dev`, or use the hosted demo.
 2. Open **Salt Patterns** in the sidebar. The gallery, "Salt Patterns", opens. The demo adds **Salt Patterns** to the sidebar, under a Templates heading.
 3. If you rehearsed in this browser, reset the demo first: in the gallery's header, open **More actions** (⋯), choose **Reset demo**, and confirm.
 4. Turn guided hints off, so they do not appear during the talk. Open any running application, for example a reference deployment from preview mode's **Open full screen**. Open the toolbar menu, choose **Settings**, and clear **Show guided hints**. The choice applies to your whole workspace.
@@ -21,7 +21,7 @@ Every running application shows the toolbar as a dark pill at the middle of the 
 
 The menu button opens the toolbar menu beside the pill:
 - **What do you need?** Type to filter the tools by name or by words such as "a11y", "persona", or "theme". Use the arrow keys to move, Enter to open, and Esc to close.
-- **The running application.** Its name and environment. Select it to open its template's page in DE FabLab in a new tab.
+- **The running application.** Its name and environment. Select it to open its template's page in the Frontend Registry in a new tab.
 - **Shortcuts.** One round button for each tool.
 - **The tools, grouped.** Collaboration (Comment, Comments, Share), Inspect (Microfrontends, Accessibility, Timing), Runtime (Session, Settings), and More (Keyboard shortcuts, Hide toolbar).
 
@@ -44,7 +44,7 @@ Each beat lists what to do, then the point to make.
 11. **Settings.** Press **S**. Switch to the dark theme. In the Markets template, publish `instrument:selected` with `{"symbol": "GLBX"}` and watch the chart follow.
 12. **Comment.** Press **C** and select **Send payment**. A "+" marks the spot. Type in **Start a new thread…**; select a word, choose **Aa**, then **Bold**. Post with the send button or Cmd+Enter. The pin stays on the button when the window is resized. A comment on a payee row, which belongs to a payee list version, is listed as not visible in this view after the payee list changes version, with **Go to comment** to bring that version back.
 13. **Share.** Press **L**. Copy the link and open it in a private window: the recipient sees the same versions, theme, signed-in profile, and comment, and can reply. The profile isn't added to the recipient's own profiles, and their changes never affect your view.
-14. **Reset.** Back in DE FabLab, open **Salt Patterns**, choose **More actions** in the page header, then **Reset demo**, and confirm in "Reset the demo?". Your comments, share links, and session profiles are removed, and the gallery confirms "The demo was reset." The share link now answers not found.
+14. **Reset.** Back in the Frontend Registry, open **Salt Patterns**, choose **More actions** in the page header, then **Reset demo**, and confirm in "Reset the demo?". Your comments, share links, and session profiles are removed, and the gallery confirms "The demo was reset." The share link now answers not found.
 
 ### Toolbar shortcuts
 
@@ -73,9 +73,9 @@ A workspace can hold 20 custom session profiles, and each comment can be up to 2
 
 ## Hosting the demo
 
-The demo is off in production. To host it for self-serve visitors, run the production image with `-e FABRICATE_DEMO=true`. To take it down, restart without the override: every demo page, running application, share link, and demo endpoint then answers not found, and nothing else in DE FabLab changes. The demo's tables are separate from catalog, assessment, evaluation, and standard data, so they can stay in the database or be dropped later.
+The demo is off in production. To host it for self-serve visitors, run the production image with `-e FRONTEND_REGISTRY_DEMO=true`. To take it down, restart without the override: every demo page, running application, share link, and demo endpoint then answers not found, and nothing else in the Frontend Registry changes. The demo's tables are separate from catalog, assessment, evaluation, and standard data, so they can stay in the database or be dropped later.
 
-Apply database migrations (`npm run db:migrate`) after updating DE FabLab. They create and update the demo's tables along with the rest of the schema.
+Apply database migrations (`npm run db:migrate`) after updating the Frontend Registry. They create and update the demo's tables along with the rest of the schema.
 
 ## Resetting
 
@@ -83,10 +83,10 @@ A visitor resets only their own workspace, from **More actions** in the Salt Pat
 
 ## What is simulated
 
-- **Deployments.** Nothing is built or deployed. Each template's reference deployment runs inside DE FabLab at `/run/ref-<slug>`, and the address preview mode's browser window shows is made up on the reserved `deweb.example` domain.
-- **The scaffold command.** `npx @deweb/create-app@latest my-app --template <slug>`, in each template's `README.md` on preview mode's Code tab, is illustrative. The `@deweb/create-app` package does not exist, and DE FabLab never runs the command. The files in preview mode's Code tab are generated from the catalog to show what a template would contain.
-- **Applications.** Microfrontends are components shipped with DE FabLab, with deliberately planted accessibility defects and a deliberately slow interaction so the toolbar always has something real to find. The audit, timing, comments, and share links do work, on that content.
-- **Portal shells.** The J.P. Morgan Access and J.P. Morgan Markets shells are illustrative, and all data in them is fictional. Each shows the J.P. Morgan logo, a typeset placeholder served from DE FabLab's own origin (`public/brand/jpmorgan-logo.svg`, and `jpmorgan-logo-dark.svg` for Salt's dark mode), followed by the portal name; it is not the official artwork, which replaces it when the brand team supplies it. Keep the demo internal.
+- **Deployments.** Nothing is built or deployed. Each template's reference deployment runs inside the Frontend Registry at `/run/ref-<slug>`, and the address preview mode's browser window shows is made up on the reserved `deweb.example` domain.
+- **The scaffold command.** `npx @deweb/create-app@latest my-app --template <slug>`, in each template's `README.md` on preview mode's Code tab, is illustrative. The `@deweb/create-app` package does not exist, and the Frontend Registry never runs the command. The files in preview mode's Code tab are generated from the catalog to show what a template would contain.
+- **Applications.** Microfrontends are components shipped with the Frontend Registry, with deliberately planted accessibility defects and a deliberately slow interaction so the toolbar always has something real to find. The audit, timing, comments, and share links do work, on that content.
+- **Portal shells.** The J.P. Morgan Access and J.P. Morgan Markets shells are illustrative, and all data in them is fictional. Each shows the J.P. Morgan logo, a typeset placeholder served from the Frontend Registry's own origin (`public/brand/jpmorgan-logo.svg`, and `jpmorgan-logo-dark.svg` for Salt's dark mode), followed by the portal name; it is not the official artwork, which replaces it when the brand team supplies it. Keep the demo internal.
 - **A portal's experience.** Each shell renders a fixed default experience for its brand: the portal name, the J.P. Morgan logo and favicon, no banner, and no menu of its own.
 
 ## Regenerating previews

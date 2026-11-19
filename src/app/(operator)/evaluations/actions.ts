@@ -8,7 +8,7 @@ import { text } from "@/lib/web/form-data";
 import type { LaunchState } from "../assessments/form-state";
 import { routes } from "@/lib/web/routes";
 
-/** Evaluates an existing Assessment against the Releases the Initiative selects now; resubmitting returns the same Evaluation. */
+/** Evaluates an existing Run against the Releases its Assessment selects now; resubmitting returns the same Evaluation. */
 export async function startEvaluationAction(assessmentPublicId: string, runPublicId: string, _previous: LaunchState, formData: FormData): Promise<LaunchState> {
   requirePublicId(assessmentPublicId, "ini", "Assessment");
   requirePublicId(runPublicId, "asm", "Run");

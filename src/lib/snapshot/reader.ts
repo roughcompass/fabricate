@@ -6,7 +6,7 @@ import type { GitRunner } from "@/lib/git/runner";
 export type { Budgets, SkipDiagnostic, TreeEntry } from "@repo-facts/contract";
 
 /**
- * Read-only access to one pinned commit, as a repo-facts `SourceReader`.
+ * Read-only access to one pinned commit, as a Surveyor `SourceReader`.
  * Analyzers never receive a checkout path or clone URL; they receive a
  * SnapshotReader, which enumerates the commit's tree and reads blob bytes
  * through controlled Git operations. No working tree or archive is ever

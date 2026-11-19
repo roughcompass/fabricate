@@ -24,7 +24,7 @@ export type PreparationState = (typeof PREPARATION_STATES)[number];
 export const ATTEMPT_STATES = ["queued", "building", "ready", "failed"] as const;
 export type AttemptState = (typeof ATTEMPT_STATES)[number];
 
-/** How a published artifact is shown: as its own page, or mounted in Fabricate's host (design decision 7). */
+/** How a published artifact is shown: as its own page, or mounted in the Frontend Registry's host (design decision 7). */
 export const ARTIFACT_LAYOUTS = ["standalone", "module_federation", "single_spa"] as const;
 export type ArtifactLayout = (typeof ARTIFACT_LAYOUTS)[number];
 

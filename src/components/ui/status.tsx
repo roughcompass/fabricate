@@ -14,7 +14,7 @@ export type { Tone } from "./indicator";
 type Indicator = Exclude<IndicatorShape, "blank">;
 
 const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]> = {
-  // Assessments, targets, Evaluations, and pinned Releases.
+  // Runs, targets, Evaluations, and pinned Releases.
   queued: ["Queued", "neutral"],
   pending: ["Pending", "neutral"],
   acquiring: ["Acquiring", "progress"],

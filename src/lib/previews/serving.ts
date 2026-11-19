@@ -14,7 +14,7 @@ import { previewBasePath } from "./toolchain";
 
 /**
  * Serves a preview's published artifact under `/previews/<id>/` (design
- * decision 6, spec "Previews are served under a Fabricate path"), whatever
+ * decision 6, spec "Previews are served under a Frontend Registry path"), whatever
  * state its latest attempt is in, so a rebuild or a failed rebuild leaves the
  * last published output serving.
  *

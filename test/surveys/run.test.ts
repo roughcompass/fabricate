@@ -36,14 +36,14 @@ describe("the survey job", () => {
   const drain = () => drainJobs(world.db, jobHandlers(world.db, world.config));
   const surveyJobs = () => world.db.select().from(jobs).where(eq(jobs.kind, RUN_SURVEY)).all();
 
-  /** Requests a survey of +commitSha+ of +source+ under the worker's recipe unless +overrides+ say otherwise, and queues its job. */
+  /** Requests a survey of +commitSha+ of +repository+ under the worker's recipe unless +overrides+ say otherwise, and queues its job. */
   function request(repository: Repository, commitSha: string, overrides: Partial<SurveyRequest> = {}) {
     const { survey } = requestSurvey(world.db, { repositoryId: repository.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", ...currentRecipe(world.config), ...overrides });
     queueSurvey(world.db, survey);
     return survey;
   }
 
-  /** A Run over +source+ whose target has resolved its reference and waits on the survey of its commit. */
+  /** A Run over +repository+ whose target has resolved its reference and waits on the survey of its commit. */
   async function waitingRun(repository: Repository) {
     const { run, targets } = buildRun(world.db, { repositories: [repository] });
     const target = await processTarget(world.db, targets[0]!.publicId, { config: world.config });

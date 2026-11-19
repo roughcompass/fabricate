@@ -17,7 +17,7 @@ export interface MissingTarget {
 }
 
 /**
- * Targets of the Assessment that failed or were canceled, which contribute
+ * Targets of the Run that failed or were canceled, which contribute
  * no Profile even when a survey they shared later succeeds, with their
  * failure codes, so no answer reads their absence as
  * "no". They're the gaps its Relationship Map records.

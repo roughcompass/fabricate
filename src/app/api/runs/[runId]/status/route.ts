@@ -3,7 +3,7 @@ import { runStatus } from "@/lib/runs/status";
 import { getDb } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
 
-// Progress for pages that poll while an Assessment or its Evaluations are running.
+// Progress for pages that poll while a Run or its Evaluations are running.
 export async function GET(_request: Request, { params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
   const db = getDb();

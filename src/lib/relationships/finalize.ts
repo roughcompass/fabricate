@@ -9,12 +9,12 @@ import type { JsonObject } from "@repo-facts/contract";
 import { mapProblems } from "./schema";
 
 /**
- * Writes an Assessment's Relationship Map once every target is terminal.
+ * Writes a Run's Relationship Map once every target is terminal.
  *
- * One immediate transaction rereads the Assessment and its targets, resolves
- * the Profiles of this Assessment, and stores the immutable map. Catalog
- * sources outside the scope contribute only their identity metadata; their
- * repositories and any Profiles from other Assessments are never read.
+ * One immediate transaction rereads the Run and its targets, resolves
+ * the Profiles of this Run, and stores the immutable map. Registered
+ * Repositories outside the scope contribute only their identity metadata;
+ * their repositories and any Profiles from other Runs are never read.
  * Finalization is idempotent: a repeated call returns the map already stored.
  */
 
@@ -31,7 +31,7 @@ export function finalizeRelationshipMap(db: Executor, run: Pick<Run, "publicId">
   });
 }
 
-/** The map document a finalizing Assessment's Profiles resolve to, before it's stored. */
+/** The map document a finalizing Run's Profiles resolve to, before it's stored. */
 export function resolveMapDocument(db: Executor, current: Run): JsonObject {
   if (current.state !== "finalizing") throw new MapNotReadyError(`Assessment ${current.publicId} is ${current.state}; its map is written while finalizing`);
 

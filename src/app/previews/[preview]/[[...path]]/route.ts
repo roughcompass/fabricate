@@ -2,7 +2,7 @@ import { servePreview } from "@/lib/previews/serving";
 
 /*
  * A repository preview's published files, under /previews/<id>/ on
- * Fabricate's own origin (docs/previews.md, "Serving"). Outside the operator
+ * the Frontend Registry's own origin (docs/previews.md, "Serving"). Outside the operator
  * layout, GET and HEAD only, and every request checks the feature switch, the
  * preview, and its remote's enrollment again.
  */

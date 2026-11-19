@@ -21,7 +21,7 @@ export type EdgeKind = (typeof EDGE_KINDS)[number];
 
 
 /*
- * The assessment projection: indexed, write-once copies of what immutable
+ * The projection: indexed, write-once copies of what immutable
  * Profile and Relationship Map documents hold. Every row names the document
  * digest and projection version that produced it. Rows are written in the
  * document's own transaction and removed only by a rebuild, which recreates
@@ -68,7 +68,7 @@ export const dependencyFacts = sqliteTable(
   ],
 );
 
-/** One node of a Relationship Map. A repository node names its catalog source and assessment target. */
+/** One node of a Relationship Map. A repository node names its Repository and Run target. */
 export const graphNodes = sqliteTable(
   "graph_nodes",
   {
@@ -93,7 +93,7 @@ export const graphNodes = sqliteTable(
     index("graph_nodes_repository_source").on(t.repositoryId),
     index("graph_nodes_assessment_target").on(t.runTargetId),
     check("graph_nodes_kind", sql.raw(`kind IN (${sqlList(PROJECTED_NODE_KINDS)})`)),
-    // A repository node always names the target it was assessed as, and that target's catalog source.
+    // A repository node always names the target it was assessed as, and that target's Repository.
     check("graph_nodes_repository_target", sql`(${t.kind} = 'repository') = (${t.runTargetId} IS NOT NULL)`),
     check("graph_nodes_repository_source", sql`${t.kind} <> 'repository' OR ${t.repositoryId} IS NOT NULL`),
     digestCheck("graph_nodes_document_digest", t.documentDigest),

@@ -176,7 +176,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
   });
 
   describe("install and build", () => {
-    it("installs at the workspace root and builds the selected package from its own directory, without Fabricate's credentials", async () => {
+    it("installs at the workspace root and builds the selected package from its own directory, without the Frontend Registry's credentials", async () => {
       const workspace: Tree = {
         "package.json": manifest({
           name: "orders-monorepo",
@@ -212,7 +212,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       expect(info.cwd).toBe(path.join(work, "packages/web"));
       expect(info.argv).toEqual([`--base=/previews/${preview.publicId}/`]);
       expect(info.env).toMatchObject({ CI: "1", NODE_ENV: "production", HOME: path.join(path.dirname(work), "home") });
-      expect(Object.keys(info.env).filter((key) => /^(FABRICATE|GIT|VERCEL|AI)_/.test(key))).toEqual([]);
+      expect(Object.keys(info.env).filter((key) => /^(FRONTEND_REGISTRY|GIT|VERCEL|AI)_/.test(key))).toEqual([]);
       expect(JSON.stringify(info.env)).not.toContain("secret");
 
       // The standalone page is built under the preview's base path.

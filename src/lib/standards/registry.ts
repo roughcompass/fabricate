@@ -59,7 +59,7 @@ export interface CollectionDefinition {
 const profile = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "repository", type, schema: "repository_profile", versions: PROFILE_VERSIONS, ...extra });
 const service = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "service_dependency", type, schema: "repository_profile", versions: PROFILE_VERSIONS, ...extra });
 const graph = (scope: Scope, id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope, type, schema: "relationship_map", versions: [1], ...extra });
-// Design-system fields exist from Profile version 2, which embeds repo-facts fact document version 2. Counts and shares read the app scope.
+// Design-system fields exist from Profile version 2, which embeds Surveyor fact document version 2. Counts and shares read the app scope.
 const design = (id: string, label: string, type: ValueType, description: string, extra: Partial<SelectorDefinition> = {}): SelectorDefinition => ({ id, label, description, scope: "repository", type, schema: "repository_profile", versions: [2], ...extra });
 const DESIGN_SYSTEM = { label: "Design system", description: "The design system's catalog id, such as salt" };
 

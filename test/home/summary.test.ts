@@ -14,7 +14,7 @@ import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 import { manifest, memoryProfile, sha1 } from "../support/profiles";
 import { seedRun } from "../support/scenarios";
 
-/** A background survey of +source+'s configured reference, still queued, failed, or profiling +files+. */
+/** A background survey of +repository+'s configured reference, still queued, failed, or profiling +files+. */
 async function backgroundSurvey(db: Db, repository: Repository, outcome: Readonly<Record<string, MemoryFile>> | "queued" | "failed"): Promise<void> {
   const commitSha = sha1(`commit:${repository.publicId}`);
   const { survey } = requestSurvey(db, { repositoryId: repository.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...currentRecipe(getConfig()) });
