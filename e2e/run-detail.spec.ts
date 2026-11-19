@@ -84,7 +84,12 @@ test("records a cancellation request for an active Assessment and keeps its scop
   await page.goto(paths.run(run.publicId));
   await expect(scope(page)).toContainText("orders");
   await expect(scope(page)).toContainText("https://git.example.com/acme/orders.git");
-  await page.getByRole("button", { name: "Cancel Run" }).click();
+  // The page header holds no destructive action, not even in an overflow menu: Cancel Run is in the alert for the Run in progress, in view without scrolling.
+  await expect(pageHeader(page).getByRole("button", { name: "Cancel Run" })).toHaveCount(0);
+  await expect(pageHeader(page).getByRole("button", { name: "More actions" })).toHaveCount(0);
+  const inProgress = page.locator("#page-alerts").filter({ hasText: "Results are partial until every repository finishes" });
+  await expect(inProgress.getByRole("button", { name: "Cancel Run" })).toBeInViewport();
+  await inProgress.getByRole("button", { name: "Cancel Run" }).click();
   const dialog = page.getByRole("dialog", { name: "Cancel Run #1?" });
   await expect(dialog).toContainText("Completed Profiles are kept.");
   await dialog.getByRole("button", { name: "Cancel Run" }).click();
@@ -94,6 +99,8 @@ test("records a cancellation request for an active Assessment and keeps its scop
   await expect(pageHeader(page)).toContainText("Canceling");
   await expect(page.locator("main").getByText(/[Cc]ancellation (was )?requested/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Cancel Run" })).toHaveCount(0);
+  // Once canceling, the status says so; the in-progress alert and its action are gone.
+  await expect(page.getByText("Results are partial until every repository finishes")).toHaveCount(0);
 });
 
 // page-patterns spec, content standard "Failures".

@@ -96,15 +96,11 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
             <LaunchForm action={startEvaluationAction.bind(null, assessment.publicId, run.publicId)} launchToken={crypto.randomUUID()} label="Start Evaluation" failure={`The Evaluation of ${name} was not started.`} />
           ) : undefined,
         secondaryActions: evaluable && !hasReleases ? [{ href: routes.assessmentEdit(assessment.publicId, "initiative-releases"), label: "Select a Release to evaluate", icon: "checklist" }] : undefined,
-        extraActions: !terminal && !run.cancelRequestedAt ? (
-          <ConfirmDialog action={cancelRun.bind(null, run.publicId)} trigger={{ label: "Cancel Run", icon: "slash" }} title={`Cancel ${name}?`} confirmLabel="Cancel Run" tone="danger">
-            <p>Repositories that have not finished stop at their next check. Completed Profiles are kept.</p>
-          </ConfirmDialog>
-        ) : undefined,
       }}
       alerts={
         <>
           <OutcomeToast outcome={runOutcome(param(query, "notice"), run, name)} />
+          {!terminal && !run.cancelRequestedAt && <InProgressAlert runId={run.publicId} name={name} />}
           {run.state === "complete_with_issues" && (
             <Alert tone="warning" title={`${failed.length} of ${countLabel(targets.length, "repository", "repositories")} could not be assessed`}>
               <p>{`${failed.map((target) => target.repositoryName).join(", ")}: ${failed[0] ? failureSentence(failed[0].failureCode, failed[0].failureMessage) : "not assessed"}${failed.length > 1 ? " (and more below)" : ""}.`}</p>
@@ -191,6 +187,28 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
         />
       </Disclosure>
     </DetailsTemplate>
+  );
+}
+
+/**
+ * While a Run runs, its results are partial, and canceling it is its one
+ * action. Cancel Run sits here, with the in-progress state and in view
+ * without scrolling, never in the page header, which holds no destructive
+ * action (page-patterns spec).
+ */
+function InProgressAlert({ runId, name }: { runId: string; name: string }) {
+  return (
+    <Alert
+      tone="info"
+      title="Results are partial until every repository finishes"
+      actions={
+        <ConfirmDialog action={cancelRun.bind(null, runId)} trigger={{ label: "Cancel Run", icon: "slash", size: "sm" }} title={`Cancel ${name}?`} confirmLabel="Cancel Run" tone="danger">
+          <p>Repositories that have not finished stop at their next check. Completed Profiles are kept.</p>
+        </ConfirmDialog>
+      }
+    >
+      The Relationship Map is written, and Evaluations can start, once they all have.
+    </Alert>
   );
 }
 
