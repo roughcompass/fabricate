@@ -21,7 +21,7 @@ export class AnalysisMismatchError extends Error {
 
 export interface SurveyCommitInput {
   survey: Survey;
-  repository: Pick<Repository, "publicId" | "name" | "cloneUrl" | "gitRef">;
+  repository: Pick<Repository, "publicId">;
   config?: FrontendRegistryConfig;
   runner?: GitRunner;
   signal?: AbortSignal;
@@ -38,7 +38,7 @@ export async function surveyDocument(input: SurveyCommitInput): Promise<JsonObje
   const reader = await openSnapshot({ repositoryPublicId: repository.publicId }, { internalRef: survey.internalRef, commitSha: survey.commitSha }, { config, ...(input.runner && { runner: input.runner }) });
   const factDocument = await analyze(reader, { ...(input.signal && { signal: input.signal }) });
   return buildProfile({
-    source: { public_id: repository.publicId, name: repository.name, clone_url: repository.cloneUrl, git_ref: survey.fromConfiguredReference ? repository.gitRef : survey.reference },
+    repository: repository.publicId,
     commit: survey.commitSha,
     surveyorRelease: SURVEYOR_RELEASE,
     configurationDigest: survey.configurationDigest,

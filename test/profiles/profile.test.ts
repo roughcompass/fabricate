@@ -42,35 +42,38 @@ describe("Repository Profiles from the pinned Surveyor bundle", () => {
 
   const factDocument = (document: JsonObject) => document.fact_document as Record<string, Record<string, JsonObject>>;
 
-  it("wraps the unchanged fact document in an envelope that records the source, commit, release, and configuration", async () => {
+  it("wraps the unchanged fact document in an envelope that names the Repository, commit, release, and configuration", async () => {
     snapshots = SnapshotFixture.create("profile");
     const { survey, repository, profile, document } = await surveyed(APP);
 
     expect(document).toMatchObject({
       schema: PROFILE_SCHEMA,
-      schema_version: 2,
-      source: { public_id: repository.publicId, name: "app", clone_url: repository.cloneUrl, git_ref: null },
+      schema_version: 3,
       commit: survey.commitSha,
       detector_release: SURVEYOR_RELEASE,
       detector_configuration_digest: survey.configurationDigest,
     });
-    // Profile version 2 embeds fact document version 2, with the design-system categories.
-    expect(document.fact_document).toMatchObject({ schema: "repo_facts.fact_document", schema_version: 2, commit: survey.commitSha, detector_release: SURVEYOR_RELEASE });
-    expect(Object.keys(factDocument(document).categories!)).toEqual(expect.arrayContaining(["design_systems", "ui_elements", "style_values"]));
+    // A survey is shared by every request for its commit, so the envelope names the Repository by its public id alone.
+    expect(document.source).toEqual({ public_id: repository.publicId });
+    // Profile version 3 embeds fact document version 3, which names the Reference Catalog entries it used: none here.
+    expect(document.fact_document).toMatchObject({ schema: "repo_facts.fact_document", schema_version: 3, commit: survey.commitSha, detector_release: SURVEYOR_RELEASE, catalog_entries: [] });
+    expect(Object.keys(factDocument(document).categories!)).toEqual(expect.arrayContaining(["ui_elements", "style_values"]));
     expect(document.fact_document_digest).toBe(digestOf(document.fact_document).digest);
     expect(profileProblems(document)).toEqual([]);
-    expect(profile).toMatchObject({ surveyorRelease: SURVEYOR_RELEASE, schemaVersion: 2, surveyId: survey.id });
+    expect(profile).toMatchObject({ surveyorRelease: SURVEYOR_RELEASE, schemaVersion: 3, surveyId: survey.id });
     expect(survey).toMatchObject({ state: "succeeded", failureCode: null });
     // Survey identity and times stay on the record, so they cannot change the document.
     expect(dump(document)).not.toContain(survey.publicId);
   });
 
-  it("names the reference a survey of another reference resolved from", async () => {
+  it("writes the same document whatever reference the survey's commit was resolved from", async () => {
     snapshots = SnapshotFixture.create("profile");
     const { survey } = await snapshots.acquireFiles(APP);
 
-    const document = await documentOf({ ...survey, fromConfiguredReference: false, reference: "refs/heads/feature" });
-    expect(document.source).toMatchObject({ git_ref: "refs/heads/feature" });
+    const configured = await documentOf(survey);
+    const other = await documentOf({ ...survey, fromConfiguredReference: false, reference: "refs/heads/feature" });
+    expect(dump(other)).toBe(dump(configured));
+    expect(dump(other)).not.toContain("refs/heads/feature");
   });
 
   it("surveys a commit once per recipe, and Surveyor writes the same document for it every time", async () => {
@@ -139,7 +142,7 @@ describe("Repository Profiles from the pinned Surveyor bundle", () => {
     const fact = Object.values(tampered.fact_document.categories).flatMap((category) => category.facts).find((item) => item.state === "observed")!;
     fact.evidence = [];
     const document = buildProfile({
-      source: reference.source as never,
+      repository: String((reference.source as JsonObject).public_id),
       commit: survey.commitSha,
       surveyorRelease: SURVEYOR_RELEASE,
       configurationDigest: survey.configurationDigest,

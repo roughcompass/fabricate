@@ -56,7 +56,7 @@ describe("starter Standards", () => {
 describe("the Salt exemplary starter", () => {
   const exemplary = findStarter("salt-exemplary")!;
   const SALT_APP = {
-    "package.json": manifest({ name: "queue", dependencies: { react: "19.3.0", "@salt-ds/core": "1.73.0", "@salt-ds/theme": "1.48.0" } }),
+    "package.json": manifest({ name: "queue", dependencies: { react: "19.3.0", "@salt-ds/core": "1.75.0", "@salt-ds/theme": "1.48.0" } }),
     "src/main.tsx": 'import "@salt-ds/theme/index.css";\nimport { SaltProvider } from "@salt-ds/core";\nimport { createRoot } from "react-dom/client";\nimport { App } from "./App";\ncreateRoot(document.getElementById("root")!).render(<SaltProvider><App /></SaltProvider>);\n',
   };
   const evaluate = async (app: string) => {

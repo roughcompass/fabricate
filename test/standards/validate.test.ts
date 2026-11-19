@@ -81,8 +81,8 @@ describe("draft validation", () => {
     expect(validateStandard({ ...standard(relationship), input_schemas: { repository_profile: [1], relationship_map: [] } })).toEqual([
       { field: "controls[0].subject", message: "Declare a supported relationship_map version to evaluate a Relationship Map Control" },
     ]);
-    expect(validateStandard({ ...standard(control()), input_schemas: { repository_profile: [3] } })).toEqual([
-      { field: "input_schemas.repository_profile", message: "Version 3 of repository_profile is not supported; supported versions are 1, 2" },
+    expect(validateStandard({ ...standard(control()), input_schemas: { repository_profile: [4] } })).toEqual([
+      { field: "input_schemas.repository_profile", message: "Version 4 of repository_profile is not supported; supported versions are 1, 2, 3" },
       { field: "controls[0].subject", message: "Declare a supported repository_profile version to evaluate a repository Control" },
     ]);
   });

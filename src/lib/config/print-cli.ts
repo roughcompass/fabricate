@@ -14,6 +14,7 @@ console.log(`Credential helper:  ${config.gitCredentialHelper ?? "(none)"}`);
 console.log(`Worker concurrency: ${config.workerConcurrency}`);
 console.log(`Template demo:      ${config.demoEnabled ? "enabled" : "disabled"}`);
 console.log(`Profiling check:    every ${config.profiling.checkMinutes} minutes`);
+console.log(`Catalog registry:   ${config.catalog.registry}`);
 console.log(
   `Analysis budgets:   ${Object.entries(config.analysis)
     .map(([key, value]) => `${key}=${value}`)

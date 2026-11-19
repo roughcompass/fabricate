@@ -20,6 +20,9 @@
     "profiling": {
       "checkMinutes": 60
     },
+    "catalog": {
+      "registry": "https://registry.npmjs.org/"
+    },
     "previews": {
       "enabled": false,
       "trustedSources": [],

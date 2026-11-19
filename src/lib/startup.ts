@@ -1,3 +1,4 @@
+import { catalogConfiguration } from "./catalog/configuration";
 import { getConfig } from "./config";
 import { getDb, pendingMigrationCount } from "./db/client";
 import { describeCapability, verifyGit } from "./git/capability";
@@ -10,6 +11,8 @@ import { PRODUCT } from "./product";
  */
 export async function verifyStartup(processName: "server" | "worker"): Promise<void> {
   const config = getConfig();
+  // An invalid config/catalog.yaml or rules file stops the process, rather than every Catalog build.
+  const catalog = catalogConfiguration(config);
   const git = await verifyGit(new GitRunner({ config }));
 
   const pending = pendingMigrationCount(getDb());
@@ -22,7 +25,8 @@ export async function verifyStartup(processName: "server" | "worker"): Promise<v
 
   console.log(
     `[${processName}] ${config.environment} configuration: ${config.allowedRoots.length} allowed root(s), ` +
-      `${config.deniedRoots.length} denied root(s), worker concurrency ${config.workerConcurrency}`,
+      `${config.deniedRoots.length} denied root(s), worker concurrency ${config.workerConcurrency}, ` +
+      `${PRODUCT.referenceCatalog} describing ${catalog.things.map((thing) => thing.id).join(", ") || "nothing"} from ${config.catalog.registry}`,
   );
   console.log(`[${processName}] ${describeCapability(git)}`);
 }
