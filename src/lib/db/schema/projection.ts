@@ -3,7 +3,6 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-o
 import { assessmentTargets, assessments } from "./assessments";
 import { repositorySources } from "./catalog";
 import { id, sqlList } from "./columns";
-import { ontologyReleases } from "./ontology";
 import { relationshipMaps, repositoryProfiles } from "./results";
 
 // These lists mirror the Relationship Map contract in src/lib/relationships/schema.ts.
@@ -12,8 +11,6 @@ export const PROJECTED_NODE_KINDS = ["repository", "package", "external_service"
 export const PROJECTED_EDGE_TYPES = ["package_dependency", "package_production", "composition", "iframe", "runtime_contract", "service_call"] as const;
 export const PROJECTED_EDGE_STATES = ["resolved", "ambiguous", "unresolved", "out_of_scope"] as const;
 export const EVIDENCE_LOCATION_KINDS = ["lines", "pointer", "entry"] as const;
-export const CLASSIFICATION_STATES = ["observed", "inferred", "unknown", "not_applicable", "not_covered"] as const;
-export const COVERAGE_STATES = ["contributed", "failed", "canceled"] as const;
 /**
  * What an edge means for review, from projection version 2: a dependency on a
  * package no repository in the Run produces, a repository's production of its
@@ -22,8 +19,6 @@ export const COVERAGE_STATES = ["contributed", "failed", "canceled"] as const;
 export const EDGE_KINDS = ["third_party", "own_package", "self", "architecture"] as const;
 export type EdgeKind = (typeof EDGE_KINDS)[number];
 
-export type ClassificationState = (typeof CLASSIFICATION_STATES)[number];
-export type CoverageState = (typeof COVERAGE_STATES)[number];
 
 /*
  * The assessment projection: indexed, write-once copies of what immutable
@@ -58,7 +53,7 @@ export const dependencyFacts = sqliteTable(
     specifier: text("specifier"),
     resolvedVersion: text("resolved_version"),
     state: text("state").notNull(),
-    evidence: text("evidence").notNull(),
+    evidence: text("evidence", { mode: "json" }).$type<string[]>().notNull(),
     documentDigest: text("document_digest").notNull(),
     projectionVersion: integer("projection_version").notNull(),
   },
@@ -89,7 +84,6 @@ export const graphNodes = sqliteTable(
     label: text("label").notNull(),
     repositorySourceId: integer("repository_source_id").references(() => repositorySources.id, { onDelete: "restrict" }),
     assessmentTargetId: integer("assessment_target_id").references(() => assessmentTargets.id, { onDelete: "restrict" }),
-    commitSha: text("commit_sha"),
     documentDigest: text("document_digest").notNull(),
     projectionVersion: integer("projection_version").notNull(),
   },
@@ -126,14 +120,14 @@ export const graphEdges = sqliteTable(
     rule: text("rule").notNull(),
     basis: text("basis").notNull(),
     reason: text("reason"),
-    evidence: text("evidence").notNull(),
+    evidence: text("evidence", { mode: "json" }).$type<string[]>().notNull(),
     documentDigest: text("document_digest").notNull(),
     projectionVersion: integer("projection_version").notNull(),
     // Projection version 2. Rows of version 1 leave these null until a rebuild;
     // a trigger requires them on every row of version 2 or later.
     referenceType: text("reference_type"),
     /** The edge's reference identifier, as a JSON object. */
-    referenceIdentifier: text("reference_identifier"),
+    referenceIdentifier: text("reference_identifier", { mode: "json" }).$type<Record<string, string>>(),
     kind: text("kind", { enum: EDGE_KINDS }),
   },
   (t) => [
@@ -199,7 +193,6 @@ export const evidenceIndex = sqliteTable(
     pointerFormat: text("pointer_format"),
     detector: text("detector").notNull(),
     rule: text("rule").notNull(),
-    contentDigest: text("content_digest").notNull(),
     documentDigest: text("document_digest").notNull(),
     projectionVersion: integer("projection_version").notNull(),
   },
@@ -212,66 +205,4 @@ export const evidenceIndex = sqliteTable(
     digestCheck("evidence_index_document_digest", t.documentDigest),
     versionCheck("evidence_index_projection_version", t.projectionVersion),
   ],
-);
-
-/** One concept's classification of one Profile's snapshot under one ontology release. */
-export const conceptClassifications = sqliteTable(
-  "concept_classifications",
-  {
-    id: id(),
-    profileId: integer("profile_id")
-      .notNull()
-      .references(() => repositoryProfiles.id, { onDelete: "restrict" }),
-    assessmentId: integer("assessment_id")
-      .notNull()
-      .references(() => assessments.id, { onDelete: "restrict" }),
-    releaseId: integer("release_id")
-      .notNull()
-      .references(() => ontologyReleases.id, { onDelete: "restrict" }),
-    conceptKey: text("concept_key").notNull(),
-    state: text("state", { enum: CLASSIFICATION_STATES }).notNull(),
-    evidence: text("evidence").notNull(),
-    documentDigest: text("document_digest").notNull(),
-    projectionVersion: integer("projection_version").notNull(),
-  },
-  (t) => [
-    uniqueIndex("concept_classifications_profile_concept").on(t.profileId, t.releaseId, t.conceptKey),
-    index("concept_classifications_release_concept").on(t.releaseId, t.conceptKey, t.state),
-    check("concept_classifications_state", sql.raw(`state IN (${sqlList(CLASSIFICATION_STATES)})`)),
-    jsonArrayCheck("concept_classifications_evidence", t.evidence),
-    digestCheck("concept_classifications_document_digest", t.documentDigest),
-    versionCheck("concept_classifications_projection_version", t.projectionVersion),
-  ],
-);
-
-/** Which targets of an Assessment contributed to its projection, and which failed or were canceled. */
-export const projectionCoverage = sqliteTable(
-  "projection_coverage",
-  {
-    id: id(),
-    assessmentId: integer("assessment_id")
-      .notNull()
-      .references(() => assessments.id, { onDelete: "restrict" }),
-    assessmentTargetId: integer("assessment_target_id")
-      .notNull()
-      .references(() => assessmentTargets.id, { onDelete: "restrict" }),
-    state: text("state", { enum: COVERAGE_STATES }).notNull(),
-    reason: text("reason"),
-    projectionVersion: integer("projection_version").notNull(),
-  },
-  (t) => [
-    uniqueIndex("projection_coverage_assessment_target").on(t.assessmentId, t.assessmentTargetId),
-    check("projection_coverage_state", sql.raw(`state IN (${sqlList(COVERAGE_STATES)})`)),
-    versionCheck("projection_coverage_projection_version", t.projectionVersion),
-  ],
-);
-
-/** A single row that marks a rebuild in progress; only then may projection rows be deleted. */
-export const projectionState = sqliteTable(
-  "projection_state",
-  {
-    id: integer("id").primaryKey(),
-    rebuilding: integer("rebuilding", { mode: "boolean" }).notNull().default(false),
-  },
-  (t) => [check("projection_state_single_row", sql`${t.id} = 1`), check("projection_state_rebuilding", sql`${t.rebuilding} IN (0, 1)`)],
 );

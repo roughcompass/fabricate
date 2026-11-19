@@ -1,7 +1,6 @@
-import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
+import { toasts } from "./support/shell";
 
-const toasts = (page: Page) => page.getByRole("region", { name: "Notifications" });
 
 const TOKEN = "BBDC-NzA2MzQ1NjYxMjM0OkxhYmNkZWZnaGlqa2xtbm9w";
 

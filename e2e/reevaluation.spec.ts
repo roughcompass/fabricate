@@ -1,19 +1,15 @@
-import type { Page } from "@playwright/test";
 import { listAssessments } from "../src/lib/assessments/assessment-records";
-import { jobHandlers } from "../src/lib/jobs/registry";
-import { drainJobs } from "../src/lib/jobs/worker";
 import { buildInitiative, buildSource } from "../test/support/builders";
-import { seedAssessment } from "../test/support/scenarios";
+import { ORDERS, seedAssessment } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
-import { ORDERS, seedResults, serverConfig } from "./support/results";
+import { seedResults, runJobs } from "./support/results";
 import { paths } from "./support/paths";
+import { pageHeader } from "./support/shell";
 
 // The page header: status, meta, and actions; the title is in the shell header.
-const header = (page: Page) => page.locator("[data-page-header]");
 
 test("starts a second Evaluation against the same Assessment after changing only the Release selection", async ({ page, db }) => {
   const { initiative, assessment } = await seedResults(db);
-  const runJobs = () => drainJobs(db, jobHandlers(db, serverConfig()));
 
   await page.goto(paths.assessment(initiative.publicId));
   const selected = page.getByRole("region", { name: "Overview" });
@@ -25,10 +21,10 @@ test("starts a second Evaluation against the same Assessment after changing only
 
   await assessments.getByRole("button", { name: "Start Evaluation of Run #1" }).click();
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("Evaluation #1 was started.")).toBeVisible();
-  await expect(header(page)).toContainText("Queued");
+  await expect(pageHeader(page)).toContainText("Queued");
   const first = page.url().split("/evaluations/")[1]!.split("?")[0]!;
-  await runJobs(); // the page polls its status and refreshes when the Evaluation finishes
-  await expect(header(page)).toContainText("Complete");
+  await runJobs(db); // the page polls its status and refreshes when the Evaluation finishes
+  await expect(pageHeader(page)).toContainText("Complete");
   await expect(page.getByRole("table", { name: "Summary by Release" }).locator("tbody tr")).toHaveCount(2);
 
   // Change only the Release selection.
@@ -44,9 +40,9 @@ test("starts a second Evaluation against the same Assessment after changing only
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("Evaluation #2 was started.")).toBeVisible();
   const second = page.url().split("/evaluations/")[1]!.split("?")[0]!;
   expect(second).not.toBe(first);
-  await runJobs();
-  await expect(header(page)).toContainText("Complete");
-  await expect(header(page).getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(assessment.publicId));
+  await runJobs(db);
+  await expect(pageHeader(page)).toContainText("Complete");
+  await expect(pageHeader(page).getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(assessment.publicId));
   const findings = page.getByRole("region", { name: "Findings", exact: true });
   await expect(findings).toContainText("Engineering baseline v1");
   await expect(findings).not.toContainText("Service readiness v1");

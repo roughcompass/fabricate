@@ -3,8 +3,7 @@ import { type ButtonSize, type ButtonVariant, ButtonContent, buttonProps } from 
 import type { IconName } from "./icon";
 import { SubmitButton } from "./submit-button";
 import styles from "./button.module.css";
-
-export { buttonProps } from "./button-content";
+import { HiddenFields } from "./form";
 
 interface CommonProps {
   variant?: ButtonVariant;
@@ -52,9 +51,7 @@ interface ActionButtonProps extends CommonProps {
 export function ActionButton({ action, fields = {}, variant = "secondary", size, icon, label, children, "aria-label": ariaLabel }: ActionButtonProps) {
   return (
     <form action={action} className={styles.inline}>
-      {Object.entries(fields).map(([name, value]) => (
-        <input key={name} type="hidden" name={name} value={value} />
-      ))}
+      <HiddenFields values={fields} />
       <SubmitButton variant={variant} size={size} icon={icon} label={label} aria-label={ariaLabel}>
         {children}
       </SubmitButton>

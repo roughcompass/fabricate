@@ -1,9 +1,8 @@
-import os from "node:os";
 import { acquireTarget } from "@/lib/acquisition/acquire";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ASSESSMENT_MACHINE, TARGET_MACHINE, isTerminal } from "@/lib/db/state-machines";
-import { redact } from "@/lib/git/redact";
+import { failureText } from "@/lib/git/redact";
 import { enqueue } from "@/lib/jobs/queue";
 import { NonRetryableError } from "@/lib/jobs/worker";
 import { analyzeSnapshot } from "@/lib/profiles/analyze";
@@ -59,7 +58,6 @@ export function coordinateAssessment(db: Executor, assessmentPublicId: string): 
 export interface ProcessOptions {
   config?: FabricateConfig;
   signal?: AbortSignal;
-  holder?: string;
 }
 
 export async function processTarget(db: Executor, targetPublicId: string, options: ProcessOptions = {}): Promise<AssessmentTarget> {
@@ -75,7 +73,7 @@ export async function processTarget(db: Executor, targetPublicId: string, option
     if (!snapshot) {
       if (target.state === "pending") target = transitionTarget(db, target, "acquiring");
       advanceAssessment(db, target.assessmentId, "acquiring");
-      const outcome = await acquireTarget(db, target, { config, ...(options.signal && { signal: options.signal }), holder: options.holder ?? `${os.hostname()}:${process.pid}:${target.publicId}` });
+      const outcome = await acquireTarget(db, target, { config, ...(options.signal && { signal: options.signal }) });
       if (!outcome.ok) return outcome.target;
       snapshot = outcome.snapshot;
       target = getTarget(db, targetPublicId);
@@ -100,7 +98,7 @@ export async function processTarget(db: Executor, targetPublicId: string, option
     if (isTerminal(TARGET_MACHINE, current.state)) return current;
     if (error instanceof Canceled || options.signal?.aborted) return transitionTarget(db, current, "canceled");
     // Normalized per source: a stable code and a redacted message, with no effect on other targets.
-    return transitionTarget(db, current, "failed", { failureCode: current.state === "analyzing" ? "analysis_failed" : "acquisition_failed", failureMessage: redact((error as Error).message ?? String(error)).slice(0, 500) });
+    return transitionTarget(db, current, "failed", { failureCode: current.state === "analyzing" ? "analysis_failed" : "acquisition_failed", failureMessage: failureText(error, 500) });
   } finally {
     requestFinalization(db, target.assessmentId);
   }

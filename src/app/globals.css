@@ -108,7 +108,6 @@
     --shadow-menu: 0 1px 3px var(--color-shadow), 0 8px 24px var(--color-shadow);
     --shadow-dialog: 0 24px 64px var(--color-shadow-strong);
     --shadow-toast: 0 8px 24px var(--color-shadow-strong);
-    --shadow-sticky: 0 -8px 24px var(--color-shadow);
     --shadow-focus: 0 0 0 3px var(--color-focus-ring);
     /*
      * The one keyboard focus ring: outside its control by default, or inside
@@ -147,7 +146,6 @@
 
     --letter-spacing-normal: 0;
     --letter-spacing-heading: -0.01em;
-    --letter-spacing-subtitle: -0.015em;
     --letter-spacing-display: -0.03em;
     --letter-spacing-caps: 0.04em;
 

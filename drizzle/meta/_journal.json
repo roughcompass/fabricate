@@ -302,6 +302,48 @@
       "when": 1795032180329,
       "tag": "0042_repository_previews",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1795061378435,
+      "tag": "0043_ownership_removed",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1795062829873,
+      "tag": "0044_salt_patterns_removed",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1795063190855,
+      "tag": "0045_unread_columns_removed",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1795063337995,
+      "tag": "0046_standard_drafts_folded",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1795063574014,
+      "tag": "0047_projection_coverage_removed",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1795063804540,
+      "tag": "0048_source_leases_removed",
+      "breakpoints": true
     }
   ]
 }

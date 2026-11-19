@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { EvidenceList } from "@/components/results/evidence";
-import { countLabel } from "@/components/ui/count";
+import { countLabel, formatNumber } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
@@ -35,7 +35,7 @@ export function RelationshipsTable({ page, assessmentId, focusHref, pageHref, co
   return (
     <Section title="Relationships" description={description}>
       <p role="status" className={styles.count}>
-        {page.pages > 1 ? `${first.toLocaleString("en-US")}–${last.toLocaleString("en-US")} of ${countLabel(page.total, "relationship")}` : countLabel(page.total, "relationship")}
+        {page.pages > 1 ? `${formatNumber(first)}–${formatNumber(last)} of ${countLabel(page.total, "relationship")}` : countLabel(page.total, "relationship")}
       </p>
       <Panel flush>
         {page.rows.length > 0 ? (

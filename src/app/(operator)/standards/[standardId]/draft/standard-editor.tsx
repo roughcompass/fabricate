@@ -1,21 +1,22 @@
 "use client";
 
-import { useActionState, useId, useRef, useState } from "react";
+import { useId } from "react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel } from "@/components/ui/panel";
-import { Select, TextArea, TextInput } from "@/components/ui/form";
+import { ActionForm, HiddenFields, Select, TextArea, TextInput } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { Menu, MenuButton, MenuSeparator } from "@/components/ui/menu";
 import { Severity, Status, severityOptions } from "@/components/ui/status";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Tag } from "@/components/ui/tag";
-import { useToast } from "@/components/ui/toast";
 import { issueLocation } from "@/lib/standards/issue-location";
 import type { EditorCatalog } from "../../catalog";
-import type { DraftIssue, DraftSaveState } from "../../form-state";
-import { ExpressionEditor, type Json, type Node, defaultPredicate, record } from "./expression-editor";
+import type { DraftSaveState } from "../../form-state";
+import { ExpressionEditor, type Json, defaultPredicate } from "./expression-editor";
+import { fieldProps } from "./fields";
+import { type ControlDraft, useControlList } from "./use-control-list";
 import styles from "./editor.module.css";
 
 /**
@@ -25,18 +26,6 @@ import styles from "./editor.module.css";
  * returns the complete server-side validation result. The save bar is the one
  * place that reports whether the draft is saved and valid.
  */
-
-interface ControlDraft {
-  uid: number;
-  key: string;
-  title: string;
-  rationale: string;
-  severity: string;
-  subject: string;
-  applicability: Node;
-  condition: Node;
-  guidance: string;
-}
 
 interface StandardEditorProps {
   action: (previous: DraftSaveState, formData: FormData) => Promise<DraftSaveState>;
@@ -51,118 +40,22 @@ const SUBJECT_OPTIONS = [
   { value: "relationship_map", label: "The Relationship Map" },
 ];
 
-/** `uid` identifies a Control in the editor; it must match between the server and client renders. */
-function toDraft(control: Json, catalog: EditorCatalog, uid: number): ControlDraft {
-  const value = record(control);
-  const text = (field: string) => (typeof value[field] === "string" ? (value[field] as string) : "");
-  const subject = value.subject === "relationship_map" ? "relationship_map" : "repository";
-  return {
-    uid,
-    key: text("key"),
-    title: text("title"),
-    rationale: text("rationale"),
-    severity: catalog.severities.includes(text("severity")) ? text("severity") : "medium",
-    subject,
-    applicability: value.applicability ? record(value.applicability) : { op: "always" },
-    condition: value.condition ? record(value.condition) : defaultPredicate(catalog, subject),
-    guidance: text("guidance"),
-  };
+export function StandardEditor({ action, initial, document, catalog, publishHref }: StandardEditorProps) {
+  // The editor opens the Control an issue is in and focuses the field itself.
+  return (
+    <ActionForm action={action} initial={initial} focusInvalid={false} className={styles.editor}>
+      {(state) => <EditorBody state={state} document={document} catalog={catalog} publishHref={publishHref} />}
+    </ActionForm>
+  );
 }
 
-export function StandardEditor({ action, initial, document, catalog, publishHref }: StandardEditorProps) {
-  const [state, formAction] = useActionState(action, initial);
-  // Initial Controls are numbered by position, so both renders agree; added ones continue from there.
-  const [controls, setControls] = useState<ControlDraft[]>(() => (Array.isArray(document.controls) ? document.controls.map((control, index) => toDraft(control, catalog, index)) : []));
-  const nextUid = useRef(controls.length);
-  const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set());
-  const { toast } = useToast();
-  const form = useRef<HTMLFormElement>(null);
-  // The submission count when the draft was last edited, and last structurally edited. An edit is saved once a later submission succeeded.
-  const [lastEdit, setLastEdit] = useState<number | null>(null);
-  const [lastStructuralEdit, setLastStructuralEdit] = useState<number | null>(null);
-  const saved = (edit: number | null) => edit === null || (edit < state.submission && state.status === "saved");
-  const dirty = !saved(lastEdit);
-  // Validation addresses Controls by position; after one moves, is added, or is removed, the result is stale until the next save.
-  const structureChanged = !saved(lastStructuralEdit);
-
-  const issues: DraftIssue[] = structureChanged ? [] : state.issues;
-  const errorsFor = (path: string) => issues.filter((issue) => issue.field === path).map((issue) => issue.message);
-  const issueCount = (index: number) => issues.filter((issue) => issue.field === `controls[${index}]` || issue.field.startsWith(`controls[${index}].`)).length;
-
-  const markEdited = (structural: boolean) => {
-    setLastEdit(state.submission);
-    if (structural) setLastStructuralEdit(state.submission);
-  };
-  const change = (next: ControlDraft[], structural = false) => {
-    setControls(next);
-    markEdited(structural);
-  };
-  const update = (uid: number, patch: Partial<ControlDraft>) => change(controls.map((control) => (control.uid === uid ? { ...control, ...patch } : control)));
-  const move = (index: number, offset: number) => {
-    const next = [...controls];
-    const [control] = next.splice(index, 1);
-    next.splice(index + offset, 0, control!);
-    change(next, true);
-  };
-  const setExpanded = (uid: number, expanded: boolean) =>
-    setOpen((current) => {
-      const next = new Set(current);
-      if (expanded) next.add(uid);
-      else next.delete(uid);
-      return next;
-    });
-  const add = () => {
-    const control = toDraft({ key: `control-${controls.length + 1}`, severity: "medium", subject: "repository", applicability: { op: "always" } }, catalog, nextUid.current++);
-    change([...controls, control], true);
-    setExpanded(control.uid, true);
-  };
-  const remove = (index: number) => {
-    const removed = controls[index]!;
-    change(controls.filter((control) => control.uid !== removed.uid), true);
-    toast({
-      id: `removed:${removed.uid}`,
-      tone: "info",
-      title: `Control ${index + 1}${removed.title ? `, ${removed.title},` : ""} was removed.`,
-      action: {
-        label: "Undo",
-        onAction: () => {
-          setControls((current) => {
-            const next = [...current];
-            next.splice(Math.min(index, next.length), 0, removed);
-            return next;
-          });
-          markEdited(true);
-        },
-      },
-    });
-  };
-
-  /** Opens the Control an issue is in and focuses the closest field to its path. */
-  const showIssue = (field: string) => {
-    const index = /^controls\[(\d+)\]/.exec(field)?.[1];
-    if (index !== undefined && controls[Number(index)]) setExpanded(controls[Number(index)]!.uid, true);
-    requestAnimationFrame(() => {
-      const candidates = [...(form.current?.querySelectorAll<HTMLElement>("[data-issue-path]") ?? [])].filter((element) => {
-        const path = element.dataset.issuePath!;
-        return field === path || field.startsWith(`${path}.`) || field.startsWith(`${path}[`);
-      });
-      const target = candidates.sort((a, b) => b.dataset.issuePath!.length - a.dataset.issuePath!.length)[0];
-      const focusable = target?.matches("input, select, textarea") ? target : target?.querySelector<HTMLElement>("input:not([type=hidden]), select, textarea, button");
-      focusable?.focus();
-    });
-  };
-
-  const serialized = JSON.stringify({
-    schema: document.schema,
-    schema_version: document.schema_version,
-    input_schemas: document.input_schemas,
-    controls: controls.map(({ uid: _uid, guidance, ...control }) => ({ ...control, guidance: guidance.trim() ? guidance : null })),
-  });
+/** The editor's Controls and save bar, from the state of its latest save. */
+function EditorBody({ state, document, catalog, publishHref }: { state: DraftSaveState } & Pick<StandardEditorProps, "document" | "catalog" | "publishHref">) {
+  const { controls, open, dirty, issues, errorsFor, issueCount, setExpanded, update, move, add, remove, showIssue, serialized } = useControlList(document, catalog, state);
 
   return (
-    <form ref={form} action={formAction} className={styles.editor} noValidate>
-      <input type="hidden" name="lockVersion" value={state.lockVersion} />
-      <input type="hidden" name="document" value={serialized} />
+    <>
+      <HiddenFields values={{ lockVersion: state.lockVersion, document: serialized }} />
 
       {issues.length > 0 && (
         <div className={styles.issues} role="region" aria-label="Issues">
@@ -252,7 +145,7 @@ export function StandardEditor({ action, initial, document, catalog, publishHref
           <SubmitButton pendingLabel="Saving">Save draft</SubmitButton>
         </div>
       </div>
-    </form>
+    </>
   );
 }
 
@@ -276,6 +169,7 @@ function ControlPanel({ control, index, last, expanded, issueCount, catalog, err
   const id = `control-${control.uid}`;
   const name = `Control ${index + 1}`;
   const bodyId = useId();
+  const field = fieldProps(id, path, errorsFor);
   return (
     <section className={styles.control} aria-label={`${name}${control.title ? `: ${control.title}` : ""}`} data-issue-path={path} data-invalid={issueCount > 0 || undefined}>
       <div className={styles.controlHeader}>
@@ -313,25 +207,23 @@ function ControlPanel({ control, index, last, expanded, issueCount, catalog, err
           </p>
         ))}
         <div className={styles.row}>
-          <TextInput id={`${id}-key`} label="Key" description="Stable within the Standard, such as has-ci" mono value={control.key} errors={errorsFor(`${path}.key`)} data-issue-path={`${path}.key`} onChange={(event) => onUpdate({ key: event.target.value })} />
-          <TextInput id={`${id}-title`} label="Title" value={control.title} errors={errorsFor(`${path}.title`)} data-issue-path={`${path}.title`} onChange={(event) => onUpdate({ title: event.target.value })} />
+          <TextInput {...field("key")} label="Key" description="Stable within the Standard, such as has-ci" mono value={control.key} onChange={(event) => onUpdate({ key: event.target.value })} />
+          <TextInput {...field("title")} label="Title" value={control.title} onChange={(event) => onUpdate({ title: event.target.value })} />
         </div>
-        <TextArea id={`${id}-rationale`} label="Rationale" rows={2} value={control.rationale} errors={errorsFor(`${path}.rationale`)} data-issue-path={`${path}.rationale`} onChange={(event) => onUpdate({ rationale: event.target.value })} />
+        <TextArea {...field("rationale")} label="Rationale" rows={2} value={control.rationale} onChange={(event) => onUpdate({ rationale: event.target.value })} />
         <div className={styles.row}>
-          <Select id={`${id}-severity`} label="Severity" value={control.severity} options={severityOptions(catalog.severities)} errors={errorsFor(`${path}.severity`)} data-issue-path={`${path}.severity`} onChange={(event) => onUpdate({ severity: event.target.value })} />
+          <Select {...field("severity")} label="Severity" value={control.severity} options={severityOptions(catalog.severities)} onChange={(event) => onUpdate({ severity: event.target.value })} />
           <Select
-            id={`${id}-subject`}
+            {...field("subject")}
             label="Subject"
             value={control.subject}
             options={SUBJECT_OPTIONS}
-            errors={errorsFor(`${path}.subject`)}
-            data-issue-path={`${path}.subject`}
             onChange={(event) => onUpdate({ subject: event.target.value, applicability: { op: "always" }, condition: defaultPredicate(catalog, event.target.value) })}
           />
         </div>
         <ExpressionEditor node={control.applicability} scope={control.subject} path={`${path}.applicability`} depth={1} label="Applies when" catalog={catalog} idPrefix={`${id}-applicability`} errorsFor={errorsFor} onChange={(applicability) => onUpdate({ applicability })} />
         <ExpressionEditor node={control.condition} scope={control.subject} path={`${path}.condition`} depth={1} label="Expected condition" catalog={catalog} idPrefix={`${id}-condition`} errorsFor={errorsFor} onChange={(condition) => onUpdate({ condition })} />
-        <TextArea id={`${id}-guidance`} label="Guidance" optional description="Shown with Findings as advice; never run." rows={2} value={control.guidance} errors={errorsFor(`${path}.guidance`)} data-issue-path={`${path}.guidance`} onChange={(event) => onUpdate({ guidance: event.target.value })} />
+        <TextArea {...field("guidance")} label="Guidance" optional description="Shown with Findings as advice; never run." rows={2} value={control.guidance} onChange={(event) => onUpdate({ guidance: event.target.value })} />
       </div>
     </section>
   );

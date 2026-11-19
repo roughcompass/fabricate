@@ -1,8 +1,10 @@
 import type { JsonObject, JsonValue, MemoryFile } from "@repo-facts/contract";
 import { describe, expect, it } from "vitest";
-import { type Reading, evaluate, repositoryContext } from "@/lib/evaluations/interpreter";
+import { repositoryContext } from "@/lib/evaluations/contexts";
+import { type Reading, evaluate } from "@/lib/evaluations/interpreter";
 import { validateStandard } from "@/lib/standards/validate";
 import { manifest, memoryProfile } from "../support/profiles";
+import { control, standardDocument } from "../support/standards";
 
 // The design-system fields of Repository Profile version 2 (standard-library: Controls can assess design-system adherence).
 
@@ -99,12 +101,8 @@ describe("design-system fields", () => {
 });
 
 describe("design-system fields in Standards", () => {
-  const standard = (repositoryProfile: number[], condition: JsonValue): JsonObject => ({
-    schema: "fabricate.standard",
-    schema_version: 1,
-    input_schemas: { repository_profile: repositoryProfile, relationship_map: [1] },
-    controls: [{ key: "salt-theme", title: "Salt theme", rationale: "Theming", severity: "high", subject: "repository", applicability: { op: "always" }, condition, guidance: null }],
-  });
+  const standard = (profileVersions: number[], condition: JsonValue): JsonObject =>
+    standardDocument([control({ key: "salt-theme", title: "Salt theme", rationale: "Theming", severity: "high", condition })], { profileVersions });
   const THEME = { op: "equals", selector: "repository.design_system_theme_imported", parameter: "salt", value: true };
 
   it("are valid in a draft that declares Profile version 2", () => {

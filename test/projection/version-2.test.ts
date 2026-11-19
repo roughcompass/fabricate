@@ -2,11 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { PROJECTION_VERSION } from "@/lib/projection/project";
 import { rebuildProjection } from "@/lib/projection/rebuild";
-import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
-import { manifest } from "../support/profiles";
 import { count, projectionRows } from "../support/projection";
-import { seedAssessment } from "../support/scenarios";
+import { seedMapStates } from "../support/scenarios";
 
 interface Edge {
   type: string;
@@ -18,24 +16,6 @@ interface Edge {
   edge_id: string;
   from_label: string;
   to_label: string | null;
-}
-
-/** The map the e2e suite seeds: resolved, ambiguous, unresolved, and out-of-scope edges, and one coverage gap. */
-async function seedMap(db: Db) {
-  const names = ["web", "client", "ui-a", "ui-b", "billing"];
-  const sources = names.map((name) => buildSource(db, { name }));
-  buildSource(db, { name: "legacy-ui" }); // in the catalog, outside the scope
-  const initiative = buildInitiative(db, { name: "Fleet assessment", sources });
-  return seedAssessment(db, initiative, sources, [
-    {
-      "package.json": manifest({ name: "web", version: "1.0.0", private: true, dependencies: { "@acme/client": "^1.0.0", "@acme/ui": "^2.0.0", "left-pad": "^1.3.0", "legacy-ui": "^0.1.0" } }),
-      "src/payments.ts": 'export const charge = () => fetch("https://payments.invalid/v1/charges", { method: "POST" });\n',
-    },
-    { "package.json": manifest({ name: "@acme/client", version: "1.0.0" }) },
-    { "package.json": manifest({ name: "@acme/ui", version: "2.0.0" }) },
-    { "package.json": manifest({ name: "@acme/ui", version: "2.1.0" }) },
-    "failed",
-  ]);
 }
 
 const edges = (db: Db): Edge[] =>
@@ -53,7 +33,7 @@ describe("projection version 2", () => {
 
   beforeEach(async () => {
     db = createTestDb();
-    await seedMap(db);
+    await seedMapStates(db);
   });
 
   it("records each edge's reference and kind", () => {
@@ -80,10 +60,9 @@ describe("projection version 2", () => {
     expect(candidates).toEqual([{ label: "ui-a" }, { label: "ui-b" }]);
   });
 
-  it("refuses updates to candidates, and deletes outside a rebuild", () => {
+  it("refuses updates to candidates", () => {
     expect(count(db, "graph_edge_candidates")).toBeGreaterThan(0);
     expect(() => rawRun(db, "update graph_edge_candidates set candidate_node = 'x'")).toThrow(/written once/);
-    expect(() => rawRun(db, "delete from graph_edge_candidates")).toThrow(/only by a rebuild/);
   });
 
   it("refuses an edge of version 2 without its reference and kind", () => {
@@ -93,7 +72,6 @@ describe("projection version 2", () => {
   it("rebuilds rows written at version 1 into the same version 2 rows, every time", () => {
     const current = projectionRows(db);
     // Turn the stored edges back into version 1 rows, as the previous release wrote them.
-    rawRun(db, "update projection_state set rebuilding = 1");
     rawRun(db, "create temp table version_1 as select * from graph_edges");
     rawRun(db, "delete from graph_edge_candidates");
     rawRun(db, "delete from graph_edges");
@@ -102,7 +80,6 @@ describe("projection version 2", () => {
       `insert into graph_edges (map_id, assessment_id, edge_id, type, state, from_node, to_node, rule, basis, reason, evidence, document_digest, projection_version)
        select map_id, assessment_id, edge_id, type, state, from_node, to_node, rule, basis, reason, evidence, document_digest, 1 from version_1`,
     );
-    rawRun(db, "update projection_state set rebuilding = 0");
     expect(count(db, "graph_edges", "projection_version = 1 and kind is null")).toBe(count(db, "graph_edges"));
 
     rebuildProjection(db);

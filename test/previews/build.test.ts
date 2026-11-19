@@ -7,7 +7,6 @@ import { mirrorPath } from "@/lib/acquisition/mirror";
 import { deleteSource, editSource } from "@/lib/catalog/catalog";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type FabricateConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
-import type { Db } from "@/lib/db/client";
 import { previewBuilds, repositorySources } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
 import { type Job, claimNext, jobPayload } from "@/lib/jobs/queue";
@@ -21,9 +20,8 @@ import { BUILD_PREVIEW, PREPARE_PREVIEW, type PreviewBuild, decidePreparation, f
 import { pinCommit } from "@/lib/previews/refs";
 import { servePreview } from "@/lib/previews/serving";
 import { attemptLogFile, cacheDirectory, previewDirectory, publishedDirectory } from "@/lib/previews/storage";
-import { acquisitionConfig, registerLocalSource } from "../support/acquisition";
-import { createTestDb, rawRun } from "../support/db";
-import { GitFixture } from "../support/git-fixture";
+import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { rawRun } from "../support/db";
 import type { Tree } from "../support/preview-trees";
 import { publishFiles, queuedPreview } from "../support/previews";
 import { manifest } from "../support/profiles";
@@ -98,49 +96,42 @@ const plan = (overrides: Partial<BuildPlan> = {}): BuildPlan => ({
 });
 
 describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", () => {
-  let fixture: GitFixture;
-  let base: FabricateConfig;
+  const world = useAcquisitionWorld("preview-build");
   let config: FabricateConfig;
   let storage: string;
-  let db: Db;
   let control: string;
 
   beforeEach(() => {
-    fixture = GitFixture.create("preview-build");
-    base = acquisitionConfig(fixture);
     storage = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "preview-storage-")));
-    control = path.join(fixture.root, "control.json");
-    db = createTestDb();
+    control = path.join(world.fixture.root, "control.json");
   });
 
   afterEach(() => {
-    fixture.cleanup();
-    fs.rmSync(base.repositoryStorage, { recursive: true, force: true });
     fs.rmSync(storage, { recursive: true, force: true });
   });
 
   const settings = (source: RepositorySource, previews: Partial<FabricateConfig["settings"]["previews"]> = {}) =>
-    withOverrides(base, { previews: { enabled: true, trustedSources: [source.cloneUrl], nodeVersions: { [NODE]: NODE_BIN }, storage, ...previews } });
+    withOverrides(world.config, { previews: { enabled: true, trustedSources: [source.cloneUrl], nodeVersions: { [NODE]: NODE_BIN }, storage, ...previews } });
 
   /** A queued preview of +packageDir+ in a remote holding +tree+, pinned and prepared with +buildPlan+. */
   async function previewOf(tree: Tree, buildPlan: BuildPlan, packageDir = "."): Promise<PreviewBuild> {
-    const work = fixture.repo("work/orders");
+    const work = world.fixture.repo("work/orders");
     for (const [file, content] of Object.entries(tree)) work.write(file, content);
     work.commit("initial");
-    const remote = fixture.bare("remotes/orders.git", { from: work });
-    const source = registerLocalSource(db, base, "orders", remote.path);
+    const remote = world.fixture.bare("remotes/orders.git", { from: work });
+    const source = registerLocalSource(world.db, world.config, "orders", remote.path);
     config = settings(source);
-    const pinned = await pinCommit(db, source, { kind: "ref", name: null }, { config });
-    const { preparation } = openPreparation(db, source, pinned);
+    const pinned = await pinCommit(world.db, source, { kind: "ref", name: null }, { config });
+    const { preparation } = openPreparation(world.db, source, pinned);
     const verdict: PackageVerdict = { directory: packageDir, manifest: "package.json", name: "orders", qualifies: true, conditions: [], plan: buildPlan };
-    decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), PROFILE, { packages: [verdict], refusal: null });
+    decidePreparation(world.db, preparation.publicId, preparation.requestedAt.getTime(), PROFILE, { packages: [verdict], refusal: null });
     // Decided here, so its job has nothing left to do; only the build job is queued.
-    rawRun(db, "delete from jobs where kind = ?", PREPARE_PREVIEW);
-    return startPreview(db, preparation.publicId, packageDir).preview;
+    rawRun(world.db, "delete from jobs where kind = ?", PREPARE_PREVIEW);
+    return startPreview(world.db, preparation.publicId, packageDir).preview;
   }
 
-  const build = (preview: PreviewBuild, claim = "test-claim") => runPreviewBuild(db, { preview: preview.publicId, attempt: findPreview(db, preview.publicId)!.attempt }, { config, claim });
-  const current = (preview: PreviewBuild) => findPreview(db, preview.publicId)!;
+  const build = (preview: PreviewBuild, claim = "test-claim") => runPreviewBuild(world.db, { preview: preview.publicId, attempt: findPreview(world.db, preview.publicId)!.attempt }, { config, claim });
+  const current = (preview: PreviewBuild) => findPreview(world.db, preview.publicId)!;
   /** The latest attempt's log, empty until a claim starts it. */
   const logOf = (preview: PreviewBuild) => {
     const file = attemptLogFile(config, current(preview));
@@ -158,17 +149,17 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
 
   describe("extraction", () => {
     it("unpacks the pinned commit's tree with git archive, running no filter and leaving submodules out", async () => {
-      const marker = path.join(fixture.root, "filter-ran");
-      const work = fixture.repo("work/orders");
+      const marker = path.join(world.fixture.root, "filter-ran");
+      const work = world.fixture.repo("work/orders");
       work.write("src/app.txt", "orders\n").write("bin/run.sh", "#!/bin/sh\necho run\n", { executable: true }).write(".gitattributes", "*.txt filter=touch\n");
       // A smudge filter configured where the commit was made; it never travels with the commit.
       work.git("config", "filter.touch.smudge", `touch ${marker} && cat`);
       work.git("update-index", "--add", "--cacheinfo", `160000,${"c".repeat(40)},vendor/lib`);
       const commit = work.commit("initial");
-      const remote = fixture.bare("remotes/orders.git", { from: work });
-      const source = registerLocalSource(db, base, "orders", remote.path);
+      const remote = world.fixture.bare("remotes/orders.git", { from: work });
+      const source = registerLocalSource(world.db, world.config, "orders", remote.path);
       config = settings(source);
-      await pinCommit(db, source, { kind: "ref", name: null }, { config });
+      await pinCommit(world.db, source, { kind: "ref", name: null }, { config });
 
       const destination = fs.mkdtempSync(path.join(storage, "work-"));
       await extractCommit(new GitRunner({ config }), mirrorPath(config.repositoryStorage, source.publicId), commit, destination);
@@ -198,11 +189,11 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
         "packages/web/emit.json": JSON.stringify({ ...STANDALONE, info: "../../install-cwd.txt" }),
       };
       const preview = await previewOf(workspace, plan(), "packages/web");
-      const secrets = { FABRICATE_DE_CONSOLE_TOKEN: "console-secret", GIT_ASKPASS: "/usr/local/bin/askpass-secret", VERCEL_TOKEN: "vercel-secret", AI_GATEWAY_API_KEY: "ai-secret" };
+      const secrets = { FABRICATE_SECRET_TOKEN: "fabricate-secret", GIT_ASKPASS: "/usr/local/bin/askpass-secret", VERCEL_TOKEN: "vercel-secret", AI_GATEWAY_API_KEY: "ai-secret" };
       Object.assign(process.env, secrets);
       try {
         // Through the worker's registered handler.
-        await drainJobs(db, jobHandlers(db, config));
+        await drainJobs(world.db, jobHandlers(world.db, config));
       } finally {
         for (const key of Object.keys(secrets)) delete process.env[key];
       }
@@ -210,7 +201,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       const done = current(preview);
       expect(done).toMatchObject({ attemptState: "ready", attemptReason: null, artifactAttempt: 1, artifactLayout: "standalone", nodeVersion: NODE, packageManager: "npm" });
       expect(done.artifact).toMatch(/^out\/1-[a-z0-9]+$/);
-      expect(JSON.parse(done.artifactEntry!)).toEqual({ file: "index.html", rebase: false });
+      expect(done.artifactEntry).toEqual({ file: "index.html", rebase: false });
       expect(done.outputBytes).toBeGreaterThan(0);
 
       const info = JSON.parse(published(preview, "build-info.json")) as { cwd: string; argv: string[]; env: Record<string, string>; installedFrom: string };
@@ -277,7 +268,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       expect(current(preview)).toMatchObject({ attemptState: "failed", attemptReason: "Previews were turned off before the build ran", attemptLog: null });
 
       config = enrolled;
-      rebuildPreview(db, preview.publicId);
+      rebuildPreview(world.db, preview.publicId);
       config = withOverrides(enrolled, { previews: { trustedSources: [] } });
       expect(await build(preview)).toBe("failed");
       expect(current(preview)).toMatchObject({ attempt: 2, attemptReason: "orders is not enrolled for previews", attemptLog: null });
@@ -297,7 +288,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
 
       const done = current(preview);
       expect(done).toMatchObject({ attemptState: "ready", artifactLayout: "standalone" });
-      expect(JSON.parse(done.artifactEntry!)).toEqual({ file: "index.html", rebase: false });
+      expect(done.artifactEntry).toEqual({ file: "index.html", rebase: false });
       expect(published(preview, "remoteEntry.js")).toContain("var mfAdmin");
       expect(logOf(preview)).toContain(`with ASSET_PATH and PUBLIC_PATH set to /previews/${preview.publicId}/`);
       expect(logOf(preview)).toContain("3 files, ");
@@ -330,7 +321,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       const first = current(preview);
       const firstLog = attemptLogFile(config, first)!;
 
-      rebuildPreview(db, preview.publicId);
+      rebuildPreview(world.db, preview.publicId);
       hold({ hold: true, fail: true });
       const rebuilding = build(preview);
       await until(() => current(preview).attemptState === "building" && logOf(preview).includes("==> build:"));
@@ -353,7 +344,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
 
       // A rebuild that succeeds replaces the artifact and removes the one it superseded.
       hold({});
-      rebuildPreview(db, preview.publicId);
+      rebuildPreview(world.db, preview.publicId);
       expect(await build(preview)).toBe("published");
       const third = current(preview);
       expect(third).toMatchObject({ attempt: 3, attemptState: "ready", artifactAttempt: 3 });
@@ -362,19 +353,19 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
 
     it("lets no claim publish after its lease expired and another worker took the attempt over", async () => {
       const preview = await previewOf(app({ ...STANDALONE, control }), plan());
-      const handler = jobHandlers(db, config)[BUILD_PREVIEW]!;
+      const handler = jobHandlers(world.db, config)[BUILD_PREVIEW]!;
       const never = new AbortController().signal;
       const run = (job: Job) => handler(jobPayload(job), { job, signal: never });
       hold({ hold: true });
 
       // Worker A claims the job with a short lease, then stops renewing it, as a stalled worker would.
-      const claimedByA = claimNext(db, { workerId: "worker-a", leaseMs: 100 })!;
+      const claimedByA = claimNext(world.db, { workerId: "worker-a", leaseMs: 100 })!;
       const a = run(claimedByA);
       await until(() => current(preview).attemptClaim?.startsWith("worker-a#") === true && logOf(preview).includes("==> build:"));
       const logA = attemptLogFile(config, current(preview))!;
 
       // The lease expires and worker B takes the job, and with it the attempt.
-      const claimedByB = claimNext(db, { workerId: "worker-b", now: new Date(Date.now() + 1_000) })!;
+      const claimedByB = claimNext(world.db, { workerId: "worker-b", now: new Date(Date.now() + 1_000) })!;
       expect(claimedByB.id).toBe(claimedByA.id);
       const b = run(claimedByB);
       await until(() => current(preview).attemptClaim?.startsWith("worker-b#") === true && logOf(preview).includes("==> build:"));
@@ -401,7 +392,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       const preview = await previewOf(app({ ...STANDALONE, control }), plan());
       hold({ hold: true });
       const controller = new AbortController();
-      const running = runPreviewBuild(db, { preview: preview.publicId, attempt: 1 }, { config, claim: "stalled", signal: controller.signal });
+      const running = runPreviewBuild(world.db, { preview: preview.publicId, attempt: 1 }, { config, claim: "stalled", signal: controller.signal });
       await until(() => logOf(preview).includes("==> build:"));
 
       controller.abort(new Error("The job's lease was lost"));
@@ -418,16 +409,16 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
 
   describe("lifecycle", () => {
     const serve = (preview: PreviewBuild, file = "") =>
-      servePreview(new Request(`http://localhost/previews/${preview.publicId}/${file}`, { headers: { "sec-fetch-dest": "document" } }), preview.publicId, file ? file.split("/") : [], { db, config });
-    const sourceOf = (preview: PreviewBuild) => db.select().from(repositorySources).where(eq(repositorySources.id, preview.repositorySourceId)).get()!;
-    const row = (preview: PreviewBuild) => db.select().from(previewBuilds).where(eq(previewBuilds.publicId, preview.publicId)).get()!;
+      servePreview(new Request(`http://localhost/previews/${preview.publicId}/${file}`, { headers: { "sec-fetch-dest": "document" } }), preview.publicId, file ? file.split("/") : [], { db: world.db, config });
+    const sourceOf = (preview: PreviewBuild) => world.db.select().from(repositorySources).where(eq(repositorySources.id, preview.repositorySourceId)).get()!;
+    const row = (preview: PreviewBuild) => world.db.select().from(previewBuilds).where(eq(previewBuilds.publicId, preview.publicId)).get()!;
 
     /** A published preview whose rebuild is held in its build step. */
     async function rebuildingPreview(): Promise<{ preview: PreviewBuild; first: PreviewBuild; rebuilding: Promise<string> }> {
       const preview = await previewOf(app({ ...STANDALONE, control }), plan());
       expect(await build(preview)).toBe("published");
       const first = current(preview);
-      rebuildPreview(db, preview.publicId);
+      rebuildPreview(world.db, preview.publicId);
       hold({ hold: true });
       const rebuilding = build(preview);
       await until(() => current(preview).attemptState === "building" && logOf(preview).includes("==> build:"));
@@ -438,7 +429,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
     it("stops serving a preview deleted during its rebuild at once, and the rebuild can neither publish nor restore it", async () => {
       const { preview, first, rebuilding } = await rebuildingPreview();
 
-      expect(await deletePreview(db, preview.publicId, config)).toBe(true);
+      expect(await deletePreview(world.db, preview.publicId, config)).toBe(true);
       expect((await serve(preview)).status).toBe(404);
       expect((await serve(preview, "assets/app.js")).status).toBe(404);
       // The published files are gone at once; the rebuild still running may write scratch files at the preview's path until it stops.
@@ -446,7 +437,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
 
       hold({});
       expect(await rebuilding).toBe("superseded");
-      expect(findPreview(db, preview.publicId)).toBeUndefined();
+      expect(findPreview(world.db, preview.publicId)).toBeUndefined();
       expect(row(preview)).toMatchObject({ attempt: 2, artifact: first.artifact, artifactAttempt: 1, deletedAt: expect.any(Date) });
       expect(fs.existsSync(previewDirectory(config, preview.publicId))).toBe(false);
       expect((await serve(preview)).status).toBe(404);
@@ -458,7 +449,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       // Repository deletion reads the process's settings.
       setConfig(config);
       try {
-        deleteSource(db, sourceOf(preview).publicId, "orders");
+        deleteSource(world.db, sourceOf(preview).publicId, "orders");
       } finally {
         setConfig(previous);
       }
@@ -475,7 +466,7 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       const { preview, first, rebuilding } = await rebuildingPreview();
       const source = sourceOf(preview);
 
-      editSource(db, source.publicId, source.lockVersion, { name: "orders", cloneUrl: "https://git.example.com/acme/orders-fork.git", gitRef: "" });
+      editSource(world.db, source.publicId, source.lockVersion, { name: "orders", cloneUrl: "https://git.example.com/acme/orders-fork.git", gitRef: "" });
       expect((await serve(preview, "assets/app.js")).status).toBe(404);
 
       hold({});
@@ -489,16 +480,16 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
     it("prunes the least recently opened previews after a successful build, never the one it published", async () => {
       const preview = await previewOf(app(STANDALONE), plan());
       const source = sourceOf(preview);
-      const stale = publishFiles(db, config, queuedPreview(db, source), { "index.html": "s".repeat(10_000) });
-      const opened = publishFiles(db, config, queuedPreview(db, source), { "index.html": "o".repeat(3_000) });
-      markOpened(db, stale.publicId, new Date(Date.now() - 60 * 60_000));
-      markOpened(db, opened.publicId, new Date(Date.now() - 30 * 60_000));
+      const stale = publishFiles(world.db, config, queuedPreview(world.db, source), { "index.html": "s".repeat(10_000) });
+      const opened = publishFiles(world.db, config, queuedPreview(world.db, source), { "index.html": "o".repeat(3_000) });
+      markOpened(world.db, stale.publicId, new Date(Date.now() - 60 * 60_000));
+      markOpened(world.db, opened.publicId, new Date(Date.now() - 30 * 60_000));
       config = withOverrides(config, { previews: { maxStorageBytes: 8_000 } });
 
       expect(await build(preview)).toBe("published");
-      expect(findPreview(db, stale.publicId)).toBeUndefined();
+      expect(findPreview(world.db, stale.publicId)).toBeUndefined();
       expect(fs.existsSync(previewDirectory(config, stale.publicId))).toBe(false);
-      expect(findPreview(db, opened.publicId)).toBeDefined();
+      expect(findPreview(world.db, opened.publicId)).toBeDefined();
       expect(current(preview).attemptState).toBe("ready");
       expect(logOf(preview)).toContain(`==> prune: deleted the least recently used preview to keep stored output under 7.8 KiB: ${stale.publicId}`);
       expect(logOf(preview).trimEnd().split("\n").at(-1)).toMatch(/^==> ready: /);

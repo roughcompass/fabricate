@@ -7,13 +7,15 @@ import { deleteSource, editSource, registerSource, type SourceForm } from "@/lib
 import { getSource } from "@/lib/catalog/source-records";
 import { CloneUrl } from "@/lib/catalog/clone-url";
 import { getDb } from "@/lib/db/client";
-import { NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
-import { isPublicId } from "@/lib/db/ids";
+import { ValidationError } from "@/lib/db/errors";
+import { requirePublicId } from "@/lib/db/ids";
 import { queueProfile } from "@/lib/profiling/versions";
-import { repositoryHref, settingsHref } from "@/lib/web/repository-paths";
-import { errorsFrom, integer, text } from "@/lib/web/form-data";
+import { lockVersion, submitForm } from "@/lib/web/actions";
+import { errorsFrom, text } from "@/lib/web/form-data";
+import { withQuery } from "@/lib/web/query";
 import type { BulkFormState } from "./bulk/bulk-state";
 import type { SourceFormState } from "./source-form-state";
+import { routes } from "@/lib/web/routes";
 
 function readForm(formData: FormData): SourceForm {
   return { name: text(formData, "name", 500), cloneUrl: text(formData, "cloneUrl", 2_048), gitRef: text(formData, "gitRef", 300) };
@@ -24,38 +26,24 @@ function safeValues(form: SourceForm): SourceForm {
   return { ...form, cloneUrl: CloneUrl.redact(form.cloneUrl) };
 }
 
+const repositoryId = (publicId: string) => requirePublicId(publicId, "src", "repository source");
+
 export async function createSource(_previous: SourceFormState, formData: FormData): Promise<SourceFormState> {
   const form = readForm(formData);
-  let publicId: string;
-  try {
-    publicId = registerSource(getDb(), form).publicId;
-  } catch (error) {
-    if (error instanceof ValidationError) return { values: safeValues(form), errors: errorsFrom(error) };
-    throw error;
-  }
-  redirect(`/repositories?notice=added&source=${publicId}`);
+  return submitForm(safeValues(form), () => withQuery(routes.repositories, { notice: "added", source: registerSource(getDb(), form).publicId }));
 }
 
-export async function updateSource(publicId: string, previous: SourceFormState, formData: FormData): Promise<SourceFormState> {
-  if (!isPublicId(publicId, "src")) throw new NotFoundError("Unknown repository source");
+export async function updateSource(publicId: string, _previous: SourceFormState, formData: FormData): Promise<SourceFormState> {
+  repositoryId(publicId);
   const form = readForm(formData);
-  const lockVersion = integer(formData, "lockVersion");
-
-  try {
-    if (lockVersion === null) throw new StaleRecordError("Missing lock version");
-    editSource(getDb(), publicId, lockVersion, form);
-  } catch (error) {
-    if (error instanceof ValidationError) return { ...previous, values: safeValues(form), errors: errorsFrom(error) };
-    if (error instanceof StaleRecordError) {
-      return {
-        ...previous,
-        values: safeValues(form),
-        errors: { base: ["This source was changed by someone else. Reload the page to review the current values, then try again."] },
-      };
-    }
-    throw error;
-  }
-  redirect(`${settingsHref(publicId)}?notice=updated`);
+  return submitForm(
+    safeValues(form),
+    () => {
+      editSource(getDb(), publicId, lockVersion(formData), form);
+      return withQuery(routes.repositorySettings(publicId), { notice: "updated" });
+    },
+    "This source was changed by someone else. Reload the page to review the current values, then try again.",
+  );
 }
 
 /**
@@ -65,12 +53,11 @@ export async function updateSource(publicId: string, previous: SourceFormState, 
  * list when it was chosen there.
  */
 export async function reprofileSource(formData: FormData): Promise<void> {
-  const publicId = text(formData, "publicId", 40);
-  if (!isPublicId(publicId, "src")) throw new NotFoundError("Unknown repository source");
+  const publicId = repositoryId(text(formData, "publicId", 40));
   const token = text(formData, "launchToken", 40);
   const result = queueProfile(getDb(), getSource(getDb(), publicId), "manual", { launchToken: LAUNCH_TOKEN.test(token) ? token : undefined });
   const notice = result.status === "queued" ? "reprofiled" : "profiling";
-  redirect(text(formData, "from", 10) === "list" ? `/repositories?notice=${notice}&source=${publicId}` : `${repositoryHref(publicId)}?notice=${notice}`);
+  redirect(text(formData, "from", 10) === "list" ? withQuery(routes.repositories, { notice, source: publicId }) : withQuery(routes.repository(publicId), { notice }));
 }
 
 /**
@@ -91,7 +78,7 @@ export async function addRepositoriesInBulk(previous: BulkFormState, formData: F
     if (error instanceof ValidationError) return { values: { urls }, errors: errorsFrom(error), added: 0, failed: [], submission };
     throw error;
   }
-  if (failed.length === 0) redirect(`/repositories?notice=bulk-added&count=${added}`);
+  if (failed.length === 0) redirect(withQuery(routes.repositories, { notice: "bulk-added", count: added }));
   return { values: { urls: failed.map((failure) => failure.text).join("\n") }, errors: {}, added, failed, submission };
 }
 
@@ -100,12 +87,12 @@ export async function addRepositoriesInBulk(previous: BulkFormState, formData: F
  * opens the list. A confirmation that doesn't match deletes nothing.
  */
 export async function deleteRepository(publicId: string, _previous: { error: string | null }, formData: FormData): Promise<{ error: string | null }> {
-  if (!isPublicId(publicId, "src")) throw new NotFoundError("Unknown repository source");
+  repositoryId(publicId);
   try {
     deleteSource(getDb(), publicId, text(formData, "confirmation", 200));
   } catch (error) {
     if (error instanceof ValidationError) return { error: error.issues.map((issue) => issue.message).join(" ") };
     throw error;
   }
-  redirect(`/repositories?notice=deleted&source=${publicId}`);
+  redirect(withQuery(routes.repositories, { notice: "deleted", source: publicId }));
 }

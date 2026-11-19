@@ -1,7 +1,9 @@
 import { type JsonObject, type JsonValue, compareCodeUnits } from "@repo-facts/contract";
 import { DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
 import type { MapDocument } from "@/lib/relationships/schema";
-import { type Context, type TraceNode, evaluate, mapContext, repositoryContext, traceEvidence, unknownCauses } from "./interpreter";
+import { mapContext, repositoryContext } from "./contexts";
+import { type Context, type TraceNode, evaluate, traceEvidence, unknownCauses } from "./interpreter";
+import { asObject } from "@/lib/json";
 
 /**
  * Applies one Release's Controls to an Assessment's immutable results.
@@ -25,8 +27,7 @@ export interface TargetInput {
   source: { public_id: string; name: string };
   state: string;
   failure: string | null;
-  /** The commit is null for a template version, whose Profile describes stored files. */
-  profile: { public_id: string; digest: string; commit: string | null; factDocument: JsonObject } | null;
+  profile: { public_id: string; digest: string; commit: string; factDocument: JsonObject } | null;
 }
 
 export interface EvaluationInputs {
@@ -45,7 +46,7 @@ export interface ReleaseInput {
 /** Every Finding document for one Release, in Control then subject order. */
 export function evaluateReleaseControls(release: ReleaseInput, inputs: EvaluationInputs): JsonObject[] {
   const findings: JsonObject[] = [];
-  const controls = (Array.isArray(release.document.controls) ? release.document.controls : []).map(record);
+  const controls = (Array.isArray(release.document.controls) ? release.document.controls : []).map(asObject);
   for (const control of controls) {
     if (control.subject === "relationship_map") {
       findings.push(relationshipFinding(release, control, inputs.map));
@@ -67,7 +68,7 @@ function repositoryFinding(release: ReleaseInput, control: JsonObject, target: T
     commit: target.profile?.commit ?? null,
     profile: target.profile ? { public_id: target.profile.public_id, digest: target.profile.digest } : null,
   };
-  return finding(release, control, subject, context, record(target.profile?.factDocument.evidence));
+  return finding(release, control, subject, context, asObject(target.profile?.factDocument.evidence));
 }
 
 function relationshipFinding(release: ReleaseInput, control: JsonObject, map: EvaluationInputs["map"]): JsonObject {
@@ -136,6 +137,3 @@ function reasoning(outcome: Outcome, applies: boolean, causes: readonly string[]
   }
 }
 
-function record(value: JsonValue | undefined): JsonObject {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-}

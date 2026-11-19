@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { count, desc, eq, sql } from "drizzle-orm";
 import type { Assessment } from "@/lib/assessments/assessment-records";
 import { launchAssessment } from "@/lib/assessments/launcher";
 import type { RepositorySource } from "@/lib/catalog/source-records";
@@ -7,6 +7,10 @@ import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type ProfileTrigger, assessmentTargets, assessments, profileVersions, repositoryProfiles, sourceSnapshots } from "@/lib/db/schema";
 import { PROFILING_INITIATIVE_ID } from "@/lib/initiatives/initiative-records";
+import { type CurrentProfile, currentProfile, currentProfiles, versionTarget } from "./current";
+import { ASSESSMENT_MACHINE, activeStates } from "@/lib/db/state-machines";
+import type { JsonValue } from "@repo-facts/contract";
+import { statusVersion } from "@/lib/assessments/status";
 
 /*
  * Profile versions (docs/profiling.md). Every repository is profiled
@@ -17,8 +21,8 @@ import { PROFILING_INITIATIVE_ID } from "@/lib/initiatives/initiative-records";
  */
 
 
-/** A Run that hasn't finished. */
-export const ACTIVE_STATES = ["queued", "acquiring", "analyzing", "finalizing"] as const;
+/** The states of a Run that hasn't finished. */
+export const ACTIVE_STATES: readonly Assessment["state"][] = activeStates(ASSESSMENT_MACHINE);
 
 export const TRIGGER_LABELS: Record<ProfileTrigger, string> = {
   imported: "Added in bulk",
@@ -47,7 +51,7 @@ export interface ProfileVersion {
 export type QueueResult = { readonly status: "queued"; readonly version: ProfileVersion } | { readonly status: "active"; readonly version: ProfileVersion };
 
 export function isActive(version: Pick<ProfileVersion, "assessment">): boolean {
-  return (ACTIVE_STATES as readonly string[]).includes(version.assessment.state);
+  return ACTIVE_STATES.includes(version.assessment.state);
 }
 
 /**
@@ -84,7 +88,7 @@ export function versionsOf(db: Executor, sourceId: number, limit = -1, offset = 
     })
     .from(profileVersions)
     .innerJoin(assessments, eq(assessments.id, profileVersions.assessmentId))
-    .leftJoin(assessmentTargets, and(eq(assessmentTargets.assessmentId, profileVersions.assessmentId), eq(assessmentTargets.repositorySourceId, profileVersions.repositorySourceId)))
+    .leftJoin(assessmentTargets, versionTarget)
     .leftJoin(sourceSnapshots, eq(sourceSnapshots.assessmentTargetId, assessmentTargets.id))
     .leftJoin(repositoryProfiles, eq(repositoryProfiles.assessmentTargetId, assessmentTargets.id))
     .where(eq(profileVersions.repositorySourceId, sourceId))
@@ -114,57 +118,49 @@ export function versionOfAssessment(db: Executor, assessmentId: number): { versi
   const row = db
     .select({ version: profileVersions.version, sourcePublicId: assessmentTargets.sourcePublicId, sourceName: assessmentTargets.sourceName })
     .from(profileVersions)
-    .innerJoin(assessmentTargets, and(eq(assessmentTargets.assessmentId, profileVersions.assessmentId), eq(assessmentTargets.repositorySourceId, profileVersions.repositorySourceId)))
+    .innerJoin(assessmentTargets, versionTarget)
     .where(eq(profileVersions.assessmentId, assessmentId))
     .get();
   return row ?? null;
 }
 
-/** The newest version of the repository +sourceId+ that wrote a Profile. */
-export function currentVersion(db: Executor, sourceId: number): ProfileVersion | undefined {
-  const row = db
-    .select({ version: profileVersions.version })
-    .from(profileVersions)
-    .innerJoin(assessmentTargets, and(eq(assessmentTargets.assessmentId, profileVersions.assessmentId), eq(assessmentTargets.repositorySourceId, profileVersions.repositorySourceId)))
-    .innerJoin(repositoryProfiles, eq(repositoryProfiles.assessmentTargetId, assessmentTargets.id))
-    .where(eq(profileVersions.repositorySourceId, sourceId))
-    .orderBy(desc(profileVersions.version))
-    .limit(1)
-    .get();
-  return row ? findVersion(db, sourceId, row.version) : undefined;
+/**
+ * What a Repository's page shows of its profiling, in two queries: its
+ * current Profile, and its newest version, whose number is how many it has.
+ */
+export function repositoryProfiling(db: Executor, sourceId: number): { current: CurrentProfile | undefined; latest: ProfileVersion | undefined; count: number } {
+  const latest = versionsOf(db, sourceId, 1)[0];
+  return { current: currentProfile(db, sourceId), latest, count: latest?.version ?? 0 };
 }
 
 export interface ProfileSummary {
-  /** The newest version, whatever its state. */
-  readonly latest: { readonly version: number; readonly state: Assessment["state"]; readonly createdAt: Date };
-  /** The newest version that wrote a Profile. */
-  readonly current: { readonly version: number; readonly profiledAt: Date } | null;
+  /** The newest version, whatever its state, and whether it wrote a Profile. */
+  readonly latest: { readonly version: number; readonly state: Assessment["state"]; readonly createdAt: Date; readonly profiled: boolean };
+  /** The current Profile: its version, or null for one from an operator's Run, and when it was written. */
+  readonly current: { readonly version: number | null; readonly profilePublicId: string; readonly profiledAt: Date } | null;
 }
 
-/** Each repository's newest version and newest profiled version, by source id, in one query, for the Repositories list. */
+/** Each repository's newest version and current Profile, by source id, in two queries, for the Repositories list. */
 export function profileSummaries(db: Executor): Map<number, ProfileSummary> {
-  const rows = db.all<{ source_id: number; version: number; state: Assessment["state"]; created_at: number; current_version: number | null; profiled_at: number | null }>(sql`
-    with ranked as (
-      select v.repository_source_id as source_id, v.version, a.state, v.created_at, p.created_at as profiled_at,
-        row_number() over (partition by v.repository_source_id order by v.version desc) as recency,
-        case when p.id is null then null else row_number() over (partition by v.repository_source_id, p.id is not null order by v.version desc) end as profiled_recency
-      from ${profileVersions} v
-      join assessments a on a.id = v.assessment_id
-      left join ${assessmentTargets} t on t.assessment_id = v.assessment_id and t.repository_source_id = v.repository_source_id
-      left join ${repositoryProfiles} p on p.assessment_target_id = t.id
-    )
-    select l.source_id, l.version, l.state, l.created_at, c.version as current_version, c.profiled_at
-    from ranked l
-    left join ranked c on c.source_id = l.source_id and c.profiled_recency = 1
-    where l.recency = 1`);
+  const rows = db.all<{ source_id: number; version: number; state: Assessment["state"]; created_at: number; profiled: number }>(sql`
+    select v.repository_source_id as source_id, v.version, a.state, v.created_at, p.id is not null as profiled
+    from ${profileVersions} v
+    join assessments a on a.id = v.assessment_id
+    left join ${assessmentTargets} t on t.assessment_id = v.assessment_id and t.repository_source_id = v.repository_source_id
+    left join ${repositoryProfiles} p on p.assessment_target_id = t.id
+    where v.version = (select max(o.version) from ${profileVersions} o where o.repository_source_id = v.repository_source_id)`);
+  const current = currentProfiles(db);
   return new Map(
-    rows.map((row) => [
-      row.source_id,
-      {
-        latest: { version: row.version, state: row.state, createdAt: new Date(row.created_at) },
-        current: row.current_version === null ? null : { version: row.current_version, profiledAt: new Date(row.profiled_at!) },
-      },
-    ]),
+    rows.map((row) => {
+      const profile = current.get(row.source_id);
+      return [
+        row.source_id,
+        {
+          latest: { version: row.version, state: row.state, createdAt: new Date(row.created_at), profiled: Boolean(row.profiled) },
+          current: profile ? { version: profile.version, profilePublicId: profile.profile.publicId, profiledAt: profile.profile.createdAt } : null,
+        },
+      ];
+    }),
   );
 }
 
@@ -219,11 +215,11 @@ export function profilingActivity(db: Executor): ProfilingActivity {
     select v.repository_source_id as source_id, v.version, a.state
     from ${profileVersions} v
     join assessments a on a.id = v.assessment_id
-    where a.state in ('queued', 'acquiring', 'analyzing', 'finalizing')
+    where a.state in ${ACTIVE_STATES}
     order by v.repository_source_id, v.version`);
   return {
     profiling: rows.filter((row) => row.state !== "queued").length,
     queued: rows.filter((row) => row.state === "queued").length,
-    version: crypto.createHash("sha256").update(JSON.stringify(rows)).digest("hex").slice(0, 16),
+    version: statusVersion(rows as unknown as JsonValue),
   };
 }

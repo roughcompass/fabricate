@@ -11,6 +11,7 @@ import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { getDb } from "@/lib/db/client";
 import { draftDocument, draftOf, listStandards, releasesOf } from "@/lib/standards/standard-records";
 import { validateStandard } from "@/lib/standards/validate";
+import { routes } from "@/lib/web/routes";
 
 export const metadata: Metadata = { title: "Standards" };
 
@@ -47,7 +48,7 @@ export default function StandardsPage() {
               <tr key={standard.publicId}>
                 <Td label="Standard">
                   <Primary>
-                    <Link href={`/standards/${standard.publicId}`}>{standard.name}</Link>
+                    <Link href={routes.standard(standard.publicId)}>{standard.name}</Link>
                   </Primary>
                   <Secondary>{standard.purpose}</Secondary>
                 </Td>

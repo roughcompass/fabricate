@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, lte } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { Assessment, AssessmentTarget } from "@/lib/assessments/assessment-records";
 import { LAUNCH_TOKEN } from "@/lib/assessments/assessment-records";
 import { type Executor, immediate } from "@/lib/db/client";
@@ -19,6 +19,10 @@ import { type JsonObject, type JsonValue, digestOf, parseCanonical } from "@repo
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 import type { Initiative } from "@/lib/initiatives/initiative-records";
 import type { StandardRelease } from "@/lib/standards/standard-records";
+import { sequenceNumber, sequenceNumbers } from "@/lib/db/sequence";
+
+/** The outcomes and severities a page filters Findings by. */
+export { OUTCOMES, SEVERITIES } from "@/lib/db/schema";
 
 /**
  * Persistence for Evaluations, the Releases pinned to each one, and their
@@ -117,19 +121,14 @@ export function listEvaluations(db: Executor, filter: { initiativeId?: number; a
     .all();
 }
 
-/**
- * An Evaluation's sequence number within its Initiative, counting from 1 in
- * creation order: "Evaluation #2". Stable because Evaluations are never
- * deleted; a change that adds deletion must persist the numbers first.
- */
+/** An Evaluation's sequence number within its Assessment: "Evaluation #2" (src/lib/db/sequence.ts). */
 export function evaluationNumber(db: Executor, evaluation: Pick<Evaluation, "id" | "initiativeId">): number {
-  return db.select({ value: count() }).from(evaluations).where(and(eq(evaluations.initiativeId, evaluation.initiativeId), lte(evaluations.id, evaluation.id))).get()?.value ?? 0;
+  return sequenceNumber(db, evaluations, evaluation);
 }
 
 /** The sequence number of each of an Initiative's Evaluations, by id. */
 export function evaluationNumbers(db: Executor, initiativeId: number): Map<number, number> {
-  const ids = db.select({ id: evaluations.id }).from(evaluations).where(eq(evaluations.initiativeId, initiativeId)).orderBy(asc(evaluations.id)).all();
-  return new Map(ids.map(({ id }, index) => [id, index + 1]));
+  return sequenceNumbers(db, evaluations, initiativeId);
 }
 
 export function evaluationReleasesOf(db: Executor, evaluationId: number): EvaluationRelease[] {
@@ -202,6 +201,11 @@ export interface FindingFilter {
   severities?: Severity[];
   controlKey?: string;
   subjectKey?: string;
+}
+
+/** The Finding +publicId+ of +evaluation+, or undefined when it belongs to another. */
+export function findFinding(db: Executor, evaluation: Pick<Evaluation, "id">, publicId: string): Finding | undefined {
+  return db.select().from(findings).where(and(eq(findings.publicId, publicId), eq(findings.evaluationId, evaluation.id))).get();
 }
 
 export function findingsOf(db: Executor, evaluationId: number, filter: FindingFilter = {}): Finding[] {

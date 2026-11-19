@@ -1,6 +1,6 @@
 # Architecture
 
-The **Frontend Registry** is CIB's registry of frontend applications, run by the Digital Enablement team. Every CIB team registers its frontend repositories here, and the Registry keeps the official record of what each application is and who owns it. Frontend means any user-facing client: browser applications, micro-frontends, and hybrid mobile applications.
+The **Frontend Registry** is CIB's registry of frontend applications, run by the Digital Enablement team. Every CIB team registers its frontend repositories here, and the Registry keeps an evidence-backed record of what each one is built from and how it fits with the others. Frontend means any user-facing client: browser applications, micro-frontends, and hybrid mobile applications.
 
 The Registry has four parts. Each part has one job, and parts talk to each other only through versioned agreements, so any part can change without the others.
 
@@ -17,15 +17,9 @@ These are product names. Repositories, npm packages, and code keep their code na
 
 The registry of record, and the control plane for the other parts.
 
-- **Owns:** the list of repositories and the applications, teams, Lines of Business, and portals they belong to ([ownership.md](ownership.md)); the list of things the Reference Catalog describes; when to survey a repository and when to rebuild the Catalog; every stored result, with the recipe that made it; the Profile views, the Relationship Map, Standards, and Assessments; the system status page.
+- **Owns:** the list of repositories; the list of things the Reference Catalog describes; when to survey a repository and when to rebuild the Catalog; every stored result, with the recipe that made it; the Profile views, the Relationship Map, Standards, and Assessments; the system status page.
 - **Never:** reads source code or package contents, or holds rules about how to analyze them. Profiling logic belongs to Surveyor.
 - **Benefit:** one place where app owners, product managers, and platform teams see the whole frontend estate, with every answer traceable to its evidence and to the versions that produced it.
-
-### The record and the DE Console
-
-The Frontend Registry is the record of registration and ownership for every CIB frontend application, including those not hosted on DE Web. For an application hosted on DE Web, the DE Console stays the source of its SEAL ID, team, and portals: the Registry reads them from the DE Console and prefers them to any claim ([ownership.md](ownership.md#the-de-console-import)). For any other application, the Registry's own attributed, verified claims are the record.
-
-Because the record is official, every ownership value names who stated it, when, and whether it was verified, and keeps its history.
 
 ## Surveyor
 
@@ -82,7 +76,7 @@ Each agreement has a version, and tests on both sides check it. A part may chang
 
 | Part | Today |
 | --- | --- |
-| Frontend Registry | Built: registration, ownership, Profiles and their views, the Relationship Map, Standards, and Assessments. To build: the system status page, Catalog storage and scheduling, and a recipe that names Catalog entries |
+| Frontend Registry | Built: registration, Profiles and their views, the Relationship Map, Standards, and Assessments. To build: the system status page, Catalog storage and scheduling, and a recipe that names Catalog entries |
 | Surveyor | Built, release 0.6.0, with Salt knowledge compiled in. To build: read Catalog entries at survey time, and remove its built-in Salt knowledge, including the `render` prop it assumes |
 | Reference Catalog | Not built. Salt is described inside Surveyor today |
 | Catalog Builder | Not built. A script (`repo-facts/scripts/catalog-salt.mjs`) rewrites the Salt list by hand from one installed version |

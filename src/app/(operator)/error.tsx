@@ -1,19 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { NO_OPTIONAL_AREAS, homeLink, visibleGroups } from "@/components/shell/navigation";
+import { HOME } from "@/components/shell/navigation";
 import { SystemPage } from "@/components/shell/system-page";
 import { buttonProps } from "@/components/ui/button-content";
 
 /**
  * An unexpected failure while rendering a page, inside the application shell.
  * It never shows the error's message or stack; the digest matches the
- * server log entry. Its way back opens Home (home spec); the client can't
- * read the configuration, and every configuration shows Assessments, which
- * is all that decides where Home's links lead.
+ * server log entry. Its way back opens Home (home spec).
  */
 export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
-  const home = homeLink(visibleGroups(NO_OPTIONAL_AREAS));
   return (
     <SystemPage
       icon="alert"
@@ -23,8 +20,8 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
           <button type="button" {...buttonProps("primary")} onClick={() => retry()}>
             Try again
           </button>
-          <Link href={home.href} {...buttonProps("secondary")}>
-            {`Go to ${home.label}`}
+          <Link href={HOME.href} {...buttonProps("secondary")}>
+            {`Go to ${HOME.label}`}
           </Link>
         </>
       }

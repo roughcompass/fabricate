@@ -1,18 +1,14 @@
 import { sql } from "drizzle-orm";
-import type { FabricateConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
-import { deConsoleStatus, openDeConsoleConflicts } from "@/lib/ownership/de-console";
 
 /**
  * Home's Needs attention list (home spec): the problems that hold now, each
  * with the time it began, newest first. Run and Evaluation problems come from
  * each Assessment's latest Run and latest Evaluation, so a later success
- * replaces an earlier failure. The reads are a fixed number of queries
+ * replaces an earlier failure. Problems that began in the same millisecond
+ * list the newer record first. The reads are a fixed number of queries
  * whatever the number of Assessments.
  */
-
-/** DE Console values are out of date once three scheduled reads have gone by without a success (design decision 5). */
-const STALE_AFTER_INTERVALS = 3;
 
 /** How many items one page of the list shows. */
 export const ATTENTION_PAGE_SIZE = 20;
@@ -25,13 +21,10 @@ interface AssessmentRef {
 export type AttentionItem =
   | { kind: "run_failed"; since: Date; assessment: AssessmentRef; run: { publicId: string; number: number } }
   | { kind: "run_with_issues"; since: Date; assessment: AssessmentRef; run: { publicId: string; number: number }; unassessed: number }
-  | { kind: "evaluation_failed"; since: Date; assessment: AssessmentRef; evaluation: { publicId: string; number: number } }
-  | { kind: "de_console_failed"; since: Date; lastSuccess: Date | null }
-  | { kind: "de_console_stale"; since: Date; refreshMinutes: number }
-  | { kind: "de_console_conflicts"; since: Date; count: number };
+  | { kind: "evaluation_failed"; since: Date; assessment: AssessmentRef; evaluation: { publicId: string; number: number } };
 
-export function attentionItems(db: Executor, config: Pick<FabricateConfig, "deConsole">, now: Date = new Date()): AttentionItem[] {
-  const items: AttentionItem[] = [...runProblems(db), ...evaluationProblems(db), ...deConsoleProblems(db, config, now)];
+export function attentionItems(db: Executor): AttentionItem[] {
+  const items: AttentionItem[] = [...runProblems(db), ...evaluationProblems(db)];
   return items.sort((a, b) => b.since.getTime() - a.since.getTime());
 }
 
@@ -53,7 +46,8 @@ function runProblems(db: Executor): AttentionItem[] {
       (select count(*) from assessment_targets t where t.assessment_id = n.id and t.state = 'failed') as unassessed
     from numbered n
     join initiatives i on i.id = n.initiative_id
-    where n.recency = 1 and n.state in ('failed', 'complete_with_issues') and i.profiling = 0`);
+    where n.recency = 1 and n.state in ('failed', 'complete_with_issues') and i.profiling = 0
+    order by n.id desc`);
   return rows.map((row): AttentionItem => {
     const common = { since: new Date(row.since), assessment: { publicId: row.assessment_public_id, name: row.name }, run: { publicId: row.public_id, number: row.number } };
     return row.state === "failed" ? { kind: "run_failed", ...common } : { kind: "run_with_issues", ...common, unassessed: row.unassessed };
@@ -72,33 +66,7 @@ function evaluationProblems(db: Executor): AttentionItem[] {
     select n.public_id, n.number, n.since, i.public_id as assessment_public_id, i.name
     from numbered n
     join initiatives i on i.id = n.initiative_id
-    where n.recency = 1 and n.state = 'failed'`);
+    where n.recency = 1 and n.state = 'failed'
+    order by n.id desc`);
   return rows.map((row) => ({ kind: "evaluation_failed", since: new Date(row.since), assessment: { publicId: row.assessment_public_id, name: row.name }, evaluation: { publicId: row.public_id, number: row.number } }));
-}
-
-/**
- * The DE Console import's problems. Read problems count only while a source
- * is configured; open conflicts remain from earlier reads either way, and
- * all of them make one item.
- */
-function deConsoleProblems(db: Executor, config: Pick<FabricateConfig, "deConsole">, now: Date): AttentionItem[] {
-  const items: AttentionItem[] = [];
-  const { lastSuccess, lastAttempt } = deConsoleStatus(db);
-  if (config.deConsole.source) {
-    if (lastAttempt?.status === "failed") {
-      items.push({ kind: "de_console_failed", since: lastAttempt.readAt, lastSuccess: lastSuccess?.readAt ?? null });
-    } else if (lastSuccess && isStale(lastSuccess.readAt, config.deConsole.refreshMinutes, now)) {
-      items.push({ kind: "de_console_stale", since: lastSuccess.readAt, refreshMinutes: config.deConsole.refreshMinutes });
-    }
-  }
-  const conflicts = openDeConsoleConflicts(db);
-  if (conflicts.length > 0) {
-    items.push({ kind: "de_console_conflicts", since: new Date(Math.max(...conflicts.map((conflict) => conflict.recordedAt.getTime()))), count: conflicts.length });
-  }
-  return items;
-}
-
-/** Whether a successful read is older than three refresh intervals. The DE Console import page uses the same rule for its alert. */
-export function isStale(readAt: Date, refreshMinutes: number, now: Date = new Date()): boolean {
-  return now.getTime() - readAt.getTime() > STALE_AFTER_INTERVALS * refreshMinutes * 60_000;
 }

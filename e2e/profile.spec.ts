@@ -9,8 +9,8 @@ import { drainJobs } from "../src/lib/jobs/worker";
 import { profilesOf } from "../src/lib/profiles/profile-records";
 import { buildInitiative, buildSource } from "../test/support/builders";
 import { manifest } from "../test/support/profiles";
-import { seedAssessment } from "../test/support/scenarios";
-import { ORDERS, STOREFRONT, serverConfig } from "./support/results";
+import { ORDERS, STOREFRONT, seedAssessment } from "../test/support/scenarios";
+import { serverConfig } from "./support/results";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, gitRepo, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 

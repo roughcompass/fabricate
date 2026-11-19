@@ -1,14 +1,14 @@
 import type { JsonObject } from "@repo-facts/contract";
-import { countLabel } from "@/components/ui/count";
+import { countLabel, formatNumber } from "@/components/ui/count";
 import { dependencyKind, humanize } from "@/components/ui/status";
 import { isJsonObject } from "@/lib/json";
-import { repositoryHref } from "@/lib/web/repository-paths";
 import { dependencyGroups } from "./joins";
 import type { RepositoryKind } from "./kind";
 import type { OverviewRow, OverviewValue } from "./overview";
 import type { PackageProducer, RelatedRepository, RepositoryRelationships } from "./relationships";
 import { type Fact, type FactDocument, type NoValue, categoryDefinitions, categoryOf, categoryState, noValue } from "./states";
 import type { ProfileTabId } from "./tabs";
+import { routes } from "@/lib/web/routes";
 
 /**
  * The Overview's answers, one panel per question a reader brings to a
@@ -35,7 +35,6 @@ export interface SummaryContext {
   services: { total: number; characterized: number };
 }
 
-const number = (value: number) => value.toLocaleString("en-US");
 const facts = (document: FactDocument, id: string): Fact[] => categoryOf(document, id)?.facts ?? [];
 const valueOf = (fact: Fact): JsonObject => (isJsonObject(fact.value) ? fact.value : {});
 const app = (fact: Fact): JsonObject => (isJsonObject(valueOf(fact).app) ? (valueOf(fact).app as JsonObject) : {});
@@ -73,7 +72,7 @@ const RELATIONSHIP_TYPES: Record<string, string> = { composition: "composes", pa
 
 function related(repositories: readonly RelatedRepository[]): OverviewValue[] {
   // Each is a resolved relationship in the Run's map, observed in both repositories' source.
-  return repositories.map((repository) => ({ state: "observed", text: repository.name, secondary: repository.types.map((type) => RELATIONSHIP_TYPES[type] ?? humanize(type)).join(" · "), href: repositoryHref(repository.publicId) }));
+  return repositories.map((repository) => ({ state: "observed", text: repository.name, secondary: repository.types.map((type) => RELATIONSHIP_TYPES[type] ?? humanize(type)).join(" · "), href: routes.repository(repository.publicId) }));
 }
 
 function runtimeRows(document: FactDocument, rows: readonly OverviewRow[], context: SummaryContext): OverviewRow[] {
@@ -97,7 +96,7 @@ function runtimeRows(document: FactDocument, rows: readonly OverviewRow[], conte
 function servicesRow(context: SummaryContext): OverviewRow {
   const { total, characterized } = context.services;
   if (!total) return row("Services", "services", [], [{ value: { state: "absent", reason: "No outbound call was found in committed source" } }]);
-  return row("Services", "services", [{ state: "observed", text: countLabel(total, "Service Dependency", "Service Dependencies"), secondary: `${number(characterized)} with characterized boundaries` }]);
+  return row("Services", "services", [{ state: "observed", text: countLabel(total, "Service Dependency", "Service Dependencies"), secondary: `${formatNumber(characterized)} with characterized boundaries` }]);
 }
 
 function dependencyRows(document: FactDocument, context: SummaryContext): OverviewRow[] {
@@ -123,15 +122,15 @@ function dependencyRows(document: FactDocument, context: SummaryContext): Overvi
         state,
         text: countLabel(names.length, "package"),
         // By the field that declares them; a package several manifests declare counts once per declaration.
-        secondary: `${declared.length > names.length ? `${countLabel(declared.length, "declaration")}: ` : ""}${[...fields].sort(([, a], [, b]) => b - a).map(([field, total]) => `${number(total)} ${dependencyKind(field).toLowerCase()}`).join(" · ")}`,
+        secondary: `${declared.length > names.length ? `${countLabel(declared.length, "declaration")}: ` : ""}${[...fields].sort(([, a], [, b]) => b - a).map(([field, total]) => `${formatNumber(total)} ${dependencyKind(field).toLowerCase()}`).join(" · ")}`,
       },
     ]),
     row("Origin", "packages_consumed", [
-      { state, text: `${number(names.length - internal)} third-party` },
-      { state, text: `${number(internal)} internal`, secondary: producers.length ? `from ${producers.slice(0, 3).join(", ")}${producers.length > 3 ? ` and ${producers.length - 3} more` : ""}` : internal ? "from its own workspaces" : undefined },
+      { state, text: `${formatNumber(names.length - internal)} third-party` },
+      { state, text: `${formatNumber(internal)} internal`, secondary: producers.length ? `from ${producers.slice(0, 3).join(", ")}${producers.length > 3 ? ` and ${producers.length - 3} more` : ""}` : internal ? "from its own workspaces" : undefined },
     ]),
     ...frameworkRow(document),
-    resolved ? row("Resolved", "resolved_dependencies", [{ state: categoryState(document, "resolved_dependencies"), text: `${number(resolved)} resolved by a lockfile` }]) : missing(document, "Resolved", "resolved_dependencies"),
+    resolved ? row("Resolved", "resolved_dependencies", [{ state: categoryState(document, "resolved_dependencies"), text: `${formatNumber(resolved)} resolved by a lockfile` }]) : missing(document, "Resolved", "resolved_dependencies"),
   ];
 }
 
@@ -169,7 +168,7 @@ function designSystemRows(document: FactDocument, rows: readonly OverviewRow[]):
     if (typeof scope.adoption_share !== "number") continue;
     result.push(
       row("Adoption", "ui_elements", [
-        { state: fact.state, text: `${scope.adoption_share}% of elements that could use ${name} do`, secondary: `${number(count(scope, "design_system"))} ${name} components of ${number(count(scope, "elements"))} elements${typeof scope.customized_share === "number" ? ` · ${scope.customized_share}% customized` : ""}` },
+        { state: fact.state, text: `${scope.adoption_share}% of elements that could use ${name} do`, secondary: `${formatNumber(count(scope, "design_system"))} ${name} components of ${formatNumber(count(scope, "elements"))} elements${typeof scope.customized_share === "number" ? ` · ${scope.customized_share}% customized` : ""}` },
       ]),
     );
   }
@@ -198,8 +197,8 @@ function designSystemRows(document: FactDocument, rows: readonly OverviewRow[]):
   const raw = families.reduce((sum, fact) => sum + count(app(fact), "raw"), 0);
   const tokenShare = styles.filter((fact) => fact.key.startsWith("summary:") && typeof app(fact).token_share === "number");
   const values: OverviewValue[] = [
-    ...tokenShare.map((fact) => ({ state: fact.state, text: `${app(fact).token_share as number}% use ${systems.get(fact.key.slice("summary:".length)) ?? "design-system"} tokens`, secondary: `${number(count(app(fact), "tokenized"))} of ${number(count(app(fact), "token_capable"))} declarations that could` })),
-    ...(raw ? [{ state: "observed", text: `${number(raw)} raw values`, secondary: [...families].sort((a, b) => count(app(b), "raw") - count(app(a), "raw")).filter((fact) => count(app(fact), "raw") > 0).slice(0, 3).map((fact) => `${fact.key.slice("declarations:".length)} ${number(count(app(fact), "raw"))}`).join(" · ") }] : []),
+    ...tokenShare.map((fact) => ({ state: fact.state, text: `${app(fact).token_share as number}% use ${systems.get(fact.key.slice("summary:".length)) ?? "design-system"} tokens`, secondary: `${formatNumber(count(app(fact), "tokenized"))} of ${formatNumber(count(app(fact), "token_capable"))} declarations that could` })),
+    ...(raw ? [{ state: "observed", text: `${formatNumber(raw)} raw values`, secondary: [...families].sort((a, b) => count(app(b), "raw") - count(app(a), "raw")).filter((fact) => count(app(fact), "raw") > 0).slice(0, 3).map((fact) => `${fact.key.slice("declarations:".length)} ${formatNumber(count(app(fact), "raw"))}`).join(" · ") }] : []),
   ];
   if (values.length) result.push(row("Style values", "style_values", values));
 

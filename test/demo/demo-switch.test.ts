@@ -10,7 +10,6 @@ import { redirectOf } from "../support/next";
 const cookieJar = new Map<string, string>();
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: (name: string) => (cookieJar.has(name) ? { name, value: cookieJar.get(name) } : undefined) }) }));
 vi.mock("next/navigation", async () => ({ ...(await import("../support/next")).navigationStub, usePathname: () => "/" }));
-vi.mock("next/cache", async () => (await import("../support/next")).cacheStub);
 
 // The demo switch (template-demo/demo-mode spec): while it is off, every demo
 // surface answers not found, whatever the request carries.
@@ -38,8 +37,8 @@ describe("demo switch off", () => {
     const { default: Gallery } = await import("@/app/(operator)/templates/page");
     const { default: Template } = await import("@/app/(operator)/templates/[templateSlug]/page");
     const { default: Preview } = await import("@/app/(operator)/templates/[templateSlug]/preview/page");
-    expect(await redirectOf(Gallery({ searchParams: Promise.resolve({}) }))).toBe("not-found");
-    expect(await redirectOf(Template({ params: Promise.resolve({ templateSlug: "market-watch" }) }))).toBe("not-found");
+    expect(await redirectOf(Gallery({ params: Promise.resolve({}), searchParams: Promise.resolve({}) }))).toBe("not-found");
+    expect(await redirectOf(Template({ params: Promise.resolve({ templateSlug: "market-watch" }), searchParams: Promise.resolve({}) }))).toBe("not-found");
     expect(await redirectOf(Preview({ params: Promise.resolve({ templateSlug: "market-watch" }), searchParams: Promise.resolve({}) }))).toBe("not-found");
   });
 
@@ -47,7 +46,7 @@ describe("demo switch off", () => {
     const { default: RunLayout } = await import("@/app/(runtime)/run/[applicationId]/layout");
     const { default: RunRoute } = await import("@/app/(runtime)/run/[applicationId]/[[...path]]/page");
     expect(await redirectOf(RunLayout({ children: null, params: Promise.resolve({ applicationId }) }))).toBe("not-found");
-    expect(await redirectOf(RunRoute({ params: Promise.resolve({ applicationId, path: ["watch"] }) }))).toBe("not-found");
+    expect(await redirectOf(RunRoute({ params: Promise.resolve({ applicationId, path: ["watch"] }), searchParams: Promise.resolve({}) }))).toBe("not-found");
   });
 
   it("answers 404 for a share link and every demo endpoint", async () => {

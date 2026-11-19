@@ -149,7 +149,9 @@ export function schemaOfScope(scope: Scope): InputSchema {
   return scope === "repository" || scope === "service_dependency" ? "repository_profile" : "relationship_map";
 }
 
-/** Repository selectors that name no category, or one that +categories+ doesn't define, so a Finding's Profile link couldn't open it. */
+/** Repository selectors that name no category, or one that +categories+ doesn't define, so a Finding's Profile link couldn't open it.
+ * @public Tests check the registry's selectors against Surveyor's categories.
+ */
 export function selectorCategoryProblems(categories: readonly string[], selectors: readonly SelectorDefinition[] = SELECTORS): string[] {
   const known = new Set(categories);
   return selectors.filter((selector) => selector.scope === "repository" && (!selector.category || !known.has(selector.category))).map((selector) => (selector.category ? `${selector.id} reads ${selector.category}, which isn't a category` : `${selector.id} names no category`));

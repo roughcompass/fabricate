@@ -4,7 +4,8 @@ import { ProgressPoller } from "@/components/progress-poller";
 import { PROFILE_DESCRIPTION, ProfileBody, profilePin } from "@/components/profiles/profile-body";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -15,13 +16,14 @@ import { assessmentStatus } from "@/lib/assessments/status";
 import { type RepositorySource, sourceReferenceLabel } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
 import { getProfile } from "@/lib/profiles/profile-records";
+import type { CurrentProfile } from "@/lib/profiling/current";
 import { type ProfileVersion, TRIGGER_LABELS, isActive } from "@/lib/profiling/versions";
 import { repositoryFocusHref } from "@/lib/relationships/map-view";
-import { repositoryHref, settingsHref, versionHref, versionsHref } from "@/lib/web/repository-paths";
 import { reprofileSource } from "../actions";
 import { PREVIEW_OUTCOME_PARAMS, previewOutcome, sourceOutcome } from "../outcomes";
 import { PreviewsSection } from "./previews-section";
 import styles from "@/components/profiles/profile-body.module.css";
+import { routes } from "@/lib/web/routes";
 
 /** Re-profile: queues the next version. The token is drawn when the page renders, so submitting the page twice queues one version. */
 export function ReprofileForm({ source, variant = "primary" }: { source: RepositorySource; variant?: "primary" | "secondary" }) {
@@ -44,46 +46,58 @@ export function VersionStatus({ version, size = "md" }: { version: ProfileVersio
 }
 
 /**
- * A Repository's page (docs/profiling.md): one profile version of it, shown
- * as the Profile view, with the newest version's state and the way to every
- * version. Without +explicit+, the version is the current one, the newest
- * that wrote a Profile, and the page is the Repository's own; with it, the
- * page is that version's.
+ * A Repository's page (docs/profiling.md), as the Profile view, with the
+ * newest version's state and the way to every version. Without +version+, it
+ * shows the Repository's current Profile, the newest any Run wrote, and is
+ * the Repository's own page; with it, the page is that version's.
  */
 export function RepositoryView({
   source,
-  shown,
+  current,
+  version,
   latest,
   count,
-  explicit,
   query,
 }: {
   source: RepositorySource;
-  /** The version shown, or undefined when the Repository has no profiled version yet. */
-  shown: ProfileVersion | undefined;
+  /** The current Profile, on the Repository's own page; undefined until a Run has profiled it. */
+  current?: CurrentProfile;
+  /** The version shown, on a version's page. */
+  version?: ProfileVersion;
   latest: ProfileVersion | undefined;
   count: number;
-  explicit: boolean;
   query: Record<string, string | string[] | undefined>;
 }) {
   const db = getDb();
-  const profile = shown?.profile ? getProfile(db, shown.profile.publicId) : null;
+  const explicit = version !== undefined;
+  const profile = explicit ? (version.profile ? getProfile(db, version.profile.publicId) : null) : (current?.profile ?? null);
+  const assessment = explicit ? version.assessment : current?.assessment;
+  const shownVersion = explicit ? version.version : (current?.version ?? null);
   const pin = profile ? profilePin(profile) : null;
-  const mapHref = profile && shown ? repositoryFocusHref(db, shown.assessment, profile.assessmentTargetId) : null;
-  const base = explicit && shown ? versionHref(source.publicId, shown.version) : repositoryHref(source.publicId);
+  const mapHref = profile && assessment ? repositoryFocusHref(db, assessment, profile.assessmentTargetId) : null;
+  const base = explicit ? routes.repositoryVersion(source.publicId, version.version) : routes.repository(source.publicId);
   const pending = latest && isActive(latest) ? latest : null;
-  const failed = latest && !isActive(latest) && !latest.profile && latest.version !== shown?.version ? latest : null;
-  const newer = explicit && shown && latest && latest.version > shown.version ? latest : null;
+  // The newest version failed: on a version's page, unless it's the one shown; on the Repository's, if it's newer than the current Profile.
+  const failed = latest && !isActive(latest) && !latest.profile && (explicit ? latest.version !== version.version : !current || latest.createdAt > current.profile.createdAt) ? latest : null;
+  const newer = explicit && latest && latest.version > version.version ? latest : null;
 
   return (
     <Page>
       {pending && <ProgressPoller url={`/api/runs/${pending.assessment.publicId}/status`} version={assessmentStatus(db, pending.assessment).version} />}
       <PageHeader
-        breadcrumbs={explicit ? [{ href: "/repositories", label: "Repositories" }, { href: repositoryHref(source.publicId), label: source.name }, { href: versionsHref(source.publicId), label: "Versions" }] : [{ href: "/repositories", label: "Repositories" }]}
-        title={explicit && shown ? `Version ${shown.version}` : source.name}
+        breadcrumbs={explicit ? [{ href: "/repositories", label: "Repositories" }, { href: routes.repository(source.publicId), label: source.name }, { href: routes.repositoryVersions(source.publicId), label: "Versions" }] : [{ href: "/repositories", label: "Repositories" }]}
+        title={explicit ? `Version ${version.version}` : source.name}
         meta={[
-          ...(explicit ? [] : shown ? [<Link key="version" href={versionHref(source.publicId, shown.version)}>{`Version ${shown.version}`}</Link>] : []),
-          ...(pin ? [<ShortValue key="commit" value={pin.pinned} label={pin.pinnedLabel} />] : []),
+          ...(explicit || !current
+            ? []
+            : [
+                current.version ? (
+                  <Link key="version" href={routes.repositoryVersion(source.publicId, current.version)}>{`Version ${current.version}`}</Link>
+                ) : (
+                  <Link key="version" href={routes.run(current.assessment.publicId)}>{`From ${current.initiative.name}`}</Link>
+                ),
+              ]),
+          ...(pin ? [<ShortValue key="commit" value={pin.commit} label="commit" />] : []),
           source.gitRef ? <Tag key="reference">{source.gitRef}</Tag> : <span key="reference">{humanize(sourceReferenceLabel(source))}</span>,
           ...(profile
             ? [
@@ -93,18 +107,18 @@ export function RepositoryView({
               ]
             : []),
         ]}
-        description={pin ? (pin.commit ? PROFILE_DESCRIPTION.commit : PROFILE_DESCRIPTION.template) : undefined}
+        description={pin ? PROFILE_DESCRIPTION : undefined}
         primaryAction={<ReprofileForm source={source} />}
         secondaryActions={[
-          { href: versionsHref(source.publicId), label: `Versions (${count})`, icon: "history" },
+          { href: routes.repositoryVersions(source.publicId), label: `Versions (${count})`, icon: "history" },
           ...(mapHref ? [{ href: mapHref, label: "Relationship Map", icon: "network" as const }] : []),
-          { href: settingsHref(source.publicId), label: "Settings", icon: "settings" },
+          { href: routes.repositorySettings(source.publicId), label: "Settings", icon: "settings" },
         ]}
         alerts={
           <>
             <OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), source.publicId)} />
             {!explicit && <OutcomeToast outcome={previewOutcome(db, param(query, "notice"), param(query, "preview"))} strip={PREVIEW_OUTCOME_PARAMS} />}
-            {pending && pending.version !== shown?.version && (
+            {pending && pending.version !== shownVersion && (
               <Alert tone="info" title={`Version ${pending.version} is ${pending.assessment.state === "queued" ? "queued" : "being profiled"}`}>
                 {`${TRIGGER_LABELS[pending.trigger]}. This page shows it once it's profiled.`}
               </Alert>
@@ -114,7 +128,7 @@ export function RepositoryView({
                 tone="warning"
                 title={`Version ${failed.version} couldn't be profiled`}
                 actions={
-                  <Link href={versionHref(source.publicId, failed.version)} className={styles.alertLink}>
+                  <Link href={routes.repositoryVersion(source.publicId, failed.version)} className={styles.alertLink}>
                     View version {failed.version}
                   </Link>
                 }
@@ -127,7 +141,7 @@ export function RepositoryView({
                 tone="info"
                 title="This is an earlier version"
                 actions={
-                  <Link href={repositoryHref(source.publicId)} className={styles.alertLink}>
+                  <Link href={routes.repository(source.publicId)} className={styles.alertLink}>
                     View the current version
                   </Link>
                 }
@@ -141,11 +155,11 @@ export function RepositoryView({
 
       {!explicit && <PreviewsSection source={source} query={query} />}
 
-      {profile && shown ? (
-        <ProfileBody profile={profile} assessment={shown.assessment} query={query} base={base} />
+      {profile && assessment ? (
+        <ProfileBody profile={profile} assessment={assessment} query={query} base={base} />
       ) : (
         <Panel>
-          <NoProfile shown={shown} latest={latest} explicit={explicit} />
+          <NoProfile version={version} latest={latest} />
         </Panel>
       )}
     </Page>
@@ -153,18 +167,18 @@ export function RepositoryView({
 }
 
 /** Why there's no Profile to show: nothing profiled yet, a version still running, or a version that failed. */
-function NoProfile({ shown, latest, explicit }: { shown: ProfileVersion | undefined; latest: ProfileVersion | undefined; explicit: boolean }) {
-  if (explicit && shown && isActive(shown)) {
+function NoProfile({ version, latest }: { version: ProfileVersion | undefined; latest: ProfileVersion | undefined }) {
+  if (version && isActive(version)) {
     return (
-      <EmptyState title={`Version ${shown.version} is ${shown.assessment.state === "queued" ? "queued" : "being profiled"}`} icon="clock">
+      <EmptyState title={`Version ${version.version} is ${version.assessment.state === "queued" ? "queued" : "being profiled"}`} icon="clock">
         Its Profile appears here when the repository has been read.
       </EmptyState>
     );
   }
-  if (explicit && shown) {
+  if (version) {
     return (
-      <EmptyState title={`Version ${shown.version} couldn't be profiled`} icon="alert">
-        {shown.failure ? `${humanize(shown.failure.code)}: ${shown.failure.message}` : "Its Run was canceled before it profiled the repository."}
+      <EmptyState title={`Version ${version.version} couldn't be profiled`} icon="alert">
+        {version.failure ? `${humanize(version.failure.code)}: ${version.failure.message}` : "Its Run was canceled before it profiled the repository."}
       </EmptyState>
     );
   }

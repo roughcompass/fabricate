@@ -17,6 +17,11 @@ export function isConclusionFilter(value: unknown): value is ConclusionFilter {
   return typeof value === "string" && (CONCLUSION_FILTERS as readonly string[]).includes(value);
 }
 
+/** The status a conclusion filter shows with: Not evaluated for an Assessment with no completed Evaluation. */
+export function conclusionState(filter: ConclusionFilter): string {
+  return filter === "none" ? "not_evaluated" : filter;
+}
+
 export interface LatestConclusion {
   /** The latest completed Evaluation and its sequence number, or null when none has completed. */
   evaluation: { id: number; publicId: string; number: number } | null;
@@ -25,28 +30,29 @@ export interface LatestConclusion {
 
 /**
  * The latest completed Evaluation's conclusion for every Assessment the
- * operator created, or for every Assessment created for a claim, by the
- * model Initiative's id. The Salt Patterns and Repository profiling
- * initiatives are neither. One query, whatever the number of Assessments.
+ * operator created, by the model Initiative's id. The Repository profiling
+ * initiative isn't included. With +at+, as things stood then: the
+ * Assessments created by then, and the Evaluations completed by then. One
+ * query, whatever the number of Assessments.
  */
-export function latestConclusions(db: Executor, options: { systemOwned?: boolean } = {}): Map<number, LatestConclusion> {
-  const systemOwned = options.systemOwned ?? false;
+export function latestConclusions(db: Executor, options: { at?: Date } = {}): Map<number, LatestConclusion> {
+  const at = options.at?.getTime();
   const rows = db.all<{ initiative_id: number; evaluation_id: number | null; public_id: string | null; number: number | null; conclusion: string | null }>(sql`
     with numbered as (
-      select e.id, e.public_id, e.initiative_id, e.state, e.summary,
+      select e.id, e.public_id, e.initiative_id, e.state, e.summary, coalesce(e.finished_at, e.created_at) as completed_at,
         row_number() over (partition by e.initiative_id order by e.id) as number
       from evaluations e
     ),
     latest as (
       select numbered.*, row_number() over (partition by initiative_id order by id desc) as recency
       from numbered
-      where state = 'complete'
+      where state = 'complete'${at === undefined ? sql`` : sql` and completed_at <= ${at}`}
     )
     select i.id as initiative_id, l.id as evaluation_id, l.public_id, l.number,
       json_extract(l.summary, '$.combined.conclusion') as conclusion
     from initiatives i
     left join latest l on l.initiative_id = i.id and l.recency = 1
-    where (i.claim_repository_source_id is not null) = ${systemOwned ? 1 : 0} and i.system_owned = 0 and i.profiling = 0`);
+    where i.profiling = 0${at === undefined ? sql`` : sql` and i.created_at <= ${at}`}`);
   return new Map(
     rows.map((row) => [
       row.initiative_id,

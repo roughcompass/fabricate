@@ -7,6 +7,7 @@ import { Menu, MenuButton } from "./menu";
 import { SubmitButton } from "./submit-button";
 import { useHydrated } from "./use-hydrated";
 import styles from "./confirm-dialog.module.css";
+import { HiddenFields } from "./form";
 
 interface ConfirmDialogProps {
   action: (formData: FormData) => void | Promise<void>;
@@ -53,9 +54,7 @@ export function ConfirmDialog({ action, fields = {}, trigger, title, children, c
 
   return (
     <form ref={form} action={action} className={styles.form}>
-      {Object.entries(fields).map(([name, value]) => (
-        <input key={name} type="hidden" name={name} value={value} />
-      ))}
+      <HiddenFields values={fields} />
       {menu ? (
         <Menu label={menu.label} variant={menu.variant} size={menu.size}>
           {menu.items}

@@ -6,7 +6,7 @@ import { findSource } from "@/lib/catalog/source-records";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
-import { isPublicId } from "@/lib/db/ids";
+import { isPublicId, requirePublicId } from "@/lib/db/ids";
 import { PreviewAccessError, isEnrolled, openPreview } from "@/lib/previews/access";
 import { deletePreview, requestPreview, requestRebuild } from "@/lib/previews/lifecycle";
 import { requestPreparation } from "@/lib/previews/preparation";
@@ -14,8 +14,9 @@ import { PreviewRequestError } from "@/lib/previews/records";
 import { type RefRequest, RefResolutionError, configuredRequest } from "@/lib/previews/refs";
 import { parseDeviceState, deviceQuery } from "@/lib/web/device-preview";
 import { text } from "@/lib/web/form-data";
-import { previewPageHref, repositoryHref } from "@/lib/web/repository-paths";
 import type { PrepareFormState } from "./preview-form-state";
+import { withQuery } from "@/lib/web/query";
+import { routes } from "@/lib/web/routes";
 
 /*
  * Repository previews from the Repository page and the preview page
@@ -25,7 +26,7 @@ import type { PrepareFormState } from "./preview-form-state";
  */
 
 /** The Repository page with the preparation +preparation+ shown in its Previews section. */
-const preparationHref = (sourcePublicId: string, preparation: string) => `${repositoryHref(sourcePublicId)}?preparation=${preparation}#previews`;
+const preparationHref = (sourcePublicId: string, preparation: string) => withQuery(routes.repository(sourcePublicId), { preparation }, "previews");
 
 /**
  * Pins the chosen branch, tag, or commit and prepares it: the Repository page
@@ -34,7 +35,7 @@ const preparationHref = (sourcePublicId: string, preparation: string) => `${repo
  * resolved, or a remote that can't be reached, is reported on the form.
  */
 export async function preparePreview(sourcePublicId: string, _previous: PrepareFormState, formData: FormData): Promise<PrepareFormState> {
-  if (!isPublicId(sourcePublicId, "src")) throw new NotFoundError("Unknown repository source");
+  requirePublicId(sourcePublicId, "src", "repository source");
   const db = getDb();
   const config = getConfig();
   const source = findSource(db, sourcePublicId);
@@ -73,7 +74,7 @@ export async function buildPreview(formData: FormData): Promise<void> {
     if (error instanceof PreviewAccessError || error instanceof NotFoundError) notFound();
     throw error;
   }
-  redirect(previewPageHref(sourcePublicId, result.preview.publicId, result.created ? { notice: "queued" } : {}));
+  redirect(routes.repositoryPreview(sourcePublicId, result.preview.publicId, result.created ? { notice: "queued" } : {}));
 }
 
 /** The preview the form names, while its page could be shown, with the device it was viewed on. */
@@ -93,12 +94,12 @@ export async function rebuildPreview(formData: FormData): Promise<void> {
     if (error instanceof PreviewAccessError || error instanceof NotFoundError) notFound();
     throw error;
   }
-  redirect(previewPageHref(source.publicId, preview.publicId, { ...device, notice: next.attempt > preview.attempt ? "rebuilt" : "building" }));
+  redirect(routes.repositoryPreview(source.publicId, preview.publicId, { ...device, notice: next.attempt > preview.attempt ? "rebuilt" : "building" }));
 }
 
 /** Deletes the preview and its files, and returns to its Repository's previews. */
 export async function deletePreviewAction(formData: FormData): Promise<void> {
   const { preview, source } = openedFrom(formData);
   await deletePreview(getDb(), preview.publicId, getConfig());
-  redirect(`${repositoryHref(source.publicId)}?notice=preview-deleted&preview=${preview.publicId}#previews`);
+  redirect(withQuery(routes.repository(source.publicId), { notice: "preview-deleted", preview: preview.publicId }, "previews"));
 }

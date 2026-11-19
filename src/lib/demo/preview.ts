@@ -1,4 +1,5 @@
 import { type DeviceState, deviceQuery, parseDeviceState } from "@/lib/web/device-preview";
+import { type SearchParams, param } from "@/lib/web/query";
 
 /**
  * Preview mode's state (template-preview spec, design.md decision 19): the
@@ -15,14 +16,12 @@ export interface PreviewState extends DeviceState {
   readonly file: string | null;
 }
 
-type Params = Readonly<Record<string, string | string[] | undefined>>;
-
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+type Params = SearchParams;
 
 export function parsePreviewState(params: Params): PreviewState {
-  const file = first(params.file);
+  const file = param(params, "file");
   return {
-    view: first(params.view) === "code" ? "code" : "preview",
+    view: param(params, "view") === "code" ? "code" : "preview",
     ...parseDeviceState(params),
     file: file && file.length <= 200 ? file : null,
   };

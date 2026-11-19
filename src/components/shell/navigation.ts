@@ -3,7 +3,7 @@ import type { IconName } from "@/components/ui/icon";
 /**
  * The sidebar's primary menu (operator-interface/page-patterns spec): groups
  * of items under headings, set apart by dividers. An item is current on every
- * path its patterns match, its create and import pages and records included.
+ * path its patterns match, its create pages and records included.
  * The patterns never overlap, so a path belongs to at most one item.
  */
 
@@ -29,7 +29,7 @@ export interface MenuGroup {
 /** Home (home spec): the first entry of the primary menu. */
 export const HOME = { id: "home", label: "Home", href: "/", icon: "home", match: [/^\/$/] } as const satisfies NavItem;
 
-/** Assessments' pages, Repositories first since everything starts from them, each list with its create and import pages and its records. */
+/** Assessments' pages, Repositories first since everything starts from them, each list with its create pages and its records. */
 const ASSESSMENT_ITEMS: readonly NavItem[] = [
   { id: "repositories", label: "Repositories", href: "/repositories", icon: "git", match: [/^\/repositories(\/.*)?$/] },
   { id: "all-assessments", label: "All Assessments", href: "/assessments", icon: "checklist", match: [/^\/assessments(\/.*)?$/, /^\/(runs|evaluations|profiles)\/[^/]+(\/.*)?$/] },
@@ -61,24 +61,6 @@ export function visibleGroups(flags: NavFlags): readonly MenuGroup[] {
     ...(flags.demo ? [{ id: "build", heading: "Templates", items: [SALT_PATTERNS] } as const] : []),
     { id: "admin", heading: "Admin", items: ADMIN_ITEMS },
   ];
-}
-
-/** Every item of the menu, in order. */
-export function menuItems(groups: readonly MenuGroup[]): readonly NavItem[] {
-  return groups.flatMap((group) => group.items);
-}
-
-/**
- * Where every link to Home leads (home spec, "Home exists only while
- * Assessments are available"): Home while the Assessments group is shown,
- * and otherwise the menu's first page. The product mark, the menu, the root
- * page, and the not-found and error pages all ask here, so a configuration
- * without Assessments never links to a Home it can't show.
- */
-export function homeLink(groups: readonly MenuGroup[]): { href: string; label: string } {
-  const first = groups[0]?.items[0];
-  if (groups.some((group) => group.id === "assessments") || !first) return { href: HOME.href, label: HOME.label };
-  return { href: first.href, label: first.label };
 }
 
 export interface Location {

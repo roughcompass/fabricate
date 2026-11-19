@@ -1,8 +1,6 @@
 import type { Page } from "@playwright/test";
-import { recordFailedDeConsoleRead } from "../src/lib/ownership/de-console";
-import { createApplication } from "../src/lib/ownership/records";
 import { buildAssessment, buildInitiative, buildSource } from "../test/support/builders";
-import { buildEvaluation, claim, driveEvaluation, driveRun, readDeConsole } from "../test/support/home";
+import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { seedResults } from "./support/results";
@@ -53,9 +51,8 @@ test("Fresh installation: each group shows its empty state and actions, and noth
   await expect(needsAttention.getByRole("link")).toHaveCount(0);
 });
 
-test("every figure opens a list showing exactly the records it counts (Unclaimed figure opens its list, Conclusion figure opens its tab)", async ({ page, db }) => {
-  const sources = Array.from({ length: 6 }, (_, index) => buildSource(db, { name: `repo-${index}` }));
-  for (const source of sources.slice(0, 4)) claim(db, source);
+test("every figure opens a list showing exactly the records it counts (Conclusion figure opens its tab)", async ({ page, db }) => {
+  for (let index = 0; index < 6; index++) buildSource(db, { name: `repo-${index}` });
   assessment(db, "Checkout platform migration", "complete", "gaps");
   assessment(db, "Payments baseline", "complete", "gaps");
   assessment(db, "Markets baseline", "complete", "conforms");
@@ -74,15 +71,13 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
   expect(figures.map(({ label, value }) => [label, value])).toEqual([
     // Six Repositories, and one more for each Assessment.
     ["Repositories", 10],
-    ["Claimed", 4],
-    ["Unclaimed", 6],
     ["Assessments", 4],
     ["Gaps found", 2],
     ["Undetermined", 0],
     ["Conforms", 1],
     ["Not evaluated", 1],
   ]);
-  await expect(page.locator('dl[aria-label="Repositories"]')).toContainText("40% of all");
+  await expect(page.locator('dl[aria-label="Repositories"] [data-figure="Profiled"]')).toContainText("of 10");
 
   for (const { group, label, value, href } of figures) {
     await page.goto(href);
@@ -92,13 +87,13 @@ test("every figure opens a list showing exactly the records it counts (Unclaimed
   }
 });
 
-test("Same page for everyone: a stated name in a cookie doesn't change Home", async ({ page, context, db, baseURL }) => {
-  claim(db, buildSource(db));
+test("Same page for everyone: a visitor's cookies don't change Home", async ({ page, context, db, baseURL }) => {
+  buildSource(db);
   assessment(db, "Checkout platform migration", "failed");
   await page.goto(paths.home);
   const first = await page.getByRole("main").innerText();
 
-  await context.addCookies([{ name: "fabricate-claimant", value: "Bo", url: baseURL! }]);
+  await context.addCookies([{ name: "stated-name", value: "Bo", url: baseURL! }]);
   await page.reload();
   expect(await page.getByRole("main").innerText()).toBe(first);
 });
@@ -135,25 +130,12 @@ test("More than one page of problems: 20 per page, newest first, with the page i
   await expect(attention(page).last()).toContainText("Assessment 05");
 });
 
-test("Opening the conflicts from Home: the item opens the DE Console import page at its conflicts", async ({ page, db }) => {
-  createApplication(db, { sealId: "88002", name: "Access Shell" });
-  createApplication(db, { sealId: "88002", name: "Access Settings" });
-  readDeConsole(db, [{ seal_id: "88002" }, { seal_id: "88001" }, { seal_id: "88001" }], new Date());
-  recordFailedDeConsoleRead(db, { trigger: "schedule", error: "The DE Console didn't answer within 30 seconds", readAt: new Date() });
-
-  await page.goto(paths.home);
-  await expect(attention(page).filter({ hasText: "The DE Console couldn't be read" })).toHaveCount(1);
-  await attention(page).getByRole("link", { name: "2 DE Console entries are in conflict" }).click();
-  await expect(page).toHaveURL(/\/repositories\/de-console#conflicts$/);
-  await expect(page.getByRole("region", { name: "Conflicts" })).toBeInViewport();
-});
-
 test("Nothing to do: an empty state without an action", async ({ page, db }) => {
   assessment(db, "Checkout platform migration", "complete", "conforms");
   await page.goto(paths.home);
   const needsAttention = page.getByRole("region", { name: "Needs attention" });
   await expect(needsAttention.getByText("Nothing needs attention")).toBeVisible();
-  await expect(needsAttention.getByText("Home checks each Assessment's latest Run and Evaluation, and the DE Console import.")).toBeVisible();
+  await expect(needsAttention.getByText("Home checks each Assessment's latest Run and Evaluation.")).toBeVisible();
   await expect(needsAttention.getByRole("link")).toHaveCount(0);
   await expect(needsAttention.getByRole("button")).toHaveCount(0);
 });
@@ -233,13 +215,11 @@ test.describe("reaching Home on a narrow viewport", () => {
   });
 
   test("Narrow content area: two figures per row, stacked attention rows, no overflow", async ({ page, db }) => {
-    for (let index = 0; index < 3; index++) claim(db, buildSource(db));
     assessment(db, "Checkout platform migration", "failed");
     await page.goto(paths.home);
-    const [first, second, third] = await page.locator('dl[aria-label="Repositories"] > div').all();
-    const [a, b, c] = await Promise.all([first!.boundingBox(), second!.boundingBox(), third!.boundingBox()]);
+    const [first, second] = await page.locator('dl[aria-label="Repositories"] > div').all();
+    const [a, b] = await Promise.all([first!.boundingBox(), second!.boundingBox()]);
     expect(a!.y).toBe(b!.y);
-    expect(c!.y).toBeGreaterThan(a!.y);
     await expect(attention(page)).toHaveCount(1);
     // Every panel stacks in one column.
     const lefts = await page.getByRole("main").locator("[data-panel]").evaluateAll((panels) => [...new Set(panels.map((panel) => Math.round(panel.getBoundingClientRect().left)))]);
@@ -253,7 +233,6 @@ test.describe("the dashboard", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   test("Wide layout: Needs attention first at full width, then the Repositories and Assessments figures side by side, then the trend and activity at equal heights (Wide layout)", async ({ page, db }) => {
-    claim(db, buildSource(db));
     assessment(db, "Checkout platform migration", "failed");
     await page.goto(paths.home);
     const panel = (name: string) => page.getByRole("main").getByRole("region", { name, exact: true });
@@ -266,7 +245,7 @@ test.describe("the dashboard", () => {
     expect(Math.round(trend!.y)).toBe(Math.round(activity!.y));
     expect(Math.round(trend!.height)).toBe(Math.round(activity!.height));
     expect(attentionBox!.width).toBeGreaterThan(repositories!.width);
-    // The three Repositories figures sit in one row.
+    // The two Repositories figures sit in one row.
     const cards = await page.locator('dl[aria-label="Repositories"] > [data-figure]').all();
     expect(new Set(await Promise.all(cards.map(async (card) => Math.round((await card.boundingBox())!.y)))).size).toBe(1);
   });
@@ -281,14 +260,13 @@ test.describe("the dashboard", () => {
     await expect(profiled.getByRole("img", { name: "Profiled: 0%" })).toBeVisible();
   });
 
-  test("Repositories added this week: each figure states its change over seven days in words (No change)", async ({ page, db }) => {
+  test("Repositories added this week: the figure states its change over seven days in words", async ({ page, db }) => {
     buildSource(db, { name: "payee-hub" });
     buildSource(db, { name: "ledger" });
     await page.goto(paths.home);
     const repositories = page.locator('dl[aria-label="Repositories"]');
     await expect(repositories.locator('[data-figure="Repositories"]')).toContainText("2");
     await expect(repositories.locator('[data-figure="Repositories"]')).toContainText("+2 this week");
-    await expect(repositories.locator('[data-figure="Claimed"]')).toContainText("No change this week");
   });
 
   test("Trend: this week's Evaluations are charted by conclusion, with the same figures in a table (Trend)", async ({ page, db }) => {
@@ -316,7 +294,7 @@ test.describe("the dashboard", () => {
   });
 
   test("Actions in the header: New Assessment and Add Repositories", async ({ page, db }) => {
-    claim(db, buildSource(db));
+    buildSource(db);
     await page.goto(paths.home);
     await expect(page.getByRole("main").getByRole("link", { name: "Add Repositories" }).first()).toHaveAttribute("href", "/repositories/bulk");
     await page.getByRole("main").getByRole("link", { name: "New Assessment" }).first().click();

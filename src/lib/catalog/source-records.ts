@@ -3,6 +3,7 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, IssueCollector, NotFoundError, StaleRecordError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { repositorySources } from "@/lib/db/schema";
+import { updateLocked } from "@/lib/db/optimistic";
 
 /**
  * Persistence for repository sources. Callers supply an already parsed and
@@ -114,21 +115,7 @@ function validate(db: Executor, values: SourceValues, excludingId?: number): voi
 
 function write(db: Executor, current: RepositorySource, next: SourceValues): RepositorySource {
   try {
-    const updated = db
-      .update(repositorySources)
-      .set({
-        name: next.name,
-        cloneUrl: next.cloneUrl,
-        canonicalUrl: next.canonicalUrl,
-        gitRef: next.gitRef ?? null,
-        lockVersion: current.lockVersion + 1,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(repositorySources.id, current.id), eq(repositorySources.lockVersion, current.lockVersion)))
-      .returning()
-      .get();
-    if (!updated) throw new StaleRecordError(`${current.name} was changed by someone else`);
-    return updated;
+    return updateLocked(db, repositorySources, current, { name: next.name, cloneUrl: next.cloneUrl, canonicalUrl: next.canonicalUrl, gitRef: next.gitRef ?? null, updatedAt: new Date() }, `${current.name} was changed by someone else`);
   } catch (error) {
     if (isUniqueViolation(error)) rejectDuplicate(db, next.canonicalUrl, current.id);
     throw error;

@@ -4,12 +4,10 @@ import type { Db } from "@/lib/db/client";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { rebuildProjection } from "@/lib/projection/rebuild";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
-import { ORDERS, STOREFRONT } from "../../e2e/support/results";
 import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
-import { manifest } from "../support/profiles";
 import { count } from "../support/projection";
-import { seedAssessment } from "../support/scenarios";
+import { ORDERS, STOREFRONT, seedAssessment, seedMapStates } from "../support/scenarios";
 
 interface Fact {
   value?: { manifest?: string; name?: string };
@@ -17,19 +15,7 @@ interface Fact {
 
 /** The Runs the e2e suite seeds: the Relationship Map's states and gap, and the Profile's every category state. */
 async function seedFixtureRuns(db: Db): Promise<Assessment[]> {
-  const names = ["web", "client", "ui-a", "ui-b", "billing"];
-  const sources = names.map((name) => buildSource(db, { name }));
-  buildSource(db, { name: "legacy-ui" });
-  const map = await seedAssessment(db, buildInitiative(db, { name: "Fleet assessment", sources }), sources, [
-    {
-      "package.json": manifest({ name: "web", version: "1.0.0", private: true, dependencies: { "@acme/client": "^1.0.0", "@acme/ui": "^2.0.0", "left-pad": "^1.3.0", "legacy-ui": "^0.1.0" } }),
-      "src/payments.ts": 'export const charge = () => fetch("https://payments.invalid/v1/charges", { method: "POST" });\n',
-    },
-    { "package.json": manifest({ name: "@acme/client", version: "1.0.0" }) },
-    { "package.json": manifest({ name: "@acme/ui", version: "2.0.0" }) },
-    { "package.json": manifest({ name: "@acme/ui", version: "2.1.0" }) },
-    "failed",
-  ]);
+  const { assessment: map } = await seedMapStates(db);
   const results = [buildSource(db, { name: "orders" }), buildSource(db, { name: "storefront" })];
   const profiled = await seedAssessment(db, buildInitiative(db, { name: "Results", sources: results }), results, [ORDERS, STOREFRONT]);
   return [map, profiled];
@@ -61,7 +47,6 @@ describe("projection backfill", () => {
       const document = mapDocument(map) as { nodes: unknown[]; edges: unknown[] };
       expect(count(db, "graph_nodes", "map_id = ?", map.id)).toBe(document.nodes.length);
       expect(count(db, "graph_edges", "map_id = ?", map.id)).toBe(document.edges.length);
-      expect(count(db, "projection_coverage", "assessment_id = ?", run.id)).toBe(count(db, "assessment_targets", "assessment_id = ?", run.id));
     }
   });
 });

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache } from "react";
 import { ProgressPoller } from "@/components/progress-poller";
 import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { countLabel } from "@/components/ui/count";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -18,39 +18,28 @@ import { StatGroup } from "@/components/ui/stat-group";
 import { Status, humanize } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { ShortValue, Tag } from "@/components/ui/tag";
-import { assessmentNumber, findAssessment, snapshotOf, targetReferenceLabel, targetsOf } from "@/lib/assessments/assessment-records";
+import { type AssessmentTarget, snapshotOf, targetReferenceLabel, targetsOf } from "@/lib/assessments/assessment-records";
 import { assessmentStatus } from "@/lib/assessments/status";
-import { getDb } from "@/lib/db/client";
-import { ASSESSMENT_MACHINE, isTerminal } from "@/lib/db/state-machines";
+import { type Executor, getDb } from "@/lib/db/client";
+import { ASSESSMENT_MACHINE, isTerminal, TARGET_MACHINE } from "@/lib/db/state-machines";
 import { evaluationNumbers, listEvaluations } from "@/lib/evaluations/evaluation-records";
-import { initiativeById } from "@/lib/initiatives/initiative-records";
-import { profileDiagnostics, profileDocument, profilesOf } from "@/lib/profiles/profile-records";
+import { profileDiagnostics, profileDocument, profilesOf, type RepositoryProfile } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
 import type { MapDocument } from "@/lib/relationships/schema";
-import { runContext } from "@/lib/web/run-context";
 import { cancelAssessment } from "../actions";
 import { assessmentOutcome } from "../outcomes";
+import { routes } from "@/lib/web/routes";
+import { loadRun } from "./load";
 
-const load = cache((publicId: string) => {
-  const db = getDb();
-  const assessment = findAssessment(db, publicId);
-  if (!assessment) return undefined;
-  const initiative = initiativeById(db, assessment.initiativeId);
-  const number = assessmentNumber(db, assessment);
-  return { assessment, initiative, number, context: runContext(db, assessment, initiative, number) };
-});
-
-export async function generateMetadata({ params }: { params: Promise<{ assessmentId: string }> }): Promise<Metadata> {
-  const found = load((await params).assessmentId);
+export async function generateMetadata({ params }: PageProps<"/runs/[assessmentId]">): Promise<Metadata> {
+  const found = loadRun((await params).assessmentId);
   return { title: found ? `${found.context.name} · ${found.context.owner}` : "Run not found" };
 }
 
-const FINISHED = new Set(["complete", "failed", "canceled"]);
-
-export default async function AssessmentPage({ params, searchParams }: { params: Promise<{ assessmentId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function AssessmentPage({ params, searchParams }: PageProps<"/runs/[assessmentId]">) {
   const [{ assessmentId }, query] = await Promise.all([params, searchParams]);
   const db = getDb();
-  const found = load(assessmentId);
+  const found = loadRun(assessmentId);
   if (!found) notFound();
   const { assessment, initiative, context } = found;
   const { name } = context;
@@ -64,16 +53,12 @@ export default async function AssessmentPage({ params, searchParams }: { params:
   const status = assessmentStatus(db, assessment);
   const terminal = isTerminal(ASSESSMENT_MACHINE, assessment.state);
   const failed = targets.filter((target) => target.state === "failed");
-  const finished = targets.filter((target) => FINISHED.has(target.state)).length;
-  const skippedInputs = (targetId: number) => {
-    const profile = profiles.get(targetId);
-    return profile ? profileDiagnostics(profileDocument(profile)).skipped.length : 0;
-  };
+  const finished = targets.filter((target) => isTerminal(TARGET_MACHINE, target.state)).length;
   const shownState = !terminal && assessment.cancelRequestedAt ? "canceling" : assessment.state;
 
   return (
     <Page>
-      {!status.terminal && <ProgressPoller url={`/api/runs/${assessment.publicId}/status`} version={status.version} />}
+      {!status.terminal && <ProgressPoller url={routes.runStatus(assessment.publicId)} version={status.version} />}
       <PageHeader
         breadcrumbs={context.parents}
         title={name}
@@ -130,7 +115,7 @@ export default async function AssessmentPage({ params, searchParams }: { params:
           stats={[
             { label: "Repository Profiles", value: `${profiles.size}/${targets.length}` },
             map && coverage
-              ? { label: "Relationship Map", value: coverage.complete ? "Complete" : "Partial", hint: <Link href={`/runs/${assessment.publicId}/map`}>Review the Relationship Map</Link> }
+              ? { label: "Relationship Map", value: coverage.complete ? "Complete" : "Partial", hint: <Link href={routes.runMap(assessment.publicId)}>Review the Relationship Map</Link> }
               : { label: "Relationship Map", value: "—", hint: terminal ? "Not available" : "Written when every repository finishes" },
             { label: "Coverage gaps", value: coverage ? coverage.gaps.length : "—" },
             // A profile version is never evaluated, so its Run doesn't offer one.
@@ -139,62 +124,7 @@ export default async function AssessmentPage({ params, searchParams }: { params:
         />
       </Section>
 
-      <Section title="Repositories" description="The scope as it was when the Run started, and each repository's progress.">
-        <Panel flush>
-          <Table
-            label="Run scope"
-            head={
-              <>
-                <Th>Repository</Th>
-                <Th>Reference</Th>
-                <Th>Status</Th>
-                <Th>Profile</Th>
-              </>
-            }
-          >
-            {targets.map((target) => {
-              const snapshot = snapshotOf(db, target.id);
-              const profile = profiles.get(target.id);
-              const skipped = skippedInputs(target.id);
-              return (
-                <tr key={target.publicId} id={target.publicId}>
-                  <Td label="Repository">
-                    <Primary>{target.sourceName}</Primary>
-                    <Secondary>
-                      <Tag>{target.cloneUrl ?? `Template version ${target.templateVersionNumber}`}</Tag>
-                    </Secondary>
-                  </Td>
-                  <Td label="Reference">
-                    {target.gitRef ? <Tag>{target.gitRef}</Tag> : humanize(targetReferenceLabel(target))}
-                    {snapshot && (
-                      <Secondary>
-                        {snapshot.commitSha ? <ShortValue value={snapshot.commitSha} label="commit" /> : <ShortValue value={snapshot.treeSha} label="content digest" />}
-                      </Secondary>
-                    )}
-                  </Td>
-                  <Td label="Status">
-                    <Status state={target.state} />
-                    {target.failureMessage && <Secondary>{target.failureMessage}</Secondary>}
-                    {target.failureCode && <Secondary mono>{target.failureCode}</Secondary>}
-                  </Td>
-                  <Td label="Profile">
-                    {profile ? (
-                      <>
-                        <Link href={`/profiles/${profile.publicId}`} aria-label={`${target.sourceName} Profile`}>
-                          Profile
-                        </Link>
-                        {skipped > 0 && <Secondary>{countLabel(skipped, "skipped input")}</Secondary>}
-                      </>
-                    ) : (
-                      <Secondary>{terminal || target.state === "failed" || target.state === "canceled" ? "None" : "Pending"}</Secondary>
-                    )}
-                  </Td>
-                </tr>
-              );
-            })}
-          </Table>
-        </Panel>
-      </Section>
+      <ScopeSection db={db} targets={targets} profiles={profiles} terminal={terminal} />
 
       {evaluations.length > 0 && (
         <Section title="Evaluations">
@@ -213,7 +143,7 @@ export default async function AssessmentPage({ params, searchParams }: { params:
                 <tr key={evaluation.publicId}>
                   <Td label="Evaluation">
                     <Primary>
-                      <Link href={`/evaluations/${evaluation.publicId}`}>{`Evaluation #${evaluationNumber.get(evaluation.id)}`}</Link>
+                      <Link href={routes.evaluation(evaluation.publicId)}>{`Evaluation #${evaluationNumber.get(evaluation.id)}`}</Link>
                     </Primary>
                   </Td>
                   <Td label="Status">
@@ -242,5 +172,71 @@ export default async function AssessmentPage({ params, searchParams }: { params:
         />
       </Disclosure>
     </Page>
+  );
+}
+
+/** The Run's scope as it was when it started, and each repository's progress and Profile. */
+function ScopeSection({ db, targets, profiles, terminal }: { db: Executor; targets: AssessmentTarget[]; profiles: Map<number, RepositoryProfile>; terminal: boolean }) {
+  const skippedInputs = (targetId: number) => {
+    const profile = profiles.get(targetId);
+    return profile ? profileDiagnostics(profileDocument(profile)).skipped.length : 0;
+  };
+  return (
+    <Section title="Repositories" description="The scope as it was when the Run started, and each repository's progress.">
+      <Panel flush>
+        <Table
+          label="Run scope"
+          head={
+            <>
+              <Th>Repository</Th>
+              <Th>Reference</Th>
+              <Th>Status</Th>
+              <Th>Profile</Th>
+            </>
+          }
+        >
+          {targets.map((target) => {
+            const snapshot = snapshotOf(db, target.id);
+            const profile = profiles.get(target.id);
+            const skipped = skippedInputs(target.id);
+            return (
+              <tr key={target.publicId} id={target.publicId}>
+                <Td label="Repository">
+                  <Primary>{target.sourceName}</Primary>
+                  <Secondary>
+                    <Tag>{target.cloneUrl}</Tag>
+                  </Secondary>
+                </Td>
+                <Td label="Reference">
+                  {target.gitRef ? <Tag>{target.gitRef}</Tag> : humanize(targetReferenceLabel(target))}
+                  {snapshot && (
+                    <Secondary>
+                      <ShortValue value={snapshot.commitSha} label="commit" />
+                    </Secondary>
+                  )}
+                </Td>
+                <Td label="Status">
+                  <Status state={target.state} />
+                  {target.failureMessage && <Secondary>{target.failureMessage}</Secondary>}
+                  {target.failureCode && <Secondary mono>{target.failureCode}</Secondary>}
+                </Td>
+                <Td label="Profile">
+                  {profile ? (
+                    <>
+                      <Link href={routes.profile(profile.publicId)} aria-label={`${target.sourceName} Profile`}>
+                        Profile
+                      </Link>
+                      {skipped > 0 && <Secondary>{countLabel(skipped, "skipped input")}</Secondary>}
+                    </>
+                  ) : (
+                    <Secondary>{terminal || target.state === "failed" || target.state === "canceled" ? "None" : "Pending"}</Secondary>
+                  )}
+                </Td>
+              </tr>
+            );
+          })}
+        </Table>
+      </Panel>
+    </Section>
   );
 }

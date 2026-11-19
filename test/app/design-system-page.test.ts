@@ -1,6 +1,11 @@
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DesignSystemPage from "@/app/(operator)/design-system/page";
+import * as content from "@/app/(operator)/design-system/specimens/content";
+import * as data from "@/app/(operator)/design-system/specimens/data";
+import * as forms from "@/app/(operator)/design-system/specimens/forms";
+import * as foundations from "@/app/(operator)/design-system/specimens/foundations";
+import * as interaction from "@/app/(operator)/design-system/specimens/interaction";
 import { FilterRail } from "@/components/ui/filter-rail";
 import { MediaCard } from "@/components/ui/media-card";
 import { SearchField } from "@/components/ui/search-field";
@@ -10,6 +15,9 @@ vi.mock("next/navigation", async () => (await import("../support/next")).navigat
 
 type Props = { children?: ReactNode; render?: (theme: "light" | "dark") => ReactNode; id?: string; single?: boolean };
 
+/** The gallery's sections, which the walk renders to reach their Specimens; none uses hooks. */
+const SECTIONS = new Set<unknown>([content, data, forms, foundations, interaction].flatMap((module) => Object.values(module)));
+
 /** Every element in a server-rendered tree, expanding each Specimen's per-theme render. */
 function elements(node: ReactNode, theme: "light" | "dark" | null = null, found: { element: ReactElement<Record<string, unknown>>; theme: "light" | "dark" | null }[] = []) {
   if (Array.isArray(node)) {
@@ -18,6 +26,7 @@ function elements(node: ReactNode, theme: "light" | "dark" | null = null, found:
   }
   if (!isValidElement<Props>(node)) return found;
   found.push({ element: node as ReactElement<Record<string, unknown>>, theme });
+  if (SECTIONS.has(node.type)) return elements((node.type as (props: Props) => ReactNode)(node.props), theme, found);
   const { children, render, single } = node.props;
   if (typeof render === "function") for (const variant of single ? (["light"] as const) : (["light", "dark"] as const)) elements(render(variant), variant, found);
   elements(children, theme, found);
@@ -29,17 +38,17 @@ describe("component gallery", () => {
 
   it("responds with the not-found page in production", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    expect(await redirectOf(DesignSystemPage({ searchParams: Promise.resolve({}) }))).toBe("not-found");
+    expect(await redirectOf(DesignSystemPage({ params: Promise.resolve({}), searchParams: Promise.resolve({}) }))).toBe("not-found");
   });
 
   it("renders in development", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    await expect(DesignSystemPage({ searchParams: Promise.resolve({}) })).resolves.toBeTruthy();
+    await expect(DesignSystemPage({ params: Promise.resolve({}), searchParams: Promise.resolve({}) })).resolves.toBeTruthy();
   });
 
   it("shows the search field, media card, and filter rail in their states", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    const found = elements(await DesignSystemPage({ searchParams: Promise.resolve({ kind: ["policy"] }) }));
+    const found = elements(await DesignSystemPage({ params: Promise.resolve({}), searchParams: Promise.resolve({ kind: ["policy"] }) }));
     const of = (type: unknown) => found.filter(({ element }) => element.type === type);
 
     const searches = of(SearchField);

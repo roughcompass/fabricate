@@ -1,9 +1,8 @@
 import crypto from "node:crypto";
-import os from "node:os";
 import { gitSource, normalizeAcquisitionError } from "@/lib/acquisition/acquire";
 import { AcquisitionError } from "@/lib/acquisition/errors";
 import { type Advertisement, Mirror, advertisedCommit, parseLsRemote, resolveAdvertised } from "@/lib/acquisition/mirror";
-import { withSourceLease } from "@/lib/acquisition/source-lease";
+import { withSourceLock } from "@/lib/acquisition/source-lease";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, isValidGitRef } from "@/lib/catalog/source-records";
 import { type FabricateConfig, getConfig } from "@/lib/config";
@@ -107,7 +106,7 @@ export async function listRemoteRefs(source: Pick<RepositorySource, "cloneUrl" |
 
 /**
  * Resolves +request+ to one commit of +source+'s remote and pins it, under
- * the source's mirror lease. Throws RefResolutionError when the request
+ * the source's mirror lock. Throws RefResolutionError when the request
  * names no commit, several, a commit the remote didn't supply, or a ref
  * that moved while it was fetched; other failures are normalized like
  * acquisition failures.
@@ -121,9 +120,7 @@ export async function pinCommit(db: Executor, source: Source, request: RefReques
     // The remote, and a local source's boundary check, are reached only when the mirror lacks the commit.
     let endpoint: { url: string; protocol: Protocol } | undefined;
     const connect = () => (endpoint ??= gitSource(source, new SourceBoundary(config)));
-    // Each request holds the lease under its own name, so two requests in one process never share it.
-    const lease = { holder: `${os.hostname()}:${process.pid}:preview:${crypto.randomBytes(4).toString("hex")}`, waitMs: config.gitLockTimeoutSeconds * 1_000, ttlMs: config.gitTimeoutSeconds * 2_000, signal };
-    return await withSourceLease(db, source.id, lease, async () => {
+    return await withSourceLock(source.id, { waitMs: config.gitLockTimeoutSeconds * 1_000, signal }, async () => {
       const mirror = new Mirror(runner, source.publicId);
       await mirror.ensure();
       const remote = new Remote(runner, mirror, connect, `preview-${crypto.randomBytes(6).toString("hex")}`, signal);

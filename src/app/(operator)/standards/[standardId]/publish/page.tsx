@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { cache } from "react";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { countLabel } from "@/components/ui/count";
 import { DescriptionList } from "@/components/ui/description-list";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
@@ -14,25 +14,25 @@ import { Tag } from "@/components/ui/tag";
 import { getDb } from "@/lib/db/client";
 import { issueLocation } from "@/lib/standards/issue-location";
 import { previewPublication } from "@/lib/standards/publish";
-import { draftDocument, findStandard, releasesOf } from "@/lib/standards/standard-records";
+import { draftDocument, releasesOf } from "@/lib/standards/standard-records";
 import { publishStandard } from "../../actions";
 import { ControlList } from "../../control-view";
 import { publishOutcome } from "../../outcomes";
+import { routes } from "@/lib/web/routes";
+import { loadStandard } from "../load";
 
-const loadStandard = cache((publicId: string) => findStandard(getDb(), publicId));
-
-export async function generateMetadata({ params }: { params: Promise<{ standardId: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/standards/[standardId]/publish">): Promise<Metadata> {
   const standard = loadStandard((await params).standardId);
   return { title: standard ? `Publish ${standard.name}` : "Standard not found" };
 }
 
-export default async function PublishPage({ params, searchParams }: { params: Promise<{ standardId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function PublishPage({ params, searchParams }: PageProps<"/standards/[standardId]/publish">) {
   const [{ standardId }, query] = await Promise.all([params, searchParams]);
   const db = getDb();
   const standard = loadStandard(standardId);
   if (!standard) notFound();
   const preview = previewPublication(db, standard.publicId);
-  if (!preview) redirect(`/standards/${standard.publicId}?notice=no_draft`);
+  if (!preview) redirect(routes.standard(standard.publicId, { notice: "no_draft" }));
   const document = draftDocument(preview.draft);
   const controls = Array.isArray(document.controls) ? (document.controls as { key?: unknown }[]) : [];
   const nextVersion = (releasesOf(db, standard.id)[0]?.version ?? 0) + 1;
@@ -57,7 +57,7 @@ export default async function PublishPage({ params, searchParams }: { params: Pr
       <PageHeader
         breadcrumbs={[
           { href: "/standards", label: "Standards" },
-          { href: `/standards/${standard.publicId}`, label: standard.name },
+          { href: routes.standard(standard.publicId), label: standard.name },
         ]}
         title={`Publish ${standard.name} v${nextVersion}`}
         description="Review exactly what will be published."
@@ -70,7 +70,7 @@ export default async function PublishPage({ params, searchParams }: { params: Pr
                 tone="warning"
                 title={`The draft has ${countLabel(preview.issues.length, "problem")}, so it cannot be published`}
                 actions={
-                  <ButtonLink href={`/standards/${standard.publicId}/draft`} icon="edit" size="sm">
+                  <ButtonLink href={routes.standardDraft(standard.publicId)} icon="edit" size="sm">
                     Fix the draft
                   </ButtonLink>
                 }

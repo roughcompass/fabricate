@@ -59,7 +59,9 @@ export function routingLabel(member: GroupMember): string {
   }
 }
 
-/** The member versions with planted accessibility defects. */
+/** The member versions with planted accessibility defects.
+ * @public Tests use it until `add-applications` removes the demo.
+ */
 export function plantedVersions(app: AppDefinition): { member: GroupMember; version: string }[] {
   return app.members.flatMap((member) => member.versions.filter((version) => version.planted?.length).map((version) => ({ member, version: version.version })));
 }

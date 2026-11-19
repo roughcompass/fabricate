@@ -1,5 +1,6 @@
 import Link from "next/link";
 import styles from "./tabs.module.css";
+import { formatNumber } from "@/components/ui/count";
 
 /**
  * Links between views of one page, such as filters or sub-views; the current
@@ -20,7 +21,7 @@ export function TabLink({ href, active, count, children }: { href: string; activ
   return (
     <Link href={href} className={styles.tab} aria-current={active ? "page" : undefined} scroll={false}>
       {children}
-      {count !== undefined && <span className={styles.count}>{count.toLocaleString("en-US")}</span>}
+      {count !== undefined && <span className={styles.count}>{formatNumber(count)}</span>}
     </Link>
   );
 }

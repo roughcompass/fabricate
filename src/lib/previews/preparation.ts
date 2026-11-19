@@ -5,17 +5,17 @@ import { mirrorPath } from "@/lib/acquisition/mirror";
 import { type RepositorySource, getSource } from "@/lib/catalog/source-records";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
-import { NotFoundError } from "@/lib/db/errors";
-import { repositoryProfiles, repositorySources } from "@/lib/db/schema";
+import { repositorySources } from "@/lib/db/schema";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
-import { redact } from "@/lib/git/redact";
+import { failureText } from "@/lib/git/redact";
 import { GitRunner } from "@/lib/git/runner";
 import { buildProfile, profileProblems } from "@/lib/profiles/schema";
 import type { FactDocument } from "@/lib/profiles/states";
-import { currentVersion } from "@/lib/profiling/versions";
+import { currentProfile } from "@/lib/profiling/current";
 import { SnapshotReader } from "@/lib/snapshot/reader";
 import { assertEnrolled, isEnrolled } from "./access";
-import { type ManifestRead, type PageRead, evaluateEligibility, installRootManifests, manifestPath, readPage, viteConfig, vitePackages } from "./eligibility";
+import { type ManifestRead, evaluateEligibility, installRootManifests, manifestPath, vitePackages } from "./eligibility";
+import { type PageRead, readPage, viteConfig } from "./pages";
 import { type PreparationProfile, type PreviewPreparation, decidePreparation, failPreparation, findPreparation, openPreparation, startPreview } from "./records";
 import { type RefOptions, type RefRequest, pinCommit, previewPinRef } from "./refs";
 
@@ -80,7 +80,7 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
     });
   } catch (error) {
     if (options.signal?.aborted) throw error;
-    return failPreparation(db, job.preparation, job.requested, redact(error instanceof Error ? error.message : String(error)));
+    return failPreparation(db, job.preparation, job.requested, failureText(error));
   }
 }
 
@@ -97,10 +97,9 @@ async function profileOf(
   open: () => Promise<SnapshotReader>,
   signal?: AbortSignal,
 ): Promise<{ profile: PreparationProfile; document: JsonObject }> {
-  const version = currentVersion(db, source.id);
-  if (version?.profile && version.commit === preparation.commitSha) {
-    const stored = db.select().from(repositoryProfiles).where(eq(repositoryProfiles.id, version.profile.id)).get();
-    if (!stored) throw new NotFoundError(`Repository Profile ${version.profile.publicId} does not exist`);
+  const current = currentProfile(db, source.id);
+  if (current && current.commit === preparation.commitSha) {
+    const stored = current.profile;
     return { profile: { repositoryProfileId: stored.id, digest: stored.digest }, document: readDocument("repositoryProfile", stored, `Repository Profile ${stored.publicId}`) };
   }
 

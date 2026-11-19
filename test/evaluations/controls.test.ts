@@ -4,6 +4,7 @@ import { type EvaluationInputs, type ReleaseInput, type TargetInput, evaluateRel
 import { type CatalogIdentity, type ResolverTarget, resolveRelationships } from "@/lib/relationships/resolve";
 import type { MapDocument } from "@/lib/relationships/schema";
 import { contributed, manifest, missing } from "../support/profiles";
+import { control, standardDocument } from "../support/standards";
 
 const toTarget = (target: ResolverTarget): TargetInput => ({
   public_id: target.public_id,
@@ -23,9 +24,8 @@ const release = (...controls: JsonObject[]): ReleaseInput => ({
   digest: "1".repeat(64),
   version: 1,
   standard: "Test Standard",
-  document: { schema: "fabricate.standard", schema_version: 1, input_schemas: { repository_profile: [1], relationship_map: [1] }, controls },
+  document: standardDocument(controls),
 });
-const control = (key: string, applicability: JsonObject, condition: JsonObject, subject = "repository"): JsonObject => ({ key, title: key, rationale: "Test", severity: "medium", subject, applicability, condition, guidance: `Consider ${key}.` });
 const ALWAYS = { op: "always" };
 
 /** Outcomes by subject name for one Control. */
@@ -44,10 +44,10 @@ describe("repository Controls", () => {
   it("produce exactly one Finding per Control and target, over successful, missing, conflicting, and skipped-input Profiles", async () => {
     const targets = [await contributed("ci", CI), await contributed("no-ci", NO_CI), await contributed("conflict", CONFLICT), await contributed("js-only", JS_ONLY), await contributed("configured", CONFIGURED), await contributed("skipped", SKIPPED), missing("billing", "failed")];
     const controls = [
-      control("has-ci", ALWAYS, { op: "exists", selector: "repository.ci_systems" }),
-      control("node-current", { op: "exists", selector: "repository.node_range" }, { op: "semver_satisfies", selector: "repository.node_range", range: ">=20.0.0" }),
-      control("services-configurable", { op: "some", collection: "service_dependencies", condition: ALWAYS }, { op: "every", collection: "service_dependencies", condition: { op: "in", selector: "service.endpoint_derivation", values: ["configured", "host_provided"] } }),
-      control("typescript-only", { op: "contains", selector: "repository.languages", mode: "any", values: ["TypeScript"] }, { op: "not", item: { op: "contains", selector: "repository.languages", mode: "any", values: ["JavaScript"] } }),
+      control({ key: "has-ci", condition: { op: "exists", selector: "repository.ci_systems" } }),
+      control({ key: "node-current", applicability: { op: "exists", selector: "repository.node_range" }, condition: { op: "semver_satisfies", selector: "repository.node_range", range: ">=20.0.0" } }),
+      control({ key: "services-configurable", applicability: { op: "some", collection: "service_dependencies", condition: ALWAYS }, condition: { op: "every", collection: "service_dependencies", condition: { op: "in", selector: "service.endpoint_derivation", values: ["configured", "host_provided"] } } }),
+      control({ key: "typescript-only", applicability: { op: "contains", selector: "repository.languages", mode: "any", values: ["TypeScript"] }, condition: { op: "not", item: { op: "contains", selector: "repository.languages", mode: "any", values: ["JavaScript"] } } }),
     ];
     const findings = evaluateReleaseControls(release(...controls), inputs(targets));
 
@@ -64,9 +64,9 @@ describe("repository Controls", () => {
     const targets = [await contributed("ci", CI), await contributed("conflict", CONFLICT), await contributed("skipped", SKIPPED), missing("billing", "failed")];
     const findings = evaluateReleaseControls(
       release(
-        control("has-ci", ALWAYS, { op: "exists", selector: "repository.ci_systems" }),
-        control("node-current", { op: "exists", selector: "repository.node_range" }, { op: "semver_satisfies", selector: "repository.node_range", range: ">=20.0.0" }),
-        control("services-configurable", ALWAYS, { op: "every", collection: "service_dependencies", condition: { op: "in", selector: "service.endpoint_derivation", values: ["configured"] } }),
+        control({ key: "has-ci", condition: { op: "exists", selector: "repository.ci_systems" }, guidance: "Consider has-ci." }),
+        control({ key: "node-current", applicability: { op: "exists", selector: "repository.node_range" }, condition: { op: "semver_satisfies", selector: "repository.node_range", range: ">=20.0.0" } }),
+        control({ key: "services-configurable", condition: { op: "every", collection: "service_dependencies", condition: { op: "in", selector: "service.endpoint_derivation", values: ["configured"] } } }),
       ),
       inputs(targets),
     );
@@ -91,7 +91,7 @@ describe("relationship Controls", () => {
     });
   const orders = () => contributed("orders", { "package.json": manifest({ name: "spa-orders", version: "1.0.0" }) });
   const composes = (from: string, to: string) =>
-    control(`${from}-composes-${to}`, ALWAYS, { op: "some", collection: "edges", where: { op: "all", items: [{ op: "equals", selector: "edge.type", value: "composition" }, { op: "equals", selector: "edge.from", value: from }] }, condition: { op: "equals", selector: "edge.to", value: to } }, "relationship_map");
+    control({ key: `${from}-composes-${to}`, condition: { op: "some", collection: "edges", where: { op: "all", items: [{ op: "equals", selector: "edge.type", value: "composition" }, { op: "equals", selector: "edge.from", value: from }] }, condition: { op: "equals", selector: "edge.to", value: to } }, subject: "relationship_map" });
 
   it("meet a resolved edge, and stay Indeterminate for unresolved endpoints and relevant coverage gaps instead of reading them as absent", async () => {
     const map = inputs([await root(), await orders(), missing("reports", "failed")], [{ public_id: "src_catalog_ui", name: "@acme/ui", canonical_url: "https://git.example.com/acme/ui" }]);
@@ -99,11 +99,11 @@ describe("relationship Controls", () => {
       release(
         composes("root", "orders"),
         composes("root", "reports"),
-        control("reports-declares-something", ALWAYS, { op: "some", collection: "edges", where: { op: "equals", selector: "edge.from", value: "reports" }, condition: ALWAYS }, "relationship_map"),
-        control("orders-depends-on-nothing-missing", ALWAYS, { op: "some", collection: "edges", where: { op: "all", items: [{ op: "equals", selector: "edge.from", value: "orders" }, { op: "equals", selector: "edge.type", value: "package_dependency" }] }, condition: ALWAYS }, "relationship_map"),
-        control("one-out-of-scope", ALWAYS, { op: "count", collection: "edges", where: { op: "equals", selector: "edge.state", value: "out_of_scope" }, comparator: "eq", value: 1 }, "relationship_map"),
-        control("some-out-of-scope", ALWAYS, { op: "count", collection: "edges", where: { op: "equals", selector: "edge.state", value: "out_of_scope" }, comparator: "gte", value: 1 }, "relationship_map"),
-        control("full-coverage", ALWAYS, { op: "equals", selector: "map.coverage_complete", value: true }, "relationship_map"),
+        control({ key: "reports-declares-something", condition: { op: "some", collection: "edges", where: { op: "equals", selector: "edge.from", value: "reports" }, condition: ALWAYS }, subject: "relationship_map" }),
+        control({ key: "orders-depends-on-nothing-missing", condition: { op: "some", collection: "edges", where: { op: "all", items: [{ op: "equals", selector: "edge.from", value: "orders" }, { op: "equals", selector: "edge.type", value: "package_dependency" }] }, condition: ALWAYS }, subject: "relationship_map" }),
+        control({ key: "one-out-of-scope", condition: { op: "count", collection: "edges", where: { op: "equals", selector: "edge.state", value: "out_of_scope" }, comparator: "eq", value: 1 }, subject: "relationship_map" }),
+        control({ key: "some-out-of-scope", condition: { op: "count", collection: "edges", where: { op: "equals", selector: "edge.state", value: "out_of_scope" }, comparator: "gte", value: 1 }, subject: "relationship_map" }),
+        control({ key: "full-coverage", condition: { op: "equals", selector: "map.coverage_complete", value: true }, subject: "relationship_map" }),
       ),
       map,
     );

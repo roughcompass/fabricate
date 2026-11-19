@@ -1,3 +1,4 @@
+import { type SearchParams, oneOf } from "./query";
 /**
  * A device preview's frame (template-preview spec, design.md decision 19;
  * repository-previews spec "Previews are viewed in a device frame"): the
@@ -23,15 +24,12 @@ export interface DeviceState {
   readonly orientation: Orientation;
 }
 
-type Params = Readonly<Record<string, string | string[] | undefined>>;
-
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+type Params = SearchParams;
 
 /** The device and orientation in a page's query: Desktop by default, each device in its own orientation unless one is given. */
 export function parseDeviceState(params: Params): DeviceState {
-  const device = DEVICE_IDS.find((id) => id === first(params.device)) ?? "desktop";
-  const orientation = first(params.orientation);
-  return { device, orientation: orientation === "portrait" || orientation === "landscape" ? orientation : DEVICES[device].orientation };
+  const device = oneOf(params, "device", DEVICE_IDS) ?? "desktop";
+  return { device, orientation: oneOf(params, "orientation", ["portrait", "landscape"] as const) ?? DEVICES[device].orientation };
 }
 
 /** The query that keeps a device state, leaving out the defaults. */

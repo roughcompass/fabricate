@@ -10,7 +10,6 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   [/^\/(assessments|standards)\/?$/, "list"],
   [/^\/repositories\/bulk\/?$/, "form"],
   [/^\/repositories\/[^/]+\/settings\/?$/, "form"],
-  [/^\/repositories\/de-console\/?$/, "detail"],
   [/^\/admin\/bitbucket-tokens\/?$/, "list"],
   [/^\/admin\/bitbucket-tokens\/new\/?$/, "form"],
   // A Repository's page, its versions, and each version.

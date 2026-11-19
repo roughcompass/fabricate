@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { Assessment, AssessmentTarget, SourceSnapshot } from "@/lib/assessments/assessment-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
@@ -24,9 +24,7 @@ export interface NewProfile {
 export function insertProfile(db: Executor, input: NewProfile): RepositoryProfile {
   const prepared = prepareDocument("repositoryProfile", input.document);
   const issues = new IssueCollector();
-  if (input.snapshot.refKind === "stored_files") {
-    if (prepared.value.content_digest !== input.snapshot.treeSha) issues.add("document", "The Profile must describe the stored files' content digest");
-  } else if (prepared.value.commit !== input.snapshot.commitSha) issues.add("document", "The Profile must describe the pinned commit");
+  if (prepared.value.commit !== input.snapshot.commitSha) issues.add("document", "The Profile must describe the pinned commit");
   if (prepared.value.detector_release !== input.assessment.detectorRelease) issues.add("document", "The Profile must record the Assessment's detector release");
   if (prepared.value.detector_configuration_digest !== input.assessment.configurationDigest) issues.add("document", "The Profile must record the Assessment's detector configuration digest");
   for (const problem of input.validate?.(prepared.value) ?? []) issues.add("document", problem);
@@ -77,17 +75,6 @@ export function profilesOf(db: Executor, assessmentId: number): { profile: Repos
     .where(eq(repositoryProfiles.assessmentId, assessmentId))
     .orderBy(asc(assessmentTargets.position))
     .all();
-}
-
-/** The most recent Profile of a repository source across Assessments, for noting that an earlier one is historical. */
-export function latestProfileOfSource(db: Executor, sourcePublicId: string): { profile: RepositoryProfile; target: AssessmentTarget } | undefined {
-  return db
-    .select({ profile: repositoryProfiles, target: assessmentTargets })
-    .from(repositoryProfiles)
-    .innerJoin(assessmentTargets, eq(assessmentTargets.id, repositoryProfiles.assessmentTargetId))
-    .where(eq(assessmentTargets.sourcePublicId, sourcePublicId))
-    .orderBy(desc(repositoryProfiles.id))
-    .get();
 }
 
 /** The Profile document, verified against its digest. */

@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { LocationList } from "@/components/results/evidence";
 import { buttonProps } from "@/components/ui/button-content";
-import { countLabel } from "@/components/ui/count";
+import { countLabel, formatNumber } from "@/components/ui/count";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Icon } from "@/components/ui/icon";
 import type { HeldSection, RowEvidence } from "@/lib/profiles/evidence";
 import { parseReasoning } from "@/lib/profiles/reasoning";
 import styles from "./profile.module.css";
+import { routes } from "@/lib/web/routes";
 
 type Loading = { state: "idle" | "loading" | "failed" } | { state: "loaded"; evidence: RowEvidence };
 
@@ -52,8 +53,8 @@ export function EvidencePanel({ url, title, count, first, assessmentId }: { url:
         {label}
       </button>
       {first ? (
-        <Link href={`/runs/${assessmentId}/evidence/${first}`} prefetch={false} className={`${styles.evidenceTrigger} ${styles.unscripted}`}>
-          {count === 1 ? "Show location" : `Show first of ${count.toLocaleString("en-US")} locations`}
+        <Link href={routes.evidence(assessmentId, first)} prefetch={false} className={`${styles.evidenceTrigger} ${styles.unscripted}`}>
+          {count === 1 ? "Show location" : `Show first of ${formatNumber(count)} locations`}
         </Link>
       ) : (
         <span className={`${styles.muted} ${styles.unscripted}`}>
@@ -90,7 +91,7 @@ function HeldView({ section, assessmentId }: { section: HeldSection; assessmentI
     <section className={styles.held} aria-label={section.label ?? undefined}>
       {section.label && <h3 className={styles.heldLabel}>{section.label}</h3>}
       <div className={styles.heldPart}>
-        <span className={styles.heldPartLabel}>{section.locations.length === 1 ? "Location" : `${section.locations.length.toLocaleString("en-US")} locations`}</span>
+        <span className={styles.heldPartLabel}>{section.locations.length === 1 ? "Location" : `${formatNumber(section.locations.length)} locations`}</span>
         <LocationList locations={section.locations} assessmentId={assessmentId} />
       </div>
       <dl className={styles.heldFacts}>

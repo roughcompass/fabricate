@@ -14,9 +14,3 @@ const OUTCOME_PARAMS = ["notice", "source", "count", "failed"] as const;
 export function OutcomeToast({ outcome, strip = OUTCOME_PARAMS }: { outcome: Outcome | undefined; strip?: readonly string[] }) {
   return outcome ? <FlashToast outcome={outcome} strip={strip} /> : null;
 }
-
-/** A query parameter as a single string, or undefined. */
-export function param(query: Record<string, string | string[] | undefined>, name: string): string | undefined {
-  const value = query[name];
-  return typeof value === "string" ? value : undefined;
-}

@@ -5,6 +5,7 @@ import { buttonProps } from "@/components/ui/button-content";
 import { Icon } from "@/components/ui/icon";
 import { Tooltip } from "@/components/ui/tooltip";
 import styles from "./device-frame.module.css";
+import { percentOf } from "@/components/ui/count";
 
 /** The browser window's border, left and right: 1px each. */
 const WINDOW_BORDER = 2;
@@ -23,7 +24,7 @@ export function FrameSize({ label }: { label: string }) {
   return (
     <p className={styles.size}>
       <span data-frame-size="">{label}</span>
-      {scale < 1 && <span className={styles.scale}>{`Shown at ${Math.round(scale * 100)}%`}</span>}
+      {scale < 1 && <span className={styles.scale}>{`Shown at ${percentOf(scale, 1)}%`}</span>}
     </p>
   );
 }

@@ -1,11 +1,11 @@
-import { and, asc, count, desc, eq, lte } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId, isPublicId } from "@/lib/db/ids";
-import { REF_KINDS, type RefKind, assessmentTargets, assessments, sourceSnapshots, storedFileSets } from "@/lib/db/schema";
-import { treeObjectId } from "@/lib/snapshot/stored-files";
-import { type JsonObject, digestOf, parseCanonical, sha256 } from "@repo-facts/contract";
+import { sequenceNumber, sequenceNumbers } from "@/lib/db/sequence";
+import { REF_KINDS, type RefKind, assessmentTargets, assessments, sourceSnapshots } from "@/lib/db/schema";
+import { type JsonObject, digestOf } from "@repo-facts/contract";
 import type { Initiative } from "@/lib/initiatives/initiative-records";
 
 /**
@@ -17,25 +17,6 @@ import type { Initiative } from "@/lib/initiatives/initiative-records";
 export type Assessment = typeof assessments.$inferSelect;
 export type AssessmentTarget = typeof assessmentTargets.$inferSelect;
 export type SourceSnapshot = typeof sourceSnapshots.$inferSelect;
-
-/** A target copied from a catalog source, which Git acquires. Template targets have no source. */
-export type SourceTarget = AssessmentTarget & { kind: "source"; repositorySourceId: number; cloneUrl: string; canonicalUrl: string };
-/** A source target's snapshot, pinned to a Git commit. A template target's snapshot is its stored files. */
-export type CommitSnapshot = SourceSnapshot & { repositorySourceId: number; commitSha: string };
-
-/** +target+ as a catalog source's copy, or an error for a template version. */
-export function sourceTarget(target: AssessmentTarget): SourceTarget {
-  if (target.kind !== "source" || target.repositorySourceId === null || target.cloneUrl === null || target.canonicalUrl === null) {
-    throw new Error(`Assessment target ${target.publicId} is a template version, not a catalog source`);
-  }
-  return target as SourceTarget;
-}
-
-/** +snapshot+ as a pinned commit, or an error for stored files. */
-export function commitSnapshot(snapshot: SourceSnapshot): CommitSnapshot {
-  if (snapshot.commitSha === null || snapshot.repositorySourceId === null) throw new Error(`Snapshot ${snapshot.publicId} is stored files, not a Git commit`);
-  return snapshot as CommitSnapshot;
-}
 
 export const LAUNCH_TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const OBJECT_ID = /^[0-9a-f]{40}$/;
@@ -124,37 +105,30 @@ export function listAssessments(db: Executor, initiativeId: number): Assessment[
   return db.select().from(assessments).where(eq(assessments.initiativeId, initiativeId)).orderBy(desc(assessments.createdAt), desc(assessments.id)).all();
 }
 
-/**
- * An Assessment's sequence number within its Initiative, counting from 1 in
- * creation order: "Assessment #3". Stable because Assessments are never
- * deleted; a change that adds deletion must persist the numbers first.
- */
+/** A Run's sequence number within its Assessment: "Run #3" (src/lib/db/sequence.ts). */
 export function assessmentNumber(db: Executor, assessment: Pick<Assessment, "id" | "initiativeId">): number {
-  return db.select({ value: count() }).from(assessments).where(and(eq(assessments.initiativeId, assessment.initiativeId), lte(assessments.id, assessment.id))).get()?.value ?? 0;
+  return sequenceNumber(db, assessments, assessment);
 }
 
-/** The sequence number of each of an Initiative's Assessments, by id. */
+/** The sequence number of each of an Initiative's Runs, by id. */
 export function assessmentNumbers(db: Executor, initiativeId: number): Map<number, number> {
-  const ids = db.select({ id: assessments.id }).from(assessments).where(eq(assessments.initiativeId, initiativeId)).orderBy(asc(assessments.id)).all();
-  return new Map(ids.map(({ id }, index) => [id, index + 1]));
+  return sequenceNumbers(db, assessments, initiativeId);
 }
 
 export function targetsOf(db: Executor, assessmentId: number): AssessmentTarget[] {
   return db.select().from(assessmentTargets).where(eq(assessmentTargets.assessmentId, assessmentId)).orderBy(asc(assessmentTargets.position)).all();
 }
 
+export function targetById(db: Executor, id: number): AssessmentTarget {
+  const target = db.select().from(assessmentTargets).where(eq(assessmentTargets.id, id)).get();
+  if (!target) throw new NotFoundError(`Assessment target ${id} does not exist`);
+  return target;
+}
+
 export function getTarget(db: Executor, publicId: string): AssessmentTarget {
   const target = db.select().from(assessmentTargets).where(eq(assessmentTargets.publicId, publicId)).get();
   if (!target) throw new NotFoundError(`Assessment target ${publicId} does not exist`);
   return target;
-}
-
-/** The detector configuration an Assessment recorded, verified against its digest. */
-export function configurationOf(assessment: Assessment): JsonObject {
-  if (sha256(assessment.configuration) !== assessment.configurationDigest) {
-    throw new Error(`Assessment ${assessment.publicId} configuration failed digest verification`);
-  }
-  return parseCanonical(assessment.configuration) as JsonObject;
 }
 
 export function targetReferenceLabel(target: Pick<AssessmentTarget, "gitRef">): string {
@@ -177,8 +151,7 @@ export function internalRefFor(snapshotPublicId: string): string {
 }
 
 /** Records the commit an acquiring target was pinned to. */
-export function recordSnapshot(db: Executor, copied: AssessmentTarget, input: SnapshotInput): CommitSnapshot {
-  const target = sourceTarget(copied);
+export function recordSnapshot(db: Executor, target: AssessmentTarget, input: SnapshotInput): SourceSnapshot {
   const issues = new IssueCollector();
   if (!OBJECT_ID.test(input.commitSha)) issues.add("commitSha", "Commit must be a 40-character lowercase object id");
   if (!OBJECT_ID.test(input.treeSha)) issues.add("treeSha", "Tree must be a 40-character lowercase object id");
@@ -206,16 +179,7 @@ export function recordSnapshot(db: Executor, copied: AssessmentTarget, input: Sn
       createdAt: now,
     })
     .returning()
-    .get() as CommitSnapshot;
-}
-
-/** A template target's stored files, verified against the digest they were stored under. */
-export function storedFilesOf(db: Executor, target: Pick<AssessmentTarget, "id" | "publicId" | "contentDigest">): Record<string, string> {
-  const row = db.select().from(storedFileSets).where(eq(storedFileSets.assessmentTargetId, target.id)).get();
-  if (!row) throw new NotFoundError(`Assessment target ${target.publicId} has no stored files`);
-  const files = parseCanonical(row.files) as Record<string, string>;
-  if (row.digest !== target.contentDigest || treeObjectId(files) !== row.digest) throw new Error(`The stored files of ${target.publicId} don't match their content digest`);
-  return files;
+    .get() as SourceSnapshot;
 }
 
 export function snapshotOf(db: Executor, targetId: number): SourceSnapshot | undefined {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { EvidenceList } from "@/components/results/evidence";
 import { ButtonLink } from "@/components/ui/button";
-import { countLabel } from "@/components/ui/count";
+import { countLabel, formatNumber } from "@/components/ui/count";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
@@ -74,7 +74,7 @@ export function FocusPanel({ focus, assessmentId, closeHref, pageHref }: { focus
 function RelationshipList({ title, empty, list, evidence, assessmentId, href }: { title: string; empty: string; list: FocusList; evidence: Focus["evidence"]; assessmentId: string; href: (page: number) => string }) {
   return (
     <section className={styles.list} aria-label={title}>
-      <h3 className={styles.listTitle}>{`${title} (${list.total.toLocaleString("en-US")})`}</h3>
+      <h3 className={styles.listTitle}>{`${title} (${formatNumber(list.total)})`}</h3>
       {list.total === 0 && <p className={styles.muted}>{empty}</p>}
       {list.groups.map((group) => (
         <div key={group.label} className={styles.group}>
@@ -119,7 +119,7 @@ function Declarations({ focus }: { focus: Focus }) {
   }
   return (
     <section className={styles.list} aria-label="Declared by">
-      <h3 className={styles.listTitle}>{`Declared by (${new Set(focus.declarations.map((row) => row.label)).size.toLocaleString("en-US")})`}</h3>
+      <h3 className={styles.listTitle}>{`Declared by (${formatNumber(new Set(focus.declarations.map((row) => row.label)).size)})`}</h3>
       {groups.map((group) => (
         <div key={group.label} className={styles.group}>
           <h4 className={styles.groupLabel}>{group.label}</h4>

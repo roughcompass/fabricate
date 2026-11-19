@@ -66,6 +66,7 @@ export async function runJob(db: Executor, job: Job, handlers: HandlerRegistry, 
  * The inline test queue: runs claimable jobs one at a time, oldest first,
  * until none remain or +limit+ jobs have run. Deterministic because it never
  * runs two jobs at once. Returns the processed jobs in order.
+ * @public Tests and end-to-end runs drain the queue through this.
  */
 export async function drainJobs(db: Executor, handlers: HandlerRegistry, options: { limit?: number; now?: () => Date } = {}): Promise<Job[]> {
   const processed: Job[] = [];

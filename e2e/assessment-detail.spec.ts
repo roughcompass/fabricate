@@ -4,11 +4,11 @@ import { manifest } from "../test/support/profiles";
 import { seedAssessment } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
 import { paths } from "./support/paths";
+import { pageHeader } from "./support/shell";
 
 const files = (name: string) => ({ "package.json": manifest({ name, version: "1.0.0" }) });
 
 // The page header: status, meta, and actions; the title is in the shell header.
-const header = (page: Page) => page.locator("[data-page-header]");
 const scope = (page: Page) => page.getByRole("table", { name: "Run scope" });
 
 async function expectLaidOut(page: Page) {
@@ -29,7 +29,7 @@ for (const viewport of [
 
     const complete = await seedAssessment(db, initiative, sources, [files("orders"), files("billing")]);
     await page.goto(paths.run(complete.publicId));
-    await expect(header(page)).toContainText("Complete");
+    await expect(pageHeader(page)).toContainText("Complete");
     await expect(page.getByRole("heading", { level: 1, name: "Run #1" })).toBeVisible();
     await expect(page).toHaveTitle("Run #1 · Fleet assessment · DE FabLab");
     // The status says it; no alert restates it.
@@ -42,7 +42,7 @@ for (const viewport of [
 
     const partial = await seedAssessment(db, initiative, sources, [files("orders"), "failed"]);
     await page.goto(paths.run(partial.publicId));
-    await expect(header(page)).toContainText("Complete with issues");
+    await expect(pageHeader(page)).toContainText("Complete with issues");
     await expect(page.getByText("1 of 2 repositories could not be assessed")).toBeVisible();
     const failedRow = scope(page).getByRole("row").filter({ hasText: "billing" });
     await expect(failedRow).toContainText("source_unavailable");
@@ -53,7 +53,7 @@ for (const viewport of [
 
     const failed = await seedAssessment(db, initiative, sources, ["failed", "failed"]);
     await page.goto(paths.run(failed.publicId));
-    await expect(header(page)).toContainText("Failed");
+    await expect(pageHeader(page)).toContainText("Failed");
     await expect(page.getByText("No repository could be assessed")).toBeVisible();
     await expect(scope(page).getByRole("row").filter({ hasText: "source_unavailable" })).toHaveCount(2);
     await expect(page.getByRole("link", { name: /Profile$/ })).toHaveCount(0);
@@ -61,7 +61,7 @@ for (const viewport of [
 
     const canceled = await seedAssessment(db, initiative, sources, [files("orders"), "canceled"], { cancel: true });
     await page.goto(paths.run(canceled.publicId));
-    await expect(header(page)).toContainText("Canceled");
+    await expect(pageHeader(page)).toContainText("Canceled");
     await expect(page.getByText("1 completed Profile remains reviewable.", { exact: false })).toBeVisible();
     await expect(page.getByRole("link", { name: "orders Profile" })).toBeVisible();
     await expect(scope(page).getByRole("row").filter({ hasText: "billing" })).toContainText("Canceled");
@@ -89,7 +89,7 @@ test("records a cancellation request for an active Assessment and keeps its scop
 
   // One message: the toast. The status shows Canceling, and no alert repeats the request.
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("Cancellation was requested.")).toBeVisible();
-  await expect(header(page)).toContainText("Canceling");
+  await expect(pageHeader(page)).toContainText("Canceling");
   await expect(page.locator("main").getByText(/[Cc]ancellation (was )?requested/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Cancel Run" })).toHaveCount(0);
 });

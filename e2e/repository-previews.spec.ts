@@ -7,8 +7,6 @@ import { SourceBoundary } from "../src/lib/catalog/source-boundary";
 import { type RepositorySource, insertSource } from "../src/lib/catalog/source-records";
 import type { Db } from "../src/lib/db/client";
 import { jobs, previewBuilds } from "../src/lib/db/schema";
-import { jobHandlers } from "../src/lib/jobs/registry";
-import { drainJobs } from "../src/lib/jobs/worker";
 import { requestPreparation } from "../src/lib/previews/preparation";
 import { BUILD_PREVIEW } from "../src/lib/previews/records";
 import { previewDirectory } from "../src/lib/previews/storage";
@@ -16,7 +14,7 @@ import { git } from "../test/support/git-fixture";
 import { FEDERATED_WORKSPACE, NEXT_APP, type Tree, offlineFederatedRemote, offlineSingleSpaBundle, offlineViteApp, offlineViteLibrary } from "../test/support/preview-trees";
 import { E2E_PREVIEWS, E2E_PREVIEW_REMOTES } from "./support/env";
 import { expect as baseExpect, gitRepo, test } from "./support/fixtures";
-import { serverConfig } from "./support/results";
+import { serverConfig, runJobs } from "./support/results";
 
 /*
  * Repository previews from the Repository page (openspec
@@ -36,7 +34,6 @@ const expect = baseExpect.configure({ timeout: 15_000 });
 test.setTimeout(120_000);
 
 const [ORDERS, PORTAL] = E2E_PREVIEW_REMOTES as [string, string];
-const runJobs = (db: Db) => drainJobs(db, jobHandlers(db, serverConfig()));
 const previews = (db: Db) => db.select().from(previewBuilds).all();
 const section = (page: Page) => page.getByRole("region", { name: "Previews" });
 const notifications = (page: Page) => page.getByRole("region", { name: "Notifications" });
@@ -300,7 +297,7 @@ test.describe("microfrontends", () => {
   test("previews a Module Federation remote through the page its build emits, like any other application", async ({ page, db, request }) => {
     const source = enrolled(db, PORTAL, offlineFederatedRemote());
     const preview = await built(db, source);
-    expect([preview.attemptState, preview.artifactLayout, JSON.parse(preview.artifactEntry!)]).toEqual(["ready", "standalone", { file: "index.html", rebase: false }]);
+    expect([preview.attemptState, preview.artifactLayout, preview.artifactEntry]).toEqual(["ready", "standalone", { file: "index.html", rebase: false }]);
     const base = `/previews/${preview.publicId}/`;
 
     await page.goto(previewPage(source, preview));

@@ -1,13 +1,11 @@
 import type { Page } from "@playwright/test";
 import { buildInitiative } from "../test/support/builders";
 import { expect, test } from "./support/fixtures";
-import { waitForHydration } from "./support/shell";
+import { waitForHydration, toasts } from "./support/shell";
 import { paths } from "./support/paths";
 
 /** The feedback infrastructure, exercised through the component gallery's demos. */
 
-const notifications = (page: Page) => page.getByRole("region", { name: "Notifications" });
-const toasts = (page: Page) => notifications(page).getByRole("listitem");
 const demo = (page: Page) => page.locator("[data-toast-demo]");
 
 test.describe("toasts", () => {

@@ -12,6 +12,7 @@ import { drainJobs } from "../../src/lib/jobs/worker";
 import { profileDocument, profilesOf } from "../../src/lib/profiles/profile-records";
 import { FLEET_DATABASE, FLEET_ENV, FLEET_ROOT } from "./env";
 import { paths } from "../support/paths";
+import { pageHeader } from "../support/shell";
 
 /**
  * The synthetic fleet, assessed and evaluated through the product: import the
@@ -28,7 +29,6 @@ const REPOSITORIES = ["acme-platform", "legacy-portal", "mf-admin", "mf-billing"
 const ANALYTICS_CONSUMERS = ["mf-admin", "mf-billing", "mf-shell", "spa-orders", "spa-reports", "spa-root"];
 
 // The page header: status, meta, and actions; the title is in the shell header.
-const header = (page: Page) => page.locator("[data-page-header]");
 const toast = (page: Page, text: string | RegExp) => page.getByRole("region", { name: "Notifications" }).getByText(text);
 const control = (page: Page, number: number) => page.getByRole("region", { name: new RegExp(`^Control ${number}\\b`) });
 const builder = (scope: ReturnType<typeof control>, legend: string) => scope.getByRole("group", { name: legend, exact: true });
@@ -76,7 +76,7 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await page.getByRole("button", { name: "Start Run" }).click();
     await expect(toast(page, "Run #1 was started.")).toBeVisible();
     await run();
-    await expect(header(page)).toContainText("Complete");
+    await expect(pageHeader(page)).toContainText("Complete");
     const assessment = listAssessments(db, listInitiatives(db)[0]!.id)[0]!;
     expect(targetsOf(db, assessment.id).map((target) => [target.sourceName, target.state]).sort()).toEqual(REPOSITORIES.map((name) => [name, "complete"]));
   });
@@ -167,7 +167,7 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await page.getByRole("table", { name: "Run history" }).getByRole("button", { name: "Start Evaluation" }).click();
     await expect(toast(page, "Evaluation #1 was started.")).toBeVisible();
     await run();
-    await expect(header(page)).toContainText("Complete");
+    await expect(pageHeader(page)).toContainText("Complete");
     await expect(page.getByRole("table", { name: "Summary by Release" }).locator("tbody tr")).toHaveCount(2);
   });
 

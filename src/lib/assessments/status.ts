@@ -1,9 +1,14 @@
-import { dump, sha256 } from "@repo-facts/contract";
+import { type JsonValue, dump, sha256 } from "@repo-facts/contract";
 import type { Executor } from "@/lib/db/client";
 import { ASSESSMENT_MACHINE, EVALUATION_MACHINE, EVALUATION_RELEASE_MACHINE, TARGET_MACHINE, isTerminal } from "@/lib/db/state-machines";
 import { type Evaluation, evaluationReleasesOf, listEvaluations } from "@/lib/evaluations/evaluation-records";
 import { profilesOf } from "@/lib/profiles/profile-records";
 import { type Assessment, targetsOf } from "./assessment-records";
+
+/** A short digest of +value+ that changes whenever it does, so a page polling for progress knows when to refresh. */
+export function statusVersion(value: JsonValue): string {
+  return sha256(dump(value)).slice(0, 16);
+}
 
 /**
  * Compact progress payloads for pages that poll while work is running. They
@@ -30,7 +35,7 @@ export function assessmentStatus(db: Executor, assessment: Assessment): Assessme
     targets: targets.map(({ terminal: _terminal, ...target }) => target),
     evaluations,
   };
-  return { version: sha256(dump(body)).slice(0, 16), ...body };
+  return { version: statusVersion(body), ...body };
 }
 
 export interface EvaluationStatus {
@@ -47,5 +52,5 @@ export function evaluationStatus(db: Executor, evaluation: Evaluation): Evaluati
     evaluation: { id: evaluation.publicId, state: evaluation.state },
     releases: releases.map(({ terminal: _terminal, ...release }) => release),
   };
-  return { version: sha256(dump(body)).slice(0, 16), ...body };
+  return { version: statusVersion(body), ...body };
 }

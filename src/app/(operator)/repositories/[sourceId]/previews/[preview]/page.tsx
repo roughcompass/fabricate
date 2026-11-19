@@ -11,7 +11,8 @@ import { formatBytes } from "@/components/ui/count";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -29,13 +30,11 @@ import { type PreviewBuild, settleAbandonedAttempts } from "@/lib/previews/recor
 import { previewBasePath } from "@/lib/previews/toolchain";
 import { packageLabel, refLabel } from "@/lib/previews/views";
 import { DEVICES, ORIENTATION_LABELS, deviceQuery, frameSize, parseDeviceState } from "@/lib/web/device-preview";
-import { previewPageHref, repositoryHref } from "@/lib/web/repository-paths";
 import { PREVIEW_OUTCOME_PARAMS, previewOutcome } from "../../../outcomes";
 import { deletePreviewAction, rebuildPreview } from "../../../preview-actions";
 import { BuildLog } from "./build-log";
 import styles from "./preview.module.css";
-
-type Params = Record<string, string | string[] | undefined>;
+import { routes } from "@/lib/web/routes";
 
 /** The preview, while its page may be shown: previews on, the preview undeleted, its remote enrolled, and of this Repository. Attempts whose jobs died are settled first. */
 const load = cache((sourceId: string, previewId: string) => {
@@ -45,7 +44,7 @@ const load = cache((sourceId: string, previewId: string) => {
   return opened && opened.source.publicId === sourceId ? opened : null;
 });
 
-export async function generateMetadata({ params }: { params: Promise<{ sourceId: string; preview: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/repositories/[sourceId]/previews/[preview]">): Promise<Metadata> {
   const { sourceId, preview } = await params;
   const opened = load(sourceId, preview);
   return { title: opened ? `Preview ${packageLabel(opened.preview)} · ${opened.source.name}` : "Preview not found" };
@@ -66,7 +65,7 @@ const MICROFRONTEND_LABELS = { module_federation: "A Module Federation remote, s
  * page its own build emitted, like any other application. The device and
  * orientation live in the address.
  */
-export default async function RepositoryPreviewPage({ params, searchParams }: { params: Promise<{ sourceId: string; preview: string }>; searchParams: Promise<Params> }) {
+export default async function RepositoryPreviewPage({ params, searchParams }: PageProps<"/repositories/[sourceId]/previews/[preview]">) {
   const [{ sourceId, preview: previewId }, query] = await Promise.all([params, searchParams]);
   const opened = load(sourceId, previewId);
   if (!opened) notFound();
@@ -77,12 +76,12 @@ export default async function RepositoryPreviewPage({ params, searchParams }: { 
   const name = packageLabel(preview);
   const ref = refLabel(preview);
   const live = preview.attemptState === "queued" || preview.attemptState === "building";
-  const entry = preview.artifactEntry === null ? null : (JSON.parse(preview.artifactEntry) as ArtifactEntry);
+  const entry = preview.artifactEntry === null ? null : (preview.artifactEntry as unknown as ArtifactEntry);
   const log = await readLogChunk(getConfig(), preview);
 
   return (
     <Page>
-      <ShellHeader title={`Preview ${name}`} back={{ href: `${repositoryHref(source.publicId)}#previews`, label: `Back to ${source.name}` }} />
+      <ShellHeader title={`Preview ${name}`} back={{ href: `${routes.repository(source.publicId)}#previews`, label: `Back to ${source.name}` }} />
       <OutcomeToast outcome={previewOutcome(getDb(), param(query, "notice"), preview.publicId)} strip={PREVIEW_OUTCOME_PARAMS} />
 
       <div className={styles.workspace}>
@@ -127,7 +126,7 @@ export default async function RepositoryPreviewPage({ params, searchParams }: { 
         {preview.artifact ? (
           <PreviewScale>
             <div className={styles.controls}>
-              <DeviceControls action={previewPageHref(source.publicId, preview.publicId)} state={device} fullScreen={{ href: base, prefix: base, withQuery: true }} />
+              <DeviceControls action={routes.repositoryPreview(source.publicId, preview.publicId)} state={device} fullScreen={{ href: base, prefix: base, withQuery: true }} />
             </div>
             <DeviceFrame
               key={`${device.device}-${device.orientation}-${preview.artifact}`}
@@ -215,7 +214,7 @@ function NothingPublished({ state }: { state: PreviewBuild["attemptState"] }) {
 
 /** How the published output was built, and the preview's identifiers. */
 function details(preview: PreviewBuild, base: string): [React.ReactNode, React.ReactNode][] {
-  const plan = (JSON.parse(preview.decidingFacts) as PackageVerdict).plan;
+  const plan = (preview.decidingFacts as unknown as PackageVerdict).plan;
   return [
     ["Package", <Tag key="package">{preview.packageDir}</Tag>],
     ...(plan

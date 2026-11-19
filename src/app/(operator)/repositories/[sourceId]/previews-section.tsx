@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ProgressPoller } from "@/components/progress-poller";
 import { ActionButton } from "@/components/ui/button";
-import { countLabel, formatBytes } from "@/components/ui/count";
+import { countLabel, formatBytes, formatNumber } from "@/components/ui/count";
 import { Disclosure } from "@/components/ui/disclosure";
-import { param } from "@/components/ui/outcome-toast";
+import { pageNumber, param } from "@/lib/web/query";
 import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -19,10 +19,10 @@ import type { BuildPlan, BuildTool, Condition, ConditionId, DecidingFact, Packag
 import { type PreviewBuild, type PreviewPreparation, preparationPackages, preparationRefusal } from "@/lib/previews/records";
 import type { RefListing } from "@/lib/previews/refs";
 import { listPreviews, packageLabel, preparationOf, previewActivity, previewCount, previewsOfCommit, refLabel, remoteRefsFor, settlePreviewWork } from "@/lib/previews/views";
-import { previewPageHref, repositoryHref } from "@/lib/web/repository-paths";
 import { buildPreview, preparePreview } from "../preview-actions";
 import { PrepareForm } from "./prepare-form";
 import styles from "./previews.module.css";
+import { routes } from "@/lib/web/routes";
 
 /** Previews in the list per page; the page is in the address as previews_page. */
 const PAGE_SIZE = 20;
@@ -54,9 +54,7 @@ export async function PreviewsSection({ source, query }: { source: RepositorySou
   settlePreviewWork(db);
   const preparation = preparationOf(db, source, param(query, "preparation"));
   const total = previewCount(db, source);
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const requested = Number.parseInt(param(query, "previews_page") ?? "1", 10);
-  const page = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), pages) : 1;
+  const { page, pages } = pageNumber(param(query, "previews_page"), total, PAGE_SIZE);
   const previews = listPreviews(db, source, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
   const activity = previewActivity(db, source, preparation?.publicId);
   const listing = await remoteRefsFor(config, source);
@@ -64,7 +62,7 @@ export async function PreviewsSection({ source, query }: { source: RepositorySou
     const params = new URLSearchParams();
     if (preparation) params.set("preparation", preparation.publicId);
     if (number > 1) params.set("previews_page", String(number));
-    return `${repositoryHref(source.publicId)}${params.size ? `?${params}` : ""}#previews`;
+    return `${routes.repository(source.publicId)}${params.size ? `?${params}` : ""}#previews`;
   };
 
   return (
@@ -100,7 +98,7 @@ function refChoice(listing: RefListing): { options: React.ComponentProps<typeof 
     listing.unavailable !== null
       ? `The remote's other branches and tags couldn't be listed: ${listing.unavailable}`
       : others.length > shown.length
-        ? `The first ${shown.length.toLocaleString("en-US")} of ${others.length.toLocaleString("en-US")} other branches and tags are listed. Enter a commit for any other.`
+        ? `The first ${formatNumber(shown.length)} of ${formatNumber(others.length)} other branches and tags are listed. Enter a commit for any other.`
         : undefined;
   return { options: [configured, ...group("branch", "Branches"), ...group("tag", "Tags")], note };
 }
@@ -158,7 +156,7 @@ function PreparationPanel({ source, preparation }: { source: RepositorySource; p
                 {preview ? (
                   <span className={styles.previewState}>
                     <Status state={preview.attemptState} size="sm" />
-                    <Link href={previewPageHref(source.publicId, preview.publicId)}>Open preview</Link>
+                    <Link href={routes.repositoryPreview(source.publicId, preview.publicId)}>Open preview</Link>
                   </span>
                 ) : (
                   <ActionButton action={buildPreview} fields={{ source: source.publicId, preparation: preparation.publicId, package: verdict.directory }} size="sm" icon="play" aria-label={`Build preview of ${verdict.name ?? verdict.directory}`}>
@@ -294,7 +292,7 @@ function PreviewTable({ source, previews }: { source: RepositorySource; previews
           <tr key={preview.publicId}>
             <Td label="Package">
               <Primary>
-                <Link href={previewPageHref(source.publicId, preview.publicId)}>{packageLabel(preview)}</Link>
+                <Link href={routes.repositoryPreview(source.publicId, preview.publicId)}>{packageLabel(preview)}</Link>
               </Primary>
               <Secondary>
                 Created <RelativeTime value={preview.createdAt} />

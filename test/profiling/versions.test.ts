@@ -10,8 +10,8 @@ import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { JOB_PRIORITIES, jobs } from "@/lib/db/schema";
-import { PROFILING_INITIATIVE_ID, listInitiatives, profilingInitiative, updateReleaseSelections } from "@/lib/initiatives/initiative-records";
-import { currentVersion, findVersion, profileSummaries, profilingActivity, queueProfile, versionCount, versionOfAssessment, versionsOf } from "@/lib/profiling/versions";
+import { PROFILING_INITIATIVE_ID, getInitiative, listInitiatives, updateInitiative } from "@/lib/initiatives/initiative-records";
+import { findVersion, profileSummaries, profilingActivity, queueProfile, repositoryProfiling, versionCount, versionOfAssessment, versionsOf } from "@/lib/profiling/versions";
 import { buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { GitFixture } from "../support/git-fixture";
@@ -38,7 +38,7 @@ describe("profile versions", () => {
     expect(result.status).toBe("queued");
     const version = (result as { version: ReturnType<typeof versionsOf>[number] }).version;
     expect(version).toMatchObject({ version: 1, trigger: "imported", headCommit: null, profile: null, commit: null, failure: null });
-    expect(version.assessment.initiativeId).toBe(profilingInitiative(db).id);
+    expect(version.assessment.initiativeId).toBe(getInitiative(db, PROFILING_INITIATIVE_ID).id);
     expect(targetsOf(db, version.assessment.id).map((target) => [target.sourcePublicId, target.gitRef])).toEqual([[orders.publicId, orders.gitRef]]);
     expect(db.select().from(jobs).all().map((job) => [job.kind, job.priority])).toEqual([["assessment.coordinate", JOB_PRIORITIES.background]]);
     expect(versionOfAssessment(db, version.assessment.id)).toEqual({ version: 1, sourcePublicId: orders.publicId, sourceName: "orders" });
@@ -78,13 +78,13 @@ describe("profile versions", () => {
       [1, "complete", true, null],
     ]);
     expect(versions[2]!.commit).toMatch(/^[0-9a-f]{40}$/);
-    expect(currentVersion(db, orders.id)?.version).toBe(1);
+    expect(repositoryProfiling(db, orders.id)).toMatchObject({ current: { version: 1 }, latest: { version: 3 }, count: 3 });
     expect(findVersion(db, orders.id, 2)?.failure?.message).toBe("The repository could not be reached");
     expect(findVersion(db, orders.id, 4)).toBeUndefined();
     expect(findVersion(db, orders.id, 0)).toBeUndefined();
   });
 
-  it("summarizes every repository's newest and current versions in one read", async () => {
+  it("summarizes every repository's newest version and current Profile in two reads", async () => {
     const ledger = buildSource(db, { name: "ledger" });
     buildSource(db, { name: "billing" });
     queueProfile(db, orders, "imported");
@@ -94,8 +94,8 @@ describe("profile versions", () => {
 
     const summaries = profileSummaries(db);
     expect(summaries.size).toBe(2);
-    expect(summaries.get(orders.id)).toMatchObject({ latest: { version: 2, state: "queued" }, current: { version: 1 } });
-    expect(summaries.get(ledger.id)).toMatchObject({ latest: { version: 1, state: "queued" }, current: null });
+    expect(summaries.get(orders.id)).toMatchObject({ latest: { version: 2, state: "queued", profiled: false }, current: { version: 1, profilePublicId: expect.stringMatching(/^prf_/) } });
+    expect(summaries.get(ledger.id)).toMatchObject({ latest: { version: 1, state: "queued", profiled: false }, current: null });
   });
 
   it("counts what is being profiled and what waits, and changes its version as each one moves", async () => {
@@ -137,10 +137,9 @@ describe("the Repository profiling initiative", () => {
   });
 
   it("stays out of the operator's Assessments and keeps its name, scope, and empty Releases", () => {
-    const initiative = profilingInitiative(db);
+    const initiative = getInitiative(db, PROFILING_INITIATIVE_ID);
     expect(listInitiatives(db).map((item) => item.publicId)).not.toContain(PROFILING_INITIATIVE_ID);
-    expect(listInitiatives(db, { systemOwned: true }).map((item) => item.publicId)).not.toContain(PROFILING_INITIATIVE_ID);
-    expect(() => updateReleaseSelections(db, PROFILING_INITIATIVE_ID, initiative.lockVersion, [])).toThrow(/can't change/);
+    expect(() => updateInitiative(db, PROFILING_INITIATIVE_ID, initiative.lockVersion, { name: initiative.name, selectionMode: "all" })).toThrow(/can't change/);
     expect(() => rawRun(db, "update initiatives set name = 'Mine' where public_id = ?", PROFILING_INITIATIVE_ID)).toThrow(/keeps its name/);
     expect(() => rawRun(db, "delete from initiatives where public_id = ?", PROFILING_INITIATIVE_ID)).toThrow(/retained/);
     expect(() => rawRun(db, "insert into initiative_targets (initiative_id, repository_source_id, created_at) values (?, ?, 0)", initiative.id, buildSource(db).id)).toThrow(/names its own repository/);

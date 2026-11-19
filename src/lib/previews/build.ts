@@ -8,7 +8,7 @@ import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { previewBuilds, repositorySources } from "@/lib/db/schema";
 import { GitError } from "@/lib/git/errors";
-import { redact } from "@/lib/git/redact";
+import { failureText } from "@/lib/git/redact";
 import { GitRunner } from "@/lib/git/runner";
 import { isEnrolled } from "./access";
 import { type PackageVerdict, selectNode } from "./eligibility";
@@ -19,6 +19,7 @@ import { type AttemptIdentity, type PreviewBuild, type PublishedArtifact, claimA
 import { previewPinRef } from "./refs";
 import { type ClaimFiles, cacheDirectory, claimFiles, previewDirectory, publishedDirectory } from "./storage";
 import { type Invocation, baseAdapter, buildArguments, buildEnvironment, cacheCleanArguments, inheritedConfigFiles, installArguments, managerCommand, previewBasePath, shimCommand, usesCorepack } from "./toolchain";
+import { countLabel } from "@/components/ui/count";
 
 /**
  * Runs one `preview.build` job (design decisions 4, 8, and 9): one worker
@@ -91,7 +92,7 @@ export async function runPreviewBuild(db: Executor, job: BuildJob, options: Buil
     log = await AttemptLog.open(files.log);
   } catch (error) {
     // Without storage the attempt can't run anywhere; retrying the job wouldn't help.
-    const reason = `The build couldn't start in ${config.previews.storage}: ${error instanceof Error ? error.message : String(error)}`;
+    const reason = `The build couldn't start in ${config.previews.storage}: ${failureText(error)}`;
     return failAttempt(db, preview.publicId, claimed ? identity : { attempt: job.attempt }, reason) ? "failed" : "skipped";
   }
   try {
@@ -122,7 +123,7 @@ export async function runPreviewBuild(db: Executor, job: BuildJob, options: Buil
       log.step("stopped", String((options.signal.reason as Error | undefined)?.message ?? "The job was stopped"));
       throw error;
     }
-    const reason = error instanceof BuildFailure ? error.message : `The build stopped unexpectedly: ${redact(error instanceof Error ? error.message : String(error))}`;
+    const reason = error instanceof BuildFailure ? error.message : `The build stopped unexpectedly: ${failureText(error)}`;
     log.step("failed", reason);
     await log.close();
     return failAttempt(db, claimed.publicId, identity, reason) ? "failed" : "superseded";
@@ -151,8 +152,8 @@ async function build(context: BuildContext): Promise<PublishedArtifact> {
   const { config, preview, files, log, signal } = context;
   const started = Date.now();
   const deadline = started + config.previews.timeoutMinutes * 60_000;
-  const limit = `Build exceeded ${config.previews.timeoutMinutes} ${config.previews.timeoutMinutes === 1 ? "minute" : "minutes"}`;
-  const verdict = JSON.parse(preview.decidingFacts) as PackageVerdict;
+  const limit = `Build exceeded ${countLabel(config.previews.timeoutMinutes, "minute")}`;
+  const verdict = preview.decidingFacts as unknown as PackageVerdict;
   const plan = verdict.plan;
   if (!plan) throw new BuildFailure(`${preview.packageDir} has no build plan`);
   log.line(`Preview ${preview.publicId}, attempt ${preview.attempt}: ${preview.packageDir} at ${preview.commitSha}${preview.refName ? ` (${preview.refName})` : ""}`);
@@ -170,7 +171,7 @@ async function build(context: BuildContext): Promise<PublishedArtifact> {
   } catch (error) {
     if (error instanceof GitError && error.code === "timeout") throw new BuildFailure(limit);
     if (error instanceof BuildFailure || signal?.aborted) throw error;
-    throw new BuildFailure(`The commit couldn't be extracted: ${redact(error instanceof Error ? error.message : String(error))}`);
+    throw new BuildFailure(`The commit couldn't be extracted: ${failureText(error)}`);
   }
 
   // 2. Choose Node again, under the settings the build runs with.
@@ -277,7 +278,7 @@ async function pruneCache(context: BuildContext, clean: { command: Invocation; e
   try {
     result = await runCommand({ ...clean.command, cwd: files.home, env: clean.env, output: log.output, deadline: Math.min(clean.deadline, Date.now() + CACHE_CLEAN_MS), signal });
   } catch (error) {
-    log.line(`The caches weren't pruned: ${error instanceof Error ? error.message : String(error)}.`);
+    log.line(`The caches weren't pruned: ${failureText(error)}.`);
     return;
   }
   if (result.outcome === "aborted") throw (signal?.reason as Error | undefined) ?? new Error("The build was stopped");

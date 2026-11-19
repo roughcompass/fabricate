@@ -1,23 +1,20 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { GroupRelationships, GroupTable, SharedList } from "@/components/relationships/map-lists";
 import { StatGroup } from "@/components/ui/stat-group";
 import { href, runLevel } from "@/lib/relationships/levels";
-import { loadRun, mapTitle } from "./load";
+import { loadMap, loadMapLevel, mapTitle } from "./load";
 import { MapLevel, NoMap } from "./map-level";
 
-export async function generateMetadata({ params }: { params: Promise<{ assessmentId: string }> }): Promise<Metadata> {
-  return { title: mapTitle(loadRun((await params).assessmentId)) };
+export async function generateMetadata({ params }: PageProps<"/runs/[assessmentId]/map">): Promise<Metadata> {
+  return { title: mapTitle(loadMap((await params).assessmentId)) };
 }
 
-/** The Run level: each Line of Business, and Unassigned, with the relationships between them. */
-export default async function MapPage({ params, searchParams }: { params: Promise<{ assessmentId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+/** The Run level: each runtime system, and each repository on its own, with the relationships between them. */
+export default async function MapPage({ params, searchParams }: PageProps<"/runs/[assessmentId]/map">) {
   const [{ assessmentId }, query] = await Promise.all([params, searchParams]);
-  const run = loadRun(assessmentId);
-  if (!run) notFound();
-  const { view } = run;
-  if (!view) return <NoMap run={run} />;
-  const level = runLevel(run.db, view);
+  const found = loadMapLevel(assessmentId, (run, view) => runLevel(run.db, view));
+  if (!found.view) return <NoMap run={found.run} />;
+  const { run, view, level } = found;
 
   return (
     <MapLevel
@@ -25,8 +22,7 @@ export default async function MapPage({ params, searchParams }: { params: Promis
       view={view}
       query={query}
       title="Relationship Map"
-      ancestors={[]}
-      description="This Run's repositories by Line of Business, then portal and application, with the relationships between them. Open a group to go down a level, or focus a repository to see what a change to it affects."
+      description="This Run's repositories by runtime system, with the relationships between them. Open a system to see its diagram, or focus a repository to see what a change to it affects."
       levelHref={href.run(view)}
       scope={{ kind: "from", nodes: new Set(view.repositories.keys()) }}
       scopeDescription="Every relationship in this Run, from the repository that declared each one."
@@ -35,12 +31,11 @@ export default async function MapPage({ params, searchParams }: { params: Promis
         label="This Run"
         stats={[
           { label: "Repositories", value: level.total },
-          { label: "Lines of Business", value: level.groups.filter((group) => group.key.startsWith("lob:")).length },
-          { label: "Portals", value: view.portals.size },
-          { label: "Unassigned", value: level.groups.find((group) => group.key === "unassigned")?.repositories ?? 0, href: href.unassigned(view) },
+          { label: "Runtime systems", value: level.groups.filter((group) => group.repositories > 1).length },
+          { label: "On their own", value: level.groups.filter((group) => group.repositories === 1).length },
         ]}
       />
-      <GroupTable title="Lines of Business" description="Each Line of Business with its repositories, including those that appear in its portals from other Lines of Business." label="Line of Business" groups={level.groups} empty="No repositories" />
+      <GroupTable title="Runtime systems" description="Repositories tied together by composition, iframe, or a runtime contract, and each repository on its own." label="Runtime system" groups={level.groups} empty="No repositories" />
       <GroupRelationships relationships={level.relationships} description="Relationships between repositories in different groups, rolled up. Relationships inside a group are counted with it." />
       <SharedList entries={level.shared} />
     </MapLevel>

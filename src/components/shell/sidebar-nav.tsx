@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useEffect } from "react";
 import { Icon } from "@/components/ui/icon";
-import { HOME, type MenuGroup, type NavFlags, homeLink, locate, visibleGroups } from "./navigation";
+import { type NavFlags, locate, visibleGroups } from "./navigation";
 import { SIDEBAR_ID } from "./shell-header";
 import styles from "./sidebar-nav.module.css";
 
@@ -14,12 +14,6 @@ export function closeDrawer(): void {
   if (drawer?.matches(":popover-open")) drawer.hidePopover();
 }
 
-/** The groups shown, without Home where links to Home lead elsewhere. */
-function shownGroups(nav: NavFlags): readonly MenuGroup[] {
-  const groups = visibleGroups(nav);
-  const showHome = homeLink(groups).href === HOME.href;
-  return groups.map((group) => ({ ...group, items: group.items.filter((item) => item.id !== HOME.id || showHome) }));
-}
 
 /**
  * The sidebar's navigation (operator-interface/page-patterns spec). The
@@ -51,7 +45,7 @@ export function SidebarNav({ nav }: { nav: NavFlags }) {
       }}
     >
       <div className={styles.menu}>
-        {shownGroups(nav).map((group, index) => {
+        {visibleGroups(nav).map((group, index) => {
           const headingId = `sidebar-group-${group.id}`;
           return (
             <Fragment key={group.id}>

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { HtmlRebaser, rebaseHtml, rebaseHtmlStream } from "@/lib/previews/rebase";
+import { HtmlRebaser, rebaseHtmlStream } from "@/lib/previews/rebase";
+
+/** +html+ rebased under +base+, all at once. */
+function rebaseHtml(html: string, base: string): string {
+  const rebaser = new HtmlRebaser(base);
+  return rebaser.push(html) + rebaser.end();
+}
 
 /*
  * The serve-time index.html rewrite (design decision 6, spec "Standalone HTML

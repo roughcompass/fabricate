@@ -6,41 +6,34 @@ import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Menu, MenuAction, MenuItem } from "@/components/ui/menu";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param, searchTerm } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { Status, humanize } from "@/components/ui/status";
 import { SearchField } from "@/components/ui/search-field";
-import { Select } from "@/components/ui/form";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
 import { assessmentCounts } from "@/lib/catalog/catalog";
 import { listSources, sourceReferenceLabel } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
-import { isOwnershipFilter, ownershipFilterOf } from "@/lib/ownership/coverage";
-import { type RepositoryOwnership, repositoryOwnership } from "@/lib/ownership/read";
-import { applicationLabel } from "@/lib/ownership/records";
 import { type ProfileSummary, ACTIVE_STATES, profileSummaries, profilingActivity } from "@/lib/profiling/versions";
 import { repositoriesHref } from "@/lib/web/list-filters";
-import { repositoryHref, settingsHref, versionHref } from "@/lib/web/repository-paths";
 import { reprofileSource } from "./actions";
 import styles from "./list.module.css";
 import { sourceOutcome } from "./outcomes";
+import { routes } from "@/lib/web/routes";
 
 export const metadata: Metadata = { title: "Repositories" };
 
-export default async function SourcesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function SourcesPage({ searchParams }: PageProps<"/repositories">) {
   const query = await searchParams;
-  const ownership = isOwnershipFilter(query.ownership) ? query.ownership : null;
-  const search = (param(query, "q") ?? "").trim().slice(0, 200);
+  const search = searchTerm(query);
   const db = getDb();
   const all = listSources(db);
-  // Ownership is read once for every Repository, in a few queries, as Home's figures count it.
-  const owned = repositoryOwnership(db, all.map((source) => source.id));
   const needle = search.toLowerCase();
-  const searched = needle ? all.filter((source) => source.name.toLowerCase().includes(needle) || source.cloneUrl.toLowerCase().includes(needle)) : all;
-  const sources = ownership ? searched.filter((source) => ownershipFilterOf(owned.get(source.id)) === ownership) : searched;
+  const sources = needle ? all.filter((source) => source.name.toLowerCase().includes(needle) || source.cloneUrl.toLowerCase().includes(needle)) : all;
   const counts = assessmentCounts(db);
   const profiles = profileSummaries(db);
   const activity = profilingActivity(db);
@@ -58,7 +51,6 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
         description="Git repositories available to Assessments, each profiled in the background whenever it changes. Edits apply to Runs started afterward."
         secondaryActions={[
           { href: "/repositories/bulk", label: "Add in bulk", icon: "layers" },
-          { href: "/repositories/claim", label: "Claim a Repository", icon: "user" },
         ]}
         primaryAction={create}
         alerts={<OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"))} />}
@@ -66,20 +58,8 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
 
       <div className={styles.toolbar}>
         <p className={styles.count}>{countLabel(sources.length, "Repository", "Repositories")}{sources.length !== all.length ? ` of ${all.length}` : ""}</p>
-        <FilterBar key={`${search}|${ownership}`} action="/repositories" label="Search and filter Repositories" filtered={Boolean(search || ownership)} clearHref={repositoriesHref()}>
-          <Select
-            id="source-ownership"
-            name="ownership"
-            label="Ownership"
-            size="sm"
-            defaultValue={ownership ?? ""}
-            options={[
-              { value: "", label: "Any ownership" },
-              { value: "claimed", label: "Claimed" },
-              { value: "unclaimed", label: "Unclaimed" },
-            ]}
-          />
-          <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref({ ownership })} />
+        <FilterBar key={search} action="/repositories" label="Search Repositories" filtered={Boolean(search)} clearHref={repositoriesHref()}>
+          <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref()} />
         </FilterBar>
       </div>
 
@@ -102,7 +82,6 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
               <>
                 <Th>Name</Th>
                 <Th>Reference</Th>
-                <Th>SEAL</Th>
                 <Th>Profile</Th>
                 <Th align="numeric">Runs</Th>
                 <Th align="actions" hidden>
@@ -115,7 +94,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
               <tr key={source.publicId} id={source.publicId}>
                 <Td label="Name">
                   <Primary>
-                    <Link href={repositoryHref(source.publicId)}>{source.name}</Link>
+                    <Link href={routes.repository(source.publicId)}>{source.name}</Link>
                   </Primary>
                   <Secondary>
                     <span className={styles.cloneUrl}>
@@ -126,9 +105,6 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                   </Secondary>
                 </Td>
                 <Td label="Reference">{source.gitRef ? <Tag>{source.gitRef}</Tag> : <Secondary>{humanize(sourceReferenceLabel(source))}</Secondary>}</Td>
-                <Td label="SEAL">
-                  <SealApplication ownership={owned.get(source.id)} />
-                </Td>
                 <Td label="Profile">
                   <ProfileCell sourcePublicId={source.publicId} summary={profiles.get(source.id)} />
                 </Td>
@@ -141,7 +117,7 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
                       <MenuAction action={reprofileSource} fields={{ publicId: source.publicId, from: "list" }} icon="refresh">
                         Re-profile
                       </MenuAction>
-                      <MenuItem href={settingsHref(source.publicId)} icon="settings">
+                      <MenuItem href={routes.repositorySettings(source.publicId)} icon="settings">
                         Settings
                       </MenuItem>
                     </Menu>
@@ -152,8 +128,6 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
           </Table>
         ) : search ? (
           <EmptyState title="No matching Repositories" icon="search">{`No Repository name or clone URL contains “${search}”.`}</EmptyState>
-        ) : ownership ? (
-          <EmptyState title={`No ${ownership} Repositories`}>{ownership === "unclaimed" ? "Every Repository listed here has a SEAL application." : "Claim a Repository to record the SEAL application it belongs to."}</EmptyState>
         ) : (
           <EmptyState
             title="No Repositories yet"
@@ -175,22 +149,6 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
   );
 }
 
-/** A Repository's effective SEAL application, marked when people's claims disagree, or "Unclaimed". */
-function SealApplication({ ownership }: { ownership: RepositoryOwnership | undefined }) {
-  const application = ownership?.application;
-  if (!application?.value) return <Secondary>Unclaimed</Secondary>;
-  return (
-    <>
-      {applicationLabel(application.value)}
-      {application.conflict && (
-        <Secondary>
-          <Status state="conflicting" label="In conflict" size="sm" />
-        </Secondary>
-      )}
-    </>
-  );
-}
-
 /**
  * A Repository's profile in the list. While a version is being profiled or
  * waits its turn, that leads, with a pulsing indicator for profiling; the
@@ -201,11 +159,13 @@ function ProfileCell({ sourcePublicId, summary }: { sourcePublicId: string; summ
   if (!summary) return <Secondary>Queued</Secondary>;
   const { latest, current } = summary;
   const pending = (ACTIVE_STATES as readonly string[]).includes(latest.state);
-  const failed = !pending && latest.version !== current?.version;
-  // The current version and when it was profiled, each on its own row.
+  // The newest version failed after the current Profile was written.
+  const failed = !pending && !latest.profiled && (!current || latest.createdAt > current.profiledAt);
+  // The current Profile, by its version or as an Assessment Run's, and when it was written.
+  const currentLink = current && (current.version ? <Link href={routes.repositoryVersion(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link> : <Link href={routes.profile(current.profilePublicId)}>Assessment Run</Link>);
   const currentRows = current && (
     <>
-      <Link href={versionHref(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link>
+      {currentLink}
       <Secondary>
         <RelativeTime value={current.profiledAt} />
       </Secondary>
@@ -216,11 +176,9 @@ function ProfileCell({ sourcePublicId, summary }: { sourcePublicId: string; summ
       <span data-profiling={latest.state === "queued" ? "queued" : "profiling"}>
         <Status state={latest.state} label={latest.state === "queued" ? `Version ${latest.version} queued` : `Profiling version ${latest.version}`} />
         {/* A version writes its Profile just before its Run finishes; until then it's shown once, as profiling. */}
-        {current && current.version !== latest.version && (
+        {current && (
           <>
-            <Secondary>
-              <Link href={versionHref(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link>
-            </Secondary>
+            <Secondary>{currentLink}</Secondary>
             <Secondary>
               <RelativeTime value={current.profiledAt} />
             </Secondary>
@@ -231,7 +189,7 @@ function ProfileCell({ sourcePublicId, summary }: { sourcePublicId: string; summ
   }
   if (!current) {
     return (
-      <Link href={versionHref(sourcePublicId, latest.version)}>
+      <Link href={routes.repositoryVersion(sourcePublicId, latest.version)}>
         <Status state="failed" label={`Version ${latest.version} failed`} />
       </Link>
     );
@@ -241,7 +199,7 @@ function ProfileCell({ sourcePublicId, summary }: { sourcePublicId: string; summ
       {currentRows}
       {failed && (
         <Secondary>
-          <Link href={versionHref(sourcePublicId, latest.version)}>
+          <Link href={routes.repositoryVersion(sourcePublicId, latest.version)}>
             <Status state="failed" label={`Version ${latest.version} failed`} size="sm" />
           </Link>
         </Secondary>

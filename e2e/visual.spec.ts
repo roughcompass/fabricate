@@ -4,6 +4,7 @@ import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOver
 import { openTool, setView, waitForRegions } from "./support/demo";
 import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
+import { useTheme } from "./support/shell";
 
 /**
  * Captures every product surface at desktop and mobile width, in the light and
@@ -28,7 +29,7 @@ test("captures every product surface at desktop and mobile width, in both themes
   fs.rmSync(OUTPUT, { recursive: true, force: true });
   fs.mkdirSync(OUTPUT, { recursive: true });
   for (const theme of THEMES) {
-    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    await useTheme(page.context(), theme, baseURL!);
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize(viewport);
       for (const [name, url] of surfaces) {
@@ -61,7 +62,7 @@ test("captures the shell's sidebar states in both themes", async ({ page, db: _d
     await page.screenshot({ path: path.join(output, `${name}-${theme}.jpg`), type: "jpeg", quality: 75 });
   };
   for (const theme of THEMES) {
-    await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    await useTheme(page.context(), theme, baseURL!);
 
     await page.setViewportSize(VIEWPORTS[0]!);
     await page.context().addCookies([{ name: "fabricate-sidebar", value: "hidden", url: baseURL! }]);
@@ -122,7 +123,7 @@ test("captures every template demo surface at desktop and mobile width, in both 
   const surfaces = demoSurfaces();
 
   for (const theme of THEMES) {
-    await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    await useTheme(context, theme, baseURL!);
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize(viewport);
       for (const [name, url] of surfaces) {
@@ -164,7 +165,7 @@ test("captures each toolbar tool over every hero application, in both themes", a
   ];
   await page.setViewportSize({ width: 1280, height: 900 });
   for (const theme of THEMES) {
-    await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    await useTheme(context, theme, baseURL!);
     for (const slug of heroes) {
       await page.goto(`/run/ref-${slug}`);
       await waitForRegions(page);
@@ -226,7 +227,7 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
     count++;
   };
   for (const theme of THEMES) {
-    await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+    await useTheme(context, theme, baseURL!);
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize(viewport);
       await page.goto("/run/ref-payments-workspace");

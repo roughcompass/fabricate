@@ -1,21 +1,36 @@
-import { and, asc, desc, eq, max, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, max, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, StaleRecordError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { standardDrafts, standardReleases, standards } from "@/lib/db/schema";
+import { standardReleases, standards } from "@/lib/db/schema";
 import { type JsonObject, type JsonValue, dump, parseCanonical } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 import { CURRENT_VERSION, DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
+import { updateLocked } from "@/lib/db/optimistic";
 
 /**
  * Persistence for the Standard Library: Standards, their single editable
- * draft, and immutable published Releases. Draft content validation and
- * publication rules live in the standards validator and publisher.
+ * draft, and immutable published Releases. A draft lives in its Standard's
+ * draft columns. Draft content validation and publication rules live in the
+ * standards validator and publisher.
  */
 
 export type Standard = typeof standards.$inferSelect;
-export type StandardDraft = typeof standardDrafts.$inferSelect;
 export type StandardRelease = typeof standardReleases.$inferSelect;
+
+/** A Standard's working copy, read from its draft columns. */
+export interface StandardDraft {
+  standardId: number;
+  document: string;
+  lockVersion: number;
+  savedAt: Date;
+  basedOnReleaseId: number | null;
+}
+
+function draftOfStandard(standard: Standard): StandardDraft | undefined {
+  if (standard.draftDocument === null || standard.draftLockVersion === null || standard.draftSavedAt === null) return undefined;
+  return { standardId: standard.id, document: standard.draftDocument, lockVersion: standard.draftLockVersion, savedAt: standard.draftSavedAt, basedOnReleaseId: standard.draftBasedOnReleaseId };
+}
 
 export interface StandardMetadata {
   name: string;
@@ -38,13 +53,12 @@ export function createStandard(db: Executor, metadata: StandardMetadata, documen
     validateMetadata(tx, values);
     const now = new Date();
     try {
-      const standard = tx.insert(standards).values({ ...values, publicId: generatePublicId("std"), createdAt: now, updatedAt: now }).returning().get();
-      const draft = tx
-        .insert(standardDrafts)
-        .values({ standardId: standard.id, document: dump(document), createdAt: now, updatedAt: now })
+      const standard = tx
+        .insert(standards)
+        .values({ ...values, publicId: generatePublicId("std"), draftDocument: dump(document), draftLockVersion: 0, draftSavedAt: now, createdAt: now, updatedAt: now })
         .returning()
         .get();
-      return { standard, draft };
+      return { standard, draft: draftOfStandard(standard)! };
     } catch (error) {
       if (isUniqueViolation(error)) throw duplicateName(values.name);
       throw error;
@@ -58,14 +72,7 @@ export function updateStandardMetadata(db: Executor, publicId: string, expectedL
     const values = normalizeMetadata(metadata);
     validateMetadata(tx, values, current.id);
     try {
-      const updated = tx
-        .update(standards)
-        .set({ ...values, lockVersion: current.lockVersion + 1, updatedAt: new Date() })
-        .where(and(eq(standards.id, current.id), eq(standards.lockVersion, expectedLockVersion)))
-        .returning()
-        .get();
-      if (!updated) throw new StaleRecordError(`${current.name} was changed by someone else`);
-      return updated;
+      return updateLocked(tx, standards, current, { ...values, updatedAt: new Date() }, `${current.name} was changed by someone else`, { expected: expectedLockVersion });
     } catch (error) {
       if (isUniqueViolation(error)) throw duplicateName(values.name);
       throw error;
@@ -88,7 +95,8 @@ export function listStandards(db: Executor): Standard[] {
 }
 
 export function draftOf(db: Executor, standardId: number): StandardDraft | undefined {
-  return db.select().from(standardDrafts).where(eq(standardDrafts.standardId, standardId)).get();
+  const standard = db.select().from(standards).where(eq(standards.id, standardId)).get();
+  return standard && draftOfStandard(standard);
 }
 
 export function draftDocument(draft: StandardDraft): JsonObject {
@@ -101,13 +109,13 @@ export function saveDraft(db: Executor, draft: StandardDraft, expectedLockVersio
     throw new ValidationError([{ field: "document", message: "A draft must be a structured Standard document" }]);
   }
   const updated = db
-    .update(standardDrafts)
-    .set({ document: dump(document), lockVersion: expectedLockVersion + 1, updatedAt: new Date() })
-    .where(and(eq(standardDrafts.id, draft.id), eq(standardDrafts.lockVersion, expectedLockVersion)))
+    .update(standards)
+    .set({ draftDocument: dump(document), draftLockVersion: expectedLockVersion + 1, draftSavedAt: new Date() })
+    .where(and(eq(standards.id, draft.standardId), eq(standards.draftLockVersion, expectedLockVersion)))
     .returning()
     .get();
   if (!updated) throw new StaleRecordError("This draft was changed by someone else");
-  return updated;
+  return draftOfStandard(updated)!;
 }
 
 /** Starts a new draft from a Release, with +document+ as its content (default: the Release's). A Standard has at most one draft. */
@@ -116,17 +124,18 @@ export function startDraftFromRelease(db: Executor, release: StandardRelease, do
     if (draftOf(tx, release.standardId)) {
       throw new ValidationError([{ field: "base", message: "This Standard already has a draft. Edit or publish it before starting another revision." }]);
     }
-    const now = new Date();
-    return tx
-      .insert(standardDrafts)
-      .values({ standardId: release.standardId, basedOnReleaseId: release.id, document: document ? dump(document) : release.document, createdAt: now, updatedAt: now })
+    const started = tx
+      .update(standards)
+      .set({ draftDocument: document ? dump(document) : release.document, draftLockVersion: 0, draftSavedAt: new Date(), draftBasedOnReleaseId: release.id })
+      .where(and(eq(standards.id, release.standardId), isNull(standards.draftDocument)))
       .returning()
       .get();
+    return draftOfStandard(started!)!;
   });
 }
 
 export function deleteDraft(db: Executor, draft: StandardDraft): void {
-  db.delete(standardDrafts).where(eq(standardDrafts.id, draft.id)).run();
+  db.update(standards).set({ draftDocument: null, draftLockVersion: null, draftSavedAt: null, draftBasedOnReleaseId: null }).where(eq(standards.id, draft.standardId)).run();
 }
 
 export interface NewRelease {
@@ -157,8 +166,8 @@ export function insertRelease(db: Executor, input: NewRelease): StandardRelease 
         documentSchemaVersion: schemaVersion,
         document: text,
         digest,
-        profileSchemaVersions: dump(versions("repository_profile")),
-        relationshipSchemaVersions: dump(versions("relationship_map")),
+        profileSchemaVersions: versions("repository_profile").map(Number),
+        relationshipSchemaVersions: versions("relationship_map").map(Number),
         draftLockVersion: input.draftLockVersion,
         publishedAt: now,
         createdAt: now,

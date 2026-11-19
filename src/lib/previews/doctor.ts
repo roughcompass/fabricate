@@ -8,6 +8,7 @@ import type { BuildPlan } from "./eligibility";
 import { type CommandResult, TAR_PATH, runCommand } from "./process";
 import { cacheDirectory } from "./storage";
 import { buildEnvironment, managerCommand } from "./toolchain";
+import { failureText } from "@/lib/git/redact";
 
 /**
  * `npm run previews:doctor` (design decision 10): whether this host has the
@@ -175,7 +176,7 @@ async function attempt(run: CheckRunner, command: CheckCommand): Promise<{ resul
   try {
     return await run(command);
   } catch (error) {
-    return { result: null, output: error instanceof Error ? error.message : String(error) };
+    return { result: null, output: failureText(error) };
   }
 }
 

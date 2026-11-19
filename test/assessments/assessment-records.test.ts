@@ -1,8 +1,8 @@
+import { parseCanonical } from "@repo-facts/contract";
 import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   type AssessmentTarget,
-  configurationOf,
   createAssessment,
   findAssessmentByLaunchToken,
   internalRefFor,
@@ -50,7 +50,7 @@ describe("assessment records", () => {
     expect(assessment.configuration).toBe(dump(bundle.configuration));
     expect(assessment.configurationDigest).toBe(sha256(assessment.configuration));
     expect(assessment.configurationDigest).toBe(bundle.digest);
-    expect(configurationOf(assessment)).toEqual(bundle.configuration);
+    expect(parseCanonical(assessment.configuration)).toEqual(bundle.configuration);
   });
 
   it("keeps copied source configuration when the catalog changes afterward", () => {

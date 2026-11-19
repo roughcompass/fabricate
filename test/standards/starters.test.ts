@@ -1,18 +1,15 @@
 import type { JsonObject } from "@repo-facts/contract";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createStandard as createStandardAction } from "@/app/(operator)/standards/actions";
-import { type Db, setDb } from "@/lib/db/client";
 import { type ReleaseInput, type TargetInput, evaluateReleaseControls } from "@/lib/evaluations/controls";
 import { publishDraft } from "@/lib/standards/publish";
 import { draftDocument, draftOf, listStandards } from "@/lib/standards/standard-records";
 import { STARTERS, findStarter } from "@/lib/standards/starters";
 import { validateStandard } from "@/lib/standards/validate";
-import { createTestDb } from "../support/db";
-import { redirectOf } from "../support/next";
+import { redirectOf, useAppDb, formData } from "../support/next";
 import { manifest, memoryProfile } from "../support/profiles";
 
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
-vi.mock("next/cache", async () => (await import("../support/next")).cacheStub);
 
 // standard-library: the Salt adherence and Salt exemplary starter Standards.
 
@@ -97,35 +94,24 @@ describe("the Salt exemplary starter", () => {
 });
 
 describe("starting a Standard from a starter", () => {
-  let db: Db;
-  beforeEach(() => {
-    db = createTestDb();
-    setDb(db);
-  });
-  afterEach(() => setDb(undefined));
-
-  const form = (fields: Record<string, string>) => {
-    const data = new FormData();
-    for (const [name, value] of Object.entries(fields)) data.append(name, value);
-    return data;
-  };
+  const app = useAppDb();
   const blank = { values: { name: "", purpose: "" }, errors: {} };
 
   it("creates a Standard whose draft holds the starter's Controls, ready to publish", async () => {
-    const location = await redirectOf(createStandardAction(blank, form({ name: salt.name, purpose: salt.purpose, starter: salt.id })));
-    const [standard] = listStandards(db);
+    const location = await redirectOf(createStandardAction(blank, formData({ name: salt.name, purpose: salt.purpose, starter: salt.id })));
+    const [standard] = listStandards(app.db);
     expect(location).toBe(`/standards/${standard!.publicId}/draft?notice=created`);
     expect(standard).toMatchObject({ name: "Salt adherence", purpose: salt.purpose });
-    const draft = draftOf(db, standard!.id)!;
+    const draft = draftOf(app.db, standard!.id)!;
     expect(draftDocument(draft)).toEqual(salt.document);
     expect(validateStandard(draftDocument(draft))).toEqual([]);
-    const release = publishDraft(db, standard!.publicId, draft.lockVersion);
-    expect(release.profileSchemaVersions).toBe("[2]");
+    const release = publishDraft(app.db, standard!.publicId, draft.lockVersion);
+    expect(release.profileSchemaVersions).toEqual([2]);
   });
 
   it("starts blank without a starter, or with one it doesn't know", async () => {
-    await redirectOf(createStandardAction(blank, form({ name: "Blank", purpose: "No starter" })));
-    await redirectOf(createStandardAction(blank, form({ name: "Unknown", purpose: "Unknown starter", starter: "not-a-starter" })));
-    for (const standard of listStandards(db)) expect(draftDocument(draftOf(db, standard.id)!).controls).toEqual([]);
+    await redirectOf(createStandardAction(blank, formData({ name: "Blank", purpose: "No starter" })));
+    await redirectOf(createStandardAction(blank, formData({ name: "Unknown", purpose: "Unknown starter", starter: "not-a-starter" })));
+    for (const standard of listStandards(app.db)) expect(draftDocument(draftOf(app.db, standard.id)!).controls).toEqual([]);
   });
 });

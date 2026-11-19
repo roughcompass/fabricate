@@ -36,17 +36,13 @@
   .description { display: flex; flex: 1; flex-direction: column; gap: var(--space-1); min-width: min(100%, var(--size-dialog)); max-width: var(--size-prose); }
   .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
   .action { height: var(--size-control-md); border-radius: var(--radius-md); }
-  .action[data-action="secondary"]:nth-child(1) { width: calc(2 * var(--space-16)); }
-  .action[data-action="secondary"]:nth-child(2) { width: var(--size-filter); }
+  .action[data-action="secondary"] { width: calc(2 * var(--space-16)); }
   .action[data-action="overflow"] { display: none; width: var(--size-control-md); }
   .action[data-action="primary"] { width: calc(4 * var(--space-10)); }
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .count { width: var(--size-label); }
-  .filters { display: flex; flex-direction: column; gap: var(--space-3); width: calc(var(--size-filter) + var(--space-8)); }
-  .filter { display: flex; flex-direction: column; gap: var(--space-1); }
-  .filterLabel { width: 40%; height: var(--space-4); }
-  .filterControl { height: var(--size-control-sm); border-radius: var(--radius-md); }
-  .tableRow { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 1.8fr) minmax(0, 1.6fr) minmax(0, 2.4fr) minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; padding-block: var(--space-4); }
+  .search { width: calc(var(--size-filter) + var(--space-8)); height: var(--size-control-sm); border-radius: var(--radius-md); }
+  .tableRow { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 1.6fr) minmax(0, 2.4fr) minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; padding-block: var(--space-4); }
   .tableRow + .tableRow { border-top: 1px solid var(--color-border-subtle); }
   .tableHead { padding-block: var(--space-2); }
   .cell { display: flex; flex-direction: column; align-items: stretch; padding-inline: var(--space-4); }
@@ -65,7 +61,7 @@
     .action[data-action="secondary"] { display: none; }
     .action[data-action="overflow"] { display: block; }
     .count { flex-basis: 100%; }
-    .filters { display: grid; flex: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; width: auto; }
+    .search { flex: 1; width: auto; }
     .tableRow { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
     .tableHead { display: none; }
     .cell, .cell[data-numeric] { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 5fr); gap: var(--space-3); padding-inline: 0; }

@@ -30,11 +30,15 @@ Both processes validate the configuration and check the Git version at startup. 
 
 Neither process applies migrations, so run `npm run db:migrate` after pulling changes. When a change adds or alters the [assessment projection](docs/projection.md), also run `npm run projection:rebuild`, which recreates it from every stored Profile and Relationship Map.
 
+Some migrations delete data, so copy `storage/fabricate.sqlite3` before migrating a database you want to keep. Migration 0043 deletes ownership: claims, SEAL IDs, teams, Lines of Business, portals, and DE Console reads, with every Assessment created for a claim and its Runs. Migration 0044 deletes the Salt Patterns Assessment and its Runs, with their template targets and stored files. Neither touches a Repository or an Assessment you created.
+
 ## Run the checks
 
 ```sh
+npm run check       # every gate a change must pass, described below
 npm test            # unit and integration tests (Vitest)
 npm run test:e2e    # browser tests (Playwright), against a dev server on port 3100
+npm run test:demo-off # the browser tests' fixtures against a server with the template demo off
 npm run test:visual # screenshots of every product surface, for design review
 npm run test:fleet  # the synthetic fleet, assessed and evaluated through the product
 npm run typecheck
@@ -44,9 +48,16 @@ npm run build       # Next.js standalone server, dist/worker.cjs, dist/migrate.c
 
 `npm run test:visual` seeds a representative Assessment, checks each product surface for horizontal overflow and overlapping content at 1280 and 375 pixels wide, and writes full-page screenshots to `verification/screenshots/`. The committed screenshots are the output of the last design review.
 
-`npm run test:fleet` needs the harness `fleet/` repositories next to this directory, or `FLEET_ROOT` set to their location. It starts its own server on port 3200 with `fleet/` as the only allowed root and a throwaway database and repository store in `tmp/fleet-run/`. It then imports the fleet, runs a baseline Assessment, authors two Standards in the editor, and runs an Evaluation. It never reads `fleet-kit/`.
+`npm run test:fleet` needs the harness `fleet/` repositories next to this directory, or `FLEET_ROOT` set to their location. It starts its own server on port 3200 with `fleet/` as the only allowed root and a throwaway database and repository store in `tmp/fleet-run/`. It then adds the fleet's repositories in bulk, runs a baseline Assessment, authors two Standards in the editor, and runs an Evaluation. It never reads `fleet-kit/`.
 
 The lint rules forbid `eval`, the `Function` constructor, the `vm` module, computed `import()`, `require()`, and regular expressions built from data. Only `src/lib/git/runner.ts` and `src/lib/previews/process.ts`, which runs [preview builds](docs/previews.md) for enrolled remotes, may import `child_process`. A test in `test/lint/` keeps these rules in force.
+
+`npm run check` runs the type check, lint, knip, the duplication check, and the unit tests:
+
+- **knip** runs twice: over everything, and in production mode (`knip.production.json`), where only the app's routes, the worker, the command-line tools, and scripts are entries, so code that only tests reach fails. A hook the test suites need carries a `@public` tag that says why.
+- **Duplication.** `npm run duplication` runs jscpd over `src`, `test`, `e2e`, and `scripts`, leaving out `src/demo`, and fails when clones of 8 lines and 70 tokens or more pass 0.5% of the code.
+- **Lint** allows no warnings, and its rules keep the shared helpers in use: record links come from `src/lib/web/routes.ts`; dates and numbers are formatted only in `time.ts` and `count.ts`; only `ActionForm` calls `useActionState`; pages and components import Drizzle and the schema for types only; tests open and migrate databases only through `test/support`; specs set the theme and find the page header only through `e2e/support/shell.ts`. A function over 150 lines and a source file over 600 lines fail it.
+- **A unit test** checks that the active-state lists derive from `src/lib/db/state-machines.ts`.
 
 ## Configure DE FabLab
 
@@ -69,8 +80,6 @@ Environment variables override the file:
 | `analysis.maxFiles` | `FABRICATE_MAX_FILES` | 4000 |
 | `analysis.maxTotalBytes` | `FABRICATE_MAX_TOTAL_BYTES` | 67108864 |
 | `demo.enabled` | `FABRICATE_DEMO` | `false`; `true` in development and test |
-| `deConsole.source` | `FABRICATE_DE_CONSOLE_SOURCE` | none; an export file or `https://` endpoint, see [docs/ownership.md](docs/ownership.md#the-de-console-import) |
-| `deConsole.refreshMinutes` | `FABRICATE_DE_CONSOLE_REFRESH_MINUTES` | 60 |
 | `profiling.checkMinutes` | `FABRICATE_PROFILING_CHECK_MINUTES` | 60; how often the worker checks every Repository for new commits and a new detector, see [docs/profiling.md](docs/profiling.md) |
 | `previews.enabled` | `FABRICATE_PREVIEWS` | `false`; whether Repository previews exist, see [docs/previews.md](docs/previews.md) |
 | `previews.trustedSources` | `FABRICATE_PREVIEWS_TRUSTED_SOURCES` | none; the clone URLs of the remotes enrolled for previews |
@@ -81,7 +90,7 @@ Environment variables override the file:
 | `previews.maxOutputBytes` | `FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES` | 209715200 (200 MiB); the largest output one build can publish |
 | `previews.maxStorageBytes` | `FABRICATE_PREVIEWS_MAX_STORAGE_BYTES` | 5368709120 (5 GiB); the published output and latest logs of every preview together, kept under it by deleting the least recently used; the package caches are pruned past half of it |
 
-The DE Console endpoint's read-only token comes only from `FABRICATE_DE_CONSOLE_TOKEN`, never from the file. List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_PREVIEWS_TRUSTED_SOURCES` separates clone URLs with spaces or newlines instead, and `FABRICATE_PREVIEWS_NODE_VERSIONS` lists `version=directory` pairs, such as `22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin`. `FABRICATE_DEMO` and `FABRICATE_PREVIEWS` accept `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_PREVIEWS_TRUSTED_SOURCES` separates clone URLs with spaces or newlines instead, and `FABRICATE_PREVIEWS_NODE_VERSIONS` lists `version=directory` pairs, such as `22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin`. `FABRICATE_DEMO` and `FABRICATE_PREVIEWS` accept `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
 
 ### Preview toolchain
 
@@ -136,14 +145,14 @@ REPO_FACTS_NPM_TOKEN=<token used for the install> node scripts/verify-release.mj
 
 cd release
 export NODE_ENV=production FABRICATE_ENV=production
-node dist/migrate.cjs                 # before the first start and after each upgrade
+node dist/migrate.cjs                 # before the first start and after each upgrade; copy the database first
 PORT=3000 HOSTNAME=0.0.0.0 node server.js
 node dist/worker.cjs
 ```
 
 `release/` holds the standalone web server, its static files, the worker and migration bundles, the migrations, `config/`, and the native SQLite binding. It installs nothing and carries no npm configuration, so neither the registry address nor its token reaches it. `scripts/verify-release.mjs` checks that: it scans every file for the token, any literal npm `_authToken`, and any `REPO_FACTS_NPM_TOKEN` assignment, and requires the release's `@repo-facts` packages to match the versions the lockfile pins, with their release provenance. Omit the token for a registry that allows anonymous reads.
 
-Data lives in `release/storage/` unless `FABRICATE_DATABASE` and `FABRICATE_REPOSITORY_STORAGE` point elsewhere. Keep it outside the release directory so an upgrade can replace the release. Pass other settings as environment variables, for example `FABRICATE_ALLOWED_ROOTS=/repositories`. Run both processes under the host's own supervisor, such as systemd or launchd, as an unprivileged user. Assessments never run a package manager or repository code, so the processes need none beyond Node.js itself. Repository previews, which are off by default, are the exception: with them on, the worker builds enrolled repositories with the Node versions its host provides, which `node dist/previews-doctor.cjs` checks (see [Preview toolchain](#preview-toolchain)).
+Data lives in `release/storage/` unless `FABRICATE_DATABASE` and `FABRICATE_REPOSITORY_STORAGE` point elsewhere. Keep it outside the release directory so an upgrade can replace the release. Pass other settings as environment variables, for example `FABRICATE_ALLOWED_ROOTS=/repositories`. Run both processes under the host's own supervisor, such as systemd or launchd, as an unprivileged user. Run one worker per database: it serializes Git updates to each repository in its own memory, and runs `workerConcurrency` jobs on different repositories at once. A second worker refuses to start while the first holds `worker.lock` beside the database, and names its process. A worker killed without releasing the lock leaves the file behind, and the next worker takes it over once that process is gone. Assessments never run a package manager or repository code, so the processes need none beyond Node.js itself. Repository previews, which are off by default, are the exception: with them on, the worker builds enrolled repositories with the Node versions its host provides, which `node dist/previews-doctor.cjs` checks (see [Preview toolchain](#preview-toolchain)).
 
 ## What an assessment does and does not do
 
@@ -191,7 +200,7 @@ The interface names three records differently from the code, which keeps the mod
 | Home | `/` |
 | Assessments | `/assessments`, `/assessments/new`, and `/assessments/<ini_ id>` with its `/edit` page |
 | Runs | `/runs/<asm_ id>`, with its `/map` and `/evidence/<id>` pages |
-| Repositories | `/repositories`, `/repositories/new`, `/repositories/bulk`, `/repositories/de-console`, and `/repositories/<src_ id>` with its `/settings`, `/versions`, and `/versions/<number>` pages |
+| Repositories | `/repositories`, `/repositories/new`, `/repositories/bulk`, and `/repositories/<src_ id>` with its `/settings`, `/versions`, and `/versions/<number>` pages |
 | Admin | `/admin/bitbucket-tokens` and `/admin/bitbucket-tokens/new`; `/admin` opens the first. Bitbucket Server access tokens are saved in the SQLite database as given and never shown again, only their last four characters, so the database file is as sensitive as the tokens |
 | Evaluations and Profiles | `/evaluations/<id>` and `/profiles/<id>`, unchanged |
 

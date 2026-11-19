@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { HOME, NO_OPTIONAL_AREAS, type NavFlags, SALT_PATTERNS, homeLink, locate, menuItems, visibleGroups } from "@/components/shell/navigation";
+import { HOME, NO_OPTIONAL_AREAS, type NavFlags, locate, visibleGroups } from "@/components/shell/navigation";
 
 // operator-interface/page-patterns spec: the primary menu groups areas under
 // headings and dividers.
@@ -30,11 +30,7 @@ const EXPECTED: Record<string, string | null> = {
   "/assessments/[initiativeId]/edit": "all-assessments",
   "/runs/[assessmentId]": "all-assessments",
   "/runs/[assessmentId]/map": "all-assessments",
-  "/runs/[assessmentId]/map/lob/[lineOfBusiness]": "all-assessments",
-  "/runs/[assessmentId]/map/portal/[portal]": "all-assessments",
-  "/runs/[assessmentId]/map/applications/[applicationId]": "all-assessments",
-  "/runs/[assessmentId]/map/unassigned": "all-assessments",
-  "/runs/[assessmentId]/map/unassigned/[system]": "all-assessments",
+  "/runs/[assessmentId]/map/systems/[system]": "all-assessments",
   "/runs/[assessmentId]/evidence/[evidenceId]": "all-assessments",
   "/evaluations/[evaluationId]": "all-assessments",
   "/evaluations/[evaluationId]/findings/[findingId]": "all-assessments",
@@ -47,11 +43,6 @@ const EXPECTED: Record<string, string | null> = {
   "/repositories/[sourceId]/versions": "repositories",
   "/repositories/[sourceId]/versions/[version]": "repositories",
   "/repositories/[sourceId]/previews/[preview]": "repositories",
-  "/repositories/de-console": "repositories",
-  "/repositories/claim": "repositories",
-  "/repositories/claim/[sourceId]": "repositories",
-  "/repositories/claim/[sourceId]/correct": "repositories",
-  "/repositories/claim/[sourceId]/owner": "repositories",
   "/standards": "standards",
   "/standards/new": "standards",
   "/standards/[standardId]": "standards",
@@ -101,7 +92,7 @@ describe("primary menu", () => {
       ["Admin", ["Bitbucket tokens"]],
     ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
-    for (const item of menuItems(visibleGroups(ALL))) expect(item.icon, item.id).toBeTruthy();
+    for (const item of visibleGroups(ALL).flatMap((group) => group.items)) expect(item.icon, item.id).toBeTruthy();
   });
 
   it("has no Templates group while the demo is disabled, and leaves its pages outside the menu (Demo disabled)", () => {
@@ -122,10 +113,5 @@ describe("primary menu", () => {
 
   it("marks nothing on the removed Applications, Portals, and Prototypes addresses", () => {
     for (const path of ["/applications", "/portals", "/portals/ptl_0123456789abcdef/editor/frame-zones", "/runtime-configuration", "/prototypes", "/prototypes/personas"]) expect(current(path, ALL), path).toBeNull();
-  });
-
-  it("leads links to Home while Assessments is shown, and to the menu's first page otherwise (Profile without Assessments)", () => {
-    for (const flags of [BASE, ALL]) expect(homeLink(visibleGroups(flags))).toEqual({ href: "/", label: "Home" });
-    expect(homeLink([{ id: "build", heading: "Templates", items: [SALT_PATTERNS] }])).toEqual({ href: "/templates", label: "Salt Patterns" });
   });
 });

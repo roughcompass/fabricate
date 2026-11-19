@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { FormAlert, FormFooter, TextInput, formStyles } from "@/components/ui/form";
+import { ActionForm, FormAlert, FormFooter, formStyles, TextInput } from "@/components/ui/form";
 import { PageAlertPortal } from "@/components/ui/page-alert-portal";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { useToast } from "@/components/ui/toast";
-import { useFocusFirstInvalid } from "@/components/ui/use-focus-first-invalid";
 import type { DemoFormState } from "./actions";
 
 /** The indeterminate state can only be set from script. */
@@ -77,17 +76,19 @@ export function AlertDemo() {
 
 /** A form whose rejected submissions move focus: to the invalid field, or to the form alert. */
 export function FocusDemo({ action }: { action: (previous: DemoFormState, formData: FormData) => Promise<DemoFormState> }) {
-  const [state, formAction] = useActionState(action, { values: { name: "" }, errors: {} });
-  const form = useFocusFirstInvalid(state, "demo-form-alert");
   return (
-    <form ref={form} action={formAction} className={formStyles.form} noValidate aria-label="Focus demo">
-      {state.errors.base && <FormAlert id="demo-form-alert">{state.errors.base.join(" ")}</FormAlert>}
-      <TextInput id="demo-name" name="name" label="Name" description='Leave empty for a field error, or enter "stale" for a form error.' defaultValue={state.values.name} errors={state.errors.name} />
-      <TextInput id="demo-other" name="other" label="Another field" optional />
-      <FormFooter>
-        <SubmitButton pendingLabel="Saving">Save changes</SubmitButton>
-      </FormFooter>
-    </form>
+    <ActionForm action={action} initial={{ values: { name: "" }, errors: {} }} alertId="demo-form-alert" className={formStyles.form} aria-label="Focus demo">
+      {(state) => (
+        <>
+          {state.errors.base && <FormAlert id="demo-form-alert">{state.errors.base.join(" ")}</FormAlert>}
+          <TextInput id="demo-name" name="name" label="Name" description='Leave empty for a field error, or enter "stale" for a form error.' defaultValue={state.values.name} errors={state.errors.name} />
+          <TextInput id="demo-other" name="other" label="Another field" optional />
+          <FormFooter>
+            <SubmitButton pendingLabel="Saving">Save changes</SubmitButton>
+          </FormFooter>
+        </>
+      )}
+    </ActionForm>
   );
 }
 

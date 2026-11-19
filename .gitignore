@@ -23,9 +23,8 @@
 .DS_Store
 /.vercel
 
-# Local output of the removed Prototypes feature
+# Local output of the removed Prototypes feature, until the operator deletes it
 /public/prototype-runtime
-/.workflow-data
 /.swc
 # A production release assembled by `npm run release`.
 /release

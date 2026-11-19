@@ -7,7 +7,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Panel } from "@/components/ui/panel";
 import { FilterRail } from "@/components/ui/filter-rail";
 import { MediaCard } from "@/components/ui/media-card";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { SearchField } from "@/components/ui/search-field";
 import { BRANDS, BRAND_IDS, PROVIDERS, PROVIDER_IDS, TEMPLATES } from "@/lib/demo/catalog";
@@ -17,10 +18,11 @@ import { resetDemo } from "./actions";
 import { demoOutcome } from "./outcomes";
 import { TemplateBadges } from "./template-badges";
 import styles from "./templates.module.css";
+import { HiddenFields } from "@/components/ui/form";
 
 export const metadata: Metadata = { title: "Salt Patterns" };
 
-export default async function TemplatesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function TemplatesPage({ searchParams }: PageProps<"/templates">) {
   requireDemo();
   const params = await searchParams;
   const query = parseGalleryQuery(params);
@@ -43,12 +45,7 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
       />
 
       <Form key={query.search} action="/templates" scroll={false} className={styles.search} role="search" aria-label="Search templates">
-        {query.brands.map((brand) => (
-          <input key={brand} type="hidden" name="brand" value={brand} />
-        ))}
-        {query.providers.map((provider) => (
-          <input key={provider} type="hidden" name="provider" value={provider} />
-        ))}
+        <HiddenFields values={{ brand: query.brands, provider: query.providers }} />
         <SearchField
           id="template-search"
           name="q"

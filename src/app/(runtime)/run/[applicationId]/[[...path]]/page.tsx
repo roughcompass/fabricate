@@ -6,7 +6,7 @@ import { requireDemo } from "@/lib/demo/guard";
  * The application route in the address. The layout renders the application;
  * this page only rejects routes the application does not have.
  */
-export default async function RunRoute({ params }: { params: Promise<{ applicationId: string; path?: string[] }> }) {
+export default async function RunRoute({ params }: PageProps<"/run/[applicationId]/[[...path]]">) {
   requireDemo();
   const { applicationId, path = [] } = await params;
   if (path.length > 1) notFound();

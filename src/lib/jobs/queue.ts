@@ -131,25 +131,20 @@ function saturatedKinds(db: Executor, limits: KindLimits, now: Date): string[] {
   return running.filter((row) => row.count >= limits[row.kind]!).map((row) => row.kind);
 }
 
+/** Writes +values+ to a running job only while +workerId+ still holds its lease. Returns false if the lease was lost. */
+function updateHeld(db: Executor, job: Job, workerId: string, values: Partial<typeof jobs.$inferInsert>): boolean {
+  return db.update(jobs).set(values).where(and(eq(jobs.id, job.id), eq(jobs.state, "running"), eq(jobs.leaseOwner, workerId))).run().changes === 1;
+}
+
 /** Extends a lease the worker still holds. Returns false if it was lost. */
 export function renewLease(db: Executor, job: Job, workerId: string, options: { now?: Date; leaseMs?: number } = {}): boolean {
   const now = options.now ?? new Date();
-  const result = db
-    .update(jobs)
-    .set({ leaseExpiresAt: new Date(now.getTime() + (options.leaseMs ?? DEFAULT_LEASE_MS)), updatedAt: now })
-    .where(and(eq(jobs.id, job.id), eq(jobs.state, "running"), eq(jobs.leaseOwner, workerId)))
-    .run();
-  return result.changes === 1;
+  return updateHeld(db, job, workerId, { leaseExpiresAt: new Date(now.getTime() + (options.leaseMs ?? DEFAULT_LEASE_MS)), updatedAt: now });
 }
 
 /** Marks a job the worker still holds as succeeded. Returns false if the lease was lost. */
 export function succeed(db: Executor, job: Job, workerId: string, now = new Date()): boolean {
-  const result = db
-    .update(jobs)
-    .set({ state: "succeeded", leaseOwner: null, leaseExpiresAt: null, lastError: null, finishedAt: now, updatedAt: now })
-    .where(and(eq(jobs.id, job.id), eq(jobs.state, "running"), eq(jobs.leaseOwner, workerId)))
-    .run();
-  return result.changes === 1;
+  return updateHeld(db, job, workerId, { state: "succeeded", leaseOwner: null, leaseExpiresAt: null, lastError: null, finishedAt: now, updatedAt: now });
 }
 
 /**
@@ -162,19 +157,12 @@ export function fail(db: Executor, job: Job, workerId: string, error: unknown, o
   const retry = (options.retryable ?? true) && job.attempts < job.maxAttempts;
   const backoff = Math.min(MAX_BACKOFF_MS, 1_000 * 2 ** Math.max(0, job.attempts - 1));
 
-  const result = db
-    .update(jobs)
-    .set(
-      retry
-        ? { state: "queued", runAfter: new Date(now.getTime() + backoff), leaseOwner: null, leaseExpiresAt: null, lastError: message, updatedAt: now }
-        : { state: "failed", leaseOwner: null, leaseExpiresAt: null, lastError: message, finishedAt: now, updatedAt: now },
-    )
-    .where(and(eq(jobs.id, job.id), eq(jobs.state, "running"), eq(jobs.leaseOwner, workerId)))
-    .run();
-  return result.changes === 1;
-}
-
-export function jobCounts(db: Executor): Record<string, number> {
-  const rows = db.select({ state: jobs.state, count: sql<number>`count(*)` }).from(jobs).groupBy(jobs.state).all();
-  return Object.fromEntries(rows.map((row) => [row.state, row.count]));
+  return updateHeld(
+    db,
+    job,
+    workerId,
+    retry
+      ? { state: "queued", runAfter: new Date(now.getTime() + backoff), leaseOwner: null, leaseExpiresAt: null, lastError: message, updatedAt: now }
+      : { state: "failed", leaseOwner: null, leaseExpiresAt: null, lastError: message, finishedAt: now, updatedAt: now },
+  );
 }

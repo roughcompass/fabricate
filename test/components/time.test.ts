@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAbsolute, formatRelative } from "@/components/ui/time";
+import { formatAbsolute, formatDate, formatRelative, formatShortDate } from "@/components/ui/time";
 
 const NOW = new Date("2026-09-30T12:00:00Z");
 const ago = (milliseconds: number) => new Date(NOW.getTime() - milliseconds);
@@ -29,5 +29,11 @@ describe("relative time", () => {
 
   it("gives the full UTC time for tooltips", () => {
     expect(formatAbsolute(NOW)).toBe("Sep 30, 2026, 12:00 PM UTC");
+  });
+
+  it("gives the UTC date alone, and a month and day for chart labels", () => {
+    expect(formatDate(NOW)).toBe("Sep 30, 2026");
+    // Late on the 12th in the Americas is already the 13th in UTC.
+    expect(formatShortDate(new Date("2026-10-13T01:00:00Z"))).toBe("Oct 13");
   });
 });

@@ -1,6 +1,7 @@
 import { type JsonObject, type JsonValue, compareCodeUnits } from "@repo-facts/contract";
 import { CloneUrl } from "@/lib/catalog/clone-url";
 import { type CoverageGap, type EdgeType, MAP_SCHEMA, MAP_SCHEMA_VERSION, type MapEdge, type MapNode, type NodeIdentity, RESOLVER_VERSION, type ReferenceIdentity, type ResolutionState, type SourceIdentity, edgeId, nodeId } from "./schema";
+import { asObject, asArray } from "@/lib/json";
 
 /**
  * Resolves one Assessment's relationship references into a Relationship Map.
@@ -67,11 +68,11 @@ export function resolveRelationships(input: { targets: readonly ResolverTarget[]
       gaps.push({ target: target.public_id, source: target.source, state: target.state, reason: target.failure });
       continue;
     }
-    const facts = record(target.profile.document.fact_document);
+    const facts = asObject(target.profile.document.fact_document);
     const node = map.node({ kind: "repository", source: target.source, target: target.public_id, commit: String(target.profile.document.commit), profile_digest: target.profile.digest });
-    const references = list(facts.relationship_references).map((item) => {
-      const value = record(item);
-      return { type: String(value.type), role: String(value.role), identifier: strings(value.identifier), basis: value.basis === "inferred" ? "inferred" : "observed", evidence: list(value.evidence).map(String) } satisfies Reference;
+    const references = asArray(facts.relationship_references).map((item) => {
+      const value = asObject(item);
+      return { type: String(value.type), role: String(value.role), identifier: strings(value.identifier), basis: value.basis === "inferred" ? "inferred" : "observed", evidence: asArray(value.evidence).map(String) } satisfies Reference;
     });
     contributors.push({ node, source: target.source, facts, references });
   }
@@ -98,7 +99,7 @@ export function resolveRelationships(input: { targets: readonly ResolverTarget[]
       }
       // Remote declarations are endpoints, and service references are resolved from their Service Dependencies below.
     }
-    for (const dependency of list(contributor.facts.service_dependencies)) resolveService(map, contributor, record(dependency));
+    for (const dependency of asArray(contributor.facts.service_dependencies)) resolveService(map, contributor, asObject(dependency));
   }
 
   const nodes = [...map.nodes.values()].sort((a, b) => compareCodeUnits(a.id, b.id));
@@ -135,7 +136,7 @@ function resolvePackage(map: MapBuilder, catalog: CatalogLabels, contributor: Co
 
 function resolveComposition(map: MapBuilder, catalog: CatalogLabels, contributor: Contributor, reference: Reference, producers: Map<string, Candidate[]>, remotes: Map<string, Candidate[]>) {
   const mechanism = reference.identifier.mechanism;
-  const compositionFacts = list(record(record(contributor.facts.categories).composition).facts).map(record);
+  const compositionFacts = asArray(asObject(asObject(contributor.facts.categories).composition).facts).map(asObject);
   let name: string;
   let candidates: Candidate[];
   let rule: string;
@@ -146,16 +147,16 @@ function resolveComposition(map: MapBuilder, catalog: CatalogLabels, contributor
     candidates = remotes.get(name) ?? [];
     rule = "composition.federation-name";
     noun = `a Module Federation remote named ${name}`;
-    const remote = compositionFacts.flatMap((fact) => list(record(fact.value).remotes).map(record)).find((item) => item.federation_name === name);
-    const entry = record(remote?.entry);
+    const remote = compositionFacts.flatMap((fact) => asArray(asObject(fact.value).remotes).map(asObject)).find((item) => item.federation_name === name);
+    const entry = asObject(remote?.entry);
     if (entry.kind === "literal" && typeof entry.value === "string") details.url = entry.value;
   } else {
     name = mechanism === "import-map" ? reference.identifier.specifier! : reference.identifier.application!;
     candidates = producers.get(name) ?? [];
     rule = mechanism === "import-map" ? "composition.import-map-specifier" : "composition.single-spa-application";
     noun = `a package named ${name}`;
-    const mapped = compositionFacts.find((fact) => record(fact.value).mechanism === "import-map" && record(fact.value).specifier === name);
-    if (typeof record(mapped?.value).url === "string") details.url = record(mapped?.value).url as string;
+    const mapped = compositionFacts.find((fact) => asObject(fact.value).mechanism === "import-map" && asObject(fact.value).specifier === name);
+    if (typeof asObject(mapped?.value).url === "string") details.url = asObject(mapped?.value).url as string;
   }
   if (candidates.length) {
     resolveAmong(map, contributor, reference, candidates, { type: "composition", rule, details, noun });
@@ -184,13 +185,13 @@ function resolveAmong(map: MapBuilder, contributor: Contributor, reference: Refe
 
 function resolveService(map: MapBuilder, contributor: Contributor, dependency: JsonObject) {
   const key = String(dependency.key);
-  const identity = record(dependency.identity);
-  const identityValue = record(identity.value);
+  const identity = asObject(dependency.identity);
+  const identityValue = asObject(identity.value);
   const kind = identity.state === "observed" || identity.state === "inferred" ? String(identityValue.kind) : "call_site";
-  const protocol = typeof record(dependency.protocol).value === "string" ? String(record(dependency.protocol).value) : "http";
+  const protocol = typeof asObject(dependency.protocol).value === "string" ? String(asObject(dependency.protocol).value) : "http";
   const reference: ReferenceIdentity = { type: "service", role: "caller", identifier: { key } };
-  const callSites = list(dependency.call_sites).map(String);
-  const cited = [...callSites, ...list(identity.evidence).map(String)];
+  const callSites = asArray(dependency.call_sites).map(String);
+  const cited = [...callSites, ...asArray(identity.evidence).map(String)];
   const details = serviceDetails(dependency);
   const basis = identity.state === "observed" ? "observed" : "inferred";
 
@@ -229,9 +230,9 @@ function resolveService(map: MapBuilder, contributor: Contributor, dependency: J
 /** The Service Dependency facts a relationship Control may read, with their states. */
 function serviceDetails(dependency: JsonObject): JsonObject {
   const fact = (name: string): JsonValue => {
-    const value = record(dependency[name]);
+    const value = asObject(dependency[name]);
     if (!value.state) return null;
-    return { state: value.state as string, value: value.value ?? null, ...(Array.isArray(value.candidates) && { candidates: value.candidates.map((candidate) => record(candidate).value ?? null) }) };
+    return { state: value.state as string, value: value.value ?? null, ...(Array.isArray(value.candidates) && { candidates: value.candidates.map((candidate) => asObject(candidate).value ?? null) }) };
   };
   return {
     key: String(dependency.key),
@@ -251,25 +252,25 @@ function serviceDetails(dependency: JsonObject): JsonObject {
 }
 
 function contractOrigins(facts: JsonObject, dependency: JsonObject): { origins: string[]; evidence: string[] } {
-  const contracts = record(dependency.contracts);
-  const values = contracts.state === "observed" || contracts.state === "inferred" ? [contracts.value] : contracts.state === "conflicting" ? list(contracts.candidates).map((candidate) => record(candidate).value) : [];
-  const paths = new Set(values.flatMap((value) => list(value).map(record)).filter((item) => item.kind === "openapi").map((item) => String(item.path)));
-  const documents = list(record(record(facts.categories).api_contracts).facts).map(record).filter((fact) => paths.has(String(fact.key)));
+  const contracts = asObject(dependency.contracts);
+  const values = contracts.state === "observed" || contracts.state === "inferred" ? [contracts.value] : contracts.state === "conflicting" ? asArray(contracts.candidates).map((candidate) => asObject(candidate).value) : [];
+  const paths = new Set(values.flatMap((value) => asArray(value).map(asObject)).filter((item) => item.kind === "openapi").map((item) => String(item.path)));
+  const documents = asArray(asObject(asObject(facts.categories).api_contracts).facts).map(asObject).filter((fact) => paths.has(String(fact.key)));
   const origins = new Set<string>();
   for (const document of documents) {
-    for (const server of list(record(document.value).servers)) {
+    for (const server of asArray(asObject(document.value).servers)) {
       const origin = /^((?:https?|wss?):\/\/[^/?#]+)/i.exec(String(server))?.[1];
       if (origin) origins.add(origin.toLowerCase());
     }
   }
-  return { origins: [...origins].sort(compareCodeUnits), evidence: [...list(contracts.evidence).map(String), ...documents.flatMap((document) => list(document.evidence).map(String))] };
+  return { origins: [...origins].sort(compareCodeUnits), evidence: [...asArray(contracts.evidence).map(String), ...documents.flatMap((document) => asArray(document.evidence).map(String))] };
 }
 
 /** The canonical Git URL a consumer declares for +name+, when its specifier is one. */
 function gitUrlOf(facts: JsonObject, name: string): string | null {
-  const dependencyFacts = list(record(record(facts.categories).dependencies).facts).map(record);
+  const dependencyFacts = asArray(asObject(asObject(facts.categories).dependencies).facts).map(asObject);
   for (const fact of dependencyFacts) {
-    const values = fact.state === "conflicting" ? list(fact.candidates).map((candidate) => record(record(candidate).value)) : [record(fact.value)];
+    const values = fact.state === "conflicting" ? asArray(fact.candidates).map((candidate) => asObject(asObject(candidate).value)) : [asObject(fact.value)];
     for (const value of values) {
       if (value.name !== name || typeof value.specifier !== "string") continue;
       try {
@@ -320,11 +321,11 @@ class MapBuilder {
   edge(from: Contributor, input: EdgeInput, cited: readonly [Contributor, readonly string[]][]): void {
     const evidence = new Set<string>();
     for (const [contributor, ids] of cited) {
-      const records = record(contributor.facts.evidence);
+      const records = asObject(contributor.facts.evidence);
       for (const id of ids) {
         if (!records[id]) continue;
         evidence.add(id);
-        this.evidence.set(id, record(records[id]));
+        this.evidence.set(id, asObject(records[id]));
       }
     }
     const reference = { type: input.reference.type, role: input.reference.role, identifier: input.reference.identifier };
@@ -353,14 +354,8 @@ function indexBy(contributors: readonly Contributor[], entries: (contributor: Co
   return index;
 }
 
-function record(value: unknown): JsonObject {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : {};
-}
 
-function list(value: unknown): JsonValue[] {
-  return Array.isArray(value) ? value : [];
-}
 
 function strings(value: unknown): Record<string, string> {
-  return Object.fromEntries(Object.entries(record(value)).map(([key, item]) => [key, String(item)]));
+  return Object.fromEntries(Object.entries(asObject(value)).map(([key, item]) => [key, String(item)]));
 }

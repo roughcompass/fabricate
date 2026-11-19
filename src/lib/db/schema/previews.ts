@@ -3,6 +3,7 @@ import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueI
 import { repositorySources } from "./catalog";
 import { createdAt, id, publicId, sqlList, timestamp, updatedAt } from "./columns";
 import { repositoryProfiles } from "./results";
+import type { JsonObject } from "@repo-facts/contract";
 
 /*
  * Repository previews (openspec add-repository-previews, docs/previews.md).
@@ -58,9 +59,9 @@ export const previewPreparations = sqliteTable(
     profileDocument: text("profile_document"),
     profileDigest: text("profile_digest"),
     /** Every package's verdict: its conditions with their deciding facts, and what a build needs when it qualifies. */
-    packages: text("packages"),
+    packages: text("packages", { mode: "json" }).$type<JsonObject[]>(),
     /** Why the commit is Not previewable: each failed condition, with its facts and evidence. */
-    refusal: text("refusal"),
+    refusal: text("refusal", { mode: "json" }).$type<JsonObject>(),
     /** Why preparation stopped before a decision. */
     failure: text("failure"),
     /** When preparation last started, so a retry queues a job of its own. */
@@ -116,7 +117,7 @@ export const previewBuilds = sqliteTable(
     refKind: text("ref_kind", { enum: PREVIEW_REF_KINDS }).notNull(),
     profileDigest: text("profile_digest").notNull(),
     /** The package's verdict from the preparation: its deciding facts with their evidence, and its build plan. */
-    decidingFacts: text("deciding_facts").notNull(),
+    decidingFacts: text("deciding_facts", { mode: "json" }).$type<JsonObject>().notNull(),
     /** The latest attempt, numbered from 1; a rebuild starts the next. */
     attempt: integer("attempt").notNull().default(1),
     attemptState: text("attempt_state", { enum: ATTEMPT_STATES }).notNull().default("queued"),
@@ -131,7 +132,7 @@ export const previewBuilds = sqliteTable(
     artifactAttempt: integer("artifact_attempt"),
     artifactLayout: text("artifact_layout", { enum: ARTIFACT_LAYOUTS }),
     /** The artifact's entry metadata: its index.html or host entry and format, and whether serving rebases its HTML. */
-    artifactEntry: text("artifact_entry"),
+    artifactEntry: text("artifact_entry", { mode: "json" }).$type<JsonObject>(),
     outputBytes: integer("output_bytes"),
     buildMs: integer("build_ms"),
     nodeVersion: text("node_version"),

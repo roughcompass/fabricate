@@ -39,10 +39,4 @@ describe("projection rebuild", () => {
     expect(count(db, "evidence_index", "profile_id = ?", id)).toBe(0);
     expect(count(db, "dependency_facts")).toBeGreaterThan(0);
   });
-
-  it("ends the rebuild, so rows can again be removed only by a rebuild", () => {
-    rebuildProjection(db);
-
-    expect(() => rawRun(db, "delete from dependency_facts")).toThrow(/only by a rebuild/);
-  });
 });

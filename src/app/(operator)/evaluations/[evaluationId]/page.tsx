@@ -13,7 +13,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Select } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -27,20 +28,17 @@ import { assessmentNumber } from "@/lib/assessments/assessment-records";
 import { assessmentById } from "@/lib/assessments/lookups";
 import { evaluationStatus } from "@/lib/assessments/status";
 import { getDb } from "@/lib/db/client";
-import { OUTCOMES, SEVERITIES } from "@/lib/db/schema";
 import type { Outcome } from "@/lib/evaluations/controls";
-import { coverageGapsOf, evaluationNumber, evaluationReleasesOf, findEvaluation, findingDocument, findingsOf, outcomeLabel } from "@/lib/evaluations/evaluation-records";
+import { coverageGapsOf, evaluationNumber, type EvaluationRelease, evaluationReleasesOf, findEvaluation, outcomeLabel, SEVERITIES } from "@/lib/evaluations/evaluation-records";
 import { type Conclusion, OUTCOME_ORDER } from "@/lib/evaluations/summary";
 import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { releaseById, standardById } from "@/lib/standards/standard-records";
 import { evaluationOutcome } from "../outcomes";
 import styles from "./evaluation.module.css";
+import { routes } from "@/lib/web/routes";
+import { type FilteredFindings, filterFindings } from "@/lib/evaluations/finding-filters";
 
 const CONCLUSIONS: Record<Conclusion, string> = { gaps: "gaps", undetermined: "undetermined", conforms: "conforms", not_applicable: "not_applicable" };
-
-function pick<T extends string>(value: string | undefined, allowed: readonly T[]): T | undefined {
-  return value !== undefined && (allowed as readonly string[]).includes(value) ? (value as T) : undefined;
-}
 
 const load = cache((publicId: string) => {
   const db = getDb();
@@ -50,12 +48,12 @@ const load = cache((publicId: string) => {
   return { evaluation, assessment, initiative: initiativeById(db, evaluation.initiativeId), number: evaluationNumber(db, evaluation), assessmentNumber: assessmentNumber(db, assessment) };
 });
 
-export async function generateMetadata({ params }: { params: Promise<{ evaluationId: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/evaluations/[evaluationId]">): Promise<Metadata> {
   const found = load((await params).evaluationId);
   return { title: found ? `Evaluation #${found.number} · ${found.initiative.name}` : "Evaluation not found" };
 }
 
-export default async function EvaluationPage({ params, searchParams }: { params: Promise<{ evaluationId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function EvaluationPage({ params, searchParams }: PageProps<"/evaluations/[evaluationId]">) {
   const [{ evaluationId }, query] = await Promise.all([params, searchParams]);
   const db = getDb();
   const found = load(evaluationId);
@@ -72,42 +70,23 @@ export default async function EvaluationPage({ params, searchParams }: { params:
   });
   const evaluated = releases.filter(({ pinned }) => pinned.state === "complete" || pinned.state === "failed").length;
 
-  const all = findingsOf(db, evaluation.id).map((finding) => ({ finding, document: findingDocument(finding) }));
-  const controls = [...new Map(all.map(({ finding, document }) => [finding.controlKey, String((document.control as JsonObject).title)])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  const subjects = [...new Map(all.map(({ finding, document }) => [finding.subjectKey, String((document.subject as JsonObject).name)])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  const filters = {
-    release: pick(param(query, "release"), releases.map(({ pinned }) => String(pinned.position))),
-    outcome: pick(param(query, "outcome"), OUTCOMES),
-    severity: pick(param(query, "severity"), SEVERITIES),
-    control: pick(param(query, "control"), controls.map(([key]) => key)),
-    subject: pick(param(query, "subject"), subjects.map(([key]) => key)),
-  };
-  const filtered = Object.values(filters).some(Boolean);
-  const shown = all.filter(
-    ({ finding }) =>
-      (!filters.release || releases.find(({ pinned }) => pinned.id === finding.evaluationReleaseId)?.pinned.position === Number(filters.release)) &&
-      (!filters.outcome || finding.outcome === filters.outcome) &&
-      (!filters.severity || finding.severity === filters.severity) &&
-      (!filters.control || finding.controlKey === filters.control) &&
-      (!filters.subject || finding.subjectKey === filters.subject),
-  );
-  const base = `/evaluations/${evaluation.publicId}`;
+  const findings = filterFindings(db, evaluation.id, releases.map(({ pinned }) => pinned), query);
   const summaries = new Map(((summary?.releases ?? []) as JsonObject[]).map((entry) => [String(entry.release), entry]));
   const combined = (summary?.combined ?? null) as JsonObject | null;
   const conclusionOf = (entry: JsonObject | null | undefined) => CONCLUSIONS[(entry?.conclusion as Conclusion | undefined) ?? "not_applicable"];
 
   return (
     <Page>
-      {!status.terminal && <ProgressPoller url={`/api/evaluations/${evaluation.publicId}/status`} version={status.version} />}
+      {!status.terminal && <ProgressPoller url={routes.evaluationStatus(evaluation.publicId)} version={status.version} />}
       <PageHeader
         breadcrumbs={[
           { href: "/assessments", label: "Assessments" },
-          { href: `/assessments/${initiative.publicId}`, label: initiative.name },
+          { href: routes.assessment(initiative.publicId), label: initiative.name },
         ]}
         title={name}
         status={<Status state={evaluation.state} />}
         meta={[
-          <Link key="assessment" href={`/runs/${assessment.publicId}`}>{`Run #${found.assessmentNumber}`}</Link>,
+          <Link key="assessment" href={routes.run(assessment.publicId)}>{`Run #${found.assessmentNumber}`}</Link>,
           countLabel(releases.length, "Release"),
           <span key="started">
             Started <RelativeTime value={evaluation.createdAt} />
@@ -174,7 +153,7 @@ export default async function EvaluationPage({ params, searchParams }: { params:
                 return (
                   <tr key={pinned.id}>
                     <Td label="Release">
-                      <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{label}</Link>
+                      <Link href={routes.release(standard.publicId, release.publicId)}>{label}</Link>
                     </Td>
                     <Td label="Conclusion">
                       <Status state={conclusionOf(entry)} />
@@ -192,82 +171,7 @@ export default async function EvaluationPage({ params, searchParams }: { params:
         )}
       </Section>
 
-      <Section id="findings" title="Findings" description="One Finding per Control and subject, grouped by Release and Control. Open a Finding for what was expected, what was observed, and why.">
-        <FilterBar key={JSON.stringify(filters)} action={base} label="Filter Findings" filtered={filtered} clearHref={base}>
-          <Select id="filter-release" name="release" label="Release" size="sm" defaultValue={filters.release ?? ""} options={[{ value: "", label: "Any Release" }, ...releases.map(({ pinned, label }) => ({ value: String(pinned.position), label }))]} />
-          <Select id="filter-outcome" name="outcome" label="Outcome" size="sm" defaultValue={filters.outcome ?? ""} options={[{ value: "", label: "Any outcome" }, ...OUTCOME_ORDER.map((outcome) => ({ value: outcome, label: outcomeLabel(outcome) }))]} />
-          <Select id="filter-severity" name="severity" label="Severity" size="sm" defaultValue={filters.severity ?? ""} options={[{ value: "", label: "Any severity" }, ...severityOptions(SEVERITIES)]} />
-          <Select id="filter-control" name="control" label="Control" size="sm" defaultValue={filters.control ?? ""} options={[{ value: "", label: "Any Control" }, ...controls.map(([key, title]) => ({ value: key, label: title }))]} />
-          <Select id="filter-subject" name="subject" label="Subject" size="sm" defaultValue={filters.subject ?? ""} options={[{ value: "", label: "Any subject" }, ...subjects.map(([key, subject]) => ({ value: key, label: subject }))]} />
-        </FilterBar>
-        <p role="status" className={styles.count}>
-          {filtered ? `Showing ${shown.length} of ${countLabel(all.length, "Finding")}` : countLabel(all.length, "Finding")}
-        </p>
-
-        {shown.length === 0 && (
-          <Panel flush>
-            <EmptyState title={all.length === 0 ? "No Findings yet" : "No matching Findings"}>{all.length === 0 ? (status.terminal ? "This Evaluation produced no Findings." : "Findings appear as each Release is evaluated.") : "No Finding matches these filters."}</EmptyState>
-          </Panel>
-        )}
-
-        {releases.map(({ pinned, label }) => {
-          const group = shown.filter(({ finding }) => finding.evaluationReleaseId === pinned.id);
-          if (!group.length) return null;
-          const byControl = [...new Map(group.map(({ finding }) => [finding.controlKey, group.filter((item) => item.finding.controlKey === finding.controlKey)])).values()];
-          return (
-            <Section key={pinned.id} id={`release-${pinned.position}`} level={3} title={label} description={`${countLabel(byControl.length, "Control")} · ${countLabel(group.length, "Finding")}`}>
-              <Panel flush>
-                <ul className={styles.controls} aria-label={`${label} Controls`}>
-                  {byControl.map((items) => {
-                    const { finding, document } = items[0]!;
-                    const control = document.control as JsonObject;
-                    const counts = OUTCOME_ORDER.map((outcome) => [outcome, items.filter((item) => item.finding.outcome === outcome).length] as const).filter(([, count]) => count > 0);
-                    return (
-                      <li key={finding.controlKey}>
-                        <details className={styles.control} open={filtered}>
-                          <summary className={styles.summary}>
-                            <Icon name="chevronRight" size={14} className={styles.chevron} />
-                            <span className={styles.title}>
-                              <span className={styles.controlTitle}>{String(control.title)}</span>
-                              <Tag>{finding.controlKey}</Tag>
-                            </span>
-                            <Severity value={finding.severity} />
-                            <span className={styles.counts}>
-                              {counts.map(([outcome, count]) => (
-                                <Status key={outcome} state={outcome} size="sm" label={`${count} ${statusLabel(outcome)}`} />
-                              ))}
-                            </span>
-                          </summary>
-                          <Table
-                            label={`${String(control.title)} Findings`}
-                            head={
-                              <>
-                                <Th>Subject</Th>
-                                <Th>Outcome</Th>
-                              </>
-                            }
-                          >
-                            {items.map((item) => (
-                              <tr key={item.finding.publicId}>
-                                <Td label="Subject">
-                                  <Link href={`${base}/findings/${item.finding.publicId}`}>{String((item.document.subject as JsonObject).name)}</Link>
-                                </Td>
-                                <Td label="Outcome">
-                                  <Status state={item.finding.outcome as Outcome} />
-                                </Td>
-                              </tr>
-                            ))}
-                          </Table>
-                        </details>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Panel>
-            </Section>
-          );
-        })}
-      </Section>
+      <FindingsSection evaluationId={evaluation.publicId} releases={releases} findings={findings} terminal={status.terminal} />
 
       <Disclosure summary="Details" variant="plain">
         <DescriptionList surface
@@ -280,6 +184,90 @@ export default async function EvaluationPage({ params, searchParams }: { params:
         />
       </Disclosure>
     </Page>
+  );
+}
+
+/** The Findings, filtered by the address and grouped by Release and Control, each opening its own page. */
+function FindingsSection({ evaluationId, releases, findings, terminal }: { evaluationId: string; releases: { pinned: EvaluationRelease; label: string }[]; findings: FilteredFindings; terminal: boolean }) {
+  const { all, controls, subjects, filters, filtered, shown } = findings;
+  const base = routes.evaluation(evaluationId);
+  return (
+    <Section id="findings" title="Findings" description="One Finding per Control and subject, grouped by Release and Control. Open a Finding for what was expected, what was observed, and why.">
+      <FilterBar key={JSON.stringify(filters)} action={base} label="Filter Findings" filtered={filtered} clearHref={base}>
+        <Select id="filter-release" name="release" label="Release" size="sm" defaultValue={filters.release ?? ""} options={[{ value: "", label: "Any Release" }, ...releases.map(({ pinned, label }) => ({ value: String(pinned.position), label }))]} />
+        <Select id="filter-outcome" name="outcome" label="Outcome" size="sm" defaultValue={filters.outcome ?? ""} options={[{ value: "", label: "Any outcome" }, ...OUTCOME_ORDER.map((outcome) => ({ value: outcome, label: outcomeLabel(outcome) }))]} />
+        <Select id="filter-severity" name="severity" label="Severity" size="sm" defaultValue={filters.severity ?? ""} options={[{ value: "", label: "Any severity" }, ...severityOptions(SEVERITIES)]} />
+        <Select id="filter-control" name="control" label="Control" size="sm" defaultValue={filters.control ?? ""} options={[{ value: "", label: "Any Control" }, ...controls.map(([key, title]) => ({ value: key, label: title }))]} />
+        <Select id="filter-subject" name="subject" label="Subject" size="sm" defaultValue={filters.subject ?? ""} options={[{ value: "", label: "Any subject" }, ...subjects.map(([key, subject]) => ({ value: key, label: subject }))]} />
+      </FilterBar>
+      <p role="status" className={styles.count}>
+        {filtered ? `Showing ${shown.length} of ${countLabel(all.length, "Finding")}` : countLabel(all.length, "Finding")}
+      </p>
+
+      {shown.length === 0 && (
+        <Panel flush>
+          <EmptyState title={all.length === 0 ? "No Findings yet" : "No matching Findings"}>{all.length === 0 ? (terminal ? "This Evaluation produced no Findings." : "Findings appear as each Release is evaluated.") : "No Finding matches these filters."}</EmptyState>
+        </Panel>
+      )}
+
+      {releases.map(({ pinned, label }) => {
+        const group = shown.filter(({ finding }) => finding.evaluationReleaseId === pinned.id);
+        if (!group.length) return null;
+        const byControl = [...new Map(group.map(({ finding }) => [finding.controlKey, group.filter((item) => item.finding.controlKey === finding.controlKey)])).values()];
+        return (
+          <Section key={pinned.id} id={`release-${pinned.position}`} level={3} title={label} description={`${countLabel(byControl.length, "Control")} · ${countLabel(group.length, "Finding")}`}>
+            <Panel flush>
+              <ul className={styles.controls} aria-label={`${label} Controls`}>
+                {byControl.map((items) => {
+                  const { finding, document } = items[0]!;
+                  const control = document.control as JsonObject;
+                  const counts = OUTCOME_ORDER.map((outcome) => [outcome, items.filter((item) => item.finding.outcome === outcome).length] as const).filter(([, count]) => count > 0);
+                  return (
+                    <li key={finding.controlKey}>
+                      <details className={styles.control} open={filtered}>
+                        <summary className={styles.summary}>
+                          <Icon name="chevronRight" size={14} className={styles.chevron} />
+                          <span className={styles.title}>
+                            <span className={styles.controlTitle}>{String(control.title)}</span>
+                            <Tag>{finding.controlKey}</Tag>
+                          </span>
+                          <Severity value={finding.severity} />
+                          <span className={styles.counts}>
+                            {counts.map(([outcome, count]) => (
+                              <Status key={outcome} state={outcome} size="sm" label={`${count} ${statusLabel(outcome)}`} />
+                            ))}
+                          </span>
+                        </summary>
+                        <Table
+                          label={`${String(control.title)} Findings`}
+                          head={
+                            <>
+                              <Th>Subject</Th>
+                              <Th>Outcome</Th>
+                            </>
+                          }
+                        >
+                          {items.map((item) => (
+                            <tr key={item.finding.publicId}>
+                              <Td label="Subject">
+                                <Link href={routes.finding(evaluationId, item.finding.publicId)}>{String((item.document.subject as JsonObject).name)}</Link>
+                              </Td>
+                              <Td label="Outcome">
+                                <Status state={item.finding.outcome as Outcome} />
+                              </Td>
+                            </tr>
+                          ))}
+                        </Table>
+                      </details>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
+          </Section>
+        );
+      })}
+    </Section>
   );
 }
 

@@ -1,6 +1,8 @@
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
+import { newestProfileIds } from "@/lib/profiling/current";
 import { assessments, graphEdges, graphNodes, initiatives, repositorySources } from "@/lib/db/schema";
+import { routes } from "@/lib/web/routes";
 
 /**
  * How a repository relates to the other repositories of the newest
@@ -75,7 +77,7 @@ export function repositoryRelationships(db: Executor, sourceId: number): Reposit
     return [...related.values()].sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  return { run: { publicId: node.run, finishedAt: node.finishedAt }, uses: collect("uses"), usedBy: collect("usedBy"), mapHref: `/runs/${node.run}/map?${new URLSearchParams({ focus: node.nodeId })}` };
+  return { run: { publicId: node.run, finishedAt: node.finishedAt }, uses: collect("uses"), usedBy: collect("usedBy"), mapHref: routes.runMap(node.run, { focus: node.nodeId }) };
 }
 
 /** A cataloged repository that produces a package. */
@@ -85,9 +87,9 @@ export interface PackageProducer {
 }
 
 /**
- * The cataloged repositories that produce each of +names+, by their newest
- * profiled version: a dependency one of them produces is internal to the
- * fleet, not a vendor's. A package name is matched exactly; a private
+ * The cataloged repositories that produce each of +names+, by their current
+ * Profiles: a dependency one of them produces is internal to the fleet, not
+ * a vendor's. A package name is matched exactly; a private
  * workspace package with a common name can match a vendor's, so each match
  * names its producer. Reads the projection by index, so it stays cheap at
  * 200 to 500 repositories.
@@ -101,8 +103,9 @@ export function packageProducers(db: Executor, names: readonly string[]): Map<st
     JOIN graph_nodes package ON package.map_id = edge.map_id AND package.node_id = edge.to_node
     JOIN graph_nodes producer ON producer.map_id = edge.map_id AND producer.node_id = edge.from_node
     JOIN repository_sources source ON source.id = producer.repository_source_id
+    JOIN repository_profiles profile ON profile.assessment_target_id = producer.assessment_target_id
     WHERE edge.type = 'package_production'
-      AND edge.map_id IN (SELECT MAX(map.id) FROM relationship_maps map JOIN profile_versions version ON version.assessment_id = map.assessment_id GROUP BY version.repository_source_id)
+      AND profile.id IN ${newestProfileIds(db)}
       AND package.label IN (${sql.join(names.map((name) => sql`${name}`), sql`, `)})
     ORDER BY source.name`);
   for (const row of rows) producers.set(row.package, [...(producers.get(row.package) ?? []), { publicId: row.publicId, name: row.name }]);

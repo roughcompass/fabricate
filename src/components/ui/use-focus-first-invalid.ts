@@ -8,16 +8,16 @@ import { useEffect, useRef } from "react";
  * to the form. The initial state never moves focus, so neither does a render
  * before the first submission.
  */
-export function useFocusFirstInvalid<State>(state: State, alertId?: string) {
+export function useFocusFirstInvalid<State>(state: State, alertId?: string, enabled = true) {
   const form = useRef<HTMLFormElement>(null);
   const initial = useRef(state);
 
   useEffect(() => {
-    if (state === initial.current) return;
+    if (!enabled || state === initial.current) return;
     const field = form.current?.querySelector<HTMLElement>('[aria-invalid="true"]:is(input, select, textarea), fieldset[aria-invalid="true"] input:not(:disabled)');
     const target = field ?? (alertId ? document.getElementById(alertId) : null);
     target?.focus();
-  }, [state, alertId]);
+  }, [state, alertId, enabled]);
 
   return form;
 }

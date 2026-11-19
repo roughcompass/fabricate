@@ -39,17 +39,10 @@ const settingsSchema = z.strictObject({
     maxFiles: positiveInteger,
     maxTotalBytes: positiveInteger,
   }),
-  // The template demo: off by default, on in development and test. A hosted
-  // demo turns it on with FABRICATE_DEMO=true.
+  // The template demo: off by default, on in development and test, and
+  // turned on elsewhere with FABRICATE_DEMO=true.
   demo: z.strictObject({
     enabled: z.boolean(),
-  }),
-  // Where ownership of DE Web applications is read from: an export file, or
-  // an HTTPS endpoint read under a read-only service identity whose token
-  // comes only from FABRICATE_DE_CONSOLE_TOKEN. Not read when null.
-  deConsole: z.strictObject({
-    source: z.string().trim().min(1).nullable(),
-    refreshMinutes: positiveInteger,
   }),
   // How often the worker checks every repository's reference for new
   // commits, and the detector for a new release, to queue profile versions.
@@ -97,8 +90,6 @@ export const ENV_KEYS = {
   maxFiles: "FABRICATE_MAX_FILES",
   maxTotalBytes: "FABRICATE_MAX_TOTAL_BYTES",
   demoEnabled: "FABRICATE_DEMO",
-  deConsoleSource: "FABRICATE_DE_CONSOLE_SOURCE",
-  deConsoleRefreshMinutes: "FABRICATE_DE_CONSOLE_REFRESH_MINUTES",
   profilingCheckMinutes: "FABRICATE_PROFILING_CHECK_MINUTES",
   previewsEnabled: "FABRICATE_PREVIEWS",
   previewsTrustedSources: "FABRICATE_PREVIEWS_TRUSTED_SOURCES",
@@ -109,17 +100,6 @@ export const ENV_KEYS = {
   previewsMaxOutputBytes: "FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES",
   previewsMaxStorageBytes: "FABRICATE_PREVIEWS_MAX_STORAGE_BYTES",
 } as const;
-
-/** The DE Console service identity's token. Read from the environment when a request is made, and never stored in the configuration. */
-export const DE_CONSOLE_TOKEN = "FABRICATE_DE_CONSOLE_TOKEN";
-
-export type DeConsoleSource = { readonly kind: "file"; readonly path: string } | { readonly kind: "url"; readonly url: string };
-
-export interface DeConsoleSettings {
-  /** Null when no DE Console source is configured. */
-  readonly source: DeConsoleSource | null;
-  readonly refreshMinutes: number;
-}
 
 export interface AnalysisBudgets {
   readonly maxBlobBytes: number;
@@ -160,7 +140,6 @@ export interface FabricateConfig {
   readonly analysis: AnalysisBudgets;
   /** Whether the template demo's pages, running applications, and endpoints exist. */
   readonly demoEnabled: boolean;
-  readonly deConsole: DeConsoleSettings;
   readonly profiling: { readonly checkMinutes: number };
   readonly previews: PreviewSettings;
   /** The settings this configuration was built from, before mandatory additions. */
@@ -195,12 +174,13 @@ export function loadConfig(options: LoadOptions = {}): FabricateConfig {
 /**
  * Returns a new configuration with some settings replaced. Mandatory denied
  * roots are recomputed, so an override can never remove fleet-kit/.
+ *
+ * @public Tests override settings through this.
  */
 export function withOverrides(
   config: FabricateConfig,
-  overrides: Partial<Omit<Settings, "analysis" | "deConsole" | "profiling" | "previews">> & {
+  overrides: Partial<Omit<Settings, "analysis" | "profiling" | "previews">> & {
     analysis?: Partial<Settings["analysis"]>;
-    deConsole?: Partial<Settings["deConsole"]>;
     profiling?: Partial<Settings["profiling"]>;
     previews?: Partial<Settings["previews"]>;
   },
@@ -210,7 +190,6 @@ export function withOverrides(
     ...overrides,
     analysis: { ...config.settings.analysis, ...overrides.analysis },
     demo: { ...config.settings.demo, ...overrides.demo },
-    deConsole: { ...config.settings.deConsole, ...overrides.deConsole },
     profiling: { ...config.settings.profiling, ...overrides.profiling },
     previews: { ...config.settings.previews, ...overrides.previews },
   };
@@ -265,7 +244,6 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
     gitCredentialHelper: settings.gitCredentialHelper,
     analysis: { ...settings.analysis },
     demoEnabled: settings.demo.enabled,
-    deConsole: { source: deConsoleSource(settings.deConsole.source, resolve, mandatory), refreshMinutes: settings.deConsole.refreshMinutes },
     profiling: { checkMinutes: settings.profiling.checkMinutes },
     previews: {
       enabled: settings.previews.enabled,
@@ -303,36 +281,6 @@ function nodeVersions(entries: Readonly<Record<string, string>>, resolve: (value
   return result;
 }
 
-const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]"]);
-
-/**
- * An HTTPS endpoint, or plain HTTP to this machine for a local stub, without
- * credentials in the URL; or an export file outside the protected tree.
- */
-function deConsoleSource(value: string | null, resolve: (value: string) => string, mandatory: readonly string[]): DeConsoleSource | null {
-  if (value === null) return null;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) {
-    let url: URL;
-    try {
-      url = new URL(value);
-    } catch {
-      throw new ConfigurationError(`The DE Console source ${JSON.stringify(value)} is not a valid URL`);
-    }
-    if (url.username || url.password) throw new ConfigurationError(`The DE Console source can't contain credentials; set ${DE_CONSOLE_TOKEN} instead`);
-    if (url.protocol !== "https:" && !(url.protocol === "http:" && LOOPBACK.has(url.hostname))) {
-      throw new ConfigurationError("The DE Console source must be an https:// URL, or http:// to this machine");
-    }
-    return { kind: "url", url: url.toString() };
-  }
-  const file = resolve(value);
-  // The file may not exist yet, so its directory's real location is checked too.
-  const directory = realpathIfExists(path.dirname(/*turbopackIgnore: true*/ file));
-  const candidates = [file, realpathIfExists(file), directory && path.join(directory, path.basename(file))].filter((candidate): candidate is string => candidate !== null);
-  if (candidates.some((candidate) => namesProtectedDirectory(candidate) || mandatory.some((denied) => isInside(denied, candidate)))) {
-    throw new ConfigurationError(`The DE Console export ${file} is inside the protected ${PROTECTED_DIRECTORY}/ tree`);
-  }
-  return { kind: "file", path: file };
-}
 
 function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Record<string, string | undefined>>): unknown {
   const result: Record<string, unknown> = { ...settings };
@@ -356,7 +304,6 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     throw new ConfigurationError(`${key} must be true, false, 1, or 0 (got ${JSON.stringify(env[key])})`);
   };
   const demo: Record<string, unknown> = { ...(settings.demo as Record<string, unknown>) };
-  const deConsole: Record<string, unknown> = { ...(settings.deConsole as Record<string, unknown>) };
   const profiling: Record<string, unknown> = { ...(settings.profiling as Record<string, unknown>) };
   const previews: Record<string, unknown> = { ...(settings.previews as Record<string, unknown>) };
   // Clone URLs can't contain whitespace, so whitespace separates them; ":" would split a URL.
@@ -388,8 +335,6 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [analysis, "maxFiles", integer(ENV_KEYS.maxFiles)],
     [analysis, "maxTotalBytes", integer(ENV_KEYS.maxTotalBytes)],
     [demo, "enabled", boolean(ENV_KEYS.demoEnabled)],
-    [deConsole, "source", text(ENV_KEYS.deConsoleSource)],
-    [deConsole, "refreshMinutes", integer(ENV_KEYS.deConsoleRefreshMinutes)],
     [profiling, "checkMinutes", integer(ENV_KEYS.profilingCheckMinutes)],
     [previews, "enabled", boolean(ENV_KEYS.previewsEnabled)],
     [previews, "trustedSources", urls(ENV_KEYS.previewsTrustedSources)],
@@ -403,7 +348,6 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   for (const [target, key, value] of assignments) if (value !== undefined) target[key] = value;
   result.analysis = analysis;
   if (Object.keys(demo).length > 0) result.demo = demo;
-  if (Object.keys(deConsole).length > 0) result.deConsole = deConsole;
   if (Object.keys(profiling).length > 0) result.profiling = profiling;
   if (Object.keys(previews).length > 0) result.previews = previews;
   return result;

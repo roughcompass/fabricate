@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { buttonProps } from "@/components/ui/button-content";
 import { countLabel } from "@/components/ui/count";
+import { ActionForm } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { useHydrated } from "@/components/ui/use-hydrated";
@@ -25,7 +26,6 @@ interface DeleteRepositoryProps {
  */
 export function DeleteRepository({ name, effects, action }: DeleteRepositoryProps) {
   const hydrated = useHydrated();
-  const [state, formAction] = useActionState(action, { error: null });
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -41,32 +41,36 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
   };
 
   const confirmation = (
-    <form action={formAction} className={styles.confirm}>
-      <label htmlFor={inputId} className={styles.confirmLabel}>
-        To confirm, type &ldquo;<strong>{name}</strong>&rdquo; in the box below
-      </label>
-      <input
-        id={inputId}
-        name="confirmation"
-        className={styles.confirmInput}
-        autoComplete="off"
-        spellCheck={false}
-        autoCapitalize="off"
-        value={hydrated ? typed : undefined}
-        onChange={(event) => setTyped(event.target.value)}
-        aria-invalid={state.error ? true : undefined}
-        // Focused when the step opens, so the name can be typed at once.
-        autoFocus={hydrated}
-      />
-      {state.error && (
-        <p className={styles.confirmError} role="alert">
-          {state.error}
-        </p>
+    <ActionForm action={action} initial={{ error: null }} className={styles.confirm}>
+      {(state) => (
+        <>
+          <label htmlFor={inputId} className={styles.confirmLabel}>
+            To confirm, type &ldquo;<strong>{name}</strong>&rdquo; in the box below
+          </label>
+          <input
+            id={inputId}
+            name="confirmation"
+            className={styles.confirmInput}
+            autoComplete="off"
+            spellCheck={false}
+            autoCapitalize="off"
+            value={hydrated ? typed : undefined}
+            onChange={(event) => setTyped(event.target.value)}
+            aria-invalid={state.error ? true : undefined}
+            // Focused when the step opens, so the name can be typed at once.
+            autoFocus={hydrated}
+          />
+          {state.error && (
+            <p className={styles.confirmError} role="alert">
+              {state.error}
+            </p>
+          )}
+          <SubmitButton variant="danger" disabled={hydrated && !matches} pendingLabel="Deleting">
+            Delete this repository
+          </SubmitButton>
+        </>
       )}
-      <SubmitButton variant="danger" disabled={hydrated && !matches} pendingLabel="Deleting">
-        Delete this repository
-      </SubmitButton>
-    </form>
+    </ActionForm>
   );
 
   return (

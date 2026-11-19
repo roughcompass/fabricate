@@ -1,5 +1,4 @@
-import os from "node:os";
-import { type AssessmentTarget, type CommitSnapshot, type SourceTarget, getTarget, internalRefFor, recordSnapshot, sourceTarget } from "@/lib/assessments/assessment-records";
+import { type AssessmentTarget, type SourceSnapshot, getTarget, internalRefFor, recordSnapshot } from "@/lib/assessments/assessment-records";
 import { transitionTarget } from "@/lib/assessments/transitions";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
 import { BoundaryViolation, SourceBoundary } from "@/lib/catalog/source-boundary";
@@ -7,11 +6,11 @@ import { type FabricateConfig, getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { generatePublicId } from "@/lib/db/ids";
 import { GitError } from "@/lib/git/errors";
-import { redact } from "@/lib/git/redact";
+import { failureText } from "@/lib/git/redact";
 import { GitRunner, type Protocol } from "@/lib/git/runner";
 import { AcquisitionError } from "./errors";
 import { Mirror } from "./mirror";
-import { withSourceLease } from "./source-lease";
+import { withSourceLock } from "./source-lease";
 
 /**
  * Acquires one Assessment target: pins the commit its configured reference
@@ -28,27 +27,16 @@ export interface AcquireOptions {
   runner?: GitRunner;
   boundary?: SourceBoundary;
   signal?: AbortSignal;
-  /** Identifies this worker in the source lease. */
-  holder?: string;
 }
 
-export async function acquireSnapshot(db: Executor, copied: AssessmentTarget, options: AcquireOptions = {}): Promise<CommitSnapshot> {
-  // Only catalog sources are acquired; a template target is already its stored files.
-  const target = sourceTarget(copied);
+export async function acquireSnapshot(db: Executor, target: AssessmentTarget, options: AcquireOptions = {}): Promise<SourceSnapshot> {
   const config = options.config ?? getConfig();
   const runner = options.runner ?? new GitRunner({ config });
   const { signal } = options;
 
   try {
     const { url, protocol } = gitSource(target, options.boundary ?? new SourceBoundary(config));
-    const lease = {
-      holder: options.holder ?? `${os.hostname()}:${process.pid}:${target.publicId}`,
-      waitMs: config.gitLockTimeoutSeconds * 1_000,
-      ttlMs: config.gitTimeoutSeconds * 2_000,
-      signal,
-    };
-
-    return await withSourceLease(db, target.repositorySourceId, lease, async () => {
+    return await withSourceLock(target.repositorySourceId, { waitMs: config.gitLockTimeoutSeconds * 1_000, signal }, async () => {
       const mirror = new Mirror(runner, target.sourcePublicId);
       await mirror.ensure();
       await mirror.clearIncoming(target.publicId);
@@ -89,7 +77,7 @@ export async function acquireSnapshot(db: Executor, copied: AssessmentTarget, op
   }
 }
 
-export type AcquisitionOutcome = { ok: true; snapshot: CommitSnapshot } | { ok: false; error: AcquisitionError; target: AssessmentTarget };
+export type AcquisitionOutcome = { ok: true; snapshot: SourceSnapshot } | { ok: false; error: AcquisitionError; target: AssessmentTarget };
 
 /**
  * Acquires a target and records the outcome on it. A failure moves only this
@@ -111,7 +99,7 @@ export async function acquireTarget(db: Executor, target: AssessmentTarget, opti
 }
 
 /** The URL and transport Git uses for a source, resolving local paths through the boundary. */
-export function gitSource(target: Pick<SourceTarget, "cloneUrl">, boundary: SourceBoundary): { url: string; protocol: Protocol } {
+export function gitSource(target: Pick<AssessmentTarget, "cloneUrl">, boundary: SourceBoundary): { url: string; protocol: Protocol } {
   const url = CloneUrl.parse(target.cloneUrl);
   if (!url.isFile) return { url: url.toString(), protocol: url.protocol };
   const location = boundary.check(url.localPath!);
@@ -152,10 +140,10 @@ export function normalizeAcquisitionError(error: unknown): AcquisitionError {
         return new AcquisitionError("unexpected", error.message);
     }
   }
-  return new AcquisitionError("unexpected", redact(error instanceof Error ? error.message : String(error)));
+  return new AcquisitionError("unexpected", failureText(error));
 }
 
 function firstLine(text: string): string {
   const line = text.split("\n").map((part) => part.replace(/^(fatal|error): /, "").trim()).find(Boolean) ?? "no details";
-  return redact(line).slice(0, 300);
+  return failureText(line, 300);
 }

@@ -3,6 +3,22 @@ import styles from "./form.module.css";
 
 export const formStyles = styles;
 
+/** Values a form submits without showing them; a list submits its name once per value, and an unset value not at all. */
+export type HiddenValues = Readonly<Record<string, string | number | readonly string[] | null | undefined>>;
+
+/** Hidden inputs for +values+. */
+export function HiddenFields({ values }: { values?: HiddenValues }) {
+  return (
+    <>
+      {Object.entries(values ?? {}).flatMap(([name, value]) =>
+        (value === null || value === undefined ? [] : typeof value === "object" ? value : [value]).map((item, index) => <input key={`${name}:${index}`} type="hidden" name={name} value={item} />),
+      )}
+    </>
+  );
+}
+
+export { ActionForm } from "./action-form";
+
 /** Values and field-addressed errors a form action returns. */
 export interface FormState<Values> {
   values: Values;
@@ -295,25 +311,6 @@ export function FormFooter({ children }: { children: React.ReactNode }) {
 }
 
 /** An error that is not about one field, such as a concurrent edit; focused after a rejected submission. */
-/**
- * A statement about the form that holds whatever the visitor enters, such as
- * where the result runs: a neutral, recessed block with an icon, a title, and
- * a sentence. Unlike FormAlert it has no tone and no live role, and it never
- * reports a problem. It has no border, so it sits inside a form's Panel
- * without nesting surfaces.
- */
-export function FormNote({ title, icon = "info", children }: { title: string; icon?: IconName; children: React.ReactNode }) {
-  return (
-    <div className={styles.note} data-form-note="">
-      <Icon name={icon} className={styles.noteIcon} />
-      <div className={styles.noteBody}>
-        <p className={styles.noteTitle}>{title}</p>
-        <div className={styles.noteText}>{children}</div>
-      </div>
-    </div>
-  );
-}
-
 export function FormAlert({ id, title, children }: { id: string; title?: string; children: React.ReactNode }) {
   return (
     <div id={id} className={styles.alert} role="alert" tabIndex={-1}>

@@ -1,15 +1,13 @@
 import fs from "node:fs";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { RepositorySource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { deletePreview } from "@/lib/previews/lifecycle";
 import { failAttempt, openPreparation, rebuildPreview } from "@/lib/previews/records";
 import { listPreviews, packageLabel, preparationOf, previewActivity, previewCount, previewsOfCommit, refLabel, remoteRefsFor } from "@/lib/previews/views";
-import { acquisitionConfig, registerLocalSource } from "../support/acquisition";
+import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
 import { buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
-import { GitFixture } from "../support/git-fixture";
 import { queuedPreview } from "../support/previews";
 
 /*
@@ -75,44 +73,33 @@ describe("preview views", () => {
     expect(refLabel({ refName: "refs/heads/feature/new-nav", refKind: "branch" })).toBe("feature/new-nav");
     expect(refLabel({ refName: "refs/tags/v1.4.0", refKind: "tag" })).toBe("v1.4.0");
     expect(refLabel({ refName: null, refKind: "commit" })).toBeNull();
-    expect(packageLabel({ packageDir: "apps/web", decidingFacts: '{"name":"@acme/web"}' })).toBe("@acme/web");
-    expect(packageLabel({ packageDir: "apps/web", decidingFacts: '{"name":null}' })).toBe("apps/web");
-    expect(packageLabel({ packageDir: ".", decidingFacts: "{}" })).toBe("The repository root");
+    expect(packageLabel({ packageDir: "apps/web", decidingFacts: { name: "@acme/web" } })).toBe("@acme/web");
+    expect(packageLabel({ packageDir: "apps/web", decidingFacts: { name: null } })).toBe("apps/web");
+    expect(packageLabel({ packageDir: ".", decidingFacts: {} })).toBe("The repository root");
   });
 
   describe("the remote's refs", () => {
-    let fixture: GitFixture;
-    let config: FabricateConfig;
-
-    beforeEach(() => {
-      fixture = GitFixture.create("preview-views");
-      config = withOverrides(acquisitionConfig(fixture), { gitTimeoutSeconds: 15 });
-    });
-
-    afterEach(() => {
-      fixture.cleanup();
-      fs.rmSync(config.repositoryStorage, { recursive: true, force: true });
-    });
+    const world = useAcquisitionWorld("preview-views", { overrides: { gitTimeoutSeconds: 15 } });
 
     it("reuses a listing for half a minute, and never one that failed", async () => {
-      const work = fixture.repo("work/orders");
+      const work = world.fixture.repo("work/orders");
       work.write("README.md", "orders\n");
       work.commit("initial");
-      const remote = fixture.bare("remotes/orders.git", { from: work });
-      const local = registerLocalSource(db, config, "orders", remote.path);
+      const remote = world.fixture.bare("remotes/orders.git", { from: work });
+      const local = registerLocalSource(world.db, world.config, "orders", remote.path);
       const now = Date.now();
 
-      const first = await remoteRefsFor(config, local, now);
+      const first = await remoteRefsFor(world.config, local, now);
       expect(first.refs.map((ref) => ref.label)).toEqual(["main"]);
       work.git("push", "--quiet", remote.path, "main:feature/next");
-      expect(await remoteRefsFor(config, local, now + 29_000)).toBe(first);
-      expect((await remoteRefsFor(config, local, now + 31_000)).refs.map((ref) => ref.label)).toEqual(["main", "feature/next"]);
+      expect(await remoteRefsFor(world.config, local, now + 29_000)).toBe(first);
+      expect((await remoteRefsFor(world.config, local, now + 31_000)).refs.map((ref) => ref.label)).toEqual(["main", "feature/next"]);
 
-      const gone = registerLocalSource(db, config, "gone", fixture.bare("remotes/gone.git", { from: work }).path);
-      fs.rmSync(fixture.dir("remotes/gone.git"), { recursive: true, force: true });
-      const failed = await remoteRefsFor(config, gone, now);
+      const gone = registerLocalSource(world.db, world.config, "gone", world.fixture.bare("remotes/gone.git", { from: work }).path);
+      fs.rmSync(world.fixture.dir("remotes/gone.git"), { recursive: true, force: true });
+      const failed = await remoteRefsFor(world.config, gone, now);
       expect(failed.unavailable).not.toBeNull();
-      expect(await remoteRefsFor(config, gone, now)).not.toBe(failed);
+      expect(await remoteRefsFor(world.config, gone, now)).not.toBe(failed);
     });
   });
 });

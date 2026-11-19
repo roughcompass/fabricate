@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { createRequire } from "node:module";
 import { expectToolbarOnTop, openTool, openToolbarMenu, startComment, waitForRegions } from "./support/demo";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
+import { useTheme } from "./support/shell";
 
 /** The toolbar over every running application (template-demo/toolbar spec). */
 
@@ -175,7 +176,7 @@ test.describe("the menu", () => {
 
   for (const theme of ["light", "dark"] as const) {
     test(`has no accessibility violations with the menu open in the ${theme} operator theme`, async ({ page, context, baseURL }) => {
-      await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+      await useTheme(context, theme, baseURL!);
       await page.reload();
       await waitForRegions(page);
       expect(await auditToolbar(page)).toEqual([]);

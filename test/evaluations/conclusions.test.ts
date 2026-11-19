@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { conclusionCounts, latestConclusions } from "@/lib/evaluations/conclusions";
-import { claimInitiative } from "@/lib/initiatives/initiative-records";
+import { queueProfile } from "@/lib/profiling/versions";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
@@ -30,13 +30,27 @@ describe("latest conclusions", () => {
     expect(conclusionCounts(conclusions)).toEqual({ gaps: 0, undetermined: 0, conforms: 0, not_applicable: 0, none: 2 });
   });
 
-  it("keeps Assessments created for claims apart (Assessments created for claims)", () => {
+  it("leaves the profiling Assessment out", () => {
     const db = createTestDb();
     const source = buildSource(db);
     const operator = buildInitiative(db, { sources: [source] });
-    const claimed = claimInitiative(db, source);
+    queueProfile(db, source, "imported");
 
     expect([...latestConclusions(db).keys()]).toEqual([operator.id]);
-    expect([...latestConclusions(db, { systemOwned: true }).keys()]).toEqual([claimed.id]);
+  });
+
+  it("reads the conclusions as they stood at a time: Assessments created by then, and Evaluations completed by then", () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.UTC(2026, 9, 1) });
+    const db = createTestDb();
+    const initiative = buildInitiative(db, { sources: [buildSource(db)] });
+    const run = driveRun(db, buildAssessment(db, { initiative }).assessment, "complete");
+    driveEvaluation(db, buildEvaluation(db, initiative, run), "complete", "conforms");
+    vi.setSystemTime(Date.UTC(2026, 9, 10));
+    driveEvaluation(db, buildEvaluation(db, initiative, run), "complete", "gaps");
+    buildInitiative(db, { sources: [buildSource(db)] });
+    vi.useRealTimers();
+
+    expect(conclusionCounts(latestConclusions(db, { at: new Date(Date.UTC(2026, 9, 5)) }))).toMatchObject({ conforms: 1, gaps: 0, none: 0 });
+    expect(conclusionCounts(latestConclusions(db))).toMatchObject({ conforms: 0, gaps: 1, none: 1 });
   });
 });

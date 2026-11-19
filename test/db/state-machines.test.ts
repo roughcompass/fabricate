@@ -5,20 +5,12 @@ import { advanceAssessment, requestCancellation, transitionAssessment, transitio
 import type { Db } from "@/lib/db/client";
 import { TransitionError } from "@/lib/db/errors";
 import { assessmentTargets, assessments, evaluationReleases, evaluations } from "@/lib/db/schema";
-import {
-  ASSESSMENT_MACHINE,
-  EVALUATION_MACHINE,
-  EVALUATION_RELEASE_MACHINE,
-  type StateMachine,
-  TARGET_MACHINE,
-  canTransition,
-  isTerminal,
-  pathsFromInitial,
-} from "@/lib/db/state-machines";
+import { activeStates, ASSESSMENT_MACHINE, canTransition, EVALUATION_MACHINE, EVALUATION_RELEASE_MACHINE, isTerminal, pathsFromInitial, TARGET_MACHINE, type StateMachine } from "@/lib/db/state-machines";
 import { createEvaluation } from "@/lib/evaluations/evaluation-records";
 import { transitionEvaluation, transitionEvaluationRelease } from "@/lib/evaluations/transitions";
 import { buildAssessment, buildRelease, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
+import { ACTIVE_STATES } from "@/lib/profiling/versions";
 
 interface Harness {
   table: string;
@@ -46,7 +38,7 @@ const harnesses: Harness[] = [
     create: (db) => buildAssessment(db, { sources: [buildSource(db)] }).targets[0]!.id,
     extra: (state) => (state === "failed" ? ", failure_code = 'test'" : ", failure_code = NULL"),
     transition: (db, id, to) =>
-      transitionTarget(db, db.select().from(assessmentTargets).where(eq(assessmentTargets.id, id)).get()!, to as never, { failureCode: "test" }),
+      transitionTarget(db, db.select().from(assessmentTargets).where(eq(assessmentTargets.id, id)).get()!, to as never, { failureCode: "unexpected" }),
   },
   {
     table: "evaluations",
@@ -156,7 +148,7 @@ describe("aggregate progress and cancellation", () => {
   it("records timestamps on start and on terminal states", () => {
     const { assessment, targets } = buildAssessment(db, { sources: [buildSource(db)] });
     const acquiring = transitionTarget(db, targets[0]!, "acquiring");
-    const failed = transitionTarget(db, acquiring, "failed", { failureCode: "remote_unavailable", failureMessage: "https://user:secret@example.com unreachable" });
+    const failed = transitionTarget(db, acquiring, "failed", { failureCode: "source_unavailable", failureMessage: "https://user:secret@example.com unreachable" });
 
     expect(acquiring.startedAt).toBeInstanceOf(Date);
     expect(failed.finishedAt).toBeInstanceOf(Date);
@@ -187,5 +179,13 @@ describe("aggregate progress and cancellation", () => {
     const finalizing = transitionEvaluation(db, transitionEvaluation(db, evaluation, "evaluating"), "finalizing");
 
     expect(() => transitionEvaluation(db, finalizing, "complete")).toThrow(/summary and result digest/);
+  });
+});
+
+describe("active states", () => {
+  it("are derived from the state machine: every state a Run moves on from", () => {
+    expect(activeStates(ASSESSMENT_MACHINE)).toEqual(["queued", "acquiring", "analyzing", "finalizing"]);
+    expect(ACTIVE_STATES).toEqual(activeStates(ASSESSMENT_MACHINE));
+    for (const state of ACTIVE_STATES) expect(isTerminal(ASSESSMENT_MACHINE, state), state).toBe(false);
   });
 });

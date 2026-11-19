@@ -1,19 +1,21 @@
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import type { JsonObject } from "@repo-facts/contract";
 import type { Executor } from "@/lib/db/client";
-import { dependencyFacts, graphEdges, graphNodes, ontologyConcepts, ontologyReleases } from "@/lib/db/schema";
+import { dependencyFacts, graphEdges, graphNodes } from "@/lib/db/schema";
 import { type DiagramEdge, type DiagramModel, type Signal, diagramModel } from "./diagram";
-import { type MapView, type ViewRepository, applicationLabel, edgesByIds, edgesFrom, edgesInto, evidenceRecords, nodesOf, repositoryRelationships } from "./map-view";
-import { compare } from "./placement";
-import { type GroupDefinition, groupKey, lineOfBusinessGroups, portalGroups, rollUp, runLevelGroups, unassignedGroups } from "./rollup";
+import { type MapView, type ViewRepository, edgesByIds, edgesFrom, edgesInto, evidenceRecords, nodesOf, repositoryRelationships } from "./map-view";
+import { type RuntimeSystem, compare } from "./placement";
+import { type GroupDefinition, groupKey, rollUp, systemGroups } from "./rollup";
+import { routes } from "@/lib/web/routes";
+import { pageNumber, withQuery } from "@/lib/web/query";
+import { countLabel, formatNumber } from "@/components/ui/count";
 
 /*
- * The data behind each Relationship Map view (design decisions 1 to 10):
- * ownership levels with their rolled-up relationships, diagrams, declared and
- * observed membership, shared libraries and services, the focus on a
- * repository, service, or package, search, and the scoped relationships
- * table. Everything here reads the projection and current ownership; none of
- * it parses a document.
+ * The data behind each Relationship Map view (relationship-maps spec): the
+ * Run and its runtime systems with their rolled-up relationships, diagrams,
+ * shared libraries and services, the focus on a repository, service, or
+ * package, search, and the scoped relationships table. Everything here reads
+ * the projection; none of it parses a document.
  */
 
 export const PAGE_SIZE = 50;
@@ -43,30 +45,13 @@ export interface SharedEntry {
   href: string;
 }
 
-export interface PathStep {
-  label: string;
-  href: string;
-}
-
 // ---------------------------------------------------------------------------
 // Addresses
 
 export const href = {
   run: (view: MapView) => view.base,
-  lineOfBusiness: (view: MapView, id: string | null) => `${view.base}/lob/${id ?? "none"}`,
-  portal: (view: MapView, id: string) => `${view.base}/portal/${id}`,
-  application: (view: MapView, id: string) => `${view.base}/applications/${id}`,
-  unassigned: (view: MapView) => `${view.base}/unassigned`,
-  system: (view: MapView, id: string) => `${view.base}/unassigned/${id}`,
+  system: (view: MapView, id: string) => `${view.base}/systems/${id}`,
 };
-
-/** A level's address with its focus, search, and pages. */
-export function withQuery(levelHref: string, query: Record<string, string | number | undefined>): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query)) if (value !== undefined && value !== "" && !(key.endsWith("page") && value === 1) && !(["dependents", "dependencies"].includes(key) && value === 1)) params.set(key, String(value));
-  const search = params.toString();
-  return search ? `${levelHref}?${search}` : levelHref;
-}
 
 const focusParam = {
   node: (nodeId: string) => nodeId,
@@ -74,20 +59,7 @@ const focusParam = {
 };
 
 function groupHref(view: MapView, key: string): string {
-  const [kind, ...rest] = key.split(":");
-  const id = rest.join(":");
-  switch (kind) {
-    case "lob":
-      return href.lineOfBusiness(view, id === "none" ? null : id);
-    case "portal":
-      return href.portal(view, id);
-    case "application":
-      return href.application(view, id);
-    case "system":
-      return href.system(view, id);
-    default:
-      return href.unassigned(view);
-  }
+  return href.system(view, key.slice("system:".length));
 }
 
 function link(view: MapView, group: GroupDefinition): GroupLink {
@@ -106,17 +78,10 @@ function summarize(view: MapView, groups: readonly GroupDefinition[], relationsh
   };
 }
 
-/** The repositories placed anywhere under one Line of Business. */
-function lineOfBusinessMembers(view: MapView, lineOfBusiness: string | null): Set<string> {
-  const members = new Set<string>();
-  for (const [node, placed] of view.placements.byNode) {
-    if (placed.some((placement) => placement.kind !== "unassigned" && placement.lineOfBusiness === lineOfBusiness)) members.add(node);
-  }
-  return members;
-}
-
-function applicationOf(view: MapView): Map<string, string> {
-  return new Map([...view.repositories.values()].filter((repository) => repository.application).map((repository) => [repository.nodeId, repository.application!]));
+/** The runtime system a repository belongs to. */
+function systemOf(view: MapView, nodeId: string): RuntimeSystem | undefined {
+  const id = view.repositories.get(nodeId)?.system;
+  return id === undefined ? undefined : view.systems.get(id);
 }
 
 // ---------------------------------------------------------------------------
@@ -155,48 +120,16 @@ export interface RunLevel {
   shared: SharedEntry[];
 }
 
+/** The Run level: every runtime system, a repository on its own included, with the relationships between them. */
 export function runLevel(db: Executor, view: MapView): RunLevel {
-  const groups = runLevelGroups(view.placements.byNode, view.labels);
+  const groups = systemGroups([...view.systems.values()]);
   return { ...summarize(view, groups, repositoryRelationships(db, view)), shared: sharedAt(db, view, href.run(view), new Set(view.repositories.keys())) };
-}
-
-export interface LineOfBusinessLevel {
-  id: string | null;
-  label: string;
-  portals: LevelGroup[];
-  applications: LevelGroup[];
-  otherPortals: LevelGroup[];
-  relationships: LevelRelationship[];
-  total: number;
-  shared: SharedEntry[];
-  members: Set<string>;
-}
-
-export function lineOfBusinessLevel(db: Executor, view: MapView, id: string | null): LineOfBusinessLevel | undefined {
-  if (id !== null && !view.linesOfBusiness.has(id)) return undefined;
-  const members = lineOfBusinessMembers(view, id);
-  if (id === null && members.size === 0) return undefined;
-  const { portals, applications, otherPortals } = lineOfBusinessGroups(view.placements.byNode, id, applicationOf(view), view.labels);
-  const relationships = repositoryRelationships(db, view);
-  const summary = summarize(view, [...portals, ...applications, ...otherPortals], relationships);
-  const byKey = new Map(summary.groups.map((group) => [group.key, group]));
-  return {
-    id,
-    label: view.labels.lineOfBusiness(id),
-    portals: portals.map((group) => byKey.get(group.key)!),
-    applications: applications.map((group) => byKey.get(group.key)!),
-    otherPortals: otherPortals.map((group) => byKey.get(group.key)!),
-    relationships: summary.relationships,
-    total: members.size,
-    shared: sharedAt(db, view, href.lineOfBusiness(view, id), members),
-    members,
-  };
 }
 
 export interface DiagramBox {
   nodeId: string;
   label: string;
-  /** A second line: the SEAL application, or what kind of node it is. */
+  /** A second line: what kind of node it is, for a node that isn't a repository. */
   detail: string | null;
   marks: string[];
   href: string;
@@ -210,119 +143,6 @@ export interface DiagramData {
   thirdParty: { name: string; href: string }[];
 }
 
-export interface PortalLevel {
-  id: string;
-  label: string;
-  lineOfBusiness: PathStep;
-  ownerLabel: string | null;
-  hostName: string | null;
-  groups: LevelGroup[];
-  diagram: DiagramData;
-  membership: Membership;
-  shared: SharedEntry[];
-  members: Set<string>;
-}
-
-export interface Membership {
-  /** False when the portal has no claimed host in this Run, so loading can't be compared with claims. */
-  comparable: boolean;
-  claimedNotLoaded: GroupLink[];
-  loadedNotClaimed: { nodeId: string; label: string; href: string }[];
-}
-
-export function portalLevel(db: Executor, view: MapView, id: string): PortalLevel | undefined {
-  const portal = view.portals.get(id);
-  if (!portal) return undefined;
-  const levelHref = href.portal(view, id);
-  const applications = applicationOf(view);
-  const groups = portalGroups(view.placements.byNode, id, applications, view.labels);
-  const members = new Set(groups.flatMap((group) => [...group.members]));
-  if (portal.host) members.add(portal.host);
-
-  const fromMembers = edgesFrom(db, view, [...members]);
-  const loaded = new Set(fromMembers.filter((edge) => edge.from === portal.host && edge.state === "resolved" && edge.to && (edge.type === "composition" || edge.type === "iframe") && view.repositories.has(edge.to)).map((edge) => edge.to!));
-  const claimed = new Set([...members].filter((node) => node !== portal.host));
-  const libraries = new Set(fromMembers.filter((edge) => edge.kind === "architecture" && edge.state === "resolved" && edge.type === "package_dependency" && edge.to && view.repositories.has(edge.to) && !members.has(edge.to) && !loaded.has(edge.to)).map((edge) => edge.to!));
-  // Libraries sit directly under the applications that use them, so no arrow crosses a row; the
-  // claimed applications the host doesn't load come last.
-  const rows: string[][] = [portal.host ? [portal.host] : [], [...loaded], [...libraries], [...claimed].filter((node) => !loaded.has(node))];
-
-  const edges = [...fromMembers, ...edgesFrom(db, view, [...loaded].filter((node) => !members.has(node)))];
-  const diagram = diagramFor(db, view, levelHref, rows, edges, (node) => groupKeyOf(view, node), (node) => (node === portal.host ? ["Host"] : marksIn(view, node, id, loaded)));
-
-  const summary = summarize(view, groups, repositoryRelationships(db, view));
-  const membership: Membership = portal.host
-    ? {
-        comparable: true,
-        claimedNotLoaded: groups
-          .filter((group) => ![...group.members].some((node) => loaded.has(node) || node === portal.host))
-          .map((group) => link(view, group)),
-        loadedNotClaimed: [...loaded]
-          .filter((node) => !claimed.has(node))
-          .map((node) => ({ nodeId: node, label: view.repositories.get(node)!.label, href: withQuery(levelHref, { focus: node }) }))
-          .sort((a, b) => compare(a.label, b.label)),
-      }
-    : { comparable: false, claimedNotLoaded: [], loadedNotClaimed: [] };
-
-  return {
-    id,
-    label: portal.label,
-    lineOfBusiness: { label: view.labels.lineOfBusiness(portal.lineOfBusiness), href: href.lineOfBusiness(view, portal.lineOfBusiness) },
-    ownerLabel: applicationLabel(portal.owner ?? undefined) ?? null,
-    hostName: portal.hostName,
-    groups: summary.groups,
-    diagram,
-    membership,
-    shared: sharedAt(db, view, levelHref, members),
-    members,
-  };
-}
-
-export interface ApplicationLevel {
-  id: string;
-  label: string;
-  lineOfBusiness: PathStep;
-  portals: GroupLink[];
-  diagram: DiagramData;
-  shared: SharedEntry[];
-  members: Set<string>;
-}
-
-export function applicationLevel(db: Executor, view: MapView, applicationId: string): ApplicationLevel | undefined {
-  const application = view.applications.get(applicationId);
-  if (!application) return undefined;
-  const levelHref = href.application(view, application.id);
-  const members = new Set([...view.repositories.values()].filter((repository) => repository.application === application.id).map((repository) => repository.nodeId));
-  const diagram = neighbourhoodDiagram(db, view, levelHref, members);
-  const portals = [...new Set([...members].flatMap((node) => view.repositories.get(node)!.portals))]
-    .map((portal) => ({ key: groupKey.portal(portal), label: view.labels.portal(portal), href: href.portal(view, portal) }))
-    .sort((a, b) => compare(a.label, b.label));
-  return {
-    id: application.id,
-    label: view.labels.application(application.id),
-    lineOfBusiness: { label: view.labels.lineOfBusiness(application.lineOfBusiness), href: href.lineOfBusiness(view, application.lineOfBusiness) },
-    portals,
-    diagram,
-    shared: sharedAt(db, view, levelHref, members),
-    members,
-  };
-}
-
-export interface UnassignedLevel {
-  systems: LevelGroup[];
-  relationships: LevelRelationship[];
-  total: number;
-  shared: SharedEntry[];
-  members: Set<string>;
-}
-
-export function unassignedLevel(db: Executor, view: MapView): UnassignedLevel {
-  const groups = unassignedGroups(view.placements.byNode, view.labels);
-  const members = new Set(groups.flatMap((group) => [...group.members]));
-  const summary = summarize(view, groups, repositoryRelationships(db, view));
-  return { systems: summary.groups, relationships: summary.relationships, total: summary.total, shared: sharedAt(db, view, href.unassigned(view), members), members };
-}
-
 export interface SystemLevel {
   id: string;
   label: string;
@@ -332,27 +152,31 @@ export interface SystemLevel {
 }
 
 export function systemLevel(db: Executor, view: MapView, id: string): SystemLevel | undefined {
-  const system = view.placements.systems.find((item) => item.id === id);
+  const system = view.systems.get(id);
   if (!system) return undefined;
   const levelHref = href.system(view, id);
   const members = new Set(system.members);
-  return { id, label: system.name, diagram: neighbourhoodDiagram(db, view, levelHref, members), shared: sharedAt(db, view, levelHref, members), members };
+  return { id, label: system.name, diagram: systemDiagram(db, view, levelHref, members), shared: sharedAt(db, view, levelHref, members), members };
 }
 
 /**
- * A diagram of +members+ with what depends on them above and what they depend
- * on below: libraries built in the Run, then services. Each repository is its
- * own group, so every relationship between two of them is drawn.
+ * A runtime system's diagram: what depends on it from outside above, then
+ * each host, then the repositories the hosts load and the system's other
+ * repositories, then the libraries built in the Run and the services it
+ * depends on. Each repository is its own group, so every relationship
+ * between two of them is drawn.
  */
-function neighbourhoodDiagram(db: Executor, view: MapView, levelHref: string, members: ReadonlySet<string>): DiagramData {
+function systemDiagram(db: Executor, view: MapView, levelHref: string, members: ReadonlySet<string>): DiagramData {
   const outgoing = edgesFrom(db, view, [...members]);
   const incoming = edgesInto(db, view, [...members]).filter((edge) => !members.has(edge.from) && edge.kind === "architecture" && edge.state === "resolved");
   const above = [...new Set(incoming.map((edge) => edge.from))];
+  const hosts = [...members].filter((node) => outgoing.some((edge) => edge.from === node && edge.state === "resolved" && (edge.type === "composition" || edge.type === "iframe") && edge.to !== null && edge.to !== node && members.has(edge.to)));
+  const loaded = [...members].filter((node) => !hosts.includes(node));
   const below = outgoing.filter((edge) => edge.kind === "architecture" && edge.state === "resolved" && edge.to && !members.has(edge.to));
   const libraries = [...new Set(below.filter((edge) => view.repositories.has(edge.to!)).map((edge) => edge.to!))].filter((node) => !above.includes(node));
   const services = [...new Set(below.filter((edge) => !view.repositories.has(edge.to!)).map((edge) => edge.to!))];
-  const rows = [above, [...members], [...libraries, ...services]];
-  return diagramFor(db, view, levelHref, rows, [...outgoing, ...incoming], (node) => (view.repositories.has(node) ? groupKey.repository(node) : `node:${node}`), (node) => marksOf(view, node));
+  const rows = [above, hosts, loaded, [...libraries, ...services]];
+  return diagramFor(db, view, levelHref, rows, [...outgoing, ...incoming], (node) => (view.repositories.has(node) ? groupKey.repository(node) : `node:${node}`), (node) => (hosts.includes(node) ? ["Host"] : []));
 }
 
 function diagramFor(db: Executor, view: MapView, levelHref: string, nodeRows: readonly string[][], edges: readonly DiagramEdge[], groupOf: (node: string) => string, marks: (node: string) => string[]): DiagramData {
@@ -361,36 +185,13 @@ function diagramFor(db: Executor, view: MapView, levelHref: string, nodeRows: re
   const labelOf = (node: string) => view.repositories.get(node)?.label ?? others.get(node)?.label ?? node;
   const rows = nodeRows.map((row, index) =>
     [...new Set(row)].map((nodeId) => {
-      const repository = view.repositories.get(nodeId);
-      const detail = repository ? (repository.application ? view.labels.application(repository.application) : "Unassigned") : others.get(nodeId)?.kind === "external_service" ? "Service" : null;
+      const detail = view.repositories.has(nodeId) ? null : others.get(nodeId)?.kind === "external_service" ? "Service" : null;
       return { nodeId, label: labelOf(nodeId), detail, marks: marks(nodeId), href: withQuery(levelHref, { focus: nodeId }), row: index };
     }),
   );
   const groups = new Map(rows.flat().map((box) => [box.nodeId, groupOf(box.nodeId)]));
   const model = diagramModel(groups, edges, labelOf);
   return { rows, model, thirdParty: model.thirdPartyPackages.map((name) => ({ name, href: withQuery(levelHref, { focus: focusParam.package(name) }) })) };
-}
-
-function groupKeyOf(view: MapView, node: string): string {
-  const application = view.repositories.get(node)?.application;
-  return application ? groupKey.application(application) : groupKey.repository(node);
-}
-
-/** A repository's marks inside one portal: other portals, another Line of Business, or not claimed here. */
-function marksIn(view: MapView, node: string, portal: string, loaded: ReadonlySet<string>): string[] {
-  const repository = view.repositories.get(node);
-  if (!repository) return [];
-  const placement = view.placements.byNode.get(node)?.find((item) => item.kind === "portal" && item.portal === portal);
-  if (!placement || placement.kind !== "portal") return loaded.has(node) ? ["Not claimed here"] : [];
-  const marks = placement.alsoIn.map((other) => `Also in ${view.labels.portal(other)}`);
-  if (placement.ownLineOfBusiness !== null) marks.push(`${view.labels.lineOfBusiness(placement.ownLineOfBusiness)} Line of Business`);
-  return marks;
-}
-
-function marksOf(view: MapView, node: string): string[] {
-  const repository = view.repositories.get(node);
-  if (!repository) return [];
-  return repository.portals.map((portal) => view.labels.portal(portal));
 }
 
 // ---------------------------------------------------------------------------
@@ -432,9 +233,10 @@ export interface Focus {
   evidence: JsonObject;
 }
 
+/** The requested page of each focus list, as the address gives it. */
 export interface FocusPages {
-  dependents?: number;
-  dependencies?: number;
+  dependents?: string | number;
+  dependencies?: string | number;
 }
 
 export function focusOf(db: Executor, view: MapView, levelHref: string, focus: string, pages: FocusPages = {}): Focus | undefined {
@@ -462,15 +264,15 @@ export function focusOf(db: Executor, view: MapView, levelHref: string, focus: s
   const dependencies = focusList(view, levelHref, mergeBy(dependencyEdges, (edge) => edge.to ?? `unmatched:${edge.edgeId}`), labelOf, pages.dependencies);
 
   const direct = new Set(dependentEdges.map((edge) => edge.from));
-  const portals = new Set([...direct].flatMap((id) => view.repositories.get(id)?.portals ?? []));
+  const systems = new Set([...direct].flatMap((id) => view.repositories.get(id)?.system ?? []));
   const further = repository || kind === "service" ? furtherDependents(db, view, focus, direct) : 0;
   const evidenceIds = [...dependents.groups, ...dependencies.groups].flatMap((group) => group.rows.flatMap((row) => row.signals.flatMap((signal) => signal.evidence)));
   return {
     kind,
     nodeId: focus,
     label: node.label,
-    sentence: impactSentence(node.label, direct.size, portals.size, further),
-    profileHref: repository?.profile ? `/profiles/${repository.profile}` : null,
+    sentence: impactSentence(node.label, direct.size, systems.size, further),
+    profileHref: repository?.profile ? routes.profile(repository.profile) : null,
     dependents,
     dependencies,
     thirdParty: thirdParty.map((name) => ({ name, href: withQuery(levelHref, { focus: focusParam.package(name) }) })),
@@ -480,12 +282,12 @@ export function focusOf(db: Executor, view: MapView, levelHref: string, focus: s
   };
 }
 
-/** "Changing design-tokens directly affects 162 repositories in 4 portals; 40 more depend on it through them." */
-export function impactSentence(label: string, direct: number, portals: number, further: number): string {
+/** "Changing design-tokens directly affects 162 repositories in 4 runtime systems; 40 more depend on it through them." */
+export function impactSentence(label: string, direct: number, systems: number, further: number): string {
   if (direct === 0) return `Nothing in this Run depends on ${label}.`;
-  const repositories = `${direct.toLocaleString("en-US")} ${direct === 1 ? "repository" : "repositories"}`;
-  const where = portals > 0 ? ` in ${portals.toLocaleString("en-US")} ${portals === 1 ? "portal" : "portals"}` : "";
-  const through = further > 0 ? `; ${further.toLocaleString("en-US")} more ${further === 1 ? "depends" : "depend"} on it through them` : "";
+  const repositories = countLabel(direct, "repository", "repositories");
+  const where = systems > 0 ? ` in ${countLabel(systems, "runtime system")}` : "";
+  const through = further > 0 ? `; ${formatNumber(further)} more ${further === 1 ? "depends" : "depend"} on it through them` : "";
   return `Changing ${label} directly affects ${repositories}${where}${through}.`;
 }
 
@@ -520,7 +322,7 @@ function mergeBy(edges: readonly DiagramEdge[], key: (edge: DiagramEdge) => stri
   return [...rows.values()];
 }
 
-function focusList(view: MapView, levelHref: string, merged: readonly MergedRow[], labelOf: (id: string) => string, page = 1): FocusList {
+function focusList(view: MapView, levelHref: string, merged: readonly MergedRow[], labelOf: (id: string) => string, requested?: string | number): FocusList {
   const rows = merged.map((row) => {
     const edge = row.edges[0]!;
     const label = row.nodeId ? labelOf(row.nodeId) : edge.state === "ambiguous" ? `One of ${edge.candidates.map(labelOf).join(", ")}` : Object.values(edge.referenceIdentifier).join(" ") || edge.type;
@@ -537,8 +339,7 @@ function focusList(view: MapView, levelHref: string, merged: readonly MergedRow[
     };
   });
   rows.sort((a, b) => (a.group === "Unmatched references" ? 1 : 0) - (b.group === "Unmatched references" ? 1 : 0) || compare(a.group, b.group) || compare(a.row.label, b.row.label));
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const current = Math.min(Math.max(1, page), pages);
+  const { page: current, pages } = pageNumber(requested, rows.length, PAGE_SIZE);
   const groups: FocusGroup[] = [];
   for (const item of rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)) {
     const last = groups.at(-1);
@@ -548,13 +349,9 @@ function focusList(view: MapView, levelHref: string, merged: readonly MergedRow[
   return { groups, total: rows.length, page: current, pages };
 }
 
-/** "FX Board (SEAL-1001) · Access, Markets", "Unassigned", or "Services". */
+/** The runtime system a repository belongs to, by name, or "Services and packages". */
 function groupLabelOf(view: MapView, nodeId: string): string {
-  const repository = view.repositories.get(nodeId);
-  if (!repository) return "Services and packages";
-  if (!repository.application) return "Unassigned";
-  const portals = repository.portals.map((portal) => view.labels.portal(portal)).sort(compare);
-  return [view.labels.application(repository.application), ...(portals.length > 0 ? [portals.join(", ")] : [])].join(" · ");
+  return systemOf(view, nodeId)?.name ?? "Services and packages";
 }
 
 function packageFocus(db: Executor, view: MapView, levelHref: string, name: string): Focus | undefined {
@@ -568,7 +365,7 @@ function packageFocus(db: Executor, view: MapView, levelHref: string, name: stri
     .from(graphEdges)
     .where(and(eq(graphEdges.mapId, view.map.id), eq(graphEdges.kind, "own_package"), eq(graphEdges.type, "package_production")))
     .all()
-    .filter((edge) => (JSON.parse(edge.identifier ?? "{}") as Record<string, string>).name === name);
+    .filter((edge) => edge.identifier?.name === name);
   if (declared.length === 0 && producers.length === 0) return undefined;
 
   const nodeOfTarget = new Map(
@@ -588,15 +385,13 @@ function packageFocus(db: Executor, view: MapView, levelHref: string, name: stri
     .sort((a, b) => compare(a.group, b.group) || compare(a.label, b.label) || compare(a.manifest, b.manifest));
   const producer = producers.map((edge) => view.repositories.get(edge.from)).find((repository): repository is ViewRepository => repository !== undefined);
   const dependents = new Set(declarations.map((row) => row.label)).size;
-  const portals = new Set(declared.flatMap((row) => view.repositories.get(nodeOfTarget.get(row.targetId) ?? "")?.portals ?? []));
+  const systems = new Set(declared.flatMap((row) => view.repositories.get(nodeOfTarget.get(row.targetId) ?? "")?.system ?? []));
   const empty: FocusList = { groups: [], total: 0, page: 1, pages: 1 };
   return {
     kind: "package",
     nodeId: null,
     label: name,
-    sentence: producer
-      ? `${name} is built in this Run by ${producer.label}. ${dependents.toLocaleString("en-US")} ${dependents === 1 ? "repository declares" : "repositories declare"} it${portals.size > 0 ? ` in ${portals.size.toLocaleString("en-US")} ${portals.size === 1 ? "portal" : "portals"}` : ""}.`
-      : `${name} is third-party: no repository in this Run produces it. ${dependents.toLocaleString("en-US")} ${dependents === 1 ? "repository declares" : "repositories declare"} it${portals.size > 0 ? ` in ${portals.size.toLocaleString("en-US")} ${portals.size === 1 ? "portal" : "portals"}` : ""}.`,
+    sentence: `${producer ? `${name} is built in this Run by ${producer.label}.` : `${name} is third-party: no repository in this Run produces it.`} ${countLabel(dependents, "repository declares", "repositories declare")} it${systems.size > 0 ? ` in ${countLabel(systems.size, "runtime system")}` : ""}.`,
     profileHref: null,
     dependents: empty,
     dependencies: empty,
@@ -611,14 +406,14 @@ function packageFocus(db: Executor, view: MapView, levelHref: string, name: stri
 // Search
 
 export interface SearchMatch {
-  kind: "repository" | "application" | "portal" | "service" | "package";
+  kind: "repository" | "service" | "package";
   label: string;
   detail: string | null;
   href: string;
   rank: number;
 }
 
-export const SEARCH_KINDS = ["repository", "application", "portal", "service", "package"] as const;
+export const SEARCH_KINDS = ["repository", "service", "package"] as const;
 const PER_KIND = 10;
 
 /** Matches for +query+ by kind, exact before prefix before substring, up to ten of each. */
@@ -639,12 +434,7 @@ export function searchMap(db: Executor, view: MapView, query: string): SearchMat
     if (Number.isFinite(value)) matches.push({ ...match, rank: value });
   };
 
-  for (const repository of view.repositories.values()) add({ kind: "repository", label: repository.label, detail: repository.application ? view.labels.application(repository.application) : "Unassigned", href: withQuery(primaryLevelOf(view, repository), { focus: repository.nodeId }) }, rank(repository.label));
-  for (const application of view.applications.values()) {
-    add({ kind: "application", label: application.name ?? application.sealId ?? "Unnamed application", detail: application.name ? application.sealId : null, href: href.application(view, application.id) }, rank(application.name, application.sealId));
-  }
-  const aliases = portalAliases(db, view);
-  for (const portal of view.portals.values()) add({ kind: "portal", label: portal.label, detail: portal.owner ? `Owned by ${applicationLabel(portal.owner)}` : null, href: href.portal(view, portal.id) }, rank(portal.label, ...(aliases.get(portal.id) ?? [])));
+  for (const repository of view.repositories.values()) add({ kind: "repository", label: repository.label, detail: systemDetail(view, repository), href: withQuery(href.system(view, repository.system), { focus: repository.nodeId }) }, rank(repository.label));
   for (const service of db.select({ nodeId: graphNodes.nodeId, label: graphNodes.label }).from(graphNodes).where(and(eq(graphNodes.mapId, view.map.id), eq(graphNodes.kind, "external_service"))).all()) {
     add({ kind: "service", label: service.label, detail: null, href: withQuery(view.base, { focus: service.nodeId }) }, rank(service.label));
   }
@@ -655,7 +445,7 @@ export function searchMap(db: Executor, view: MapView, query: string): SearchMat
     .groupBy(dependencyFacts.packageName)
     .orderBy(asc(dependencyFacts.packageName))
     .all()) {
-    add({ kind: "package", label: pkg.name, detail: `${pkg.dependents.toLocaleString("en-US")} ${pkg.dependents === 1 ? "declaration" : "declarations"}`, href: withQuery(view.base, { focus: focusParam.package(pkg.name) }) }, rank(pkg.name));
+    add({ kind: "package", label: pkg.name, detail: countLabel(pkg.dependents, "declaration"), href: withQuery(view.base, { focus: focusParam.package(pkg.name) }) }, rank(pkg.name));
   }
 
   return SEARCH_KINDS.flatMap((kind) =>
@@ -666,32 +456,10 @@ export function searchMap(db: Executor, view: MapView, query: string): SearchMat
   );
 }
 
-/** The level a search result for a repository opens: its first portal, its Line of Business, or its runtime system. */
-function primaryLevelOf(view: MapView, repository: ViewRepository): string {
-  const placed = view.placements.byNode.get(repository.nodeId) ?? [];
-  const portal = placed.find((placement) => placement.kind === "portal");
-  if (portal && portal.kind === "portal") return href.portal(view, portal.portal);
-  const lineOfBusiness = placed.find((placement) => placement.kind === "line_of_business");
-  if (lineOfBusiness && lineOfBusiness.kind === "line_of_business") return href.lineOfBusiness(view, lineOfBusiness.lineOfBusiness);
-  const system = placed.find((placement) => placement.kind === "unassigned");
-  return system && system.kind === "unassigned" ? href.system(view, system.system) : href.run(view);
-}
-
-/** The aliases of each portal whose concept the newest ontology release defines. */
-function portalAliases(db: Executor, view: MapView): Map<string, string[]> {
-  const keyed = [...view.portals.values()].map((portal) => ({ portal, conceptKey: portal.conceptKey })).filter((item) => item.conceptKey !== null);
-  if (keyed.length === 0) return new Map();
-  const release = db.select({ id: ontologyReleases.id }).from(ontologyReleases).orderBy(sql`${ontologyReleases.number} desc`).limit(1).get();
-  if (!release) return new Map();
-  const concepts = new Map(
-    db
-      .select({ key: ontologyConcepts.conceptKey, document: ontologyConcepts.document })
-      .from(ontologyConcepts)
-      .where(and(eq(ontologyConcepts.releaseId, release.id), inArray(ontologyConcepts.conceptKey, keyed.map((item) => item.conceptKey!))))
-      .all()
-      .map((row) => [row.key, (JSON.parse(row.document) as { aliases?: unknown }).aliases]),
-  );
-  return new Map(keyed.map((item) => [item.portal.id, (Array.isArray(concepts.get(item.conceptKey!)) ? (concepts.get(item.conceptKey!) as unknown[]) : []).filter((alias): alias is string => typeof alias === "string")]));
+/** The runtime system a repository is in, when it shares one with others. */
+function systemDetail(view: MapView, repository: ViewRepository): string | null {
+  const system = view.systems.get(repository.system);
+  return system && system.members.length > 1 ? `In ${system.name}` : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -720,11 +488,10 @@ export interface RelationshipPage {
 export type RelationshipScope = { kind: "from"; nodes: ReadonlySet<string> } | { kind: "touching"; node: string } | { kind: "package"; name: string };
 
 /** One page of the relationships in scope, in reading order: by declaring repository, type, then what it refers to. */
-export function relationshipPage(db: Executor, view: MapView, scope: RelationshipScope, page = 1): RelationshipPage {
+export function relationshipPage(db: Executor, view: MapView, scope: RelationshipScope, requested?: string | number): RelationshipPage {
   const edgeIds = scopedEdgeIds(db, view, scope);
   const total = edgeIds.length;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const current = Math.min(Math.max(1, page), pages);
+  const { page: current, pages } = pageNumber(requested, total, PAGE_SIZE);
   if (total === 0) return { rows: [], total, page: current, pages, evidence: {} as JsonObject };
 
   const ordered = db.all<{ edge_id: string }>(sql`
@@ -765,7 +532,7 @@ function scopedEdgeIds(db: Executor, view: MapView, scope: RelationshipScope): s
     .from(graphEdges)
     .where(and(eq(graphEdges.mapId, view.map.id), inArray(graphEdges.type, ["package_dependency", "package_production"])))
     .all()
-    .filter((row) => (JSON.parse(row.identifier ?? "{}") as Record<string, string>).name === scope.name)
+    .filter((row) => row.identifier?.name === scope.name)
     .map((row) => row.id);
 }
 

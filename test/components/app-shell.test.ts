@@ -1,7 +1,7 @@
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { AppShell } from "@/components/shell/app-shell";
-import { NO_OPTIONAL_AREAS, type NavFlags, menuItems, visibleGroups } from "@/components/shell/navigation";
+import { NO_OPTIONAL_AREAS, type NavFlags, visibleGroups } from "@/components/shell/navigation";
 import { SidebarNav } from "@/components/shell/sidebar-nav";
 import { ThemeSwitcher } from "@/components/shell/theme-switcher";
 
@@ -27,7 +27,7 @@ describe("application shell", () => {
   it("shows Home, the Assessments group, and Admin when the demo is disabled (Demo disabled)", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
     const flags = nav.props.nav as NavFlags;
-    expect(menuItems(visibleGroups(flags)).map((entry) => entry.label)).toEqual(["Home", "Repositories", "All Assessments", "Standards", "Bitbucket tokens"]);
+    expect(visibleGroups(flags).flatMap((group) => group.items).map((entry) => entry.label)).toEqual(["Home", "Repositories", "All Assessments", "Standards", "Bitbucket tokens"]);
   });
 
   it("adds Salt Patterns in its own group when the demo is enabled, opening its list", () => {

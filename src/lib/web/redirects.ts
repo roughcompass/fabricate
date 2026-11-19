@@ -1,9 +1,10 @@
 /*
- * Permanent redirects from addresses the product no longer serves
- * (page-patterns spec, "Every link opens the page it names"). next.config.ts
+ * Permanent redirects from addresses the product retired recently
+ * (page-patterns spec, "Links open the pages they name"). next.config.ts
  * applies them before routing, so a bookmark or an old link opens the page
- * that replaced it. This module imports nothing, because the Next.js
- * configuration loads it.
+ * that replaced it. An address retired more than 30 days ago gets no
+ * redirect and opens the not-found page. This module imports nothing,
+ * because the Next.js configuration loads it.
  */
 
 export interface Redirect {
@@ -15,19 +16,7 @@ export interface Redirect {
 
 const permanent = (source: string, destination: string): Redirect => ({ source, destination, permanent: true });
 
-/**
- * Addresses from before the interface vocabulary changed. Old Assessment
- * pages are told apart from the new ones by their public ID prefix: a model
- * Assessment (asm_) is now a Run, while /assessments/ini_… is an Assessment.
- */
-const VOCABULARY_REDIRECTS: Redirect[] = [
-  permanent("/initiatives/new", "/assessments/new"),
-  permanent("/initiatives/:id(ini_[a-z0-9]{16})/:rest*", "/assessments/:id/:rest*"),
-  permanent("/assessments/:id(asm_[a-z0-9]{16})/:rest*", "/runs/:id/:rest*"),
-  permanent("/sources/:rest*", "/repositories/:rest*"),
-];
-
-/** A Repository's Edit page became its Settings. */
+/** A Repository's Edit page became its Settings on 2026-11-17. */
 const SETTINGS_REDIRECTS: Redirect[] = [permanent("/repositories/:id(src_[a-z0-9]{16})/edit", "/repositories/:id/settings")];
 
-export const LEGACY_REDIRECTS: Redirect[] = [...VOCABULARY_REDIRECTS, ...SETTINGS_REDIRECTS];
+export const LEGACY_REDIRECTS: Redirect[] = [...SETTINGS_REDIRECTS];

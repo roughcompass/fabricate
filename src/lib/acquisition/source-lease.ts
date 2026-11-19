@@ -1,61 +1,50 @@
-import { and, eq } from "drizzle-orm";
-import { type Executor, immediate } from "@/lib/db/client";
-import { sourceLeases } from "@/lib/db/schema";
 import { AcquisitionError } from "./errors";
 
 /**
- * Runs +work+ while holding the lease on one source's managed object
- * database, so worker processes never update the same mirror at once. Other
- * sources proceed concurrently. The lease is renewed while +work+ runs and
- * expires on its own if the holder stops without releasing it.
+ * One update at a time to each source's managed object database (design
+ * decision 11). Only one worker process runs (src/worker/lock.ts), so a queue
+ * per repository in its memory is enough; work on different repositories
+ * runs in parallel.
  */
-export interface LeaseOptions {
-  holder: string;
-  /** How long to wait for another holder before failing. */
+export interface LockOptions {
+  /** How long to wait for the work ahead of it before failing. */
   waitMs: number;
-  /** How long an unrenewed lease lasts. */
-  ttlMs: number;
   signal?: AbortSignal;
-  pollMs?: number;
 }
 
-export async function withSourceLease<T>(db: Executor, repositorySourceId: number, options: LeaseOptions, work: () => Promise<T>): Promise<T> {
-  const deadline = Date.now() + options.waitMs;
-  while (!tryAcquire(db, repositorySourceId, options.holder, options.ttlMs)) {
-    if (options.signal?.aborted) throw new AcquisitionError("canceled", "Acquisition was canceled while waiting for the source mirror");
-    if (Date.now() >= deadline) {
-      throw new AcquisitionError("lock_timeout", `Another worker held this source's mirror for more than ${Math.round(options.waitMs / 1_000)}s`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, options.pollMs ?? 100));
-  }
+/** The end of each repository's queue: settles when the last work queued on it is done. */
+const queues = new Map<number, Promise<void>>();
 
-  const renewal = setInterval(() => renew(db, repositorySourceId, options.holder, options.ttlMs), Math.max(50, Math.floor(options.ttlMs / 3)));
+/** Runs +work+ once every earlier work on +repositorySourceId+ is done, or fails after waiting +waitMs+. */
+export async function withSourceLock<T>(repositorySourceId: number, options: LockOptions, work: () => Promise<T>): Promise<T> {
+  const ahead = queues.get(repositorySourceId) ?? Promise.resolve();
+  let release!: () => void;
+  const done = new Promise<void>((resolve) => (release = resolve));
+  // Whoever queues next waits for this work, and for everything ahead of it even if this one gives up waiting.
+  const tail = ahead.then(() => done);
+  queues.set(repositorySourceId, tail);
   try {
+    await waitFor(ahead, options);
     return await work();
   } finally {
-    clearInterval(renewal);
-    db.delete(sourceLeases).where(and(eq(sourceLeases.repositorySourceId, repositorySourceId), eq(sourceLeases.holder, options.holder))).run();
+    release();
+    // Forgotten once everything queued up to here is done, unless more work queued behind it.
+    void tail.then(() => queues.get(repositorySourceId) === tail && queues.delete(repositorySourceId));
   }
 }
 
-function tryAcquire(db: Executor, repositorySourceId: number, holder: string, ttlMs: number): boolean {
-  return immediate(db, (tx) => {
-    const now = new Date();
-    const current = tx.select().from(sourceLeases).where(eq(sourceLeases.repositorySourceId, repositorySourceId)).get();
-    if (current && current.holder !== holder && current.expiresAt > now) return false;
-
-    const values = { holder, acquiredAt: now, expiresAt: new Date(now.getTime() + ttlMs) };
-    tx.insert(sourceLeases)
-      .values({ repositorySourceId, ...values })
-      .onConflictDoUpdate({ target: sourceLeases.repositorySourceId, set: values })
-      .run();
-    return true;
+function waitFor(ahead: Promise<void>, { waitMs, signal }: LockOptions): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const canceled = () => finish(new AcquisitionError("canceled", "Acquisition was canceled while waiting for the source mirror"));
+    const timer = setTimeout(() => finish(new AcquisitionError("lock_timeout", `Other work held this source's mirror for more than ${Math.round(waitMs / 1_000)}s`)), waitMs);
+    function finish(error?: AcquisitionError) {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", canceled);
+      if (error) reject(error);
+      else resolve();
+    }
+    if (signal?.aborted) return canceled();
+    signal?.addEventListener("abort", canceled, { once: true });
+    void ahead.then(() => finish());
   });
-}
-
-function renew(db: Executor, repositorySourceId: number, holder: string, ttlMs: number): void {
-  db.update(sourceLeases)
-    .set({ expiresAt: new Date(Date.now() + ttlMs) })
-    .where(and(eq(sourceLeases.repositorySourceId, repositorySourceId), eq(sourceLeases.holder, holder)))
-    .run();
 }

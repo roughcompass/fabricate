@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { createRequire } from "node:module";
 import { expectToolbarOnTop, openTool, startComment, waitForRegions } from "./support/demo";
 import { expect, test } from "./support/fixtures";
+import { useTheme } from "./support/shell";
 
 /** Comments anchored to rendered elements (template-demo/toolbar spec). */
 
@@ -202,7 +203,7 @@ test.describe("the composer", () => {
 
   for (const theme of ["light", "dark"] as const) {
     test(`has no accessibility violations while open, with the formatting bar, in the ${theme} operator theme`, async ({ page, context, baseURL }) => {
-      await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+      await useTheme(context, theme, baseURL!);
       await page.reload();
       await waitForRegions(page);
       await startComment(page);

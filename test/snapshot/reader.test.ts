@@ -1,40 +1,27 @@
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { FabricateConfig } from "@/lib/config";
-import type { Db } from "@/lib/db/client";
+import { beforeEach, describe, expect, it } from "vitest";
 import { openSnapshot } from "@/lib/snapshot/open";
 import type { Budgets } from "@/lib/snapshot/reader";
-import { acquire, acquisitionConfig, registerLocalSource } from "../support/acquisition";
-import { createTestDb } from "../support/db";
-import { GitFixture, type Repo } from "../support/git-fixture";
+import { acquire, registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { type Repo } from "../support/git-fixture";
 
 const GENEROUS: Budgets = { maxBlobBytes: 1_048_576, maxLockfileBytes: 1_048_576, maxFiles: 1_000, maxTotalBytes: 10_485_760 };
 
 describe("SnapshotReader", () => {
-  let fixture: GitFixture;
-  let config: FabricateConfig;
-  let db: Db;
+  const world = useAcquisitionWorld("reader");
   let work: Repo;
 
   beforeEach(() => {
-    fixture = GitFixture.create("reader");
-    config = acquisitionConfig(fixture);
-    db = createTestDb();
-    work = fixture.repo("fleet/orders");
-  });
-
-  afterEach(() => {
-    fixture.cleanup();
-    fs.rmSync(config.repositoryStorage, { recursive: true, force: true });
+    work = world.fixture.repo("fleet/orders");
   });
 
   /** Commits the work repository (unless already committed) and opens a reader on a fresh snapshot of it. */
   const snapshotReader = async (budgets = GENEROUS, options: { committed?: boolean } = {}) => {
     if (!options.committed) work.commit();
-    const source = registerLocalSource(db, config, "orders", work.path);
-    const { target, snapshot } = await acquire(db, config, source);
-    return openSnapshot(target, snapshot, { config, budgets });
+    const source = registerLocalSource(world.db, world.config, "orders", work.path);
+    const { target, snapshot } = await acquire(world.db, world.config, source);
+    return openSnapshot(target, snapshot, { config: world.config, budgets });
   };
 
   describe("tree enumeration and reads", () => {
@@ -86,17 +73,17 @@ describe("SnapshotReader", () => {
 
     it("refuses to open a ref that no longer names the recorded commit", async () => {
       work.write("a.txt", "a\n").commit();
-      const source = registerLocalSource(db, config, "orders", work.path);
-      const { target, snapshot } = await acquire(db, config, source);
+      const source = registerLocalSource(world.db, world.config, "orders", work.path);
+      const { target, snapshot } = await acquire(world.db, world.config, source);
 
-      await expect(openSnapshot(target, { ...snapshot, commitSha: "0".repeat(40) }, { config })).rejects.toMatchObject({ code: "command_rejected" });
-      await expect(openSnapshot(target, { ...snapshot, internalRef: "refs/heads/main" }, { config })).rejects.toMatchObject({ code: "command_rejected" });
+      await expect(openSnapshot(target, { ...snapshot, commitSha: "0".repeat(40) }, { config: world.config })).rejects.toMatchObject({ code: "command_rejected" });
+      await expect(openSnapshot(target, { ...snapshot, internalRef: "refs/heads/main" }, { config: world.config })).rejects.toMatchObject({ code: "command_rejected" });
     });
   });
 
   describe("hostile trees", () => {
     it("records symbolic links and submodules as metadata without reading their targets", async () => {
-      const outside = path.join(fixture.root, "outside-secret.txt");
+      const outside = path.join(world.fixture.root, "outside-secret.txt");
       fs.writeFileSync(outside, "outside secret\n");
       work.write("README.md", "hello\n").symlink("escape", outside).symlink("parent", "../../../../etc/passwd");
       work.git("add", "--all");
@@ -149,7 +136,7 @@ describe("SnapshotReader", () => {
       const reader = await snapshotReader();
       await reader.readMany(reader.files().map((entry) => entry.path));
 
-      const storageFiles = fs.readdirSync(config.repositoryStorage, { recursive: true, encoding: "utf8" });
+      const storageFiles = fs.readdirSync(world.config.repositoryStorage, { recursive: true, encoding: "utf8" });
       expect(storageFiles.filter((file) => file.endsWith("README.md") || file.endsWith("index.js"))).toEqual([]);
     });
   });
@@ -214,10 +201,10 @@ describe("SnapshotReader", () => {
       const budgets = { maxBlobBytes: 200, maxLockfileBytes: 200, maxFiles: 10, maxTotalBytes: 120 };
 
       work.commit();
-      const source = registerLocalSource(db, config, "orders", work.path);
+      const source = registerLocalSource(world.db, world.config, "orders", work.path);
       const readerFor = async () => {
-        const { target, snapshot } = await acquire(db, config, source);
-        return openSnapshot(target, snapshot, { config, budgets });
+        const { target, snapshot } = await acquire(world.db, world.config, source);
+        return openSnapshot(target, snapshot, { config: world.config, budgets });
       };
       const first = await readerFor();
       await first.readMany(["c.txt", "big.bin", "a.txt", "b.txt"]);

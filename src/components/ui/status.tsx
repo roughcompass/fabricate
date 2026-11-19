@@ -47,19 +47,13 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   ambiguous: ["Ambiguous", "warning"],
   unresolved: ["Unresolved", "neutral"],
   out_of_scope: ["Out of scope", "neutral"],
-  // Sources and Standards.
-  enabled: ["Enabled", "success"],
-  disabled: ["Disabled", "neutral"],
+  // Standards and their drafts.
   draft: ["Draft", "neutral"],
   draft_ready: ["Ready to publish", "success"],
   draft_problems: ["Has problems", "warning"],
   no_draft: ["No draft", "neutral"],
   unsaved: ["Unsaved changes", "warning"],
   published: ["Published", "success"],
-  // Directory import candidates.
-  importable: ["Ready to add", "info"],
-  registered: ["Already registered", "neutral"],
-  rejected: ["Rejected", "error"],
   // Service Dependency boundaries.
   characterized: ["Boundary characterized", "success"],
   // A part of a page that lists what to look at, such as a Profile's Needs attention and Skipped inputs.
@@ -74,18 +68,9 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   undetermined: ["Undetermined", "warning"],
   conforms: ["Conforms", "success"],
   not_evaluated: ["Not evaluated", "neutral", "dash"],
-  // Checks and their outcomes.
-  active: ["Active", "success"],
-  retired: ["Retired", "neutral"],
-  submitted: ["Submitted", "success"],
-  approved: ["Approved", "success"],
-  withdrawn: ["Withdrawn", "neutral"],
-  matching: ["Matching", "success"],
+  // Other states pages pass.
   missing: ["Missing", "error"],
   stale: ["Stale", "warning"],
-  pass: ["Passes", "success"],
-  fail: ["Fails", "error"],
-  blocking: ["Blocking", "error"],
   warning: ["Warning", "warning"],
   // Repository previews: a commit being prepared or refused, and a preview's latest build attempt (Queued and Failed above).
   profiling: ["Profiling", "progress"],
@@ -93,10 +78,6 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   not_previewable: ["Not previewable", "neutral"],
   building: ["Building", "progress"],
   ready: ["Ready", "success"],
-  // DE Console reads, and why an entry is in conflict.
-  succeeded: ["Succeeded", "success"],
-  duplicate_in_export: ["Listed twice in the export", "warning"],
-  several_applications: ["Matches several applications", "warning"],
 };
 
 /** A readable label for a value without a mapping: underscores become spaces, first letter capitalized. */
@@ -105,7 +86,9 @@ export function humanize(value: string): string {
   return words ? words[0]!.toUpperCase() + words.slice(1) : "None";
 }
 
-/** Whether a value has an explicit entry in the registry. */
+/** Whether a value has an explicit entry in the registry.
+ * @public Tests check that every state has an entry.
+ */
 export function hasStatus(state: string): boolean {
   return Object.hasOwn(STATES, state);
 }

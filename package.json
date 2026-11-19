@@ -27,9 +27,10 @@
     "test:fleet": "playwright test --config playwright.fleet.config.ts",
     "test:demo-off": "playwright test --config playwright.demo-off.config.ts",
     "lint": "eslint --max-warnings=0 .",
-    "knip": "knip",
-    "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run lint && npm run knip && npm test"
+    "knip": "knip && knip --production --config knip.production.json",
+    "typecheck": "next typegen && tsc --noEmit",
+    "duplication": "jscpd --min-lines 8 --min-tokens 70 --threshold 0.5 --ignore \"**/src/demo/**\" --reporters console src test e2e scripts",
+    "check": "npm run typecheck && npm run lint && npm run knip && npm run duplication && npm test"
   },
   "dependencies": {
     "@fontsource/open-sans": "5.3.0",
@@ -63,6 +64,7 @@
     "esbuild": "0.28.2",
     "eslint": "10.15.0",
     "eslint-config-next": "16.4.6",
+    "jscpd": "4.3.0",
     "knip": "6.45.1",
     "tsx": "4.23.15",
     "vitest": "5.1.0"

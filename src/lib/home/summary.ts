@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
 import { type ConclusionFilter, conclusionCounts, latestConclusions } from "@/lib/evaluations/conclusions";
-import { type RepositoryCounts, repositoryCounts } from "@/lib/ownership/coverage";
 
 /**
  * Home's fleet summary (home spec): two groups of figures, each read with
@@ -10,33 +9,35 @@ import { type RepositoryCounts, repositoryCounts } from "@/lib/ownership/coverag
  */
 
 export interface FleetSummary {
-  /** `profiled` counts Repositories with at least one finished profile version. */
-  repositories: RepositoryCounts & { empty: boolean; profiled: number };
-  /** Assessments the operator created; those created for claims are left out. */
+  /** `profiled` counts Repositories with a current Profile. */
+  repositories: { empty: boolean; total: number; profiled: number };
+  /** Assessments the operator created. */
   assessments: { empty: boolean; total: number; byConclusion: Record<ConclusionFilter, number> };
 }
 
 export function fleetSummary(db: Executor): FleetSummary {
-  const repositories = repositoryCounts(db);
-  const conclusions = latestConclusions(db, { systemOwned: false });
+  const total = repositoryCount(db);
+  const conclusions = latestConclusions(db);
   return {
-    repositories: { ...repositories, empty: repositories.total === 0, profiled: profiledCount(db) },
+    repositories: { empty: total === 0, total, profiled: profiledCount(db) },
     assessments: { empty: conclusions.size === 0, total: conclusions.size, byConclusion: conclusionCounts(conclusions) },
   };
 }
 
-/** The Claimed figure's share of all Repositories, as a whole percentage; null when there are none. */
-export function claimedShare(repositories: Pick<RepositoryCounts, "total" | "claimed">): number | null {
-  return repositories.total === 0 ? null : Math.round((repositories.claimed / repositories.total) * 100);
+/** The Repositories in the catalog, or with +at+, those in it then, in one query. */
+export function repositoryCount(db: Executor, options: { at?: Date } = {}): number {
+  const at = options.at?.getTime();
+  const inCatalog = at === undefined ? sql`deleted_at is null` : sql`created_at <= ${at} and (deleted_at is null or deleted_at > ${at})`;
+  return db.get<{ total: number }>(sql`select count(*) as total from repository_sources where ${inCatalog}`)?.total ?? 0;
 }
 
-/** Repositories in the catalog with at least one finished profile version, in one query. */
+/** Repositories in the catalog with a current Profile, written by any Run, in one query. */
 function profiledCount(db: Executor): number {
   const row = db.get<{ profiled: number }>(sql`
-    select count(distinct v.repository_source_id) as profiled
-    from profile_versions v
-    join assessments a on a.id = v.assessment_id
-    join repository_sources s on s.id = v.repository_source_id
-    where s.deleted_at is null and a.state in ('complete', 'complete_with_issues')`);
+    select count(distinct t.repository_source_id) as profiled
+    from repository_profiles p
+    join assessment_targets t on t.id = p.assessment_target_id
+    join repository_sources s on s.id = t.repository_source_id
+    where s.deleted_at is null`);
   return row?.profiled ?? 0;
 }

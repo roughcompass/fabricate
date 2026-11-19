@@ -7,6 +7,7 @@ import type { ProfileTrigger } from "@/lib/db/schema";
 import { CURRENT_VERSION } from "@/lib/documents/schemas";
 import { type Job, enqueue } from "@/lib/jobs/queue";
 import { type CheckState, ACTIVE_STATES, latestVersions, queueProfile } from "./versions";
+import { failureText } from "@/lib/git/redact";
 
 /*
  * The scheduled profiling check (docs/profiling.md). Time is cut into slots
@@ -110,7 +111,7 @@ export async function checkProfiles(db: Executor, config: FabricateConfig, optio
         const decision = decideWithHead(state, await head(source, options.signal));
         if (decision && "queue" in decision) queue(source, decision.queue, decision.headCommit);
       } catch (error) {
-        unreachable.push({ source: source.publicId, message: error instanceof Error ? error.message : String(error) });
+        unreachable.push({ source: source.publicId, message: failureText(error) });
       }
     }
   };

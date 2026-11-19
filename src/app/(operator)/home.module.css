@@ -3,11 +3,12 @@
   .row { display: grid; gap: var(--space-4); align-items: stretch; }
   .row[data-columns="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-  /* Where the fleet stands: three Repositories cards and the Assessments card, four across. */
-  .overview { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
+  /* Where the fleet stands: two Repositories cards and the Assessments card, three across. */
+  .overview { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
   .group { display: flex; min-width: 0; }
   .group > * { flex: 1; }
-  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); margin: 0; }
+  /* Two figures per row at every width. */
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin: 0; }
   .cards.single { grid-template-columns: minmax(0, 1fr); }
 
   /* One figure as a card on the surface: its label, its count, how much of the whole it is, and its change this week. */
@@ -52,12 +53,5 @@
 
   @container content (max-width: 1023px) {
     .row[data-columns="2"], .overview { grid-template-columns: minmax(0, 1fr); }
-  }
-  /* Two figures per row on a narrow column. */
-  @container content (max-width: 767px) {
-    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    /* An odd last card takes the whole row rather than leaving a gap beside it. */
-    .cards > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }
-    .cards.single { grid-template-columns: minmax(0, 1fr); }
   }
 }

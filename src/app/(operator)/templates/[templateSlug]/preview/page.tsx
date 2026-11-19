@@ -16,9 +16,7 @@ import { type TemplateFile, isIllustrative, templateFiles } from "@/lib/demo/tem
 import { DEVICES, ORIENTATION_LABELS, frameSize } from "@/lib/web/device-preview";
 import styles from "./preview.module.css";
 
-type Params = Record<string, string | string[] | undefined>;
-
-export async function generateMetadata({ params }: { params: Promise<{ templateSlug: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/templates/[templateSlug]/preview">): Promise<Metadata> {
   const { templateSlug } = await params;
   const title = templateBySlug(templateSlug)?.title;
   return { title: title ? `Preview ${title}` : "Template not found" };
@@ -87,7 +85,7 @@ function FileTree({ files, selected, hrefFor }: { files: readonly TemplateFile[]
  * full-screen controls on the tabs' row, and the Code tab shows the
  * template's files. Every choice lives in the address.
  */
-export default async function PreviewPage({ params, searchParams }: { params: Promise<{ templateSlug: string }>; searchParams: Promise<Params> }) {
+export default async function PreviewPage({ params, searchParams }: PageProps<"/templates/[templateSlug]/preview">) {
   requireDemo();
   const { templateSlug } = await params;
   const template = templateBySlug(templateSlug);

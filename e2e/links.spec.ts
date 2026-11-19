@@ -2,6 +2,7 @@ import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { seedOperatorSurfaces } from "./support/surfaces";
+import { useTheme } from "./support/shell";
 
 /**
  * The link check (operator-interface/page-patterns spec, "Every link opens the
@@ -123,7 +124,7 @@ async function checkPrimaries(browser: Browser, context: BrowserContext, baseURL
   await checker.addCookies(await context.cookies());
   const checking = await checker.newPage();
   for (const theme of ["light", "dark"] as const) {
-    await checker.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL }]);
+    await useTheme(checker, theme, baseURL);
     for (const url of urls) {
       await checking.goto(url);
       for (const problem of await unfilledPrimaries(checking)) problems.push(`${url} (${theme}): ${problem}`);

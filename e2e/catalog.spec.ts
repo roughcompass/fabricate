@@ -1,13 +1,12 @@
 import type { Page } from "@playwright/test";
 import { buildSource } from "../test/support/builders";
-import { claim } from "../test/support/home";
 import { transitionAssessment } from "../src/lib/assessments/transitions";
 import { listSources } from "../src/lib/catalog/source-records";
 import { versionsOf } from "../src/lib/profiling/versions";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
+import { toasts } from "./support/shell";
 
-const toasts = (page: Page) => page.getByRole("region", { name: "Notifications" });
 const rowMenu = async (page: Page, name: string) => {
   await page.getByRole("button", { name: `Actions for ${name}` }).click();
   return page.locator("[popover]:popover-open");
@@ -183,60 +182,17 @@ test("searches Sources by name or clone URL, keeping the search in the address",
   await expect(rows).toHaveCount(3);
 });
 
-// page-patterns spec: the Repositories list filters what Home counts.
-test.describe("the ownership filter", () => {
-  const rows = (page: Page) => page.getByRole("table", { name: "Repositories" }).locator("tbody tr");
+test("the removed claim and DE Console addresses respond as not found, and a former ownership filter is ignored", async ({ page, db }) => {
+  buildSource(db, { name: "orders" });
+  buildSource(db, { name: "billing" });
+  for (const removed of ["/repositories/claim", "/repositories/de-console"]) {
+    const response = await page.goto(removed);
+    expect(response?.status(), removed).toBe(404);
+  }
 
-  test("Filtering to unclaimed Repositories keeps the search, records both in the address, and reads Unclaimed", async ({ page, db }) => {
-    claim(db, buildSource(db, { name: "orders" }));
-    claim(db, buildSource(db, { name: "billing" }));
-    buildSource(db, { name: "accounts" });
-    buildSource(db, { name: "archive" });
-
-    await page.goto(`${paths.repositories}?q=a`);
-    await page.getByLabel("Ownership").selectOption("unclaimed");
-    await expect(page).toHaveURL(/q=a/);
-    await expect(page).toHaveURL(/ownership=unclaimed/);
-    await expect(rows(page)).toHaveCount(2);
-    await expect(rows(page).first()).toContainText("accounts");
-    await expect(rows(page).first()).toContainText("Unclaimed");
-    // The count says what the search and the filter leave.
-    await expect(page.getByText("2 Repositories of 4")).toBeVisible();
-  });
-
-  test("Claimed Repository in conflict shows the effective application, marked", async ({ page, db }) => {
-    const source = buildSource(db, { name: "orders" });
-    claim(db, source, { providedBy: "Ana" });
-    claim(db, source, { providedBy: "Bo" });
-
-    await page.goto(`${paths.repositories}?ownership=claimed`);
-    await expect(rows(page)).toHaveCount(1);
-    await expect(rows(page).first()).toContainText("In conflict");
-    await expect(rows(page).first()).not.toContainText("Unclaimed");
-  });
-
-  test("shows an empty state that names the filter", async ({ page, db }) => {
-    claim(db, buildSource(db, { name: "orders" }));
-    await page.goto(`${paths.repositories}?ownership=unclaimed`);
-    await expect(page.getByText("No unclaimed Repositories")).toBeVisible();
-  });
-
-  test.describe("without JavaScript", () => {
-    test.use({ javaScriptEnabled: false });
-
-    test("Ownership filter without JavaScript applies with Apply and offers Clear filters", async ({ page, db }) => {
-      claim(db, buildSource(db, { name: "orders" }));
-      buildSource(db, { name: "accounts" });
-
-      await page.goto(paths.repositories);
-      await page.getByLabel("Ownership").selectOption("claimed");
-      await page.getByRole("button", { name: "Apply" }).click();
-      await expect(page).toHaveURL(/ownership=claimed/);
-      await expect(rows(page)).toHaveCount(1);
-      await expect(rows(page).first()).toContainText("orders");
-      await expect(page.getByRole("link", { name: "Clear filters" })).toBeVisible();
-    });
-  });
+  await page.goto(`${paths.repositories}?ownership=unclaimed`);
+  await expect(page.getByRole("table", { name: "Repositories" }).locator("tbody tr")).toHaveCount(2);
+  await expect(page.getByLabel("Ownership")).toHaveCount(0);
 });
 
 test("keeps every row one height, with or without a Reference", async ({ page, db }) => {

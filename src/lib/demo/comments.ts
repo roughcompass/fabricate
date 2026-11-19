@@ -7,6 +7,7 @@ import { type ThreadStatus, demoComments, demoThreads } from "@/lib/db/schema";
 import type { DemoView } from "./access";
 import { memberById, routeByPath } from "./catalog";
 import { COMMENT_LIMIT, normalizeDisplayName } from "./workspaces";
+import { formatNumber } from "@/components/ui/count";
 
 /**
  * Comment threads anchored to rendered elements (template-demo/toolbar spec).
@@ -60,7 +61,7 @@ export interface Author {
 export function normalizeBody(value: string): string {
   const body = value.replace(/\r\n?/g, "\n").trim();
   if (!body) throw new ValidationError([{ field: "body", message: "Write a comment" }]);
-  if (body.length > COMMENT_LIMIT) throw new ValidationError([{ field: "body", message: `Use at most ${COMMENT_LIMIT.toLocaleString("en-US")} characters` }]);
+  if (body.length > COMMENT_LIMIT) throw new ValidationError([{ field: "body", message: `Use at most ${formatNumber(COMMENT_LIMIT)} characters` }]);
   return body;
 }
 

@@ -73,7 +73,7 @@ describe("preview toolchain doctor", () => {
 
   it("runs corepack in a build's install environment, with caches under preview storage and a throwaway HOME", async () => {
     const bin = install("24.22.0");
-    const secret = "FABRICATE_DE_CONSOLE_TOKEN";
+    const secret = "FABRICATE_SECRET_TOKEN";
     process.env[secret] = "doctor-secret";
     try {
       await check(configWith({ "24.22.0": bin }), runner({ "node --version": { output: "v24.22.0\n" } }));

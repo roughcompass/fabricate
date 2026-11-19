@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
 
 export const SELECTION_MODES = ["all", "explicit"] as const;
@@ -45,17 +45,6 @@ export const initiatives = sqliteTable(
     objective: text("objective").notNull().default(""),
     selectionMode: text("selection_mode", { enum: SELECTION_MODES }).notNull().default("all"),
     /**
-     * Set on a system-owned initiative: the one repository it assesses when
-     * the repository is claimed. Null on initiatives operators create.
-     */
-    claimRepositorySourceId: integer("claim_repository_source_id").references((): AnySQLiteColumn => repositorySources.id, { onDelete: "restrict" }),
-    /**
-     * Set on the Salt Patterns initiative, which DE FabLab owns and whose
-     * targets are template versions (converge-templates-and-prototypes,
-     * design decision 2). Operators choose its Releases, nothing else.
-     */
-    systemOwned: integer("system_owned", { mode: "boolean" }).notNull().default(false),
-    /**
      * Set on the Repository profiling initiative, which DE FabLab owns. Each
      * of its Runs profiles one repository, which the launch names, and is
      * that repository's next profile version (docs/profiling.md).
@@ -66,13 +55,11 @@ export const initiatives = sqliteTable(
     updatedAt: updatedAt(),
   },
   (t) => [
-    uniqueIndex("initiatives_claim_repository_source").on(t.claimRepositorySourceId),
     check("initiatives_public_id", sql`${t.publicId} GLOB 'ini_*'`),
     check("initiatives_name", sql`length(trim(${t.name})) BETWEEN 1 AND 120`),
     check("initiatives_objective", sql`length(${t.objective}) <= 2000`),
     check("initiatives_selection_mode", sql.raw(`selection_mode IN (${sqlList(SELECTION_MODES)})`)),
-    check("initiatives_system_owned", sql`${t.systemOwned} IN (0, 1)`),
-    check("initiatives_profiling", sql`${t.profiling} IN (0, 1) AND NOT (${t.profiling} = 1 AND (${t.systemOwned} = 1 OR ${t.claimRepositorySourceId} IS NOT NULL))`),
+    check("initiatives_profiling", sql`${t.profiling} IN (0, 1)`),
   ],
 );
 

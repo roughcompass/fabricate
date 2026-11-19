@@ -11,6 +11,7 @@ import { buildInitiative } from "../test/support/builders";
 import { E2E_ENV } from "./support/env";
 import { expect, gitRepo, test } from "./support/fixtures";
 import { paths } from "./support/paths";
+import { pageHeader } from "./support/shell";
 
 // The server's configuration, so jobs run from the test process use its database, storage, and source root.
 const config = () => loadConfig({ env: { ...process.env, ...E2E_ENV } });
@@ -30,7 +31,7 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
   // The outcome leaves the address at once, so no refresh can bring it back.
   await expect(page).not.toHaveURL(/notice=/);
   // The page header carries the status; the title is in the shell header.
-  const header = page.locator("[data-page-header]");
+  const header = pageHeader(page);
   await expect(header).toContainText("Queued");
 
   // Jobs run one at a time from the test process, using the inline queue.

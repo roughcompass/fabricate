@@ -17,10 +17,6 @@
     "demo": {
       "enabled": false
     },
-    "deConsole": {
-      "source": null,
-      "refreshMinutes": 60
-    },
     "profiling": {
       "checkMinutes": 60
     },

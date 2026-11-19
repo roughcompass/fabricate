@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { JsonObject } from "@repo-facts/contract";
-import { type Condition, type ConditionId, type EligibilityInput, type ManifestRead, type PageRead, evaluateEligibility, installRootManifests, readPage, vitePackages } from "@/lib/previews/eligibility";
+import { type Condition, type ConditionId, type EligibilityInput, type ManifestRead, evaluateEligibility, installRootManifests, vitePackages } from "@/lib/previews/eligibility";
+import { type PageRead, readPage } from "@/lib/previews/pages";
 import type { FactDocument } from "@/lib/profiles/states";
 import { analyzedFacts } from "../support/fact-documents";
 import { FEDERATED_WORKSPACE, NEXT_APP, NPM_WORKSPACE, SCALA_SERVICE, TWO_LOCKFILES, type Tree, VITE_REACT_APP, offlineFederatedRemote, offlineSingleSpaBundle, offlineViteLibrary } from "../support/preview-trees";

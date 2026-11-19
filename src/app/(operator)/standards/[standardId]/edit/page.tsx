@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cache } from "react";
 import { Page, PageHeader } from "@/components/ui/page";
-import { getDb } from "@/lib/db/client";
-import { findStandard } from "@/lib/standards/standard-records";
 import { updateStandard } from "../../actions";
 import { StandardForm } from "../../standard-form";
+import { routes } from "@/lib/web/routes";
+import { loadStandard } from "../load";
 
-const loadStandard = cache((publicId: string) => findStandard(getDb(), publicId));
-
-export async function generateMetadata({ params }: { params: Promise<{ standardId: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/standards/[standardId]/edit">): Promise<Metadata> {
   const standard = loadStandard((await params).standardId);
   return { title: standard ? `Edit ${standard.name}` : "Standard not found" };
 }
 
-export default async function EditStandardPage({ params }: { params: Promise<{ standardId: string }> }) {
+export default async function EditStandardPage({ params }: PageProps<"/standards/[standardId]/edit">) {
   const { standardId } = await params;
   const standard = loadStandard(standardId);
   if (!standard) notFound();
@@ -24,7 +21,7 @@ export default async function EditStandardPage({ params }: { params: Promise<{ s
       <PageHeader
         breadcrumbs={[
           { href: "/standards", label: "Standards" },
-          { href: `/standards/${standard.publicId}`, label: standard.name },
+          { href: routes.standard(standard.publicId), label: standard.name },
         ]}
         title="Edit Standard"
         description="Published Releases keep the name and purpose they were published with."
@@ -34,7 +31,7 @@ export default async function EditStandardPage({ params }: { params: Promise<{ s
         initial={{ values: { name: standard.name, purpose: standard.purpose }, errors: {} }}
         lockVersion={standard.lockVersion}
         submitLabel="Save changes"
-        cancelHref={`/standards/${standard.publicId}`}
+        cancelHref={routes.standard(standard.publicId)}
       />
     </Page>
   );

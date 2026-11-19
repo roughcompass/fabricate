@@ -6,6 +6,7 @@ import { requestCancellation } from "@/lib/assessments/transitions";
 import { getDb } from "@/lib/db/client";
 import { NotFoundError, TransitionError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
+import { routes } from "@/lib/web/routes";
 
 /** Records a durable cancellation request; running jobs stop at their next check. */
 export async function cancelAssessment(assessmentId: string): Promise<void> {
@@ -15,8 +16,8 @@ export async function cancelAssessment(assessmentId: string): Promise<void> {
   try {
     requestCancellation(db, assessment.id);
   } catch (error) {
-    if (error instanceof TransitionError) redirect(`/runs/${assessmentId}?notice=already-finished`);
+    if (error instanceof TransitionError) redirect(routes.run(assessmentId, { notice: "already-finished" }));
     throw error;
   }
-  redirect(`/runs/${assessmentId}?notice=cancel-requested`);
+  redirect(routes.run(assessmentId, { notice: "cancel-requested" }));
 }

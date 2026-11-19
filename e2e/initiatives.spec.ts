@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { listAssessments } from "../src/lib/assessments/assessment-records";
 import { jobs } from "../src/lib/db/schema";
-import { claimInitiative, listInitiatives, saltPatternsInitiative, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
+import { listInitiatives, selectedReleases, selectedSources } from "../src/lib/initiatives/initiative-records";
 import { createStandard } from "../src/lib/standards/standard-records";
 import { buildAssessment, buildInitiative, buildRelease, buildSource } from "../test/support/builders";
 import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home";
@@ -159,62 +159,10 @@ test("Initiative pages stay usable at mobile width", async ({ page, db }) => {
   await expect(page.locator("[popover]:popover-open").getByRole("link", { name: "Edit" })).toBeVisible();
 });
 
-// page-patterns spec: the Assessments list filters what Home counts.
-test("Owned by DE FabLab: Salt Patterns alone, outside the main table and its tab counts", async ({ page, db }) => {
-  buildInitiative(db, { name: "Orders review" });
-
-  await page.goto(paths.assessments);
-  const main = page.getByRole("table", { name: "Assessments", exact: true });
-  await expect(main).toContainText("Orders review");
-  await expect(main).not.toContainText("Salt Patterns");
-  await expect(page.getByRole("navigation", { name: "Filter Assessments" }).getByRole("link", { name: /^All/ })).toHaveText(/^All\s*1$/);
-  const owned = page.getByRole("table", { name: "Assessments owned by DE FabLab" }).locator("tbody tr");
-  await expect(owned).toHaveCount(1);
-  await expect(owned.first()).toContainText("Salt Patterns");
-  await expect(owned.first()).toContainText("Template versions");
-});
-
-test("Salt Patterns: DE FabLab owns it, and only its Releases can be selected (Releases selected)", async ({ page, db }) => {
-  const exemplary = createStandard(db, { name: "Salt exemplary", purpose: "Exemplary Salt usage" }).standard;
-  buildRelease(db, { standard: exemplary });
-  buildSource(db, { name: "orders" });
-
-  await page.goto(paths.assessments);
-  const owned = page.getByRole("region", { name: "Owned by DE FabLab" });
-  await expect(owned).toContainText("None selected");
-  await owned.getByRole("link", { name: "Salt Patterns" }).click();
-
-  await expect(page).toHaveTitle("Salt Patterns · DE FabLab");
-  await expect(page.getByText("Owned by DE FabLab")).toBeVisible();
-  await expect(overview(page)).toContainText("Template versions, added when one is accepted or re-checked");
-  await expect(page.getByRole("button", { name: "Start Run" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Edit", exact: true })).toHaveCount(0);
-
-  await page.getByRole("link", { name: "Select Releases" }).click();
-  await expect(page.getByRole("heading", { name: "Select Releases" })).toBeVisible();
-  // No name, objective, or target to edit, and nothing to delete.
-  await expect(page.getByLabel("Name")).toHaveCount(0);
-  await expect(page.getByRole("group", { name: "Repository scope" })).toHaveCount(0);
-  await expect(page.getByRole("group", { name: "Selected Repositories" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Delete Assessment" })).toHaveCount(0);
-  await page.getByLabel("Salt exemplary v1").check();
-  await page.getByRole("button", { name: "Save Releases" }).click();
-
-  await expect(toast(page, "Salt Patterns was updated.")).toBeVisible();
-  await expect(overview(page)).toContainText("Salt exemplary v1");
-  const salt = saltPatternsInitiative(db);
-  expect(selectedReleases(db, salt.id).map(({ standard }) => standard.name)).toEqual(["Salt exemplary"]);
-  expect(selectedSources(db, salt.id)).toEqual([]);
-  expect(salt).toMatchObject({ name: "Salt Patterns", selectionMode: "explicit" });
-
-  await page.goto(paths.assessments);
-  await expect(page.getByRole("region", { name: "Owned by DE FabLab" })).toContainText("Salt exemplary v1");
-});
-
 test.describe("conclusion tabs", () => {
   const rows = (page: Page) => page.getByRole("table", { name: "Assessments", exact: true }).locator("tbody tr");
 
-  test("Gaps found tab lists only Assessments whose latest completed Evaluation found Gaps, and hides those created for claims", async ({ page, db }) => {
+  test("Gaps found tab lists only Assessments whose latest completed Evaluation found Gaps", async ({ page, db }) => {
     const source = buildSource(db, { name: "orders" });
     const evaluated = (name: string, conclusion: "gaps" | "conforms") => {
       const initiative = buildInitiative(db, { name, sources: [source] });
@@ -222,10 +170,8 @@ test.describe("conclusion tabs", () => {
     };
     const gaps = evaluated("Checkout platform migration", "gaps");
     evaluated("Payments baseline", "conforms");
-    claimInitiative(db, source);
 
     await page.goto(paths.assessments);
-    await expect(page.getByText("Created for claims")).toBeVisible();
     const tabs = page.getByRole("navigation", { name: "Filter Assessments" });
     await expect(tabs.getByRole("link")).toHaveText([/^All\s*2$/, /^Gaps found\s*1$/, /^Undetermined\s*0$/, /^Conforms\s*1$/, /^Not evaluated\s*0$/]);
     await tabs.getByRole("link", { name: /Gaps found/ }).click();
@@ -234,7 +180,6 @@ test.describe("conclusion tabs", () => {
     await expect(rows(page).first()).toContainText("Checkout platform migration");
     await expect(rows(page).first().getByRole("link", { name: "Evaluation #1" })).toHaveAttribute("href", `/evaluations/${gaps.publicId}`);
     await expect(rows(page).first()).toContainText("Gaps found");
-    await expect(page.getByText("Created for claims")).toHaveCount(0);
   });
 
   test("Not evaluated tab lists an Assessment with Runs but no completed Evaluation", async ({ page, db }) => {

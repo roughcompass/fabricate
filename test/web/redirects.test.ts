@@ -23,14 +23,15 @@ function redirectOf(address: string): string | null {
   return null;
 }
 
-describe("redirects from before the interface vocabulary changed", () => {
-  it.each([
-    ["/initiatives/new", "/assessments/new"],
-    ["/initiatives/ini_aaaaaaaaaaaaaaaa/edit", "/assessments/ini_aaaaaaaaaaaaaaaa/edit"],
-    ["/assessments/asm_bbbbbbbbbbbbbbbb/map", "/runs/asm_bbbbbbbbbbbbbbbb/map"],
-    ["/sources/new", "/repositories/new"],
-  ])("still sends %s to %s", (from, to) => {
-    expect(redirectOf(from)).toBe(to);
+describe("redirects from recently retired addresses", () => {
+  it("sends a Repository's Edit page to its Settings", () => {
+    expect(redirectOf("/repositories/src_cccccccccccccccc/edit")).toBe("/repositories/src_cccccccccccccccc/settings");
+  });
+});
+
+describe("addresses retired more than 30 days ago (Retired address)", () => {
+  it.each(["/initiatives/new", "/initiatives/ini_aaaaaaaaaaaaaaaa/edit", "/assessments/asm_bbbbbbbbbbbbbbbb/map", "/sources/new"])("leaves %s to the not-found page", (address) => {
+    expect(redirectOf(address)).toBeNull();
   });
 });
 

@@ -32,7 +32,7 @@ describe("standard records", () => {
     expect(isPublicId(standard.publicId, "std")).toBe(true);
     expect(standard.name).toBe("Frontend baseline");
     expect(draftDocument(draft)).toEqual(blankDraftDocument());
-    expect(draftOf(db, standard.id)?.id).toBe(draft.id);
+    expect(draftOf(db, standard.id)).toEqual({ standardId: standard.id, document: draft.document, lockVersion: 0, savedAt: standard.createdAt, basedOnReleaseId: null });
   });
 
   it("requires a name and purpose and rejects a case-insensitive duplicate name", () => {
@@ -45,7 +45,8 @@ describe("standard records", () => {
   it("allows only one active draft per Standard", () => {
     const { standard, draft } = createStandard(db, { name: "One draft", purpose: "Test" });
 
-    expect(() => rawRun(db, "insert into standard_drafts (standard_id, document, created_at, updated_at) values (?, '{}', 0, 0)", standard.id)).toThrow(/UNIQUE constraint failed/);
+    // A draft's columns exist together, and only a draft revises a Release.
+    expect(() => rawRun(db, "update standards set draft_lock_version = null where id = ?", standard.id)).toThrow(/CHECK constraint failed/);
 
     const release = buildRelease(db, { standard });
     expect(() => startDraftFromRelease(db, release)).toThrow(/already has a draft/);
@@ -72,7 +73,7 @@ describe("standard records", () => {
     expect(isPublicId(first.publicId, "rel")).toBe(true);
     expect(first.digest).toBe(sha256(first.document));
     // New drafts declare the current Profile version.
-    expect(first.profileSchemaVersions).toBe("[2]");
+    expect(first.profileSchemaVersions).toEqual([2]);
     expect(releasesOf(db, standard.id).map((release) => release.version)).toEqual([2, 1]);
     expect(releaseLabel(standard, second)).toBe("Versioned v2");
   });
@@ -140,7 +141,7 @@ describe("standard records", () => {
 
       expect(() => insert(1, "a".repeat(64))).toThrow(/UNIQUE constraint failed/);
       expect(() => insert(9, "short")).toThrow(/CHECK constraint failed/);
-      expect(() => rawRun(db, "update standard_drafts set document = '[]' where standard_id = ?", standard.id)).toThrow(/CHECK constraint failed/);
+      expect(() => rawRun(db, "update standards set draft_document = '[]' where id = ?", standard.id)).toThrow(/CHECK constraint failed/);
     });
 
     it("rejects repointing a Release selection", () => {

@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { navFlags } from "@/components/shell/nav-flags";
-import { HOME, homeLink, visibleGroups } from "@/components/shell/navigation";
 import { ButtonLink } from "@/components/ui/button";
-import { countLabel } from "@/components/ui/count";
+import { countLabel, formatNumber, percentOf } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
-import { param } from "@/components/ui/outcome-toast";
+import { pageNumber, param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
@@ -14,20 +11,20 @@ import { RelativeTime } from "@/components/ui/relative-time";
 import { toneClass } from "@/components/ui/indicator";
 import { StateIndicator, Status, statusLabel, statusOf } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
-import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { profilingActivity } from "@/lib/profiling/versions";
 import { BarChart, type BarSeries } from "@/components/ui/bar-chart";
 import { ATTENTION_PAGE_SIZE, type AttentionItem, attentionItems } from "@/lib/home/attention";
 import { type ActivityKind, WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity } from "@/lib/home/dashboard";
-import { type FleetSummary, claimedShare, fleetSummary } from "@/lib/home/summary";
+import { type FleetSummary, fleetSummary } from "@/lib/home/summary";
 import { assessmentsHref, repositoriesHref } from "@/lib/web/list-filters";
 import styles from "./home.module.css";
+import { routes } from "@/lib/web/routes";
+import { formatShortDate } from "@/components/ui/time";
+import { CONCLUSION_FILTERS, conclusionState } from "@/lib/evaluations/conclusions";
 
 // The root layout's title template applies only to child segments, and this page shares the root segment.
 export const metadata: Metadata = { title: { absolute: "Home · DE FabLab" } };
-
-const DE_CONSOLE = "/repositories/de-console";
 
 /** The time this request renders, which each figure's change over the week is measured from. */
 function requestTime(): number {
@@ -40,26 +37,18 @@ function requestTime(): number {
  * stands, as four cards that each open the list they count, with the share
  * they cover and their change over the last seven days; then the Assessment
  * trend beside the latest finished Runs. Every visitor sees the same page.
- * Where Assessments aren't available, the root address opens wherever links
- * to Home lead instead.
  */
-export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const config = getConfig();
-  const home = homeLink(visibleGroups(navFlags(config)));
-  if (home.href !== HOME.href) redirect(home.href);
-
+export default async function HomePage({ searchParams }: PageProps<"/">) {
   const query = await searchParams;
   const db = getDb();
   const summary = fleetSummary(db);
   const profiling = profilingActivity(db);
-  const items = attentionItems(db, config);
-  const pages = Math.max(1, Math.ceil(items.length / ATTENTION_PAGE_SIZE));
-  const requested = Number.parseInt(param(query, "page") ?? "1", 10);
-  const page = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), pages) : 1;
+  const items = attentionItems(db);
+  const { page, pages } = pageNumber(param(query, "page"), items.length, ATTENTION_PAGE_SIZE);
   const shown = items.slice((page - 1) * ATTENTION_PAGE_SIZE, page * ATTENTION_PAGE_SIZE);
 
   const then = figuresAt(db, new Date(requestTime() - WEEK_MS));
-  const changes = figureChanges(summary, then, claimedShare);
+  const changes = figureChanges(summary, then);
   const trend = assessmentTrend(db);
   const activity = recentActivity(db).slice(0, ACTIVITY_SHOWN);
 
@@ -90,14 +79,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               }
             >
               {shown.map((item) => (
-                <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : "evaluation" in item ? item.evaluation.publicId : item.kind}`} item={item} refreshMinutes={config.deConsole.refreshMinutes} />
+                <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : item.evaluation.publicId}`} item={item} />
               ))}
             </Table>
           ) : (
             // Nothing to do takes one line, so it never pushes the figures down.
             <div className={styles.clear}>
               <Status state="clear" label="Nothing needs attention" />
-              <span className={styles.muted}>{"Home checks each Assessment's latest Run and Evaluation, and the DE Console import."}</span>
+              <span className={styles.muted}>{"Home checks each Assessment's latest Run and Evaluation."}</span>
             </div>
           )}
         </Panel>
@@ -107,7 +96,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <div className={styles.overview}>
         <section className={styles.group} data-group="repositories" aria-label="Repositories">
           {summary.repositories.empty ? (
-            <Panel title="Repositories" description="Every Repository, profiled in the background, and whether each has a SEAL application.">
+            <Panel title="Repositories" description="Every Repository, each profiled in the background.">
               <EmptyState
                 title="No Repositories yet"
                 icon="git"
@@ -122,7 +111,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   </>
                 }
               >
-                Register Git repositories to profile, claim, and assess them.
+                Register Git repositories to profile and assess them.
               </EmptyState>
             </Panel>
           ) : (
@@ -162,7 +151,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             label="Evaluations completed each week, by conclusion"
             groupLabel="Week of"
             series={TREND_SERIES}
-            groups={trend.map((week) => ({ label: weekLabel(week.start), values: week.counts }))}
+            groups={trend.map((week) => ({ label: formatShortDate(week.start), values: week.counts }))}
             empty="No Evaluation completed in the last eight weeks."
           />
         </Panel>
@@ -209,11 +198,7 @@ const ACTIVITY_LABELS: Record<ActivityKind, string> = {
   run_failed: "Run failed:",
 };
 
-/** A week's first day, as the chart labels it: "Oct 12". */
-const weekLabel = (start: Date) => start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-const figure = (value: number) => value.toLocaleString("en-US");
-const percent = (part: number, whole: number) => (whole === 0 ? 0 : Math.round((part / whole) * 100));
 
 /** A week's change, set apart by direction so it reads at a glance, and stated in words so it never relies on color. */
 function Change({ change }: { change: string }) {
@@ -227,25 +212,24 @@ function Change({ change }: { change: string }) {
 /** A share as a bar, with its percentage in words for assistive technology. */
 function Meter({ value, max, label }: { value: number; max: number; label: string }) {
   return (
-    <dd className={styles.meter} role="img" aria-label={`${label}: ${percent(value, max)}%`}>
-      <span className={styles.meterFill} style={{ inlineSize: `${percent(value, max)}%` }} />
+    <dd className={styles.meter} role="img" aria-label={`${label}: ${percentOf(value, max)}%`}>
+      <span className={styles.meterFill} style={{ inlineSize: `${percentOf(value, max)}%` }} />
     </dd>
   );
 }
 
 /**
- * The Repositories cards: how many there are, how many are profiled and
- * claimed, each with its share of all as a bar. Each count opens the list it
- * counts; Unclaimed is the link under Claimed.
+ * The Repositories cards: how many there are and how many are profiled, with
+ * the profiled share of all as a bar. The count opens the list it counts.
  */
 function RepositoryCards({ repositories, profiling, changes }: { repositories: FleetSummary["repositories"]; profiling: number; changes: Record<string, string> }) {
-  const { total, claimed, unclaimed, profiled } = repositories;
+  const { total, profiled } = repositories;
   return (
     <>
       <div className={styles.card} data-figure="Repositories">
         <dt className={styles.cardLabel}>Repositories</dt>
         <dd className={styles.cardValue}>
-          <Link href={repositoriesHref()}>{figure(total)}</Link>
+          <Link href={repositoriesHref()}>{formatNumber(total)}</Link>
         </dd>
         <dd className={styles.muted}>In the catalog</dd>
         <Change change={changes.repositories!} />
@@ -254,36 +238,18 @@ function RepositoryCards({ repositories, profiling, changes }: { repositories: F
         <dt className={styles.cardLabel}>Profiled</dt>
         {/* A count, not a link: the Repositories list can't be filtered to the profiled ones. */}
         <dd className={styles.cardValue}>
-          {figure(profiled)}
-          <span className={styles.cardOf}>{`of ${figure(total)}`}</span>
+          {formatNumber(profiled)}
+          <span className={styles.cardOf}>{`of ${formatNumber(total)}`}</span>
         </dd>
         <Meter value={profiled} max={total} label="Profiled" />
-        <dd className={styles.muted}>{profiling > 0 ? `${figure(profiling)} profiling or queued now` : profiled === total ? "Every Repository has a profile" : "Each is profiled in the background"}</dd>
-      </div>
-      <div className={styles.card} data-figure="Claimed">
-        <dt className={styles.cardLabel}>Claimed</dt>
-        <dd className={styles.cardValue}>
-          <Link href={repositoriesHref({ ownership: "claimed" })}>{figure(claimed)}</Link>
-          <span className={styles.cardOf}>{`of ${figure(total)} · ${percent(claimed, total)}% of all`}</span>
-        </dd>
-        <Meter value={claimed} max={total} label="Claimed" />
-        <dd className={styles.muted} data-figure="Unclaimed">
-          <Link href={repositoriesHref({ ownership: "unclaimed" })}>{`${figure(unclaimed)} unclaimed`}</Link>
-        </dd>
-        <Change change={changes.claimed!} />
+        <dd className={styles.muted}>{profiling > 0 ? `${formatNumber(profiling)} profiling or queued now` : profiled === total ? "Every Repository has a profile" : "Each is profiled in the background"}</dd>
       </div>
     </>
   );
 }
 
 // Each conclusion's filter, and its state in the status registry, which gives its label, tone, and indicator.
-const CONCLUSIONS: { id: "gaps" | "undetermined" | "conforms" | "not_applicable" | "none"; state: string }[] = [
-  { id: "gaps", state: "gaps" },
-  { id: "undetermined", state: "undetermined" },
-  { id: "conforms", state: "conforms" },
-  { id: "not_applicable", state: "not_applicable" },
-  { id: "none", state: "not_evaluated" },
-];
+const CONCLUSIONS = CONCLUSION_FILTERS.map((id) => ({ id, state: conclusionState(id) }));
 
 /**
  * The Assessments card: how many there are, then the conclusion of each one's
@@ -298,7 +264,7 @@ function AssessmentCard({ assessments, changes }: { assessments: FleetSummary["a
     <div className={styles.card} data-figure="Assessments">
       <dt className={styles.cardLabel}>Assessments</dt>
       <dd className={styles.cardValue}>
-        <Link href={assessmentsHref()}>{figure(total)}</Link>
+        <Link href={assessmentsHref()}>{formatNumber(total)}</Link>
       </dd>
       <Change change={changes.assessments!} />
       <dd className={styles.split} role="img" aria-label={shown.map((conclusion) => `${statusLabel(conclusion.state)} ${byConclusion[conclusion.id]}`).join(", ")}>
@@ -313,7 +279,7 @@ function AssessmentCard({ assessments, changes }: { assessments: FleetSummary["a
                 {statusLabel(conclusion.state)}
               </dt>
               <dd>
-                <Link href={assessmentsHref({ conclusion: conclusion.id })}>{figure(byConclusion[conclusion.id])}</Link>
+                <Link href={assessmentsHref({ conclusion: conclusion.id })}>{formatNumber(byConclusion[conclusion.id])}</Link>
               </dd>
             </div>
           ))}
@@ -324,8 +290,8 @@ function AssessmentCard({ assessments, changes }: { assessments: FleetSummary["a
 }
 
 /** One problem: what it is, linked to the page that shows it; the record it concerns; and when it began. */
-function AttentionRow({ item, refreshMinutes }: { item: AttentionItem; refreshMinutes: number }) {
-  const { title, href, detail, record } = describe(item, refreshMinutes);
+function AttentionRow({ item }: { item: AttentionItem }) {
+  const { title, href, detail, record } = describe(item);
   return (
     <tr>
       <Td label="Problem">
@@ -342,39 +308,13 @@ function AttentionRow({ item, refreshMinutes }: { item: AttentionItem; refreshMi
   );
 }
 
-function describe(item: AttentionItem, refreshMinutes: number): { title: string; href: string; detail?: React.ReactNode; record: string } {
+function describe(item: AttentionItem): { title: string; href: string; detail?: React.ReactNode; record: string } {
   switch (item.kind) {
     case "run_failed":
-      return { title: `Run #${item.run.number} failed`, href: `/runs/${item.run.publicId}`, record: item.assessment.name };
+      return { title: `Run #${item.run.number} failed`, href: routes.run(item.run.publicId), record: item.assessment.name };
     case "run_with_issues":
-      return { title: `Run #${item.run.number} couldn't assess ${countLabel(item.unassessed, "Repository", "Repositories")}`, href: `/runs/${item.run.publicId}`, record: item.assessment.name };
+      return { title: `Run #${item.run.number} couldn't assess ${countLabel(item.unassessed, "Repository", "Repositories")}`, href: routes.run(item.run.publicId), record: item.assessment.name };
     case "evaluation_failed":
-      return { title: `Evaluation #${item.evaluation.number} failed`, href: `/evaluations/${item.evaluation.publicId}`, record: item.assessment.name };
-    case "de_console_failed":
-      return {
-        title: "The DE Console couldn't be read",
-        href: DE_CONSOLE,
-        record: "DE Console import",
-        detail: item.lastSuccess ? (
-          <>
-            Its values are from <RelativeTime value={item.lastSuccess} />.
-          </>
-        ) : (
-          "Nothing has been read from it yet."
-        ),
-      };
-    case "de_console_stale":
-      return {
-        title: "DE Console values are out of date",
-        href: DE_CONSOLE,
-        record: "DE Console import",
-        detail: (
-          <>
-            Last read <RelativeTime value={item.since} />, with reads scheduled every {countLabel(refreshMinutes, "minute")}.
-          </>
-        ),
-      };
-    case "de_console_conflicts":
-      return { title: `${countLabel(item.count, "DE Console entry", "DE Console entries")} ${item.count === 1 ? "is" : "are"} in conflict`, href: `${DE_CONSOLE}#conflicts`, record: "DE Console import" };
+      return { title: `Evaluation #${item.evaluation.number} failed`, href: routes.evaluation(item.evaluation.publicId), record: item.assessment.name };
   }
 }

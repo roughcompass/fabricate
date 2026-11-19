@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { initiatives } from "./catalog";
 import { createdAt, id, lockVersion, publicId, timestamp, updatedAt } from "./columns";
 
@@ -15,6 +15,16 @@ export const standards = sqliteTable(
     name: text("name").notNull(),
     purpose: text("purpose").notNull(),
     lockVersion: lockVersion(),
+    /**
+     * The single editable working copy, while there is one: its structured
+     * document, which may be incomplete while being edited, its own
+     * optimistic lock version, when it was last saved, and the Release it
+     * revises, if any.
+     */
+    draftDocument: text("draft_document"),
+    draftLockVersion: integer("draft_lock_version"),
+    draftSavedAt: timestamp("draft_saved_at"),
+    draftBasedOnReleaseId: integer("draft_based_on_release_id").references((): AnySQLiteColumn => standardReleases.id, { onDelete: "restrict" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -23,28 +33,13 @@ export const standards = sqliteTable(
     check("standards_public_id", sql`${t.publicId} GLOB 'std_*'`),
     check("standards_name_length", sql`length(trim(${t.name})) BETWEEN 1 AND 120`),
     check("standards_purpose_length", sql`length(trim(${t.purpose})) BETWEEN 1 AND 2000`),
+    // A draft's document, lock version, and save time exist together, and only a draft revises a Release.
+    check(
+      "standards_draft",
+      sql`(${t.draftDocument} IS NULL) = (${t.draftLockVersion} IS NULL) AND (${t.draftDocument} IS NULL) = (${t.draftSavedAt} IS NULL) AND (${t.draftDocument} IS NOT NULL OR ${t.draftBasedOnReleaseId} IS NULL)`,
+    ),
+    check("standards_draft_document", sql`${t.draftDocument} IS NULL OR (json_valid(${t.draftDocument}) AND json_type(${t.draftDocument}) = 'object')`),
   ],
-);
-
-/**
- * The single editable, optimistic-locked working copy of a Standard. Its
- * document is structured JSON that may be incomplete while being edited.
- */
-export const standardDrafts = sqliteTable(
-  "standard_drafts",
-  {
-    id: id(),
-    standardId: integer("standard_id")
-      .notNull()
-      .unique()
-      .references(() => standards.id, { onDelete: "cascade" }),
-    basedOnReleaseId: integer("based_on_release_id").references(() => standardReleases.id, { onDelete: "restrict" }),
-    document: text("document").notNull(),
-    lockVersion: lockVersion(),
-    createdAt: createdAt(),
-    updatedAt: updatedAt(),
-  },
-  (t) => [check("standard_drafts_document", sql`json_valid(${t.document}) AND json_type(${t.document}) = 'object'`)],
 );
 
 /** An immutable, published version of a Standard's Controls. */
@@ -60,8 +55,8 @@ export const standardReleases = sqliteTable(
     documentSchemaVersion: integer("document_schema_version").notNull(),
     document: text("document").notNull(),
     digest: text("digest").notNull(),
-    profileSchemaVersions: text("profile_schema_versions").notNull(),
-    relationshipSchemaVersions: text("relationship_schema_versions").notNull(),
+    profileSchemaVersions: text("profile_schema_versions", { mode: "json" }).$type<number[]>().notNull(),
+    relationshipSchemaVersions: text("relationship_schema_versions", { mode: "json" }).$type<number[]>().notNull(),
     draftLockVersion: integer("draft_lock_version").notNull(),
     publishedAt: timestamp("published_at").notNull(),
     createdAt: createdAt(),

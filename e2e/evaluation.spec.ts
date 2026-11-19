@@ -3,11 +3,11 @@ import type { Page } from "@playwright/test";
 import { findingDocument, findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { selectReleases } from "../test/support/scenarios";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
-import { evaluate, seedResults } from "./support/results";
+import { evaluate, seedResults, seedEvaluation } from "./support/results";
+import { pageHeader } from "./support/shell";
 
 const releaseGroup = (page: Page, release: string) => page.getByRole("region", { name: release, exact: true });
 // The page header: status, meta, and actions; the title is in the shell header.
-const header = (page: Page) => page.locator("[data-page-header]");
 const findingRows = (page: Page) => page.locator('table[aria-label$=" Findings"] tbody tr');
 const status = (page: Page) => page.getByRole("status").filter({ hasText: "Finding" });
 
@@ -28,10 +28,9 @@ async function applyFilter(page: Page, label: string, value: string) {
 }
 
 test("summarizes each Release separately and filters Findings by Release, outcome, severity, Control, and subject", async ({ page, db }) => {
-  const { initiative, assessment } = await seedResults(db);
-  const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+  const { evaluation } = await seedEvaluation(db);
   await page.goto(`/evaluations/${evaluation.publicId}`);
-  await expect(header(page)).toContainText("Complete");
+  await expect(pageHeader(page)).toContainText("Complete");
   await expect(page.getByText("1 repository in the Run had no Profile")).toBeVisible();
 
   const summary = page.getByRole("table", { name: "Summary by Release" });
@@ -72,8 +71,7 @@ test("summarizes each Release separately and filters Findings by Release, outcom
 });
 
 test("groups Findings under their Control, and a Gap filter shows only Controls with Gaps", async ({ page, db }) => {
-  const { initiative, assessment } = await seedResults(db);
-  const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+  const { evaluation } = await seedEvaluation(db);
   await page.goto(`/evaluations/${evaluation.publicId}`);
 
   // One row per Control summarizes its outcomes; expanding it lists the Finding for each repository.
@@ -108,14 +106,13 @@ test("shows one Release's conclusion with the combined counts and no per-Release
 });
 
 test("explains a Gap: expected state, observed facts, evidence, reasoning, and guidance that is not an action", async ({ page, db }) => {
-  const { initiative, assessment } = await seedResults(db);
-  const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+  const { initiative, evaluation } = await seedEvaluation(db);
   await page.goto(`/evaluations/${evaluation.publicId}?control=services-configurable`);
   await page.getByRole("table", { name: "Service destinations are configurable or contracted Findings" }).getByRole("link", { name: "orders" }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: "Service destinations are configurable or contracted" })).toBeVisible();
   // The outcome appears once, in the header.
-  await expect(header(page)).toContainText("Gap");
+  await expect(pageHeader(page)).toContainText("Gap");
   await expect(page.locator("main").getByText("Gap", { exact: true })).toHaveCount(1);
   await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Assessments", initiative.name, "Evaluation #1"]);
   const result = page.getByRole("region", { name: "Result" });
@@ -148,8 +145,7 @@ test("explains a Gap: expected state, observed facts, evidence, reasoning, and g
 });
 
 test("lists every Indeterminate cause, including a missing Profile", async ({ page, db }) => {
-  const { initiative, assessment } = await seedResults(db);
-  const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+  const { evaluation } = await seedEvaluation(db);
   const all = findingsOf(db, evaluation.id, { controlKey: "verified-runtime" }).map((finding) => ({ finding, document: findingDocument(finding) }));
 
   for (const { finding, document } of all) {
@@ -169,8 +165,7 @@ test("lists every Indeterminate cause, including a missing Profile", async ({ pa
 });
 
 test("opens the Profile at the category a Finding's Control reads", async ({ page, db }) => {
-  const { initiative, assessment } = await seedResults(db);
-  const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+  const { evaluation } = await seedEvaluation(db);
   const finding = findingsOf(db, evaluation.id, { controlKey: "has-ci" }).find((candidate) => (findingDocument(candidate).subject as JsonObject).name === "orders")!;
   await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
 
@@ -182,8 +177,7 @@ test("opens the Profile at the category a Finding's Control reads", async ({ pag
 });
 
 test("Evaluation pages stay readable at mobile width", async ({ page, db }) => {
-  const { initiative, assessment } = await seedResults(db);
-  const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+  const { evaluation } = await seedEvaluation(db);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(`/evaluations/${evaluation.publicId}`);
   await expect(page.getByRole("table", { name: "Summary by Release" })).toBeVisible();

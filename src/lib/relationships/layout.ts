@@ -1,12 +1,12 @@
 import { compare } from "./placement";
 
 /*
- * The layered layout for portal and SEAL application diagrams (design
- * decision 6). Boxes sit in fixed rows: row 0 is sorted by name, and each
- * later row by the average position of its connections in the row above,
- * one barycenter pass, with ties broken by name. A row wraps onto further
- * lines at a fixed number of boxes. Coordinates are deterministic, so the
- * same diagram always draws the same way, and boxes never overlap.
+ * The layered layout for runtime system diagrams (design decision 6).
+ * Boxes sit in fixed rows: row 0 is sorted by name, and each later row by
+ * the average position of its connections in the row above, one barycenter
+ * pass, with ties broken by name. A row wraps onto further lines at a fixed
+ * number of boxes. Coordinates are deterministic, so the same diagram always
+ * draws the same way, and boxes never overlap.
  */
 
 export interface LayoutBox {

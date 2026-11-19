@@ -2,7 +2,7 @@ import type { Assessment } from "@/lib/assessments/assessment-records";
 import type { Executor } from "@/lib/db/client";
 import type { Initiative } from "@/lib/initiatives/initiative-records";
 import { versionOfAssessment } from "@/lib/profiling/versions";
-import { repositoryHref, versionHref } from "./repository-paths";
+import { routes } from "@/lib/web/routes";
 
 export interface RunContext {
   /** The Run's name: "Run #3", or for a profile version's Run, "Run of version 3". */
@@ -21,8 +21,8 @@ export function runContext(db: Executor, assessment: Pick<Assessment, "id">, ini
       name: `Run of version ${version.version}`,
       parents: [
         { href: "/repositories", label: "Repositories" },
-        { href: repositoryHref(version.sourcePublicId), label: version.sourceName },
-        { href: versionHref(version.sourcePublicId, version.version), label: `Version ${version.version}` },
+        { href: routes.repository(version.sourcePublicId), label: version.sourceName },
+        { href: routes.repositoryVersion(version.sourcePublicId, version.version), label: `Version ${version.version}` },
       ],
       owner: version.sourceName,
     };
@@ -31,7 +31,7 @@ export function runContext(db: Executor, assessment: Pick<Assessment, "id">, ini
     name: `Run #${number}`,
     parents: [
       { href: "/assessments", label: "Assessments" },
-      { href: `/assessments/${initiative.publicId}`, label: initiative.name },
+      { href: routes.assessment(initiative.publicId), label: initiative.name },
     ],
     owner: initiative.name,
   };

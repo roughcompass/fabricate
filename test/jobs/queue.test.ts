@@ -1,18 +1,16 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { eq } from "drizzle-orm";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type Db, immediate, migrateDatabase, openDatabase } from "@/lib/db/client";
+import { beforeEach, describe, expect, it } from "vitest";
+import { type Db, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, jobs } from "@/lib/db/schema";
-import { claimNext, enqueue, fail, jobCounts, renewLease, succeed } from "@/lib/jobs/queue";
+import { claimNext, enqueue, fail, renewLease, succeed } from "@/lib/jobs/queue";
+import { jobCounts } from "../support/jobs";
 import { NonRetryableError, Worker, drainJobs, runJob } from "@/lib/jobs/worker";
 import { PROCESS_TARGET } from "@/lib/assessments/orchestration";
 import { getConfig, withOverrides } from "@/lib/config";
 import { jobLimits } from "@/lib/jobs/registry";
 import { BUILD_PREVIEW } from "@/lib/previews/records";
 import type { JsonObject } from "@repo-facts/contract";
-import { createTestDb, rawRun } from "../support/db";
+import { createTestDb, rawRun, withSharedFileDb } from "../support/db";
 
 const job = (key: string, extra: Partial<Parameters<typeof enqueue>[1]> = {}) => ({ kind: "test.work", payload: { key }, idempotencyKey: `test.work:${key}`, ...extra });
 const at = (ms: number) => new Date(Date.UTC(2026, 0, 1) + ms);
@@ -25,25 +23,16 @@ describe("job queue", () => {
   });
 
   describe("transactional enqueue", () => {
-    let directory: string;
-    afterEach(() => fs.rmSync(directory, { recursive: true, force: true }));
+    it("makes a job visible to other connections only when its transaction commits", () =>
+      withSharedFileDb((writer, reader) => {
+        const visible = () => reader.select().from(jobs).all().length;
 
-    it("makes a job visible to other connections only when its transaction commits", () => {
-      directory = fs.mkdtempSync(path.join(os.tmpdir(), "fabricate-jobs-"));
-      const file = path.join(directory, "jobs.sqlite3");
-      const writer = openDatabase(file);
-      migrateDatabase(writer);
-      const reader = openDatabase(file);
-      const visible = () => reader.select().from(jobs).all().length;
-
-      immediate(writer, (tx) => {
-        enqueue(tx, job("a"));
-        expect(visible()).toBe(0);
-      });
-      expect(visible()).toBe(1);
-      writer.$client.close();
-      reader.$client.close();
-    });
+        immediate(writer, (tx) => {
+          enqueue(tx, job("a"));
+          expect(visible()).toBe(0);
+        });
+        expect(visible()).toBe(1);
+      }));
 
     it("discards a job when its transaction rolls back", () => {
       expect(() =>

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -16,7 +17,7 @@ import { NEW_BITBUCKET_TOKEN_HREF } from "./paths";
 export const metadata: Metadata = { title: "Bitbucket tokens" };
 
 /** Admin: the Bitbucket Server access tokens DE FabLab may use, each shown by its owner, server, and last four characters. */
-export default async function BitbucketTokensPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function BitbucketTokensPage({ searchParams }: PageProps<"/admin/bitbucket-tokens">) {
   const query = await searchParams;
   const db = getDb();
   const tokens = listBitbucketTokens(db);

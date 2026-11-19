@@ -2,19 +2,25 @@
 
 const absoluteDate = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
 const absoluteDateTime = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
+const shortDate = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-/** The UTC date alone, such as "Oct 2, 2026", for a value that's current as of a day. */
+/** The full UTC time, for tooltips and machine-readable markup. */
+export function formatAbsolute(value: Date): string {
+  return `${absoluteDateTime.format(value)} UTC`;
+}
+
+/** The UTC date alone: "Oct 2, 2026". */
 export function formatDate(value: Date): string {
   return absoluteDate.format(value);
 }
 
-/** The full UTC time, for tooltips and machine-readable markup. */
-export function formatAbsolute(value: Date): string {
-  return `${absoluteDateTime.format(value)} UTC`;
+/** A UTC month and day, for chart labels: "Oct 12". */
+export function formatShortDate(value: Date): string {
+  return shortDate.format(value);
 }
 
 /**

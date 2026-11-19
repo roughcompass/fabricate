@@ -126,7 +126,7 @@ export async function servePreview(request: Request, publicId: string, segments:
 
   const root = await artifactRoot(config, preview);
   if (!root) return notFound(head);
-  const entry = JSON.parse(preview.artifactEntry) as Partial<ArtifactEntry>;
+  const entry = preview.artifactEntry as Partial<ArtifactEntry>;
   let served = parts.length === 0 ? PAGE : parts.join("/");
   let file = await regularFile(root, served);
   if (!file && isNavigation(request, parts)) {

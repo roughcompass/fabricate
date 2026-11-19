@@ -5,6 +5,7 @@ import { useEffect, useId, useRef } from "react";
 import { type ButtonSize, type ButtonVariant, ButtonContent, buttonProps } from "./button-content";
 import { Icon, type IconName } from "./icon";
 import styles from "./menu.module.css";
+import { HiddenFields } from "./form";
 
 interface MenuProps {
   /** The trigger's accessible name, such as "Actions for orders". */
@@ -92,9 +93,7 @@ export function MenuItem({ href, icon, newTab = false, children }: { href: strin
 export function MenuAction({ action, fields = {}, icon, tone = "default", children }: { action: (formData: FormData) => void | Promise<void>; fields?: Record<string, string>; icon?: IconName; tone?: "default" | "danger"; children: React.ReactNode }) {
   return (
     <form action={action} className={styles.form}>
-      {Object.entries(fields).map(([name, value]) => (
-        <input key={name} type="hidden" name={name} value={value} />
-      ))}
+      <HiddenFields values={fields} />
       <button type="submit" className={styles.item} data-tone={tone}>
         {icon && <Icon name={icon} size={14} />}
         {children}

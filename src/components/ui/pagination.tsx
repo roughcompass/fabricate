@@ -1,5 +1,6 @@
 import Link from "next/link";
 import styles from "./pagination.module.css";
+import { formatNumber } from "@/components/ui/count";
 
 /**
  * Links between the pages of a long list. The page lives in the address, so
@@ -19,7 +20,7 @@ export function Pagination({ label, page, pages, href, scrollToTop = false }: { 
   }
   return (
     <nav className={styles.pagination} aria-label={label}>
-      <p className={styles.position}>{`Page ${page.toLocaleString("en-US")} of ${pages.toLocaleString("en-US")}`}</p>
+      <p className={styles.position}>{`Page ${formatNumber(page)} of ${formatNumber(pages)}`}</p>
       <ul className={styles.pages}>
         <li>
           {page > 1 ? (
@@ -40,7 +41,7 @@ export function Pagination({ label, page, pages, href, scrollToTop = false }: { 
           ) : (
             <li key={item}>
               <Link href={href(item)} className={styles.page} aria-current={item === page ? "page" : undefined} aria-label={`Page ${item}`} scroll={scrollToTop}>
-                {item.toLocaleString("en-US")}
+                {formatNumber(item)}
               </Link>
             </li>
           ),

@@ -4,11 +4,6 @@
  * and the publication review lists them with their messages.
  */
 
-export interface LocatedIssue {
-  field: string;
-  message: string;
-}
-
 const PARTS: Record<string, string> = {
   applicability: "Applies when",
   condition: "Expected condition",
@@ -34,9 +29,4 @@ export function issueLocation(field: string, controls: readonly { key?: unknown 
   const control = `Control ${index + 1}${typeof key === "string" && key ? ` (${key})` : ""}`;
   const part = match[2] ? (PARTS[match[2]] ?? words(match[2])) : null;
   return part ? `${control} · ${part}` : control;
-}
-
-/** A location and its message, for a list where the fields are not shown. */
-export function describeIssue(issue: LocatedIssue, controls: readonly { key?: unknown }[]): string {
-  return `${issueLocation(issue.field, controls)}: ${issue.message}`;
 }

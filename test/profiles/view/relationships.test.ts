@@ -5,16 +5,16 @@ import { packageProducers, repositoryRelationships } from "@/lib/profiles/relati
 import { findVersion, queueProfile } from "@/lib/profiling/versions";
 import { buildSource } from "../../support/builders";
 import { createTestDb } from "../../support/db";
-import { type MapWorldRun, seedMapWorldRun } from "../../support/map-world";
+import { type MapWorld, seedMapWorld } from "../../support/map-world";
 import { manifest } from "../../support/profiles";
 import { completeRun } from "../../support/scenarios";
 
 describe("A repository's relationships", () => {
   let db: Db;
-  let world: MapWorldRun;
+  let world: MapWorld;
   beforeAll(async () => {
     db = createTestDb();
-    world = await seedMapWorldRun(db);
+    world = await seedMapWorld(db);
   });
 
   it("lists the repositories that use it and those it uses, from the newest Assessment Run that mapped it", () => {

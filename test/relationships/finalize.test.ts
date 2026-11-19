@@ -1,17 +1,16 @@
-import type { JsonObject, MemoryFile } from "@repo-facts/contract";
+import type { JsonObject } from "@repo-facts/contract";
 import { beforeEach, describe, expect, it } from "vitest";
-import { type Assessment, type AssessmentTarget, recordSnapshot, targetsOf } from "@/lib/assessments/assessment-records";
+import { targetsOf } from "@/lib/assessments/assessment-records";
 import { transitionAssessment, transitionTarget } from "@/lib/assessments/transitions";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Db } from "@/lib/db/client";
-import { insertProfile } from "@/lib/profiles/profile-records";
-import { profileProblems } from "@/lib/profiles/schema";
 import { MapNotReadyError, finalizeRelationshipMap } from "@/lib/relationships/finalize";
 import { mapDocument } from "@/lib/relationships/map-records";
 import { type MapDocument, mapProblems } from "@/lib/relationships/schema";
 import { buildAssessment, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
-import { manifest, memoryProfile, sha1 } from "../support/profiles";
+import { manifest } from "../support/profiles";
+import { type Outcome, completeTarget } from "../support/scenarios";
 
 const UI = { "package.json": manifest({ name: "@acme/ui", version: "1.0.0" }) };
 const APP = {
@@ -31,25 +30,10 @@ describe("Relationship Map finalization", () => {
     db = createTestDb();
   });
 
-  /** Moves a target through acquisition and analysis, storing a Profile of +files+. */
-  async function complete(assessment: Assessment, target: AssessmentTarget, files: Readonly<Record<string, MemoryFile>>): Promise<void> {
-    const acquiring = transitionTarget(db, target, "acquiring");
-    const snapshot = recordSnapshot(db, acquiring, { commitSha: sha1(`commit:${target.publicId}`), treeSha: sha1(`tree:${target.publicId}`), refKind: "default_branch", resolvedRef: "refs/heads/main", acquisitionMetadata: {} });
-    const analyzing = transitionTarget(db, acquiring, "analyzing");
-    const { document } = await memoryProfile(files, { public_id: target.sourcePublicId, name: target.sourceName }, snapshot.commitSha);
-    insertProfile(db, { assessment, target: analyzing, snapshot, document, validate: profileProblems });
-    transitionTarget(db, analyzing, "complete");
-  }
-
   /** An Assessment over +sources+ whose targets end as +outcomes+ (a file tree, or a failure). */
-  async function assessed(sources: RepositorySource[], outcomes: (Readonly<Record<string, MemoryFile>> | "failed" | "canceled")[]) {
+  async function assessed(sources: RepositorySource[], outcomes: Outcome[]) {
     const { assessment, targets } = buildAssessment(db, { sources });
-    for (const [index, outcome] of outcomes.entries()) {
-      const target = targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!;
-      if (outcome === "failed") transitionTarget(db, transitionTarget(db, target, "acquiring"), "failed", { failureCode: "remote_unavailable", failureMessage: "The remote could not be reached" });
-      else if (outcome === "canceled") transitionTarget(db, target, "canceled");
-      else await complete(assessment, target, outcome);
-    }
+    for (const [index, outcome] of outcomes.entries()) await completeTarget(db, assessment, targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!, outcome);
     return transitionAssessment(db, assessment, "finalizing");
   }
 
@@ -77,7 +61,7 @@ describe("Relationship Map finalization", () => {
     expect(byType("runtime_contract")).toEqual(["unresolved"]);
     expect(byType("service_call")).toEqual(["resolved"]);
     const billing = targetsOf(db, assessment.id).find((target) => target.sourceName === "billing")!;
-    expect(map.coverage).toMatchObject({ complete: false, gaps: [{ target: billing.publicId, source: { public_id: billing.sourcePublicId, name: "billing" }, state: "failed", reason: "remote_unavailable" }] });
+    expect(map.coverage).toMatchObject({ complete: false, gaps: [{ target: billing.publicId, source: { public_id: billing.sourcePublicId, name: "billing" }, state: "failed", reason: "source_unavailable" }] });
     expect(map.coverage.contributors).toHaveLength(3);
   });
 

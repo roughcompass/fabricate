@@ -20,11 +20,6 @@ import { CURRENT_VERSION, DOCUMENT_SCHEMAS } from "@/lib/documents/schemas";
  * design-system categories. Version 1 Profiles, from repo-facts 0.1.0, are
  * kept as stored; version 2 extends version 1, so readers of version 1 read
  * either.
- *
- * A template version's Profile (converge-templates-and-prototypes, design
- * decision 2) is version 2 with `template` and `content_digest`, the Git tree
- * id of its exported files, in place of `source` and `commit`: stored files
- * have no repository and no commit.
  */
 
 export const PROFILE_SCHEMA = DOCUMENT_SCHEMAS.repositoryProfile.name;
@@ -59,14 +54,9 @@ export function buildProfile(input: ProfileInput): JsonObject {
   };
 }
 
-/** Whether +document+ is a template version's Profile rather than a repository's. */
-function isTemplateProfile(document: JsonObject): boolean {
-  return "template" in document;
-}
-
-/** The commit a Profile describes, or null for a template version's stored files. */
-export function profileCommit(document: JsonObject): string | null {
-  return typeof document.commit === "string" ? document.commit : null;
+/** The commit a Profile describes. */
+export function profileCommit(document: JsonObject): string {
+  return String(document.commit);
 }
 
 const OBJECT_ID = /^[0-9a-f]{40}$/;
@@ -78,35 +68,20 @@ const shared = {
   fact_document: z.record(z.string(), z.unknown()),
   fact_document_digest: z.string().regex(/^[0-9a-f]{64}$/),
 };
-const sourceEnvelope = z.strictObject({
+const envelope = z.strictObject({
   ...shared,
   source: z.strictObject({ public_id: z.string().min(1), name: z.string().min(1), clone_url: z.string().min(1), git_ref: z.string().min(1).nullable() }),
   commit: z.string().regex(OBJECT_ID),
 });
-const templateEnvelope = z.strictObject({
-  ...shared,
-  template: z
-    .strictObject({
-      public_id: z.string().regex(/^ptp_[a-z0-9]{16}$/).nullable(),
-      name: z.string().min(1),
-      version_public_id: z.string().regex(/^ptv_[a-z0-9]{16}$/).nullable(),
-      version_number: z.number().int().min(1).nullable(),
-      prototype_version_public_id: z.string().regex(/^ver_[a-z0-9]{16}$/),
-    })
-    .refine((template) => (template.public_id === null) === (template.version_public_id === null) && (template.public_id === null) === (template.version_number === null), "A template's id, version id, and version number are given together or not at all"),
-  content_digest: z.string().regex(OBJECT_ID),
-});
-
 /** Every problem with a Profile document: its envelope, and the embedded fact document under the repo-facts contract. */
 export function profileProblems(document: JsonObject): string[] {
-  const parsed = (isTemplateProfile(document) ? templateEnvelope : sourceEnvelope).safeParse(document);
+  const parsed = envelope.safeParse(document);
   if (!parsed.success) return parsed.error.issues.map((issue) => `${issue.path.join(".") || "(document)"}: ${issue.message}`);
 
   const factDocument = document.fact_document as JsonObject;
   const problems = factDocumentProblems(factDocument).map((problem) => `fact_document: ${problem}`);
   if (digestOf(factDocument).digest !== document.fact_document_digest) problems.push("fact_document_digest does not match the embedded fact document");
-  // Stored files have no commit, so a template's fact document names none.
-  if ((factDocument.commit ?? null) !== profileCommit(document)) problems.push("The fact document must describe the Profile's commit");
+  if (factDocument.commit !== document.commit) problems.push("The fact document must describe the Profile's commit");
   if (factDocument.detector_release !== document.detector_release) problems.push("The fact document must record the Profile's detector release");
   return problems;
 }

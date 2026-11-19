@@ -1,5 +1,6 @@
 import type { ConclusionFilter } from "@/lib/evaluations/conclusions";
-import type { OwnershipFilter } from "@/lib/ownership/coverage";
+import { withQuery } from "./query";
+import { routes } from "./routes";
 
 /**
  * Addresses of the lists Home's figures open, with their filters
@@ -8,17 +9,12 @@ import type { OwnershipFilter } from "@/lib/ownership/coverage";
  * a figure and the list it opens always agree on the parameters.
  */
 
-const withQuery = (path: string, entries: Record<string, string | null | undefined>) => {
-  const params = new URLSearchParams(Object.entries(entries).filter((entry): entry is [string, string] => Boolean(entry[1])));
-  return params.size ? `${path}?${params}` : path;
-};
-
-/** The Repositories list with an ownership filter and a search. */
-export function repositoriesHref(filters: { ownership?: OwnershipFilter | null; q?: string } = {}): string {
-  return withQuery("/repositories", { ownership: filters.ownership, q: filters.q });
+/** The Repositories list with a search. */
+export function repositoriesHref(filters: { q?: string } = {}): string {
+  return withQuery(routes.repositories, { q: filters.q });
 }
 
 /** The Assessments list on a conclusion tab. */
 export function assessmentsHref(filters: { conclusion?: ConclusionFilter | null } = {}): string {
-  return withQuery("/assessments", { conclusion: filters.conclusion });
+  return withQuery(routes.assessments, { conclusion: filters.conclusion });
 }

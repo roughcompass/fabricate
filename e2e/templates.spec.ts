@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
-import { expectCurrentItem } from "./support/shell";
+import { expectCurrentItem, pageHeader } from "./support/shell";
 
 /** The Find your template gallery (template-gallery spec). */
 
@@ -33,7 +33,7 @@ test("Opening the gallery: titled Salt Patterns, with the search, the filter rai
   await expect(cards(page)).toHaveCount(16);
   expect((await cardTitles(page)).slice(0, 4)).toEqual(["Client onboarding", "Market watch", "Operations console", "Payments workspace"]);
   // No primary action; resetting the demo is under More actions.
-  const header = page.locator("[data-page-header]");
+  const header = pageHeader(page);
   await expect(header.locator('[data-variant="primary"]')).toHaveCount(0);
   await expect(header.getByRole("button", { name: "More actions" })).toBeVisible();
 });
@@ -256,7 +256,7 @@ test.describe("template detail", () => {
 
   test("Breadcrumb names its page: Salt Patterns opens the page titled Salt Patterns", async ({ page, db: _db }) => {
     await page.goto("/templates/market-watch");
-    const crumbs = page.locator("[data-page-header]").getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
+    const crumbs = pageHeader(page).getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
     await expect(crumbs.first()).toHaveText("Salt Patterns");
     await crumbs.first().click();
     await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Salt Patterns");

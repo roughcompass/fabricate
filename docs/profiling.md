@@ -18,7 +18,7 @@ A Repository has at most one version queued or running. A trigger that arrives w
 
 ## The scheduled check
 
-The worker checks every Repository once per `profiling.checkMinutes` (default 60, `FABRICATE_PROFILING_CHECK_MINUTES`). Like the DE Console read, each period's check is one job with its own idempotency key, so any number of workers queue one check per period, and each check queues the next before it starts.
+The worker checks every Repository once per `profiling.checkMinutes` (default 60, `FABRICATE_PROFILING_CHECK_MINUTES`). Each period's check is one job with its own idempotency key, so a period gets one check however often the worker restarts, and each check queues the next before it starts.
 
 For each Repository whose newest version has finished, the check:
 
@@ -50,11 +50,11 @@ The Repository profiling Assessment stays out of Assessments, Home's figures, re
 
 Deleting is confirmed the way GitHub confirms it: a dialog asks whether you want to delete the repository, then lists what deleting changes and asks you to say you read it, then asks you to type the repository's name, which alone enables the button. The server checks the name again. Without JavaScript, the name field and button stand on the page.
 
-A deleted Repository is gone for good, but its row stays as a tombstone (`repository_sources.deleted_at`, migration 0040), because past Runs, their results, profiles, and ownership claims point at it and are kept. Deleting:
+A deleted Repository is gone for good, but its row stays as a tombstone (`repository_sources.deleted_at`, migration 0040), because past Runs, their results, and profiles point at it and are kept. Deleting:
 
-- removes it from the Repositories list, its pages (which return 404), Home's figures from then on, ownership coverage, and the scheduled profiling check;
+- removes it from the Repositories list, its pages (which return 404), Home's figures from then on, and the scheduled profiling check;
 - cancels a profile version in progress;
-- removes it from the selected Repositories of every Assessment; Assessments of all Repositories leave it out from the next Run. The Assessment created for its claim keeps it and can't start a Run;
+- removes it from the selected Repositories of every Assessment; Assessments of all Repositories leave it out from the next Run.
 - frees its clone URL, so the same repository can be added again as a new Repository with no history.
 
 A trigger refuses any change to a deleted row, so it can't be edited or restored.

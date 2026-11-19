@@ -1,6 +1,6 @@
 import type { CategoryDefinition, JsonValue } from "@repo-facts/contract";
 import { factText, formatValue } from "@/components/results/value";
-import { countLabel } from "@/components/ui/count";
+import { countLabel, formatNumber } from "@/components/ui/count";
 import { ciSystem, runtimeName } from "@/components/ui/status";
 import { isJsonObject } from "@/lib/json";
 import { compositionSummary } from "./composition";
@@ -179,7 +179,6 @@ export interface ScopeFigure {
   section?: string;
 }
 
-const figure = (count: number) => count.toLocaleString("en-US");
 
 /**
  * How much of the commit was read, and how much the Profile found, as key
@@ -193,9 +192,9 @@ export function scopeFigures(document: FactDocument): ScopeFigure[] {
   const declarations = dependencyGroups(document).flatMap((group) => group.rows.filter((row) => row.declared));
   const packages = new Set(declarations.map((row) => row.name)).size;
   return [
-    ...(typeof inventory.files === "number" ? [{ label: "Files read", value: figure(inventory.files_read ?? 0), hint: `of ${countLabel(inventory.files, "file")}` }] : []),
-    { label: "Dependencies", value: figure(packages), ...(declarations.length > packages ? { hint: `${countLabel(declarations.length, "declaration")} in ${countLabel(dependencyGroups(document).filter((group) => group.manifest && group.rows.some((row) => row.declared)).length, "manifest")}` } : {}), section: "dependencies" },
-    { label: "Scripts", value: figure(categoryOf(document, "scripts")?.facts.length ?? 0), section: "scripts" },
-    { label: "Service Dependencies", value: figure(document.service_dependencies?.length ?? 0), section: "services" },
+    ...(typeof inventory.files === "number" ? [{ label: "Files read", value: formatNumber(inventory.files_read ?? 0), hint: `of ${countLabel(inventory.files, "file")}` }] : []),
+    { label: "Dependencies", value: formatNumber(packages), ...(declarations.length > packages ? { hint: `${countLabel(declarations.length, "declaration")} in ${countLabel(dependencyGroups(document).filter((group) => group.manifest && group.rows.some((row) => row.declared)).length, "manifest")}` } : {}), section: "dependencies" },
+    { label: "Scripts", value: formatNumber(categoryOf(document, "scripts")?.facts.length ?? 0), section: "scripts" },
+    { label: "Service Dependencies", value: formatNumber(document.service_dependencies?.length ?? 0), section: "services" },
   ];
 }

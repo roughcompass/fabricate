@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "New Standard" };
 
 const BLANK = "blank";
 
-export default async function NewStandardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function NewStandardPage({ searchParams }: PageProps<"/standards/new">) {
   const requested = (await searchParams).starter;
   const starter = findStarter(typeof requested === "string" ? requested : null);
 

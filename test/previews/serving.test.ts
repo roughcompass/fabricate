@@ -5,13 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { editSource } from "@/lib/catalog/catalog";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type FabricateConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
-import { type Db, setDb } from "@/lib/db/client";
 import { contentType, isNavigation, servePreview } from "@/lib/previews/serving";
 import { type PreviewBuild, failAttempt, findPreview, rebuildPreview } from "@/lib/previews/records";
 import { previewDirectory } from "@/lib/previews/storage";
 import { buildSource } from "../support/builders";
-import { createTestDb, rawRun } from "../support/db";
+import { rawRun } from "../support/db";
 import { publishFiles, queuedPreview } from "../support/previews";
+import { useAppDb } from "../support/next";
 
 /*
  * Serving a preview's published artifact under /previews/<id>/ (design
@@ -31,21 +31,18 @@ const STANDALONE = {
 
 describe("serving previews", () => {
   const original = getConfig();
-  let db: Db;
+  const app = useAppDb();
   let storage: string;
   let config: FabricateConfig;
   let source: RepositorySource;
 
   beforeEach(() => {
-    db = createTestDb();
-    setDb(db);
     storage = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "preview-serving-")));
-    source = buildSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git" });
+    source = buildSource(app.db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git" });
     configure({});
   });
 
   afterEach(() => {
-    setDb(undefined);
     setConfig(original);
     fs.rmSync(storage, { recursive: true, force: true });
   });
@@ -57,8 +54,8 @@ describe("serving previews", () => {
 
   /** A Ready standalone preview whose page refers to its assets under its own path. */
   function standalone(files: Record<string, string | Buffer> = STANDALONE, entry = {}): PreviewBuild {
-    const preview = queuedPreview(db, source);
-    return publishFiles(db, config, preview, { "index.html": PAGE.replace("{{id}}", preview.publicId), ...files }, entry);
+    const preview = queuedPreview(app.db, source);
+    return publishFiles(app.db, config, preview, { "index.html": PAGE.replace("{{id}}", preview.publicId), ...files }, entry);
   }
 
   /** The route's answer to a request for +url+, with +headers+. */
@@ -213,8 +210,8 @@ describe("serving previews", () => {
     });
 
     it("serves a microfrontend's own page at its root and for navigation, like any other application", async () => {
-      const preview = queuedPreview(db, source, "module_federation");
-      publishFiles(db, config, preview, { "index.html": "<!doctype html><title>admin</title>", "remoteEntry.js": "var mfAdmin;\n" });
+      const preview = queuedPreview(app.db, source, "module_federation");
+      publishFiles(app.db, config, preview, { "index.html": "<!doctype html><title>admin</title>", "remoteEntry.js": "var mfAdmin;\n" });
 
       expect(await (await get(base(preview), page)).text()).toContain("<title>admin</title>");
       expect((await get(`${base(preview)}remoteEntry.js`)).status).toBe(200);
@@ -283,15 +280,15 @@ describe("serving previews", () => {
   describe("access", () => {
     it("serves the published artifact whatever the latest attempt's state, while a rebuild is queued and after it fails", async () => {
       const preview = standalone();
-      rebuildPreview(db, preview.publicId);
+      rebuildPreview(app.db, preview.publicId);
       expect((await get(`${base(preview)}assets/app.js`)).status).toBe(200);
-      failAttempt(db, preview.publicId, { attempt: 2 }, "vite build exited with code 1");
-      expect(findPreview(db, preview.publicId)).toMatchObject({ attemptState: "failed", artifactAttempt: 1 });
+      failAttempt(app.db, preview.publicId, { attempt: 2 }, "vite build exited with code 1");
+      expect(findPreview(app.db, preview.publicId)).toMatchObject({ attemptState: "failed", artifactAttempt: 1 });
       expect((await get(base(preview), page)).status).toBe(200);
     });
 
     it("answers 404 for an unknown or malformed preview, and for one with nothing published yet", async () => {
-      const queued = queuedPreview(db, source);
+      const queued = queuedPreview(app.db, source);
       for (const id of ["pvw_0000000000000000", "src_0000000000000000", "pvw_x", "..", queued.publicId]) expect((await get(`/previews/${id}/`, page)).status, id).toBe(404);
     });
 
@@ -313,17 +310,17 @@ describe("serving previews", () => {
 
       configure({});
       expect((await get(`${base(preview)}assets/app.js`)).status).toBe(200);
-      editSource(db, source.publicId, source.lockVersion, { name: "orders", cloneUrl: "https://git.example.com/acme/orders-fork.git", gitRef: "" });
+      editSource(app.db, source.publicId, source.lockVersion, { name: "orders", cloneUrl: "https://git.example.com/acme/orders-fork.git", gitRef: "" });
       expect((await get(`${base(preview)}assets/app.js`)).status).toBe(404);
     });
 
     it("answers 404 for a deleted preview, and for every preview of a deleted Repository", async () => {
       const deleted = standalone();
       const other = standalone();
-      rawRun(db, "update preview_builds set deleted_at = ? where public_id = ?", Date.now(), deleted.publicId);
+      rawRun(app.db, "update preview_builds set deleted_at = ? where public_id = ?", Date.now(), deleted.publicId);
       expect((await get(base(deleted), page)).status).toBe(404);
       expect((await get(base(other), page)).status).toBe(200);
-      rawRun(db, "update repository_sources set deleted_at = ? where id = ?", Date.now(), source.id);
+      rawRun(app.db, "update repository_sources set deleted_at = ? where id = ?", Date.now(), source.id);
       expect((await get(base(other), page)).status).toBe(404);
     });
   });
@@ -333,7 +330,7 @@ describe("serving previews", () => {
 
     it("rewrites the page of an artifact recorded as needing it, wherever it's served from, and only that page", async () => {
       const preview = standalone({ ...STANDALONE, "index.html": ROOTED }, { rebase: true });
-      expect(JSON.parse(preview.artifactEntry!)).toMatchObject({ rebase: true });
+      expect(preview.artifactEntry).toMatchObject({ rebase: true });
       const expected = `<!doctype html><html><head><base href="${base(preview)}"><script type="module" src="${base(preview)}assets/app.js"></script><link rel="stylesheet" href="${base(preview)}assets/app.css"></head><body></body></html>`;
 
       for (const file of ["", "index.html", "accounts/42"]) {
@@ -353,9 +350,9 @@ describe("serving previews", () => {
   describe("opening", () => {
     it("records when the artifact's page is opened, at most once a minute, and not for its assets or HEAD requests", async () => {
       const preview = standalone();
-      const opened = () => findPreview(db, preview.publicId)!.lastOpenedAt;
+      const opened = () => findPreview(app.db, preview.publicId)!.lastOpenedAt;
       const request = (file: string, method = "GET") => new Request(`http://localhost${base(preview)}${file}`, { method, headers: page });
-      const at = (ms: number) => ({ db, config, now: new Date(ms) });
+      const at = (ms: number) => ({ db: app.db, config, now: new Date(ms) });
 
       await servePreview(request("assets/app.js"), preview.publicId, ["assets", "app.js"], at(1_000_000));
       await servePreview(request("", "HEAD"), preview.publicId, [], at(1_000_000));

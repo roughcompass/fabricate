@@ -32,15 +32,15 @@ export function ListSkeleton() {
 
 /**
  * The Repositories list as it lays out: the description beside its actions,
- * the count beside the Ownership filter and search, and the table's head and
- * rows in its six columns, with the name over its clone URL and the profile's
- * version over its time. On a narrow screen it follows the page as the page
- * collapses: the secondary actions into a menu, the filters below the count,
- * and each row into a block of labelled fields.
+ * the count beside the search, and the table's head and rows in its five
+ * columns, with the name over its clone URL and the profile's version over its
+ * time. On a narrow screen it follows the page as the page collapses: the
+ * secondary action into a menu, the search below the count, and each row into
+ * a block of labelled fields.
  */
 export function RepositoriesSkeleton() {
   // Each column: its value's lines, and whether it aligns to the end.
-  const columns: { lines: Width[]; numeric?: boolean }[] = [{ lines: ["medium", "long"] }, { lines: ["medium", "medium"] }, { lines: ["long"] }, { lines: ["medium", "long"] }, { lines: ["long"], numeric: true }];
+  const columns: { lines: Width[]; numeric?: boolean }[] = [{ lines: ["medium", "long"] }, { lines: ["long"] }, { lines: ["medium", "long"] }, { lines: ["long"], numeric: true }];
   return (
     <Page busy>
       <ShellHeader />
@@ -49,9 +49,8 @@ export function RepositoriesSkeleton() {
           <Skeleton />
           <Skeleton width="long" />
         </div>
-        {/* Add in bulk, Claim a Repository, and New Repository; on a narrow screen, the menu and New Repository. */}
+        {/* Add in bulk and New Repository; on a narrow screen, the menu and New Repository. */}
         <div className={styles.actions}>
-          <span className={`${styles.skeleton} ${styles.action}`} data-action="secondary" aria-hidden="true" />
           <span className={`${styles.skeleton} ${styles.action}`} data-action="secondary" aria-hidden="true" />
           <span className={`${styles.skeleton} ${styles.action}`} data-action="overflow" aria-hidden="true" />
           <span className={`${styles.skeleton} ${styles.action}`} data-action="primary" aria-hidden="true" />
@@ -61,13 +60,7 @@ export function RepositoriesSkeleton() {
         <span className={styles.count}>
           <Skeleton width="long" />
         </span>
-        <div className={styles.filters}>
-          <span className={styles.filter}>
-            <span className={`${styles.skeleton} ${styles.filterLabel}`} aria-hidden="true" />
-            <span className={`${styles.skeleton} ${styles.filterControl}`} aria-hidden="true" />
-          </span>
-          <span className={`${styles.skeleton} ${styles.filterControl}`} aria-hidden="true" />
-        </div>
+        <span className={`${styles.skeleton} ${styles.search}`} aria-hidden="true" />
       </div>
       <div className={styles.panel}>
         <div className={`${styles.tableRow} ${styles.tableHead}`}>

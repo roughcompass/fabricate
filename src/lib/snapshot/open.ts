@@ -1,5 +1,5 @@
 import { mirrorPath } from "@/lib/acquisition/mirror";
-import type { AssessmentTarget, CommitSnapshot } from "@/lib/assessments/assessment-records";
+import type { AssessmentTarget, SourceSnapshot } from "@/lib/assessments/assessment-records";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import { GitRunner } from "@/lib/git/runner";
 import { type Budgets, SnapshotReader, type SnapshotReaderOptions } from "./reader";
@@ -7,7 +7,7 @@ import { type Budgets, SnapshotReader, type SnapshotReaderOptions } from "./read
 /** Opens a read-only reader on a target's pinned snapshot. */
 export function openSnapshot(
   target: Pick<AssessmentTarget, "sourcePublicId">,
-  snapshot: Pick<CommitSnapshot, "internalRef" | "commitSha">,
+  snapshot: Pick<SourceSnapshot, "internalRef" | "commitSha">,
   options: { config?: FabricateConfig; runner?: GitRunner; budgets?: Budgets } & SnapshotReaderOptions = {},
 ): Promise<SnapshotReader> {
   const config = options.config ?? getConfig();

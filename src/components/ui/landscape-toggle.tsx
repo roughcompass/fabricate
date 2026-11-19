@@ -5,6 +5,7 @@ import { buttonProps } from "@/components/ui/button-content";
 import { Icon } from "@/components/ui/icon";
 import { Tooltip } from "@/components/ui/tooltip";
 import styles from "./landscape-toggle.module.css";
+import { HiddenFields } from "./form";
 
 export type Orientation = "portrait" | "landscape";
 
@@ -30,9 +31,7 @@ export function LandscapeToggle({ action, orientation, keep }: { action: string;
         router.push(`${action}?${params}`, { scroll: false });
       }}
     >
-      {Object.entries(keep).map(([key, value]) => (
-        <input key={key} type="hidden" name={key} value={value} />
-      ))}
+      <HiddenFields values={keep} />
       <Tooltip content="Landscape">
         <button type="submit" name="orientation" value={next} {...withClass(buttonProps("secondary", "sm", true), styles.toggle)} aria-label="Landscape" aria-pressed={orientation === "landscape"}>
           <Icon name="rotate" size={16} />

@@ -76,8 +76,8 @@ export function startEvaluation(db: Executor, initiativePublicId: string, assess
           continue;
         }
         const subjects = new Set((Array.isArray(document.controls) ? document.controls : []).map((control) => (control as JsonObject).subject));
-        const profileVersions = JSON.parse(release.profileSchemaVersions) as number[];
-        const mapVersions = JSON.parse(release.relationshipSchemaVersions) as number[];
+        const profileVersions = release.profileSchemaVersions;
+        const mapVersions = release.relationshipSchemaVersions;
         if (subjects.has("repository") && !readableBy("repositoryProfile", assessment.profileSchemaVersion, profileVersions)) problems.push(`${label} supports Repository Profile v${profileVersions.join(", v") || "none"}, but the Assessment has v${assessment.profileSchemaVersion}.`);
         if (subjects.has("relationship_map") && !readableBy("relationshipMap", assessment.relationshipSchemaVersion, mapVersions)) problems.push(`${label} supports Relationship Map v${mapVersions.join(", v") || "none"}, but the Assessment has v${assessment.relationshipSchemaVersion}.`);
       }

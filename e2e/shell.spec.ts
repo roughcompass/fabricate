@@ -3,9 +3,10 @@ import { findingsOf } from "../src/lib/evaluations/evaluation-records";
 import { profilesOf } from "../src/lib/profiles/profile-records";
 import { buildSource } from "../test/support/builders";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
-import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate, seedResults } from "./support/results";
+import { BASELINE_CONTROLS, SERVICE_CONTROLS, seedResults, seedEvaluation } from "./support/results";
 import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
+import { pageHeader, useTheme } from "./support/shell";
 
 // operator-interface/page-patterns spec: the application shell, and the
 // primary menu: Home, then the Assessments and Templates groups under
@@ -63,8 +64,7 @@ test.describe("on a wide viewport", () => {
   });
 
   test("Current section on a deep page: a Finding marks All Assessments", async ({ page, db }) => {
-    const { initiative, assessment } = await seedResults(db);
-    const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+    const { evaluation } = await seedEvaluation(db);
     const finding = findingsOf(db, evaluation.id)[0]!;
     await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
     await expectCurrent(page, "All Assessments");
@@ -80,12 +80,12 @@ test.describe("on a wide viewport", () => {
   test("The create pages that left the menu are offered on their list pages", async ({ page, db }) => {
     buildSource(db);
     await page.goto(paths.assessments);
-    await expect(page.locator("[data-page-header]").getByRole("link", { name: "New Assessment" })).toBeVisible();
+    await expect(pageHeader(page).getByRole("link", { name: "New Assessment" })).toBeVisible();
     await page.goto(paths.repositories);
-    await expect(page.locator("[data-page-header]").getByRole("link", { name: "New Repository" })).toBeVisible();
-    await expect(page.locator("[data-page-header]").getByRole("link", { name: "Add in bulk" })).toBeVisible();
+    await expect(pageHeader(page).getByRole("link", { name: "New Repository" })).toBeVisible();
+    await expect(pageHeader(page).getByRole("link", { name: "Add in bulk" })).toBeVisible();
     await page.goto("/standards");
-    await expect(page.locator("[data-page-header]").getByRole("link", { name: "New Standard" })).toBeVisible();
+    await expect(pageHeader(page).getByRole("link", { name: "New Standard" })).toBeVisible();
   });
 
   test("Page outside every item: the gallery shows the primary menu with nothing current", async ({ page, db: _db }) => {
@@ -138,23 +138,22 @@ test.describe("the shell header", () => {
     const { initiative } = await seedResults(db);
     await page.goto(paths.assessment(initiative.publicId));
     await expect(header(page).getByRole("heading", { level: 1 })).toHaveText("Fleet assessment");
-    await expect(page.locator("[data-page-header]")).not.toContainText("Fleet assessment");
+    await expect(pageHeader(page)).not.toContainText("Fleet assessment");
   });
 
   test("Breadcrumbs on a Finding: the Control title in the header, its ancestors in the page", async ({ page, db }) => {
-    const { initiative, assessment } = await seedResults(db);
-    const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+    const { evaluation } = await seedEvaluation(db);
     const finding = findingsOf(db, evaluation.id)[0]!;
     const control = [...BASELINE_CONTROLS, ...SERVICE_CONTROLS].find((candidate) => candidate.key === finding.controlKey)!;
     await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
     await expect(header(page).getByRole("heading", { level: 1 })).toHaveText(control.title as string);
-    const crumbs = page.locator("[data-page-header]").getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
+    const crumbs = pageHeader(page).getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
     await expect(crumbs).toHaveText(["Assessments", "Fleet assessment", "Evaluation #1"]);
   });
 
   for (const theme of ["light", "dark"] as const) {
     test(`Solid header: in the ${theme} theme, the header behind the create page's title is a solid surface, distinct from the canvas`, async ({ page, db: _db, baseURL }) => {
-      await page.context().addCookies([{ name: "fabricate-theme", value: theme, url: baseURL! }]);
+      await useTheme(page.context(), theme, baseURL!);
       await page.goto(paths.newRepository);
       await expect(header(page).getByRole("heading", { level: 1 })).toHaveText("New Repository");
       const [fill, canvas, surface] = await page.evaluate(() => {
@@ -176,8 +175,7 @@ test.describe("the shell header", () => {
   }
 
   test("Scrolling a long page keeps the header and the sidebar in view", async ({ page, db }) => {
-    const { initiative, assessment } = await seedResults(db);
-    const evaluation = await evaluate(db, initiative.publicId, assessment.publicId);
+    const { evaluation } = await seedEvaluation(db);
     await page.goto(`/evaluations/${evaluation.publicId}`);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);

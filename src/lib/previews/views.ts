@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { FabricateConfig } from "@/lib/config";
@@ -7,6 +6,7 @@ import { isPublicId } from "@/lib/db/ids";
 import { previewBuilds, previewPreparations } from "@/lib/db/schema";
 import { type PreviewBuild, type PreviewPreparation, settleAbandonedAttempts, settleAbandonedPreparations } from "./records";
 import { type RefListing, listRemoteRefs } from "./refs";
+import { statusVersion } from "@/lib/assessments/status";
 
 /**
  * What the Repository page and the preview page read about previews (spec
@@ -76,7 +76,7 @@ export function previewActivity(db: Executor, source: Pick<RepositorySource, "id
     .all();
   const parts = [preparation ? `${preparation.publicId}:${preparation.state}:${preparation.requestedAt.getTime()}` : "-", ...previews.map((row) => `${row.publicId}:${row.attempt}:${row.state}:${row.artifact ?? 0}`)];
   return {
-    version: crypto.createHash("sha256").update(parts.join("|")).digest("base64url").slice(0, 16),
+    version: statusVersion(parts),
     active: preparation?.state === "profiling" || previews.some((row) => row.state === "queued" || row.state === "building"),
   };
 }
@@ -112,7 +112,7 @@ export function refLabel(row: Pick<PreviewBuild, "refName" | "refKind">): string
 /** A preview's package as people know it: its manifest's name, else its directory. */
 export function packageLabel(preview: Pick<PreviewBuild, "packageDir" | "decidingFacts">): string {
   try {
-    const name = (JSON.parse(preview.decidingFacts) as { name?: unknown }).name;
+    const name = preview.decidingFacts.name;
     if (typeof name === "string" && name !== "") return name;
   } catch {
     // A verdict that can't be read still has its directory.

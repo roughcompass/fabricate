@@ -2,6 +2,8 @@ import type { JsonValue } from "@repo-facts/contract";
 import semver from "semver";
 import { COMPARATORS, CONTAINS_MODES, CONTROL_KEY, LIMITS, OPERATORS, OPERATORS_BY_TYPE, type Operator, SEVERITIES, STANDARD_SCHEMA, STANDARD_SCHEMA_VERSION, SUBJECTS } from "./document";
 import { COLLECTION_BY_ID, INPUT_SCHEMAS, type InputSchema, SELECTOR_BY_ID, SUBJECT_SCOPE, SUPPORTED_VERSIONS, type Scope, schemaOfScope } from "./registry";
+import { formatNumber } from "@/components/ui/count";
+import { isJsonObject } from "@/lib/json";
 
 /**
  * Complete server-side validation of a Standard document.
@@ -32,7 +34,7 @@ export function validateStandard(input: JsonValue, options: { metadata?: { name:
     if (!options.metadata.name.trim()) add("name", "Enter a name");
     if (!options.metadata.purpose.trim()) add("purpose", "Describe the Standard's purpose");
   }
-  if (!isRecord(input)) {
+  if (!isJsonObject(input)) {
     add("document", "A Standard must be a structured document");
     return issues;
   }
@@ -43,7 +45,7 @@ export function validateStandard(input: JsonValue, options: { metadata?: { name:
   const declared = inputSchemas(input.input_schemas, add);
   if (input.standard !== undefined) {
     const standard = input.standard;
-    if (!isRecord(standard) || typeof standard.name !== "string" || typeof standard.purpose !== "string") add("document.standard", "The published Standard must record its name and purpose");
+    if (!isJsonObject(standard) || typeof standard.name !== "string" || typeof standard.purpose !== "string") add("document.standard", "The published Standard must record its name and purpose");
     else unsupportedFields(standard, ["name", "purpose"], "document.standard", add);
   }
 
@@ -67,7 +69,7 @@ export function validateStandard(input: JsonValue, options: { metadata?: { name:
 
 function inputSchemas(value: JsonValue | undefined, add: (field: string, message: string) => void): Record<InputSchema, number[]> {
   const declared: Record<InputSchema, number[]> = { repository_profile: [], relationship_map: [] };
-  if (!isRecord(value)) {
+  if (!isJsonObject(value)) {
     add("input_schemas", "Declare the input schema versions the Controls read");
     return declared;
   }
@@ -89,7 +91,7 @@ function inputSchemas(value: JsonValue | undefined, add: (field: string, message
 
 /** Validates one Control and returns its key, when it has a usable one. */
 function validateControl(control: JsonValue, path: string, declared: Record<InputSchema, number[]>, add: (field: string, message: string) => void): string | null {
-  if (!isRecord(control)) {
+  if (!isJsonObject(control)) {
     add(path, "A Control must be a structured object");
     return null;
   }
@@ -131,7 +133,7 @@ function validateExpression(node: JsonValue, path: string, scope: Scope, depth: 
     add(path, `Expressions can nest at most ${LIMITS.depth} levels`);
     return;
   }
-  if (!isRecord(node)) {
+  if (!isJsonObject(node)) {
     add(path, "Expected an expression");
     return;
   }
@@ -246,7 +248,7 @@ function comparator(value: JsonValue | undefined, field: string, add: (field: st
 
 function text(value: JsonValue | undefined, field: string, missing: string, limit: number, add: (field: string, message: string) => void): void {
   if (typeof value !== "string" || !value.trim()) add(field, missing);
-  else if (value.length > limit) add(field, `Use at most ${limit.toLocaleString("en-US")} characters`);
+  else if (value.length > limit) add(field, `Use at most ${formatNumber(limit)} characters`);
 }
 
 function unsupportedFields(value: Record_, allowed: readonly string[], path: string, add: (field: string, message: string) => void): void {
@@ -257,6 +259,3 @@ function isCount(value: JsonValue | undefined): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
-function isRecord(value: JsonValue | undefined): value is Record_ {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}

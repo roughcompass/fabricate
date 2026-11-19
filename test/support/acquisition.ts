@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 import { acquireSnapshot } from "@/lib/acquisition/acquire";
 import type { AssessmentTarget } from "@/lib/assessments/assessment-records";
 import { transitionTarget } from "@/lib/assessments/transitions";
@@ -11,12 +12,42 @@ import { type FabricateConfig, getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { GitRunner } from "@/lib/git/runner";
 import { buildAssessment } from "./builders";
-import type { GitFixture } from "./git-fixture";
+import { createTestDb } from "./db";
+import { GitFixture } from "./git-fixture";
 
 /** Configuration whose allowed root is a fixture and whose storage is private. */
 export function acquisitionConfig(fixture: GitFixture, overrides: Parameters<typeof withOverrides>[1] = {}): FabricateConfig {
   const storage = fs.mkdtempSync(path.join(os.tmpdir(), "acquire-storage-"));
   return withOverrides(getConfig(), { allowedRoots: [fixture.root], repositoryStorage: fs.realpathSync(storage), ...overrides });
+}
+
+export interface AcquisitionWorld {
+  /** The Git fixture whose root is the only allowed one. */
+  fixture: GitFixture;
+  /** Configuration that allows the fixture, with private repository storage. */
+  config: FabricateConfig;
+  db: Db;
+}
+
+/**
+ * Registers hooks that give each test, or with `once` the whole suite, a Git
+ * fixture, a configuration that allows it, and a fresh database, and that
+ * remove the fixture and storage afterward. Read them from the returned world
+ * inside hooks and tests; the suite's own hooks run after it sets up and
+ * before it cleans up.
+ */
+export function useAcquisitionWorld(name: string, options: { overrides?: Parameters<typeof withOverrides>[1]; once?: boolean } = {}): AcquisitionWorld {
+  const world = {} as AcquisitionWorld;
+  (options.once ? beforeAll : beforeEach)(() => {
+    world.fixture = GitFixture.create(name);
+    world.config = acquisitionConfig(world.fixture, options.overrides);
+    world.db = createTestDb();
+  });
+  (options.once ? afterAll : afterEach)(() => {
+    world.fixture.cleanup();
+    fs.rmSync(world.config.repositoryStorage, { recursive: true, force: true });
+  });
+  return world;
 }
 
 export function registerLocalSource(db: Db, config: FabricateConfig, name: string, location: string, gitRef: string | null = null): RepositorySource {

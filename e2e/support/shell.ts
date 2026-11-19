@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { expect } from "./fixtures";
 
 /** The sidebar's navigation. */
@@ -22,4 +22,15 @@ export async function waitForHydration(page: Page): Promise<void> {
 /** Expects the sidebar to mark `item` as the page's item: "page" on the item's own page, "true" on a page below it. */
 export async function expectCurrentItem(page: Page, item: string, current: "page" | "true" = "page"): Promise<void> {
   await expect(primaryNavigation(page).getByRole("link", { name: item, exact: true })).toHaveAttribute("aria-current", current);
+}
+
+/** The page header: the page's title, breadcrumbs, and actions. */
+export const pageHeader = (page: Page) => page.locator("[data-page-header]");
+
+/** The toasts on screen, newest last. */
+export const toasts = (page: Page) => page.getByRole("region", { name: "Notifications" }).getByRole("listitem");
+
+/** Sets the theme cookie, so pages the context loads next render in +theme+. */
+export async function useTheme(context: BrowserContext, theme: "light" | "dark", baseURL: string): Promise<void> {
+  await context.addCookies([{ name: "fabricate-theme", value: theme, url: baseURL }]);
 }

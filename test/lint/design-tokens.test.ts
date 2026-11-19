@@ -113,7 +113,6 @@ const VIEWPORT_QUERY_FILES = new Set([
   "src/components/shell/shell-header.module.css",
   "src/components/shell/sidebar-resizer.module.css",
   "src/components/ui/toast.module.css",
-  "src/components/ui/flash-toast.module.css",
   "src/components/ui/confirm-dialog.module.css",
 ]);
 const viewportQueryAllowed = (file: string) => VIEWPORT_QUERY_FILES.has(file) || file.startsWith("src/components/toolbar/") || file.startsWith("src/demo/");

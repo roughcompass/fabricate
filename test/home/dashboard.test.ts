@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity, weekChange } from "@/lib/home/dashboard";
-import { claimedShare, fleetSummary } from "@/lib/home/summary";
+import { fleetSummary } from "@/lib/home/summary";
 import type { Assessment } from "@/lib/assessments/assessment-records";
-import { getConfig } from "@/lib/config";
 import { attentionItems } from "@/lib/home/attention";
-import { claimInitiative } from "@/lib/initiatives/initiative-records";
 import { queueProfile } from "@/lib/profiling/versions";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
@@ -24,26 +22,33 @@ function backdate(db: Db, table: string, column: string, id: number, days: numbe
   db.$client.prepare(`update ${table} set ${column} = ? where id = ?`).run(daysAgo(days), id);
 }
 
-const changes = (db: Db) => figureChanges(fleetSummary(db), figuresAt(db, new Date(NOW - WEEK_MS)), claimedShare);
+const changes = (db: Db) => figureChanges(fleetSummary(db), figuresAt(db, new Date(NOW - WEEK_MS)));
 
 describe("figures over seven days", () => {
   it("states an increase, a decrease, and no change in text", () => {
     expect(weekChange(6, 4)).toBe("+2 this week");
     expect(weekChange(3, 5)).toBe("−2 this week");
     expect(weekChange(5, 5)).toBe("No change this week");
-    expect(weekChange(61, 58, " pts")).toBe("+3 pts this week");
   });
 
-  it("counts an Assessment's conclusion from Evaluations completed by then", () => {
+  it("counts the Repositories added this week, not a deleted one (Repositories added this week)", () => {
+    const db = createTestDb();
+    for (let index = 0; index < 4; index++) backdate(db, "repository_sources", "created_at", buildSource(db).id, 10);
+    buildSource(db);
+    buildSource(db);
+    expect(changes(db)).toEqual({ repositories: "+2 this week", assessments: "No change this week" });
+  });
+
+  it("counts an Assessment's conclusion from Evaluations completed by then, and states no change for an Assessment created earlier (No change)", () => {
     const db = createTestDb();
     const source = buildSource(db);
     const initiative = buildInitiative(db, { sources: [source] });
     backdate(db, "initiatives", "created_at", initiative.id, 10);
     const evaluation = driveEvaluation(db, buildEvaluation(db, initiative, driveRun(db, buildAssessment(db, { initiative }).assessment, "complete")), "complete", "gaps");
     expect(figuresAt(db, new Date(NOW - WEEK_MS)).assessments).toMatchObject({ total: 1, byConclusion: { gaps: 0, none: 1 } });
-    expect(changes(db)).toMatchObject({ assessments: "No change this week", gaps: "+1 this week", none: "−1 this week" });
+    expect(changes(db)).toMatchObject({ assessments: "No change this week" });
     backdate(db, "evaluations", "finished_at", evaluation.id, 9);
-    expect(changes(db).gaps).toBe("No change this week");
+    expect(figuresAt(db, new Date(NOW - WEEK_MS)).assessments.byConclusion).toMatchObject({ gaps: 1, none: 0 });
   });
 });
 
@@ -71,19 +76,18 @@ describe("Assessment trend", () => {
 });
 
 describe("recent activity", () => {
-  it("leads with the newest finished Run, linking to it, and leaves claims' Runs and profile versions out", () => {
+  it("leads with the newest finished Run, linking to it, and leaves profile versions out", () => {
     const db = createTestDb();
     const source = buildSource(db);
     const orders = buildInitiative(db, { name: "Orders review", sources: [source] });
     const older = driveRun(db, buildAssessment(db, { initiative: orders }).assessment, "complete");
     backdate(db, "assessments", "finished_at", older.id, 1);
     const failed = driveRun(db, buildAssessment(db, { initiative: orders }).assessment, "failed");
-    driveRun(db, buildAssessment(db, { initiative: claimInitiative(db, source) }).assessment, "complete");
     const version = queueProfile(db, source, "imported") as { version: { assessment: Assessment } };
     driveRun(db, version.version.assessment, "failed");
 
     const activity = recentActivity(db);
-    expect(attentionItems(db, getConfig()).map((item) => item.kind)).toEqual(["run_failed"]);
+    expect(attentionItems(db).map((item) => item.kind)).toEqual(["run_failed"]);
     expect(fleetSummary(db).assessments.total).toBe(1);
     expect(activity.map((item) => item.kind)).toEqual(["run_failed", "run_completed"]);
     expect(activity[0]).toMatchObject({ record: { name: "Orders review", href: `/runs/${failed.publicId}` } });

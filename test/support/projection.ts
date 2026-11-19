@@ -2,7 +2,7 @@ import type { Db } from "@/lib/db/client";
 import { manifest } from "./profiles";
 
 /** Every table of the assessment projection. */
-export const PROJECTION_TABLES = ["dependency_facts", "graph_nodes", "graph_edges", "graph_edge_candidates", "evidence_index", "concept_classifications", "projection_coverage"] as const;
+export const PROJECTION_TABLES = ["dependency_facts", "graph_nodes", "graph_edges", "graph_edge_candidates", "evidence_index"] as const;
 
 /** An npm lockfile, version 3, that pins each dependency of +name+ to a version. */
 function lockfile(name: string, versions: Record<string, string>): string {

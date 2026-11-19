@@ -1,5 +1,4 @@
 import type { JsonObject } from "@repo-facts/contract";
-import { eq } from "drizzle-orm";
 import { cache } from "react";
 import { NeedsAttention } from "@/components/profiles/attention";
 import { CategoryTable, EmptyCategory, type EvidenceContext, SharedTable } from "@/components/profiles/category-blocks";
@@ -20,8 +19,7 @@ import { Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { ShortValue, Tag } from "@/components/ui/tag";
 import type { Assessment } from "@/lib/assessments/assessment-records";
-import { getDb } from "@/lib/db/client";
-import { assessmentTargets, repositorySources } from "@/lib/db/schema";
+import { type Executor, getDb } from "@/lib/db/client";
 import { dependencyGroups } from "@/lib/profiles/joins";
 import { type RepositoryProfile, profileDiagnostics, profileDocument } from "@/lib/profiles/profile-records";
 import { packageProducers, repositoryRelationships } from "@/lib/profiles/relationships";
@@ -29,26 +27,37 @@ import { profileCommit } from "@/lib/profiles/schema";
 import type { FactDocument } from "@/lib/profiles/states";
 import { type SummaryPanel, profileSummary } from "@/lib/profiles/summary";
 import { type ProfileTabId, isProfileTab, profileTabHref } from "@/lib/profiles/tabs";
-import { type CategoryBlock, type DependencyFilters as Filters, type SharedBlock, type TabView, filterDependencies, pageOfGroups, profileView } from "@/lib/profiles/view";
+import { type CategoryBlock, type DependencyFilters as Filters, filterDependencies, pageOfGroups, profileView, type ProfileView, type SharedBlock, type TabView } from "@/lib/profiles/view";
 import styles from "./profile-body.module.css";
+import { pageNumber, pageQuery, param, withQuery } from "@/lib/web/query";
+import { targetById } from "@/lib/assessments/assessment-records";
 
-/** What a Profile is pinned to: a commit, or, for a template version, its files' content digest. A page's header and body share one read of the document. */
-export const profilePin = cache((profile: RepositoryProfile): { document: JsonObject; commit: string | null; pinned: string; pinnedLabel: string } => {
+/** The commit a Profile is pinned to. A page's header and body share one read of the document. */
+export const profilePin = cache((profile: RepositoryProfile): { document: JsonObject; commit: string } => {
   const document = profileDocument(profile);
-  // A template version's Profile describes its exported files, identified by their content digest, not a commit.
-  const commit = profileCommit(document);
-  return { document, commit, pinned: commit ?? String(document.content_digest), pinnedLabel: commit ? "commit" : "content digest" };
+  return { document, commit: profileCommit(document) };
 });
 
-export const PROFILE_DESCRIPTION = {
-  commit: "Every fact comes from committed files at this commit, read as data. Nothing in the repository was run.",
-  template: "Every fact comes from the template version's exported files, read as data. Nothing in them was run.",
-};
+export const PROFILE_DESCRIPTION = "Every fact comes from committed files at this commit, read as data. Nothing in the repository was run.";
 
-const queryValue = (value: string | string[] | undefined) => (typeof value === "string" && value !== "" ? value : undefined);
 
 /** Rows per page of a long table, so a large repository's Profile stays quick to load and to read. */
 const PROFILE_PAGE_SIZE = 50;
+
+/** The Overview's panels, from the facts, the newest map's relationships, and which declared packages the fleet produces. */
+function overviewPanels(db: Executor, profile: RepositoryProfile, facts: FactDocument, view: ProfileView) {
+  const target = targetById(db, profile.assessmentTargetId);
+  const relationships = repositoryRelationships(db, target.repositorySourceId);
+  const declared = [...new Set(dependencyGroups(facts).flatMap((group) => group.rows.filter((row) => row.declared).map((row) => row.name)))];
+  const panels = profileSummary(facts, view.overview, {
+    kind: view.kind,
+    relationships,
+    producers: packageProducers(db, declared),
+    self: target.sourcePublicId,
+    services: { total: view.services.length, characterized: view.services.filter((service) => service.characterized).length },
+  });
+  return { panels, relationships, declared };
+}
 
 /**
  * A Profile as views, one per question a reader brings to a repository:
@@ -63,45 +72,25 @@ const PROFILE_PAGE_SIZE = 50;
  */
 export function ProfileBody({ profile, assessment, query, base }: { profile: RepositoryProfile; assessment: Pick<Assessment, "publicId">; query: Record<string, string | string[] | undefined>; base: string }) {
   const db = getDb();
-  const { document, commit, pinned, pinnedLabel } = profilePin(profile);
+  const { document, commit } = profilePin(profile);
   const facts = document.fact_document as unknown as FactDocument;
   const diagnostics = profileDiagnostics(document);
   const view = profileView(facts, diagnostics);
   const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, assessmentId: assessment.publicId, profileId: profile.publicId };
-  const filters: Filters = { kind: queryValue(query.kind), manifest: queryValue(query.manifest), package: queryValue(query.package) };
+  const filters: Filters = { kind: param(query, "kind") || undefined, manifest: param(query, "manifest") || undefined, package: param(query, "package") || undefined };
 
-  const source = db
-    .select({ id: repositorySources.id, publicId: repositorySources.publicId })
-    .from(assessmentTargets)
-    .innerJoin(repositorySources, eq(repositorySources.id, assessmentTargets.repositorySourceId))
-    .where(eq(assessmentTargets.id, profile.assessmentTargetId))
-    .get();
-  const relationships = source ? repositoryRelationships(db, source.id) : { run: null, uses: [], usedBy: [], mapHref: null };
-  const declared = [...new Set(dependencyGroups(facts).flatMap((group) => group.rows.filter((row) => row.declared).map((row) => row.name)))];
-  const panels = profileSummary(facts, view.overview, {
-    kind: view.kind,
-    relationships,
-    producers: packageProducers(db, declared),
-    self: source?.publicId ?? null,
-    services: { total: view.services.length, characterized: view.services.filter((service) => service.characterized).length },
-  });
+  const { panels, relationships, declared } = overviewPanels(db, profile, facts, view);
 
   const visible = view.tabs.filter((tab) => tab.visible);
-  const requested = queryValue(query.tab);
+  const requested = param(query, "tab");
   const current = visible.find((tab) => tab.id === (isProfileTab(requested) ? requested : "overview")) ?? visible[0]!;
 
   // Each long table pages on its own, in the address as `<category>_page`, keeping the rest of the query.
   const paging = (id: string, total: number) => {
     const key = `${id}_page`;
-    const pages = Math.max(1, Math.ceil(total / PROFILE_PAGE_SIZE));
-    const requestedPage = Number.parseInt(queryValue(query[key]) ?? "1", 10);
-    const page = Number.isFinite(requestedPage) ? Math.min(Math.max(requestedPage, 1), pages) : 1;
-    const href = (number: number) => {
-      const params = new URLSearchParams();
-      for (const [name, value] of Object.entries(query)) if (typeof value === "string" && name !== key) params.set(name, value);
-      if (number > 1) params.set(key, String(number));
-      return `${base}${params.size ? `?${params}` : ""}#${id}`;
-    };
+    const { page, pages } = pageNumber(param(query, key), total, PROFILE_PAGE_SIZE);
+    const kept = Object.fromEntries(Object.entries(query).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[0] !== key));
+    const href = (number: number) => withQuery(base, { ...kept, [key]: pageQuery(number) }, id);
     return { page, pages, start: (page - 1) * PROFILE_PAGE_SIZE, href };
   };
 
@@ -211,7 +200,7 @@ export function ProfileBody({ profile, assessment, query, base }: { profile: Rep
                   <DescriptionList
                     surface
                     items={[
-                      [commit ? "Commit" : "Content digest", <Tag key="commit" copy label={pinnedLabel}>{pinned}</Tag>],
+                      ["Commit", <Tag key="commit" copy label="commit">{commit}</Tag>],
                       ["Detector release", <Tag key="release">{String(document.detector_release)}</Tag>],
                       ["Profile digest", <ShortValue key="digest" value={profile.digest} label="digest" />],
                       ["Created", <RelativeTime key="created" value={profile.createdAt} />],

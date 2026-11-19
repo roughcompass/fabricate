@@ -1,8 +1,9 @@
 import styles from "./progress-bar.module.css";
+import { percentOf } from "./count";
 
 /** Work done out of the total, as a bar with its count in words. */
 export function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
-  const percent = max > 0 ? Math.round((Math.min(value, max) / max) * 100) : 0;
+  const percent = percentOf(value, max);
   return (
     <div className={styles.progress}>
       <div className={styles.text}>

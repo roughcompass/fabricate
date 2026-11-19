@@ -3,14 +3,16 @@
 import { parseCanonical } from "@repo-facts/contract";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db/client";
-import { NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
-import { isPublicId } from "@/lib/db/ids";
+import { StaleRecordError, ValidationError } from "@/lib/db/errors";
+import { requirePublicId } from "@/lib/db/ids";
 import { publishDraft, reviseRelease } from "@/lib/standards/publish";
 import * as records from "@/lib/standards/standard-records";
 import { findStarter } from "@/lib/standards/starters";
 import { validateStandard } from "@/lib/standards/validate";
-import { errorsFrom, integer, text } from "@/lib/web/form-data";
+import { lockVersion, submitForm } from "@/lib/web/actions";
+import { integer, text } from "@/lib/web/form-data";
 import type { DraftSaveState, StandardFormState, StandardFormValues } from "./form-state";
+import { routes } from "@/lib/web/routes";
 
 /** The largest draft document a save accepts, in characters. */
 const MAX_DRAFT_LENGTH = 512 * 1024;
@@ -19,35 +21,26 @@ function readMetadata(formData: FormData): StandardFormValues {
   return { name: text(formData, "name", 500), purpose: text(formData, "purpose", 4_000) };
 }
 
-function assertStandardId(publicId: string): void {
-  if (!isPublicId(publicId, "std")) throw new NotFoundError("Unknown Standard");
-}
+const assertStandardId = (publicId: string) => requirePublicId(publicId, "std", "Standard");
 
 export async function createStandard(_previous: StandardFormState, formData: FormData): Promise<StandardFormState> {
   const values = readMetadata(formData);
   // A starter supplies the draft; an unknown starter id starts blank rather than guessing.
   const starter = findStarter(text(formData, "starter", 100));
-  let publicId: string;
-  try {
-    publicId = records.createStandard(getDb(), values, starter?.document).standard.publicId;
-  } catch (error) {
-    if (error instanceof ValidationError) return { values, errors: errorsFrom(error) };
-    throw error;
-  }
-  redirect(`/standards/${publicId}/draft?notice=created`);
+  return submitForm(values, () => routes.standardDraft(records.createStandard(getDb(), values, starter?.document).standard.publicId, { notice: "created" }));
 }
 
 export async function updateStandard(standardId: string, _previous: StandardFormState, formData: FormData): Promise<StandardFormState> {
   assertStandardId(standardId);
   const values = readMetadata(formData);
-  try {
-    records.updateStandardMetadata(getDb(), standardId, integer(formData, "lockVersion") ?? -1, values);
-  } catch (error) {
-    if (error instanceof ValidationError) return { values, errors: errorsFrom(error) };
-    if (error instanceof StaleRecordError) return { values, errors: { base: ["This Standard was changed by someone else. Reload it and try again."] } };
-    throw error;
-  }
-  redirect(`/standards/${standardId}?notice=updated`);
+  return submitForm(
+    values,
+    () => {
+      records.updateStandardMetadata(getDb(), standardId, lockVersion(formData), values);
+      return routes.standard(standardId, { notice: "updated" });
+    },
+    "This Standard was changed by someone else. Reload it and try again.",
+  );
 }
 
 /**
@@ -74,7 +67,7 @@ export async function saveDraft(standardId: string, previous: DraftSaveState, fo
   const db = getDb();
   const standard = records.getStandard(db, standardId);
   const draft = records.draftOf(db, standard.id);
-  if (!draft) redirect(`/standards/${standardId}?notice=no_draft`);
+  if (!draft) redirect(routes.standard(standardId, { notice: "no_draft" }));
   try {
     const saved = records.saveDraft(db, draft, lockVersion, document);
     return { lockVersion: saved.lockVersion, issues: validateStandard(document, { metadata: standard }), status: "saved", message: null, submission };
@@ -90,24 +83,24 @@ export async function publishStandard(standardId: string, formData: FormData): P
   assertStandardId(standardId);
   let releaseId: string;
   try {
-    releaseId = publishDraft(getDb(), standardId, integer(formData, "lockVersion") ?? -1).publicId;
+    releaseId = publishDraft(getDb(), standardId, lockVersion(formData)).publicId;
   } catch (error) {
-    if (error instanceof StaleRecordError) redirect(`/standards/${standardId}/publish?notice=stale`);
+    if (error instanceof StaleRecordError) redirect(routes.standardPublish(standardId, { notice: "stale" }));
     // The publication review lists the problems itself, so the redirect carries no notice (feedback spec).
-    if (error instanceof ValidationError) redirect(`/standards/${standardId}/publish`);
+    if (error instanceof ValidationError) redirect(routes.standardPublish(standardId));
     throw error;
   }
-  redirect(`/standards/${standardId}/releases/${releaseId}?notice=published`);
+  redirect(routes.release(standardId, releaseId, { notice: "published" }));
 }
 
 export async function reviseStandard(standardId: string, releaseId: string): Promise<void> {
   assertStandardId(standardId);
-  if (!isPublicId(releaseId, "rel")) throw new NotFoundError("Unknown Release");
+  requirePublicId(releaseId, "rel", "Release");
   try {
     reviseRelease(getDb(), releaseId);
   } catch (error) {
-    if (error instanceof ValidationError) redirect(`/standards/${standardId}?notice=draft_exists`);
+    if (error instanceof ValidationError) redirect(routes.standard(standardId, { notice: "draft_exists" }));
     throw error;
   }
-  redirect(`/standards/${standardId}/draft?notice=revision`);
+  redirect(routes.standardDraft(standardId, { notice: "revision" }));
 }

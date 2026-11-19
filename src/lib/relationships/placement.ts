@@ -1,36 +1,14 @@
 /*
- * Where each repository of a Run appears when the map is grouped by current
- * ownership (design decision 4). Pure: the caller supplies ownership and the
- * runtime links between repositories, so the rules are tested directly.
- *
- * - A repository appears under every portal of its SEAL application, marked
- *   with the other portals it's also in. A portal's host appears under it too,
- *   and so isn't listed as in no portal.
- * - When a portal's owner aligns to another Line of Business, the repository
- *   is marked with its own Line of Business there, and its own Line of
- *   Business also lists it under "portals of other Lines of Business".
- * - A claimed repository in no portal appears under its Line of Business.
- * - An unclaimed repository appears under Unassigned, in the runtime system
- *   that composition, iframe, and runtime-contract links tie it to.
+ * The runtime systems of a Run (relationship-maps spec, "Maps are reviewed by
+ * runtime system"): repositories tied together by composition, iframe, and
+ * runtime-contract links. A repository with no such link stands alone, as a
+ * system of one. Pure: the caller supplies the repositories and their links,
+ * so the rules are tested directly.
  */
 
-export interface PlacementRepository {
+export interface SystemRepository {
   nodeId: string;
   label: string;
-  /** The effective SEAL application's public ID, or null when the repository has no claim. */
-  application: string | null;
-  /** The application's Line of Business, or null when none is recorded. */
-  lineOfBusiness: string | null;
-  /** The application's effective portals. */
-  portals: readonly string[];
-}
-
-export interface PlacementPortal {
-  id: string;
-  /** The owner's Line of Business, or null when the portal has no owner or its owner has none. */
-  lineOfBusiness: string | null;
-  /** The node ID of the portal's effective host repository. */
-  host: string | null;
 }
 
 /** A link that ties two repositories into one runtime system: composition, iframe, or a runtime contract. */
@@ -40,14 +18,8 @@ export interface RuntimeLink {
   type: "composition" | "iframe" | "runtime_contract";
 }
 
-export type Placement =
-  | { kind: "portal"; portal: string; lineOfBusiness: string | null; alsoIn: string[]; ownLineOfBusiness: string | null; host: boolean }
-  | { kind: "other_portal"; portal: string; lineOfBusiness: string | null }
-  | { kind: "line_of_business"; lineOfBusiness: string | null }
-  | { kind: "unassigned"; system: string };
-
-interface RuntimeSystem {
-  /** The node ID of the repository the system is named for. */
+export interface RuntimeSystem {
+  /** The node ID of the repository the system is named for: its host, or its first repository by name. */
   id: string;
   name: string;
   /** The repository with outgoing composition links, if there is one. */
@@ -55,59 +27,8 @@ interface RuntimeSystem {
   members: string[];
 }
 
-export interface Placements {
-  byNode: Map<string, Placement[]>;
-  systems: RuntimeSystem[];
-}
-
-export function placeRepositories(repositories: readonly PlacementRepository[], portals: readonly PlacementPortal[], links: readonly RuntimeLink[]): Placements {
-  const portalById = new Map(portals.map((portal) => [portal.id, portal]));
-  const byNode = new Map<string, Placement[]>();
-  const unassigned: PlacementRepository[] = [];
-
-  for (const repository of [...repositories].sort(byLabel)) {
-    if (repository.application === null) {
-      unassigned.push(repository);
-      continue;
-    }
-    const placed: Placement[] = [];
-    const memberOf = [...new Set(repository.portals)].sort(compare);
-    for (const portalId of memberOf) {
-      const lineOfBusiness = portalById.get(portalId)?.lineOfBusiness ?? null;
-      const foreign = lineOfBusiness !== repository.lineOfBusiness;
-      placed.push({
-        kind: "portal",
-        portal: portalId,
-        lineOfBusiness,
-        alsoIn: memberOf.filter((other) => other !== portalId),
-        ownLineOfBusiness: foreign ? repository.lineOfBusiness : null,
-        host: portalById.get(portalId)?.host === repository.nodeId,
-      });
-      if (foreign) placed.push({ kind: "other_portal", portal: portalId, lineOfBusiness: repository.lineOfBusiness });
-    }
-    const hosts = portals.some((portal) => portal.host === repository.nodeId);
-    if (memberOf.length === 0 && !hosts) placed.push({ kind: "line_of_business", lineOfBusiness: repository.lineOfBusiness });
-    byNode.set(repository.nodeId, placed);
-  }
-
-  // A host appears under the portal it hosts even when its application isn't claimed in it.
-  for (const portal of [...portals].sort((a, b) => compare(a.id, b.id))) {
-    if (portal.host === null) continue;
-    const placed = byNode.get(portal.host);
-    if (!placed || placed.some((item) => item.kind === "portal" && item.portal === portal.id)) continue;
-    const repository = repositories.find((item) => item.nodeId === portal.host)!;
-    const foreign = portal.lineOfBusiness !== repository.lineOfBusiness;
-    placed.push({ kind: "portal", portal: portal.id, lineOfBusiness: portal.lineOfBusiness, alsoIn: [], ownLineOfBusiness: foreign ? repository.lineOfBusiness : null, host: true });
-    if (foreign) placed.push({ kind: "other_portal", portal: portal.id, lineOfBusiness: repository.lineOfBusiness });
-  }
-
-  const systems = runtimeSystems(unassigned, links);
-  for (const system of systems) for (const member of system.members) byNode.set(member, [{ kind: "unassigned", system: system.id }]);
-  return { byNode, systems };
-}
-
-/** Unassigned repositories joined by their runtime links, by union-find. */
-function runtimeSystems(repositories: readonly PlacementRepository[], links: readonly RuntimeLink[]): RuntimeSystem[] {
+/** The repositories joined by their runtime links, by union-find, each system named for its host or its first repository. */
+export function runtimeSystems(repositories: readonly SystemRepository[], links: readonly RuntimeLink[]): RuntimeSystem[] {
   const members = new Set(repositories.map((repository) => repository.nodeId));
   const parent = new Map([...members].map((id) => [id, id]));
   const find = (id: string): string => {
@@ -136,8 +57,6 @@ function runtimeSystems(repositories: readonly PlacementRepository[], links: rea
     })
     .sort((a, b) => compare(a.name, b.name) || compare(a.id, b.id));
 }
-
-const byLabel = (a: PlacementRepository, b: PlacementRepository) => compare(a.label, b.label) || compare(a.nodeId, b.nodeId);
 
 /** Code-unit order, so the same input always sorts the same way, whatever the locale. */
 export function compare(a: string, b: string): number {

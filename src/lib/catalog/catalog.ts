@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, ValidationError } from "@/lib/db/errors";
 import { requestCancellation } from "@/lib/assessments/transitions";
@@ -11,6 +11,7 @@ import { getConfig } from "@/lib/config";
 import { deleteRepositoryPreviews, discardPreviewFiles } from "@/lib/previews/lifecycle";
 import { previewCount } from "@/lib/previews/views";
 import { type RepositorySource, getSource, insertSource, sourceFieldIssues, updateSource } from "./source-records";
+import { updateLocked } from "@/lib/db/optimistic";
 
 /**
  * Catalog operations for the web UI: parse and canonicalize the clone URL,
@@ -87,7 +88,7 @@ export function deletionEffects(db: Executor, source: RepositorySource): Deletio
     .select({ name: initiatives.name })
     .from(initiativeTargets)
     .innerJoin(initiatives, eq(initiatives.id, initiativeTargets.initiativeId))
-    .where(and(eq(initiativeTargets.repositorySourceId, source.id), isNull(initiatives.claimRepositorySourceId)))
+    .where(eq(initiativeTargets.repositorySourceId, source.id))
     .orderBy(sql`lower(${initiatives.name})`)
     .all();
   return { versions: versionCount(db, source.id), assessments: selecting.map((row) => row.name), runs: assessmentCounts(db).get(source.id) ?? 0, previews: previewCount(db, source) };
@@ -95,10 +96,9 @@ export function deletionEffects(db: Executor, source: RepositorySource): Deletio
 
 /**
  * Deletes +source+ from the catalog, permanently, once +confirmation+ is its
- * name exactly. It leaves every list, scope, profiling check, and claim, and
- * its clone URL is free to register again. A profile version in progress is
- * canceled, and Assessments that select it stop selecting it; the Assessment
- * created for its claim keeps it, so its history reads true. Past Runs keep
+ * name exactly. It leaves every list, scope, and profiling check, and its
+ * clone URL is free to register again. A profile version in progress is
+ * canceled, and Assessments that select it stop selecting it. Past Runs keep
  * their results, which name it as they assessed it. Its previews are deleted
  * with it, and their files removed (docs/previews.md).
  */
@@ -107,17 +107,11 @@ export function deleteSource(db: Executor, publicId: string, confirmation: strin
     const source = getSource(tx, publicId);
     if (confirmation.trim() !== source.name) throw new ValidationError([{ field: "confirmation", message: `Type ${source.name} to confirm` }]);
     for (const version of versionsOf(tx, source.id).filter(isActive)) requestCancellation(tx, version.assessment.id);
-    const operatorInitiatives = tx.select({ id: initiatives.id }).from(initiatives).where(isNull(initiatives.claimRepositorySourceId));
-    tx.delete(initiativeTargets).where(and(eq(initiativeTargets.repositorySourceId, source.id), inArray(initiativeTargets.initiativeId, operatorInitiatives))).run();
+    tx.delete(initiativeTargets).where(eq(initiativeTargets.repositorySourceId, source.id)).run();
     const now = new Date();
     return {
       previews: deleteRepositoryPreviews(tx, source.id),
-      deleted: tx
-        .update(repositorySources)
-        .set({ deletedAt: now, updatedAt: now, lockVersion: source.lockVersion + 1 })
-        .where(eq(repositorySources.id, source.id))
-        .returning()
-        .get(),
+      deleted: updateLocked(tx, repositorySources, source, { deletedAt: now, updatedAt: now }, `${source.name} was changed while it was being deleted`),
     };
   });
   // The previews stopped serving with the commit; their directories move aside now and are removed in the background.

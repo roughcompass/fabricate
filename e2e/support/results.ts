@@ -6,64 +6,12 @@ import { startEvaluation } from "../../src/lib/evaluations/start";
 import { jobHandlers } from "../../src/lib/jobs/registry";
 import { drainJobs } from "../../src/lib/jobs/worker";
 import { buildInitiative, buildSource } from "../../test/support/builders";
-import { manifest } from "../../test/support/profiles";
-import { publishStandard, seedAssessment, selectReleases } from "../../test/support/scenarios";
+import { ORDERS, publishStandard, seedAssessment, selectReleases } from "../../test/support/scenarios";
+import { control } from "../../test/support/standards";
 import { E2E_ENV } from "./env";
 
 /** The server's configuration, so jobs run from the test process use its database and storage. */
 export const serverConfig = () => loadConfig({ env: { ...process.env, ...E2E_ENV } });
-
-/**
- * A repository whose Profile has observed, inferred, mixed, conflicting,
- * unknown, and absent categories, a skipped input, and two unavailable
- * Service Dependencies with literal endpoints and no contract or substitute.
- */
-export const ORDERS = {
-  "package.json": manifest({ name: "orders", version: "1.0.0", engines: { node: ">=20" }, dependencies: { axios: "^1.6.0" } }),
-  ".nvmrc": "18\n",
-  "yarn.lock": "# yarn lockfile v1\n\n",
-  ".github/workflows/ci.yml": "name: ci\non: [push\njobs: {",
-  "src/payments.ts": 'export async function charge(id: string) {\n  const res = await fetch("https://payments.invalid/v1/charges", { method: "POST", body: JSON.stringify({ id }) });\n  const body = await res.json();\n  return body.status;\n}\n',
-  "src/ledger.ts": 'const proxy = process.env.HTTPS_PROXY;\nexport async function entries() {\n  const res = await fetch("https://ledger.corp.internal/entries", { headers: { authorization: `Bearer ${process.env.LEDGER_TOKEN}` } });\n  return (await res.json()).items;\n}\n',
-};
-
-const STOREFRONT_DEPENDENCIES = { react: "19.1.0", "react-dom": "19.1.0" };
-const STOREFRONT_DEV_DEPENDENCIES = { vite: "7.0.0", vitest: "3.2.0", eslint: "9.30.0", typescript: "5.8.3" };
-
-/**
- * A React application built with Vite whose Profile has 2 production and 4
- * development dependencies, each resolved by its lockfile, 4 scripts, a CI
- * workflow with two run steps, an unknown composition, and two Service
- * Dependencies: one with a literal endpoint and one whose endpoint a caller supplies.
- */
-export const STOREFRONT = {
-  "package.json": manifest({
-    name: "storefront",
-    version: "2.1.0",
-    private: true,
-    engines: { node: ">=22" },
-    scripts: { build: "vite build", test: "vitest run", lint: "eslint .", start: "vite" },
-    dependencies: STOREFRONT_DEPENDENCIES,
-    devDependencies: STOREFRONT_DEV_DEPENDENCIES,
-  }),
-  "package-lock.json": manifest({
-    name: "storefront",
-    version: "2.1.0",
-    lockfileVersion: 3,
-    requires: true,
-    packages: {
-      "": { name: "storefront", version: "2.1.0", dependencies: STOREFRONT_DEPENDENCIES, devDependencies: STOREFRONT_DEV_DEPENDENCIES },
-      ...Object.fromEntries(Object.entries(STOREFRONT_DEPENDENCIES).map(([name, version]) => [`node_modules/${name}`, { version }])),
-      ...Object.fromEntries(Object.entries(STOREFRONT_DEV_DEPENDENCIES).map(([name, version]) => [`node_modules/${name}`, { version, dev: true }])),
-    },
-  }),
-  ".github/workflows/ci.yml": "name: ci\non: [push]\njobs:\n  ci:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci\n      - run: npm test\n",
-  "vite.config.ts": 'import { defineConfig } from "vite";\nexport default defineConfig({});\n',
-  "src/main.tsx": 'import { createRoot } from "react-dom/client";\nexport const load = () => fetch("https://api.example.test/products");\ncreateRoot(document.body).render(<main>Shop</main>);\n',
-  "src/client.ts": "export async function ping(base: string) {\n  return fetch(`${base}/ping`);\n}\n",
-};
-
-const control = (fields: JsonObject): JsonObject => ({ applicability: { op: "always" }, guidance: null, subject: "repository", ...fields });
 
 /** Controls that give ORDERS every outcome: Meets, Gap, Not applicable, and Indeterminate with one or several causes. */
 export const BASELINE_CONTROLS: JsonObject[] = [
@@ -115,9 +63,18 @@ export async function seedResults(db: Db) {
   return { initiative, assessment, baseline, services };
 }
 
+/** Runs every queued job with the server's configuration. */
+export const runJobs = (db: Db) => drainJobs(db, jobHandlers(db, serverConfig()));
+
 /** Starts an Evaluation of the seeded Assessment and runs its jobs to completion. */
 export async function evaluate(db: Db, initiativeId: string, assessmentId: string) {
   const { evaluation } = startEvaluation(db, initiativeId, assessmentId, crypto.randomUUID());
-  await drainJobs(db, jobHandlers(db, serverConfig()));
+  await runJobs(db);
   return evaluation;
+}
+
+/** seedResults, with the Initiative's Evaluation of the Assessment run to completion. */
+export async function seedEvaluation(db: Db) {
+  const seeded = await seedResults(db);
+  return { ...seeded, evaluation: await evaluate(db, seeded.initiative.publicId, seeded.assessment.publicId) };
 }

@@ -2,7 +2,6 @@ import { type JsonObject, SHARED_CATEGORIES } from "@repo-facts/contract";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, eq } from "drizzle-orm";
 import { cache } from "react";
 import { ExpressionView } from "@/app/(operator)/standards/control-view";
 import { EvidenceList } from "@/components/results/evidence";
@@ -15,8 +14,7 @@ import { Severity, Status } from "@/components/ui/status";
 import { ShortValue, Tag } from "@/components/ui/tag";
 import { assessmentById } from "@/lib/assessments/lookups";
 import { getDb } from "@/lib/db/client";
-import { findings } from "@/lib/db/schema";
-import { evaluationNumber, findEvaluation, findingDocument } from "@/lib/evaluations/evaluation-records";
+import { evaluationNumber, findEvaluation, findFinding, findingDocument } from "@/lib/evaluations/evaluation-records";
 import type { TraceNode } from "@/lib/evaluations/interpreter";
 import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { findingCategory } from "@/lib/profiles/links";
@@ -24,6 +22,7 @@ import { profileSectionHref } from "@/lib/profiles/tabs";
 import { releaseById, standardById } from "@/lib/standards/standard-records";
 import { COLLECTION_BY_ID, SELECTOR_BY_ID } from "@/lib/standards/registry";
 import styles from "./finding.module.css";
+import { routes } from "@/lib/web/routes";
 
 type Cause = { selector: string | null; parameter: string | null; collection: string | null; reason: string };
 
@@ -37,23 +36,19 @@ const load = cache((evaluationId: string, findingId: string) => {
   const db = getDb();
   const evaluation = findEvaluation(db, evaluationId);
   if (!evaluation) return undefined;
-  const finding = db
-    .select()
-    .from(findings)
-    .where(and(eq(findings.publicId, findingId), eq(findings.evaluationId, evaluation.id)))
-    .get();
+  const finding = findFinding(db, evaluation, findingId);
   if (!finding) return undefined;
   return { evaluation, finding, document: findingDocument(finding), initiative: initiativeById(db, evaluation.initiativeId), number: evaluationNumber(db, evaluation) };
 });
 
-export async function generateMetadata({ params }: { params: Promise<{ evaluationId: string; findingId: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/evaluations/[evaluationId]/findings/[findingId]">): Promise<Metadata> {
   const { evaluationId, findingId } = await params;
   const found = load(evaluationId, findingId);
   if (!found) return { title: "Finding not found" };
   return { title: `${String((found.document.control as JsonObject).title)} · ${String((found.document.subject as JsonObject).name)}` };
 }
 
-export default async function FindingPage({ params }: { params: Promise<{ evaluationId: string; findingId: string }> }) {
+export default async function FindingPage({ params }: PageProps<"/evaluations/[evaluationId]/findings/[findingId]">) {
   const { evaluationId, findingId } = await params;
   const db = getDb();
   const found = load(evaluationId, findingId);
@@ -71,19 +66,19 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
   const guidance = document.guidance as JsonObject | null;
   const profile = subject.profile as JsonObject | null | undefined;
   const map = subject.map as JsonObject | null | undefined;
-  const releaseLink = <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{`${standard.name} v${release.version}`}</Link>;
+  const releaseLink = <Link href={routes.release(standard.publicId, release.publicId)}>{`${standard.name} v${release.version}`}</Link>;
   // The Profile link opens the category the Control reads, and names it.
   const category = findingCategory(condition, applicability);
   const categoryLabel = category ? SHARED_CATEGORIES.find((definition) => definition.id === category)?.label : undefined;
   const subjectLink =
     subject.type === "repository" ? (
       profile ? (
-        <Link href={category && categoryLabel ? profileSectionHref(`/profiles/${String(profile.public_id)}`, category) : `/profiles/${String(profile.public_id)}`}>{category && categoryLabel ? `${categoryLabel} in the ${String(subject.name)} Profile` : `${String(subject.name)} Profile`}</Link>
+        <Link href={category && categoryLabel ? profileSectionHref(routes.profile(String(profile.public_id)), category) : routes.profile(String(profile.public_id))}>{category && categoryLabel ? `${categoryLabel} in the ${String(subject.name)} Profile` : `${String(subject.name)} Profile`}</Link>
       ) : (
         <span>{`${String(subject.name)} (no Profile)`}</span>
       )
     ) : map ? (
-      <Link href={`/runs/${assessment.publicId}/map`}>Relationship Map</Link>
+      <Link href={routes.runMap(assessment.publicId)}>Relationship Map</Link>
     ) : (
       <span>Relationship Map (not available)</span>
     );
@@ -93,8 +88,8 @@ export default async function FindingPage({ params }: { params: Promise<{ evalua
       <PageHeader
         breadcrumbs={[
           { href: "/assessments", label: "Assessments" },
-          { href: `/assessments/${initiative.publicId}`, label: initiative.name },
-          { href: `/evaluations/${evaluation.publicId}`, label: `Evaluation #${number}` },
+          { href: routes.assessment(initiative.publicId), label: initiative.name },
+          { href: routes.evaluation(evaluation.publicId), label: `Evaluation #${number}` },
         ]}
         title={String(control.title)}
         status={<Status state={finding.outcome} />}

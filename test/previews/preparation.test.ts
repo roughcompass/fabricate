@@ -1,11 +1,10 @@
 import fs from "node:fs";
 import { and, eq } from "drizzle-orm";
 import { detectorConfiguration } from "@repo-facts/bundle";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { mirrorPath } from "@/lib/acquisition/mirror";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type FabricateConfig, withOverrides } from "@/lib/config";
-import type { Db } from "@/lib/db/client";
 import { jobs, previewBuilds, previewPreparations, profileVersions, repositoryProfiles } from "@/lib/db/schema";
 import { readDocument } from "@/lib/documents/digested";
 import { jobPayload } from "@/lib/jobs/queue";
@@ -14,10 +13,10 @@ import { drainJobs } from "@/lib/jobs/worker";
 import { requestPreparation } from "@/lib/previews/preparation";
 import { BUILD_PREVIEW, PREPARE_PREVIEW, type PreviewPreparation, findPreparation, preparationPackages, preparationRefusal, startPreview } from "@/lib/previews/records";
 import type { RefRequest } from "@/lib/previews/refs";
-import { currentVersion, queueProfile, versionsOf } from "@/lib/profiling/versions";
-import { acquisitionConfig, registerLocalSource } from "../support/acquisition";
-import { createTestDb } from "../support/db";
-import { type BareRepo, GitFixture, type Repo, git } from "../support/git-fixture";
+import { currentProfile } from "@/lib/profiling/current";
+import { queueProfile, versionsOf } from "@/lib/profiling/versions";
+import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { type BareRepo, type Repo, git } from "../support/git-fixture";
 import { FEDERATED_WORKSPACE, NEXT_APP, NPM_WORKSPACE, SCALA_SERVICE, type Tree, VITE_REACT_APP, collidingCommits, offlineViteLibrary } from "../support/preview-trees";
 
 /*
@@ -31,32 +30,19 @@ import { FEDERATED_WORKSPACE, NEXT_APP, NPM_WORKSPACE, SCALA_SERVICE, type Tree,
 const NODE = { "20.18.1": "/opt/node-20/bin", "22.11.0": "/opt/node-22/bin" };
 
 describe("preview preparation", () => {
-  let fixture: GitFixture;
-  let base: FabricateConfig;
+  const world = useAcquisitionWorld("preview-preparation");
   let config: FabricateConfig;
-  let db: Db;
-
-  beforeEach(() => {
-    fixture = GitFixture.create("preview-preparation");
-    base = acquisitionConfig(fixture);
-    db = createTestDb();
-  });
-
-  afterEach(() => {
-    fixture.cleanup();
-    fs.rmSync(base.repositoryStorage, { recursive: true, force: true });
-  });
 
   const settings = (source: RepositorySource, previews: Partial<FabricateConfig["settings"]["previews"]> = {}) =>
-    withOverrides(base, { previews: { enabled: true, trustedSources: [source.cloneUrl], nodeVersions: NODE, ...previews } });
+    withOverrides(world.config, { previews: { enabled: true, trustedSources: [source.cloneUrl], nodeVersions: NODE, ...previews } });
 
   /** A remote holding +tree+ on main, registered and enrolled. */
   function repository(tree: Tree, name = "orders"): { work: Repo; remote: BareRepo; source: RepositorySource; commit: string } {
-    const work = fixture.repo(`work/${name}`);
+    const work = world.fixture.repo(`work/${name}`);
     for (const [file, content] of Object.entries(tree)) work.write(file, content);
     const commit = work.commit("initial");
-    const remote = fixture.bare(`remotes/${name}.git`, { from: work });
-    const source = registerLocalSource(db, base, name, remote.path);
+    const remote = world.fixture.bare(`remotes/${name}.git`, { from: work });
+    const source = registerLocalSource(world.db, world.config, name, remote.path);
     config = settings(source);
     return { work, remote, source, commit };
   }
@@ -72,32 +58,32 @@ describe("preview preparation", () => {
     return commit;
   }
 
-  const request = (source: RepositorySource, ref: RefRequest = { kind: "ref", name: null }) => requestPreparation(db, source.publicId, ref, { config });
+  const request = (source: RepositorySource, ref: RefRequest = { kind: "ref", name: null }) => requestPreparation(world.db, source.publicId, ref, { config });
   /** Runs every queued preparation job through the worker's registered handler. */
   async function runPreparations(): Promise<void> {
-    const handler = jobHandlers(db, config)[PREPARE_PREVIEW]!;
-    for (const job of db.select().from(jobs).where(and(eq(jobs.kind, PREPARE_PREVIEW), eq(jobs.state, "queued"))).all()) {
+    const handler = jobHandlers(world.db, config)[PREPARE_PREVIEW]!;
+    for (const job of world.db.select().from(jobs).where(and(eq(jobs.kind, PREPARE_PREVIEW), eq(jobs.state, "queued"))).all()) {
       await handler(jobPayload(job), { job, signal: new AbortController().signal });
-      db.update(jobs).set({ state: "succeeded", finishedAt: new Date(), updatedAt: new Date() }).where(eq(jobs.id, job.id)).run();
+      world.db.update(jobs).set({ state: "succeeded", finishedAt: new Date(), updatedAt: new Date() }).where(eq(jobs.id, job.id)).run();
     }
   }
   const prepared = async (source: RepositorySource, ref?: RefRequest): Promise<PreviewPreparation> => {
     const preparation = await request(source, ref);
     await runPreparations();
-    return findPreparation(db, preparation.publicId)!;
+    return findPreparation(world.db, preparation.publicId)!;
   };
-  const builds = () => db.select().from(previewBuilds).all();
-  const buildJobs = () => db.select().from(jobs).where(eq(jobs.kind, BUILD_PREVIEW)).all();
+  const builds = () => world.db.select().from(previewBuilds).all();
+  const buildJobs = () => world.db.select().from(jobs).where(eq(jobs.kind, BUILD_PREVIEW)).all();
   const counts = () => ({
-    versions: db.select().from(profileVersions).all().length,
-    profiles: db.select().from(repositoryProfiles).all().length,
-    assessments: db.$client.prepare("select count(*) as n from assessments").get(),
-    snapshots: db.$client.prepare("select count(*) as n from source_snapshots").get(),
+    versions: world.db.select().from(profileVersions).all().length,
+    profiles: world.db.select().from(repositoryProfiles).all().length,
+    assessments: world.db.$client.prepare("select count(*) as n from assessments").get(),
+    snapshots: world.db.$client.prepare("select count(*) as n from source_snapshots").get(),
   });
   /** Profiles +source+ as the background profiling does: version 1 of its default branch. */
   async function profile(source: RepositorySource): Promise<void> {
-    queueProfile(db, source, "added", { config });
-    await drainJobs(db, jobHandlers(db, config));
+    queueProfile(world.db, source, "added", { config });
+    await drainJobs(world.db, jobHandlers(world.db, config));
   }
 
   describe("profiles", () => {
@@ -111,7 +97,7 @@ describe("preview preparation", () => {
       const preparation = await request(source, { kind: "ref", name: "feature/next" });
       expect(preparation).toMatchObject({ state: "profiling", commitSha: next, refName: "refs/heads/feature/next", refKind: "branch" });
       await runPreparations();
-      const decided = findPreparation(db, preparation.publicId)!;
+      const decided = findPreparation(world.db, preparation.publicId)!;
 
       // Decided from this commit's own profile, which is kept with the preparation.
       expect(decided).toMatchObject({ state: "refused", repositoryProfileId: null });
@@ -120,7 +106,7 @@ describe("preview preparation", () => {
       expect(preparationRefusal(decided)!.conditions.find((condition) => condition.condition === "framework")!.reason).toMatch(/^Next\.js renders on a server/);
       // No profile version, Profile, Run, or snapshot was added, and none was changed.
       expect(counts()).toEqual(before);
-      expect(versionsOf(db, source.id).map((version) => [version.version, version.commit])).toEqual([[1, currentVersion(db, source.id)!.commit]]);
+      expect(versionsOf(world.db, source.id).map((version) => [version.version, version.commit])).toEqual([[1, currentProfile(world.db, source.id)!.commit]]);
       expect(builds()).toEqual([]);
     });
 
@@ -128,12 +114,12 @@ describe("preview preparation", () => {
       const { source, commit } = repository(VITE_REACT_APP);
       await profile(source);
       const before = counts();
-      const version = currentVersion(db, source.id)!;
-      expect(version.commit).toBe(commit);
+      const current = currentProfile(world.db, source.id)!;
+      expect(current.commit).toBe(commit);
 
       const decided = await prepared(source);
 
-      const stored = db.select().from(repositoryProfiles).where(eq(repositoryProfiles.id, version.profile!.id)).get()!;
+      const stored = world.db.select().from(repositoryProfiles).where(eq(repositoryProfiles.id, current.profile.id)).get()!;
       expect(decided).toMatchObject({ state: "ready", commitSha: commit, repositoryProfileId: stored.id, profileDocument: null, profileDigest: stored.digest });
       expect(counts()).toEqual(before);
       // Exactly one package qualifies, so its build is queued without asking.
@@ -181,7 +167,7 @@ describe("preview preparation", () => {
       expect(preparationPackages(decided).filter((verdict) => verdict.qualifies).map((verdict) => verdict.directory)).toEqual(["packages/web"]);
       const [preview] = builds();
       expect(preview).toMatchObject({ commitSha: commit, packageDir: "packages/web", attemptState: "queued" });
-      expect(JSON.parse(preview!.decidingFacts).plan).toMatchObject({ installRoot: ".", packageManager: { name: "npm", lockfile: "package-lock.json" }, buildTool: "vite", buildScript: "vite build" });
+      expect(preview!.decidingFacts.plan).toMatchObject({ installRoot: ".", packageManager: { name: "npm", lockfile: "package-lock.json" }, buildTool: "vite", buildScript: "vite build" });
     });
 
     it("queues nothing until a package is chosen among several, then builds the pinned commit after the branch moves", async () => {
@@ -198,9 +184,9 @@ describe("preview preparation", () => {
       work.git("push", "--quiet", remote.path, "main");
       expect(git(remote.path, ["rev-parse", "refs/heads/main"]).trim()).toBe(moved);
 
-      const { preview } = startPreview(db, decided.publicId, "apps/admin");
+      const { preview } = startPreview(world.db, decided.publicId, "apps/admin");
       expect(preview).toMatchObject({ commitSha: commit, packageDir: "apps/admin", refName: "refs/heads/main" });
-      expect(JSON.parse(preview.decidingFacts).plan).toMatchObject({ layout: "module_federation", buildTool: "rspack" });
+      expect(preview.decidingFacts.plan).toMatchObject({ layout: "module_federation", buildTool: "rspack" });
       expect(buildJobs().map(jobPayload)).toEqual([{ preview: preview.publicId, attempt: 1 }]);
       expect(git(mirrorPath(config.repositoryStorage, source.publicId), ["rev-parse", `refs/fabricate/previews/${commit}`]).trim()).toBe(commit);
     });
@@ -246,9 +232,9 @@ describe("preview preparation", () => {
 
   describe("access", () => {
     const nothingStarted = (source: RepositorySource) => {
-      expect(db.select().from(previewPreparations).all()).toEqual([]);
-      expect(db.select().from(jobs).where(eq(jobs.kind, PREPARE_PREVIEW)).all()).toEqual([]);
-      expect(fs.existsSync(mirrorPath(base.repositoryStorage, source.publicId))).toBe(false);
+      expect(world.db.select().from(previewPreparations).all()).toEqual([]);
+      expect(world.db.select().from(jobs).where(eq(jobs.kind, PREPARE_PREVIEW)).all()).toEqual([]);
+      expect(fs.existsSync(mirrorPath(world.config.repositoryStorage, source.publicId))).toBe(false);
     };
 
     it("does nothing while previews are off", async () => {
@@ -271,13 +257,13 @@ describe("preview preparation", () => {
       const first = await request(source);
       config = settings(source, { enabled: false });
       await runPreparations();
-      expect(findPreparation(db, first.publicId)).toMatchObject({ state: "failed", failure: "Previews were turned off before the commit was prepared" });
+      expect(findPreparation(world.db, first.publicId)).toMatchObject({ state: "failed", failure: "Previews were turned off before the commit was prepared" });
 
       config = enrolled;
       await request(source);
       config = settings(source, { trustedSources: [] });
       await runPreparations();
-      expect(findPreparation(db, first.publicId)).toMatchObject({ state: "failed", failure: "orders is not enrolled for previews" });
+      expect(findPreparation(world.db, first.publicId)).toMatchObject({ state: "failed", failure: "orders is not enrolled for previews" });
 
       config = enrolled;
       expect(await prepared(source)).toMatchObject({ publicId: first.publicId, state: "ready" });
@@ -290,8 +276,8 @@ describe("preview preparation", () => {
       git(remote.path, ["update-ref", "refs/heads/right", right]);
 
       await expect(request(source, { kind: "commit", sha: left.slice(0, 4) })).rejects.toMatchObject({ name: "RefResolutionError", code: "ambiguous" });
-      expect(db.select().from(previewPreparations).all()).toEqual([]);
-      expect(db.select().from(jobs).where(eq(jobs.kind, PREPARE_PREVIEW)).all()).toEqual([]);
+      expect(world.db.select().from(previewPreparations).all()).toEqual([]);
+      expect(world.db.select().from(jobs).where(eq(jobs.kind, PREPARE_PREVIEW)).all()).toEqual([]);
     });
   });
 });

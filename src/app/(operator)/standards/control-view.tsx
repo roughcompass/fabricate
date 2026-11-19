@@ -1,10 +1,11 @@
-import type { JsonObject, JsonValue } from "@repo-facts/contract";
+import type { JsonValue } from "@repo-facts/contract";
 import { DescriptionList } from "@/components/ui/description-list";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Severity } from "@/components/ui/status";
 import { Tag } from "@/components/ui/tag";
 import { COLLECTION_BY_ID, SELECTOR_BY_ID } from "@/lib/standards/registry";
 import styles from "./control-view.module.css";
+import { asObject } from "@/lib/json";
 
 /**
  * A complete, read-only rendering of Controls: every field, and every
@@ -29,7 +30,7 @@ export function ControlList({ controls }: { controls: JsonValue }) {
 }
 
 function ControlDefinition({ control }: { control: JsonValue }) {
-  const value = record(control);
+  const value = asObject(control);
   const key = String(value.key ?? "");
   return (
     <article aria-label={`Control ${key}`} className={styles.control}>
@@ -56,7 +57,7 @@ export function ExpressionView({ expression }: { expression: JsonValue }) {
 }
 
 function describe(expression: JsonValue): React.ReactNode {
-  const node = record(expression);
+  const node = asObject(expression);
   const identifier = (id: JsonValue | undefined) => <code className={styles.id}>{String(id ?? "")}</code>;
   const field = () => {
     const selector = typeof node.selector === "string" ? SELECTOR_BY_ID.get(node.selector) : undefined;
@@ -163,6 +164,3 @@ function describe(expression: JsonValue): React.ReactNode {
   }
 }
 
-function record(value: JsonValue | undefined): JsonObject {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-}

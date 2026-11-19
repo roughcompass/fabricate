@@ -4,93 +4,64 @@ import { redirect } from "next/navigation";
 import { launchAssessment } from "@/lib/assessments/launcher";
 import { ScopeResolutionError } from "@/lib/assessments/scope-resolver";
 import { getDb } from "@/lib/db/client";
-import { NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
-import { isPublicId } from "@/lib/db/ids";
-import { SELECTION_MODES, type SelectionMode } from "@/lib/db/schema";
+import { ValidationError } from "@/lib/db/errors";
+import { requirePublicId } from "@/lib/db/ids";
+import type { SelectionMode } from "@/lib/db/schema";
 import * as records from "@/lib/initiatives/initiative-records";
-import { errorsFrom, integer, text, texts } from "@/lib/web/form-data";
-import type { InitiativeFormState, InitiativeFormValues, LaunchState, ReleaseSelectionState } from "./form-state";
+import { lockVersion, submitForm } from "@/lib/web/actions";
+import { text, texts } from "@/lib/web/form-data";
+import type { InitiativeFormState, InitiativeFormValues, LaunchState } from "./form-state";
+import { withQuery } from "@/lib/web/query";
+import { routes } from "@/lib/web/routes";
 
 function readForm(formData: FormData): InitiativeFormValues {
   const mode = text(formData, "selectionMode", 20);
   return {
     name: text(formData, "name", 500),
     objective: text(formData, "objective", 4_000),
-    selectionMode: (SELECTION_MODES as readonly string[]).includes(mode) ? (mode as SelectionMode) : ("" as SelectionMode),
+    selectionMode: (records.SELECTION_MODES as readonly string[]).includes(mode) ? (mode as SelectionMode) : ("" as SelectionMode),
     sourcePublicIds: texts(formData, "sourcePublicIds", 40),
     standardReleasePublicIds: texts(formData, "standardReleasePublicIds", 40),
   };
 }
 
-function assertInitiativeId(publicId: string): void {
-  if (!isPublicId(publicId, "ini")) throw new NotFoundError("Unknown initiative");
-}
+const assessmentId = (publicId: string) => requirePublicId(publicId, "ini", "initiative");
 
 export async function createInitiative(_previous: InitiativeFormState, formData: FormData): Promise<InitiativeFormState> {
   const values = readForm(formData);
-  let publicId: string;
-  try {
-    publicId = records.createInitiative(getDb(), values).publicId;
-  } catch (error) {
-    if (error instanceof ValidationError) return { values, errors: errorsFrom(error) };
-    throw error;
-  }
-  redirect(`/assessments/${publicId}?notice=created`);
+  return submitForm(values, () => routes.assessment(records.createInitiative(getDb(), values).publicId, { notice: "created" }));
 }
 
-export async function updateInitiative(publicId: string, previous: InitiativeFormState, formData: FormData): Promise<InitiativeFormState> {
-  assertInitiativeId(publicId);
+export async function updateInitiative(publicId: string, _previous: InitiativeFormState, formData: FormData): Promise<InitiativeFormState> {
+  assessmentId(publicId);
   const values = readForm(formData);
-  const lockVersion = integer(formData, "lockVersion");
-  try {
-    if (lockVersion === null) throw new StaleRecordError("Missing lock version");
-    records.updateInitiative(getDb(), publicId, lockVersion, values);
-  } catch (error) {
-    if (error instanceof ValidationError) return { ...previous, values, errors: errorsFrom(error) };
-    if (error instanceof StaleRecordError) {
-      return { ...previous, values, errors: { base: ["This initiative was changed by someone else. Reload the page to review the current values, then try again."] } };
-    }
-    throw error;
-  }
-  redirect(`/assessments/${publicId}?notice=updated`);
-}
-
-/** Saves only the Releases an Assessment selects: how the Salt Patterns initiative is edited. */
-export async function updateReleaseSelections(publicId: string, previous: ReleaseSelectionState, formData: FormData): Promise<ReleaseSelectionState> {
-  assertInitiativeId(publicId);
-  const values = { standardReleasePublicIds: texts(formData, "standardReleasePublicIds", 40) };
-  const lockVersion = integer(formData, "lockVersion");
-  try {
-    if (lockVersion === null) throw new StaleRecordError("Missing lock version");
-    records.updateReleaseSelections(getDb(), publicId, lockVersion, values.standardReleasePublicIds);
-  } catch (error) {
-    if (error instanceof ValidationError) return { ...previous, values, errors: errorsFrom(error) };
-    if (error instanceof StaleRecordError) {
-      return { ...previous, values, errors: { base: ["This Assessment was changed by someone else. Reload the page to review the current Releases, then try again."] } };
-    }
-    throw error;
-  }
-  redirect(`/assessments/${publicId}?notice=updated`);
+  return submitForm(
+    values,
+    () => {
+      records.updateInitiative(getDb(), publicId, lockVersion(formData), values);
+      return routes.assessment(publicId, { notice: "updated" });
+    },
+    "This initiative was changed by someone else. Reload the page to review the current values, then try again.",
+  );
 }
 
 export async function deleteInitiative(formData: FormData): Promise<void> {
-  const publicId = text(formData, "publicId", 40);
-  assertInitiativeId(publicId);
+  const publicId = assessmentId(text(formData, "publicId", 40));
   try {
     records.deleteInitiative(getDb(), publicId);
   } catch (error) {
-    if (error instanceof ValidationError) redirect(`/assessments/${publicId}?notice=retained`);
+    if (error instanceof ValidationError) redirect(routes.assessment(publicId, { notice: "retained" }));
     throw error;
   }
-  redirect("/assessments?notice=deleted");
+  redirect(withQuery(routes.assessments, { notice: "deleted" }));
 }
 
 export async function startAssessment(initiativePublicId: string, _previous: LaunchState, formData: FormData): Promise<LaunchState> {
-  assertInitiativeId(initiativePublicId);
+  assessmentId(initiativePublicId);
   let location: string;
   try {
     const result = launchAssessment(getDb(), initiativePublicId, text(formData, "launchToken", 40));
-    location = `/runs/${result.assessment.publicId}?notice=${result.duplicate ? "already-started" : "started"}`;
+    location = routes.run(result.assessment.publicId, { notice: result.duplicate ? "already-started" : "started" });
   } catch (error) {
     if (error instanceof ScopeResolutionError) return { problems: error.problems.map((problem) => problem.message) };
     throw error;

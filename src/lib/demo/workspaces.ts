@@ -76,7 +76,9 @@ export function maybePurgeIdleWorkspaces(db: Executor, now = new Date()): number
   return purgeIdleWorkspaces(db, now);
 }
 
-/** Forgets when the purge last ran (tests only). */
+/** Forgets when the purge last ran (tests only).
+ * @public Tests use it until `add-applications` removes the demo.
+ */
 export function resetPurgeClock(): void {
   purgeClock.__fabricateDemoPurgeAt = undefined;
 }

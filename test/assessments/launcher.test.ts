@@ -1,12 +1,12 @@
 import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import { configurationOf, targetsOf } from "@/lib/assessments/assessment-records";
+import { targetsOf } from "@/lib/assessments/assessment-records";
 import { COORDINATE_ASSESSMENT, launchAssessment } from "@/lib/assessments/launcher";
 import { ScopeResolutionError } from "@/lib/assessments/scope-resolver";
 import type { Db } from "@/lib/db/client";
 import { assessmentTargets, assessments, jobs } from "@/lib/db/schema";
 import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
-import { sha256 } from "@repo-facts/contract";
+import { parseCanonical, sha256 } from "@repo-facts/contract";
 import { getConfig } from "@/lib/config";
 import { selectedReleases } from "@/lib/initiatives/initiative-records";
 import { jobPayload } from "@/lib/jobs/queue";
@@ -42,8 +42,8 @@ describe("assessment launch", () => {
     const bundle = detectorConfiguration(getConfig().analysis);
     expect(assessment).toMatchObject({ state: "queued", detectorRelease: DETECTOR_RELEASE, configurationDigest: bundle.digest });
     expect(sha256(assessment.configuration)).toBe(bundle.digest);
-    expect(configurationOf(assessment)).toEqual(bundle.configuration);
-    expect(configurationOf(assessment)).toMatchObject({ schema: "repo_facts.detector_configuration", release: DETECTOR_RELEASE });
+    expect(parseCanonical(assessment.configuration)).toEqual(bundle.configuration);
+    expect(parseCanonical(assessment.configuration)).toMatchObject({ schema: "repo_facts.detector_configuration", release: DETECTOR_RELEASE });
 
     const [job] = db.select().from(jobs).all();
     expect(job).toMatchObject({ kind: COORDINATE_ASSESSMENT, state: "queued" });

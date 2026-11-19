@@ -3,8 +3,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { Primary, Table, Td, Th } from "@/components/ui/table";
-import type { GroupLink, LevelGroup, LevelRelationship, Membership, SharedEntry } from "@/lib/relationships/levels";
-import styles from "./relationships.module.css";
+import type { LevelGroup, LevelRelationship, SharedEntry } from "@/lib/relationships/levels";
+import { formatNumber } from "@/components/ui/count";
 
 /** The groups of a level, each with its repositories and the relationships folded inside it. */
 export function GroupTable({ title, description, label, groups, empty }: { title: string; description?: string; label: string; groups: readonly LevelGroup[]; empty: string }) {
@@ -30,10 +30,10 @@ export function GroupTable({ title, description, label, groups, empty }: { title
                   </Primary>
                 </Td>
                 <Td label="Repositories" align="numeric">
-                  {group.repositories.toLocaleString("en-US")}
+                  {formatNumber(group.repositories)}
                 </Td>
                 <Td label="Relationships inside" align="numeric">
-                  {group.internal.toLocaleString("en-US")}
+                  {formatNumber(group.internal)}
                 </Td>
               </tr>
             ))}
@@ -71,7 +71,7 @@ export function GroupRelationships({ relationships, description }: { relationshi
                 <Link href={relationship.to.href}>{relationship.to.label}</Link>
               </Td>
               <Td label="Repository relationships" align="numeric">
-                {relationship.repositoryRelationships.toLocaleString("en-US")}
+                {formatNumber(relationship.repositoryRelationships)}
               </Td>
             </tr>
           ))}
@@ -106,54 +106,12 @@ export function SharedList({ entries }: { entries: readonly SharedEntry[] }) {
               </Td>
               <Td label="Kind">{entry.kind === "library" ? "Library" : "Service"}</Td>
               <Td label="Dependents here" align="numeric">
-                {entry.dependents.toLocaleString("en-US")}
+                {formatNumber(entry.dependents)}
               </Td>
             </tr>
           ))}
         </Table>
       </Panel>
     </Section>
-  );
-}
-
-/** A portal's claims beside what its host loads. */
-export function MembershipLists({ membership, hostName }: { membership: Membership; hostName: string | null }) {
-  if (!membership.comparable) {
-    return (
-      <Section title="Claims and loading" description="Applications claimed in this portal compared with what its host loads.">
-        <Panel>
-          <p className={styles.muted}>{hostName ? `Its host, ${hostName}, isn't in this Run, so its loading can't be compared with its claims.` : "No repository is claimed as this portal's host, so its loading can't be compared with its claims."}</p>
-        </Panel>
-      </Section>
-    );
-  }
-  return (
-    <Section title="Claims and loading" description="Applications claimed in this portal compared with what its host loads.">
-      <Panel>
-        <div className={styles.lists}>
-          <LinkList title="Claimed but not loaded" empty="The host loads every application claimed here." items={membership.claimedNotLoaded} />
-          <LinkList title="Loaded but not claimed" empty="Every repository the host loads is claimed here." items={membership.loadedNotClaimed.map((item) => ({ key: item.nodeId, label: item.label, href: item.href }))} />
-        </div>
-      </Panel>
-    </Section>
-  );
-}
-
-function LinkList({ title, empty, items }: { title: string; empty: string; items: readonly GroupLink[] }) {
-  return (
-    <section className={styles.list} aria-label={title}>
-      <h3 className={styles.listTitle}>{`${title} (${items.length.toLocaleString("en-US")})`}</h3>
-      {items.length === 0 ? (
-        <p className={styles.muted}>{empty}</p>
-      ) : (
-        <ul className={styles.rows}>
-          {items.map((item) => (
-            <li key={item.key}>
-              <Link href={item.href}>{item.label}</Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }

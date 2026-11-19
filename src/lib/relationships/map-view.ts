@@ -3,18 +3,18 @@ import type { JsonObject } from "@repo-facts/contract";
 import type { Assessment } from "@/lib/assessments/assessment-records";
 import type { Executor } from "@/lib/db/client";
 import { assessmentTargets, evidenceIndex, graphEdgeCandidates, graphEdges, graphNodes, relationshipMaps, repositoryProfiles, type EdgeKind } from "@/lib/db/schema";
-import { type RepositoryOwnership, ownershipForAssessment, portalOwnership } from "@/lib/ownership/read";
-import { applicationLabel as labelOf } from "@/lib/ownership/records";
 import { type MissingTarget, missingTargets } from "@/lib/projection/queries";
 import type { DiagramEdge } from "./diagram";
 import type { RelationshipMap } from "./map-records";
-import { type Placements, type RuntimeLink, compare, placeRepositories } from "./placement";
-import type { Labels, RepositoryRelationship } from "./rollup";
+import { type RuntimeLink, type RuntimeSystem, compare, runtimeSystems } from "./placement";
+import type { RepositoryRelationship } from "./rollup";
+import { routes } from "@/lib/web/routes";
+import { chunked } from "@/lib/db/chunked";
 
 /*
  * Everything a Relationship Map view needs, read from the assessment
- * projection and current ownership. No view reads the map document: a map
- * of 500 repositories is a handful of indexed queries.
+ * projection. No view reads the map document: a map of 500 repositories is a
+ * handful of indexed queries.
  */
 
 export interface ViewRepository {
@@ -25,32 +25,8 @@ export interface ViewRepository {
   /** The target's Profile, when one exists. */
   profile: string | null;
   sourceId: number;
-  ownership: RepositoryOwnership | undefined;
-  /** The application's public ID, or null when the repository has no claim. */
-  application: string | null;
-  lineOfBusiness: string | null;
-  portals: string[];
-}
-
-export interface ViewApplication {
-  id: string;
-  sealId: string | null;
-  name: string | null;
-  lineOfBusiness: string | null;
-}
-
-interface ViewPortal {
-  id: string;
-  label: string;
-  /** The approved ontology concept, or null while the portal is pending review. */
-  conceptKey: string | null;
-  /** Its owner's Line of Business. */
-  lineOfBusiness: string | null;
-  owner: ViewApplication | null;
-  /** The host repository's node, when the host is claimed and in this Run. */
-  host: string | null;
-  /** The host repository's name when one is claimed, in this Run or not. */
-  hostName: string | null;
+  /** The ID of the runtime system the repository belongs to. */
+  system: string;
 }
 
 export interface MapView {
@@ -58,20 +34,15 @@ export interface MapView {
   map: RelationshipMap;
   base: string;
   repositories: Map<string, ViewRepository>;
-  applications: Map<string, ViewApplication>;
-  portals: Map<string, ViewPortal>;
-  linesOfBusiness: Map<string, string>;
-  placements: Placements;
-  labels: Labels;
-  /** The latest time any ownership in effect was stated, or null when nothing is claimed. */
-  asOf: Date | null;
+  /** The Run's runtime systems by ID, each repository in exactly one. */
+  systems: Map<string, RuntimeSystem>;
   missing: MissingTarget[];
 }
 
 /** The Relationship Map address focused on a target's repository, or null while the Run has no map. */
 export function repositoryFocusHref(db: Executor, assessment: Pick<Assessment, "publicId">, targetId: number): string | null {
   const node = db.select({ nodeId: graphNodes.nodeId }).from(graphNodes).where(and(eq(graphNodes.assessmentTargetId, targetId), eq(graphNodes.kind, "repository"))).get();
-  return node ? `/runs/${assessment.publicId}/map?${new URLSearchParams({ focus: node.nodeId })}` : null;
+  return node ? routes.runMap(assessment.publicId, { focus: node.nodeId }) : null;
 }
 
 /** The map record of an Assessment, without its document. */
@@ -84,80 +55,28 @@ export function loadMapView(db: Executor, assessment: Assessment): MapView | und
   if (!map) return undefined;
 
   const nodes = db
-    .select({ nodeId: graphNodes.nodeId, label: graphNodes.label, sourceId: graphNodes.repositorySourceId, targetId: graphNodes.assessmentTargetId, target: assessmentTargets.publicId, profile: repositoryProfiles.publicId })
+    .select({ nodeId: graphNodes.nodeId, label: graphNodes.label, sourceId: graphNodes.repositorySourceId, target: assessmentTargets.publicId, profile: repositoryProfiles.publicId })
     .from(graphNodes)
     .innerJoin(assessmentTargets, eq(assessmentTargets.id, graphNodes.assessmentTargetId))
     .leftJoin(repositoryProfiles, eq(repositoryProfiles.assessmentTargetId, graphNodes.assessmentTargetId))
     .where(and(eq(graphNodes.mapId, map.id), eq(graphNodes.kind, "repository")))
     .orderBy(asc(graphNodes.label))
     .all();
-  const { byTarget, asOf } = ownershipForAssessment(db, assessment.id);
-
-  const applications = new Map<string, ViewApplication>();
-  const linesOfBusiness = new Map<string, string>();
-  const portalIds = new Set<number>();
-  const repositories = new Map<string, ViewRepository>();
-  for (const node of nodes) {
-    const ownership = byTarget.get(node.targetId!);
-    const application = ownership?.application.value ?? null;
-    const lineOfBusiness = ownership?.lineOfBusiness.value ?? null;
-    if (application) applications.set(application.publicId, { id: application.publicId, sealId: application.sealId, name: application.name, lineOfBusiness: lineOfBusiness?.publicId ?? null });
-    if (lineOfBusiness) linesOfBusiness.set(lineOfBusiness.publicId, lineOfBusiness.label);
-    const portals = (ownership?.portals ?? []).filter((item) => !item.flagged).map((item) => item.portal);
-    for (const portal of [...portals, ...(ownership?.hosts ?? [])]) portalIds.add(portal.id);
-    repositories.set(node.nodeId, {
-      nodeId: node.nodeId,
-      label: node.label,
-      target: node.target,
-      profile: node.profile,
-      sourceId: node.sourceId!,
-      ownership,
-      application: application?.publicId ?? null,
-      lineOfBusiness: lineOfBusiness?.publicId ?? null,
-      portals: portals.map((portal) => portal.publicId),
-    });
-  }
-
-  const nodeOfSource = new Map([...repositories.values()].map((repository) => [repository.sourceId, repository.nodeId]));
-  const portals = new Map<string, ViewPortal>();
-  for (const ownership of portalOwnership(db, [...portalIds]).values()) {
-    const owner = ownership.owner.value;
-    const lineOfBusiness = ownership.lineOfBusiness.value;
-    if (lineOfBusiness) linesOfBusiness.set(lineOfBusiness.publicId, lineOfBusiness.label);
-    portals.set(ownership.portal.publicId, {
-      id: ownership.portal.publicId,
-      label: ownership.portal.label,
-      conceptKey: ownership.portal.conceptKey,
-      lineOfBusiness: lineOfBusiness?.publicId ?? null,
-      owner: owner ? { id: owner.publicId, sealId: owner.sealId, name: owner.name, lineOfBusiness: lineOfBusiness?.publicId ?? null } : null,
-      host: ownership.host.value ? (nodeOfSource.get(ownership.host.value.id) ?? null) : null,
-      hostName: ownership.host.value?.name ?? null,
-    });
-  }
-
-  const placements = placeRepositories(
-    [...repositories.values()].map((repository) => ({ nodeId: repository.nodeId, label: repository.label, application: repository.application, lineOfBusiness: repository.lineOfBusiness, portals: repository.portals })),
-    [...portals.values()].map((portal) => ({ id: portal.id, lineOfBusiness: portal.lineOfBusiness, host: portal.host })),
-    runtimeLinks(db, map.id, repositories),
+  const linked = new Map(nodes.map((node) => [node.nodeId, node]));
+  const systems = runtimeSystems(
+    nodes.map((node) => ({ nodeId: node.nodeId, label: node.label })),
+    runtimeLinks(db, map.id, linked),
   );
-  const systems = new Map(placements.systems.map((system) => [system.id, system.name]));
-  const labels: Labels = {
-    lineOfBusiness: (id) => (id === null ? "No Line of Business" : (linesOfBusiness.get(id) ?? id)),
-    portal: (id) => portals.get(id)?.label ?? id,
-    application: (id) => applicationLabel(applications.get(id)) ?? id,
-    system: (id) => systems.get(id) ?? id,
-  };
+  const systemOf = new Map(systems.flatMap((system) => system.members.map((member) => [member, system.id] as const)));
+  const repositories = new Map<string, ViewRepository>(
+    nodes.map((node) => [node.nodeId, { nodeId: node.nodeId, label: node.label, target: node.target, profile: node.profile, sourceId: node.sourceId!, system: systemOf.get(node.nodeId)! }]),
+  );
 
-  return { assessment, map, base: `/runs/${assessment.publicId}/map`, repositories, applications, portals, linesOfBusiness, placements, labels, asOf, missing: missingTargets(db, assessment.id) };
+  return { assessment, map, base: routes.runMap(assessment.publicId), repositories, systems: new Map(systems.map((system) => [system.id, system])), missing: missingTargets(db, assessment.id) };
 }
 
-/** The application's name with its SEAL ID beside it, as metadata. */
-export function applicationLabel(application: Pick<ViewApplication, "sealId" | "name"> | undefined): string | undefined {
-  return application ? labelOf(application) : undefined;
-}
-
-/** Composition, iframe, and runtime-contract links between repositories, which tie unclaimed ones into runtime systems. */
-function runtimeLinks(db: Executor, mapId: number, repositories: ReadonlyMap<string, ViewRepository>): RuntimeLink[] {
+/** Composition, iframe, and runtime-contract links between repositories, which tie them into runtime systems. */
+function runtimeLinks(db: Executor, mapId: number, repositories: ReadonlyMap<string, unknown>): RuntimeLink[] {
   return db
     .select({ from: graphEdges.fromNode, to: graphEdges.toNode, type: graphEdges.type })
     .from(graphEdges)
@@ -220,9 +139,9 @@ function withCandidates(db: Executor, view: MapView, rows: readonly EdgeRow[]): 
     rule: row.rule,
     basis: row.basis,
     reason: row.reason,
-    evidence: JSON.parse(row.evidence) as string[],
+    evidence: row.evidence,
     kind: (row.kind ?? "architecture") as EdgeKind,
-    referenceIdentifier: JSON.parse(row.referenceIdentifier ?? "{}") as Record<string, string>,
+    referenceIdentifier: row.referenceIdentifier ?? {},
     candidates: (candidates.get(row.edgeId) ?? []).sort(compare),
   }));
 }
@@ -256,8 +175,3 @@ export function evidenceRecords(db: Executor, assessmentId: number, ids: readonl
   return records as JsonObject;
 }
 
-function chunked<T>(values: readonly T[], size = 500): T[][] {
-  const chunks: T[][] = [];
-  for (let start = 0; start < values.length; start += size) chunks.push(values.slice(start, start + size));
-  return chunks;
-}

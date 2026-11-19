@@ -1,7 +1,8 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ActionButton, Button, ButtonLink, buttonProps } from "@/components/ui/button";
+import { ActionButton, Button, ButtonLink } from "@/components/ui/button";
+import { buttonProps } from "@/components/ui/button-content";
 import { SubmitButton } from "@/components/ui/submit-button";
 
 // operator-interface/design-system spec: each page's primary action uses the

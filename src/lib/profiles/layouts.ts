@@ -1,6 +1,6 @@
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { factText, formatValue } from "@/components/results/value";
-import { countLabel, formatBytes } from "@/components/ui/count";
+import { countLabel, formatBytes, formatNumber } from "@/components/ui/count";
 import { checkKind, ciSystem, dependencyKind, humanize, kindLabel, runtimeName } from "@/components/ui/status";
 import { isJsonObject } from "@/lib/json";
 import { COMPOSITION } from "./composition";
@@ -161,14 +161,13 @@ function detailText(entries: [string, JsonValue][]): string {
 // sites per scope (app, stories, tests); only the app scope counts toward a
 // Standard, so it leads and the other scopes follow as a note.
 
-const number = (value: number) => value.toLocaleString("en-US");
 const scopeOf = (fact: Fact, scope: string): JsonObject => {
   const value = field(fact, scope);
   return isJsonObject(value) ? value : {};
 };
 const count = (object: JsonObject, name: string): number => (typeof object[name] === "number" ? (object[name] as number) : 0);
 /** The non-zero counts as a phrase, each noun in its plural only when the count isn't one: "1 token · 12 raw values". */
-const nonzero = (parts: [value: number, label: string, plural?: string][]) => parts.filter(([value]) => value > 0).map(([value, label, plural]) => `${number(value)} ${value === 1 || !plural ? label : plural}`).join(" · ");
+const nonzero = (parts: [value: number, label: string, plural?: string][]) => parts.filter(([value]) => value > 0).map(([value, label, plural]) => `${formatNumber(value)} ${value === 1 || !plural ? label : plural}`).join(" · ");
 const keyParts = (fact: Fact) => fact.key.split(":");
 // A catalog id, such as `salt`, as a design system's name.
 const systemName = (id: string | undefined) => (id ? humanize(id) : "Design system");
@@ -266,9 +265,9 @@ const uiElements: Layout = {
       numeric: true,
       cell: (fact) => {
         const app = scopeOf(fact, "app");
-        if (keyParts(fact)[0] === "summary") return typeof app.elements === "number" ? { text: `${number(count(app, "design_system"))} of ${number(count(app, "elements"))}` } : null;
+        if (keyParts(fact)[0] === "summary") return typeof app.elements === "number" ? { text: `${formatNumber(count(app, "design_system"))} of ${formatNumber(count(app, "elements"))}` } : null;
         if (typeof app.definitions === "number") return { text: countLabel(count(app, "definitions"), "definition") };
-        return typeof app.sites === "number" ? { text: number(count(app, "sites")) } : null;
+        return typeof app.sites === "number" ? { text: formatNumber(count(app, "sites")) } : null;
       },
     },
     {
@@ -341,8 +340,8 @@ const apiContracts: Layout = {
       optional: true,
       cell: (fact) => {
         const operations = field(fact, "operations");
-        if (typeof operations === "number") return { text: number(operations) };
-        return Array.isArray(operations) ? { text: number(operations.length) } : null;
+        if (typeof operations === "number") return { text: formatNumber(operations) };
+        return Array.isArray(operations) ? { text: formatNumber(operations.length) } : null;
       },
     },
     {
@@ -371,7 +370,7 @@ const DECLARATION_KINDS: [name: string, label: string, plural?: string][] = [
 function styleDetail(fact: Fact): string | undefined {
   const app = scopeOf(fact, "app");
   const kind = keyParts(fact)[0];
-  if (kind === "summary") return typeof app.token_capable === "number" ? `${number(count(app, "tokenized"))} of ${number(count(app, "token_capable"))} token-capable declarations use a token or an alias` : undefined;
+  if (kind === "summary") return typeof app.token_capable === "number" ? `${formatNumber(count(app, "tokenized"))} of ${formatNumber(count(app, "token_capable"))} token-capable declarations use a token or an alias` : undefined;
   if (kind === "declarations") return nonzero(DECLARATION_KINDS.map(([name, label, plural]) => [count(app, name), label, plural])) || undefined;
   if (kind === "token-aliases") return `In ${countLabel(count(app, "declarations"), "declaration")}`;
   if (kind === "unknown-token") return "Unknown token";
@@ -406,9 +405,9 @@ const styleValues: Layout = {
         const app = scopeOf(fact, "app");
         const kind = keyParts(fact)[0];
         if (kind === "summary") return typeof app.token_share === "number" ? { text: `${app.token_share}%` } : typeof app.token_capable === "number" ? { text: "No share" } : null;
-        if (kind === "declarations") return { text: number(DECLARATION_KINDS.reduce((sum, [name]) => sum + count(app, name), 0)) };
-        if (kind === "token-aliases") return typeof app.aliases === "number" ? { text: number(count(app, "aliases")) } : null;
-        return typeof app.count === "number" ? { text: number(count(app, "count")) } : null;
+        if (kind === "declarations") return { text: formatNumber(DECLARATION_KINDS.reduce((sum, [name]) => sum + count(app, name), 0)) };
+        if (kind === "token-aliases") return typeof app.aliases === "number" ? { text: formatNumber(count(app, "aliases")) } : null;
+        return typeof app.count === "number" ? { text: formatNumber(count(app, "count")) } : null;
       },
     },
     {
@@ -434,7 +433,7 @@ const styleValues: Layout = {
 };
 
 const LAYOUTS: Record<string, Layout> = {
-  languages: layout(keyColumn("Language"), fieldColumn("Files", "files", { numeric: true, format: (files) => Number(files).toLocaleString("en-US") }), { label: "Size", numeric: true, cell: (fact) => (typeof field(fact, "bytes") === "number" ? { text: formatBytes(field(fact, "bytes") as number) } : null) }),
+  languages: layout(keyColumn("Language"), fieldColumn("Files", "files", { numeric: true, format: (files) => formatNumber(Number(files)) }), { label: "Size", numeric: true, cell: (fact) => (typeof field(fact, "bytes") === "number" ? { text: formatBytes(field(fact, "bytes") as number) } : null) }),
   submodules: layout(fieldColumn("Path", "path", { mono: true }), fieldColumn("Commit", "commit", { mono: true, format: (commit) => commit.slice(0, 12) })),
   package_identity: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Version", "version", { optional: true, mono: true, nowrap: true }), booleanColumn("Visibility", "private", "Private", "Public"), manifestColumn),
   packages_produced: layout(fieldColumn("Package", "name", { mono: true }), fieldColumn("Version", "version", { optional: true, mono: true, nowrap: true }), booleanColumn("Published", "published", "Published", "Not published"), manifestColumn),

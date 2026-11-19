@@ -3,7 +3,7 @@ import { assessmentTargets, assessments, sourceSnapshots } from "./assessments";
 import { initiativeTargets, initiatives, repositorySources } from "./catalog";
 import { evaluationReleases, evaluations, findings } from "./evaluations";
 import { relationshipMaps, repositoryProfiles } from "./results";
-import { initiativeStandardReleases, standardDrafts, standardReleases, standards } from "./standards";
+import { initiativeStandardReleases, standardReleases, standards } from "./standards";
 
 export const repositorySourceRelations = relations(repositorySources, ({ many }) => ({
   initiativeTargets: many(initiativeTargets),
@@ -42,14 +42,8 @@ export const sourceSnapshotRelations = relations(sourceSnapshots, ({ one }) => (
   repositorySource: one(repositorySources, { fields: [sourceSnapshots.repositorySourceId], references: [repositorySources.id] }),
 }));
 
-export const standardRelations = relations(standards, ({ one, many }) => ({
-  draft: one(standardDrafts),
+export const standardRelations = relations(standards, ({ many }) => ({
   releases: many(standardReleases),
-}));
-
-export const standardDraftRelations = relations(standardDrafts, ({ one }) => ({
-  standard: one(standards, { fields: [standardDrafts.standardId], references: [standards.id] }),
-  basedOnRelease: one(standardReleases, { fields: [standardDrafts.basedOnReleaseId], references: [standardReleases.id] }),
 }));
 
 export const standardReleaseRelations = relations(standardReleases, ({ one, many }) => ({

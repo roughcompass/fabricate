@@ -125,7 +125,7 @@ describe("preview records", () => {
       expect(fromMain.created).toBe(true);
       expect(fromRelease).toEqual({ preview: fromMain.preview, created: false });
       expect(fromMain.preview).toMatchObject({ commitSha: COMMIT, packageDir: "apps/web", refName: "refs/heads/main", attempt: 1, attemptState: "queued", artifact: null, profileDigest: PROFILE.digest });
-      expect(JSON.parse(fromMain.preview.decidingFacts)).toMatchObject({ directory: "apps/web", qualifies: true, plan: { buildTool: "vite" } });
+      expect(fromMain.preview.decidingFacts).toMatchObject({ directory: "apps/web", qualifies: true, plan: { buildTool: "vite" } });
       // One build is queued, for the first attempt.
       expect(jobsOf(BUILD_PREVIEW).map(jobPayload)).toEqual([{ preview: fromMain.preview.publicId, attempt: 1 }]);
     });

@@ -9,16 +9,13 @@ import { getAssessment, targetsOf } from "@/lib/assessments/assessment-records";
 import { launchAssessment } from "@/lib/assessments/launcher";
 import { resolveCloneUrl } from "@/lib/catalog/catalog";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
-import type { FabricateConfig } from "@/lib/config";
-import type { Db } from "@/lib/db/client";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
-import { acquisitionConfig, registerLocalSource } from "../support/acquisition";
+import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
 import { buildInitiative } from "../support/builders";
-import { createTestDb } from "../support/db";
-import { GitFixture, type Repo } from "../support/git-fixture";
+import { type Repo } from "../support/git-fixture";
 import { GitLog, NO_NETWORK_CALLS, NetworkTrap, countNetworkCalls } from "../support/traps";
 
 /**
@@ -37,9 +34,7 @@ const MODULE_FILES = ["index.js", "next.config.js", "next.config.mjs", "eslint.c
 const ALLOWED_SUBCOMMANDS = new Set(["version", "init", "ls-remote", "fetch", "rev-parse", "update-ref", "for-each-ref", "cat-file", "ls-tree"]);
 
 describe("Assessment of a malicious repository", () => {
-  let fixture: GitFixture;
-  let config: FabricateConfig;
-  let db: Db;
+  const world = useAcquisitionWorld("malicious", { once: true });
   let sentinels: string;
   let outside: string;
   let gitLog: GitLog;
@@ -56,7 +51,7 @@ describe("Assessment of a malicious repository", () => {
     `require("fs").writeFileSync(${JSON.stringify(path.join(sentinels, `module-${name.replaceAll("/", "_")}`))}, "loaded");\nglobalThis.__fabricateModuleTrap = ${JSON.stringify(name)};\nfetch(${JSON.stringify(`${trapUrl}/module`)}).catch(() => {});\nmodule.exports = {};\n`;
 
   function hostileRepository(): Repo {
-    const work = fixture.repo("fleet/hostile");
+    const work = world.fixture.repo("fleet/hostile");
     const manifest = {
       name: "hostile",
       version: "1.0.0",
@@ -116,47 +111,42 @@ describe("Assessment of a malicious repository", () => {
   }
 
   beforeAll(async () => {
-    fixture = GitFixture.create("malicious");
-    sentinels = fixture.dir("sentinels");
+    sentinels = world.fixture.dir("sentinels");
     outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "outside-root-")));
     fs.writeFileSync(path.join(outside, "secret.txt"), `${markers.outside}\n`);
-    config = acquisitionConfig(fixture);
-    db = createTestDb();
 
     trap = await NetworkTrap.open();
     trapUrl = trap.url;
 
     // Every Git invocation Fabricate makes goes through this wrapper, which logs its argv and runs the real Git.
-    gitLog = new GitLog(fixture.dir("git-log"));
+    gitLog = new GitLog(world.fixture.dir("git-log"));
 
     work = hostileRepository();
-    const source = registerLocalSource(db, config, "hostile", work.path);
-    const initiative = buildInitiative(db, { sources: [source] });
+    const source = registerLocalSource(world.db, world.config, "hostile", work.path);
+    const initiative = buildInitiative(world.db, { sources: [source] });
 
     spyCalls = await gitLog.during(() =>
       countNetworkCalls(async () => {
-        assessmentId = launchAssessment(db, initiative.publicId, crypto.randomUUID(), config).assessment.publicId;
-        await drainJobs(db, jobHandlers(db, config));
+        assessmentId = launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), world.config).assessment.publicId;
+        await drainJobs(world.db, jobHandlers(world.db, world.config));
       }),
     );
   }, 120_000);
 
   afterAll(async () => {
     await trap.close();
-    fixture.cleanup();
     fs.rmSync(outside, { recursive: true, force: true });
-    fs.rmSync(config.repositoryStorage, { recursive: true, force: true });
     delete (globalThis as { __fabricateModuleTrap?: unknown }).__fabricateModuleTrap;
   });
 
-  const facts = () => profileDocument(profilesOf(db, getAssessment(db, assessmentId).id)[0]!.profile).fact_document as JsonObject;
+  const facts = () => profileDocument(profilesOf(world.db, getAssessment(world.db, assessmentId).id)[0]!.profile).fact_document as JsonObject;
   const category = (id: string) => (facts().categories as Record<string, JsonObject>)[id]!;
 
   it("completes the Assessment with a Profile and a Relationship Map", () => {
-    const assessment = getAssessment(db, assessmentId);
+    const assessment = getAssessment(world.db, assessmentId);
     expect(assessment.state).toBe("complete");
-    expect(targetsOf(db, assessment.id).map((target) => target.state)).toEqual(["complete"]);
-    expect(mapOf(db, assessment.id)).toBeDefined();
+    expect(targetsOf(world.db, assessment.id).map((target) => target.state)).toEqual(["complete"]);
+    expect(mapOf(world.db, assessment.id)).toBeDefined();
   });
 
   it("runs no hook, filter, lifecycle script, CI command, config command, or transport command", () => {
@@ -166,7 +156,7 @@ describe("Assessment of a malicious repository", () => {
   it("loads no repository file as a module", () => {
     expect((globalThis as { __fabricateModuleTrap?: unknown }).__fabricateModuleTrap).toBeUndefined();
     const loaded = Object.keys(createRequire(import.meta.url).cache);
-    expect(loaded.filter((file) => file.startsWith(fixture.root) || file.startsWith(config.repositoryStorage))).toEqual([]);
+    expect(loaded.filter((file) => file.startsWith(world.fixture.root) || file.startsWith(world.config.repositoryStorage))).toEqual([]);
   });
 
   it("opens no connection and resolves no hostname", () => {
@@ -194,17 +184,17 @@ describe("Assessment of a malicious repository", () => {
       for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
         const full = path.join(directory, entry.name);
         if (entry.isDirectory()) walk(full);
-        else written.push(path.relative(config.repositoryStorage, full));
+        else written.push(path.relative(world.config.repositoryStorage, full));
       }
     };
-    walk(config.repositoryStorage);
+    walk(world.config.repositoryStorage);
     const tree = new Set(["package.json", "index.js", ".npmrc", ".env", "Makefile", "openapi.yaml", ...MODULE_FILES]);
     expect(written.filter((file) => tree.has(path.basename(file)))).toEqual([]);
     expect(written.filter((file) => file.includes("hooks/"))).toEqual([]);
   });
 
   it("never reads through a symbolic link or a sensitive file, so no outside or secret content is stored", () => {
-    const stored = db.$client.serialize();
+    const stored = world.db.$client.serialize();
     for (const marker of Object.values(markers)) expect(stored.includes(Buffer.from(marker)), marker).toBe(false);
     const diagnostics = facts().diagnostics as JsonObject[];
     // Every link is inventoried; one a detector would read is reported as never followed.
@@ -221,12 +211,12 @@ describe("Assessment of a malicious repository", () => {
     expect(services).toEqual(expect.arrayContaining(["https://payments.invalid"]));
     for (const service of facts().service_dependencies as JsonObject[]) expect(service.access).toMatchObject({ state: "unknown" });
     // The map records the Service Dependencies as endpoints without contacting them.
-    const map = mapDocument(mapOf(db, getAssessment(db, assessmentId).id)!) as JsonObject;
+    const map = mapDocument(mapOf(world.db, getAssessment(world.db, assessmentId).id)!) as JsonObject;
     expect(JSON.stringify(map.nodes)).toContain("payments.invalid");
   });
 
   it("refuses an executable transport as a clone URL before anything is stored", () => {
-    const boundary = new SourceBoundary(config);
+    const boundary = new SourceBoundary(world.config);
     for (const url of [`ext::sh -c ${touch("clone-ext")}`, `ssh://-oProxyCommand=${encodeURIComponent(touch("clone-ssh"))}/x`, `file://${outside}`]) expect(() => resolveCloneUrl(url, boundary), url).toThrow();
     expect(fs.readdirSync(sentinels)).toEqual([]);
   });

@@ -8,6 +8,12 @@ const PATTERNS: readonly [RegExp, string][] = [
   [/\b((?:access_)?token|password|passwd|secret|private_token)=[^&\s]+/gi, "$1=[REDACTED]"],
 ];
 
+/** A thrown value in words for a record or log: an Error's message, or the value itself, redacted and at most +limit+ characters. */
+export function failureText(error: unknown, limit = MAX_LENGTH): string {
+  const text = redact(error instanceof Error ? error.message : String(error));
+  return text.length > limit ? text.slice(0, limit) : text;
+}
+
 export function redact(text: string): string {
   let redacted = text.toWellFormed();
   for (const [pattern, replacement] of PATTERNS) redacted = redacted.replace(pattern, replacement);

@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
-import { dependencyFacts, evidenceIndex, graphEdgeCandidates, graphEdges, graphNodes, projectionCoverage, projectionState, relationshipMaps, repositoryProfiles } from "@/lib/db/schema";
+import { dependencyFacts, evidenceIndex, graphEdgeCandidates, graphEdges, graphNodes, relationshipMaps, repositoryProfiles } from "@/lib/db/schema";
 import { DocumentIntegrityError } from "@/lib/documents/digested";
 import { profileDocument } from "@/lib/profiles/profile-records";
 import { mapDocument } from "@/lib/relationships/map-records";
@@ -21,13 +21,11 @@ export interface RebuildReport {
 /**
  * Drops the projection and recreates it from the stored documents, in one
  * transaction. Each document's digest is verified first; a document that no
- * longer matches is reported and left out rather than projected. Concept
- * classifications are rebuilt by the ontology importer, so they're kept.
+ * longer matches is reported and left out rather than projected.
  */
 export function rebuildProjection(db: Executor): RebuildReport {
   return immediate(db, (tx) => {
-    tx.update(projectionState).set({ rebuilding: true }).where(eq(projectionState.id, 1)).run();
-    for (const table of [projectionCoverage, graphEdgeCandidates, graphEdges, graphNodes, evidenceIndex, dependencyFacts]) tx.delete(table).run();
+    for (const table of [graphEdgeCandidates, graphEdges, graphNodes, evidenceIndex, dependencyFacts]) tx.delete(table).run();
 
     const report: RebuildReport = { profiles: 0, maps: 0, skipped: [] };
     // Documents can be tens of MB, so they're read one at a time.
@@ -46,7 +44,6 @@ export function rebuildProjection(db: Executor): RebuildReport {
       report.maps++;
     }
 
-    tx.update(projectionState).set({ rebuilding: false }).where(eq(projectionState.id, 1)).run();
     return report;
   });
 }

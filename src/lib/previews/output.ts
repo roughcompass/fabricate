@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { BuildTool } from "./eligibility";
+import { list } from "./wording";
 
 /**
  * Finds a preview build's output and decides whether it can be published
@@ -159,10 +160,4 @@ export function formatBytes(bytes: number): string {
     if (bytes >= size) return `${Number((bytes / size).toFixed(1))} ${unit}`;
   }
   return `${bytes} bytes`;
-}
-
-function list(items: readonly string[], conjunction: "and" | "or"): string {
-  if (items.length <= 1) return items.join("");
-  if (items.length === 2) return `${items[0]} ${conjunction} ${items[1]}`;
-  return `${items.slice(0, -1).join(", ")}, ${conjunction} ${items.at(-1)}`;
 }

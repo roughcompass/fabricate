@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import type { Assessment } from "@/lib/assessments/assessment-records";
 import { transitionAssessment, transitionTarget } from "@/lib/assessments/transitions";
 import { targetsOf } from "@/lib/assessments/assessment-records";
-import type { RepositorySource } from "@/lib/catalog/source-records";
 import type { Executor } from "@/lib/db/client";
 import { ASSESSMENT_MACHINE, EVALUATION_MACHINE, pathsFromInitial } from "@/lib/db/state-machines";
 import type { AssessmentState, EvaluationState } from "@/lib/db/schema";
@@ -10,13 +9,11 @@ import { type Evaluation, createEvaluation } from "@/lib/evaluations/evaluation-
 import { transitionEvaluation } from "@/lib/evaluations/transitions";
 import type { Conclusion } from "@/lib/evaluations/summary";
 import type { Initiative } from "@/lib/initiatives/initiative-records";
-import { parseDeConsoleExport, recordDeConsoleRead } from "@/lib/ownership/de-console";
-import { type Application, createApplication, recordAssertion } from "@/lib/ownership/records";
 import { buildRelease } from "./builders";
 
 /*
  * Builders for Home's fixtures: Runs and Evaluations driven to a final state
- * through their state machines, claims, and DE Console reads.
+ * through their state machines.
  */
 
 const RUN_PATHS = pathsFromInitial(ASSESSMENT_MACHINE);
@@ -44,16 +41,4 @@ export function driveEvaluation(db: Executor, evaluation: Evaluation, to: Evalua
     current = transitionEvaluation(db, current, state, state === "complete" ? { summary: JSON.stringify({ combined: { conclusion } }), resultDigest: "0".repeat(64) } : {});
   }
   return current;
-}
-
-/** Records a person's claim that +source+ belongs to +application+ (a new SEAL application by default). */
-export function claim(db: Executor, source: RepositorySource, options: { application?: Application; providedBy?: string; supersedes?: number[] } = {}) {
-  const application = options.application ?? createApplication(db, { sealId: String(10_000 + source.id) });
-  const assertion = recordAssertion(db, { attribute: "application", repository: source.id, application: application.id, providedBy: options.providedBy ?? "Ana", source: "person", supersedes: options.supersedes });
-  return { application, assertion };
-}
-
-/** Records a successful DE Console read of a version 1 export. */
-export function readDeConsole(db: Executor, applications: object[], readAt: Date) {
-  return recordDeConsoleRead(db, parseDeConsoleExport({ format: "de-console-ownership", version: 1, exported_at: null, applications }), { trigger: "schedule", readAt });
 }

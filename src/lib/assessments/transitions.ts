@@ -1,10 +1,12 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
-import { StaleRecordError, TransitionError } from "@/lib/db/errors";
+import { updateLocked } from "@/lib/db/optimistic";
+import { TransitionError } from "@/lib/db/errors";
 import { type AssessmentState, type TargetState, assessmentTargets, assessments } from "@/lib/db/schema";
 import { ASSESSMENT_MACHINE, TARGET_MACHINE, assertTransition, canTransition, isTerminal } from "@/lib/db/state-machines";
 import { redact } from "@/lib/git/redact";
 import type { Assessment, AssessmentTarget } from "./assessment-records";
+import type { AcquisitionFailureCode } from "@/lib/acquisition/errors";
 
 /**
  * The only writers of Assessment and target state. Each transition is
@@ -19,21 +21,20 @@ export interface AssessmentChanges {
 export function transitionAssessment(db: Executor, assessment: Assessment, to: AssessmentState, changes: AssessmentChanges = {}): Assessment {
   assertTransition(ASSESSMENT_MACHINE, assessment.state, to, `Assessment ${assessment.publicId}`);
   const now = new Date();
-  const updated = db
-    .update(assessments)
-    .set({
+  return updateLocked(
+    db,
+    assessments,
+    assessment,
+    {
       state: to,
       ...(changes.failureReason !== undefined && { failureReason: changes.failureReason && redact(changes.failureReason) }),
       startedAt: assessment.startedAt ?? (to === "acquiring" ? now : null),
       finishedAt: isTerminal(ASSESSMENT_MACHINE, to) ? now : null,
-      lockVersion: assessment.lockVersion + 1,
       updatedAt: now,
-    })
-    .where(and(eq(assessments.id, assessment.id), eq(assessments.state, assessment.state), eq(assessments.lockVersion, assessment.lockVersion)))
-    .returning()
-    .get();
-  if (!updated) throw new StaleRecordError(`Assessment ${assessment.publicId} changed while moving to ${to}`);
-  return updated;
+    },
+    `Assessment ${assessment.publicId} changed while moving to ${to}`,
+    { guard: eq(assessments.state, assessment.state) },
+  );
 }
 
 /**
@@ -58,18 +59,16 @@ export function requestCancellation(db: Executor, assessmentId: number): Assessm
     if (current.cancelRequestedAt) return current;
 
     const now = new Date();
-    return tx
-      .update(assessments)
-      .set({ cancelRequestedAt: now, lockVersion: current.lockVersion + 1, updatedAt: now })
-      .where(eq(assessments.id, current.id))
-      .returning()
-      .get()!;
+    return updateLocked(tx, assessments, current, { cancelRequestedAt: now, updatedAt: now }, `Assessment ${current.publicId} changed while its cancellation was requested`);
   });
 }
 
+/** Why a target failed: how its acquisition failed, or that acquisition or analysis stopped unexpectedly. */
+export type TargetFailureCode = AcquisitionFailureCode | "acquisition_failed" | "analysis_failed";
+
 export interface TargetChanges {
   /** Required when moving to failed; a stable, machine-readable code. */
-  failureCode?: string;
+  failureCode?: TargetFailureCode;
   /** Human-readable cause. Redacted before it is stored. */
   failureMessage?: string;
 }
@@ -79,20 +78,19 @@ export function transitionTarget(db: Executor, target: AssessmentTarget, to: Tar
   if (to === "failed" && !changes.failureCode) throw new TransitionError(`Target ${target.publicId} needs a failure code to fail`);
 
   const now = new Date();
-  const updated = db
-    .update(assessmentTargets)
-    .set({
+  return updateLocked(
+    db,
+    assessmentTargets,
+    target,
+    {
       state: to,
       failureCode: to === "failed" ? changes.failureCode : null,
       failureMessage: to === "failed" ? redact(changes.failureMessage ?? changes.failureCode ?? "") : null,
       startedAt: target.startedAt ?? (to === "acquiring" ? now : null),
       finishedAt: isTerminal(TARGET_MACHINE, to) ? now : null,
-      lockVersion: target.lockVersion + 1,
       updatedAt: now,
-    })
-    .where(and(eq(assessmentTargets.id, target.id), eq(assessmentTargets.state, target.state), eq(assessmentTargets.lockVersion, target.lockVersion)))
-    .returning()
-    .get();
-  if (!updated) throw new StaleRecordError(`Target ${target.publicId} changed while moving to ${to}`);
-  return updated;
+    },
+    `Target ${target.publicId} changed while moving to ${to}`,
+    { guard: eq(assessmentTargets.state, target.state) },
+  );
 }

@@ -2,6 +2,7 @@ import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import Link from "next/link";
 import { type EvidenceLocation, evidenceLocations } from "@/lib/profiles/evidence-locations";
 import styles from "./results.module.css";
+import { routes } from "@/lib/web/routes";
 
 /**
  * The evidence behind a fact, relationship, or Finding: each record's
@@ -26,7 +27,7 @@ export function LocationList({ locations, assessmentId, detail }: { locations: r
     <ul className={styles.evidence}>
       {locations.map((location) => (
         <li key={location.id}>
-          <Link href={`/runs/${assessmentId}/evidence/${location.id}`} className={styles.location}>
+          <Link href={routes.evidence(assessmentId, location.id)} className={styles.location}>
             {location.location}
           </Link>
           {detail && <span className={styles.source}>{detail(location)}</span>}

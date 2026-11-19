@@ -1,6 +1,6 @@
 import { DETECTOR_RELEASE, analyze, detectorConfiguration } from "@repo-facts/bundle";
 import type { Stage } from "@repo-facts/contract";
-import { type Assessment, type AssessmentTarget, type SourceSnapshot, commitSnapshot, sourceTarget } from "@/lib/assessments/assessment-records";
+import type { Assessment, AssessmentTarget, SourceSnapshot } from "@/lib/assessments/assessment-records";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import type { GitRunner } from "@/lib/git/runner";
@@ -41,8 +41,7 @@ export async function analyzeSnapshot(db: Executor, input: AnalyzeSnapshotInput)
   const config = input.config ?? getConfig();
   const digest = verifiedConfigurationDigest(input.assessment, config);
 
-  const target = sourceTarget(input.target);
-  const snapshot = commitSnapshot(input.snapshot);
+  const { target, snapshot } = input;
   const reader = await openSnapshot(target, snapshot, { config, ...(input.runner && { runner: input.runner }) });
   const factDocument = await analyze(reader, { ...(input.signal && { signal: input.signal }), ...(input.checkpoint && { checkpoint: input.checkpoint }) });
   const document = buildProfile({

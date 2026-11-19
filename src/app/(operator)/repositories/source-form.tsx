@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { ButtonLink } from "@/components/ui/button";
-import { FormAlert, FormFooter, TextInput, formStyles } from "@/components/ui/form";
+import { ActionForm, FormAlert, FormFooter, TextInput, formStyles } from "@/components/ui/form";
 import { Panel } from "@/components/ui/panel";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { useFocusFirstInvalid } from "@/components/ui/use-focus-first-invalid";
 import { repositoryNameFromUrl } from "@/lib/catalog/repository-name";
 import type { SourceFormState } from "./source-form-state";
 
@@ -25,8 +24,15 @@ interface SourceFormProps {
  * the URL's, so the form works the same without JavaScript.
  */
 export function SourceForm({ action, initial, lockVersion, submitLabel, layout = "panel" }: SourceFormProps) {
-  const [state, formAction] = useActionState(action, initial);
-  const form = useFocusFirstInvalid(state, "source-form-alert");
+  return (
+    <ActionForm action={action} initial={initial} alertId="source-form-alert" hidden={{ lockVersion }}>
+      {(state) => <SourceFields state={state} submitLabel={submitLabel} layout={layout} />}
+    </ActionForm>
+  );
+}
+
+/** The form's fields and its action, from the state of its latest submission. */
+function SourceFields({ state, submitLabel, layout }: { state: SourceFormState; submitLabel: string; layout: "panel" | "plain" }) {
   const [name, setName] = useState(state.values.name);
   const [typed, setTyped] = useState(state.values.name.trim() !== "");
   // A rejected submission renders the values it carried.
@@ -40,7 +46,6 @@ export function SourceForm({ action, initial, lockVersion, submitLabel, layout =
   const fields = (
     <div className={formStyles.form}>
       {state.errors.base && <FormAlert id="source-form-alert">{state.errors.base.join(" ")}</FormAlert>}
-      {lockVersion !== undefined && <input type="hidden" name="lockVersion" value={lockVersion} />}
       <TextInput
         id="source-clone-url"
         name="cloneUrl"
@@ -81,27 +86,23 @@ export function SourceForm({ action, initial, lockVersion, submitLabel, layout =
     </div>
   );
 
-  return (
-    <form ref={form} action={formAction} noValidate>
-      {layout === "plain" ? (
-        <div className={formStyles.form}>
-          {fields}
-          <div>
-            <SubmitButton pendingLabel="Saving">{submitLabel}</SubmitButton>
-          </div>
-        </div>
-      ) : (
-        <Panel
-          footer={
-            <FormFooter>
-              <ButtonLink href="/repositories">Cancel</ButtonLink>
-              <SubmitButton pendingLabel="Saving">{submitLabel}</SubmitButton>
-            </FormFooter>
-          }
-        >
-          {fields}
-        </Panel>
-      )}
-    </form>
+  return layout === "plain" ? (
+    <div className={formStyles.form}>
+      {fields}
+      <div>
+        <SubmitButton pendingLabel="Saving">{submitLabel}</SubmitButton>
+      </div>
+    </div>
+  ) : (
+    <Panel
+      footer={
+        <FormFooter>
+          <ButtonLink href="/repositories">Cancel</ButtonLink>
+          <SubmitButton pendingLabel="Saving">{submitLabel}</SubmitButton>
+        </FormFooter>
+      }
+    >
+      {fields}
+    </Panel>
   );
 }

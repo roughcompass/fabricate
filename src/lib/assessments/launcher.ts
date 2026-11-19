@@ -53,15 +53,10 @@ export function launchAssessment(db: Executor, initiativePublicId: string, launc
       const initiative = getInitiative(tx, initiativePublicId);
       const previous = findAssessmentByLaunchToken(tx, initiative.id, token);
       if (previous) return { assessment: previous, targets: [], duplicate: true };
-      // Its targets are template versions, which DE FabLab adds when one is accepted or re-checked.
-      if (initiative.systemOwned) throw new ScopeResolutionError([{ sourcePublicId: null, sourceName: null, message: "Salt Patterns Runs start when a template version is accepted or re-checked." }]);
-
       if (initiative.profiling !== Boolean(options.sources)) {
         throw new ScopeResolutionError([{ sourcePublicId: null, sourceName: null, message: initiative.profiling ? "Repository profiling Runs start when a repository is profiled." : "Only the Repository profiling initiative takes its scope from the launch." }]);
       }
-      // A system-owned initiative assesses its claimed repository's default branch, whatever reference the catalog sets.
-      const resolved = options.sources ?? resolveScope(tx, initiative);
-      const sources = initiative.claimRepositorySourceId === null ? [...resolved] : resolved.map((source) => ({ ...source, gitRef: null }));
+      const sources = [...(options.sources ?? resolveScope(tx, initiative))];
       const { assessment, targets } = createAssessment(tx, {
         initiative,
         launchToken: token,

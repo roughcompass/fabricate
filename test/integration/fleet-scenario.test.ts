@@ -10,17 +10,14 @@ import { requestCancellation } from "@/lib/assessments/transitions";
 import { addRepositories } from "@/lib/catalog/bulk-add";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type RepositorySource, listSources } from "@/lib/catalog/source-records";
-import type { FabricateConfig } from "@/lib/config";
-import type { Db } from "@/lib/db/client";
 import { type Initiative, createInitiative } from "@/lib/initiatives/initiative-records";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
 import type { MapDocument } from "@/lib/relationships/schema";
-import { acquisitionConfig } from "../support/acquisition";
-import { createTestDb } from "../support/db";
-import { GitFixture, type Repo } from "../support/git-fixture";
+import { useAcquisitionWorld } from "../support/acquisition";
+import { type Repo } from "../support/git-fixture";
 import { manifest } from "../support/profiles";
 import { GitLog, NO_NETWORK_CALLS, NetworkTrap, countNetworkCalls } from "../support/traps";
 
@@ -34,9 +31,7 @@ import { GitLog, NO_NETWORK_CALLS, NetworkTrap, countNetworkCalls } from "../sup
  */
 
 describe("Multi-repository Assessment scenario", () => {
-  let fixture: GitFixture;
-  let config: FabricateConfig;
-  let db: Db;
+  const world = useAcquisitionWorld("fleet-scenario", { once: true });
   let trap: NetworkTrap;
   let gitLog: GitLog;
   let fleet: string;
@@ -52,27 +47,24 @@ describe("Multi-repository Assessment scenario", () => {
   const run = (limit?: number) =>
     gitLog.during(async () => {
       const calls = await countNetworkCalls(async () => {
-        await drainJobs(db, jobHandlers(db, config), limit ? { limit } : {});
+        await drainJobs(world.db, jobHandlers(world.db, world.config), limit ? { limit } : {});
       });
       networkCalls.push(calls);
     });
-  const launch = (initiative: Initiative) => launchAssessment(db, initiative.publicId, crypto.randomUUID(), config).assessment;
-  const refreshed = (assessment: Assessment) => getAssessment(db, assessment.publicId);
-  const states = (assessment: Assessment) => Object.fromEntries(targetsOf(db, assessment.id).map((target) => [target.sourceName, target.state]));
-  const shas = (assessment: Assessment) => Object.fromEntries(targetsOf(db, assessment.id).map((target) => [target.sourceName, snapshotOf(db, target.id)?.commitSha ?? null]));
-  const profiles = (assessment: Assessment) => Object.fromEntries(profilesOf(db, assessment.id).map(({ profile, target }) => [target.sourceName, profile]));
-  const map = (assessment: Assessment) => mapDocument(mapOf(db, assessment.id)!) as unknown as MapDocument;
+  const launch = (initiative: Initiative) => launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), world.config).assessment;
+  const refreshed = (assessment: Assessment) => getAssessment(world.db, assessment.publicId);
+  const states = (assessment: Assessment) => Object.fromEntries(targetsOf(world.db, assessment.id).map((target) => [target.sourceName, target.state]));
+  const shas = (assessment: Assessment) => Object.fromEntries(targetsOf(world.db, assessment.id).map((target) => [target.sourceName, snapshotOf(world.db, target.id)?.commitSha ?? null]));
+  const profiles = (assessment: Assessment) => Object.fromEntries(profilesOf(world.db, assessment.id).map(({ profile, target }) => [target.sourceName, profile]));
+  const map = (assessment: Assessment) => mapDocument(mapOf(world.db, assessment.id)!) as unknown as MapDocument;
   /** A map without its per-run target identifiers, which are the only run identity it records. */
   const withoutTargets = (value: JsonValue): JsonValue => (Array.isArray(value) ? value.map(withoutTargets) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== "target").map(([key, item]) => [key, withoutTargets(item)])) : value);
 
   beforeAll(async () => {
-    fixture = GitFixture.create("fleet-scenario");
-    config = acquisitionConfig(fixture);
-    db = createTestDb();
     trap = await NetworkTrap.open();
     gitLog = new GitLog(fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "fleet-scenario-git-"))));
     outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "outside-fleet-")));
-    fleet = fixture.dir("fleet");
+    fleet = world.fixture.dir("fleet");
     // The web repository's configured destination resolves to the trap if anything ever dereferences it.
     process.env.ORDERS_URL = trap.url;
 
@@ -88,7 +80,7 @@ describe("Multi-repository Assessment scenario", () => {
       archive: { "package.json": manifest({ name: "archive", version: "0.1.0" }) },
     };
     for (const [name, files] of Object.entries(trees)) {
-      repos[name] = fixture.repo(`fleet/${name}`);
+      repos[name] = world.fixture.repo(`fleet/${name}`);
       for (const [file, content] of Object.entries(files)) repos[name]!.write(file, content);
       repos[name]!.commit();
     }
@@ -101,23 +93,21 @@ describe("Multi-repository Assessment scenario", () => {
     if (savedOrdersUrl === undefined) delete process.env.ORDERS_URL;
     else process.env.ORDERS_URL = savedOrdersUrl;
     await trap.close();
-    fixture.cleanup();
     fs.rmSync(outside, { recursive: true, force: true });
-    fs.rmSync(config.repositoryStorage, { recursive: true, force: true });
   });
 
   it("adds the fleet's repositories in bulk, refusing what is outside the allowed root", () => {
-    const boundary = new SourceBoundary(config);
+    const boundary = new SourceBoundary(world.config);
     // The archive stays out of the catalog, so the whole-fleet Assessment never sees it.
     const urls = ["billing", "client", "ui", "web", "zz-outside-link"].map((name) => `file://${fleet}/${name}`);
-    const result = addRepositories(db, [...urls, `file://${outside}`].join("\n"), boundary);
+    const result = addRepositories(world.db, [...urls, `file://${outside}`].join("\n"), boundary);
     expect(result.failed.map((failure) => failure.line)).toEqual([5, 6]);
-    sources = Object.fromEntries(listSources(db).map((source) => [source.name, source]));
+    sources = Object.fromEntries(listSources(world.db).map((source) => [source.name, source]));
     expect(Object.keys(sources).sort()).toEqual(["billing", "client", "ui", "web"]);
     for (const source of Object.values(sources)) expect(source.cloneUrl.startsWith(`file://${fleet}/`)).toBe(true);
 
-    wholeFleet = createInitiative(db, { name: "Whole fleet", objective: "Current state of every repository", selectionMode: "all" });
-    explicit = createInitiative(db, { name: "Shared packages", objective: "The UI and client packages", selectionMode: "explicit", sourcePublicIds: [sources.ui!.publicId, sources.client!.publicId] });
+    wholeFleet = createInitiative(world.db, { name: "Whole fleet", objective: "Current state of every repository", selectionMode: "all" });
+    explicit = createInitiative(world.db, { name: "Shared packages", objective: "The UI and client packages", selectionMode: "explicit", sourcePublicIds: [sources.ui!.publicId, sources.client!.publicId] });
   });
 
   let first: Assessment;
@@ -130,7 +120,7 @@ describe("Multi-repository Assessment scenario", () => {
     first = refreshed(first);
     expect(first.state).toBe("complete_with_issues");
     expect(states(first)).toEqual({ billing: "failed", client: "complete", ui: "complete", web: "complete" });
-    expect(targetsOf(db, first.id).find((target) => target.sourceName === "billing")).toMatchObject({ failureCode: "source_unavailable" });
+    expect(targetsOf(world.db, first.id).find((target) => target.sourceName === "billing")).toMatchObject({ failureCode: "source_unavailable" });
     expect(Object.keys(profiles(first)).sort()).toEqual(["client", "ui", "web"]);
   });
 
@@ -182,7 +172,7 @@ describe("Multi-repository Assessment scenario", () => {
   it("cancels a running Assessment, keeping the Profile that finished", async () => {
     const assessment = launch(explicit);
     await run(2); // the coordinator, then the first target
-    requestCancellation(db, assessment.id);
+    requestCancellation(world.db, assessment.id);
     await run();
 
     const done = refreshed(assessment);
@@ -200,7 +190,7 @@ describe("Multi-repository Assessment scenario", () => {
     expect(calls.length).toBeGreaterThan(0);
     const paths = calls.flatMap((argv) => argv.flatMap((arg) => [...arg.matchAll(/(?:file:\/\/|--git-dir=|^)(\/[^\s]+)/g)].map((match) => match[1]!)));
     expect(paths.length).toBeGreaterThan(0);
-    const allowed = [fixture.root, config.repositoryStorage, "/dev/null"];
+    const allowed = [world.fixture.root, world.config.repositoryStorage, "/dev/null"];
     expect(paths.filter((file) => !allowed.some((root) => file === root || file.startsWith(`${root}/`)))).toEqual([]);
     expect(paths.some((file) => file.startsWith(outside))).toBe(false);
   });

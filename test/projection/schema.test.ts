@@ -8,28 +8,11 @@ import { PROJECTION_TABLES, count, pinnedRepository } from "../support/projectio
 import { manifest } from "../support/profiles";
 import { seedAssessment } from "../support/scenarios";
 
-const insertRelease = (db: Db) => {
-  rawRun(db, "insert into ontology_releases (public_id, number, commit_sha, document, digest, imported_at) values (?, 1, ?, '{}', ?, ?)", "olr_aaaaaaaaaaaaaaaa", "a".repeat(40), "b".repeat(64), Date.now());
-  rawRun(db, "insert into ontology_concepts (release_id, concept_key, kind, label, lifecycle, owner, document) values (1, 'portal/access', 'portal', 'Access', 'adopt', 'Access platform team', '{}')");
-};
-
 describe("projection schema", () => {
   it("mirrors the Relationship Map's node kinds, edge types, and resolution states", () => {
     expect(PROJECTED_NODE_KINDS).toEqual(NODE_KINDS);
     expect(PROJECTED_EDGE_TYPES).toEqual(EDGE_TYPES);
     expect(PROJECTED_EDGE_STATES).toEqual(RESOLUTION_STATES);
-  });
-});
-
-describe("ontology releases", () => {
-  it("refuses to change or delete an imported release or its concepts", () => {
-    const db = createTestDb();
-    insertRelease(db);
-
-    expect(() => rawRun(db, "update ontology_releases set number = 2")).toThrow(/never changes/);
-    expect(() => rawRun(db, "delete from ontology_releases")).toThrow(/retained/);
-    expect(() => rawRun(db, "update ontology_concepts set label = 'Access portal'")).toThrow(/never changes/);
-    expect(() => rawRun(db, "delete from ontology_concepts")).toThrow(/retained/);
   });
 });
 
@@ -48,17 +31,13 @@ describe("projection rows", () => {
       { "package.json": manifest({ name: "@acme/ui", version: "2.1.0" }) },
       "failed",
     ]);
-    insertRelease(db);
-    rawRun(db, "insert into concept_classifications (profile_id, assessment_id, release_id, concept_key, state, evidence, document_digest, projection_version) select id, assessment_id, 1, 'portal/access', 'not_applicable', '[]', digest, 1 from repository_profiles limit 1");
   });
 
-  it("refuses updates, and deletes outside a rebuild, in every projection table (Update refused)", () => {
+  it("refuses updates in every projection table (Update refused)", () => {
     for (const table of PROJECTION_TABLES) {
       expect(count(db, table), table).toBeGreaterThan(0);
       expect(() => rawRun(db, `update ${table} set projection_version = 2`), table).toThrow(/written once/);
-      expect(() => rawRun(db, `delete from ${table}`), table).toThrow(/only by a rebuild/);
     }
-    expect(() => rawRun(db, "delete from projection_state")).toThrow(/kept/);
   });
 
   it("joins every repository node to its catalog entry and assessment target", () => {

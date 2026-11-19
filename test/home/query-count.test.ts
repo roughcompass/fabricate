@@ -1,30 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { attentionItems } from "@/lib/home/attention";
 import { WEEK_MS, assessmentTrend, figuresAt, recentActivity } from "@/lib/home/dashboard";
 import { fleetSummary } from "@/lib/home/summary";
-import { createApplication } from "@/lib/ownership/records";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
-import { buildEvaluation, claim, driveEvaluation, driveRun, readDeConsole } from "../support/home";
+import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
 
-/** A fleet of +repositories+ Repositories, half claimed, and +assessments+ Assessments with a mix of outcomes. */
+/** A fleet of +repositories+ Repositories and +assessments+ Assessments with a mix of outcomes. */
 function seed(repositories: number, assessments: number): Db {
   const db = createTestDb();
-  const sources = Array.from({ length: repositories }, (_, index) => {
-    const source = buildSource(db);
-    if (index % 2 === 0) claim(db, source);
-    return source;
-  });
+  const sources = Array.from({ length: repositories }, () => buildSource(db));
   for (let index = 0; index < assessments; index++) {
     const initiative = buildInitiative(db, { sources: [sources[index % sources.length]!] });
     const run = driveRun(db, buildAssessment(db, { initiative }).assessment, index % 3 === 0 ? "failed" : "complete");
     if (run.state === "complete") driveEvaluation(db, buildEvaluation(db, initiative, run), index % 2 === 0 ? "complete" : "failed", "gaps");
   }
-  createApplication(db, { sealId: "88002" });
-  createApplication(db, { sealId: "88002" });
-  readDeConsole(db, [{ seal_id: "88002" }], new Date(0));
   return db;
 }
 
@@ -41,7 +32,7 @@ function statementsOf(db: Db): string[] {
     figuresAt(db, new Date(Date.now() - WEEK_MS));
     assessmentTrend(db);
     recentActivity(db);
-    attentionItems(db, withOverrides(getConfig(), { deConsole: { source: "/tmp/de-console-export.json", refreshMinutes: 60 } }));
+    attentionItems(db);
   } finally {
     db.$client.prepare = prepare;
   }
@@ -56,6 +47,7 @@ describe("Home's reads", () => {
     expect(small.length).toBeGreaterThan(5);
     expect(large.length).toBe(small.length);
     expect(large.length).toBeLessThan(20);
-    for (const statement of large) expect(statement).not.toMatch(/repository_profiles|relationship_maps/);
+    // Profile and Relationship Map rows may be counted, but no statement reads a stored document.
+    for (const statement of large) expect(statement).not.toMatch(/\bdocument\b/);
   }, 120_000);
 });

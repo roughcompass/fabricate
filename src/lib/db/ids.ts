@@ -1,45 +1,28 @@
 import crypto from "node:crypto";
+import { NotFoundError } from "./errors";
 
 /**
  * Stable, prefixed public identifiers used in URLs, documents, and Git refs.
  * Database row ids never leave the data-access layer.
  */
-export const PUBLIC_ID_PREFIXES = {
-  repositorySource: "src",
-  initiative: "ini",
-  assessment: "asm",
-  assessmentTarget: "tgt",
-  sourceSnapshot: "snp",
-  repositoryProfile: "prf",
-  relationshipMap: "map",
-  standard: "std",
-  standardRelease: "rel",
-  evaluation: "evl",
-  finding: "fnd",
-  demoApplication: "app",
-  demoThread: "thr",
-  demoComment: "cmt",
-  demoProfile: "dpf",
-  ontologyRelease: "olr",
-  /** Applications created before onboarding keep the prefix they were given. */
-  legacyApplication: "sea",
-  application: "wap",
-  lineOfBusiness: "lob",
-  portal: "ptl",
-  menuItem: "mnu",
-  experienceVersion: "pxv",
-  ownershipAssertion: "own",
-  deConsoleConflict: "dcc",
-  microfrontend: "mfe",
-  placement: "plc",
-  placementDecision: "pdc",
-  externalReference: "xrf",
-  bitbucketToken: "bbt",
-  previewPreparation: "ppr",
-  previewBuild: "pvw",
-} as const;
-
-export type PublicIdPrefix = (typeof PUBLIC_ID_PREFIXES)[keyof typeof PUBLIC_ID_PREFIXES];
+export type PublicIdPrefix =
+  | "src" // repository source
+  | "ini" // initiative
+  | "asm" // assessment
+  | "tgt" // assessment target
+  | "snp" // source snapshot
+  | "prf" // repository profile
+  | "map" // relationship map
+  | "std" // standard
+  | "rel" // standard release
+  | "evl" // evaluation
+  | "fnd" // finding
+  | "thr" // demo thread
+  | "cmt" // demo comment
+  | "dpf" // demo profile
+  | "bbt" // Bitbucket token
+  | "ppr" // preview preparation
+  | "pvw"; // preview build
 
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const LENGTH = 16;
@@ -52,4 +35,10 @@ export function generatePublicId(prefix: PublicIdPrefix): string {
 
 export function isPublicId(value: unknown, prefix?: PublicIdPrefix): value is string {
   return typeof value === "string" && /^[a-z]{3}_[a-z0-9]{16}$/.test(value) && (prefix === undefined || value.startsWith(`${prefix}_`));
+}
+
+/** +value+ as a public ID with +prefix+, or a NotFoundError naming +what+, so a crafted address finds nothing. */
+export function requirePublicId(value: string, prefix: PublicIdPrefix, what: string): string {
+  if (!isPublicId(value, prefix)) throw new NotFoundError(`Unknown ${what}`);
+  return value;
 }

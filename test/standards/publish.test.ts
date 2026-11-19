@@ -1,9 +1,6 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { type JsonObject, sha256 } from "@repo-facts/contract";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type Db, migrateDatabase, openDatabase } from "@/lib/db/client";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { Db } from "@/lib/db/client";
 import { StaleRecordError, ValidationError } from "@/lib/db/errors";
 import { selectedReleases, updateInitiative } from "@/lib/initiatives/initiative-records";
 import { standardDigest } from "@/lib/standards/canonical";
@@ -11,7 +8,7 @@ import { previewPublication, publishDraft, reviseRelease } from "@/lib/standards
 import * as standardRecords from "@/lib/standards/standard-records";
 import { createStandard, draftDocument, draftOf, getStandard, releaseDocument, releasesOf, saveDraft } from "@/lib/standards/standard-records";
 import { buildInitiative } from "../support/builders";
-import { createTestDb, rawRun } from "../support/db";
+import { createTestDb, rawRun, withSharedFileDb } from "../support/db";
 import { captureValidation } from "../support/validation";
 import { sampleStandard } from "../support/standards";
 
@@ -34,7 +31,7 @@ describe("publication", () => {
     const release = publishDraft(db, standard.publicId, draft.lockVersion);
     const document = releaseDocument(release);
 
-    expect(release).toMatchObject({ version: 1, draftLockVersion: draft.lockVersion, digest: sha256(release.document), profileSchemaVersions: "[1]", relationshipSchemaVersions: "[1]" });
+    expect(release).toMatchObject({ version: 1, draftLockVersion: draft.lockVersion, digest: sha256(release.document), profileSchemaVersions: [1], relationshipSchemaVersions: [1] });
     expect(release.digest).toBe(preview.digest);
     expect(release.digest).toBe(standardDigest(document));
     expect(document.standard).toEqual({ name: "Engineering baseline", purpose: "Shared expectations for fleet repositories" });
@@ -60,24 +57,8 @@ describe("publication", () => {
     expect(releasesOf(db, standard.id)).toEqual([]);
   });
 
-  describe("concurrently, from separate connections", () => {
-    let directory: string;
-    let first: Db;
-    let second: Db;
-    beforeEach(() => {
-      directory = fs.mkdtempSync(path.join(os.tmpdir(), "publish-race-"));
-      const file = path.join(directory, "fabricate.sqlite3");
-      first = openDatabase(file);
-      migrateDatabase(first);
-      second = openDatabase(file);
-    });
-    afterEach(() => {
-      first.$client.close();
-      second.$client.close();
-      fs.rmSync(directory, { recursive: true, force: true });
-    });
-
-    it("creates at most one Release when two publications of one draft race", () => {
+  it("creates at most one Release when two publications of one draft race, from separate connections", () =>
+    withSharedFileDb((first, second) => {
       const { standard, draft } = createStandard(first, { name: "Race", purpose: "Concurrency" });
       const saved = saveDraft(first, draft, draft.lockVersion, sampleStandard());
       // Both operators reviewed the same draft version.
@@ -91,8 +72,7 @@ describe("publication", () => {
 
       expect(outcomes).toEqual([1, "StaleRecordError"]);
       expect(releasesOf(second, getStandard(second, standard.publicId).id)).toHaveLength(1);
-    });
-  });
+    }));
 
   it("revises a Release in a new draft without changing any published Release", () => {
     const { standard, draft } = draftWith(sampleStandard());

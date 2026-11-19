@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Icon, type IconName } from "./icon";
 import { Tooltip } from "./tooltip";
 import styles from "./toggle-group.module.css";
+import { HiddenFields } from "./form";
 
 interface ToggleGroupProps {
   /** The page the choice applies to; the chosen value becomes `name` in its query. */
@@ -40,9 +41,7 @@ export function ToggleGroup({ action, label, name, options, selected, keep = {},
         router.push(`${action}?${params}`, { scroll: false });
       }}
     >
-      {Object.entries(keep).map(([key, value]) => (
-        <input key={key} type="hidden" name={key} value={value} />
-      ))}
+      <HiddenFields values={keep} />
       <div role="group" aria-label={label} className={styles.group}>
         {options.map((option) =>
           iconOnly ? (

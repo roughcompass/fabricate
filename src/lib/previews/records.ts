@@ -4,9 +4,10 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { type ArtifactLayout, type PreviewRefKind, jobs, previewBuilds, previewPreparations } from "@/lib/db/schema";
-import { dump, parseCanonical, type JsonObject, type JsonValue } from "@repo-facts/contract";
+import { type JsonObject } from "@repo-facts/contract";
 import { enqueue } from "@/lib/jobs/queue";
 import type { Eligibility, PackageVerdict, Refusal } from "./eligibility";
+import { failureText } from "@/lib/git/redact";
 
 /**
  * Persistence for repository previews (design decision 1). A preparation is
@@ -117,8 +118,8 @@ export function decidePreparation(db: Executor, publicId: string, requested: num
         repositoryProfileId: "repositoryProfileId" in profile ? profile.repositoryProfileId : null,
         profileDocument: "document" in profile ? profile.document : null,
         profileDigest: profile.digest,
-        packages: dump(eligibility.packages as unknown as JsonValue),
-        refusal: refused ? dump(eligibility.refusal as unknown as JsonValue) : null,
+        packages: eligibility.packages as unknown as JsonObject[],
+        refusal: refused ? (eligibility.refusal as unknown as JsonObject) : null,
         updatedAt: now,
         finishedAt: now,
       })
@@ -134,7 +135,7 @@ export function failPreparation(db: Executor, publicId: string, requested: numbe
   return (
     db
       .update(previewPreparations)
-      .set({ state: "failed", failure: failure.slice(0, 1_000) || "Preparation failed", updatedAt: now, finishedAt: now })
+      .set({ state: "failed", failure: failureText(failure, 1_000) || "Preparation failed", updatedAt: now, finishedAt: now })
       .where(and(eq(previewPreparations.publicId, publicId), eq(previewPreparations.state, "profiling"), eq(previewPreparations.requestedAt, new Date(requested))))
       .returning()
       .get() ?? null
@@ -143,12 +144,12 @@ export function failPreparation(db: Executor, publicId: string, requested: numbe
 
 /** Every package's verdict, once decided. */
 export function preparationPackages(preparation: PreviewPreparation): PackageVerdict[] {
-  return preparation.packages === null ? [] : (parseCanonical(preparation.packages) as unknown as PackageVerdict[]);
+  return (preparation.packages ?? []) as unknown as PackageVerdict[];
 }
 
 /** Why the commit is Not previewable, when it's refused. */
 export function preparationRefusal(preparation: PreviewPreparation): Refusal | null {
-  return preparation.refusal === null ? null : (parseCanonical(preparation.refusal) as unknown as Refusal);
+  return preparation.refusal as unknown as Refusal | null;
 }
 
 // -- Previews -------------------------------------------------------------------------
@@ -186,7 +187,7 @@ export function startPreview(db: Executor, preparationPublicId: string, packageD
         refName: preparation.refName,
         refKind: preparation.refKind,
         profileDigest: preparation.profileDigest!,
-        decidingFacts: dump(verdict as unknown as JsonValue),
+        decidingFacts: verdict as unknown as JsonObject,
         createdAt: now,
         updatedAt: now,
       })
@@ -283,7 +284,7 @@ export function publishAttempt(db: Executor, publicId: string, identity: Attempt
       artifact: artifact.directory,
       artifactAttempt: identity.attempt,
       artifactLayout: artifact.layout,
-      artifactEntry: dump(artifact.entry),
+      artifactEntry: artifact.entry as JsonObject,
       outputBytes: artifact.outputBytes,
       buildMs: artifact.buildMs,
       nodeVersion: artifact.nodeVersion,
@@ -301,7 +302,7 @@ export function failAttempt(db: Executor, publicId: string, identity: AttemptIde
   const now = new Date();
   const result = db
     .update(previewBuilds)
-    .set({ attemptState: "failed", attemptReason: reason.slice(0, 1_000) || "The build failed", ...(log !== undefined && { attemptLog: log }), finishedAt: now, updatedAt: now })
+    .set({ attemptState: "failed", attemptReason: failureText(reason, 1_000) || "The build failed", ...(log !== undefined && { attemptLog: log }), finishedAt: now, updatedAt: now })
     .where(currentAttempt(publicId, identity))
     .run();
   return result.changes === 1;

@@ -2,13 +2,12 @@ import crypto from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { cache } from "react";
-import { Alert } from "@/components/ui/alert";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { countLabel } from "@/components/ui/count";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -16,31 +15,44 @@ import { Section } from "@/components/ui/section";
 import { Status } from "@/components/ui/status";
 import { Primary, RowActions, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { Tag, TagList } from "@/components/ui/tag";
-import { assessmentNumbers, listAssessments, targetsOf } from "@/lib/assessments/assessment-records";
+import { type Assessment, assessmentNumbers, type AssessmentTarget, listAssessments, targetsOf } from "@/lib/assessments/assessment-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
-import { evaluationNumbers, evaluationReleasesOf, listEvaluations } from "@/lib/evaluations/evaluation-records";
-import { findInitiative, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
+import { type Evaluation, evaluationNumbers, evaluationReleasesOf, listEvaluations } from "@/lib/evaluations/evaluation-records";
+import { type Initiative, scopeLabel, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
 import { releaseById, releaseLabel, standardById } from "@/lib/standards/standard-records";
 import { startEvaluationAction } from "../../evaluations/actions";
 import { startAssessment } from "../actions";
 import { LaunchForm } from "../launch-form";
 import { initiativeOutcome } from "../outcomes";
+import { routes } from "@/lib/web/routes";
+import { loadAssessment } from "./load";
 
 // One lookup per request, shared by the page and its metadata.
-const loadInitiative = cache((publicId: string) => findInitiative(getDb(), publicId));
-
-export async function generateMetadata({ params }: { params: Promise<{ initiativeId: string }> }): Promise<Metadata> {
-  const initiative = loadInitiative((await params).initiativeId);
+export async function generateMetadata({ params }: PageProps<"/assessments/[initiativeId]">): Promise<Metadata> {
+  const initiative = loadAssessment((await params).initiativeId);
   return { title: initiative?.name ?? "Assessment not found" };
 }
 
 const reusable = (state: string) => state === "complete" || state === "complete_with_issues";
 
-export default async function InitiativePage({ params, searchParams }: { params: Promise<{ initiativeId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+interface RunRow {
+  assessment: Assessment;
+  number: number;
+  targets: AssessmentTarget[];
+}
+
+interface EvaluationRow {
+  evaluation: Evaluation;
+  number: number;
+  assessment: RunRow;
+  releases: string[];
+}
+
+export default async function InitiativePage({ params, searchParams }: PageProps<"/assessments/[initiativeId]">) {
   const [{ initiativeId }, query] = await Promise.all([params, searchParams]);
   const db = getDb();
-  const initiative = loadInitiative(initiativeId);
+  const initiative = loadAssessment(initiativeId);
   if (!initiative) notFound();
   // Repository profiling Runs are each a Repository's profile versions, shown under Repositories (docs/profiling.md).
   if (initiative.profiling) redirect("/repositories");
@@ -64,9 +76,7 @@ export default async function InitiativePage({ params, searchParams }: { params:
     }),
   }));
   const scope = initiative.selectionMode === "all" ? `${scopeLabel(initiative, 0)} (${listSources(db).length} now)` : scopeLabel(initiative, sources.length);
-  // Salt Patterns assesses template versions, which DE FabLab adds; only its Releases are chosen here.
-  const templates = initiative.systemOwned;
-  const editHref = `/assessments/${initiative.publicId}/edit`;
+  const editHref = routes.assessmentEdit(initiative.publicId);
 
   return (
     <Page>
@@ -79,35 +89,17 @@ export default async function InitiativePage({ params, searchParams }: { params:
           </span>,
         ]}
         description={initiative.objective || undefined}
-        secondaryActions={[templates ? { href: editHref, label: "Select Releases", icon: "edit" } : { href: editHref, label: "Edit", icon: "edit" }]}
-        primaryAction={
-          templates ? undefined : (
-            <LaunchForm
-              action={startAssessment.bind(null, initiative.publicId)}
-              launchToken={crypto.randomUUID()}
-              label="Start Run"
-              failure="The Run was not started because its scope could not be resolved."
-            />
-          )
-        }
-        alerts={
-          <>
-            <OutcomeToast outcome={initiativeOutcome(param(query, "notice"), initiative)} />
-            {templates && (
-              <Alert tone="info" title="Owned by DE FabLab">
-                Runs start when a template version is accepted or re-checked, and each is evaluated against the Releases selected here. Its name, objective, and targets can&apos;t change.
-              </Alert>
-            )}
-          </>
-        }
+        secondaryActions={[{ href: editHref, label: "Edit", icon: "edit" }]}
+        primaryAction={<LaunchForm action={startAssessment.bind(null, initiative.publicId)} launchToken={crypto.randomUUID()} label="Start Run" failure="The Run was not started because its scope could not be resolved." />}
+        alerts={<OutcomeToast outcome={initiativeOutcome(param(query, "notice"), initiative)} />}
       />
 
       <Section title="Overview">
         <DescriptionList surface
           layout="columns"
           items={[
-            templates ? ["Targets", "Template versions, added when one is accepted or re-checked"] : ["Repositories", scope],
-            ...(initiative.selectionMode === "explicit" && !templates
+            ["Repositories", scope],
+            ...(initiative.selectionMode === "explicit"
               ? ([
                   [
                     "Selected Repositories",
@@ -129,13 +121,13 @@ export default async function InitiativePage({ params, searchParams }: { params:
                   {releases.map(({ release, standard }, index) => (
                     <span key={release.publicId}>
                       {index > 0 && ", "}
-                      <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{releaseLabel(standard, release)}</Link>
+                      <Link href={routes.release(standard.publicId, release.publicId)}>{releaseLabel(standard, release)}</Link>
                     </span>
                   ))}
                 </span>
               ) : (
                 <span key="releases">
-                  None selected. <Link href={`${editHref}#initiative-releases`}>Select a Release</Link> {templates ? "to hold templates to it." : "to run Evaluations."}
+                  None selected. <Link href={routes.assessmentEdit(initiative.publicId, "initiative-releases")}>Select a Release</Link> to run Evaluations.
                 </span>
               ),
             ],
@@ -143,119 +135,9 @@ export default async function InitiativePage({ params, searchParams }: { params:
         />
       </Section>
 
-      <Section title="Runs" description="Each Run keeps the scope it started with; a finished one can be evaluated again after the Release selection changes.">
-        <Panel flush>
-          {assessments.length > 0 ? (
-            <Table
-              label="Run history"
-              head={
-                <>
-                  <Th>Run</Th>
-                  <Th>Status</Th>
-                  <Th>Scope</Th>
-                  <Th>Finished</Th>
-                  <Th align="actions" hidden>
-                    Evaluate
-                  </Th>
-                </>
-              }
-            >
-              {assessments.map(({ assessment, number, targets }) => {
-                const failed = targets.filter((target) => target.state === "failed").length;
-                const canceled = targets.filter((target) => target.state === "canceled").length;
-                return (
-                  <tr key={assessment.publicId}>
-                    <Td label="Run">
-                      <Primary>
-                        <Link href={`/runs/${assessment.publicId}`}>{`Run #${number}`}</Link>
-                      </Primary>
-                      <Secondary>
-                        Started <RelativeTime value={assessment.createdAt} />
-                      </Secondary>
-                    </Td>
-                    <Td label="Status">
-                      <Status state={assessment.state} />
-                    </Td>
-                    <Td label="Scope">{[templates ? targets.map((target) => target.sourceName).join(", ") : countLabel(targets.length, "Repository", "Repositories"), failed ? `${failed} failed` : null, canceled ? `${canceled} canceled` : null].filter(Boolean).join(" · ")}</Td>
-                    <Td label="Finished">
-                      <RelativeTime value={assessment.finishedAt} />
-                    </Td>
-                    <Td align="actions">
-                      <RowActions>
-                        {!reusable(assessment.state) ? (
-                          <Secondary>{assessment.state === "failed" || assessment.state === "canceled" ? "No results to evaluate" : "Evaluate once finished"}</Secondary>
-                        ) : releases.length === 0 ? (
-                          <Link href={`/assessments/${initiative.publicId}/edit#initiative-releases`}>Select a Release to evaluate</Link>
-                        ) : (
-                          <LaunchForm
-                            action={startEvaluationAction.bind(null, initiative.publicId, assessment.publicId)}
-                            launchToken={crypto.randomUUID()}
-                            label="Start Evaluation"
-                            accessibleName={`Start Evaluation of Run #${number}`}
-                            failure={`The Evaluation of Run #${number} was not started.`}
-                            variant="secondary"
-                            size="sm"
-                          />
-                        )}
-                      </RowActions>
-                    </Td>
-                  </tr>
-                );
-              })}
-            </Table>
-          ) : (
-            <EmptyState title="No Runs yet">{templates ? "A Run starts when a template version is accepted or re-checked." : "Start a Run to pin each scoped repository to a commit and profile it without running its code."}</EmptyState>
-          )}
-        </Panel>
-      </Section>
+      <RunsSection initiative={initiative} runs={assessments} hasReleases={releases.length > 0} />
 
-      <Section title="Evaluations" description="Comparisons of a Run with the Standard Releases selected when each started.">
-        <Panel flush>
-          {evaluations.length > 0 ? (
-            <Table
-              label="Evaluation history"
-              head={
-                <>
-                  <Th>Evaluation</Th>
-                  <Th>Status</Th>
-                  <Th>Run</Th>
-                  <Th>Standard Releases</Th>
-                  <Th>Finished</Th>
-                </>
-              }
-            >
-              {evaluations.map(({ evaluation, number, assessment, releases: pinned }) => (
-                <tr key={evaluation.publicId}>
-                  <Td label="Evaluation">
-                    <Primary>
-                      <Link href={`/evaluations/${evaluation.publicId}`}>{`Evaluation #${number}`}</Link>
-                    </Primary>
-                    <Secondary>
-                      Started <RelativeTime value={evaluation.createdAt} />
-                    </Secondary>
-                  </Td>
-                  <Td label="Status">
-                    <Status state={evaluation.state} />
-                  </Td>
-                  <Td label="Run">
-                    <Link href={`/runs/${assessment.assessment.publicId}`}>{`Run #${assessment.number}`}</Link>
-                  </Td>
-                  <Td label="Standard Releases">
-                    <TagList values={pinned} />
-                  </Td>
-                  <Td label="Finished">
-                    <RelativeTime value={evaluation.finishedAt} />
-                  </Td>
-                </tr>
-              ))}
-            </Table>
-          ) : (
-            <EmptyState title="No Evaluations yet">
-              {releases.length ? "Start an Evaluation from a finished Run above." : "Select a published Standard Release, then evaluate a finished Run."}
-            </EmptyState>
-          )}
-        </Panel>
-      </Section>
+      <EvaluationsSection evaluations={evaluations} hasReleases={releases.length > 0} />
 
       <Disclosure summary="Details" variant="plain">
         <DescriptionList surface
@@ -272,5 +154,129 @@ export default async function InitiativePage({ params, searchParams }: { params:
         />
       </Disclosure>
     </Page>
+  );
+}
+
+/** Every Run of the Assessment, each with what it can do next: wait, be evaluated, or have a Release selected first. */
+function RunsSection({ initiative, runs, hasReleases }: { initiative: Initiative; runs: RunRow[]; hasReleases: boolean }) {
+  return (
+    <Section title="Runs" description="Each Run keeps the scope it started with; a finished one can be evaluated again after the Release selection changes.">
+      <Panel flush>
+        {runs.length > 0 ? (
+          <Table
+            label="Run history"
+            head={
+              <>
+                <Th>Run</Th>
+                <Th>Status</Th>
+                <Th>Scope</Th>
+                <Th>Finished</Th>
+                <Th align="actions" hidden>
+                  Evaluate
+                </Th>
+              </>
+            }
+          >
+            {runs.map(({ assessment, number, targets }) => {
+              const failed = targets.filter((target) => target.state === "failed").length;
+              const canceled = targets.filter((target) => target.state === "canceled").length;
+              return (
+                <tr key={assessment.publicId}>
+                  <Td label="Run">
+                    <Primary>
+                      <Link href={routes.run(assessment.publicId)}>{`Run #${number}`}</Link>
+                    </Primary>
+                    <Secondary>
+                      Started <RelativeTime value={assessment.createdAt} />
+                    </Secondary>
+                  </Td>
+                  <Td label="Status">
+                    <Status state={assessment.state} />
+                  </Td>
+                  <Td label="Scope">{[countLabel(targets.length, "Repository", "Repositories"), failed ? `${failed} failed` : null, canceled ? `${canceled} canceled` : null].filter(Boolean).join(" · ")}</Td>
+                  <Td label="Finished">
+                    <RelativeTime value={assessment.finishedAt} />
+                  </Td>
+                  <Td align="actions">
+                    <RowActions>
+                      {!reusable(assessment.state) ? (
+                        <Secondary>{assessment.state === "failed" || assessment.state === "canceled" ? "No results to evaluate" : "Evaluate once finished"}</Secondary>
+                      ) : !hasReleases ? (
+                        <Link href={routes.assessmentEdit(initiative.publicId, "initiative-releases")}>Select a Release to evaluate</Link>
+                      ) : (
+                        <LaunchForm
+                          action={startEvaluationAction.bind(null, initiative.publicId, assessment.publicId)}
+                          launchToken={crypto.randomUUID()}
+                          label="Start Evaluation"
+                          accessibleName={`Start Evaluation of Run #${number}`}
+                          failure={`The Evaluation of Run #${number} was not started.`}
+                          variant="secondary"
+                          size="sm"
+                        />
+                      )}
+                    </RowActions>
+                  </Td>
+                </tr>
+              );
+            })}
+          </Table>
+        ) : (
+          <EmptyState title="No Runs yet">Start a Run to pin each scoped repository to a commit and profile it without running its code.</EmptyState>
+        )}
+      </Panel>
+    </Section>
+  );
+}
+
+/** Every Evaluation of the Assessment's Runs, newest first. */
+function EvaluationsSection({ evaluations, hasReleases }: { evaluations: EvaluationRow[]; hasReleases: boolean }) {
+  return (
+    <Section title="Evaluations" description="Comparisons of a Run with the Standard Releases selected when each started.">
+      <Panel flush>
+        {evaluations.length > 0 ? (
+          <Table
+            label="Evaluation history"
+            head={
+              <>
+                <Th>Evaluation</Th>
+                <Th>Status</Th>
+                <Th>Run</Th>
+                <Th>Standard Releases</Th>
+                <Th>Finished</Th>
+              </>
+            }
+          >
+            {evaluations.map(({ evaluation, number, assessment, releases: pinned }) => (
+              <tr key={evaluation.publicId}>
+                <Td label="Evaluation">
+                  <Primary>
+                    <Link href={routes.evaluation(evaluation.publicId)}>{`Evaluation #${number}`}</Link>
+                  </Primary>
+                  <Secondary>
+                    Started <RelativeTime value={evaluation.createdAt} />
+                  </Secondary>
+                </Td>
+                <Td label="Status">
+                  <Status state={evaluation.state} />
+                </Td>
+                <Td label="Run">
+                  <Link href={routes.run(assessment.assessment.publicId)}>{`Run #${assessment.number}`}</Link>
+                </Td>
+                <Td label="Standard Releases">
+                  <TagList values={pinned} />
+                </Td>
+                <Td label="Finished">
+                  <RelativeTime value={evaluation.finishedAt} />
+                </Td>
+              </tr>
+            ))}
+          </Table>
+        ) : (
+          <EmptyState title="No Evaluations yet">
+            {hasReleases ? "Start an Evaluation from a finished Run above." : "Select a published Standard Release, then evaluate a finished Run."}
+          </EmptyState>
+        )}
+      </Panel>
+    </Section>
   );
 }

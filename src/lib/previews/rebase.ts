@@ -216,9 +216,3 @@ export function rebaseHtmlStream(base: string): TransformStream<string, string> 
     },
   });
 }
-
-/** +html+ rebased under +base+, all at once. */
-export function rebaseHtml(html: string, base: string): string {
-  const rebaser = new HtmlRebaser(base);
-  return rebaser.push(html) + rebaser.end();
-}

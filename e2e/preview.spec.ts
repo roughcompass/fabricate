@@ -2,6 +2,7 @@ import type { Frame, Page } from "@playwright/test";
 import { templateBySlug } from "../src/lib/demo/catalog";
 import { startComment, waitForRegions } from "./support/demo";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
+import { pageHeader } from "./support/shell";
 
 /** Preview mode (template-preview spec). */
 
@@ -43,7 +44,7 @@ test.describe("the focused page", () => {
     await expect(headings).toHaveCount(1);
     await expect(headings).toHaveText("Preview Payments workspace");
     expect((await headings.boundingBox())!.width).toBeLessThanOrEqual(1);
-    await expect(page.locator("[data-page-header]")).toHaveCount(0);
+    await expect(pageHeader(page)).toHaveCount(0);
     await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toHaveCount(0);
     // The content takes the whole width.
     await expect.poll(async () => (await page.locator("main").boundingBox())!.x).toBe(0);
@@ -103,7 +104,7 @@ test("opens from Preview template in the same tab, on the Preview tab with the D
   await expect(page).toHaveTitle("Preview Market watch · DE FabLab");
   // A focused page: no breadcrumbs, description, or visible title.
   await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toHaveCount(0);
-  await expect(page.locator("[data-page-header]")).toHaveCount(0);
+  await expect(pageHeader(page)).toHaveCount(0);
   await expect(page.locator("[data-shell-header]").getByRole("link", { name: "Back to Market watch" })).toHaveAttribute("href", "/templates/market-watch");
 
   await expect(page.getByRole("navigation", { name: "Preview mode" }).getByRole("link", { name: "Preview" })).toHaveAttribute("aria-current", "page");

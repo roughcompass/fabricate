@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeIssue, issueLocation } from "@/lib/standards/issue-location";
+import { issueLocation } from "@/lib/standards/issue-location";
 
 const controls = [{ key: "has-ci" }, { key: "" }, {}];
 
@@ -18,10 +18,5 @@ describe("Standard issue locations", () => {
   it("describes issues outside a Control in words", () => {
     expect(issueLocation("controls", controls)).toBe("Controls");
     expect(issueLocation("input_schemas.repository_profile", controls)).toBe("Input schemas repository profile");
-  });
-
-  it("adds the message for lists without the fields", () => {
-    expect(describeIssue({ field: "controls[0].key", message: "Use lowercase letters, digits, and hyphens" }, controls)).toBe("Control 1 (has-ci) · Key: Use lowercase letters, digits, and hyphens");
-    expect(describeIssue({ field: "controls", message: "Add at least one Control" }, [])).toBe("Controls: Add at least one Control");
   });
 });

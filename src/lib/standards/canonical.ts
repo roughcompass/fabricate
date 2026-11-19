@@ -1,4 +1,5 @@
 import { type JsonValue, compareCodeUnits, dump, sha256 } from "@repo-facts/contract";
+import { isJsonObject } from "@/lib/json";
 
 /**
  * The canonical form and digest of a Standard document, for drafts and
@@ -17,10 +18,10 @@ import { type JsonValue, compareCodeUnits, dump, sha256 } from "@repo-facts/cont
  */
 
 export function canonicalStandard(document: JsonValue): JsonValue {
-  if (!isRecord(document)) return canonicalValue(document);
+  if (!isJsonObject(document)) return canonicalValue(document);
   return rebuild(document, (key, value) => {
-    if (key === "controls" && Array.isArray(value)) return sortBy(value.map(canonicalControl), (control) => (isRecord(control) && typeof control.key === "string" ? control.key : ""));
-    if (key === "input_schemas" && isRecord(value)) return rebuild(value, (_name, versions) => (Array.isArray(versions) ? uniqueSorted(versions) : canonicalValue(versions)));
+    if (key === "controls" && Array.isArray(value)) return sortBy(value.map(canonicalControl), (control) => (isJsonObject(control) && typeof control.key === "string" ? control.key : ""));
+    if (key === "input_schemas" && isJsonObject(value)) return rebuild(value, (_name, versions) => (Array.isArray(versions) ? uniqueSorted(versions) : canonicalValue(versions)));
     return canonicalValue(value);
   });
 }
@@ -31,15 +32,15 @@ export function standardDigest(document: JsonValue): string {
 }
 
 function canonicalControl(control: JsonValue): JsonValue {
-  if (!isRecord(control)) return canonicalValue(control);
+  if (!isJsonObject(control)) return canonicalValue(control);
   return rebuild(control, (key, value) => (key === "applicability" || key === "condition" ? canonicalExpression(value) : canonicalValue(value)));
 }
 
 function canonicalExpression(expression: JsonValue): JsonValue {
-  if (!isRecord(expression)) return canonicalValue(expression);
+  if (!isJsonObject(expression)) return canonicalValue(expression);
   const op = expression.op;
   return rebuild(expression, (key, value) => {
-    if ((key === "item" || key === "where" || key === "condition") && isRecord(value)) return canonicalExpression(value);
+    if ((key === "item" || key === "where" || key === "condition") && isJsonObject(value)) return canonicalExpression(value);
     if (key === "items" && Array.isArray(value)) {
       const items = value.map(canonicalExpression);
       // `all` and `any` are commutative, so their items have one canonical order.
@@ -53,7 +54,7 @@ function canonicalExpression(expression: JsonValue): JsonValue {
 /** A copy with every object rebuilt from its own keys; canonical JSON sorts the keys when it is written. */
 function canonicalValue(value: JsonValue): JsonValue {
   if (Array.isArray(value)) return value.map(canonicalValue);
-  if (isRecord(value)) return rebuild(value, (_key, item) => canonicalValue(item));
+  if (isJsonObject(value)) return rebuild(value, (_key, item) => canonicalValue(item));
   return value;
 }
 
@@ -74,6 +75,3 @@ function uniqueSorted(values: JsonValue[]): JsonValue[] {
   return [...seen.entries()].sort(([a], [b]) => compareCodeUnits(a, b)).map(([, value]) => value);
 }
 
-function isRecord(value: JsonValue | undefined): value is Record_ {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}

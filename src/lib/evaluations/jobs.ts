@@ -10,6 +10,7 @@ import { type Evaluation, type EvaluationRelease, coverageGapsOf, evaluationRele
 import { evaluationInputs } from "./start";
 import { type SummaryFinding, summarize } from "./summary";
 import { transitionEvaluation, transitionEvaluationRelease } from "./transitions";
+import { failureText } from "@/lib/git/redact";
 
 /**
  * The Evaluation pipeline: one idempotent job per pinned Release, and a
@@ -125,7 +126,7 @@ function failRelease(db: Executor, evaluationPublicId: string, position: number,
     const evaluation = getEvaluation(tx, evaluationPublicId);
     const release = evaluationReleasesOf(tx, evaluation.id).find((item) => item.position === position);
     if (!release || isTerminal(EVALUATION_RELEASE_MACHINE, release.state)) return;
-    transitionEvaluationRelease(tx, release, "failed", { failureReason: reason.slice(0, 500) });
+    transitionEvaluationRelease(tx, release, "failed", { failureReason: failureText(reason, 500) });
     requestEvaluationFinalization(tx, evaluationPublicId);
   });
 }

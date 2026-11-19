@@ -7,17 +7,14 @@ import type { JsonObject } from "@repo-facts/contract";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getAssessment, targetsOf } from "@/lib/assessments/assessment-records";
 import { launchAssessment } from "@/lib/assessments/launcher";
-import type { FabricateConfig } from "@/lib/config";
-import type { Db } from "@/lib/db/client";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
 import type { MapDocument } from "@/lib/relationships/schema";
-import { acquisitionConfig, registerLocalSource } from "../support/acquisition";
+import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
 import { buildInitiative } from "../support/builders";
-import { createTestDb } from "../support/db";
-import { GitFixture, type Repo } from "../support/git-fixture";
+import { type Repo } from "../support/git-fixture";
 import { manifest } from "../support/profiles";
 import { NO_NETWORK_CALLS, NetworkTrap, countNetworkCalls } from "../support/traps";
 
@@ -35,9 +32,7 @@ const PROXY_KEYS = ["HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "http
 const UNDICI_DISPATCHER = Symbol.for("undici.globalDispatcher.1");
 
 describe("Assessment of unavailable Service Dependencies", () => {
-  let fixture: GitFixture;
-  let config: FabricateConfig;
-  let db: Db;
+  const world = useAcquisitionWorld("unavailable", { once: true });
   let trap: NetworkTrap;
   let work: Repo;
   let calls: typeof NO_NETWORK_CALLS;
@@ -83,16 +78,13 @@ describe("Assessment of unavailable Service Dependencies", () => {
   };
 
   beforeAll(async () => {
-    fixture = GitFixture.create("unavailable");
-    config = acquisitionConfig(fixture);
-    db = createTestDb();
     trap = await NetworkTrap.open();
 
-    work = fixture.repo("fleet/storefront");
+    work = world.fixture.repo("fleet/storefront");
     for (const [file, content] of Object.entries(files(trap.url))) work.write(file, content);
     work.commit();
     treeBefore = listTree(work.path);
-    const initiative = buildInitiative(db, { sources: [registerLocalSource(db, config, "storefront", work.path)] });
+    const initiative = buildInitiative(world.db, { sources: [registerLocalSource(world.db, world.config, "storefront", work.path)] });
 
     // A credential, a configured destination, and a proxy in the environment, all pointing at the trap.
     for (const key of ["PAYMENTS_TOKEN", "ORDERS_URL", ...PROXY_KEYS]) saved[key] = process.env[key];
@@ -104,8 +96,8 @@ describe("Assessment of unavailable Service Dependencies", () => {
 
     try {
       calls = await countNetworkCalls(async () => {
-        assessmentId = launchAssessment(db, initiative.publicId, crypto.randomUUID(), config).assessment.publicId;
-        await drainJobs(db, jobHandlers(db, config));
+        assessmentId = launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), world.config).assessment.publicId;
+        await drainJobs(world.db, jobHandlers(world.db, world.config));
       });
       proxyAfter = proxyState();
     } finally {
@@ -118,18 +110,16 @@ describe("Assessment of unavailable Service Dependencies", () => {
 
   afterAll(async () => {
     await trap.close();
-    fixture.cleanup();
-    fs.rmSync(config.repositoryStorage, { recursive: true, force: true });
   });
 
-  const facts = () => profileDocument(profilesOf(db, getAssessment(db, assessmentId).id)[0]!.profile).fact_document as JsonObject;
+  const facts = () => profileDocument(profilesOf(world.db, getAssessment(world.db, assessmentId).id)[0]!.profile).fact_document as JsonObject;
   const service = (key: string) => (facts().service_dependencies as JsonObject[]).find((item) => item.key === key)!;
   const fact = (key: string, name: string) => service(key)[name] as JsonObject;
 
   it("completes the Assessment: an unavailable service is not a source failure", () => {
-    const assessment = getAssessment(db, assessmentId);
+    const assessment = getAssessment(world.db, assessmentId);
     expect(assessment.state).toBe("complete");
-    expect(targetsOf(db, assessment.id)).toMatchObject([{ state: "complete", failureCode: null }]);
+    expect(targetsOf(world.db, assessment.id)).toMatchObject([{ state: "complete", failureCode: null }]);
   });
 
   it("resolves no hostname, opens no socket, and loads no remote schema", () => {
@@ -177,7 +167,7 @@ describe("Assessment of unavailable Service Dependencies", () => {
     const categories = facts().categories as Record<string, JsonObject>;
     expect((categories.egress_routes!.facts as JsonObject[]).map((item) => item.key)).toContain("name:HTTPS_PROXY");
     expect((categories.access_signals!.facts as JsonObject[]).map((item) => item.key)).toEqual(expect.arrayContaining(["name:PAYMENTS_TOKEN", "file:.env"]));
-    const stored = db.$client.serialize();
+    const stored = world.db.$client.serialize();
     for (const marker of Object.values(markers)) expect(stored.includes(Buffer.from(marker)), marker).toBe(false);
   });
 
@@ -192,7 +182,7 @@ describe("Assessment of unavailable Service Dependencies", () => {
     const substitutes = (facts().categories as Record<string, JsonObject>).test_substitutes!.facts as JsonObject[];
     for (const item of substitutes) expect(treeBefore).toContain(String(item.key).split(":")[1]);
     // Storage holds bare mirrors only: Git's own files, no checked-out file and no hook.
-    const stored = listTree(config.repositoryStorage);
+    const stored = listTree(world.config.repositoryStorage);
     expect(stored.length).toBeGreaterThan(0);
     expect(stored.filter((file) => !/^src_[a-z0-9]+\.git\/(objects|refs|HEAD|config|packed-refs|description|info|shallow|lock)/.test(file))).toEqual([]);
     const committed = new Set(treeBefore.map((file) => path.basename(file)));
@@ -200,7 +190,7 @@ describe("Assessment of unavailable Service Dependencies", () => {
   });
 
   it("puts every destination in the Relationship Map without contacting it", () => {
-    const map = mapDocument(mapOf(db, getAssessment(db, assessmentId).id)!) as unknown as MapDocument;
+    const map = mapDocument(mapOf(world.db, getAssessment(world.db, assessmentId).id)!) as unknown as MapDocument;
     const calls = map.edges.filter((edge) => edge.type === "service_call");
     expect(calls).toHaveLength(5);
     expect(calls.filter((edge) => edge.state === "unresolved").map((edge) => edge.reason)).toEqual(expect.arrayContaining(["The call's destination is not determined statically"]));

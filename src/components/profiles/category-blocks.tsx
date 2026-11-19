@@ -2,7 +2,7 @@ import type { JsonObject } from "@repo-facts/contract";
 import { Fragment } from "react";
 import { EvidenceList } from "@/components/results/evidence";
 import { NoValuePlaceholder } from "@/components/results/no-value";
-import { countLabel } from "@/components/ui/count";
+import { countLabel, formatNumber } from "@/components/ui/count";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
@@ -259,7 +259,7 @@ function SearchDetails({ heading }: { heading: Heading }) {
           {surface.slice(0, INPUTS_SHOWN).map((path) => (
             <li key={path}>{path || "(repository)"}</li>
           ))}
-          {surface.length > INPUTS_SHOWN && <li className={styles.muted}>{`and ${(surface.length - INPUTS_SHOWN).toLocaleString("en-US")} more`}</li>}
+          {surface.length > INPUTS_SHOWN && <li className={styles.muted}>{`and ${formatNumber(surface.length - INPUTS_SHOWN)} more`}</li>}
         </ul>
       )}
     </div>
@@ -282,7 +282,7 @@ function SearchLine({ heading }: { heading: Heading }) {
   );
 }
 
-export const SHARED_TITLES: Record<SharedBlock["kind"], { title: string; description: string }> = {
+const SHARED_TITLES: Record<SharedBlock["kind"], { title: string; description: string }> = {
   dependencies: { title: "Dependencies", description: "Direct dependencies by manifest, with their declared ranges, the versions lockfiles resolve, and whether they're internal" },
   scripts: { title: "Package scripts", description: "Scripts declared in package manifests, with what each one checks (never run)" },
 };

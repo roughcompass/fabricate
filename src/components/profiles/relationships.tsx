@@ -6,8 +6,8 @@ import { Section } from "@/components/ui/section";
 import { Table, Td, Th } from "@/components/ui/table";
 import { humanize } from "@/components/ui/status";
 import type { RelatedRepository, RepositoryRelationships } from "@/lib/profiles/relationships";
-import { repositoryHref } from "@/lib/web/repository-paths";
 import styles from "./profile.module.css";
+import { routes } from "@/lib/web/routes";
 
 /**
  * The repositories this one uses and the ones that use it, from the newest
@@ -31,7 +31,7 @@ export function Relationships({ relationships }: { relationships: RepositoryRela
       ) : (
         <>
           <p className={styles.source}>
-            From Run <Link href={`/runs/${run.publicId}`}>{run.publicId}</Link>
+            From Run <Link href={routes.run(run.publicId)}>{run.publicId}</Link>
             {run.finishedAt ? (
               <>
                 , finished <RelativeTime value={run.finishedAt} />
@@ -55,7 +55,7 @@ export function Relationships({ relationships }: { relationships: RepositoryRela
                   {rows.map(({ direction, repository }) => (
                     <tr key={`${direction}:${repository.publicId}`}>
                       <Td label="Repository">
-                        <Link href={repositoryHref(repository.publicId)}>{repository.name}</Link>
+                        <Link href={routes.repository(repository.publicId)}>{repository.name}</Link>
                       </Td>
                       <Td label="Direction">{direction}</Td>
                       <Td label="Through">{through(repository)}</Td>

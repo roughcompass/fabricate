@@ -1,11 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import ApplicationPage from "@/app/(operator)/runs/[assessmentId]/map/applications/[applicationId]/page";
-import PortalPage from "@/app/(operator)/runs/[assessmentId]/map/portal/[portal]/page";
 import MapPage from "@/app/(operator)/runs/[assessmentId]/map/page";
-import { type Db, setDb } from "@/lib/db/client";
-import { createTestDb } from "../support/db";
+import SystemPage from "@/app/(operator)/runs/[assessmentId]/map/systems/[system]/page";
 import { type LargeMap, seedLargeMap } from "../support/large-map";
+import { useAppDb } from "../support/next";
 
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
 
@@ -48,35 +46,31 @@ async function timed(render: () => Promise<React.ReactElement>): Promise<{ milli
 const BUDGET = 500;
 
 describe("Relationship Map at 500 repositories (Large Run)", () => {
-  let db: Db;
+  const app = useAppDb({ once: true });
   let large: LargeMap;
   let nodeOf: (name: string) => string;
 
   beforeAll(async () => {
-    db = createTestDb();
-    setDb(db);
-    large = await seedLargeMap(db);
-    nodeOf = (name) => (db.$client.prepare("select node_id from graph_nodes where kind = 'repository' and label = ?").get(name) as { node_id: string }).node_id;
+    large = await seedLargeMap(app.db);
+    nodeOf = (name) => (app.db.$client.prepare("select node_id from graph_nodes where kind = 'repository' and label = ?").get(name) as { node_id: string }).node_id;
     guard.forbid = true;
   }, 180_000);
 
   afterAll(() => {
     guard.forbid = false;
-    setDb(undefined);
   });
 
   const run = () => Promise.resolve({ assessmentId: large.assessment.publicId });
   const views: [string, () => Promise<React.ReactElement>][] = [
     ["the Run level", () => MapPage({ params: run(), searchParams: Promise.resolve({}) })],
-    ["a portal level", () => PortalPage({ params: Promise.resolve({ assessmentId: large.assessment.publicId, portal: large.portals[3]!.publicId }), searchParams: Promise.resolve({}) })],
-    ["an application level", () => ApplicationPage({ params: Promise.resolve({ assessmentId: large.assessment.publicId, applicationId: large.applications.get("SEAL-A0300")!.publicId }), searchParams: Promise.resolve({}) })],
+    ["a runtime system's level", () => SystemPage({ params: Promise.resolve({ assessmentId: large.assessment.publicId, system: nodeOf("shell-03") }), searchParams: Promise.resolve({}) })],
     ["a library's focus", () => MapPage({ params: run(), searchParams: Promise.resolve({ focus: nodeOf("lib-00") }) })],
   ];
 
-  it("is seeded at scale, with claims across Lines of Business and portals", () => {
-    const count = (sql: string) => (db.$client.prepare(sql).get() as { n: number }).n;
+  it("is seeded at scale, with runtime systems and repositories on their own", () => {
+    const count = (sql: string) => (app.db.$client.prepare(sql).get() as { n: number }).n;
     expect(count("select count(*) as n from graph_nodes where kind = 'repository'")).toBe(500);
-    expect(count("select count(distinct subject_repository_source_id) as n from ownership_assertions where attribute = 'application'")).toBe(440);
+    expect(count("select count(*) as n from graph_edges where type = 'composition' and state = 'resolved'")).toBe(340);
     expect(count("select count(*) as n from graph_edges where kind = 'architecture' and state = 'resolved'")).toBeGreaterThan(1000);
   });
 
@@ -91,9 +85,9 @@ describe("Relationship Map at 500 repositories (Large Run)", () => {
     });
   }
 
-  it("leads the library's focus with its dependents across portals", async () => {
-    const { html } = await timed(views[3]![1]);
+  it("leads the library's focus with its dependents across runtime systems", async () => {
+    const { html } = await timed(views[2]![1]);
 
-    expect(html).toMatch(/Changing lib-00 directly affects \d+ repositories in \d+ portals; \d+ more depend on it through them\./);
+    expect(html).toMatch(/Changing lib-00 directly affects \d+ repositories in \d+ runtime systems; \d+ more depend on it through them\./);
   });
 });

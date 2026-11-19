@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache } from "react";
 import { ActionButton, ButtonLink } from "@/components/ui/button";
 import { countLabel } from "@/components/ui/count";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -16,25 +16,25 @@ import { Status } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { ShortValue, Tag } from "@/components/ui/tag";
 import { getDb } from "@/lib/db/client";
-import { draftDocument, draftOf, findStandard, releaseDocument, releasesOf } from "@/lib/standards/standard-records";
+import { draftDocument, draftOf, releaseDocument, releasesOf } from "@/lib/standards/standard-records";
 import { validateStandard } from "@/lib/standards/validate";
 import { reviseStandard } from "../actions";
 import { standardOutcome } from "../outcomes";
+import { routes } from "@/lib/web/routes";
+import { loadStandard } from "./load";
 
-const loadStandard = cache((publicId: string) => findStandard(getDb(), publicId));
-
-export async function generateMetadata({ params }: { params: Promise<{ standardId: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/standards/[standardId]">): Promise<Metadata> {
   const standard = loadStandard((await params).standardId);
   return { title: standard?.name ?? "Standard not found" };
 }
 
 /** "Profile v1 · Map v1": the result schemas a Release reads. */
-function reads(profiles: string, maps: string): string {
-  const versions = (json: string) => (JSON.parse(json) as number[]).map((version) => `v${version}`).join(", ") || "none";
+function reads(profiles: readonly number[], maps: readonly number[]): string {
+  const versions = (list: readonly number[]) => list.map((version) => `v${version}`).join(", ") || "none";
   return `Profile ${versions(profiles)} · Relationship Map ${versions(maps)}`;
 }
 
-export default async function StandardPage({ params, searchParams }: { params: Promise<{ standardId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function StandardPage({ params, searchParams }: PageProps<"/standards/[standardId]">) {
   const [{ standardId }, query] = await Promise.all([params, searchParams]);
   const db = getDb();
   const standard = loadStandard(standardId);
@@ -50,7 +50,7 @@ export default async function StandardPage({ params, searchParams }: { params: P
         breadcrumbs={[{ href: "/standards", label: "Standards" }]}
         title={standard.name}
         description={standard.purpose}
-        secondaryActions={[{ href: `/standards/${standard.publicId}/edit`, label: "Edit name and purpose", icon: "edit" }]}
+        secondaryActions={[{ href: routes.standardEdit(standard.publicId), label: "Edit name and purpose", icon: "edit" }]}
         alerts={<OutcomeToast outcome={standardOutcome(param(query, "notice"), standard)} />}
       />
 
@@ -60,10 +60,10 @@ export default async function StandardPage({ params, searchParams }: { params: P
         actions={
           draft ? (
             <>
-              <ButtonLink href={`/standards/${standard.publicId}/draft`} icon="edit">
+              <ButtonLink href={routes.standardDraft(standard.publicId)} icon="edit">
                 Edit draft
               </ButtonLink>
-              <ButtonLink href={`/standards/${standard.publicId}/publish`} variant="primary" icon="lock">
+              <ButtonLink href={routes.standardPublish(standard.publicId)} variant="primary" icon="lock">
                 Review and publish
               </ButtonLink>
             </>
@@ -76,7 +76,7 @@ export default async function StandardPage({ params, searchParams }: { params: P
             items={[
               ["Status", issues.length ? <Status key="status" state="draft_problems" label={`${countLabel(issues.length, "problem")} to fix`} /> : <Status key="status" state="draft_ready" />],
               ["Controls", Array.isArray(controls) ? controls.length : 0],
-              ["Last saved", <RelativeTime key="saved" value={draft.updatedAt} />],
+              ["Last saved", <RelativeTime key="saved" value={draft.savedAt} />],
             ]}
           />
         ) : (
@@ -117,7 +117,7 @@ export default async function StandardPage({ params, searchParams }: { params: P
                   <tr key={release.publicId}>
                     <Td label="Release">
                       <Primary>
-                        <Link href={`/standards/${standard.publicId}/releases/${release.publicId}`}>{`v${release.version}`}</Link>
+                        <Link href={routes.release(standard.publicId, release.publicId)}>{`v${release.version}`}</Link>
                       </Primary>
                       <Secondary>{`Reads ${reads(release.profileSchemaVersions, release.relationshipSchemaVersions)}`}</Secondary>
                     </Td>

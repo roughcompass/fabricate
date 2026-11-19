@@ -4,10 +4,10 @@ import { previewPublication } from "../src/lib/standards/publish";
 import { createStandard, draftDocument, draftOf, getStandard, listStandards, releasesOf, saveDraft } from "../src/lib/standards/standard-records";
 import { sampleStandard } from "../test/support/standards";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
+import { toasts } from "./support/shell";
 
 const control = (page: Page, number: number) => page.getByRole("region", { name: new RegExp(`^Control ${number}\\b`) });
 const builder = (scope: ReturnType<typeof control>, legend: string) => scope.getByRole("group", { name: legend, exact: true });
-const toasts = (page: Page) => page.getByRole("region", { name: "Notifications" });
 const controlAction = async (page: Page, number: number, action: string) => {
   await page.getByRole("button", { name: `Actions for Control ${number}` }).click();
   await page.locator("[popover]:popover-open").getByRole("button", { name: action }).click();
@@ -235,5 +235,5 @@ test("starts a Standard from the Salt adherence starter, then reviews and publis
   await page.getByRole("button", { name: "Publish v1" }).click();
   await page.getByRole("dialog", { name: "Publish Salt adherence v1?" }).getByRole("button", { name: "Publish v1" }).click();
   await expect(toasts(page).getByText("Release v1 was published.")).toBeVisible();
-  expect(releasesOf(db, standard!.id).map((release) => release.profileSchemaVersions)).toEqual(["[2]"]);
+  expect(releasesOf(db, standard!.id).map((release) => release.profileSchemaVersions)).toEqual([[2]]);
 });

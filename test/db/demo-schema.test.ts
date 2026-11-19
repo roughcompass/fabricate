@@ -2,8 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type Db, MIGRATIONS_FOLDER, migrateDatabase, openDatabase } from "@/lib/db/client";
-import { createTestDb, rawRun } from "../support/db";
+import { type Db, MIGRATIONS_FOLDER } from "@/lib/db/client";
+import { createTestDb, migrateToLatest, rawRun } from "../support/db";
 
 const DEMO_TABLES = ["demo_comments", "demo_shares", "demo_threads", "demo_workspaces"];
 const DEMO_MIGRATIONS = ["0013_demo", "0014_demo_origin", "0033_demo_imports_removed", "0037_demo_applications_removed"];
@@ -53,8 +53,7 @@ describe("demo schema", () => {
       fs.writeFileSync(journalFile, JSON.stringify(journal));
       for (const tag of DEMO_MIGRATIONS) fs.rmSync(path.join(folder, `${tag}.sql`));
 
-      const product = openDatabase(":memory:");
-      migrateDatabase(product, folder);
+      const product = createTestDb(folder);
       const before = tables(product);
       const schemaOf = (handle: Db) =>
         handle.$client.prepare("select name, sql from sqlite_master where name not like 'demo_%' and name not like 'sqlite_%' and name <> '__drizzle_migrations' order by name").all();
@@ -100,8 +99,7 @@ describe("demo schema", () => {
       journal.entries = journal.entries.filter((entry) => entry.idx < removal);
       fs.writeFileSync(journalFile, JSON.stringify(journal));
 
-      const earlier = openDatabase(":memory:");
-      migrateDatabase(earlier, folder);
+      const earlier = createTestDb(folder);
       rawRun(earlier, "insert into demo_workspaces (key_digest, created_at, last_seen_at) values (?, 0, 0)", DIGEST);
       rawRun(earlier, "insert into demo_applications (public_id, workspace_id, template_slug, name, environment, created_at) values ('app_0000000000000001', 1, 'market-watch', 'Desk', 'sandbox', 0)");
       const insertThread = (publicId: string, applicationId: number | null, referenceSlug: string | null) =>
@@ -119,7 +117,7 @@ describe("demo schema", () => {
       rawRun(earlier, "insert into demo_shares (token_digest, application_id, view_workspace_id, state, created_at) values (?, 1, 1, '{}', 0)", "a".repeat(64));
       rawRun(earlier, "insert into demo_shares (token_digest, reference_slug, view_workspace_id, state, created_at) values (?, 'market-watch', 1, '{}', 0)", "b".repeat(64));
 
-      migrateDatabase(earlier, MIGRATIONS_FOLDER);
+      migrateToLatest(earlier);
       expect(tables(earlier)).not.toContain("demo_applications");
       expect(earlier.$client.prepare("select public_id, reference_slug from demo_threads").all()).toEqual([{ public_id: "thr_0000000000000002", reference_slug: "market-watch" }]);
       expect(earlier.$client.prepare("select public_id from demo_comments").all()).toEqual([{ public_id: "cmt_0000000000000002" }]);

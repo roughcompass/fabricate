@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, Select, TextInput } from "@/components/ui/form";
 import { booleanLabel, humanize } from "@/components/ui/status";
 import type { CatalogSelector, EditorCatalog } from "../../catalog";
+import { fieldProps } from "./fields";
 import styles from "./editor.module.css";
 
 /**
@@ -162,17 +163,17 @@ function collectionOf(node: Node, catalog: EditorCatalog, scope: string) {
 }
 
 function QuantifierFields({ node, scope, path, catalog, id, errorsFor, onChange }: FieldsProps) {
+  const field = fieldProps(id, path, errorsFor);
   const { collections, collection } = collectionOf(node, catalog, scope);
   return (
     <>
       <Select
-        id={`${id}-collection`}
+        {...field("collection")}
         label="Items"
         size="sm"
         value={collection.id}
         options={collections.map((item) => ({ value: item.id, label: item.label }))}
         description={collection.description}
-        errors={errorsFor(`${path}.collection`)}
         onChange={(event) => {
           const next = collections.find((item) => item.id === event.target.value)!;
           const { where: _where, ...rest } = node;
@@ -182,15 +183,14 @@ function QuantifierFields({ node, scope, path, catalog, id, errorsFor, onChange 
       {node.op === "count" && (
         <>
           <Select
-            id={`${id}-comparator`}
+            {...field("comparator")}
             label="The number of items is"
             size="sm"
             value={String(node.comparator ?? "eq")}
             options={catalog.comparators.map((value) => ({ value, label: COMPARATOR_LABELS[value] ?? value }))}
-            errors={errorsFor(`${path}.comparator`)}
             onChange={(event) => onChange({ ...node, comparator: event.target.value })}
           />
-          <TextInput id={`${id}-value`} label="Count" size="sm" type="number" min={0} step={1} value={String(node.value ?? 0)} errors={errorsFor(`${path}.value`)} onChange={(event) => onChange({ ...node, value: wholeNumber(event.target.value) })} />
+          <TextInput {...field("value")} label="Count" size="sm" type="number" min={0} step={1} value={String(node.value ?? 0)} onChange={(event) => onChange({ ...node, value: wholeNumber(event.target.value) })} />
         </>
       )}
     </>
@@ -243,6 +243,7 @@ function selectorOf(node: Node, catalog: EditorCatalog, scope: string) {
 }
 
 function PredicateFields({ node, scope, path, catalog, id, errorsFor, onChange }: FieldsProps) {
+  const field = fieldProps(id, path, errorsFor);
   const { selectors, selector, operators, op } = selectorOf(node, catalog, scope);
   const choose = (selectorId: string) => {
     const next = selectors.find((item) => item.id === selectorId)!;
@@ -252,13 +253,12 @@ function PredicateFields({ node, scope, path, catalog, id, errorsFor, onChange }
   return (
     <>
       <Select
-        id={`${id}-selector`}
+        {...field("selector")}
         label="Field"
         size="sm"
         value={selector?.id ?? ""}
         options={[...(selector ? [] : [{ value: "", label: "Choose a field" }]), ...selectors.map((item) => ({ value: item.id, label: item.label }))]}
         description={selector?.description}
-        errors={errorsFor(`${path}.selector`)}
         onChange={(event) => choose(event.target.value)}
       />
       {selector && (
@@ -272,7 +272,7 @@ function PredicateFields({ node, scope, path, catalog, id, errorsFor, onChange }
         />
       )}
       {selector?.parameter && (
-        <TextInput id={`${id}-parameter`} label={selector.parameter.label} size="sm" description={selector.parameter.description} value={String(node.parameter ?? "")} errors={errorsFor(`${path}.parameter`)} onChange={(event) => onChange({ ...node, parameter: event.target.value })} />
+        <TextInput {...field("parameter")} label={selector.parameter.label} size="sm" description={selector.parameter.description} value={String(node.parameter ?? "")} onChange={(event) => onChange({ ...node, parameter: event.target.value })} />
       )}
     </>
   );
@@ -298,6 +298,7 @@ function operands(node: Node, selector: CatalogSelector): Node {
 }
 
 function OperandEditor({ node, scope, path, catalog, id, errorsFor, onChange }: FieldsProps) {
+  const field = fieldProps(id, path, errorsFor);
   const { selector, op } = selectorOf(node, catalog, scope);
   if (!selector) return null;
   const current = { ...node, op };
@@ -340,44 +341,41 @@ function OperandEditor({ node, scope, path, catalog, id, errorsFor, onChange }: 
       if (selector.type === "boolean")
         return row(
           <Select
-            id={`${id}-value`}
+            {...field("value")}
             label="Value"
             size="sm"
             value={String(node.value)}
             options={[true, false].map((value) => ({ value: String(value), label: booleanLabel(value) }))}
-            errors={errorsFor(`${path}.value`)}
             onChange={(event) => onChange({ ...current, value: event.target.value === "true" })}
           />,
         );
-      if (selector.type === "number") return row(<TextInput id={`${id}-value`} label="Value" size="sm" type="number" min={0} step={1} value={String(node.value ?? 0)} errors={errorsFor(`${path}.value`)} onChange={(event) => onChange({ ...current, value: wholeNumber(event.target.value) })} />);
+      if (selector.type === "number") return row(<TextInput {...field("value")} label="Value" size="sm" type="number" min={0} step={1} value={String(node.value ?? 0)} onChange={(event) => onChange({ ...current, value: wholeNumber(event.target.value) })} />);
       if (selector.choices)
         return row(
           <Select
-            id={`${id}-value`}
+            {...field("value")}
             label="Value"
             size="sm"
             value={String(node.value ?? "")}
             options={selector.choices.map((value) => ({ value, label: humanize(value) }))}
-            errors={errorsFor(`${path}.value`)}
             onChange={(event) => onChange({ ...current, value: event.target.value })}
           />,
         );
-      return row(<TextInput id={`${id}-value`} label="Value" size="sm" value={String(node.value ?? "")} errors={errorsFor(`${path}.value`)} onChange={(event) => onChange({ ...current, value: event.target.value })} />);
+      return row(<TextInput {...field("value")} label="Value" size="sm" value={String(node.value ?? "")} onChange={(event) => onChange({ ...current, value: event.target.value })} />);
     case "in":
       return valueList("Values");
     case "compare":
       return row(
         <>
           <Select
-            id={`${id}-comparator`}
+            {...field("comparator")}
             label="Comparison"
             size="sm"
             value={String(node.comparator ?? "gte")}
             options={catalog.comparators.map((value) => ({ value, label: COMPARATOR_LABELS[value] ?? value }))}
-            errors={errorsFor(`${path}.comparator`)}
             onChange={(event) => onChange({ ...current, comparator: event.target.value })}
           />
-          <TextInput id={`${id}-value`} label="Number" size="sm" type="number" min={0} step={1} value={String(node.value ?? 0)} errors={errorsFor(`${path}.value`)} onChange={(event) => onChange({ ...current, value: wholeNumber(event.target.value) })} />
+          <TextInput {...field("value")} label="Number" size="sm" type="number" min={0} step={1} value={String(node.value ?? 0)} onChange={(event) => onChange({ ...current, value: wholeNumber(event.target.value) })} />
         </>,
       );
     case "contains":
@@ -385,12 +383,11 @@ function OperandEditor({ node, scope, path, catalog, id, errorsFor, onChange }: 
         <>
           {row(
             <Select
-              id={`${id}-mode`}
+              {...field("mode")}
               label="Must contain"
               size="sm"
               value={String(node.mode ?? "any")}
               options={catalog.containsModes.map((value) => ({ value, label: value === "all" ? "All of the values" : "Any of the values" }))}
-              errors={errorsFor(`${path}.mode`)}
               onChange={(event) => onChange({ ...current, mode: event.target.value })}
             />,
           )}
@@ -398,7 +395,7 @@ function OperandEditor({ node, scope, path, catalog, id, errorsFor, onChange }: 
         </>
       );
     case "semver_satisfies":
-      return row(<TextInput id={`${id}-range`} label="Version range" size="sm" description="A semantic version range, such as >=18.0.0" value={String(node.range ?? "")} errors={errorsFor(`${path}.range`)} onChange={(event) => onChange({ ...current, range: event.target.value })} />);
+      return row(<TextInput {...field("range")} label="Version range" size="sm" description="A semantic version range, such as >=18.0.0" value={String(node.range ?? "")} onChange={(event) => onChange({ ...current, range: event.target.value })} />);
     default:
       return null;
   }

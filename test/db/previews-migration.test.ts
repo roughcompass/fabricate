@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type Db, migrateDatabase, openDatabase } from "@/lib/db/client";
+import type { Db } from "@/lib/db/client";
+import { createTestDb, migrateToLatest } from "../support/db";
 import { migrationFolderAt } from "../support/migrations";
 
 /*
@@ -22,10 +23,9 @@ describe("repository previews migration", () => {
 
   beforeEach(() => {
     // A Repository registered before the migration carries over untouched.
-    db = openDatabase(":memory:");
-    migrateDatabase(db, migrationFolderAt(BEFORE));
+    db = createTestDb(migrationFolderAt(BEFORE));
     run("insert into repository_sources (public_id, name, clone_url, canonical_url, created_at, updated_at) values ('src_orders0000000000', 'orders', 'https://git.example.com/acme/orders.git', 'https://git.example.com/acme/orders', ?, ?)", T0, T0);
-    migrateDatabase(db);
+    migrateToLatest(db);
   });
   afterEach(() => db.$client.close());
 

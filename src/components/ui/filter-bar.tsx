@@ -6,6 +6,7 @@ import Link from "next/link";
 import { buttonProps } from "./button-content";
 import { useHydrated } from "./use-hydrated";
 import styles from "./filter-bar.module.css";
+import { HiddenFields } from "./form";
 
 interface FilterBarProps {
   /** The page the filters apply to; the chosen values become its query. */
@@ -29,9 +30,7 @@ export function FilterBar({ action, label, filtered, clearHref, keep = {}, child
   const hydrated = useHydrated();
   return (
     <Form action={action} scroll={false} className={styles.bar} aria-label={label} onChange={(event) => event.currentTarget.requestSubmit()}>
-      {Object.entries(keep).map(([name, value]) => (
-        <input key={name} type="hidden" name={name} value={value} />
-      ))}
+      <HiddenFields values={keep} />
       <div className={styles.filters}>{children}</div>
       <div className={styles.actions}>
         <button type="submit" {...buttonProps("secondary", "sm")} hidden={hydrated}>

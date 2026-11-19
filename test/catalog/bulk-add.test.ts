@@ -1,17 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BULK_LIMIT, addRepositories, parseBulkLines } from "@/lib/catalog/bulk-add";
+import { addRepositories } from "@/lib/catalog/bulk-add";
+import { BULK_LIMIT, parseBulkLines } from "@/lib/catalog/bulk-lines";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { listSources } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
-import { type Db, setDb } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { versionsOf } from "@/lib/profiling/versions";
-import { createTestDb } from "../support/db";
 import { GitFixture } from "../support/git-fixture";
-import { redirectOf } from "../support/next";
+import { formData, redirectOf, useAppDb } from "../support/next";
 
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
-vi.mock("next/cache", async () => (await import("../support/next")).cacheStub);
 
 describe("bulk lines", () => {
   it("reads one clone URL per line, with an optional reference, skipping blank lines and numbering them as pasted", () => {
@@ -24,11 +22,10 @@ describe("bulk lines", () => {
 });
 
 describe("adding Repositories in bulk", () => {
-  let db: Db;
+  const app = useAppDb();
   let boundary: SourceBoundary;
   let fixture: GitFixture;
   beforeEach(() => {
-    db = createTestDb();
     fixture = GitFixture.create("bulk");
     fixture.repo("fleet/orders").write("README.md", "orders").commit();
     boundary = new SourceBoundary(withOverrides(getConfig(), { allowedRoots: [fixture.dir("fleet")] }));
@@ -37,7 +34,7 @@ describe("adding Repositories in bulk", () => {
 
   it("adds every line it can, named after its owner and repository and queued for profiling, and reports each refused line", () => {
     const result = addRepositories(
-      db,
+      app.db,
       [
         "https://github.com/vickykatoch/helios.git",
         "https://github.com/openmrs/openmrs-esm-core.git main",
@@ -62,31 +59,25 @@ describe("adding Repositories in bulk", () => {
       [7, expect.stringMatching(/outside the allowed source roots|allowed root/i)],
       [8, "Reference is not a valid branch, tag, or commit"],
     ]);
-    for (const source of result.created) expect(versionsOf(db, source.id).map((version) => [version.trigger, version.assessment.state])).toEqual([["imported", "queued"]]);
+    for (const source of result.created) expect(versionsOf(app.db, source.id).map((version) => [version.trigger, version.assessment.state])).toEqual([["imported", "queued"]]);
   });
 
   it("refuses nothing to add, and more lines than the limit, before adding any", () => {
-    expect(() => addRepositories(db, " \n\n", boundary)).toThrow(/at least one clone URL/);
+    expect(() => addRepositories(app.db, " \n\n", boundary)).toThrow(/at least one clone URL/);
     const many = Array.from({ length: BULK_LIMIT + 1 }, (_, index) => `https://git.example.com/acme/repo-${index}.git`).join("\n");
-    expect(() => addRepositories(db, many, boundary)).toThrow(ValidationError);
-    expect(listSources(db)).toEqual([]);
+    expect(() => addRepositories(app.db, many, boundary)).toThrow(ValidationError);
+    expect(listSources(app.db)).toEqual([]);
   });
 
   describe("the Server Action", () => {
-    beforeEach(() => setDb(db));
-
     it("opens the list with a count when every line is added", async () => {
       const { addRepositoriesInBulk } = await import("@/app/(operator)/repositories/actions");
-      const form = new FormData();
-      form.set("urls", "https://github.com/vickykatoch/helios.git\nhttps://github.com/vickykatoch/atlas.git");
-      expect(await redirectOf(addRepositoriesInBulk({ values: { urls: "" }, errors: {}, added: 0, failed: [] }, form))).toBe("/repositories?notice=bulk-added&count=2");
+      expect(await redirectOf(addRepositoriesInBulk({ values: { urls: "" }, errors: {}, added: 0, failed: [] }, formData({ urls: "https://github.com/vickykatoch/helios.git\nhttps://github.com/vickykatoch/atlas.git" })))).toBe("/repositories?notice=bulk-added&count=2");
     });
 
     it("keeps only the refused lines, without echoing a credential", async () => {
       const { addRepositoriesInBulk } = await import("@/app/(operator)/repositories/actions");
-      const form = new FormData();
-      form.set("urls", "https://github.com/vickykatoch/helios.git\nhttps://user:hunter2@git.example.com/acme/app.git");
-      const state = await addRepositoriesInBulk({ values: { urls: "" }, errors: {}, added: 0, failed: [] }, form);
+      const state = await addRepositoriesInBulk({ values: { urls: "" }, errors: {}, added: 0, failed: [] }, formData({ urls: "https://github.com/vickykatoch/helios.git\nhttps://user:hunter2@git.example.com/acme/app.git" }));
 
       expect(state).toMatchObject({ added: 1, values: { urls: "https://[REDACTED]@git.example.com/acme/app.git" }, submission: 1 });
       expect(state.failed).toHaveLength(1);

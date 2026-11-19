@@ -2,8 +2,9 @@ import type { Choice } from "@/components/ui/form";
 import { listSources, sourceReferenceLabel } from "@/lib/catalog/source-records";
 import type { Executor } from "@/lib/db/client";
 import { listSelectableReleases, releaseDocument, releaseLabel } from "@/lib/standards/standard-records";
+import { countLabel } from "@/components/ui/count";
+import { formatDate } from "@/components/ui/time";
 
-const dateFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
 
 /** Every Repository, to choose an explicit scope from. */
 export function sourceChoices(db: Executor): Choice[] {
@@ -17,7 +18,7 @@ export function releaseChoices(db: Executor): Choice[] {
     return {
       value: release.publicId,
       label: releaseLabel(standard, release),
-      description: `${controls} ${controls === 1 ? "Control" : "Controls"} · published ${dateFormat.format(release.publishedAt)} · digest ${release.digest.slice(0, 12)}`,
+      description: `${countLabel(controls, "Control")} · published ${formatDate(release.publishedAt)} · digest ${release.digest.slice(0, 12)}`,
     };
   });
 }

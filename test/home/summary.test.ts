@@ -1,31 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { deleteSource } from "@/lib/catalog/catalog";
-import { claimedShare, fleetSummary } from "@/lib/home/summary";
-import { claimInitiative } from "@/lib/initiatives/initiative-records";
+import { fleetSummary } from "@/lib/home/summary";
+import { targetsOf } from "@/lib/assessments/assessment-records";
 import { findVersion, queueProfile } from "@/lib/profiling/versions";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
-import { buildEvaluation, claim, driveEvaluation, driveRun } from "../support/home";
+import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
+import { manifest } from "../support/profiles";
+import { completeRun, seedAssessment } from "../support/scenarios";
 
 describe("fleet summary", () => {
-  it("counts every Repository, and the claimed and unclaimed ones (Ownership coverage)", () => {
+  it("counts every Repository, and those with a current Profile from any Run, not one only queued, failed, or deleted (Profiling coverage)", async () => {
     const db = createTestDb();
-    const sources = Array.from({ length: 212 }, () => buildSource(db));
-    for (const source of sources.slice(0, 130)) claim(db, source);
-
-    const { repositories } = fleetSummary(db);
-    expect(repositories).toMatchObject({ empty: false, total: 212, claimed: 130, unclaimed: 82 });
-    expect(claimedShare(repositories)).toBe(61);
-    expect(claimedShare({ total: 0, claimed: 0 })).toBeNull();
-  });
-
-  it("counts the Repositories with a finished profile version, not one only queued or deleted", () => {
-    const db = createTestDb();
-    const [profiled, queued, deleted] = [buildSource(db, { name: "profiled" }), buildSource(db, { name: "queued" }), buildSource(db, { name: "deleted" })];
-    for (const source of [profiled, queued, deleted]) queueProfile(db, source, "imported");
-    for (const source of [profiled, deleted]) driveRun(db, findVersion(db, source.id, 1)!.assessment, "complete");
+    const [profiled, assessed, queued, failed, deleted] = [buildSource(db, { name: "profiled" }), buildSource(db, { name: "assessed" }), buildSource(db, { name: "queued" }), buildSource(db, { name: "failed" }), buildSource(db, { name: "deleted" })];
+    for (const source of [profiled, queued, failed, deleted]) queueProfile(db, source, "imported");
+    for (const source of [profiled, failed, deleted]) {
+      const { assessment } = findVersion(db, source.id, 1)!;
+      await completeRun(db, assessment, targetsOf(db, assessment.id), [source], [source === failed ? "failed" : { "package.json": manifest({ name: source.name, version: "1.0.0" }) }]);
+    }
+    // An operator's Run profiles a repository too.
+    await seedAssessment(db, buildInitiative(db, { sources: [assessed] }), [assessed], [{ "package.json": manifest({ name: "assessed", version: "1.0.0" }) }]);
     deleteSource(db, deleted.publicId, "deleted");
-    expect(fleetSummary(db).repositories).toMatchObject({ total: 2, profiled: 1 });
+
+    expect(fleetSummary(db).repositories).toEqual({ empty: false, total: 4, profiled: 2 });
   });
 
   it("counts the operator's Assessments by conclusion and hides Not applicable at zero (Not applicable hidden at zero)", () => {
@@ -39,7 +36,6 @@ describe("fleet summary", () => {
     evaluated("gaps");
     evaluated("conforms");
     buildInitiative(db, { sources: [source] });
-    claimInitiative(db, source);
 
     const { assessments } = fleetSummary(db);
     expect(assessments).toEqual({ empty: false, total: 4, byConclusion: { gaps: 2, undetermined: 0, conforms: 1, not_applicable: 0, none: 1 } });
@@ -52,9 +48,9 @@ describe("fleet summary", () => {
     expect(summary.assessments.empty).toBe(true);
   });
 
-  it("doesn't count only claim-created Assessments as the operator's", () => {
+  it("doesn't count the profiling Assessment as the operator's", () => {
     const db = createTestDb();
-    claimInitiative(db, buildSource(db));
+    queueProfile(db, buildSource(db), "imported");
     expect(fleetSummary(db).assessments).toMatchObject({ empty: true, total: 0 });
   });
 });

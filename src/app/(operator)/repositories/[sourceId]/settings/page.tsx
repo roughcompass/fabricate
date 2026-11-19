@@ -1,23 +1,21 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cache } from "react";
-import { OutcomeToast, param } from "@/components/ui/outcome-toast";
+import { OutcomeToast } from "@/components/ui/outcome-toast";
+import { param } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { SectionNav } from "@/components/ui/section-nav";
 import { deletionEffects } from "@/lib/catalog/catalog";
-import { findSource } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
-import { repositoryHref } from "@/lib/web/repository-paths";
 import { deleteRepository, updateSource } from "../../actions";
 import { sourceOutcome } from "../../outcomes";
 import { SourceForm } from "../../source-form";
 import { DeleteRepository } from "./delete-repository";
 import styles from "./settings.module.css";
+import { routes } from "@/lib/web/routes";
+import { loadRepository } from "../load";
 
-const loadSource = cache((publicId: string) => findSource(getDb(), publicId));
-
-export async function generateMetadata({ params }: { params: Promise<{ sourceId: string }> }): Promise<Metadata> {
-  const source = loadSource((await params).sourceId);
+export async function generateMetadata({ params }: PageProps<"/repositories/[sourceId]/settings">): Promise<Metadata> {
+  const source = loadRepository((await params).sourceId);
   return { title: source ? `Settings · ${source.name}` : "Repository not found" };
 }
 
@@ -26,9 +24,9 @@ export async function generateMetadata({ params }: { params: Promise<{ sourceId:
  * section menu beside General, which edits its clone URL, name, and
  * reference, and the Danger Zone, which deletes it.
  */
-export default async function SettingsPage({ params, searchParams }: { params: Promise<{ sourceId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function SettingsPage({ params, searchParams }: PageProps<"/repositories/[sourceId]/settings">) {
   const [{ sourceId }, query] = await Promise.all([params, searchParams]);
-  const source = loadSource(sourceId);
+  const source = loadRepository(sourceId);
   if (!source) notFound();
   const db = getDb();
 
@@ -37,7 +35,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
       <PageHeader
         breadcrumbs={[
           { href: "/repositories", label: "Repositories" },
-          { href: repositoryHref(source.publicId), label: source.name },
+          { href: routes.repository(source.publicId), label: source.name },
         ]}
         title="Settings"
         alerts={<OutcomeToast outcome={sourceOutcome(db, param(query, "notice"), source.publicId)} />}

@@ -1,15 +1,19 @@
-// Fabricate worker: runs acquisition, analysis, evaluation, DE Console read, profiling check, and preview jobs outside
+// Fabricate worker: runs acquisition, analysis, evaluation, profiling check, and preview jobs outside
 // the web server. Started with `npm run dev:worker` or `npm run worker`.
+import path from "node:path";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { jobHandlers, jobLimits } from "@/lib/jobs/registry";
 import { Worker } from "@/lib/jobs/worker";
-import { scheduleDeConsoleReads } from "@/lib/ownership/de-console-schedule";
 import { scheduleProfileChecks } from "@/lib/profiling/check";
 import { verifyStartup } from "@/lib/startup";
+import { WorkerLockError, claimWorkerLock } from "./lock";
 
 async function main(): Promise<void> {
   await verifyStartup("worker");
+  // One worker per database: its lock file sits beside the database.
+  const release = claimWorkerLock(path.join(path.dirname(getConfig().database), "worker.lock"));
+  process.once("exit", release);
 
   const worker = new Worker({
     db: getDb(),
@@ -19,9 +23,7 @@ async function main(): Promise<void> {
     limits: jobLimits(),
     log: (message) => console.log(`[worker] ${message}`),
   });
-  // The DE Console read reschedules itself; this starts it, at most once per slot across workers.
-  scheduleDeConsoleReads(getDb(), getConfig());
-  // So does the profiling check, which also queues the first version of every repository without one.
+  // The profiling check reschedules itself; this starts it, and it also queues the first version of every repository without one.
   scheduleProfileChecks(getDb(), getConfig());
   worker.start();
   console.log(`[worker] ready as ${worker.workerId}`);
@@ -35,6 +37,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error("[worker] fatal", error);
+  if (error instanceof WorkerLockError) console.error(`[worker] ${error.message}`);
+  else console.error("[worker] fatal", error);
   process.exit(1);
 });

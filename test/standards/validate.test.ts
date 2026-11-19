@@ -1,10 +1,8 @@
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { describe, expect, it } from "vitest";
 import { validateStandard } from "@/lib/standards/validate";
-import { sampleStandard } from "../support/standards";
+import { control, sampleStandard } from "../support/standards";
 
-const control = (overrides: Record<string, unknown> = {}): JsonObject =>
-  ({ key: "has-ci", title: "Runs CI", rationale: "Automated verification", severity: "high", subject: "repository", applicability: { op: "always" }, condition: { op: "exists", selector: "repository.ci_systems" }, guidance: null, ...overrides }) as JsonObject;
 const standard = (...controls: JsonObject[]): JsonObject => ({ ...sampleStandard(), controls });
 const withCondition = (condition: JsonValue) => standard(control({ condition }));
 

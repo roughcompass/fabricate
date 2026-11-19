@@ -2,7 +2,7 @@
 
 import "./globals.css";
 import Link from "next/link";
-import { NO_OPTIONAL_AREAS, homeLink, visibleGroups } from "@/components/shell/navigation";
+import { HOME } from "@/components/shell/navigation";
 import { SystemPage } from "@/components/shell/system-page";
 import { buttonProps } from "@/components/ui/button-content";
 
@@ -12,7 +12,6 @@ import { buttonProps } from "@/components/ui/button-content";
  * operating system's theme. Its way back opens Home, as the error page's does.
  */
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
-  const home = homeLink(visibleGroups(NO_OPTIONAL_AREAS));
   return (
     <html lang="en">
       <body>
@@ -26,8 +25,8 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
                 <button type="button" {...buttonProps("primary")} onClick={() => retry()}>
                   Try again
                 </button>
-                <Link href={home.href} {...buttonProps("secondary")}>
-                  {`Go to ${home.label}`}
+                <Link href={HOME.href} {...buttonProps("secondary")}>
+                  {`Go to ${HOME.label}`}
                 </Link>
               </>
             }

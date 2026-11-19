@@ -11,17 +11,15 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { ShortValue, Tag } from "@/components/ui/tag";
-import { type AssessmentTarget, type SourceSnapshot, assessmentNumber, commitSnapshot, findAssessment, snapshotOf, storedFilesOf } from "@/lib/assessments/assessment-records";
-import { getConfig } from "@/lib/config";
+import { type AssessmentTarget, type SourceSnapshot, snapshotOf } from "@/lib/assessments/assessment-records";
 import { getDb } from "@/lib/db/client";
-import { initiativeById } from "@/lib/initiatives/initiative-records";
 import { evidenceSection } from "@/lib/profiles/links";
 import { profileSectionHref } from "@/lib/profiles/tabs";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import type { FactDocument } from "@/lib/profiles/states";
 import { openSnapshot } from "@/lib/snapshot/open";
-import { openStoredFiles } from "@/lib/snapshot/stored-files";
-import { runContext } from "@/lib/web/run-context";
+import { routes } from "@/lib/web/routes";
+import { loadRun } from "../../load";
 
 const REFUSALS: Record<string, string> = {
   commit_mismatch: "The stored snapshot is at a different commit than the evidence names.",
@@ -34,10 +32,9 @@ const REFUSALS: Record<string, string> = {
 };
 
 const load = cache((assessmentId: string, evidenceId: string) => {
-  const db = getDb();
-  const assessment = findAssessment(db, assessmentId);
-  if (!assessment) return undefined;
-  const owner = profilesOf(db, assessment.id)
+  const run = loadRun(assessmentId);
+  if (!run) return undefined;
+  const owner = profilesOf(run.db, run.assessment.id)
     .map(({ profile, target }) => {
       const facts = profileDocument(profile).fact_document as JsonObject;
       return { profile, target, facts, record: (facts.evidence as JsonObject | undefined)?.[evidenceId] };
@@ -46,30 +43,25 @@ const load = cache((assessmentId: string, evidenceId: string) => {
   if (!owner) return undefined;
   // The Profile breadcrumb returns to the section that cites this evidence.
   const section = evidenceSection(owner.facts as unknown as FactDocument, evidenceId);
-  const initiative = initiativeById(db, assessment.initiativeId);
-  return { assessment, owner, section, context: runContext(db, assessment, initiative, assessmentNumber(db, assessment)) };
+  return { assessment: run.assessment, owner, section, context: run.context };
 });
 
-export async function generateMetadata({ params }: { params: Promise<{ assessmentId: string; evidenceId: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/runs/[assessmentId]/evidence/[evidenceId]">): Promise<Metadata> {
   const { assessmentId, evidenceId } = await params;
   const found = load(assessmentId, evidenceId);
   return { title: found ? `${evidenceLocation(found.owner.record as JsonObject)} · ${found.owner.target.sourceName}` : "Evidence not found" };
 }
 
-/** Re-reads the cited content from the pinned snapshot, or a template target's stored files, and verifies it; never throws. */
+/** Re-reads the cited content from the pinned snapshot and verifies it; never throws. */
 async function resolve(target: AssessmentTarget, snapshot: SourceSnapshot, record: Evidence): Promise<ResolvedEvidence | null> {
   try {
-    const reader =
-      target.kind === "template"
-        ? openStoredFiles(storedFilesOf(getDb(), target), getConfig().analysis).reader
-        : await openSnapshot(target, commitSnapshot(snapshot));
-    return await resolveEvidence(reader, record);
+    return await resolveEvidence(await openSnapshot(target, snapshot), record);
   } catch {
     return null;
   }
 }
 
-export default async function EvidencePage({ params }: { params: Promise<{ assessmentId: string; evidenceId: string }> }) {
+export default async function EvidencePage({ params }: PageProps<"/runs/[assessmentId]/evidence/[evidenceId]">) {
   const { assessmentId, evidenceId } = await params;
   const db = getDb();
   const found = load(assessmentId, evidenceId);
@@ -86,8 +78,8 @@ export default async function EvidencePage({ params }: { params: Promise<{ asses
       <PageHeader
         breadcrumbs={[
           ...context.parents,
-          { href: `/runs/${assessment.publicId}`, label: context.name },
-          { href: section ? profileSectionHref(`/profiles/${owner.profile.publicId}`, section) : `/profiles/${owner.profile.publicId}`, label: owner.target.sourceName },
+          { href: routes.run(assessment.publicId), label: context.name },
+          { href: section ? profileSectionHref(routes.profile(owner.profile.publicId), section) : routes.profile(owner.profile.publicId), label: owner.target.sourceName },
         ]}
         title={evidenceLocation(owner.record as JsonObject)}
         description="Committed content that a fact, relationship, or Finding cites, re-read from the pinned snapshot and verified against its recorded digests."

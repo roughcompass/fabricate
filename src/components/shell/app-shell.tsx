@@ -1,7 +1,7 @@
 import type { Theme } from "@/lib/web/theme";
 import { SIDEBAR_WIDTH } from "@/lib/web/sidebar";
 import { BrandLink } from "./brand-link";
-import { NO_OPTIONAL_AREAS, type NavFlags, homeLink, visibleGroups } from "./navigation";
+import { HOME, NO_OPTIONAL_AREAS, type NavFlags } from "./navigation";
 import { NavigationFeedback } from "./navigation-feedback";
 import { SIDEBAR_ID } from "./shell-header";
 import { SidebarNav } from "./sidebar-nav";
@@ -37,7 +37,7 @@ export function AppShell({ theme, nav = NO_OPTIONAL_AREAS, sidebar = DEFAULT_SID
         {/* Inline from 1024px; below that, a native popover drawer that the header's Open navigation opens. */}
         <div id={SIDEBAR_ID} className={styles.sidebar} popover="auto">
           <div className={styles.brandRow}>
-            <BrandLink href={homeLink(visibleGroups(nav)).href} className={styles.brand} aria-label="DE FabLab home">
+            <BrandLink href={HOME.href} className={styles.brand} aria-label="DE FabLab home">
               <svg className={styles.mark} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M12 2 22 20H2L12 2z" fill="currentColor" />
               </svg>

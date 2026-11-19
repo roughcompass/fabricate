@@ -1,29 +1,27 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { cache } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { listAssessments } from "@/lib/assessments/assessment-records";
 import { listSources } from "@/lib/catalog/source-records";
 import { getDb } from "@/lib/db/client";
-import { findInitiative, isSystemOwned, selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
-import { deleteInitiative, updateInitiative, updateReleaseSelections } from "../../actions";
+import { selectedReleases, selectedSources } from "@/lib/initiatives/initiative-records";
+import { deleteInitiative, updateInitiative } from "../../actions";
 import { releaseChoices, sourceChoices } from "../../choices";
 import { InitiativeForm } from "../../initiative-form";
-import { ReleaseSelectionForm } from "../../release-selection-form";
+import { routes } from "@/lib/web/routes";
+import { loadAssessment } from "../load";
 
-const loadInitiative = cache((publicId: string) => findInitiative(getDb(), publicId));
-
-export async function generateMetadata({ params }: { params: Promise<{ initiativeId: string }> }): Promise<Metadata> {
-  const initiative = loadInitiative((await params).initiativeId);
-  return { title: initiative ? (initiative.systemOwned ? `Releases · ${initiative.name}` : `Edit ${initiative.name}`) : "Assessment not found" };
+export async function generateMetadata({ params }: PageProps<"/assessments/[initiativeId]/edit">): Promise<Metadata> {
+  const initiative = loadAssessment((await params).initiativeId);
+  return { title: initiative ? `Edit ${initiative.name}` : "Assessment not found" };
 }
 
-export default async function EditInitiativePage({ params }: { params: Promise<{ initiativeId: string }> }) {
+export default async function EditInitiativePage({ params }: PageProps<"/assessments/[initiativeId]/edit">) {
   const { initiativeId } = await params;
   const db = getDb();
-  const initiative = loadInitiative(initiativeId);
+  const initiative = loadAssessment(initiativeId);
   if (!initiative) notFound();
   // Repository profiling Runs are each a Repository's profile versions, shown under Repositories (docs/profiling.md).
   if (initiative.profiling) redirect("/repositories");
@@ -32,35 +30,12 @@ export default async function EditInitiativePage({ params }: { params: Promise<{
   const releaseIds = selectedReleases(db, initiative.id).map(({ release }) => release.publicId);
   const assessed = listAssessments(db, initiative.id).length > 0;
 
-  // Salt Patterns: DE FabLab owns its name, objective, and template targets; only its Releases are chosen here.
-  if (initiative.systemOwned) {
-    return (
-      <Page width="form">
-        <PageHeader
-          breadcrumbs={[
-            { href: "/assessments", label: "Assessments" },
-            { href: `/assessments/${initiative.publicId}`, label: initiative.name },
-          ]}
-          title="Select Releases"
-          description="Changes apply to template versions accepted or re-checked from now on."
-        />
-        <ReleaseSelectionForm
-          action={updateReleaseSelections.bind(null, initiative.publicId)}
-          initial={{ values: { standardReleasePublicIds: releaseIds }, errors: {} }}
-          lockVersion={initiative.lockVersion}
-          releaseChoices={releaseChoices(db)}
-          cancelHref={`/assessments/${initiative.publicId}`}
-        />
-      </Page>
-    );
-  }
-
   return (
     <Page width="form">
       <PageHeader
         breadcrumbs={[
           { href: "/assessments", label: "Assessments" },
-          { href: `/assessments/${initiative.publicId}`, label: initiative.name },
+          { href: routes.assessment(initiative.publicId), label: initiative.name },
         ]}
         title="Edit Assessment"
         description="Changes apply to future Runs and Evaluations only."
@@ -76,9 +51,9 @@ export default async function EditInitiativePage({ params }: { params: Promise<{
         sourceChoices={sourceChoices(db)}
         releaseChoices={releaseChoices(db)}
         submitLabel="Save changes"
-        cancelHref={`/assessments/${initiative.publicId}`}
+        cancelHref={routes.assessment(initiative.publicId)}
       />
-      {!assessed && !isSystemOwned(initiative) && (
+      {!assessed && (
         <Panel
           title="Delete Assessment"
           description="Only an Assessment without Runs can be deleted."

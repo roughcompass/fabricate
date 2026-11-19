@@ -5,14 +5,10 @@ import { findingsOf } from "../../src/lib/evaluations/evaluation-records";
 import { profileDocument, profilesOf } from "../../src/lib/profiles/profile-records";
 import { reviseRelease } from "../../src/lib/standards/publish";
 import { standardById } from "../../src/lib/standards/standard-records";
-import { buildInitiative, buildSource } from "../../test/support/builders";
-import { manifest } from "../../test/support/profiles";
-import { publishStandard, seedAssessment, selectReleases } from "../../test/support/scenarios";
+import { ORDERS, publishStandard, seedMapStates, selectReleases } from "../../test/support/scenarios";
 import { gitRepo } from "./fixtures";
-import { BASELINE_CONTROLS, ORDERS, SERVICE_CONTROLS, evaluate } from "./results";
+import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate } from "./results";
 import { paths } from "./paths";
-import { recordFailedDeConsoleRead } from "../../src/lib/ownership/de-console";
-import { readDeConsole } from "../../test/support/home";
 
 /**
  * Every product surface, seeded with data that exercises it: the operator
@@ -24,21 +20,7 @@ export type Surface = [name: string, url: string];
 
 /** Seeds an Initiative with an Assessment, an Evaluation, Standards, and a draft, and returns the operator surfaces. */
 export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<Surface[]> {
-  const names = ["web", "client", "ui-a", "ui-b", "orders", "billing"];
-  const sources = names.map((name) => buildSource(db, { name }));
-  buildSource(db, { name: "legacy-ui" });
-  const initiative = buildInitiative(db, { name: "Checkout platform migration", sources });
-  const assessment = await seedAssessment(db, initiative, sources, [
-    {
-      "package.json": manifest({ name: "web", version: "1.0.0", private: true, dependencies: { "@acme/client": "^1.0.0", "@acme/ui": "^2.0.0", "left-pad": "^1.3.0", "legacy-ui": "^0.1.0" } }),
-      "src/payments.ts": 'export const charge = () => fetch("https://payments.invalid/v1/charges", { method: "POST" });\n',
-    },
-    { "package.json": manifest({ name: "@acme/client", version: "1.0.0" }) },
-    { "package.json": manifest({ name: "@acme/ui", version: "2.0.0" }) },
-    { "package.json": manifest({ name: "@acme/ui", version: "2.1.0" }) },
-    ORDERS,
-    "failed",
-  ]);
+  const { initiative, sources, assessment } = await seedMapStates(db, { initiativeName: "Checkout platform migration", also: { orders: ORDERS } });
   const baseline = publishStandard(db, "Engineering baseline", BASELINE_CONTROLS);
   const services = publishStandard(db, "Service readiness", SERVICE_CONTROLS);
   selectReleases(db, initiative, [baseline, services]);
@@ -52,9 +34,6 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
   const baselineStandard = standardById(db, baseline.standardId);
   const servicesStandard = standardById(db, services.standardId);
   for (const name of ["payments", "ledger"]) gitRepo(path.join(sourcesDir, name));
-  // A DE Console export that lists one SEAL ID twice records a conflict without creating applications, and a later read fails.
-  readDeConsole(db, [{ seal_id: "99001", name: "Markets Hub" }, { seal_id: "99001", name: "Markets Admin" }], new Date(Date.now() - 5 * 3_600_000));
-  recordFailedDeConsoleRead(db, { trigger: "schedule", error: "The DE Console didn't answer within 30 seconds", readAt: new Date(Date.now() - 3_600_000) });
 
   return [
     ["00-home", paths.home],
@@ -68,7 +47,6 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["03-source-bulk", paths.bulkRepositories],
     ["03-source", `/repositories/${sources[0]!.publicId}`],
     ["03-source-versions", `/repositories/${sources[0]!.publicId}/versions`],
-    ["03-de-console", "/repositories/de-console"],
     ["04-standards", "/standards"],
     ["04-standard", `/standards/${baselineStandard.publicId}`],
     ["04-standard-published", `/standards/${servicesStandard.publicId}`],
@@ -81,7 +59,7 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
     ["06-profile", `/profiles/${orders.publicId}`],
     ["06-evidence", paths.evidence(assessment.publicId, evidenceId)],
     ["07-map", paths.runMap(assessment.publicId)],
-    ["07-map-unassigned", `${paths.runMap(assessment.publicId)}/unassigned`],
+    ["07-map-system", `${paths.runMap(assessment.publicId)}/systems/${(db.$client.prepare("select node_id from graph_nodes where kind = 'repository' and label = 'web'").get() as { node_id: string }).node_id}`],
     ["08-evaluation", `/evaluations/${evaluation.publicId}`],
     ["08-finding-gap", `/evaluations/${evaluation.publicId}/findings/${gap.publicId}`],
     ["08-finding-indeterminate", `/evaluations/${evaluation.publicId}/findings/${indeterminate.publicId}`],

@@ -4,42 +4,37 @@ import { redirect } from "next/navigation";
 import { FocusPanel } from "@/components/relationships/focus";
 import { RelationshipsTable } from "@/components/relationships/relationships-table";
 import { Alert } from "@/components/ui/alert";
+import type { Crumb } from "@/components/ui/breadcrumbs";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
-import { param } from "@/components/ui/outcome-toast";
+import { pageQuery, param, searchTerm, withQuery } from "@/lib/web/query";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { SearchField } from "@/components/ui/search-field";
 import { Section } from "@/components/ui/section";
 import { statusLabel } from "@/components/ui/status";
-import { formatAbsolute, formatDate } from "@/components/ui/time";
 import { targetsOf } from "@/lib/assessments/assessment-records";
-import { type PathStep, type RelationshipScope, SEARCH_KINDS, type SearchMatch, focusOf, relationshipPage, searchMap, withQuery } from "@/lib/relationships/levels";
+import { type RelationshipScope, SEARCH_KINDS, type SearchMatch, focusOf, relationshipPage, searchMap } from "@/lib/relationships/levels";
 import type { MapView } from "@/lib/relationships/map-view";
-import type { LoadedRun } from "./load";
+import type { LoadedMap } from "./load";
 import styles from "./map.module.css";
+import { routes } from "@/lib/web/routes";
 
 type Query = Record<string, string | string[] | undefined>;
 
-const KIND_TITLES: Record<SearchMatch["kind"], string> = { repository: "Repositories", application: "Applications", portal: "Portals", service: "Services", package: "Packages" };
-
-/** A positive page number from the address, or 1. */
-function pageParam(query: Query, name: string): number {
-  const value = Number.parseInt(param(query, name) ?? "", 10);
-  return Number.isFinite(value) && value > 0 ? value : 1;
-}
+const KIND_TITLES: Record<SearchMatch["kind"], string> = { repository: "Repositories", service: "Services", package: "Packages" };
 
 /** The breadcrumbs from the Assessments list, or for a profile version the Repositories list, to the Run's map. */
-function runCrumbs(run: LoadedRun, withMap: boolean): PathStep[] {
+function runCrumbs(run: LoadedMap, withMap: boolean): Crumb[] {
   return [
     ...run.context.parents,
-    { href: `/runs/${run.assessment.publicId}`, label: run.context.name },
-    ...(withMap ? [{ href: `/runs/${run.assessment.publicId}/map`, label: "Relationship Map" }] : []),
+    { href: routes.run(run.assessment.publicId), label: run.context.name },
+    ...(withMap ? [{ href: routes.runMap(run.assessment.publicId), label: "Relationship Map" }] : []),
   ];
 }
 
 /** The page a Run shows before its map is written. */
-export function NoMap({ run }: { run: LoadedRun }) {
+export function NoMap({ run }: { run: LoadedMap }) {
   return (
     <Page>
       <PageHeader breadcrumbs={runCrumbs(run, false)} title="Relationship Map" />
@@ -53,27 +48,25 @@ export function NoMap({ run }: { run: LoadedRun }) {
 }
 
 /**
- * One level of the Relationship Map: its path from the Run, the date its
- * ownership is current as of, search, an optional focus beside the level,
- * and the relationships table scoped to the level or the focus.
+ * One level of the Relationship Map: its path from the Run, search, an
+ * optional focus beside the level, and the relationships table scoped to the
+ * level or the focus.
  */
 export function MapLevel({
   run,
   view,
   query,
   title,
-  ancestors,
   description,
   levelHref,
   scope,
   scopeDescription,
   children,
 }: {
-  run: LoadedRun;
+  run: LoadedMap;
   view: MapView;
   query: Query;
   title: string;
-  ancestors: readonly PathStep[];
   description: string;
   levelHref: string;
   scope: RelationshipScope;
@@ -81,35 +74,25 @@ export function MapLevel({
   children: React.ReactNode;
 }) {
   const { db, assessment } = run;
-  const search = (param(query, "q") ?? "").trim().slice(0, 200);
+  const search = searchTerm(query);
   const focusId = param(query, "focus");
   const matches = search ? searchMap(db, view, search) : [];
   const exact = matches.filter((match) => match.rank === 0);
   if (exact.length === 1) redirect(exact[0]!.href);
 
-  const pages = { dependents: pageParam(query, "dependents"), dependencies: pageParam(query, "dependencies") };
+  const pages = { dependents: param(query, "dependents"), dependencies: param(query, "dependencies") };
   const focus = focusId ? focusOf(db, view, levelHref, focusId, pages) : undefined;
   const tableScope: RelationshipScope = focus ? (focus.kind === "package" ? { kind: "package", name: focus.label } : { kind: "touching", node: focus.nodeId! }) : scope;
-  const page = relationshipPage(db, view, tableScope, pageParam(query, "page"));
+  const page = relationshipPage(db, view, tableScope, param(query, "page"));
   const keep = { focus: focusId };
   const failures = new Map(targetsOf(db, assessment.id).flatMap((target) => (target.failureMessage ? [[target.publicId, target.failureMessage] as const] : [])));
-  const breadcrumbs = [...runCrumbs(run, ancestors.length > 0 || levelHref !== view.base), ...ancestors];
 
   return (
     <Page>
       <PageHeader
-        breadcrumbs={levelHref === view.base ? runCrumbs(run, false) : breadcrumbs}
+        breadcrumbs={runCrumbs(run, levelHref !== view.base)}
         title={title}
         description={description}
-        meta={[
-          view.asOf ? (
-            <time key="as-of" dateTime={view.asOf.toISOString()} title={formatAbsolute(view.asOf)}>
-              {`Ownership as of ${formatDate(view.asOf)}`}
-            </time>
-          ) : (
-            <span key="as-of">No ownership claimed yet</span>
-          ),
-        ]}
         alerts={
           view.missing.length > 0 && (
             <Alert tone="warning" title={`${countLabel(view.missing.length, "repository", "repositories")} did not contribute`}>
@@ -136,7 +119,7 @@ export function MapLevel({
 
       <div>
         <Form key={search} action={levelHref} scroll={false} className={styles.search} role="search" aria-label="Search the map">
-          <SearchField id="map-search" name="q" label="Search the map" hideLabel placeholder="Search repositories, applications, SEAL IDs, portals, services, and packages" defaultValue={search} clearHref={withQuery(levelHref, keep)} />
+          <SearchField id="map-search" name="q" label="Search the map" hideLabel placeholder="Search repositories, services, and packages" defaultValue={search} clearHref={withQuery(levelHref, keep)} />
         </Form>
       </div>
 
@@ -156,7 +139,7 @@ export function MapLevel({
               focus={focus}
               assessmentId={assessment.publicId}
               closeHref={levelHref}
-              pageHref={(list, number) => withQuery(levelHref, { focus: focusId, ...pages, [list]: number })}
+              pageHref={(list, number) => withQuery(levelHref, { focus: focusId, dependents: pageQuery(focus.dependents.page), dependencies: pageQuery(focus.dependencies.page), [list]: pageQuery(number) })}
             />
           </aside>
         )}
@@ -167,7 +150,7 @@ export function MapLevel({
         page={page}
         assessmentId={assessment.publicId}
         focusHref={(nodeId) => withQuery(levelHref, { focus: nodeId })}
-        pageHref={(number) => withQuery(levelHref, { ...keep, page: number })}
+        pageHref={(number) => withQuery(levelHref, { ...keep, page: pageQuery(number) })}
         coverageComplete={view.missing.length === 0}
         description={focus ? `The relationships of ${focus.label}, from the repository that declared each one.` : scopeDescription}
       />

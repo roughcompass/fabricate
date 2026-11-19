@@ -15,7 +15,6 @@ const shared: Settings = {
   gitCredentialHelper: null,
   analysis: { maxBlobBytes: 1024, maxLockfileBytes: 2048, maxFiles: 10, maxTotalBytes: 4096 },
   demo: { enabled: false },
-  deConsole: { source: null, refreshMinutes: 60 },
   profiling: { checkMinutes: 60 },
   previews: { enabled: false, trustedSources: [], nodeVersions: {}, storage: "storage/previews", concurrency: 1, timeoutMinutes: 15, maxOutputBytes: 209_715_200, maxStorageBytes: 5_368_709_120 },
 };
@@ -176,42 +175,6 @@ describe("configuration", () => {
     });
   });
 
-  describe("DE Console source", () => {
-    const withSource = (source: string | null) => ({ shared: { ...shared, deConsole: { source, refreshMinutes: 60 } } });
-
-    it("is off unless a source is configured", () => {
-      expect(load().deConsole).toEqual({ source: null, refreshMinutes: 60 });
-      expect(loadConfig({ appRoot: process.cwd(), environment: "production", env: {} }).deConsole.source).toBeNull();
-    });
-
-    it("resolves an export file from the app root, and reads an endpoint and schedule from the environment", () => {
-      expect(load(withSource("exports/de-console.json")).deConsole.source).toEqual({ kind: "file", path: path.join(appRoot, "exports/de-console.json") });
-      const fromEnv = load({ shared }, { FABRICATE_DE_CONSOLE_SOURCE: "https://de-console.example.test/ownership", FABRICATE_DE_CONSOLE_REFRESH_MINUTES: "15" });
-      expect(fromEnv.deConsole).toEqual({ source: { kind: "url", url: "https://de-console.example.test/ownership" }, refreshMinutes: 15 });
-    });
-
-    it("accepts plain HTTP only to this machine", () => {
-      expect(load(withSource("http://127.0.0.1:4100/export")).deConsole.source).toEqual({ kind: "url", url: "http://127.0.0.1:4100/export" });
-      expect(() => load(withSource("http://de-console.example.test/export"))).toThrow(/https:\/\/ URL/);
-      expect(() => load(withSource("ftp://de-console.example.test/export"))).toThrow(ConfigurationError);
-    });
-
-    it("refuses credentials in the URL, which belong in the token variable", () => {
-      expect(() => load(withSource("https://fid:secret@de-console.example.test/export"))).toThrow(/FABRICATE_DE_CONSOLE_TOKEN/);
-    });
-
-    it("never reads an export from the protected fleet-kit tree", () => {
-      expect(() => load(withSource("../fleet-kit/ownership.json"))).toThrow(/protected fleet-kit/);
-      fs.symlinkSync(fleetKit, path.join(workspace, "exports"));
-      expect(() => load(withSource("../exports/ownership.json"))).toThrow(/protected fleet-kit/);
-    });
-
-    it("keeps the token out of the configuration", () => {
-      const config = load(withSource("https://de-console.example.test/export"), { FABRICATE_DE_CONSOLE_TOKEN: "service-token" });
-      expect(JSON.stringify(config)).not.toContain("service-token");
-    });
-  });
-
   describe("repository previews", () => {
     const withPreviews = (previews: Partial<Settings["previews"]>) => ({ shared: { ...shared, previews: { ...shared.previews, ...previews } } });
 
@@ -307,16 +270,6 @@ describe("configuration", () => {
 });
 
 describe("npm run config", () => {
-  it("reports whether each read token is set, never its value", async () => {
-    const { execFileSync } = await import("node:child_process");
-    const output = execFileSync("npx", ["tsx", "src/lib/config/print-cli.ts"], {
-      encoding: "utf8",
-      env: { ...process.env, FABRICATE_ENV: "test", FABRICATE_DE_CONSOLE_SOURCE: "https://de-console.example.test/export", FABRICATE_DE_CONSOLE_TOKEN: "console-secret-91" },
-    });
-    expect(output).toContain("DE Console:         https://de-console.example.test/export, every 60 minutes, token set");
-    expect(output).not.toContain("console-secret-91");
-  }, 30_000);
-
   it("prints the preview settings", async () => {
     const { execFileSync } = await import("node:child_process");
     const output = execFileSync("npx", ["tsx", "src/lib/config/print-cli.ts"], {

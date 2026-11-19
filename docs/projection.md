@@ -7,12 +7,10 @@ The assessment projection holds indexed copies of what Repository Profiles and R
 | Table | One row per | Written with |
 | --- | --- | --- |
 | `dependency_facts` | Declared direct dependency of a manifest, joined to its resolved version. A version a lockfile records without a declaration gets its own row, with no field or specifier. | The Profile |
-| `evidence_index` | Evidence record of a Profile: its path, location, detector, rule, and content digest | The Profile |
-| `graph_nodes` | Node of a Relationship Map. A repository node names its catalog source and assessment target, so edges join to ownership. | The map |
+| `evidence_index` | Evidence record of a Profile: its path, location, detector, and rule | The Profile |
+| `graph_nodes` | Node of a Relationship Map. A repository node names its catalog source and assessment target, so edges join to their repositories. | The map |
 | `graph_edges` | Edge of a Relationship Map: type, resolution state, endpoints, resolver rule, basis, reason, evidence IDs, reference, and review kind | The map |
 | `graph_edge_candidates` | Candidate endpoint of an ambiguous edge | The map |
-| `projection_coverage` | Target of an Assessment: whether it contributed, failed, or was canceled | The map |
-| `concept_classifications` | Concept's classification of one Profile under one ontology release | The ontology importer |
 
 Every row records the digest of the document it came from and the projection version that produced it.
 
@@ -31,7 +29,7 @@ Projection version 2 added the reference, the review kind, and the candidates. R
 
 A Profile's rows are written in the same transaction as the Profile, and a map's rows in the same transaction as the map. If projecting fails, neither the document nor any of its rows is stored. Stored documents can predate parts of the current contract, so the projector copies whatever sections a document has and skips the rest.
 
-Database triggers refuse every update to a projection row. They refuse deletes too, except while a rebuild is running. A rebuild marks itself in the single-row `projection_state` table.
+Database triggers refuse every update to a projection row. Rows are deleted only by a rebuild, which replaces all of them in one transaction.
 
 ## Rebuilds
 
@@ -41,7 +39,7 @@ npm run projection:rebuild
 
 The command opens the configured database, which `FABRICATE_DATABASE` can override, and refuses to run while migrations are pending. In one transaction it:
 
-1. Removes every projection row except concept classifications, which the ontology importer owns.
+1. Removes every projection row.
 2. Reads each Profile and map one at a time, and verifies it against its digest.
 3. Projects each document that matches. A document that doesn't match is reported and left out, and the command exits with status 1.
 
@@ -56,15 +54,8 @@ npm run projection:rebuild
 
 ## Queries
 
-`src/lib/projection/queries.ts` answers these without reading a document:
-
-| Function | Answers |
-| --- | --- |
-| `evidenceLocation` | Where an evidence record of an Assessment points, and which Profile holds it |
-| `repositoriesResolving` | Which repositories declare or resolve a package, optionally limited to resolved versions in a semver range |
-| `edgesOfNode` | A node's edges in a map, by direction, type, and resolution state |
-| `missingTargets` | Which targets of an Assessment failed or were canceled |
+The Relationship Map's views read the projection directly (`src/lib/relationships/map-view.ts` and `levels.ts`). `missingTargets` in `src/lib/projection/queries.ts` answers which targets of an Assessment failed or were canceled before writing a Profile, from the targets' own state and failure code; no table records it.
 
 ## Coverage
 
-A failed or canceled target has no rows. Its absence never means "no": a query result that counts repositories also returns `missing`, the targets it couldn't see. A result that counts three repositories using a package therefore means three of the repositories that contributed, with the missing targets listed alongside.
+A failed or canceled target has no rows. Its absence never means "no": the Relationship Map lists the targets that didn't contribute, with why, above every view, so a count of three repositories using a package means three of the repositories that contributed.

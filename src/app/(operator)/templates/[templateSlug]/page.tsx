@@ -12,13 +12,13 @@ import { BRANDS, PROVIDERS, routingLabel, templateBySlug } from "@/lib/demo/cata
 import { requireDemo } from "@/lib/demo/guard";
 import styles from "../templates.module.css";
 
-export async function generateMetadata({ params }: { params: Promise<{ templateSlug: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/templates/[templateSlug]">): Promise<Metadata> {
   const { templateSlug } = await params;
   const title = templateBySlug(templateSlug)?.title;
   return { title: title ? `${title} · Salt Patterns` : "Template not found" };
 }
 
-export default async function TemplatePage({ params }: { params: Promise<{ templateSlug: string }> }) {
+export default async function TemplatePage({ params }: PageProps<"/templates/[templateSlug]">) {
   requireDemo();
   const { templateSlug } = await params;
   const template = templateBySlug(templateSlug);

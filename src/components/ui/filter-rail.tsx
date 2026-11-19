@@ -4,7 +4,7 @@ import Form from "next/form";
 import Link from "next/link";
 
 import { buttonProps } from "./button-content";
-import { formStyles } from "./form";
+import { formStyles, HiddenFields } from "./form";
 import { Icon } from "./icon";
 import { useHydrated } from "./use-hydrated";
 import styles from "./filter-rail.module.css";
@@ -47,9 +47,7 @@ export function FilterRail({ action, label, title = label, headingLevel = 2, gro
   const Heading = headingLevel === 3 ? "h3" : "h2";
   return (
     <Form action={action} scroll={false} className={styles.rail} aria-label={label} onChange={(event) => event.currentTarget.requestSubmit()}>
-      {Object.entries(keep).map(([name, value]) => (
-        <input key={name} type="hidden" name={name} value={value} />
-      ))}
+      <HiddenFields values={keep} />
       <details className={styles.disclosure}>
         <summary className={styles.summary}>
           <Icon name="chevronRight" size={14} className={styles.chevron} />
