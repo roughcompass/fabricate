@@ -18,7 +18,7 @@ import { type CommandResult, type CommandSpec, extractCommit, runCommand } from 
 import { type AttemptIdentity, type PreviewBuild, type PublishedArtifact, claimAttempt, failAttempt, findPreview, publishAttempt, settleAbandonedAttempts } from "./records";
 import { previewPinRef } from "./refs";
 import { type ClaimFiles, cacheDirectory, claimFiles, previewDirectory, publishedDirectory } from "./storage";
-import { type Invocation, baseAdapter, buildArguments, buildEnvironment, cacheCleanArguments, installArguments, managerCommand, previewBasePath, shimCommand, usesCorepack } from "./toolchain";
+import { type Invocation, baseAdapter, buildArguments, buildEnvironment, cacheCleanArguments, inheritedConfigFiles, installArguments, managerCommand, previewBasePath, shimCommand, usesCorepack } from "./toolchain";
 
 /**
  * Runs one `preview.build` job (design decisions 4, 8, and 9): one worker
@@ -65,6 +65,8 @@ class BuildFailure extends Error {
 const LOG_LIMIT = 16 * 1024 * 1024;
 /** How far before the install output may be dated, for clocks that disagree with file times. */
 const CLOCK_SLACK_MS = 2_000;
+const ALL = new Intl.ListFormat("en-US", { type: "conjunction" });
+const ANY = new Intl.ListFormat("en-US", { type: "disjunction" });
 
 export async function runPreviewBuild(db: Executor, job: BuildJob, options: BuildOptions): Promise<BuildOutcome> {
   const config = options.config ?? getConfig();
@@ -197,6 +199,12 @@ async function build(context: BuildContext): Promise<PublishedArtifact> {
   const command = managerCommand(manager, nodeBin);
   const install = { command: command.command, args: [...command.args, ...installArguments(manager)] };
   log.step("install", `${display(install)} in ${place(plan.installRoot)}, with ${manager.lockfile}`);
+  // Yarn would read configuration above the extracted commit, which isn't the repository's; the build's own HOME can't stop it.
+  const names = inheritedConfigFiles(manager);
+  const inherited = await configurationAbove(files.work, names);
+  if (inherited.length > 0) {
+    throw new BuildFailure(`Yarn reads configuration from every directory above the one it installs in, so it would read ${ALL.format(inherited)}. Set previews.storage to a directory with no ${ANY.format(names)} above it.`);
+  }
   const installed = Date.now() - CLOCK_SLACK_MS;
   if (shims) {
     if (!fs.existsSync(path.join(nodeBin, "corepack"))) throw new BuildFailure(`Node ${selected.version} at ${nodeBin} has no corepack, which ${manager.name} needs.`);
@@ -381,4 +389,18 @@ function place(directory: string): string {
 
 function segments(directory: string): string[] {
   return directory === "." ? [] : directory.split("/");
+}
+
+/** Each file named +names+ in a directory above +directory+, by its real path, nearest first. */
+async function configurationAbove(directory: string, names: readonly string[]): Promise<string[]> {
+  const found: string[] = [];
+  if (names.length === 0) return found;
+  // A package manager walks up from its working directory's real path.
+  for (let current = path.dirname(await fsp.realpath(directory)); ; current = path.dirname(current)) {
+    for (const name of names) {
+      const file = path.join(current, name);
+      if (fs.existsSync(file)) found.push(file);
+    }
+    if (path.dirname(current) === current) return found;
+  }
 }

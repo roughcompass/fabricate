@@ -246,6 +246,29 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       expect(log).toContain("==> failed: No configured Node version satisfies >=20.0.0.");
     });
 
+    it("fails a Yarn build before installing when Yarn would read configuration from a directory above the extracted commit", async () => {
+      // Like a development checkout's .npmrc above storage/previews, which Yarn 1 read, failing on the variable it names.
+      fs.writeFileSync(path.join(storage, ".npmrc"), "@repo-facts:registry=${REPO_FACTS_NPM_REGISTRY}\n");
+      fs.writeFileSync(path.join(storage, ".yarnrc"), 'registry "http://127.0.0.1:4873/"\n');
+      const preview = await previewOf({ ...app(STANDALONE), "yarn.lock": "" }, plan({ packageManager: { name: "yarn", version: "1.22.22", lockfile: "yarn.lock" } }));
+
+      expect(await build(preview)).toBe("failed");
+      const { attemptReason } = current(preview);
+      expect(attemptReason).toMatch(/^Yarn reads configuration from every directory above the one it installs in, so it would read /);
+      expect(attemptReason).toContain(`${path.join(storage, ".npmrc")} and ${path.join(storage, ".yarnrc")}`);
+      expect(attemptReason).toMatch(/Set previews\.storage to a directory with no \.npmrc or \.yarnrc above it\.$/);
+      const log = logOf(preview);
+      expect(log).toContain("==> install: corepack yarn@1.22.22 install --frozen-lockfile in the repository root, with yarn.lock");
+      expect(log.trimEnd().split("\n").at(-1)).toBe(`==> failed: ${attemptReason}`);
+    });
+
+    it("builds an npm package whatever configuration is above it, since npm reads only the install root's and its own HOME's", async () => {
+      fs.writeFileSync(path.join(storage, ".npmrc"), "@repo-facts:registry=${REPO_FACTS_NPM_REGISTRY}\n");
+      const preview = await previewOf(app(STANDALONE), plan());
+      expect(await build(preview)).toBe("published");
+      expect(current(preview)).toMatchObject({ attemptState: "ready", attemptReason: null });
+    });
+
     it("fails a queued build, running nothing, while previews are off or the remote isn't enrolled", async () => {
       const preview = await previewOf(app(STANDALONE), plan());
       const enrolled = config;

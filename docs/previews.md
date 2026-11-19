@@ -15,7 +15,7 @@ Previews are off by default. While `previews.enabled` is off, no Repository page
 | `previews.enabled` (`FABRICATE_PREVIEWS`) | `false` | Turns previews on. |
 | `previews.trustedSources` | none | The remotes enrolled for previews, by clone URL. |
 | `previews.nodeVersions` | none | Each Node version a build may use, mapped to the directory that holds its `node` binary. |
-| `previews.storage` (`FABRICATE_PREVIEWS_STORAGE`) | `storage/previews` | Where builds run and keep their logs, published output, and package caches. |
+| `previews.storage` (`FABRICATE_PREVIEWS_STORAGE`) | `storage/previews` | Where builds run and keep their logs, published output, and package caches. Yarn builds need it outside any directory with Yarn's configuration; see [The build's environment](#the-builds-environment). |
 | `previews.concurrency` | 1 | How many preview builds run at once, apart from the worker's other jobs. |
 | `previews.timeoutMinutes` | 15 | How long a build may run before it's stopped. |
 | `previews.maxOutputBytes` | 200 MiB | The largest output one build can publish. |
@@ -200,6 +200,8 @@ The install and build get an environment built from a list, never the worker's o
 - For the build step only, the base-path variables and `NODE_ENV=production`.
 
 No other variable is passed, so `FABRICATE_*`, `GIT_*`, `VERCEL_*`, `AI_*`, `npm_config_*`, and any proxy settings stay behind, and with its own `HOME` a build reads no user-level `.npmrc` or `.yarnrc`. A repository's own committed package manager configuration still applies. A registry the worker can reach only through a proxy set in its environment can't be installed from yet.
+
+Yarn also reads configuration from every directory above the one it installs in, up to the filesystem root: `.npmrc` and `.yarnrc` for Yarn 1, and `.yarnrc.yml` for later versions. None of those is the repository's, and a build's own `HOME` can't stop Yarn from reading them, so a Yarn build fails before installing when any of them is above its extracted commit, naming each file. Keep `previews.storage` outside every directory that has one. A development checkout has its own `.npmrc`, so to preview Yarn repositories in development, set `FABRICATE_PREVIEWS_STORAGE` outside the checkout, and outside a home directory where Yarn has written a `.yarnrc`. npm and pnpm read only the install root's configuration and the build's own `HOME`'s.
 
 ### Logs and storage
 

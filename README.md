@@ -75,7 +75,7 @@ Environment variables override the file:
 | `previews.enabled` | `FABRICATE_PREVIEWS` | `false`; whether Repository previews exist, see [docs/previews.md](docs/previews.md) |
 | `previews.trustedSources` | `FABRICATE_PREVIEWS_TRUSTED_SOURCES` | none; the clone URLs of the remotes enrolled for previews |
 | `previews.nodeVersions` | `FABRICATE_PREVIEWS_NODE_VERSIONS` | none; each Node version a preview build may use, mapped to its binary directory |
-| `previews.storage` | `FABRICATE_PREVIEWS_STORAGE` | `storage/previews`; where preview builds run and keep their logs, published output, and package caches |
+| `previews.storage` | `FABRICATE_PREVIEWS_STORAGE` | `storage/previews`; where preview builds run and keep their logs, published output, and package caches, outside any directory with a `.npmrc`, `.yarnrc`, or `.yarnrc.yml` for Yarn builds |
 | `previews.concurrency` | `FABRICATE_PREVIEWS_CONCURRENCY` | 1; preview builds that run at once |
 | `previews.timeoutMinutes` | `FABRICATE_PREVIEWS_TIMEOUT_MINUTES` | 15 |
 | `previews.maxOutputBytes` | `FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES` | 209715200 (200 MiB); the largest output one build can publish |

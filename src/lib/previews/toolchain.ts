@@ -78,6 +78,18 @@ export function cacheCleanArguments(manager: PackageManagerPlan): string[] {
   }
 }
 
+/**
+ * The configuration files the manager reads from every directory above the
+ * one it installs in, up to the filesystem root, not only from the install
+ * root and HOME: Yarn 1's `.npmrc` and `.yarnrc`, and later Yarn's
+ * `.yarnrc.yml`. npm and pnpm read only the install root's and HOME's, and a
+ * build's HOME is its own.
+ */
+export function inheritedConfigFiles(manager: PackageManagerPlan): string[] {
+  if (manager.name !== "yarn") return [];
+  return isYarnClassic(manager) ? [".npmrc", ".yarnrc"] : [".yarnrc.yml"];
+}
+
 /** Runs the package's `build` script with +extra+ appended, which every manager passes to the script's last command. */
 export function buildArguments(manager: PackageManagerPlan, extra: readonly string[]): string[] {
   if (extra.length === 0) return ["run", "build"];

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BuildPlan } from "@/lib/previews/eligibility";
-import { baseAdapter, buildArguments, buildEnvironment, installArguments, managerCommand, previewBasePath, shimCommand, usesCorepack } from "@/lib/previews/toolchain";
+import { baseAdapter, buildArguments, buildEnvironment, inheritedConfigFiles, installArguments, managerCommand, previewBasePath, shimCommand, usesCorepack } from "@/lib/previews/toolchain";
 
 /*
  * How a preview build calls the repository's toolchain (design decisions 4
@@ -38,6 +38,13 @@ describe("preview toolchain", () => {
     expect(installArguments(yarnClassic)).toEqual(["install", "--frozen-lockfile"]);
     expect(installArguments({ ...yarnClassic, version: "1.22.22" })).toEqual(["install", "--frozen-lockfile"]);
     expect(installArguments(yarnBerry)).toEqual(["install", "--immutable"]);
+  });
+
+  it("names the configuration files Yarn reads from every directory above the install, which npm and pnpm don't", () => {
+    expect(inheritedConfigFiles(yarnClassic)).toEqual([".npmrc", ".yarnrc"]);
+    expect(inheritedConfigFiles({ ...yarnClassic, version: "1.22.22" })).toEqual([".npmrc", ".yarnrc"]);
+    expect(inheritedConfigFiles(yarnBerry)).toEqual([".yarnrc.yml"]);
+    expect([npm, npmPinned, pnpm].map(inheritedConfigFiles)).toEqual([[], [], []]);
   });
 
   it("passes Vite the base path as an argument to the build script's last command", () => {
