@@ -55,9 +55,10 @@ export function BarChart({ id, label, series, groups, groupLabel = "Group", empt
   const slot = WIDTH / Math.max(groups.length, 1);
   const barWidth = slot * (1 - GAP);
   const plot = HEIGHT - LABELS - TOTALS;
+  const blank = totals.every((total) => total === 0) && Boolean(empty);
   return (
     <figure className={styles.chart} data-bar-chart={id}>
-      {totals.every((total) => total === 0) && empty ? (
+      {blank ? (
         <p className={styles.empty}>{empty}</p>
       ) : (
         <svg className={styles.svg} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-hidden="true" focusable="false">
@@ -96,7 +97,8 @@ export function BarChart({ id, label, series, groups, groupLabel = "Group", empt
           })}
         </svg>
       )}
-      <ul className={styles.legend} aria-hidden="true">
+      {/* With nothing drawn there's nothing to key, and the swatches' patterns live in the drawing. */}
+      {!blank && <ul className={styles.legend} aria-hidden="true">
         {series.map((entry) => (
           <li key={entry.id}>
             <svg className={styles.swatch} viewBox="0 0 12 12" focusable="false">
@@ -105,7 +107,7 @@ export function BarChart({ id, label, series, groups, groupLabel = "Group", empt
             {entry.label}
           </li>
         ))}
-      </ul>
+      </ul>}
       {/* Inside a hidden box: a table sizes to its content, so the box clips it. */}
       <div className="visually-hidden">
         <table>

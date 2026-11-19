@@ -91,7 +91,7 @@ test("filters the components by usage and name, in the address, and clears them"
   await seedFleet(db);
   await page.goto("/adoption/design-systems/salt?usage=unused");
   const table = page.getByRole("table", { name: "Components" });
-  await expect(page.getByRole("status").filter({ hasText: "unused" })).toContainText(", unused, of");
+  await expect(page.getByRole("status").filter({ hasText: "unused" })).toHaveText(/^Showing \d+ of \d+ components: unused$/);
   await expect(table.getByRole("link", { name: "Button", exact: true })).toHaveCount(0);
   await page.goto("/adoption/design-systems/salt?q=butt");
   await expect(table.locator("tbody tr td:first-child a")).toContainText(["Button"]);

@@ -103,7 +103,8 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
           {!terminal && !run.cancelRequestedAt && <InProgressAlert runId={run.publicId} name={name} />}
           {run.state === "complete_with_issues" && (
             <Alert tone="warning" title={`${failed.length} of ${countLabel(targets.length, "repository", "repositories")} could not be assessed`}>
-              <p>{`${failed.map((target) => target.repositoryName).join(", ")}: ${failed[0] ? failureSentence(failed[0].failureCode, failed[0].failureMessage) : "not assessed"}${failed.length > 1 ? " (and more below)" : ""}.`}</p>
+              {/* The sentence ends with its own punctuation; failures of different kinds are each in the list below. */}
+              <p>{`${failed.map((target) => target.repositoryName).join(", ")}: ${failedTogether ? failureSentence(failed[0]!.failureCode, failed[0]!.failureMessage) : "each one's reason is listed below."}`}</p>
               <p>Their relationships are missing from the Relationship Map, and Evaluations treat what they could contain as unknown.</p>
             </Alert>
           )}
