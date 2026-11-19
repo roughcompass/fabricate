@@ -180,7 +180,12 @@ test("searches Sources by name or clone URL, keeping the search in the address",
   await page.goto(paths.repositories);
   const search = page.getByRole("searchbox", { name: "Search Repositories" });
   await expect(search).toHaveAttribute("placeholder", "Search by name or clone URL");
-  await search.fill("ord");
+  // Typed a key at a time once the page runs its scripts, which hide Apply, the search waits for Enter, and keeps focus and every letter meanwhile.
+  await expect(page.getByRole("form", { name: "Search Repositories" }).getByRole("button", { name: "Apply" })).toBeHidden();
+  await search.pressSequentially("ord", { delay: 150 });
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue("ord");
+  expect(new URL(page.url()).searchParams.has("q")).toBe(false);
   await search.press("Enter");
   await expect(page).toHaveURL(/q=ord/);
   const rows = page.getByRole("table", { name: "Repositories" }).locator("tbody tr");
