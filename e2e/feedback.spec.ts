@@ -91,6 +91,8 @@ test.describe("outcomes after a redirect", () => {
 
 test("puts an alert raised by a client component in the page-alert slot", async ({ page }) => {
   await page.goto("/design-system#alert");
+  // The trigger is client-only; a click before hydration does nothing.
+  await waitForHydration(page);
   await page.getByRole("button", { name: "Raise a page alert" }).click();
   await expect(page.locator("#page-alerts").getByRole("alert")).toContainText("The Run was not started");
 });
@@ -146,6 +148,8 @@ test.describe("confirmation dialogs", () => {
 
 test("moves focus to the first invalid field, or to the form alert", async ({ page }) => {
   await page.goto("/design-system#form-feedback");
+  // Before hydration the form posts without JavaScript, and focus doesn't move.
+  await waitForHydration(page);
   const form = page.getByRole("form", { name: "Focus demo" });
   await form.getByRole("button", { name: "Save changes" }).click();
   await expect(form.getByLabel("Name", { exact: true })).toBeFocused();
