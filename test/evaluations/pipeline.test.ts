@@ -65,7 +65,7 @@ describe("Evaluation pipeline", () => {
 
       // Repeating the submission returns the same Evaluation and enqueues nothing new.
       expect(startEvaluation(db, updated.publicId, partial.publicId, token)).toMatchObject({ duplicate: true, evaluation: { id: evaluation.id } });
-      expect(db.select().from(jobs).all()).toHaveLength(2);
+      expect(db.select().from(jobs).all().filter((job) => job.kind === EVALUATE_RELEASE)).toHaveLength(2);
     });
 
     it("refuses unfinished Assessments, Assessments without Profiles, missing selections, and incompatible Releases, creating nothing", async () => {

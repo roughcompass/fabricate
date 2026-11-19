@@ -5,9 +5,10 @@ import { advanceAssessment, requestCancellation, transitionAssessment, transitio
 import type { Db } from "@/lib/db/client";
 import { TransitionError } from "@/lib/db/errors";
 import { assessmentTargets, assessments, evaluationReleases, evaluations } from "@/lib/db/schema";
-import { activeStates, ASSESSMENT_MACHINE, canTransition, EVALUATION_MACHINE, EVALUATION_RELEASE_MACHINE, isTerminal, pathsFromInitial, TARGET_MACHINE, type StateMachine } from "@/lib/db/state-machines";
+import { activeStates, ASSESSMENT_MACHINE, canTransition, EVALUATION_MACHINE, EVALUATION_RELEASE_MACHINE, isTerminal, pathsFromInitial, SURVEY_MACHINE, TARGET_MACHINE, type StateMachine } from "@/lib/db/state-machines";
 import { createEvaluation } from "@/lib/evaluations/evaluation-records";
 import { transitionEvaluation, transitionEvaluationRelease } from "@/lib/evaluations/transitions";
+import { moveSurvey, requestSurvey, surveyById } from "@/lib/surveys/records";
 import { buildAssessment, buildRelease, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { ACTIVE_STATES } from "@/lib/profiling/versions";
@@ -19,6 +20,8 @@ interface Harness {
   create: (db: Db) => number;
   /** Extra columns a raw update needs to reach +state+ legally. */
   extra?: (state: string) => string;
+  /** An update that changes nothing but a counter, to prove a terminal row is frozen. */
+  touch?: string;
   /** Moves the row through the data-access layer. */
   transition: (db: Db, id: number, to: string) => unknown;
 }
@@ -35,8 +38,19 @@ const harnesses: Harness[] = [
   {
     table: "assessment_targets",
     machine: TARGET_MACHINE as StateMachine<string>,
-    create: (db) => buildAssessment(db, { sources: [buildSource(db)] }).targets[0]!.id,
-    extra: (state) => (state === "failed" ? ", failure_code = 'test'" : ", failure_code = NULL"),
+    // With a survey of its Repository to link, as resolving its reference does.
+    create: (db) => {
+      const source = buildSource(db);
+      newSurvey(db, source.id);
+      return buildAssessment(db, { sources: [source] }).targets[0]!.id;
+    },
+    // A target moves to analyzing when it links its survey, which completing requires.
+    extra: (state) =>
+      state === "failed"
+        ? ", failure_code = 'test'"
+        : state === "analyzing"
+          ? ", failure_code = NULL, ref_kind = 'default_branch', resolved_ref = 'refs/heads/main', resolved_at = 1, survey_id = (select id from surveys where repository_source_id = assessment_targets.repository_source_id)"
+          : ", failure_code = NULL",
     transition: (db, id, to) =>
       transitionTarget(db, db.select().from(assessmentTargets).where(eq(assessmentTargets.id, id)).get()!, to as never, { failureCode: "unexpected" }),
   },
@@ -54,7 +68,21 @@ const harnesses: Harness[] = [
     create: (db) => newEvaluation(db).releases[0]!.id,
     transition: (db, id, to) => transitionEvaluationRelease(db, db.select().from(evaluationReleases).where(eq(evaluationReleases.id, id)).get()!, to as never),
   },
+  {
+    table: "surveys",
+    machine: SURVEY_MACHINE as StateMachine<string>,
+    // Each on a Repository of its own, so its number is 1.
+    create: (db) => newSurvey(db, buildSource(db).id).id,
+    extra: (state) => (state === "failed" ? ", failure_code = 'test', finished_at = 1" : state === "succeeded" ? ", finished_at = 1, internal_ref = 'refs/fabricate/snapshots/srv_test'" : ", finished_at = NULL"),
+    touch: "attempts = attempts + 1",
+    transition: (db, id, to) => moveSurvey(db, surveyById(db, id), to as never, to === "failed" ? { failureCode: "unexpected" } : to === "succeeded" ? { internalRef: "refs/fabricate/snapshots/srv_test" } : {}),
+  },
 ];
+
+/** A queued survey of a commit of the Repository +repositorySourceId+. */
+function newSurvey(db: Db, repositorySourceId: number) {
+  return requestSurvey(db, { repositorySourceId, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "manual", surveyorRelease: "0.6.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 }).survey;
+}
 
 function newEvaluation(db: Db) {
   const { assessment } = buildAssessment(db, { sources: [buildSource(db)] });
@@ -71,7 +99,7 @@ function newEvaluation(db: Db) {
   });
 }
 
-describe.each(harnesses)("$table state machine", ({ table, machine, create, extra, transition }) => {
+describe.each(harnesses)("$table state machine", ({ table, machine, create, extra, touch = "lock_version = lock_version + 1", transition }) => {
   let db: Db;
   beforeEach(() => {
     db = createTestDb();
@@ -110,7 +138,7 @@ describe.each(harnesses)("$table state machine", ({ table, machine, create, extr
   it.each(machine.terminal)("rejects any update once %s", (terminal) => {
     const id = rowAt(terminal);
 
-    expect(() => rawRun(db, `update ${table} set lock_version = lock_version + 1 where id = ?`, id)).toThrow(/terminal .* cannot change/);
+    expect(() => rawRun(db, `update ${table} set ${touch} where id = ?`, id)).toThrow(/terminal .* cannot change/);
   });
 
   it("rejects rows that do not start in the initial state", () => {
@@ -122,6 +150,7 @@ describe.each(harnesses)("$table state machine", ({ table, machine, create, extr
     if ("public_id" in copy) copy.public_id = `${String(copy.public_id).slice(0, 4)}zzzzzzzzzzzzzzzz`;
     if ("launch_token" in copy) copy.launch_token = crypto.randomUUID();
     if ("position" in copy) copy.position = 99;
+    if ("number" in copy) copy.number = Number(copy.number) + 1;
     const columns = Object.keys(copy);
 
     expect(() => rawRun(db, `insert into ${table} (${columns.join(", ")}) values (${columns.map(() => "?").join(", ")})`, ...Object.values(copy))).toThrow(
@@ -185,7 +214,11 @@ describe("aggregate progress and cancellation", () => {
 describe("active states", () => {
   it("are derived from the state machine: every state a Run moves on from", () => {
     expect(activeStates(ASSESSMENT_MACHINE)).toEqual(["queued", "acquiring", "analyzing", "finalizing"]);
-    expect(ACTIVE_STATES).toEqual(activeStates(ASSESSMENT_MACHINE));
-    for (const state of ACTIVE_STATES) expect(isTerminal(ASSESSMENT_MACHINE, state), state).toBe(false);
+    for (const state of activeStates(ASSESSMENT_MACHINE)) expect(isTerminal(ASSESSMENT_MACHINE, state), state).toBe(false);
+  });
+
+  it("count a survey as on its way while it moves on toward a result: not once it failed, which waits for a retry", () => {
+    expect(activeStates(SURVEY_MACHINE)).toEqual(["queued", "running", "failed"]);
+    expect(ACTIVE_STATES).toEqual(activeStates(SURVEY_MACHINE).filter((state) => state !== "failed"));
   });
 });

@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 import { buildSource } from "../test/support/builders";
-import { transitionAssessment } from "../src/lib/assessments/transitions";
 import { listSources } from "../src/lib/catalog/source-records";
 import { versionsOf } from "../src/lib/profiling/versions";
+import { moveSurvey, requestSurvey } from "../src/lib/surveys/records";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { toasts } from "./support/shell";
@@ -45,13 +45,14 @@ test("adds and edits a Source with validation feedback", async ({ page, db: _db 
   await expect(page.locator("#source-clone-url-error")).toContainText("already registered as orders (src_");
   await page.getByRole("link", { name: "Cancel" }).click();
 
-  // A new Repository is queued for its first profile version, and its name opens its page.
-  await expect(page.getByRole("row", { name: /orders/ })).toContainText("Version 1 queued");
+  // A new Repository's first survey is requested in the background, and its name opens its page.
+  await expect(page.getByRole("row", { name: /orders/ })).toContainText("Queued");
   await page.getByRole("link", { name: "orders", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "orders" })).toBeVisible();
   await expect(page.getByText("Not profiled yet")).toBeVisible();
+  // Re-profile reads the reference at once, and says when it can't.
   await page.getByRole("button", { name: "Re-profile" }).click();
-  await expect(toasts(page).getByText("orders is already being profiled.")).toBeVisible();
+  await expect(toasts(page).getByText("orders's reference couldn't be read.")).toBeVisible();
   await page.getByRole("link", { name: "Settings" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
   await page.getByLabel("Reference").fill("release");
@@ -148,12 +149,20 @@ test("adds Repositories in bulk, keeps the refused lines to fix, and shows what 
   await page.getByLabel("Clone URLs").fill("ssh://git@github.com/acme/scp.git");
   await page.getByRole("button", { name: "Add Repositories" }).click();
   await expect(toasts(page).getByText("Added 1 Repository.")).toBeVisible();
+  await expect(page.getByRole("row", { name: /vickykatoch-helios/ })).toContainText("Queued");
+
+  // Each one's reference resolves in the background, which queues its first version.
+  for (const [index, source] of listSources(db).entries()) {
+    const commitSha = (index + 1).toString(16).padStart(40, "0");
+    requestSurvey(db, { repositorySourceId: source.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
+  }
+  await page.reload();
   await expect(page.getByRole("row", { name: /vickykatoch-helios/ })).toContainText("Version 1 queued");
   await expect(page.locator("[data-profiling-activity]")).toHaveText(/3 queued/);
 
   // A version the worker has started shows as profiling, with a pulsing indicator.
   const helios = listSources(db).find((source) => source.name === "vickykatoch-helios")!;
-  transitionAssessment(db, versionsOf(db, helios.id)[0]!.assessment, "acquiring");
+  moveSurvey(db, versionsOf(db, helios.id)[0]!.survey, "running", { attempts: 1 });
   await page.reload();
   await expect(page.getByRole("row", { name: /vickykatoch-helios/ }).locator("[data-profiling=profiling]")).toContainText("Profiling version 1");
   await expect(page.locator("[data-profiling-activity]")).toHaveText(/Profiling 1 Repository.*2 queued/);

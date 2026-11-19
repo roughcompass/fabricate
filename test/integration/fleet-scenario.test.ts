@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type Assessment, getAssessment, snapshotOf, targetsOf } from "@/lib/assessments/assessment-records";
+import { type Assessment, getAssessment, targetsOf } from "@/lib/assessments/assessment-records";
 import { launchAssessment } from "@/lib/assessments/launcher";
 import { requestCancellation } from "@/lib/assessments/transitions";
 import { addRepositories } from "@/lib/catalog/bulk-add";
@@ -16,6 +16,7 @@ import { drainJobs } from "@/lib/jobs/worker";
 import { profileDocument, profilesOf } from "@/lib/profiles/profile-records";
 import { mapDocument, mapOf } from "@/lib/relationships/map-records";
 import type { MapDocument } from "@/lib/relationships/schema";
+import { targetCommits } from "@/lib/surveys/records";
 import { useAcquisitionWorld } from "../support/acquisition";
 import { type Repo } from "../support/git-fixture";
 import { manifest } from "../support/profiles";
@@ -54,7 +55,10 @@ describe("Multi-repository Assessment scenario", () => {
   const launch = (initiative: Initiative) => launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), world.config).assessment;
   const refreshed = (assessment: Assessment) => getAssessment(world.db, assessment.publicId);
   const states = (assessment: Assessment) => Object.fromEntries(targetsOf(world.db, assessment.id).map((target) => [target.sourceName, target.state]));
-  const shas = (assessment: Assessment) => Object.fromEntries(targetsOf(world.db, assessment.id).map((target) => [target.sourceName, snapshotOf(world.db, target.id)?.commitSha ?? null]));
+  const shas = (assessment: Assessment) => {
+    const commits = targetCommits(world.db, assessment.id);
+    return Object.fromEntries(targetsOf(world.db, assessment.id).map((target) => [target.sourceName, commits.get(target.id) ?? null]));
+  };
   const profiles = (assessment: Assessment) => Object.fromEntries(profilesOf(world.db, assessment.id).map(({ profile, target }) => [target.sourceName, profile]));
   const map = (assessment: Assessment) => mapDocument(mapOf(world.db, assessment.id)!) as unknown as MapDocument;
   /** A map without its per-run target identifiers, which are the only run identity it records. */

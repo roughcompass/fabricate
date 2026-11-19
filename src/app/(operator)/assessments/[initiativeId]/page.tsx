@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -54,8 +54,6 @@ export default async function InitiativePage({ params, searchParams }: PageProps
   const db = getDb();
   const initiative = loadAssessment(initiativeId);
   if (!initiative) notFound();
-  // Repository profiling Runs are each a Repository's profile versions, shown under Repositories (docs/profiling.md).
-  if (initiative.profiling) redirect("/repositories");
 
   const sources = selectedSources(db, initiative.id);
   const releases = selectedReleases(db, initiative.id);

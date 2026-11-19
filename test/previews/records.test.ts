@@ -10,10 +10,13 @@ import {
   type PinnedCommit,
   type PreparationProfile,
   type PublishedArtifact,
+  continuePreparations,
   decidePreparation,
   failAttempt,
   failPreparation,
+  findPreparation,
   findPreview,
+  linkPreparationSurvey,
   openPreparation,
   preparationJob,
   preparationPackages,
@@ -23,6 +26,7 @@ import {
   startPreview,
 } from "@/lib/previews/records";
 import { jobPayload } from "@/lib/jobs/queue";
+import { moveSurvey, requestSurvey } from "@/lib/surveys/records";
 import { buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 
@@ -34,7 +38,7 @@ import { createTestDb, rawRun } from "../support/db";
 
 const COMMIT = "a".repeat(40);
 const OTHER = "b".repeat(40);
-const PROFILE: PreparationProfile = { document: '{"schema":"fabricate.repository_profile"}', digest: "f".repeat(64) };
+const DIGEST = "f".repeat(64);
 
 const verdict = (directory: string, qualifies = true): PackageVerdict => ({
   directory,
@@ -58,6 +62,11 @@ describe("preview records", () => {
   const main: PinnedCommit = { commitSha: COMMIT, refName: "refs/heads/main", refKind: "branch" };
   const release: PinnedCommit = { commitSha: COMMIT, refName: "refs/heads/release/1.4", refKind: "branch" };
   const jobsOf = (kind: string) => db.select().from(jobs).where(eq(jobs.kind, kind)).all();
+  /** The survey of +commitSha+ a preparation decides from. */
+  const surveyOf = (commitSha: string) =>
+    requestSurvey(db, { repositorySourceId: source.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: DIGEST, profileSchemaVersion: 2 }).survey;
+  /** The Profile of +commitSha+'s survey, as a decision records it. */
+  const profileOf = (commitSha: string): PreparationProfile => ({ surveyId: surveyOf(commitSha).id, digest: DIGEST });
 
   beforeEach(() => {
     db = createTestDb();
@@ -67,7 +76,7 @@ describe("preview records", () => {
   /** The preparation of +pinned+, decided with +outcome+ unless it was decided already. */
   const prepared = (pinned: PinnedCommit, outcome: Eligibility = eligibility(verdict("apps/web"), verdict("apps/admin"), verdict("packages/ui", false))) => {
     const { preparation, started } = openPreparation(db, source, pinned);
-    return started ? decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), PROFILE, outcome)! : preparation;
+    return started ? decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), profileOf(pinned.commitSha), outcome)! : preparation;
   };
 
   describe("preparations", () => {
@@ -83,7 +92,7 @@ describe("preview records", () => {
 
     it("record the decision with every verdict, and the refusal only when nothing qualifies", () => {
       const ready = prepared(main);
-      expect(ready).toMatchObject({ state: "ready", profileDocument: PROFILE.document, profileDigest: PROFILE.digest, repositoryProfileId: null, refusal: null });
+      expect(ready).toMatchObject({ state: "ready", surveyId: surveyOf(COMMIT).id, profileDigest: DIGEST, refusal: null });
       expect(preparationPackages(ready).map((found) => [found.directory, found.qualifies])).toEqual([
         ["apps/web", true],
         ["apps/admin", true],
@@ -104,13 +113,32 @@ describe("preview records", () => {
       expect(again.started).toBe(true);
       expect(again.preparation).toMatchObject({ state: "profiling", failure: null, refName: "refs/heads/main" });
       expect(again.preparation.requestedAt.getTime()).toBeGreaterThan(earlier);
-      expect(decidePreparation(db, preparation.publicId, earlier, PROFILE, eligibility(verdict("apps/web")))).toBeNull();
+      expect(decidePreparation(db, preparation.publicId, earlier, profileOf(COMMIT), eligibility(verdict("apps/web")))).toBeNull();
       expect(jobsOf(PREPARE_PREVIEW)).toHaveLength(2);
 
-      const refused = decidePreparation(db, preparation.publicId, again.preparation.requestedAt.getTime(), PROFILE, eligibility(verdict("apps/web", false)))!;
-      expect(openPreparation(db, source, main)).toMatchObject({ started: true, preparation: { state: "profiling", profileDocument: PROFILE.document } });
+      const refused = decidePreparation(db, preparation.publicId, again.preparation.requestedAt.getTime(), profileOf(COMMIT), eligibility(verdict("apps/web", false)))!;
+      // The survey it decided from stays linked, for the next job to reuse.
+      expect(openPreparation(db, source, main)).toMatchObject({ started: true, preparation: { state: "profiling", surveyId: surveyOf(COMMIT).id } });
       expect(refused.state).toBe("refused");
       expect(jobsOf(PREPARE_PREVIEW)).toHaveLength(3);
+    });
+
+    it("link a survey of their own commit only, and are queued again once each survey they wait on finishes", () => {
+      const { preparation } = openPreparation(db, source, main);
+      expect(() => linkPreparationSurvey(db, preparation.id, surveyOf(OTHER).id)).toThrow(/links a survey of its Repository and commit/);
+      const survey = surveyOf(COMMIT);
+      linkPreparationSurvey(db, preparation.id, survey.id);
+      expect(findPreparation(db, preparation.publicId)).toMatchObject({ state: "profiling", surveyId: survey.id });
+
+      // Nothing to continue while the survey is on its way.
+      const running = moveSurvey(db, survey, "running", { attempts: 1 });
+      continuePreparations(db, running);
+      expect(jobsOf(PREPARE_PREVIEW)).toHaveLength(1);
+
+      const failed = moveSurvey(db, running, "failed", { failureCode: "analysis_failed", failureMessage: "Surveyor stopped" });
+      continuePreparations(db, failed);
+      continuePreparations(db, failed);
+      expect(jobsOf(PREPARE_PREVIEW).map(jobPayload)).toEqual([preparationJob(preparation), { ...preparationJob(preparation), afterSurvey: true }]);
     });
   });
 
@@ -124,7 +152,7 @@ describe("preview records", () => {
 
       expect(fromMain.created).toBe(true);
       expect(fromRelease).toEqual({ preview: fromMain.preview, created: false });
-      expect(fromMain.preview).toMatchObject({ commitSha: COMMIT, packageDir: "apps/web", refName: "refs/heads/main", attempt: 1, attemptState: "queued", artifact: null, profileDigest: PROFILE.digest });
+      expect(fromMain.preview).toMatchObject({ commitSha: COMMIT, packageDir: "apps/web", refName: "refs/heads/main", attempt: 1, attemptState: "queued", artifact: null, profileDigest: DIGEST });
       expect(fromMain.preview.decidingFacts).toMatchObject({ directory: "apps/web", qualifies: true, plan: { buildTool: "vite" } });
       // One build is queued, for the first attempt.
       expect(jobsOf(BUILD_PREVIEW).map(jobPayload)).toEqual([{ preview: fromMain.preview.publicId, attempt: 1 }]);
@@ -142,7 +170,7 @@ describe("preview records", () => {
     it("start only from a ready preparation and a package that qualifies", () => {
       const profiling = openPreparation(db, source, main).preparation;
       expect(() => startPreview(db, profiling.publicId, "apps/web")).toThrow(expect.objectContaining({ name: "PreviewRequestError", code: "not_ready" }));
-      const ready = decidePreparation(db, profiling.publicId, profiling.requestedAt.getTime(), PROFILE, eligibility(verdict("apps/web"), verdict("packages/ui", false)))!;
+      const ready = decidePreparation(db, profiling.publicId, profiling.requestedAt.getTime(), profileOf(COMMIT), eligibility(verdict("apps/web"), verdict("packages/ui", false)))!;
       expect(() => startPreview(db, ready.publicId, "packages/ui")).toThrow(expect.objectContaining({ code: "not_qualifying" }));
       expect(() => startPreview(db, ready.publicId, "apps/missing")).toThrow(expect.objectContaining({ code: "not_qualifying" }));
       expect(db.select().from(previewBuilds).all()).toEqual([]);

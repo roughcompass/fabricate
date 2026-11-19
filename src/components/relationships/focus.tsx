@@ -93,7 +93,7 @@ function RelationshipList({ title, empty, list, evidence, assessmentId, href }: 
                       <li key={signal.edgeId} className={styles.signal}>
                         <span>{`${EDGE_LABELS[signal.type]?.[0] ?? signal.type}, ${edgeBasis(signal.basis).toLowerCase()}`}</span>
                         <span className={styles.rule}>{signal.rule}</span>
-                        <EvidenceList ids={signal.evidence} records={evidence} assessmentId={assessmentId} />
+                        <EvidenceList ids={signal.evidence} records={evidence} owner={{ run: assessmentId }} />
                       </li>
                     ))}
                     {row.reason && <li className={styles.muted}>{row.reason}</li>}

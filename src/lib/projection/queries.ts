@@ -1,6 +1,6 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { assessmentTargets, repositoryProfiles } from "@/lib/db/schema";
+import { assessmentTargets } from "@/lib/db/schema";
 
 /*
  * Questions answered from the projection and the Run's own records. None of
@@ -17,16 +17,16 @@ export interface MissingTarget {
 }
 
 /**
- * Targets of the Assessment that failed or were canceled before writing a
- * Profile, with their failure codes, so no answer reads their absence as
+ * Targets of the Assessment that failed or were canceled, which contribute
+ * no Profile even when a survey they shared later succeeds, with their
+ * failure codes, so no answer reads their absence as
  * "no". They're the gaps its Relationship Map records.
  */
 export function missingTargets(db: Executor, assessmentId: number): MissingTarget[] {
   return db
     .select({ target: assessmentTargets.publicId, source: assessmentTargets.sourceName, state: assessmentTargets.state, reason: assessmentTargets.failureCode })
     .from(assessmentTargets)
-    .leftJoin(repositoryProfiles, eq(repositoryProfiles.assessmentTargetId, assessmentTargets.id))
-    .where(and(eq(assessmentTargets.assessmentId, assessmentId), inArray(assessmentTargets.state, ["failed", "canceled"]), isNull(repositoryProfiles.id)))
+    .where(and(eq(assessmentTargets.assessmentId, assessmentId), inArray(assessmentTargets.state, ["failed", "canceled"])))
     .orderBy(asc(assessmentTargets.position))
     .all() as MissingTarget[];
 }

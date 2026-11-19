@@ -1,13 +1,14 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { targetsOf } from "@/lib/assessments/assessment-records";
+import { surveyRefFor } from "@/lib/acquisition/mirror";
+import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { packageProducers, repositoryRelationships } from "@/lib/profiles/relationships";
-import { findVersion, queueProfile } from "@/lib/profiling/versions";
+import { currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey } from "@/lib/surveys/records";
+import { finishSurvey } from "@/lib/surveys/run";
 import { buildSource } from "../../support/builders";
 import { createTestDb } from "../../support/db";
 import { type MapWorld, seedMapWorld } from "../../support/map-world";
-import { manifest } from "../../support/profiles";
-import { completeRun } from "../../support/scenarios";
+import { manifest, memoryProfile, sha1 } from "../../support/profiles";
 
 describe("A repository's relationships", () => {
   let db: Db;
@@ -38,20 +39,24 @@ describe("A repository's relationships", () => {
 });
 
 describe("Package producers across the fleet", () => {
-  it("names the repository whose newest profiled version publishes a package, and never one whose package is private", async () => {
+  it("names the repository whose current Profile publishes a package, and never one whose package is private or only on a branch", async () => {
     const db = createTestDb();
-    const profiled = async (name: string, packageManifest: string) => {
-      const source = buildSource(db, { name });
-      queueProfile(db, source, "imported");
-      const version = findVersion(db, source.id, 1)!;
-      await completeRun(db, version.assessment, targetsOf(db, version.assessment.id), [source], [{ "package.json": packageManifest }]);
+    /** Surveys +source+ at a commit of its configured reference, or of a branch, whose package.json is +packageManifest+. */
+    const surveyed = async (source: ReturnType<typeof buildSource>, packageManifest: string, fromConfiguredReference = true) => {
+      const commitSha = sha1(`${source.publicId}:${packageManifest}`);
+      const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha, reference: "refs/heads/main", fromConfiguredReference, trigger: fromConfiguredReference ? "added" : "run", ...currentRecipe(getConfig()) });
+      if (fromConfiguredReference) recordConfiguredResolution(db, source.id, commitSha, new Date());
+      const running = pinSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { treeSha: null, internalRef: surveyRefFor(survey.publicId) });
+      finishSurvey(db, running, { document: (await memoryProfile({ "package.json": packageManifest }, { public_id: source.publicId, name: source.name }, commitSha)).document });
       return source;
     };
-    const tokens = await profiled("design-tokens", manifest({ name: "@acme/design-tokens", version: "1.0.0" }));
+    const tokens = await surveyed(buildSource(db, { name: "design-tokens" }), manifest({ name: "@acme/design-tokens", version: "1.0.0" }));
     // A private workspace named like a public package, as mattermost's e2e workspace is named cypress.
-    await profiled("chat", manifest({ name: "cypress", private: true }));
+    await surveyed(buildSource(db, { name: "chat" }), manifest({ name: "cypress", private: true }));
+    // A branch's Profile isn't the Repository's current one.
+    await surveyed(tokens, manifest({ name: "@acme/next-tokens", version: "2.0.0-next.1" }), false);
 
-    const producers = packageProducers(db, ["@acme/design-tokens", "cypress", "react"]);
+    const producers = packageProducers(db, ["@acme/design-tokens", "@acme/next-tokens", "cypress", "react"]);
     expect([...producers.entries()]).toEqual([["@acme/design-tokens", [{ publicId: tokens.publicId, name: "design-tokens" }]]]);
     expect(packageProducers(db, []).size).toBe(0);
   });

@@ -7,6 +7,9 @@ import { type Query, pageQuery, withQuery } from "./query";
  * a Repository Source is a Repository, at /repositories. Pages, actions, and
  * the end-to-end specs build addresses here, so a change lands in one place.
  */
+/** What a piece of evidence is reached through: a Run's public ID, or a Profile's. */
+export type EvidenceOwner = { readonly run: string } | { readonly profile: string };
+
 export const routes = {
   home: "/",
 
@@ -17,7 +20,8 @@ export const routes = {
 
   run: (assessmentId: string, query?: Query) => withQuery(`/runs/${assessmentId}`, query),
   runMap: (assessmentId: string, query?: Query) => withQuery(`/runs/${assessmentId}/map`, query),
-  evidence: (assessmentId: string, evidenceId: string) => `/runs/${assessmentId}/evidence/${evidenceId}`,
+  /** Evidence opens under its Run, or, reached from a Profile with no Run, under the Profile. */
+  evidence: (owner: EvidenceOwner, evidenceId: string) => ("run" in owner ? `/runs/${owner.run}/evidence/${evidenceId}` : `/profiles/${owner.profile}/evidence/${evidenceId}`),
   runStatus: (assessmentId: string) => `/api/runs/${assessmentId}/status`,
 
   evaluation: (evaluationId: string, query?: Query) => withQuery(`/evaluations/${evaluationId}`, query),
@@ -41,7 +45,7 @@ export const routes = {
   repository: (sourceId: string) => `/repositories/${sourceId}`,
   /** Its settings: its clone URL, name, and reference, and deleting it. */
   repositorySettings: (sourceId: string) => `/repositories/${sourceId}/settings`,
-  /** Every profile version of it, newest first. */
+  /** Every version of it, its surveys, newest first. */
   repositoryVersions: (sourceId: string, page = 1) => withQuery(`/repositories/${sourceId}/versions`, { page: pageQuery(page) }),
   repositoryVersion: (sourceId: string, version: number) => `/repositories/${sourceId}/versions/${version}`,
   /** One of its previews (docs/previews.md): its device frame, state, and build log, with +query+ such as its device. */

@@ -58,7 +58,7 @@ export default async function SettingsPage({ params, searchParams }: PageProps<"
             <h2 id="general-heading" className={styles.heading}>
               General
             </h2>
-            <p className={styles.muted}>Changes apply to Runs started afterward, and a new clone URL or reference queues a new profile version.</p>
+            <p className={styles.muted}>Changes apply to Runs started afterward, and a new clone URL or reference surveys the repository again.</p>
             <SourceForm
               action={updateSource.bind(null, source.publicId)}
               initial={{ values: { name: source.name, cloneUrl: source.cloneUrl, gitRef: source.gitRef ?? "" }, errors: {} }}

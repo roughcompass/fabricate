@@ -1,7 +1,6 @@
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { newestProfileIds } from "@/lib/profiling/current";
-import { assessments, graphEdges, graphNodes, initiatives, repositorySources } from "@/lib/db/schema";
+import { assessments, graphEdges, graphNodes, repositorySources } from "@/lib/db/schema";
 import { routes } from "@/lib/web/routes";
 
 /**
@@ -34,13 +33,12 @@ export interface RepositoryRelationships {
 const NONE: RepositoryRelationships = { run: null, uses: [], usedBy: [], mapHref: null };
 
 export function repositoryRelationships(db: Executor, sourceId: number): RepositoryRelationships {
-  // The newest Assessment Run, not a profile version's own one-repository Run, in which nothing else can appear.
+  // The newest Assessment Run that mapped the repository.
   const node = db
     .select({ mapId: graphNodes.mapId, nodeId: graphNodes.nodeId, run: assessments.publicId, finishedAt: assessments.finishedAt })
     .from(graphNodes)
     .innerJoin(assessments, eq(assessments.id, graphNodes.assessmentId))
-    .innerJoin(initiatives, eq(initiatives.id, assessments.initiativeId))
-    .where(and(eq(graphNodes.repositorySourceId, sourceId), eq(graphNodes.kind, "repository"), eq(initiatives.profiling, false)))
+    .where(and(eq(graphNodes.repositorySourceId, sourceId), eq(graphNodes.kind, "repository")))
     .orderBy(desc(graphNodes.mapId))
     .limit(1)
     .get();
@@ -97,16 +95,15 @@ export interface PackageProducer {
 export function packageProducers(db: Executor, names: readonly string[]): Map<string, PackageProducer[]> {
   const producers = new Map<string, PackageProducer[]>();
   if (!names.length) return producers;
+  // Produced packages are projected from each current Profile (unify-surveys, design decision 4).
   const rows = db.all<{ package: string; publicId: string; name: string }>(sql`
-    SELECT DISTINCT package.label AS package, source.public_id AS publicId, source.name AS name
-    FROM graph_edges edge
-    JOIN graph_nodes package ON package.map_id = edge.map_id AND package.node_id = edge.to_node
-    JOIN graph_nodes producer ON producer.map_id = edge.map_id AND producer.node_id = edge.from_node
-    JOIN repository_sources source ON source.id = producer.repository_source_id
-    JOIN repository_profiles profile ON profile.assessment_target_id = producer.assessment_target_id
-    WHERE edge.type = 'package_production'
-      AND profile.id IN ${newestProfileIds(db)}
-      AND package.label IN (${sql.join(names.map((name) => sql`${name}`), sql`, `)})
+    SELECT DISTINCT fact.package_name AS package, source.public_id AS publicId, source.name AS name
+    FROM dependency_facts fact
+    JOIN repository_profiles profile ON profile.id = fact.profile_id
+    JOIN repository_sources source ON source.current_survey_id = profile.survey_id
+    WHERE fact.kind = 'produced'
+      AND source.deleted_at IS NULL
+      AND fact.package_name IN (${sql.join(names.map((name) => sql`${name}`), sql`, `)})
     ORDER BY source.name`);
   for (const row of rows) producers.set(row.package, [...(producers.get(row.package) ?? []), { publicId: row.publicId, name: row.name }]);
   return producers;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { conclusionCounts, latestConclusions } from "@/lib/evaluations/conclusions";
-import { queueProfile } from "@/lib/profiling/versions";
+import { requestSurvey } from "@/lib/surveys/records";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
@@ -30,11 +30,11 @@ describe("latest conclusions", () => {
     expect(conclusionCounts(conclusions)).toEqual({ gaps: 0, undetermined: 0, conforms: 0, not_applicable: 0, none: 2 });
   });
 
-  it("leaves the profiling Assessment out", () => {
+  it("lists only operators' Assessments, background surveys adding none (No profiling Assessment)", () => {
     const db = createTestDb();
     const source = buildSource(db);
     const operator = buildInitiative(db, { sources: [source] });
-    queueProfile(db, source, "imported");
+    requestSurvey(db, { repositorySourceId: source.id, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", surveyorRelease: "0.6.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
 
     expect([...latestConclusions(db).keys()]).toEqual([operator.id]);
   });

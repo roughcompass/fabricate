@@ -9,7 +9,7 @@ import { drainJobs } from "../src/lib/jobs/worker";
 import { profilesOf } from "../src/lib/profiles/profile-records";
 import { buildInitiative, buildSource } from "../test/support/builders";
 import { manifest } from "../test/support/profiles";
-import { ORDERS, STOREFRONT, seedAssessment } from "../test/support/scenarios";
+import { ORDERS, STOREFRONT, seedAssessment, seedSurvey } from "../test/support/scenarios";
 import { serverConfig } from "./support/results";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, gitRepo, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -308,17 +308,17 @@ test("summarizes an unresolved Service Dependency by its client and call site, n
   await expect(detail(unresolved, "Key")).toHaveText("unresolved:src/client.ts:2");
 });
 
-test("marks an earlier Profile historical and links to the newest one", async ({ page, db }) => {
+test("marks an earlier version and links to the current one", async ({ page, db }) => {
   const { orders, initiative, profile: earlier } = await seedOrders(db);
   const later = await seedAssessment(db, initiative, [orders], [{ ...ORDERS, ".nvmrc": "20\n" }]);
   const newest = profilesOf(db, later.id)[0]!.profile;
 
   await open(page, earlier.publicId, "tooling");
-  await expect(page.getByText("This is a historical Profile")).toBeVisible();
+  await expect(page.getByText("This is an earlier version")).toBeVisible();
   await expect(category(page, "runtime_requirements").getByText("Conflicting").first()).toBeVisible();
-  await page.getByRole("link", { name: "View the newest Profile" }).click();
-  await expect(page).toHaveURL(new RegExp(`/profiles/${newest.publicId}$`));
-  await expect(page.getByText("This is a historical Profile")).toHaveCount(0);
+  await page.getByRole("link", { name: "View the current version" }).click();
+  await expect(page).toHaveURL(new RegExp(`/repositories/${orders.publicId}$`));
+  await expect(page.getByText("This is an earlier version")).toHaveCount(0);
   await open(page, newest.publicId, "tooling");
   await expect(category(page, "runtime_requirements").getByText("Observed").first()).toBeVisible();
 });
@@ -388,8 +388,8 @@ test("opens verified evidence excerpts from a real snapshot without rendering UR
   for (const summary of await page.locator("#services summary").all()) await summary.click();
   await page.locator("#services").getByRole("link", { name: "src/payments.ts:2" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "src/payments.ts:2" })).toBeVisible();
-  // A call site's breadcrumb returns to the Service Dependencies.
-  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "orders" })).toHaveAttribute("href", /#services$/);
+  // Reached from the Profile, its version's breadcrumb returns to the Service Dependencies.
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Version 1" })).toHaveAttribute("href", /#services$/);
   await expect(page.getByRole("region", { name: "Record" })).toContainText("Line 2");
   const excerpt = page.getByLabel("Excerpt of src/payments.ts");
   await expect(excerpt).toContainText("[redacted]@payments.invalid/v1/charges");
@@ -420,20 +420,48 @@ test("navigates between categories and heads a category without facts like every
 });
 
 test("links an evidence record to each ancestor, with no other way back", async ({ page, db }) => {
-  const { profile, initiative, assessment } = await seedOrders(db);
+  const { orders, profile } = await seedOrders(db);
   await open(page, profile.publicId, "tooling");
   const manager = await openEvidence(category(page, "package_managers"), "yarn");
   await manager.getByRole("link", { name: "yarn.lock" }).click();
+  // Reached from a Profile, evidence leads back through its Repository and version (unify-surveys, design decision 7).
   const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
-  await expect(breadcrumbs.getByRole("link")).toHaveText(["Assessments", initiative.name, "Run #1", "orders"]);
-  await expect(breadcrumbs.getByRole("link", { name: "Run #1" })).toHaveAttribute("href", paths.run(assessment.publicId));
+  await expect(breadcrumbs.getByRole("link")).toHaveText(["Repositories", "orders", "Version 1"]);
+  await expect(breadcrumbs.getByRole("link", { name: "orders" })).toHaveAttribute("href", paths.repository(orders.publicId));
   await expect(page.locator("main").getByRole("link", { name: /back/i })).toHaveCount(0);
 
-  // The Profile breadcrumb returns to the category that cites the evidence, in the view that holds it.
-  await expect(breadcrumbs.getByRole("link", { name: "orders" })).toHaveAttribute("href", `/profiles/${profile.publicId}?tab=tooling#package_managers`);
-  await breadcrumbs.getByRole("link", { name: "orders" }).click();
+  // The version's breadcrumb returns to the category that cites the evidence, in the view that holds it.
+  await expect(breadcrumbs.getByRole("link", { name: "Version 1" })).toHaveAttribute("href", `/profiles/${profile.publicId}?tab=tooling#package_managers`);
+  await breadcrumbs.getByRole("link", { name: "Version 1" }).click();
   await expect(page).toHaveURL(/#package_managers$/);
   await expect(category(page, "package_managers")).toBeInViewport();
+});
+
+test("numbers a Repository's versions for good and says why each ran (Stable numbers, Why a version ran)", async ({ page, db }) => {
+  const web = buildSource(db, { name: "web" });
+  const initiative = buildInitiative(db, { name: "Checkout platform migration", sources: [web] });
+  await seedSurvey(db, web, { trigger: "added" });
+  await seedSurvey(db, web, { trigger: "commit" });
+  await seedAssessment(db, initiative, [web], [ORDERS]);
+  await seedSurvey(db, web, { trigger: "preview", reference: "refs/heads/feature/new-nav", fromConfiguredReference: false });
+
+  await page.goto(paths.repositoryVersions(web.publicId));
+  const versions = page.getByRole("table", { name: "Versions of web" });
+  const row = (number: number) => versions.getByRole("row").filter({ has: page.getByRole("link", { name: `Version ${number}`, exact: true }) });
+  await expect(row(1)).toContainText("Added");
+  await expect(row(2)).toContainText("New commit");
+  await expect(row(3).getByRole("link", { name: "Run of Checkout platform migration" })).toBeVisible();
+  await expect(row(4)).toContainText("Preview");
+  await expect(row(4)).toContainText("refs/heads/feature/new-nav");
+  const first = await row(1).getByRole("link", { name: "Version 1" }).getAttribute("href");
+
+  // A fifth survey takes the next number; the first four keep theirs, and their addresses.
+  await seedSurvey(db, web, { trigger: "manual" });
+  await page.reload();
+  await expect(row(5)).toContainText("Re-profiled");
+  await expect(row(1).getByRole("link", { name: "Version 1" })).toHaveAttribute("href", first!);
+  await page.goto(first!);
+  await expect(page.getByRole("heading", { level: 1, name: "Version 1" })).toBeVisible();
 });
 
 const SALT_APP = {

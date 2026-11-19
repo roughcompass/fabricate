@@ -1,12 +1,12 @@
 import { eq, sql } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { type Issue, ValidationError } from "@/lib/db/errors";
-import { requestCancellation } from "@/lib/assessments/transitions";
-import { type ProfileTrigger, assessmentTargets, assessments, initiativeTargets, initiatives, repositorySources } from "@/lib/db/schema";
+import { assessmentTargets, initiativeTargets, initiatives, repositorySources } from "@/lib/db/schema";
 import { CloneUrl, InvalidCloneUrl } from "./clone-url";
 import { repositoryNameFromUrl } from "./repository-name";
 import { BoundaryViolation, SourceBoundary } from "./source-boundary";
-import { isActive, queueProfile, versionCount, versionsOf } from "@/lib/profiling/versions";
+import { versionCount } from "@/lib/profiling/versions";
+import { requestBackgroundSurvey } from "@/lib/surveys/background";
 import { getConfig } from "@/lib/config";
 import { deleteRepositoryPreviews, discardPreviewFiles } from "@/lib/previews/lifecycle";
 import { previewCount } from "@/lib/previews/views";
@@ -50,12 +50,12 @@ export function resolveCloneUrl(input: string, boundary = new SourceBoundary()):
   return { cloneUrl: resolved.toString(), canonicalUrl: resolved.canonical };
 }
 
-export function registerSource(db: Executor, submitted: SourceForm, boundary?: SourceBoundary, trigger: Extract<ProfileTrigger, "added" | "imported"> = "added"): RepositorySource {
+export function registerSource(db: Executor, submitted: SourceForm, boundary?: SourceBoundary): RepositorySource {
   const form = named(submitted);
   const url = resolveOrReject(form, boundary);
   return immediate(db, (tx) => {
     const source = insertSource(tx, { name: form.name, gitRef: form.gitRef, ...url });
-    queueProfile(tx, source, trigger);
+    requestBackgroundSurvey(tx, source, "added");
     return source;
   });
 }
@@ -66,13 +66,13 @@ export function editSource(db: Executor, publicId: string, lockVersion: number, 
   return immediate(db, (tx) => {
     const before = getSource(tx, publicId);
     const source = updateSource(tx, publicId, lockVersion, { name: form.name, gitRef: form.gitRef, ...url });
-    if (source.canonicalUrl !== before.canonicalUrl || source.gitRef !== before.gitRef) queueProfile(tx, source, "edited");
+    if (source.canonicalUrl !== before.canonicalUrl || source.gitRef !== before.gitRef) requestBackgroundSurvey(tx, source, "edited");
     return source;
   });
 }
 
 export interface DeletionEffects {
-  /** Its profile versions, which go with it. */
+  /** Its versions, which stay with it for the history of the Runs that used them. */
   readonly versions: number;
   /** Assessments that select it, which stop selecting it. */
   readonly assessments: readonly string[];
@@ -97,8 +97,8 @@ export function deletionEffects(db: Executor, source: RepositorySource): Deletio
 /**
  * Deletes +source+ from the catalog, permanently, once +confirmation+ is its
  * name exactly. It leaves every list, scope, and profiling check, and its
- * clone URL is free to register again. A profile version in progress is
- * canceled, and Assessments that select it stop selecting it. Past Runs keep
+ * clone URL is free to register again. A survey in progress finishes, and
+ * Assessments that select it stop selecting it. Past Runs keep
  * their results, which name it as they assessed it. Its previews are deleted
  * with it, and their files removed (docs/previews.md).
  */
@@ -106,7 +106,6 @@ export function deleteSource(db: Executor, publicId: string, confirmation: strin
   const { deleted, previews } = immediate(db, (tx) => {
     const source = getSource(tx, publicId);
     if (confirmation.trim() !== source.name) throw new ValidationError([{ field: "confirmation", message: `Type ${source.name} to confirm` }]);
-    for (const version of versionsOf(tx, source.id).filter(isActive)) requestCancellation(tx, version.assessment.id);
     tx.delete(initiativeTargets).where(eq(initiativeTargets.repositorySourceId, source.id)).run();
     const now = new Date();
     return {
@@ -119,14 +118,11 @@ export function deleteSource(db: Executor, publicId: string, confirmation: strin
   return deleted;
 }
 
-/** How many Runs of Assessments included each source, keyed by source row id. Profile versions, which the list shows apart, aren't counted. */
+/** How many Runs of Assessments included each source, keyed by source row id. */
 export function assessmentCounts(db: Executor): Map<number, number> {
   const rows = db
     .select({ sourceId: assessmentTargets.repositorySourceId, count: sql<number>`count(distinct ${assessmentTargets.assessmentId})` })
     .from(assessmentTargets)
-    .innerJoin(assessments, eq(assessments.id, assessmentTargets.assessmentId))
-    .innerJoin(initiatives, eq(initiatives.id, assessments.initiativeId))
-    .where(eq(initiatives.profiling, false))
     .groupBy(assessmentTargets.repositorySourceId)
     .all();
   // Template targets have no source.

@@ -19,5 +19,5 @@ export const loadRun = cache((publicId: string): LoadedRun | undefined => {
   if (!assessment) return undefined;
   const initiative = initiativeById(db, assessment.initiativeId);
   const number = assessmentNumber(db, assessment);
-  return { db, assessment, initiative, number, context: runContext(db, assessment, initiative, number) };
+  return { db, assessment, initiative, number, context: runContext(initiative, number) };
 });

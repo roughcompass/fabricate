@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
@@ -23,8 +23,6 @@ export default async function EditInitiativePage({ params }: PageProps<"/assessm
   const db = getDb();
   const initiative = loadAssessment(initiativeId);
   if (!initiative) notFound();
-  // Repository profiling Runs are each a Repository's profile versions, shown under Repositories (docs/profiling.md).
-  if (initiative.profiling) redirect("/repositories");
 
   const sourceIds = selectedSources(db, initiative.id).map((source) => source.publicId);
   const releaseIds = selectedReleases(db, initiative.id).map(({ release }) => release.publicId);

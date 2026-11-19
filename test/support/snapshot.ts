@@ -64,12 +64,12 @@ export class SnapshotFixture {
     this.work.git("commit", "--quiet", "--allow-empty", "-m", "Snapshot fixture");
   }
 
-  /** Acquires whatever the work repository last committed, in a new Assessment. */
+  /** Pins whatever the work repository last committed for a survey, and opens a reader on it. */
   async acquireCommitted(budgets?: Budgets, options: SnapshotReaderOptions = {}) {
     this.source ??= registerLocalSource(this.db, this.config, "app", this.work.path);
-    const { assessment, target, snapshot } = await acquire(this.db, this.config, this.source);
+    const { survey, target, snapshot } = await acquire(this.db, this.config, this.source);
     const reader = await openSnapshot(target, snapshot, { config: this.config, ...(budgets && { budgets }), ...options });
-    return { assessment, target, snapshot, reader };
+    return { survey, target, snapshot, reader };
   }
 
   cleanup(): void {

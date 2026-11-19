@@ -35,6 +35,7 @@ const EXPECTED: Record<string, string | null> = {
   "/evaluations/[evaluationId]": "all-assessments",
   "/evaluations/[evaluationId]/findings/[findingId]": "all-assessments",
   "/profiles/[profileId]": "all-assessments",
+  "/profiles/[profileId]/evidence/[evidenceId]": "all-assessments",
   "/repositories": "repositories",
   "/repositories/new": "repositories",
   "/repositories/bulk": "repositories",

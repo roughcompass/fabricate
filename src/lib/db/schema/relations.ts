@@ -1,13 +1,16 @@
 import { relations } from "drizzle-orm";
-import { assessmentTargets, assessments, sourceSnapshots } from "./assessments";
+import { assessmentTargets, assessments } from "./assessments";
 import { initiativeTargets, initiatives, repositorySources } from "./catalog";
 import { evaluationReleases, evaluations, findings } from "./evaluations";
 import { relationshipMaps, repositoryProfiles } from "./results";
 import { initiativeStandardReleases, standardReleases, standards } from "./standards";
+import { surveys } from "./surveys";
 
-export const repositorySourceRelations = relations(repositorySources, ({ many }) => ({
+export const repositorySourceRelations = relations(repositorySources, ({ one, many }) => ({
   initiativeTargets: many(initiativeTargets),
   assessmentTargets: many(assessmentTargets),
+  surveys: many(surveys),
+  currentSurvey: one(surveys, { fields: [repositorySources.currentSurveyId], references: [surveys.id] }),
 }));
 
 export const initiativeRelations = relations(initiatives, ({ many }) => ({
@@ -25,7 +28,6 @@ export const initiativeTargetRelations = relations(initiativeTargets, ({ one }) 
 export const assessmentRelations = relations(assessments, ({ one, many }) => ({
   initiative: one(initiatives, { fields: [assessments.initiativeId], references: [initiatives.id] }),
   targets: many(assessmentTargets),
-  profiles: many(repositoryProfiles),
   relationshipMap: one(relationshipMaps),
   evaluations: many(evaluations),
 }));
@@ -33,13 +35,13 @@ export const assessmentRelations = relations(assessments, ({ one, many }) => ({
 export const assessmentTargetRelations = relations(assessmentTargets, ({ one }) => ({
   assessment: one(assessments, { fields: [assessmentTargets.assessmentId], references: [assessments.id] }),
   repositorySource: one(repositorySources, { fields: [assessmentTargets.repositorySourceId], references: [repositorySources.id] }),
-  snapshot: one(sourceSnapshots),
-  profile: one(repositoryProfiles),
+  survey: one(surveys, { fields: [assessmentTargets.surveyId], references: [surveys.id] }),
 }));
 
-export const sourceSnapshotRelations = relations(sourceSnapshots, ({ one }) => ({
-  target: one(assessmentTargets, { fields: [sourceSnapshots.assessmentTargetId], references: [assessmentTargets.id] }),
-  repositorySource: one(repositorySources, { fields: [sourceSnapshots.repositorySourceId], references: [repositorySources.id] }),
+export const surveyRelations = relations(surveys, ({ one, many }) => ({
+  repositorySource: one(repositorySources, { fields: [surveys.repositorySourceId], references: [repositorySources.id] }),
+  profile: one(repositoryProfiles),
+  targets: many(assessmentTargets),
 }));
 
 export const standardRelations = relations(standards, ({ many }) => ({
@@ -77,9 +79,7 @@ export const findingRelations = relations(findings, ({ one }) => ({
 }));
 
 export const repositoryProfileRelations = relations(repositoryProfiles, ({ one }) => ({
-  assessment: one(assessments, { fields: [repositoryProfiles.assessmentId], references: [assessments.id] }),
-  target: one(assessmentTargets, { fields: [repositoryProfiles.assessmentTargetId], references: [assessmentTargets.id] }),
-  snapshot: one(sourceSnapshots, { fields: [repositoryProfiles.sourceSnapshotId], references: [sourceSnapshots.id] }),
+  survey: one(surveys, { fields: [repositoryProfiles.surveyId], references: [surveys.id] }),
 }));
 
 export const relationshipMapRelations = relations(relationshipMaps, ({ one }) => ({

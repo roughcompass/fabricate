@@ -17,13 +17,24 @@ export interface ResolvedRef {
   name: string;
 }
 
+/** A resolved reference with the commit the remote advertised for it, known before anything is fetched. */
+export interface Resolution extends ResolvedRef {
+  commitSha: string;
+}
+
 export interface FetchedCommit {
   commitSha: string;
   treeSha: string;
 }
 
 const FULL_SHA = /^[0-9a-f]{40}$/;
-const SNAPSHOT_REF = /^refs\/fabricate\/snapshots\/snp_[a-z0-9]{16}$/;
+/** A survey's own pin; surveys made from earlier snapshots keep the snapshot's. */
+const SNAPSHOT_REF = /^refs\/fabricate\/snapshots\/(?:snp|srv)_[a-z0-9]{16}$/;
+
+/** The internal ref that pins a survey's commit. */
+export function surveyRefFor(surveyPublicId: string): string {
+  return `refs/fabricate/snapshots/${surveyPublicId}`;
+}
 
 function incomingRef(key: string): string {
   return `refs/fabricate/incoming/${key}`;
@@ -54,10 +65,29 @@ export class Mirror {
     await this.runner.initBare(this.gitDir);
   }
 
-  /** Decides what the configured reference names on the remote. */
-  async resolve(url: string, protocol: Protocol, gitRef: string | null, signal?: AbortSignal): Promise<ResolvedRef> {
-    if (gitRef && FULL_SHA.test(gitRef)) return { kind: "commit", name: gitRef };
-    return resolveAdvertised(parseLsRemote(await this.runner.lsRemote(url, protocol, signal)), gitRef);
+  /** Decides what the configured reference names on the remote, and the commit it advertises for it, so a survey is found before anything is fetched. */
+  async resolve(url: string, protocol: Protocol, gitRef: string | null, signal?: AbortSignal): Promise<Resolution> {
+    if (gitRef && FULL_SHA.test(gitRef)) return { kind: "commit", name: gitRef, commitSha: gitRef };
+    const advertised = parseLsRemote(await this.runner.lsRemote(url, protocol, signal));
+    const resolved = resolveAdvertised(advertised, gitRef);
+    return { ...resolved, commitSha: advertisedCommit(advertised, resolved) };
+  }
+
+  /** Whether the mirror already holds +commitSha+, so a survey can pin it without fetching. */
+  async hasCommit(commitSha: string): Promise<boolean> {
+    if (!FULL_SHA.test(commitSha)) return false;
+    try {
+      return (await this.runner.objectType(this.gitDir, commitSha)) === "commit";
+    } catch {
+      return false;
+    }
+  }
+
+  /** The tree of a commit the mirror holds. */
+  async treeOf(commitSha: string): Promise<string> {
+    const treeSha = await this.runner.revParse(this.gitDir, `${commitSha}^{tree}`);
+    if (!treeSha || !FULL_SHA.test(treeSha)) throw new AcquisitionError("object_verification_failed", `The tree of ${commitSha} could not be read`);
+    return treeSha;
   }
 
   /**

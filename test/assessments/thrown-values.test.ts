@@ -1,36 +1,43 @@
+import crypto from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { recordSnapshot } from "@/lib/assessments/assessment-records";
-import { processTarget } from "@/lib/assessments/orchestration";
-import { transitionTarget } from "@/lib/assessments/transitions";
-import { buildAssessment, buildSource } from "../support/builders";
-import { createTestDb } from "../support/db";
-import { sha1 } from "../support/profiles";
+import { getAssessment, targetsOf } from "@/lib/assessments/assessment-records";
+import { launchAssessment } from "@/lib/assessments/launcher";
+import { drainJobs } from "@/lib/jobs/worker";
+import { jobHandlers } from "@/lib/jobs/registry";
+import { surveyById } from "@/lib/surveys/records";
+import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { buildInitiative } from "../support/builders";
 
-// Analysis throws whatever the test sets: JavaScript code can throw any value, not only an Error.
+// Surveyor throws whatever the test sets: JavaScript code can throw any value, not only an Error.
 const thrown = vi.hoisted(() => ({ value: null as unknown }));
 vi.mock("@/lib/profiles/analyze", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/profiles/analyze")>()),
-  analyzeSnapshot: async () => {
+  surveyDocument: async () => {
     throw thrown.value;
   },
 }));
 
 describe("a thrown value that isn't an Error", () => {
+  const world = useAcquisitionWorld("thrown-values");
+
   it.each([
     ["null", null],
     ["undefined", undefined],
     ["a string", "the detector gave up"],
     ["a number", 42],
-  ])("fails its target with the value in words instead of crashing (%s)", async (_label, value) => {
+  ])("fails the survey and the target waiting on it with the value in words instead of crashing (%s)", async (_label, value) => {
     thrown.value = value;
-    const db = createTestDb();
-    const { targets } = buildAssessment(db, { sources: [buildSource(db, { name: "orders" })] });
-    // Pinned already, so processing goes straight to analysis.
-    const acquiring = transitionTarget(db, targets[0]!, "acquiring");
-    recordSnapshot(db, acquiring, { commitSha: sha1("commit"), treeSha: sha1("tree"), refKind: "default_branch", resolvedRef: "refs/heads/main", acquisitionMetadata: {} });
+    const work = world.fixture.repo("fleet/orders");
+    work.write("README.md", "orders\n").commit();
+    const source = registerLocalSource(world.db, world.config, "orders", work.path);
+    const { assessment } = launchAssessment(world.db, buildInitiative(world.db, { sources: [source] }).publicId, crypto.randomUUID(), world.config);
 
-    const target = await processTarget(db, acquiring.publicId);
+    // The target resolves and joins its survey; the survey pins the commit, then Surveyor throws.
+    await drainJobs(world.db, jobHandlers(world.db, world.config));
+    const [target] = targetsOf(world.db, assessment.id);
 
+    expect(surveyById(world.db, target!.surveyId!)).toMatchObject({ state: "failed", failureCode: "analysis_failed", failureMessage: String(value), internalRef: expect.any(String) });
     expect(target).toMatchObject({ state: "failed", failureCode: "analysis_failed", failureMessage: String(value) });
+    expect(getAssessment(world.db, assessment.publicId).state).toBe("failed");
   });
 });

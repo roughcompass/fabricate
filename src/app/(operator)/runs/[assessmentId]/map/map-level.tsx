@@ -24,7 +24,7 @@ type Query = Record<string, string | string[] | undefined>;
 
 const KIND_TITLES: Record<SearchMatch["kind"], string> = { repository: "Repositories", service: "Services", package: "Packages" };
 
-/** The breadcrumbs from the Assessments list, or for a profile version the Repositories list, to the Run's map. */
+/** The breadcrumbs from the Assessments list to the Run's map. */
 function runCrumbs(run: LoadedMap, withMap: boolean): Crumb[] {
   return [
     ...run.context.parents,

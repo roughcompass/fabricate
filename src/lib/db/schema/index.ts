@@ -7,7 +7,7 @@ export * from "./standards";
 export * from "./evaluations";
 export * from "./results";
 export * from "./projection";
-export * from "./profiling";
+export * from "./surveys";
 export * from "./jobs";
 export * from "./relations";
 export * from "./demo";

@@ -26,6 +26,9 @@ const STATES: Record<string, [label: string, tone: Tone, indicator?: Indicator]>
   complete_with_issues: ["Complete with issues", "warning"],
   failed: ["Failed", "error"],
   canceled: ["Canceled", "neutral"],
+  // Surveys, a Repository's versions; queued and failed are as above.
+  running: ["Profiling", "progress"],
+  succeeded: ["Profiled", "success"],
   // Finding outcomes.
   meets: ["Meets", "success"],
   gap: ["Gap", "error"],

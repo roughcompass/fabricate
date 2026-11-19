@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
+import { surveys } from "./surveys";
 
 export const SELECTION_MODES = ["all", "explicit"] as const;
 export type SelectionMode = (typeof SELECTION_MODES)[number];
@@ -20,6 +21,11 @@ export const repositorySources = sqliteTable(
     cloneUrl: text("clone_url").notNull(),
     canonicalUrl: text("canonical_url").notNull(),
     gitRef: text("git_ref"),
+    /** The commit its configured reference named when it was last resolved, and when (unify-surveys, decision 4). */
+    configuredCommit: text("configured_commit"),
+    configuredResolvedAt: timestamp("configured_resolved_at"),
+    /** Its current Profile's survey: the newest successful survey of the commit its configured reference last named, or the one before while that commit has none. */
+    currentSurveyId: integer("current_survey_id").references((): AnySQLiteColumn => surveys.id, { onDelete: "restrict" }),
     /** When it was deleted from the catalog; null while it's in it. */
     deletedAt: timestamp("deleted_at"),
     lockVersion: lockVersion(),
@@ -44,12 +50,6 @@ export const initiatives = sqliteTable(
     name: text("name").notNull(),
     objective: text("objective").notNull().default(""),
     selectionMode: text("selection_mode", { enum: SELECTION_MODES }).notNull().default("all"),
-    /**
-     * Set on the Repository profiling initiative, which DE FabLab owns. Each
-     * of its Runs profiles one repository, which the launch names, and is
-     * that repository's next profile version (docs/profiling.md).
-     */
-    profiling: integer("profiling", { mode: "boolean" }).notNull().default(false),
     lockVersion: lockVersion(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -59,7 +59,6 @@ export const initiatives = sqliteTable(
     check("initiatives_name", sql`length(trim(${t.name})) BETWEEN 1 AND 120`),
     check("initiatives_objective", sql`length(${t.objective}) <= 2000`),
     check("initiatives_selection_mode", sql.raw(`selection_mode IN (${sqlList(SELECTION_MODES)})`)),
-    check("initiatives_profiling", sql`${t.profiling} IN (0, 1)`),
   ],
 );
 

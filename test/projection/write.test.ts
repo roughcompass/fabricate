@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { recordSnapshot } from "@/lib/assessments/assessment-records";
-import { transitionTarget } from "@/lib/assessments/transitions";
+import { surveyRefFor } from "@/lib/acquisition/mirror";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { profileProblems } from "@/lib/profiles/schema";
+import { moveSurvey, pinSurvey, requestSurvey } from "@/lib/surveys/records";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { memoryProfile } from "../support/profiles";
@@ -18,14 +18,23 @@ describe("projection writes", () => {
   it("stores neither the Profile nor any of its rows when projecting it fails (Failed write)", async () => {
     const db = createTestDb();
     const source = buildSource(db, { name: "web" });
-    const { assessment, targets } = buildAssessment(db, { sources: [source] });
-    const acquiring = transitionTarget(db, targets[0]!, "acquiring");
-    const snapshot = recordSnapshot(db, acquiring, { commitSha: sha1("c"), treeSha: sha1("t"), refKind: "default_branch", resolvedRef: "refs/heads/main", acquisitionMetadata: {} });
-    const analyzing = transitionTarget(db, acquiring, "analyzing");
-    const { document } = await memoryProfile(pinnedRepository("web", { react: "16.14.0" }), { public_id: source.publicId, name: source.name }, snapshot.commitSha);
+    const { assessment } = buildAssessment(db, { sources: [source] });
+    const { survey: queued } = requestSurvey(db, {
+      repositorySourceId: source.id,
+      commitSha: sha1("c"),
+      reference: "refs/heads/main",
+      fromConfiguredReference: true,
+      trigger: "run",
+      requestedByAssessmentId: assessment.id,
+      surveyorRelease: assessment.detectorRelease,
+      configurationDigest: assessment.configurationDigest,
+      profileSchemaVersion: assessment.profileSchemaVersion,
+    });
+    const survey = pinSurvey(db, moveSurvey(db, queued, "running", { attempts: 1 }), { treeSha: sha1("t"), internalRef: surveyRefFor(queued.publicId) });
+    const { document } = await memoryProfile(pinnedRepository("web", { react: "16.14.0" }), { public_id: source.publicId, name: source.name }, survey.commitSha);
     failInsertsInto(db, "evidence_index");
 
-    expect(() => insertProfile(db, { assessment, target: analyzing, snapshot, document, validate: profileProblems })).toThrow(/projection failed/);
+    expect(() => insertProfile(db, { survey, document, validate: profileProblems })).toThrow(/projection failed/);
     expect(count(db, "repository_profiles")).toBe(0);
     expect(count(db, "dependency_facts")).toBe(0);
   });

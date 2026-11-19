@@ -159,10 +159,10 @@ function ProfileCell({ sourcePublicId, summary }: { sourcePublicId: string; summ
   if (!summary) return <Secondary>Queued</Secondary>;
   const { latest, current } = summary;
   const pending = (ACTIVE_STATES as readonly string[]).includes(latest.state);
-  // The newest version failed after the current Profile was written.
-  const failed = !pending && !latest.profiled && (!current || latest.createdAt > current.profiledAt);
-  // The current Profile, by its version or as an Assessment Run's, and when it was written.
-  const currentLink = current && (current.version ? <Link href={routes.repositoryVersion(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link> : <Link href={routes.profile(current.profilePublicId)}>Assessment Run</Link>);
+  // The newest version is newer than the current one, and failed.
+  const failed = !pending && !latest.profiled && (!current || latest.version > current.version);
+  // The current Profile, by its version, and when it was written.
+  const currentLink = current && <Link href={routes.repositoryVersion(sourcePublicId, current.version)}>{`Version ${current.version}`}</Link>;
   const currentRows = current && (
     <>
       {currentLink}
@@ -175,7 +175,6 @@ function ProfileCell({ sourcePublicId, summary }: { sourcePublicId: string; summ
     return (
       <span data-profiling={latest.state === "queued" ? "queued" : "profiling"}>
         <Status state={latest.state} label={latest.state === "queued" ? `Version ${latest.version} queued` : `Profiling version ${latest.version}`} />
-        {/* A version writes its Profile just before its Run finishes; until then it's shown once, as profiling. */}
         {current && (
           <>
             <Secondary>{currentLink}</Secondary>

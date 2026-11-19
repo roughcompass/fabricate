@@ -32,6 +32,10 @@ export function sourceOutcome(db: Executor, code: string | undefined, sourcePubl
     }
     case "profiling":
       return { id, tone: "info", title: `${source.name} is already being profiled.`, description: "A new version can be queued once this one finishes." };
+    case "current":
+      return { id, tone: "info", title: `${source.name}'s Profile is already up to date.`, description: "Its reference names the commit its current Profile describes, under the same Surveyor release and configuration." };
+    case "unreachable":
+      return { id, tone: "error", title: `${source.name}'s reference couldn't be read.`, description: "Nothing was queued. Check its clone URL and reference, then try again." };
     default:
       return undefined;
   }

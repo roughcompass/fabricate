@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
-import { createTestDb, migrateToLatest } from "../support/db";
+import { createTestDb, migrateUpTo } from "../support/db";
 import { migrationFolderAt } from "../support/migrations";
 
 /*
@@ -81,7 +81,7 @@ describe("Salt Patterns removed migration", () => {
       T0,
       T0,
     );
-    migrateToLatest(db);
+    migrateUpTo(db, "0044_salt_patterns_removed");
   });
   afterEach(() => db.$client.close());
 

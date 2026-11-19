@@ -1,33 +1,40 @@
 import fs from "node:fs";
-import { and, eq } from "drizzle-orm";
-import { detectorConfiguration } from "@repo-facts/bundle";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { mirrorPath } from "@/lib/acquisition/mirror";
+import { mirrorPath, surveyRefFor } from "@/lib/acquisition/mirror";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type FabricateConfig, withOverrides } from "@/lib/config";
-import { jobs, previewBuilds, previewPreparations, profileVersions, repositoryProfiles } from "@/lib/db/schema";
-import { readDocument } from "@/lib/documents/digested";
+import { immediate } from "@/lib/db/client";
+import { assessments, jobs, previewBuilds, previewPreparations, repositoryProfiles, surveys } from "@/lib/db/schema";
 import { jobPayload } from "@/lib/jobs/queue";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { drainJobs } from "@/lib/jobs/worker";
 import { requestPreparation } from "@/lib/previews/preparation";
 import { BUILD_PREVIEW, PREPARE_PREVIEW, type PreviewPreparation, findPreparation, preparationPackages, preparationRefusal, startPreview } from "@/lib/previews/records";
 import type { RefRequest } from "@/lib/previews/refs";
+import { insertProfile, profileDocument, profileOfSurvey } from "@/lib/profiles/profile-records";
 import { currentProfile } from "@/lib/profiling/current";
-import { queueProfile, versionsOf } from "@/lib/profiling/versions";
+import { versionsOf } from "@/lib/profiling/versions";
+import { surveyRepository } from "@/lib/surveys/background";
+import { type Survey, currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey, surveyById } from "@/lib/surveys/records";
+import { RUN_SURVEY, finishSurvey } from "@/lib/surveys/run";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
 import { type BareRepo, type Repo, git } from "../support/git-fixture";
 import { FEDERATED_WORKSPACE, NEXT_APP, NPM_WORKSPACE, SCALA_SERVICE, type Tree, VITE_REACT_APP, collidingCommits, offlineViteLibrary } from "../support/preview-trees";
+import { memoryProfile } from "../support/profiles";
 
 /*
  * Preparing a pinned commit before any package build (design decision 3):
- * the Repository's own Profile when it's of that commit, else a static run
- * of the same detector kept with the preparation, never a profile version;
- * then one qualifying package starts its preview, several wait for a choice,
- * and none leaves a refusal without a build row.
+ * the Profile of the commit's survey under the current recipe (unify-surveys,
+ * design decision 6), which any Run, check, or earlier preview may already
+ * have, else a survey the preparation starts and waits on, listed among the
+ * Repository's versions; then one qualifying package starts its preview,
+ * several wait for a choice, and none leaves a refusal without a build row.
  */
 
 const NODE = { "20.18.1": "/opt/node-20/bin", "22.11.0": "/opt/node-22/bin" };
+/** A Surveyor release before the pinned bundle's. */
+const EARLIER_RELEASE = "0.0.1";
 
 describe("preview preparation", () => {
   const world = useAcquisitionWorld("preview-preparation");
@@ -59,11 +66,22 @@ describe("preview preparation", () => {
   }
 
   const request = (source: RepositorySource, ref: RefRequest = { kind: "ref", name: null }) => requestPreparation(world.db, source.publicId, ref, { config });
-  /** Runs every queued preparation job through the worker's registered handler. */
+  const nextJob = () =>
+    world.db
+      .select()
+      .from(jobs)
+      .where(and(inArray(jobs.kind, [PREPARE_PREVIEW, RUN_SURVEY]), eq(jobs.state, "queued")))
+      .orderBy(jobs.id)
+      .get();
+  /**
+   * Runs every queued preparation job, and each survey one waits on, which
+   * queues it again when it finishes, through the worker's registered
+   * handlers. Builds stay queued.
+   */
   async function runPreparations(): Promise<void> {
-    const handler = jobHandlers(world.db, config)[PREPARE_PREVIEW]!;
-    for (const job of world.db.select().from(jobs).where(and(eq(jobs.kind, PREPARE_PREVIEW), eq(jobs.state, "queued"))).all()) {
-      await handler(jobPayload(job), { job, signal: new AbortController().signal });
+    const handlers = jobHandlers(world.db, config);
+    for (let job = nextJob(); job; job = nextJob()) {
+      await handlers[job.kind]!(jobPayload(job), { job, signal: new AbortController().signal });
       world.db.update(jobs).set({ state: "succeeded", finishedAt: new Date(), updatedAt: new Date() }).where(eq(jobs.id, job.id)).run();
     }
   }
@@ -74,43 +92,52 @@ describe("preview preparation", () => {
   };
   const builds = () => world.db.select().from(previewBuilds).all();
   const buildJobs = () => world.db.select().from(jobs).where(eq(jobs.kind, BUILD_PREVIEW)).all();
+  /** How many surveys, Profiles, survey jobs (Surveyor runs), and Runs exist. */
   const counts = () => ({
-    versions: world.db.select().from(profileVersions).all().length,
+    surveys: world.db.select().from(surveys).all().length,
     profiles: world.db.select().from(repositoryProfiles).all().length,
-    assessments: world.db.$client.prepare("select count(*) as n from assessments").get(),
-    snapshots: world.db.$client.prepare("select count(*) as n from source_snapshots").get(),
+    surveyJobs: world.db.select().from(jobs).where(eq(jobs.kind, RUN_SURVEY)).all().length,
+    runs: world.db.select().from(assessments).all().length,
   });
-  /** Profiles +source+ as the background profiling does: version 1 of its default branch. */
+  /** Surveys +source+ as background surveying does: version 1, of its configured reference. */
   async function profile(source: RepositorySource): Promise<void> {
-    queueProfile(world.db, source, "added", { config });
+    await surveyRepository(world.db, source, "added", { config });
     await drainJobs(world.db, jobHandlers(world.db, config));
   }
+  const surveyOf = (preparation: PreviewPreparation): Survey => surveyById(world.db, preparation.surveyId!);
 
   describe("profiles", () => {
-    it("profiles a branch's commit statically for the preparation, leaving the Repository's profile versions unchanged", async () => {
-      const { work, remote, source } = repository(VITE_REACT_APP);
+    it("surveys a branch's commit for the preparation, listing it among the Repository's versions and leaving its current Profile (Commit not yet profiled)", async () => {
+      const { work, remote, source, commit } = repository(VITE_REACT_APP);
       const next = branch(work, remote, "feature/next", NEXT_APP);
       await profile(source);
       const before = counts();
-      expect(before.versions).toBe(1);
+      expect(before).toEqual({ surveys: 1, profiles: 1, surveyJobs: 1, runs: 0 });
 
       const preparation = await request(source, { kind: "ref", name: "feature/next" });
-      expect(preparation).toMatchObject({ state: "profiling", commitSha: next, refName: "refs/heads/feature/next", refKind: "branch" });
+      expect(preparation).toMatchObject({ state: "profiling", commitSha: next, refName: "refs/heads/feature/next", refKind: "branch", surveyId: null });
       await runPreparations();
       const decided = findPreparation(world.db, preparation.publicId)!;
 
-      // Decided from this commit's own profile, which is kept with the preparation.
-      expect(decided).toMatchObject({ state: "refused", repositoryProfileId: null });
-      const document = readDocument("repositoryProfile", { document: decided.profileDocument!, digest: decided.profileDigest! }, "preparation profile");
-      expect(document).toMatchObject({ commit: next, source: { public_id: source.publicId }, detector_configuration_digest: detectorConfiguration(config.analysis).digest });
+      // Decided from the Profile of this commit's own survey, a preview survey under the current recipe.
+      const survey = surveyOf(decided);
+      expect(survey).toMatchObject({ number: 2, commitSha: next, reference: "refs/heads/feature/next", fromConfiguredReference: false, trigger: "preview", state: "succeeded", requestedByAssessmentId: null, ...currentRecipe(config) });
+      const stored = profileOfSurvey(world.db, survey.id)!;
+      expect(decided).toMatchObject({ state: "refused", profileDigest: stored.digest });
+      expect(profileDocument(stored)).toMatchObject({ commit: next, source: { public_id: source.publicId }, detector_configuration_digest: currentRecipe(config).configurationDigest });
       expect(preparationRefusal(decided)!.conditions.find((condition) => condition.condition === "framework")!.reason).toMatch(/^Next\.js renders on a server/);
-      // No profile version, Profile, Run, or snapshot was added, and none was changed.
-      expect(counts()).toEqual(before);
-      expect(versionsOf(world.db, source.id).map((version) => [version.version, version.commit])).toEqual([[1, currentProfile(world.db, source.id)!.commit]]);
+      // One survey and one Profile were added, and no Run.
+      expect(counts()).toEqual({ surveys: 2, profiles: 2, surveyJobs: 2, runs: 0 });
+      expect(versionsOf(world.db, source.id).map((version) => [version.version, version.commit, version.trigger])).toEqual([
+        [2, next, "preview"],
+        [1, commit, "added"],
+      ]);
+      // A branch isn't the configured reference, so the current Profile is still version 1's.
+      expect(currentProfile(world.db, source.id)).toMatchObject({ version: 1, commit });
       expect(builds()).toEqual([]);
     });
 
-    it("decides from the Repository's newest Profile when it's of the pinned commit, and starts the one qualifying package", async () => {
+    it("decides from the commit's successful survey without surveying again, and starts the one qualifying package (Preview of a surveyed commit)", async () => {
       const { source, commit } = repository(VITE_REACT_APP);
       await profile(source);
       const before = counts();
@@ -119,12 +146,55 @@ describe("preview preparation", () => {
 
       const decided = await prepared(source);
 
-      const stored = world.db.select().from(repositoryProfiles).where(eq(repositoryProfiles.id, current.profile.id)).get()!;
-      expect(decided).toMatchObject({ state: "ready", commitSha: commit, repositoryProfileId: stored.id, profileDocument: null, profileDigest: stored.digest });
+      expect(decided).toMatchObject({ state: "ready", commitSha: commit, surveyId: current.survey.id, profileDigest: current.profile.digest });
+      // The survey was linked as it stood: Surveyor didn't run again, and nothing was added.
       expect(counts()).toEqual(before);
+      expect(surveyOf(decided)).toEqual(current.survey);
       // Exactly one package qualifies, so its build is queued without asking.
-      expect(builds()).toEqual([expect.objectContaining({ commitSha: commit, packageDir: ".", refName: "refs/heads/main", preparationId: decided.id, attemptState: "queued", profileDigest: stored.digest })]);
+      expect(builds()).toEqual([expect.objectContaining({ commitSha: commit, packageDir: ".", refName: "refs/heads/main", preparationId: decided.id, attemptState: "queued", profileDigest: current.profile.digest })]);
       expect(buildJobs().map(jobPayload)).toEqual([{ preview: builds()[0]!.publicId, attempt: 1 }]);
+    });
+
+    it("surveys a commit again under the current recipe when it was surveyed only by an earlier Surveyor release, not using that Profile (Preview after an upgrade)", async () => {
+      const { source, commit } = repository(VITE_REACT_APP);
+      // Version 1, by an earlier Surveyor release, read the commit as a Next.js application, which can't be previewed.
+      const recipe = currentRecipe(config);
+      const { survey: queued } = requestSurvey(world.db, { repositorySourceId: source.id, commitSha: commit, reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...recipe, surveyorRelease: EARLIER_RELEASE });
+      const running = pinSurvey(world.db, moveSurvey(world.db, queued, "running", { attempts: 1 }), { treeSha: null, internalRef: surveyRefFor(queued.publicId) });
+      const { document } = await memoryProfile(NEXT_APP, { public_id: source.publicId, name: source.name }, commit);
+      const earlier = immediate(world.db, (tx) => {
+        const written = insertProfile(tx, { survey: running, document: { ...document, detector_release: EARLIER_RELEASE } });
+        moveSurvey(tx, running, "succeeded", {});
+        recordConfiguredResolution(tx, source.id, commit, new Date());
+        return written;
+      });
+      expect(currentProfile(world.db, source.id)).toMatchObject({ version: 1, commit, profile: { id: earlier.id } });
+
+      const decided = await prepared(source);
+
+      // A new survey of the same commit ran under the current recipe, and decided: the application qualifies.
+      const survey = surveyOf(decided);
+      expect(survey).toMatchObject({ number: 2, commitSha: commit, trigger: "preview", state: "succeeded", attempts: 1, ...recipe });
+      const stored = profileOfSurvey(world.db, survey.id)!;
+      expect(stored.id).not.toBe(earlier.id);
+      expect(decided).toMatchObject({ state: "ready", profileDigest: stored.digest });
+      expect(builds()).toHaveLength(1);
+      // The earlier survey and its Profile remain; the new one, of the commit the configured reference names, is current.
+      expect(versionsOf(world.db, source.id).map((version) => [version.version, version.survey.surveyorRelease, version.profile?.id])).toEqual([
+        [2, recipe.surveyorRelease, stored.id],
+        [1, EARLIER_RELEASE, earlier.id],
+      ]);
+      expect(currentProfile(world.db, source.id)).toMatchObject({ version: 2, profile: { id: stored.id } });
+    });
+
+    it("makes a preview's survey of the configured reference the Repository's current Profile", async () => {
+      const { source, commit } = repository(VITE_REACT_APP);
+      expect(currentProfile(world.db, source.id)).toBeUndefined();
+
+      const decided = await prepared(source);
+
+      expect(surveyOf(decided)).toMatchObject({ number: 1, commitSha: commit, trigger: "preview", fromConfiguredReference: true, state: "succeeded" });
+      expect(currentProfile(world.db, source.id)).toMatchObject({ version: 1, commit, survey: { id: decided.surveyId } });
     });
 
     it("selects the highest configured Node install that satisfies the package, and refuses without a build when none does", async () => {
@@ -144,17 +214,45 @@ describe("preview preparation", () => {
       expect(buildJobs()).toHaveLength(1);
     });
 
-    it("re-decides a refused commit under new settings, reusing the profile it kept", async () => {
+    it("re-decides a refused commit under new settings from the survey it linked, without surveying again", async () => {
       const { source } = repository(VITE_REACT_APP);
       config = settings(source, { nodeVersions: {} });
       const refused = await prepared(source);
       expect(refused.state).toBe("refused");
       expect(preparationRefusal(refused)!.conditions.map((condition) => condition.reason)).toEqual(["No Node versions are configured for previews (previews.nodeVersions)."]);
+      const before = counts();
 
       config = settings(source);
       const ready = await prepared(source);
-      expect(ready).toMatchObject({ publicId: refused.publicId, state: "ready", profileDigest: refused.profileDigest, profileDocument: refused.profileDocument });
+      expect(ready).toMatchObject({ publicId: refused.publicId, state: "ready", surveyId: refused.surveyId, profileDigest: refused.profileDigest });
+      expect(counts()).toEqual(before);
       expect(builds()).toHaveLength(1);
+    });
+
+    it("fails the preparation when its survey fails, and retries that survey when the commit is requested again", async () => {
+      const { source } = repository(VITE_REACT_APP);
+      const first = await request(source);
+      const handlers = jobHandlers(world.db, config);
+      // The preparation's job starts the commit's survey and waits on it.
+      const job = nextJob()!;
+      expect(job.kind).toBe(PREPARE_PREVIEW);
+      await handlers[PREPARE_PREVIEW]!(jobPayload(job), { job, signal: new AbortController().signal });
+      world.db.update(jobs).set({ state: "succeeded", finishedAt: new Date(), updatedAt: new Date() }).where(eq(jobs.id, job.id)).run();
+      const waiting = findPreparation(world.db, first.publicId)!;
+      expect(waiting).toMatchObject({ state: "profiling", surveyId: expect.any(Number) });
+      expect(surveyOf(waiting)).toMatchObject({ state: "queued", trigger: "preview" });
+
+      // Surveyor fails on it, which wakes the preparation to fail with it.
+      world.db.delete(jobs).where(eq(jobs.kind, RUN_SURVEY)).run();
+      finishSurvey(world.db, moveSurvey(world.db, surveyOf(waiting), "running", { attempts: 1 }), { failure: { code: "analysis_failed", message: "Surveyor stopped" } });
+      await runPreparations();
+      expect(findPreparation(world.db, first.publicId)).toMatchObject({ state: "failed", failure: "The commit couldn't be surveyed: Surveyor stopped" });
+
+      // Requested again, the same survey is retried and the commit is decided.
+      const again = await prepared(source);
+      expect(again).toMatchObject({ publicId: first.publicId, state: "ready", surveyId: waiting.surveyId });
+      expect(surveyOf(again)).toMatchObject({ number: 1, state: "succeeded", attempts: 2 });
+      expect(counts()).toMatchObject({ surveys: 1, profiles: 1 });
     });
   });
 

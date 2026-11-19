@@ -1,11 +1,15 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { acquireTarget } from "@/lib/acquisition/acquire";
-import { type AssessmentTarget, getTarget, snapshotOf } from "@/lib/assessments/assessment-records";
+import { resolveTarget } from "@/lib/acquisition/acquire";
+import { type AssessmentTarget, getTarget } from "@/lib/assessments/assessment-records";
+import { processTarget } from "@/lib/assessments/orchestration";
 import { transitionTarget } from "@/lib/assessments/transitions";
 import { type RepositorySource, insertSource } from "@/lib/catalog/source-records";
+import { surveys } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
+import { surveyById } from "@/lib/surveys/records";
+import { runSurvey } from "@/lib/surveys/run";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
 import { buildAssessment } from "../support/builders";
 import { fakeExecutable } from "../support/fake-git";
@@ -34,26 +38,27 @@ describe("acquisition failures", () => {
     return [byName.get(failing.name)!, byName.get("healthy")!];
   };
 
-  /** Real Git, except that ls-remote runs +body+ first. */
-  const wrappedRunner = (body: string, timeoutMs?: number) => {
-    const fake = fakeExecutable(`case "$*" in *ls-remote*) ${body} ;; esac\nexec '${realGit}' "$@"`);
+  /** Real Git, except that the +command+ subcommand runs +body+ first. */
+  const wrappedRunner = (body: string, options: { timeoutMs?: number; command?: "ls-remote" | "fetch" } = {}) => {
+    const fake = fakeExecutable(`case "$*" in *" ${options.command ?? "ls-remote"} "*) ${body} ;; esac\nexec '${realGit}' "$@"`);
     cleanups.push(fake.cleanup);
-    return new GitRunner({ config: world.config, executable: fake.executable, timeoutMs });
+    return new GitRunner({ config: world.config, executable: fake.executable, timeoutMs: options.timeoutMs });
   };
 
-  it("records an unreachable remote on its own target while a sibling source succeeds", async () => {
+  const surveysOf = (source: RepositorySource) => world.db.select().from(surveys).all().filter((survey) => survey.repositorySourceId === source.id);
+
+  it("records an unreachable remote on its own target, with no survey, while a sibling source resolves", async () => {
     const unreachable = insertSource(world.db, { name: "unreachable", cloneUrl: "https://127.0.0.1:1/acme/orders.git", canonicalUrl: "https://127.0.0.1:1/acme/orders" });
     const [failing, sibling] = pair(unreachable);
 
-    const failed = await acquireTarget(world.db, failing, { config: world.config });
-    const succeeded = await acquireTarget(world.db, sibling, { config: world.config });
+    const failed = await resolveTarget(world.db, failing, { config: world.config });
+    const succeeded = await resolveTarget(world.db, sibling, { config: world.config });
 
-    expect(failed).toMatchObject({ ok: false, error: { code: "source_unavailable" } });
-    expect(getTarget(world.db, failing.publicId)).toMatchObject({ state: "failed", failureCode: "source_unavailable" });
-    expect(snapshotOf(world.db, failing.id)).toBeUndefined();
-    expect(succeeded.ok).toBe(true);
+    expect(failed).toMatchObject({ ok: false, error: { code: "source_unavailable" }, target: { state: "failed", failureCode: "source_unavailable" } });
+    expect(getTarget(world.db, failing.publicId)).toMatchObject({ state: "failed", failureCode: "source_unavailable", refKind: null, surveyId: null });
+    expect(surveysOf(unreachable)).toEqual([]);
+    expect(succeeded).toMatchObject({ ok: true, resolution: { kind: "default_branch", name: "refs/heads/main", commitSha: expect.stringMatching(/^[0-9a-f]{40}$/) } });
     expect(getTarget(world.db, sibling.publicId)).toMatchObject({ state: "acquiring", failureCode: null });
-    expect(snapshotOf(world.db, sibling.id)?.commitSha).toMatch(/^[0-9a-f]{40}$/);
   });
 
   it("treats a local source removed after registration as unavailable", async () => {
@@ -63,7 +68,8 @@ describe("acquisition failures", () => {
     fs.rmSync(work.path, { recursive: true, force: true });
     const [failing] = pair(removed);
 
-    expect(await acquireTarget(world.db, failing, { config: world.config })).toMatchObject({ ok: false, error: { code: "source_unavailable" } });
+    expect(await resolveTarget(world.db, failing, { config: world.config })).toMatchObject({ ok: false, error: { code: "source_unavailable" } });
+    expect(getTarget(world.db, failing.publicId)).toMatchObject({ state: "failed", failureCode: "source_unavailable" });
   });
 
   it("records an invalid reference", async () => {
@@ -71,7 +77,7 @@ describe("acquisition failures", () => {
     work.commit();
     const [failing] = pair(registerLocalSource(world.db, world.config, "orders", work.path, "no-such-branch"));
 
-    await acquireTarget(world.db, failing, { config: world.config });
+    await resolveTarget(world.db, failing, { config: world.config });
     expect(getTarget(world.db, failing.publicId)).toMatchObject({ state: "failed", failureCode: "invalid_ref", failureMessage: expect.stringContaining("no-such-branch") });
   });
 
@@ -80,23 +86,22 @@ describe("acquisition failures", () => {
     work.commit();
     const [failing, sibling] = pair(registerLocalSource(world.db, world.config, "slow", work.path));
 
-    const outcome = await acquireTarget(world.db, failing, { config: world.config, runner: wrappedRunner("sleep 5", 300) });
+    const outcome = await resolveTarget(world.db, failing, { config: world.config, runner: wrappedRunner("sleep 5", { timeoutMs: 300 }) });
     expect(outcome).toMatchObject({ ok: false, error: { code: "timeout" } });
     expect(getTarget(world.db, failing.publicId).failureCode).toBe("timeout");
-    expect((await acquireTarget(world.db, sibling, { config: world.config })).ok).toBe(true);
+    expect((await resolveTarget(world.db, sibling, { config: world.config })).ok).toBe(true);
   });
 
-  it("marks a canceled acquisition canceled rather than failed", async () => {
+  it("marks a canceled resolution canceled rather than failed", async () => {
     const work = world.fixture.repo("fleet/canceled");
     work.commit();
     const [failing] = pair(registerLocalSource(world.db, world.config, "canceled", work.path));
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 150);
 
-    const outcome = await acquireTarget(world.db, failing, { config: world.config, runner: wrappedRunner("sleep 5"), signal: controller.signal });
+    const outcome = await resolveTarget(world.db, failing, { config: world.config, runner: wrappedRunner("sleep 5"), signal: controller.signal });
     expect(outcome).toMatchObject({ ok: false, error: { code: "canceled" } });
-    expect(getTarget(world.db, failing.publicId)).toMatchObject({ state: "canceled", failureCode: null });
-    expect(snapshotOf(world.db, failing.id)).toBeUndefined();
+    expect(getTarget(world.db, failing.publicId)).toMatchObject({ state: "canceled", failureCode: null, surveyId: null });
   });
 
   it("never persists credentials that appear in Git's diagnostics", async () => {
@@ -107,7 +112,7 @@ describe("acquisition failures", () => {
       `echo "fatal: unable to access 'https://deploy:s3cr3t-token@git.example.com/acme/private.git/': The requested URL returned error: 403" >&2; echo "Authorization: Bearer tok_abcdef123456" >&2; exit 128`,
     );
 
-    const outcome = await acquireTarget(world.db, failing, { config: world.config, runner });
+    const outcome = await resolveTarget(world.db, failing, { config: world.config, runner });
     const stored = getTarget(world.db, failing.publicId);
 
     expect(outcome).toMatchObject({ ok: false, error: { code: "authentication_failed" } });
@@ -116,5 +121,22 @@ describe("acquisition failures", () => {
       expect(text).not.toContain("s3cr3t-token");
       expect(text).not.toContain("tok_abcdef123456");
     }
+  });
+
+  it("normalizes a failure while a survey fetches its commit, redacts it, and fails the target waiting on it with the same code", async () => {
+    const work = world.fixture.repo("fleet/private");
+    work.commit();
+    const source = registerLocalSource(world.db, world.config, "private", work.path);
+    const { targets } = buildAssessment(world.db, { sources: [source] });
+    const waiting = await processTarget(world.db, targets[0]!.publicId, { config: world.config });
+    expect(waiting).toMatchObject({ state: "analyzing", surveyId: expect.any(Number) });
+    const runner = wrappedRunner(`echo "fatal: unable to access 'https://deploy:s3cr3t-token@git.example.com/acme/private.git/': The requested URL returned error: 403" >&2; exit 128`, { command: "fetch" });
+
+    const survey = await runSurvey(world.db, surveyById(world.db, waiting.surveyId!).publicId, { config: world.config, runner });
+    const target = getTarget(world.db, waiting.publicId);
+
+    expect(survey).toMatchObject({ state: "failed", failureCode: "authentication_failed", internalRef: null });
+    expect(target).toMatchObject({ state: "failed", failureCode: "authentication_failed" });
+    for (const text of [survey.failureMessage ?? "", target.failureMessage ?? ""]) expect(text).not.toContain("s3cr3t-token");
   });
 });

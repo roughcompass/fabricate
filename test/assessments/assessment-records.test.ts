@@ -1,23 +1,18 @@
 import { parseCanonical } from "@repo-facts/contract";
 import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  type AssessmentTarget,
-  createAssessment,
-  findAssessmentByLaunchToken,
-  internalRefFor,
-  recordSnapshot,
-  snapshotOf,
-  targetsOf,
-} from "@/lib/assessments/assessment-records";
+import { type Assessment, type AssessmentTarget, createAssessment, findAssessmentByLaunchToken, linkSurvey, targetsOf } from "@/lib/assessments/assessment-records";
+import { assessmentById } from "@/lib/assessments/lookups";
+import { transitionTarget } from "@/lib/assessments/transitions";
 import { detectorConfiguration } from "@repo-facts/bundle";
 import { dump, sha256 } from "@repo-facts/contract";
-import { getSource, updateSource } from "@/lib/catalog/source-records";
+import { type RepositorySource, getSource, updateSource } from "@/lib/catalog/source-records";
 import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { isPublicId } from "@/lib/db/ids";
 import { deleteInitiative } from "@/lib/initiatives/initiative-records";
+import { type Survey, requestSurvey } from "@/lib/surveys/records";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 
@@ -100,43 +95,64 @@ describe("assessment records", () => {
     deleteInitiative(db, unassessed.publicId);
   });
 
-  describe("source snapshots", () => {
+  describe("survey links", () => {
+    let source: RepositorySource;
     let target: AssessmentTarget;
+    let survey: Survey;
     beforeEach(() => {
-      target = buildAssessment(db, { sources: [buildSource(db)] }).targets[0]!;
-      rawRun(db, "update assessment_targets set state = 'acquiring' where id = ?", target.id);
+      source = buildSource(db);
+      const { assessment, targets } = buildAssessment(db, { sources: [source] });
+      target = transitionTarget(db, targets[0]!, "acquiring");
+      survey = surveyOf(source, sha("commit"), assessment);
     });
 
-    const snapshot = { commitSha: sha("commit"), treeSha: sha("tree"), refKind: "branch" as const, resolvedRef: "refs/heads/main", acquisitionMetadata: { requested_ref: "main" } };
+    /** A survey of +commitSha+ of +repository+, as a Run under +assessment+'s recipe requests it. */
+    const surveyOf = (repository: RepositorySource, commitSha: string, assessment: Assessment) =>
+      requestSurvey(db, {
+        repositorySourceId: repository.id,
+        commitSha,
+        reference: "refs/heads/main",
+        fromConfiguredReference: true,
+        trigger: "run",
+        requestedByAssessmentId: assessment.id,
+        surveyorRelease: assessment.detectorRelease,
+        configurationDigest: assessment.configurationDigest,
+        profileSchemaVersion: assessment.profileSchemaVersion,
+      }).survey;
+    const resolution = { refKind: "branch" as const, resolvedRef: "refs/heads/main" };
 
-    it("records the pinned commit under an internal ref", () => {
-      const recorded = recordSnapshot(db, target, snapshot);
+    it("records how the target resolved and the survey it waits on, and moves it to analyzing", () => {
+      const linked = linkSurvey(db, target, { ...resolution, surveyId: survey.id });
 
-      expect(isPublicId(recorded.publicId, "snp")).toBe(true);
-      expect(recorded.internalRef).toBe(internalRefFor(recorded.publicId));
-      expect(recorded.acquisitionMetadata).toBe('{"requested_ref":"main"}');
-      expect(snapshotOf(db, target.id)?.commitSha).toBe(snapshot.commitSha);
+      expect(linked).toMatchObject({ state: "analyzing", refKind: "branch", resolvedRef: "refs/heads/main", resolvedAt: expect.any(Date), surveyId: survey.id });
+      expect(targetsOf(db, target.assessmentId)[0]).toEqual(linked);
     });
 
-    it("rejects malformed object ids before writing", () => {
-      expect(() => recordSnapshot(db, target, { ...snapshot, commitSha: "ABC", treeSha: sha("x").toUpperCase() })).toThrow(ValidationError);
+    it("keeps the resolution and the survey once linked", () => {
+      linkSurvey(db, target, { ...resolution, surveyId: survey.id });
+      const other = surveyOf(source, sha("other"), assessmentById(db, target.assessmentId));
+
+      for (const assignment of ["ref_kind = 'tag'", "resolved_ref = 'refs/heads/other'", "resolved_at = 0", `survey_id = ${other.id}`, "survey_id = NULL"]) {
+        expect(() => rawRun(db, `update assessment_targets set ${assignment} where id = ?`, target.id)).toThrow(/resolves its reference and links its survey once/);
+      }
     });
 
-    it("allows exactly one snapshot per target", () => {
-      recordSnapshot(db, target, snapshot);
-      expect(() => recordSnapshot(db, target, snapshot)).toThrow(/UNIQUE constraint failed/);
+    it("links only a survey of the target's own Repository", () => {
+      const elsewhere = surveyOf(buildSource(db), sha("commit"), assessmentById(db, target.assessmentId));
+
+      expect(() => linkSurvey(db, target, { ...resolution, surveyId: elsewhere.id })).toThrow(/a target links a survey of its own Repository/);
+      expect(() => rawRun(db, "update assessment_targets set ref_kind = 'branch', resolved_ref = 'refs/heads/main', resolved_at = 0, survey_id = ? where id = ?", elsewhere.id, target.id)).toThrow(
+        /a target links a survey of its own Repository/,
+      );
+      expect(targetsOf(db, target.assessmentId)[0]).toMatchObject({ state: "acquiring", refKind: null, surveyId: null });
     });
 
-    it("rejects a snapshot for a target that is not acquiring", () => {
-      const pending = buildAssessment(db, { sources: [buildSource(db)] }).targets[0]!;
-      expect(() => recordSnapshot(db, pending, snapshot)).toThrow(/recorded for its acquiring target/);
-    });
+    it("needs a resolution to link a survey, and a survey to complete", () => {
+      expect(() => rawRun(db, "update assessment_targets set survey_id = ? where id = ?", survey.id, target.id)).toThrow(/CHECK constraint failed/);
+      expect(() => rawRun(db, "update assessment_targets set ref_kind = 'branch' where id = ?", target.id)).toThrow(/CHECK constraint failed/);
 
-    it("never changes or deletes a snapshot", () => {
-      const recorded = recordSnapshot(db, target, snapshot);
-
-      expect(() => rawRun(db, "update source_snapshots set commit_sha = ? where id = ?", sha("other"), recorded.id)).toThrow(/immutable/);
-      expect(() => rawRun(db, "delete from source_snapshots where id = ?", recorded.id)).toThrow(/retained/);
+      rawRun(db, "update assessment_targets set state = 'analyzing' where id = ?", target.id);
+      expect(() => rawRun(db, "update assessment_targets set state = 'complete' where id = ?", target.id)).toThrow(/CHECK constraint failed/);
     });
   });
 

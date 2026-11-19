@@ -32,6 +32,18 @@ Neither process applies migrations, so run `npm run db:migrate` after pulling ch
 
 Some migrations delete data, so copy `storage/fabricate.sqlite3` before migrating a database you want to keep. Migration 0043 deletes ownership: claims, SEAL IDs, teams, Lines of Business, portals, and DE Console reads, with every Assessment created for a claim and its Runs. Migration 0044 deletes the Salt Patterns Assessment and its Runs, with their template targets and stored files. Neither touches a Repository or an Assessment you created.
 
+Migration 0049 turns every Repository Profile into a survey: one per repository, commit, and Surveyor recipe, numbered as the Repository's versions. It deletes the hidden Repository profiling Assessment with its Runs and their one-repository maps, keeps their Profiles, and renumbers versions, so earlier version addresses change. It rewrites the Profiles table, which holds most of the database: migrating a 7.8 GB database took 39 seconds and peaked at 22 GB with its write-ahead log, so with the backup, have free space of about three times the size of `storage/fabricate.sqlite3`. Upgrade in this order, with the web server and worker stopped:
+
+```sh
+cp storage/fabricate.sqlite3 storage/fabricate.backup.sqlite3   # back up
+df -h storage                                                   # check free space
+npm run db:migrate                                              # migrate
+npm run projection:rebuild                                      # rebuild the projection, which 0049 empties
+npm run db:vacuum                                               # give back the space the rewrite left free
+```
+
+Local data can also start over instead: move `storage/fabricate.sqlite3` aside, run `npm run db:migrate`, and add the Repositories again.
+
 ## Run the checks
 
 ```sh
@@ -158,7 +170,7 @@ Data lives in `release/storage/` unless `FABRICATE_DATABASE` and `FABRICATE_REPO
 
 DE FabLab uses Git only to fetch and read committed objects. Each Git command comes from a fixed list and runs without a shell. Repository hooks are disabled, submodules are not cloned, and only the `file`, `https`, and `ssh` transports are allowed.
 
-Detectors come from one pinned release of `@repo-facts/bundle`, currently 0.6.0, which reports design-system usage; `package.json` names its exact version. Each Run records that version as its detector release, along with the digest of the bundle's configuration under DE FabLab's analysis limits. A Repository Profile embeds, unchanged, the fact document the bundle produced. Identical commits analyzed with the same release and configuration produce identical Profiles. Upgrading detectors means pinning a newer exact release. Earlier Profiles keep the release that produced them: Runs from 0.1.0 keep Repository Profile version 1, and Runs from 0.2.0 or later record version 2. 0.3.0 leaves neutral values such as `margin: 0` out of the Salt token share, and counts an element a Salt component renders through its `render` prop as that component, so the same commit can score higher than under 0.2.0. 0.6.0 records the package and API each Module Federation build's plugin came from, which tell Module Federation 1, 1.5, and 2 apart; reports the Next.js and Rsbuild plugins, the Module Federation runtime, and Native Federation; and names only published packages as produced for other repositories, so a private workspace's name, such as a workspace called `cypress`, no longer matches another repository's dependency. A Run still queued from an earlier release fails with a release mismatch; launch it again. See [Standards](docs/standards.md#repository-profile-versions-1-and-2) for which Releases read which Profile versions.
+Detectors come from one pinned release of `@repo-facts/bundle`, currently 0.6.0, which reports design-system usage; `package.json` names its exact version. Each Run records that version as its detector release, along with the digest of the bundle's configuration under DE FabLab's analysis limits. A Repository Profile embeds, unchanged, the fact document the bundle produced. A commit is surveyed once for each release, configuration, and Profile version, and every Run, check, and preview that needs it shares that survey's Profile. Upgrading detectors means pinning a newer exact release. Earlier Profiles keep the release that produced them: Runs from 0.1.0 keep Repository Profile version 1, and Runs from 0.2.0 or later record version 2. 0.3.0 leaves neutral values such as `margin: 0` out of the Salt token share, and counts an element a Salt component renders through its `render` prop as that component, so the same commit can score higher than under 0.2.0. 0.6.0 records the package and API each Module Federation build's plugin came from, which tell Module Federation 1, 1.5, and 2 apart; reports the Next.js and Rsbuild plugins, the Module Federation runtime, and Native Federation; and names only published packages as produced for other repositories, so a private workspace's name, such as a workspace called `cypress`, no longer matches another repository's dependency. A Run still queued from an earlier release fails with a release mismatch; launch it again. See [Standards](docs/standards.md#repository-profile-versions-1-and-2) for which Releases read which Profile versions.
 
 Analysis reads the exact commit recorded for each repository. It never checks out a working tree, so uncommitted edits in a local repository never appear in results. DE FabLab never runs anything a repository defines: hooks, Git filters, package lifecycle scripts, CI commands, builds, or tests. JavaScript and TypeScript files are parsed into syntax trees and never executed. Symbolic links are recorded without being followed. A file that exceeds an analysis budget is listed as skipped, and the facts it could affect are reported as unknown.
 
@@ -184,7 +196,7 @@ The interface names three records differently from the code, which keeps the mod
 | Assessment | A long-lived objective that selects repositories, either all Repositories or an explicit subset, and optionally published Standard Releases |
 | Run | One run over an Assessment's repositories, frozen when it starts, that pins each repository to a commit and analyzes it |
 | Repository Profile | The immutable, evidence-backed facts about one repository at one commit. Each fact is observed, inferred, unknown, or conflicting. |
-| Profile version | One numbered profiling of a Repository, queued in the background when it changes. Its page shows the newest version that has a Profile. See [docs/profiling.md](docs/profiling.md). |
+| Survey | One Surveyor run of a Repository's commit under one recipe, shared by Runs, background surveying, and previews. A Repository's surveys are its numbered versions, and its page shows the current one: its newest successful survey of its configured reference. See [docs/profiling.md](docs/profiling.md). |
 | Service Dependency | An outbound service call found in a Profile, with its endpoint, operations, access signals, and contract and substitute evidence |
 | Relationship Map | The directional package, composition, iframe, runtime-contract, and service-call relationships found across one Run's Profiles |
 | Standard | A named description of desired engineering state, made of Controls and edited as a draft |

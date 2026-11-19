@@ -1,132 +1,93 @@
-import crypto from "node:crypto";
-import { count, desc, eq, sql } from "drizzle-orm";
-import type { Assessment } from "@/lib/assessments/assessment-records";
-import { launchAssessment } from "@/lib/assessments/launcher";
-import type { RepositorySource } from "@/lib/catalog/source-records";
-import { type FabricateConfig, getConfig } from "@/lib/config";
-import { type Executor, immediate } from "@/lib/db/client";
-import { type ProfileTrigger, assessmentTargets, assessments, profileVersions, repositoryProfiles, sourceSnapshots } from "@/lib/db/schema";
-import { PROFILING_INITIATIVE_ID } from "@/lib/initiatives/initiative-records";
-import { type CurrentProfile, currentProfile, currentProfiles, versionTarget } from "./current";
-import { ASSESSMENT_MACHINE, activeStates } from "@/lib/db/state-machines";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import type { Executor } from "@/lib/db/client";
+import { type SurveyState, type SurveyTrigger, assessments, initiatives, repositoryProfiles, surveys } from "@/lib/db/schema";
 import type { JsonValue } from "@repo-facts/contract";
 import { statusVersion } from "@/lib/assessments/status";
+import { SURVEY_MACHINE, activeStates } from "@/lib/db/state-machines";
+import type { Survey } from "@/lib/surveys/records";
+import { type CurrentProfile, currentProfile, currentProfiles } from "./current";
 
 /*
- * Profile versions (docs/profiling.md). Every repository is profiled
- * in the background, and each profile is a numbered version of it: a Run of
- * the Repository profiling initiative that profiles the repository alone, at
- * the reference the catalog sets for it. A repository has at most one version
- * queued or running at a time.
+ * A Repository's versions (unify-surveys, design decision 1): its surveys,
+ * numbered from 1 in the order they were created, whatever started them:
+ * adding or editing it, a new commit, a new recipe, an operator, a Run, or a
+ * preview. Numbers are stored, so a version keeps its address.
  */
 
+/** The states of a survey on its way: those the survey machine moves on from, but failed, which waits to be requested again. */
+export const ACTIVE_STATES: readonly SurveyState[] = activeStates(SURVEY_MACHINE).filter((state) => state !== "failed");
 
-/** The states of a Run that hasn't finished. */
-export const ACTIVE_STATES: readonly Assessment["state"][] = activeStates(ASSESSMENT_MACHINE);
-
-export const TRIGGER_LABELS: Record<ProfileTrigger, string> = {
-  imported: "Added in bulk",
+export const TRIGGER_LABELS: Record<SurveyTrigger, string> = {
   added: "Added",
   edited: "Edited",
+  commit: "New commit",
+  recipe: "Surveyor upgrade",
   manual: "Re-profiled",
-  initial: "First profile",
-  commit: "New commits",
-  detector: "Detector upgrade",
+  run: "Assessment Run",
+  preview: "Preview",
 };
 
 export interface ProfileVersion {
   readonly version: number;
-  readonly trigger: ProfileTrigger;
+  readonly trigger: SurveyTrigger;
   readonly createdAt: Date;
-  readonly headCommit: string | null;
-  readonly assessment: Assessment;
-  /** The Profile the version wrote, once its Run profiled the repository. */
+  readonly survey: Survey;
+  /** The Profile the survey wrote, once it succeeded. */
   readonly profile: { readonly id: number; readonly publicId: string; readonly createdAt: Date } | null;
-  /** The commit the version profiled, once it was acquired. */
-  readonly commit: string | null;
-  /** Why the repository couldn't be profiled, when it couldn't. */
+  /** The commit the version surveys. */
+  readonly commit: string;
+  /** Why the survey failed, when its latest attempt did. */
   readonly failure: { readonly code: string; readonly message: string } | null;
+  /** The Assessment whose Run started it, when one did. */
+  readonly requestedBy: { readonly assessmentPublicId: string; readonly name: string } | null;
 }
 
-export type QueueResult = { readonly status: "queued"; readonly version: ProfileVersion } | { readonly status: "active"; readonly version: ProfileVersion };
-
-export function isActive(version: Pick<ProfileVersion, "assessment">): boolean {
-  return ACTIVE_STATES.includes(version.assessment.state);
-}
-
-/**
- * Queues the next profile version of +source+ for +trigger+, unless the
- * repository already has a version queued or running. The
- * version's Run is launched in the same transaction, so the version exists
- * exactly when its jobs do.
- */
-export function queueProfile(db: Executor, source: RepositorySource, trigger: ProfileTrigger, options: { headCommit?: string | null; launchToken?: string; config?: FabricateConfig } = {}): QueueResult {
-  return immediate(db, (tx) => {
-    const latest = versionsOf(tx, source.id, 1)[0];
-    if (latest && isActive(latest)) return { status: "active", version: latest };
-    const launched = launchAssessment(tx, PROFILING_INITIATIVE_ID, options.launchToken ?? crypto.randomUUID(), options.config ?? getConfig(), { sources: [source] });
-    // A repeated launch token, such as a form submitted twice, names the version it already queued.
-    if (launched.duplicate) return { status: "active", version: versionsOf(tx, source.id).find((version) => version.assessment.id === launched.assessment.id)! };
-    const number = (latest?.version ?? 0) + 1;
-    tx.insert(profileVersions).values({ repositorySourceId: source.id, assessmentId: launched.assessment.id, version: number, trigger, headCommit: options.headCommit ?? null, createdAt: launched.assessment.createdAt }).run();
-    return { status: "queued", version: versionsOf(tx, source.id, 1)[0]! };
-  });
+export function isActive(version: Pick<ProfileVersion, "survey">): boolean {
+  return ACTIVE_STATES.includes(version.survey.state);
 }
 
 /** The versions of the repository +sourceId+, newest first: at most +limit+, after skipping +offset+. One query. */
 export function versionsOf(db: Executor, sourceId: number, limit = -1, offset = 0): ProfileVersion[] {
   return db
-    .select({
-      row: profileVersions,
-      assessment: assessments,
-      profileId: repositoryProfiles.id,
-      profilePublicId: repositoryProfiles.publicId,
-      profileCreatedAt: repositoryProfiles.createdAt,
-      commit: sourceSnapshots.commitSha,
-      failureCode: assessmentTargets.failureCode,
-      failureMessage: assessmentTargets.failureMessage,
-    })
-    .from(profileVersions)
-    .innerJoin(assessments, eq(assessments.id, profileVersions.assessmentId))
-    .leftJoin(assessmentTargets, versionTarget)
-    .leftJoin(sourceSnapshots, eq(sourceSnapshots.assessmentTargetId, assessmentTargets.id))
-    .leftJoin(repositoryProfiles, eq(repositoryProfiles.assessmentTargetId, assessmentTargets.id))
-    .where(eq(profileVersions.repositorySourceId, sourceId))
-    .orderBy(desc(profileVersions.version))
+    .select({ survey: surveys, profileId: repositoryProfiles.id, profilePublicId: repositoryProfiles.publicId, profileCreatedAt: repositoryProfiles.createdAt, assessmentPublicId: assessments.publicId, initiativeName: initiatives.name })
+    .from(surveys)
+    .leftJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, surveys.id))
+    .leftJoin(assessments, eq(assessments.id, surveys.requestedByAssessmentId))
+    .leftJoin(initiatives, eq(initiatives.id, assessments.initiativeId))
+    .where(eq(surveys.repositorySourceId, sourceId))
+    .orderBy(desc(surveys.number))
     .limit(limit)
     .offset(offset)
     .all()
     .map((found) => ({
-      version: found.row.version,
-      trigger: found.row.trigger,
-      createdAt: found.row.createdAt,
-      headCommit: found.row.headCommit,
-      assessment: found.assessment,
+      version: found.survey.number,
+      trigger: found.survey.trigger,
+      createdAt: found.survey.createdAt,
+      survey: found.survey,
       profile: found.profileId === null ? null : { id: found.profileId, publicId: found.profilePublicId!, createdAt: found.profileCreatedAt! },
-      commit: found.commit,
-      failure: found.failureCode === null ? null : { code: found.failureCode, message: found.failureMessage ?? "" },
+      commit: found.survey.commitSha,
+      failure: found.survey.state === "failed" ? { code: found.survey.failureCode ?? "analysis_failed", message: found.survey.failureMessage ?? "" } : null,
+      requestedBy: found.assessmentPublicId === null ? null : { assessmentPublicId: found.assessmentPublicId, name: found.initiativeName ?? "" },
     }));
 }
 
 /** How many versions the repository +sourceId+ has. */
 export function versionCount(db: Executor, sourceId: number): number {
-  return db.select({ count: count() }).from(profileVersions).where(eq(profileVersions.repositorySourceId, sourceId)).get()?.count ?? 0;
+  return db.select({ count: count() }).from(surveys).where(eq(surveys.repositorySourceId, sourceId)).get()?.count ?? 0;
 }
 
-/** The version that is the Run +assessmentId+, with its repository's public ID and name; null for any other Run. */
-export function versionOfAssessment(db: Executor, assessmentId: number): { version: number; sourcePublicId: string; sourceName: string } | null {
-  const row = db
-    .select({ version: profileVersions.version, sourcePublicId: assessmentTargets.sourcePublicId, sourceName: assessmentTargets.sourceName })
-    .from(profileVersions)
-    .innerJoin(assessmentTargets, versionTarget)
-    .where(eq(profileVersions.assessmentId, assessmentId))
-    .get();
-  return row ?? null;
+/** The version of +sourceId+ numbered +version+. */
+export function findVersion(db: Executor, sourceId: number, version: number): ProfileVersion | undefined {
+  if (!Number.isInteger(version) || version < 1) return undefined;
+  const total = versionCount(db, sourceId);
+  if (version > total) return undefined;
+  // Numbers run from 1 without gaps, so the newest-first offset of version n is total - n.
+  return versionsOf(db, sourceId, 1, total - version)[0];
 }
 
 /**
- * What a Repository's page shows of its profiling, in two queries: its
- * current Profile, and its newest version, whose number is how many it has.
+ * What a Repository's page shows of its surveys: its current Profile, and
+ * its newest version, whose number is how many it has.
  */
 export function repositoryProfiling(db: Executor, sourceId: number): { current: CurrentProfile | undefined; latest: ProfileVersion | undefined; count: number } {
   const latest = versionsOf(db, sourceId, 1)[0];
@@ -135,20 +96,18 @@ export function repositoryProfiling(db: Executor, sourceId: number): { current: 
 
 export interface ProfileSummary {
   /** The newest version, whatever its state, and whether it wrote a Profile. */
-  readonly latest: { readonly version: number; readonly state: Assessment["state"]; readonly createdAt: Date; readonly profiled: boolean };
-  /** The current Profile: its version, or null for one from an operator's Run, and when it was written. */
-  readonly current: { readonly version: number | null; readonly profilePublicId: string; readonly profiledAt: Date } | null;
+  readonly latest: { readonly version: number; readonly state: SurveyState; readonly createdAt: Date; readonly profiled: boolean };
+  /** The current Profile: its version, and when it was written. */
+  readonly current: { readonly version: number; readonly profilePublicId: string; readonly profiledAt: Date } | null;
 }
 
 /** Each repository's newest version and current Profile, by source id, in two queries, for the Repositories list. */
 export function profileSummaries(db: Executor): Map<number, ProfileSummary> {
-  const rows = db.all<{ source_id: number; version: number; state: Assessment["state"]; created_at: number; profiled: number }>(sql`
-    select v.repository_source_id as source_id, v.version, a.state, v.created_at, p.id is not null as profiled
-    from ${profileVersions} v
-    join assessments a on a.id = v.assessment_id
-    left join ${assessmentTargets} t on t.assessment_id = v.assessment_id and t.repository_source_id = v.repository_source_id
-    left join ${repositoryProfiles} p on p.assessment_target_id = t.id
-    where v.version = (select max(o.version) from ${profileVersions} o where o.repository_source_id = v.repository_source_id)`);
+  const rows = db.all<{ source_id: number; number: number; state: SurveyState; created_at: number; profiled: number }>(sql`
+    select s.repository_source_id as source_id, s.number, s.state, s.created_at, p.id is not null as profiled
+    from ${surveys} s
+    left join ${repositoryProfiles} p on p.survey_id = s.id
+    where s.number = (select max(o.number) from ${surveys} o where o.repository_source_id = s.repository_source_id)`);
   const current = currentProfiles(db);
   return new Map(
     rows.map((row) => {
@@ -156,7 +115,7 @@ export function profileSummaries(db: Executor): Map<number, ProfileSummary> {
       return [
         row.source_id,
         {
-          latest: { version: row.version, state: row.state, createdAt: new Date(row.created_at), profiled: Boolean(row.profiled) },
+          latest: { version: row.number, state: row.state, createdAt: new Date(row.created_at), profiled: Boolean(row.profiled) },
           current: profile ? { version: profile.version, profilePublicId: profile.profile.publicId, profiledAt: profile.profile.createdAt } : null,
         },
       ];
@@ -164,61 +123,25 @@ export function profileSummaries(db: Executor): Map<number, ProfileSummary> {
   );
 }
 
-/** What the scheduled check compares of a repository's newest version. */
-export interface CheckState {
-  readonly version: number;
-  readonly state: Assessment["state"];
-  readonly headCommit: string | null;
-  /** The commit the version profiled, or failing that, the one the check saw when it queued it. */
-  readonly knownCommit: string | null;
-  readonly detectorRelease: string;
-  readonly profileSchemaVersion: number;
-}
-
-/** The newest version of every repository, by source id, in one query. */
-export function latestVersions(db: Executor): Map<number, CheckState> {
-  const rows = db.all<{ source_id: number; version: number; state: Assessment["state"]; head_commit: string | null; commit_sha: string | null; detector_release: string; profile_schema_version: number }>(sql`
-    select v.repository_source_id as source_id, v.version, a.state, v.head_commit, s.commit_sha, a.detector_release, a.profile_schema_version
-    from ${profileVersions} v
-    join assessments a on a.id = v.assessment_id
-    left join ${assessmentTargets} t on t.assessment_id = v.assessment_id and t.repository_source_id = v.repository_source_id
-    left join ${sourceSnapshots} s on s.assessment_target_id = t.id
-    where v.version = (select max(o.version) from ${profileVersions} o where o.repository_source_id = v.repository_source_id)`);
-  return new Map(
-    rows.map((row) => [
-      row.source_id,
-      { version: row.version, state: row.state, headCommit: row.head_commit, knownCommit: row.commit_sha ?? row.head_commit, detectorRelease: row.detector_release, profileSchemaVersion: row.profile_schema_version },
-    ]),
-  );
-}
-
-/** The version of +sourceId+ numbered +version+. */
-export function findVersion(db: Executor, sourceId: number, version: number): ProfileVersion | undefined {
-  const total = versionCount(db, sourceId);
-  if (!Number.isInteger(version) || version < 1 || version > total) return undefined;
-  // Versions are numbered from 1 without gaps, so the newest-first offset of version n is total - n.
-  return versionsOf(db, sourceId, 1, total - version)[0];
-}
-
 export interface ProfilingActivity {
-  /** Repositories whose newest version is being profiled now. */
+  /** Surveys running now. */
   readonly profiling: number;
-  /** Repositories whose newest version waits its turn. */
+  /** Surveys waiting their turn. */
   readonly queued: number;
-  /** Changes whenever a version starts, advances, or finishes, so a page can refresh. */
+  /** Changes whenever a survey starts or finishes, so a page can refresh. */
   readonly version: string;
 }
 
-/** What is being profiled now, in one query, for the Repositories list and its status endpoint. */
+/** What is being surveyed now, in one query, for the Repositories list and its status endpoint. */
 export function profilingActivity(db: Executor): ProfilingActivity {
-  const rows = db.all<{ source_id: number; version: number; state: Assessment["state"] }>(sql`
-    select v.repository_source_id as source_id, v.version, a.state
-    from ${profileVersions} v
-    join assessments a on a.id = v.assessment_id
-    where a.state in ${ACTIVE_STATES}
-    order by v.repository_source_id, v.version`);
+  const rows = db
+    .select({ id: surveys.id, state: surveys.state })
+    .from(surveys)
+    .where(and(inArray(surveys.state, [...ACTIVE_STATES])))
+    .orderBy(surveys.id)
+    .all();
   return {
-    profiling: rows.filter((row) => row.state !== "queued").length,
+    profiling: rows.filter((row) => row.state === "running").length,
     queued: rows.filter((row) => row.state === "queued").length,
     version: statusVersion(rows as unknown as JsonValue),
   };

@@ -9,6 +9,7 @@ import type { ArtifactEntry } from "@/lib/previews/output";
 import { PREPARE_PREVIEW, type PreviewBuild, decidePreparation, findPreview, openPreparation, publishAttempt, startPreview } from "@/lib/previews/records";
 import { previewDirectory } from "@/lib/previews/storage";
 import { rawRun } from "./db";
+import { requestSurvey } from "@/lib/surveys/records";
 
 /*
  * Previews with published artifacts written straight into preview storage,
@@ -29,7 +30,9 @@ export function queuedPreview(db: Db, source: RepositorySource, layout: Artifact
     conditions: [],
     plan: { installRoot: ".", packageManager: { name: "npm", version: null, lockfile: "package-lock.json" }, buildTool: "vite", buildScript: "vite build", node: { version: "22.11.0", ranges: [] }, layout, composition: null },
   };
-  decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), { document: '{"schema":"fabricate.repository_profile"}', digest: "f".repeat(64) }, { packages: [verdict], refusal: null });
+  // A survey of the commit to decide from; the decision is recorded here, so it never runs.
+  const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
+  decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), { surveyId: survey.id, digest: "f".repeat(64) }, { packages: [verdict], refusal: null });
   // Decided here, so its job has nothing left to do; only the build job is queued.
   rawRun(db, "delete from jobs where kind = ?", PREPARE_PREVIEW);
   return startPreview(db, preparation.publicId, ".").preview;

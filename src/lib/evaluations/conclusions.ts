@@ -30,8 +30,7 @@ export interface LatestConclusion {
 
 /**
  * The latest completed Evaluation's conclusion for every Assessment the
- * operator created, by the model Initiative's id. The Repository profiling
- * initiative isn't included. With +at+, as things stood then: the
+ * operator created, by the model Initiative's id. With +at+, as things stood then: the
  * Assessments created by then, and the Evaluations completed by then. One
  * query, whatever the number of Assessments.
  */
@@ -52,7 +51,7 @@ export function latestConclusions(db: Executor, options: { at?: Date } = {}): Ma
       json_extract(l.summary, '$.combined.conclusion') as conclusion
     from initiatives i
     left join latest l on l.initiative_id = i.id and l.recency = 1
-    where i.profiling = 0${at === undefined ? sql`` : sql` and i.created_at <= ${at}`}`);
+    ${at === undefined ? sql`` : sql`where i.created_at <= ${at}`}`);
   return new Map(
     rows.map((row) => [
       row.initiative_id,

@@ -92,7 +92,7 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
           <Icon name="git" size={24} />
           <strong>{name}</strong>
           <span className={styles.muted}>
-            {countLabel(effects.versions, "profile version")} · {countLabel(effects.runs, "Run")}
+            {countLabel(effects.versions, "version")} · {countLabel(effects.runs, "Run")}
           </span>
         </div>
 
@@ -114,7 +114,7 @@ export function DeleteRepository({ name, effects, action }: DeleteRepositoryProp
               <li>
                 This will permanently delete <strong>{name}</strong> from the catalog. It can&apos;t be restored, and its clone URL can be registered again only as a new Repository.
               </li>
-              <li>{effects.versions ? `Its ${countLabel(effects.versions, "profile version")} will no longer be shown, and a version in progress is canceled.` : "It has no profile versions yet."}</li>
+              <li>{effects.versions ? `Its ${countLabel(effects.versions, "version")} will no longer be shown; a version in progress finishes.` : "It has no versions yet."}</li>
               <li>
                 {effects.assessments.length
                   ? `${countLabel(effects.assessments.length, "Assessment")} will stop selecting it: ${effects.assessments.join(", ")}.`

@@ -18,10 +18,9 @@ import { diagnosticReason } from "@/components/ui/status";
 import { Secondary, Table, Td, Th } from "@/components/ui/table";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { ShortValue, Tag } from "@/components/ui/tag";
-import type { Assessment } from "@/lib/assessments/assessment-records";
 import { type Executor, getDb } from "@/lib/db/client";
 import { dependencyGroups } from "@/lib/profiles/joins";
-import { type RepositoryProfile, profileDiagnostics, profileDocument } from "@/lib/profiles/profile-records";
+import { type RepositoryProfile, profileDiagnostics, profileDocument, profileRepository } from "@/lib/profiles/profile-records";
 import { packageProducers, repositoryRelationships } from "@/lib/profiles/relationships";
 import { profileCommit } from "@/lib/profiles/schema";
 import type { FactDocument } from "@/lib/profiles/states";
@@ -30,7 +29,6 @@ import { type ProfileTabId, isProfileTab, profileTabHref } from "@/lib/profiles/
 import { type CategoryBlock, type DependencyFilters as Filters, filterDependencies, pageOfGroups, profileView, type ProfileView, type SharedBlock, type TabView } from "@/lib/profiles/view";
 import styles from "./profile-body.module.css";
 import { pageNumber, pageQuery, param, withQuery } from "@/lib/web/query";
-import { targetById } from "@/lib/assessments/assessment-records";
 
 /** The commit a Profile is pinned to. A page's header and body share one read of the document. */
 export const profilePin = cache((profile: RepositoryProfile): { document: JsonObject; commit: string } => {
@@ -46,14 +44,14 @@ const PROFILE_PAGE_SIZE = 50;
 
 /** The Overview's panels, from the facts, the newest map's relationships, and which declared packages the fleet produces. */
 function overviewPanels(db: Executor, profile: RepositoryProfile, facts: FactDocument, view: ProfileView) {
-  const target = targetById(db, profile.assessmentTargetId);
-  const relationships = repositoryRelationships(db, target.repositorySourceId);
+  const repository = profileRepository(db, profile);
+  const relationships = repositoryRelationships(db, repository.id);
   const declared = [...new Set(dependencyGroups(facts).flatMap((group) => group.rows.filter((row) => row.declared).map((row) => row.name)))];
   const panels = profileSummary(facts, view.overview, {
     kind: view.kind,
     relationships,
     producers: packageProducers(db, declared),
-    self: target.sourcePublicId,
+    self: repository.publicId,
     services: { total: view.services.length, characterized: view.services.filter((service) => service.characterized).length },
   });
   return { panels, relationships, declared };
@@ -70,13 +68,13 @@ function overviewPanels(db: Executor, profile: RepositoryProfile, facts: FactDoc
  * Overview says why. +base+ is the page's address; +query+ holds the view,
  * the dependency filters, and each table's page.
  */
-export function ProfileBody({ profile, assessment, query, base }: { profile: RepositoryProfile; assessment: Pick<Assessment, "publicId">; query: Record<string, string | string[] | undefined>; base: string }) {
+export function ProfileBody({ profile, query, base }: { profile: RepositoryProfile; query: Record<string, string | string[] | undefined>; base: string }) {
   const db = getDb();
   const { document, commit } = profilePin(profile);
   const facts = document.fact_document as unknown as FactDocument;
   const diagnostics = profileDiagnostics(document);
   const view = profileView(facts, diagnostics);
-  const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, assessmentId: assessment.publicId, profileId: profile.publicId };
+  const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, owner: { profile: profile.publicId }, profileId: profile.publicId };
   const filters: Filters = { kind: param(query, "kind") || undefined, manifest: param(query, "manifest") || undefined, package: param(query, "package") || undefined };
 
   const { panels, relationships, declared } = overviewPanels(db, profile, facts, view);

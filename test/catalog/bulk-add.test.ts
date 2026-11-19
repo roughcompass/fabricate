@@ -1,11 +1,14 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { addRepositories } from "@/lib/catalog/bulk-add";
 import { BULK_LIMIT, parseBulkLines } from "@/lib/catalog/bulk-lines";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { listSources } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
+import { JOB_PRIORITIES, assessments, jobs, surveys } from "@/lib/db/schema";
 import { ValidationError } from "@/lib/db/errors";
-import { versionsOf } from "@/lib/profiling/versions";
+import { jobPayload } from "@/lib/jobs/queue";
+import { REQUEST_SURVEY } from "@/lib/surveys/background";
 import { GitFixture } from "../support/git-fixture";
 import { formData, redirectOf, useAppDb } from "../support/next";
 
@@ -32,7 +35,7 @@ describe("adding Repositories in bulk", () => {
     return () => fixture.cleanup();
   });
 
-  it("adds every line it can, named after its owner and repository and queued for profiling, and reports each refused line", () => {
+  it("adds every line it can, named after its owner and repository and queued for a background survey, and reports each refused line", () => {
     const result = addRepositories(
       app.db,
       [
@@ -59,7 +62,11 @@ describe("adding Repositories in bulk", () => {
       [7, expect.stringMatching(/outside the allowed source roots|allowed root/i)],
       [8, "Reference is not a valid branch, tag, or commit"],
     ]);
-    for (const source of result.created) expect(versionsOf(app.db, source.id).map((version) => [version.trigger, version.assessment.state])).toEqual([["imported", "queued"]]);
+    // Each one's reference is resolved and surveyed by a background job, not a Run.
+    const requests = app.db.select().from(jobs).where(eq(jobs.kind, REQUEST_SURVEY)).all();
+    expect(requests.map((job) => [jobPayload(job), job.priority])).toEqual(result.created.map((source) => [{ repository: source.publicId, trigger: "added" }, JOB_PRIORITIES.background]));
+    expect(app.db.select().from(surveys).all()).toEqual([]);
+    expect(app.db.select().from(assessments).all()).toEqual([]);
   });
 
   it("refuses nothing to add, and more lines than the limit, before adding any", () => {

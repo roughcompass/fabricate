@@ -1,7 +1,9 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { assessmentCounts, editSource, registerSource } from "@/lib/catalog/catalog";
-import { versionsOf } from "@/lib/profiling/versions";
+import { jobs } from "@/lib/db/schema";
+import { jobPayload } from "@/lib/jobs/queue";
+import { REQUEST_SURVEY } from "@/lib/surveys/background";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { getSource, listSources } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
@@ -85,8 +87,8 @@ describe("catalog service", () => {
     editSource(db, source.publicId, source.lockVersion, { name: "orders-ui", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "release" }, boundary);
     expect(getSource(db, source.publicId)).toMatchObject({ name: "orders-ui", gitRef: "release" });
     expect(targetsOf(db, assessment.id)[0]).toMatchObject({ sourceName: "orders", gitRef: "main" });
-    // Its profile version's Run is shown apart, so it isn't counted.
-    expect(versionsOf(db, source.id)).toHaveLength(1);
+    // Adding and editing each request a background survey, which is no Run, so only the Assessment's Run is counted.
+    expect(db.select().from(jobs).all().filter((job) => job.kind === REQUEST_SURVEY).map((job) => jobPayload(job).trigger)).toEqual(["added", "edited"]);
     expect(assessmentCounts(db).get(source.id)).toBe(1);
   });
 });

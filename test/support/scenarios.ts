@@ -1,14 +1,19 @@
 import crypto from "node:crypto";
 import { DETECTOR_RELEASE, detectorConfiguration } from "@repo-facts/bundle";
 import { type JsonObject, type MemoryFile, digestOf } from "@repo-facts/contract";
-import { type Assessment, type AssessmentTarget, createAssessment, getAssessment, recordSnapshot } from "@/lib/assessments/assessment-records";
+import { type Assessment, type AssessmentTarget, createAssessment, getAssessment, linkSurvey } from "@/lib/assessments/assessment-records";
+import { continueWaitingTargets } from "@/lib/assessments/waiting";
+import { surveyRefFor } from "@/lib/acquisition/mirror";
+import { sourceById } from "@/lib/catalog/source-records";
+import { type Survey, currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey, updateCurrentSurvey } from "@/lib/surveys/records";
+import { finishSurvey } from "@/lib/surveys/run";
 import { requestCancellation, transitionAssessment, transitionTarget } from "@/lib/assessments/transitions";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { getConfig } from "@/lib/config";
-import type { Db } from "@/lib/db/client";
+import { type Db, immediate } from "@/lib/db/client";
+import type { SurveyTrigger } from "@/lib/db/schema";
 import { type Initiative, getInitiative, selectedSources, updateInitiative } from "@/lib/initiatives/initiative-records";
 import { insertProfile } from "@/lib/profiles/profile-records";
-import { profileProblems } from "@/lib/profiles/schema";
 import { finalizeRelationshipMap, resolveMapDocument } from "@/lib/relationships/finalize";
 import { insertRelationshipMap } from "@/lib/relationships/map-records";
 import { publishDraft } from "@/lib/standards/publish";
@@ -109,7 +114,7 @@ export async function completeRun(
 ): Promise<Assessment> {
   if (options.cancel) requestCancellation(db, assessment.id);
   for (const [index, outcome] of outcomes.entries()) await completeTarget(db, assessment, targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!, outcome, options);
-  const finalizing = transitionAssessment(db, getAssessment(db, assessment.publicId), "finalizing");
+  const finalizing = finalizingRun(db, assessment);
   if (options.transformMap) insertRelationshipMap(db, { assessment: finalizing, document: options.transformMap(resolveMapDocument(db, finalizing)) });
   else finalizeRelationshipMap(db, finalizing);
   const profiles = outcomes.filter((outcome) => typeof outcome === "object").length;
@@ -117,7 +122,36 @@ export async function completeRun(
   return transitionAssessment(db, finalizing, state, state === "failed" ? { failureReason: "No repository could be assessed" } : {});
 }
 
-/** Ends +target+ as +outcome+: canceled, failed while acquiring, or pinned to a synthetic commit and profiled from its files by the pinned bundle. */
+let surveyed = 0;
+
+/**
+ * A background or preview survey of a new synthetic commit of +source+,
+ * succeeded with a Profile of +files+, as the survey job writes one. A
+ * survey of the configured reference records that reference's resolution,
+ * as background surveying does.
+ */
+export async function seedSurvey(db: Db, source: Pick<RepositorySource, "id" | "publicId" | "name">, options: { trigger?: SurveyTrigger; reference?: string; fromConfiguredReference?: boolean; files?: Readonly<Record<string, MemoryFile>> } = {}): Promise<Survey> {
+  const commitSha = sha1(`survey:${source.publicId}:${++surveyed}`);
+  const configured = options.fromConfiguredReference ?? true;
+  const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha, reference: options.reference ?? "refs/heads/main", fromConfiguredReference: configured, trigger: options.trigger ?? "added", ...currentRecipe(getConfig()) });
+  if (configured) recordConfiguredResolution(db, source.id, commitSha, new Date());
+  const running = pinSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { treeSha: sha1(`tree:${commitSha}`), internalRef: surveyRefFor(survey.publicId) });
+  const { document } = await memoryProfile(options.files ?? { "package.json": manifest({ name: source.name, version: "1.0.0" }) }, { public_id: source.publicId, name: source.name }, commitSha);
+  return finishSurvey(db, running, { document });
+}
+
+/** The Run +assessment+ moved to finalizing, unless its last survey already moved it there, as it does when it completes the last target. */
+export function finalizingRun(db: Db, assessment: Pick<Assessment, "publicId">): Assessment {
+  const current = getAssessment(db, assessment.publicId);
+  return current.state === "finalizing" ? current : transitionAssessment(db, current, "finalizing");
+}
+
+/**
+ * Ends +target+ as +outcome+: canceled, failed while resolving its
+ * reference, or joined to a survey of a synthetic commit under the Run's
+ * recipe, which pins it, profiles its files with the pinned bundle, and
+ * succeeds, completing the target as a real survey does.
+ */
 export async function completeTarget(db: Db, assessment: Assessment, target: AssessmentTarget, outcome: Outcome, options: Pick<RunOptions, "profileVersion1"> = {}): Promise<void> {
   if (outcome === "canceled") {
     transitionTarget(db, target, "canceled");
@@ -128,12 +162,31 @@ export async function completeTarget(db: Db, assessment: Assessment, target: Ass
     transitionTarget(db, acquiring, "failed", { failureCode: "source_unavailable", failureMessage: "The repository could not be reached" });
     return;
   }
-  const snapshot = recordSnapshot(db, acquiring, { commitSha: sha1(`commit:${target.publicId}`), treeSha: sha1(`tree:${target.publicId}`), refKind: "default_branch", resolvedRef: "refs/heads/main", acquisitionMetadata: {} });
-  const analyzing = transitionTarget(db, acquiring, "analyzing");
-  const { document } = await memoryProfile(outcome, { public_id: target.sourcePublicId, name: target.sourceName }, snapshot.commitSha);
-  if (options.profileVersion1) insertProfile(db, { assessment, target: analyzing, snapshot, document: asProfileVersion1(document) });
-  else insertProfile(db, { assessment, target: analyzing, snapshot, document, validate: profileProblems });
-  transitionTarget(db, analyzing, "complete");
+  const commitSha = sha1(`commit:${target.publicId}`);
+  const configured = target.gitRef === sourceById(db, target.repositorySourceId).gitRef;
+  const { survey } = requestSurvey(db, {
+    repositorySourceId: target.repositorySourceId,
+    commitSha,
+    reference: "refs/heads/main",
+    fromConfiguredReference: configured,
+    trigger: "run",
+    requestedByAssessmentId: assessment.id,
+    surveyorRelease: assessment.detectorRelease,
+    configurationDigest: assessment.configurationDigest,
+    profileSchemaVersion: assessment.profileSchemaVersion,
+  });
+  if (configured) recordConfiguredResolution(db, target.repositorySourceId, commitSha, new Date());
+  linkSurvey(db, acquiring, { refKind: "default_branch", resolvedRef: "refs/heads/main", surveyId: survey.id });
+  const running = pinSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { treeSha: sha1(`tree:${target.publicId}`), internalRef: surveyRefFor(survey.publicId) });
+  const { document } = await memoryProfile(outcome, { public_id: target.sourcePublicId, name: target.sourceName }, commitSha);
+  // A Profile as an earlier release stored it isn't valid under today's contract, so it's written without validation.
+  if (!options.profileVersion1) return void finishSurvey(db, running, { document });
+  immediate(db, (tx) => {
+    insertProfile(tx, { survey: running, document: asProfileVersion1(document) });
+    const finished = moveSurvey(tx, running, "succeeded", {});
+    updateCurrentSurvey(tx, finished);
+    continueWaitingTargets(tx, finished);
+  });
 }
 
 /**

@@ -1,7 +1,8 @@
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import type { JsonObject } from "@repo-facts/contract";
 import type { Executor } from "@/lib/db/client";
-import { dependencyFacts, graphEdges, graphNodes } from "@/lib/db/schema";
+import { assessmentTargets, dependencyFacts, graphEdges, graphNodes, repositoryProfiles } from "@/lib/db/schema";
+import { runProfileIds } from "@/lib/profiles/evidence-owners";
 import { type DiagramEdge, type DiagramModel, type Signal, diagramModel } from "./diagram";
 import { type MapView, type ViewRepository, edgesByIds, edgesFrom, edgesInto, evidenceRecords, nodesOf, repositoryRelationships } from "./map-view";
 import { type RuntimeSystem, compare } from "./placement";
@@ -356,9 +357,12 @@ function groupLabelOf(view: MapView, nodeId: string): string {
 
 function packageFocus(db: Executor, view: MapView, levelHref: string, name: string): Focus | undefined {
   const declared = db
-    .select({ targetId: dependencyFacts.assessmentTargetId, manifest: dependencyFacts.manifest, specifier: dependencyFacts.specifier, resolvedVersion: dependencyFacts.resolvedVersion })
+    .select({ targetId: assessmentTargets.id, manifest: dependencyFacts.manifest, specifier: dependencyFacts.specifier, resolvedVersion: dependencyFacts.resolvedVersion })
     .from(dependencyFacts)
-    .where(and(eq(dependencyFacts.assessmentId, view.assessment.id), eq(dependencyFacts.packageName, name)))
+    .innerJoin(repositoryProfiles, eq(repositoryProfiles.id, dependencyFacts.profileId))
+    // A completed target of the Run uses its survey's Profile.
+    .innerJoin(assessmentTargets, and(eq(assessmentTargets.surveyId, repositoryProfiles.surveyId), eq(assessmentTargets.assessmentId, view.assessment.id), eq(assessmentTargets.state, "complete")))
+    .where(and(eq(dependencyFacts.kind, "dependency"), eq(dependencyFacts.packageName, name)))
     .all();
   const producers = db
     .select({ from: graphEdges.fromNode, identifier: graphEdges.referenceIdentifier })
@@ -441,7 +445,7 @@ export function searchMap(db: Executor, view: MapView, query: string): SearchMat
   for (const pkg of db
     .select({ name: dependencyFacts.packageName, dependents: count() })
     .from(dependencyFacts)
-    .where(and(eq(dependencyFacts.assessmentId, view.assessment.id), sql`instr(lower(${dependencyFacts.packageName}), ${needle}) > 0`))
+    .where(and(inArray(dependencyFacts.profileId, runProfileIds(db, view.assessment.id)), eq(dependencyFacts.kind, "dependency"), sql`instr(lower(${dependencyFacts.packageName}), ${needle}) > 0`))
     .groupBy(dependencyFacts.packageName)
     .orderBy(asc(dependencyFacts.packageName))
     .all()) {

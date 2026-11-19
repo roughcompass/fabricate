@@ -29,6 +29,8 @@ export interface EnqueueOptions {
   maxAttempts?: number;
   /** JOB_PRIORITIES.normal unless given. */
   priority?: number;
+  /** When a job with the key is still queued at a lower priority, raise it to +priority+, as a Run joining a background survey does. */
+  raisePriority?: boolean;
 }
 
 /** Adds a job unless one with the same idempotency key exists; returns the job either way. */
@@ -49,7 +51,11 @@ export function enqueue(db: Executor, options: EnqueueOptions): Job {
     .onConflictDoNothing({ target: jobs.idempotencyKey })
     .returning()
     .get();
-  return inserted ?? db.select().from(jobs).where(eq(jobs.idempotencyKey, options.idempotencyKey)).get()!;
+  if (inserted) return inserted;
+  const existing = db.select().from(jobs).where(eq(jobs.idempotencyKey, options.idempotencyKey)).get()!;
+  const priority = options.priority ?? JOB_PRIORITIES.normal;
+  if (!options.raisePriority || existing.state !== "queued" || existing.priority >= priority) return existing;
+  return db.update(jobs).set({ priority, updatedAt: now }).where(eq(jobs.id, existing.id)).returning().get();
 }
 
 export function jobPayload(job: Job): JsonObject {

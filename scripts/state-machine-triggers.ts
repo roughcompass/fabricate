@@ -11,6 +11,7 @@ import {
   ASSESSMENT_MACHINE,
   EVALUATION_MACHINE,
   EVALUATION_RELEASE_MACHINE,
+  SURVEY_MACHINE,
   type StateMachine,
   TARGET_MACHINE,
 } from "../src/lib/db/state-machines";
@@ -54,6 +55,7 @@ const statements = [
   ...triggers("assessment_targets", "targets", TARGET_MACHINE),
   ...triggers("evaluations", "evaluations", EVALUATION_MACHINE),
   ...triggers("evaluation_releases", "evaluation releases", EVALUATION_RELEASE_MACHINE),
+  ...triggers("surveys", "surveys", SURVEY_MACHINE),
 ];
 
 console.log(

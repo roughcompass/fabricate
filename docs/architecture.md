@@ -66,11 +66,14 @@ Each agreement has a version, and tests on both sides check it. A part may chang
 
 ## How a survey runs
 
-1. The Catalog Builder writes entries, when the Frontend Registry schedules a build.
-2. The Frontend Registry snapshots a repository and hands Surveyor the snapshot and the current Catalog entries.
-3. Surveyor returns a fact document.
-4. The Frontend Registry stores it as a Profile, with its recipe: the Surveyor release and the Catalog entries used.
-5. When the Surveyor release or any Catalog entry changes, the Frontend Registry sees that a repository's newest Profile has an older recipe, and re-surveys it in the background ([profiling.md](profiling.md)). The system status page shows the progress.
+A survey is one Surveyor run of one repository's commit under one recipe ([profiling.md](profiling.md)). Runs, background surveying, and previews share surveys, so a commit is surveyed once for each recipe.
+
+1. Something needs a Profile of a repository's commit: a Run, the background check, or a preview. The Frontend Registry reads which commit the reference names, without fetching anything.
+2. It finds the survey of that repository, commit, and recipe, or starts one. The recipe is the Surveyor release, the configuration digest, and the Profile schema version; the Catalog entries Surveyor reads will join it when the Reference Catalog exists.
+3. The survey pins the commit in the repository's mirror and hands Surveyor the snapshot.
+4. Surveyor returns a fact document.
+5. The Frontend Registry stores it as the survey's Profile and, in the same transaction, makes it the repository's current Profile when the commit came from its configured reference, and continues every Run and preview waiting on the survey.
+6. When the recipe changes, the background check finds that a repository's current survey has an older one, and surveys its commit again. The system status page will show the progress.
 
 ## Status
 

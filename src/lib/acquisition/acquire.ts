@@ -1,92 +1,55 @@
-import { type AssessmentTarget, type SourceSnapshot, getTarget, internalRefFor, recordSnapshot } from "@/lib/assessments/assessment-records";
+import { type AssessmentTarget, getTarget } from "@/lib/assessments/assessment-records";
 import { transitionTarget } from "@/lib/assessments/transitions";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/catalog/clone-url";
 import { BoundaryViolation, SourceBoundary } from "@/lib/catalog/source-boundary";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
-import { generatePublicId } from "@/lib/db/ids";
 import { GitError } from "@/lib/git/errors";
 import { failureText } from "@/lib/git/redact";
 import { GitRunner, type Protocol } from "@/lib/git/runner";
 import { AcquisitionError } from "./errors";
-import { Mirror } from "./mirror";
-import { withSourceLock } from "./source-lease";
+import { Mirror, type Resolution } from "./mirror";
 
 /**
- * Acquires one Assessment target: pins the commit its configured reference
- * names and records the snapshot. This is the only network-capable phase of an
- * Assessment; analysis afterward reads the pinned commit only.
+ * Resolves a reference to the commit its remote advertises, before anything
+ * is fetched, so a Run or background request can find its survey first
+ * (unify-surveys, design decision 2). The survey job fetches and pins the
+ * commit when the mirror lacks it.
  *
- * Local sources are re-checked against the source boundary at acquisition
- * time, because a path or symbolic link can change after registration. Every
+ * Local sources are re-checked against the source boundary each time,
+ * because a path or symbolic link can change after registration. Every
  * failure is normalized to a stable code with a redacted message.
  */
 
-export interface AcquireOptions {
+export interface ResolveOptions {
   config?: FabricateConfig;
   runner?: GitRunner;
   boundary?: SourceBoundary;
   signal?: AbortSignal;
 }
 
-export async function acquireSnapshot(db: Executor, target: AssessmentTarget, options: AcquireOptions = {}): Promise<SourceSnapshot> {
+/** What +gitRef+ names on +source+'s remote: the default branch when null. */
+export async function resolveReference(source: { sourcePublicId: string; cloneUrl: string; gitRef: string | null }, options: ResolveOptions = {}): Promise<Resolution> {
   const config = options.config ?? getConfig();
   const runner = options.runner ?? new GitRunner({ config });
-  const { signal } = options;
-
   try {
-    const { url, protocol } = gitSource(target, options.boundary ?? new SourceBoundary(config));
-    return await withSourceLock(target.repositorySourceId, { waitMs: config.gitLockTimeoutSeconds * 1_000, signal }, async () => {
-      const mirror = new Mirror(runner, target.sourcePublicId);
-      await mirror.ensure();
-      await mirror.clearIncoming(target.publicId);
-      try {
-        const resolved = await mirror.resolve(url, protocol, target.gitRef, signal);
-        const fetched = await mirror.fetch(url, protocol, resolved, target.publicId, signal);
-
-        const snapshotId = generatePublicId("snp");
-        const snapshotRef = internalRefFor(snapshotId);
-        await mirror.pin(snapshotRef, fetched.commitSha);
-        try {
-          if (signal?.aborted) throw new AcquisitionError("canceled", "Acquisition was canceled");
-          return recordSnapshot(db, target, {
-            publicId: snapshotId,
-            commitSha: fetched.commitSha,
-            treeSha: fetched.treeSha,
-            refKind: resolved.kind,
-            resolvedRef: resolved.name,
-            acquisitionMetadata: {
-              requested_ref: target.gitRef,
-              resolved_ref: resolved.name,
-              ref_kind: resolved.kind,
-              protocol,
-              clone_url: target.cloneUrl,
-              shallow: true,
-            },
-          });
-        } catch (error) {
-          await mirror.unpin(snapshotRef);
-          throw error;
-        }
-      } finally {
-        await mirror.clearIncoming(target.publicId);
-      }
-    });
+    const { url, protocol } = gitSource(source, options.boundary ?? new SourceBoundary(config));
+    return await new Mirror(runner, source.sourcePublicId).resolve(url, protocol, source.gitRef, options.signal);
   } catch (error) {
     throw normalizeAcquisitionError(error);
   }
 }
 
-export type AcquisitionOutcome = { ok: true; snapshot: SourceSnapshot } | { ok: false; error: AcquisitionError; target: AssessmentTarget };
+export type ResolutionOutcome = { ok: true; resolution: Resolution } | { ok: false; error: AcquisitionError; target: AssessmentTarget };
 
 /**
- * Acquires a target and records the outcome on it. A failure moves only this
- * target to failed (or canceled), with a stable code and a redacted message;
- * no other target or record changes.
+ * Resolves a Run target's reference. A failure is the target's own (design
+ * decision 2): it moves only this target to failed, or canceled, with a stable
+ * code and a redacted message, and creates no survey.
  */
-export async function acquireTarget(db: Executor, target: AssessmentTarget, options: AcquireOptions = {}): Promise<AcquisitionOutcome> {
+export async function resolveTarget(db: Executor, target: AssessmentTarget, options: ResolveOptions = {}): Promise<ResolutionOutcome> {
   try {
-    return { ok: true, snapshot: await acquireSnapshot(db, target, options) };
+    return { ok: true, resolution: await resolveReference(target, options) };
   } catch (caught) {
     const error = normalizeAcquisitionError(caught);
     const current = getTarget(db, target.publicId);

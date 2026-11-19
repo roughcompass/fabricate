@@ -9,7 +9,7 @@ import { manifest } from "../../support/profiles";
 
 const loaded = (document: FactDocument): LoadedProfile => ({
   publicId: "prf_0000000000000000",
-  assessmentId: "asm_0000000000000000",
+  owner: { run: "asm_0000000000000000" },
   view: profileView(document, profileDiagnostics({ fact_document: document as never })),
   records: (document.evidence ?? {}) as JsonObject,
   labels: new Map(categoryDefinitions(document).map((definition) => [definition.id, definition.label])),
@@ -28,7 +28,7 @@ describe("A row's evidence panel", () => {
   it("finds a category's row by its id, with each fact's locations, key, and raw value", () => {
     const yarn = orders.categories.package_managers!.facts[0]!;
     const evidence = rowEvidence(loaded(orders), "package_managers", yarn.key);
-    expect(evidence?.assessmentId).toBe("asm_0000000000000000");
+    expect(evidence?.owner).toEqual({ run: "asm_0000000000000000" });
     expect(evidence?.sections).toEqual([
       {
         label: null,

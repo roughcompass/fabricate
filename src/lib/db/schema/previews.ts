@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { repositorySources } from "./catalog";
 import { createdAt, id, publicId, sqlList, timestamp, updatedAt } from "./columns";
-import { repositoryProfiles } from "./results";
+import { surveys } from "./surveys";
 import type { JsonObject } from "@repo-facts/contract";
 
 /*
@@ -36,9 +36,9 @@ const refCheck = (name: AnySQLiteColumn, kind: AnySQLiteColumn) =>
 
 /**
  * One pinned commit of a Repository, prepared for previews before any build
- * exists (design decision 3): profiled with the Repository's own Profile of
- * that commit, or a static detector run kept here that never becomes a
- * profile version, then evaluated per package. One per Repository and commit,
+ * exists (design decision 3): decided from its commit's survey, which is
+ * among the Repository's versions, and evaluated per package. One per
+ * Repository and commit,
  * so two refs at one commit share it; the ref is the one first prepared.
  */
 export const previewPreparations = sqliteTable(
@@ -53,10 +53,8 @@ export const previewPreparations = sqliteTable(
     refName: text("ref_name"),
     refKind: text("ref_kind", { enum: PREVIEW_REF_KINDS }).notNull(),
     state: text("state", { enum: PREPARATION_STATES }).notNull().default("profiling"),
-    /** The Repository's own Profile of this commit, when it was reused. */
-    repositoryProfileId: integer("repository_profile_id").references(() => repositoryProfiles.id, { onDelete: "restrict" }),
-    /** The Profile document the preparation made itself, when there was none to reuse. */
-    profileDocument: text("profile_document"),
+    /** The survey of this commit under the recipe current when it was prepared, whose Profile decides (unify-surveys, decision 6). */
+    surveyId: integer("survey_id").references(() => surveys.id, { onDelete: "restrict" }),
     profileDigest: text("profile_digest"),
     /** Every package's verdict: its conditions with their deciding facts, and what a build needs when it qualifies. */
     packages: text("packages", { mode: "json" }).$type<JsonObject[]>(),
@@ -77,14 +75,13 @@ export const previewPreparations = sqliteTable(
     check("preview_preparations_ref", refCheck(t.refName, t.refKind)),
     check("preview_preparations_state", sql.raw(`state IN (${sqlList(PREPARATION_STATES)})`)),
     check("preview_preparations_profile_digest", digestCheck(t.profileDigest)),
-    check("preview_preparations_profile_document", sql`${t.profileDocument} IS NULL OR (json_valid(${t.profileDocument}) AND json_type(${t.profileDocument}) = 'object')`),
     check("preview_preparations_packages", sql`${t.packages} IS NULL OR (json_valid(${t.packages}) AND json_type(${t.packages}) = 'array')`),
     check("preview_preparations_refusal", sql`${t.refusal} IS NULL OR (json_valid(${t.refusal}) AND json_type(${t.refusal}) = 'object')`),
     // Profiling holds no outcome; a decision has exactly one Profile, its verdicts, and a refusal only when refused; a failure says why.
     check("preview_preparations_profiling", sql`${t.state} <> 'profiling' OR (${t.packages} IS NULL AND ${t.refusal} IS NULL AND ${t.failure} IS NULL AND ${t.finishedAt} IS NULL)`),
     check(
       "preview_preparations_decided",
-      sql`${t.state} NOT IN ('ready', 'refused') OR (${t.profileDigest} IS NOT NULL AND (${t.repositoryProfileId} IS NULL) <> (${t.profileDocument} IS NULL) AND ${t.packages} IS NOT NULL AND ${t.failure} IS NULL AND ${t.finishedAt} IS NOT NULL AND (${t.state} = 'refused') = (${t.refusal} IS NOT NULL))`,
+      sql`${t.state} NOT IN ('ready', 'refused') OR (${t.profileDigest} IS NOT NULL AND ${t.surveyId} IS NOT NULL AND ${t.packages} IS NOT NULL AND ${t.failure} IS NULL AND ${t.finishedAt} IS NOT NULL AND (${t.state} = 'refused') = (${t.refusal} IS NOT NULL))`,
     ),
     check("preview_preparations_failed", sql`${t.state} <> 'failed' OR (${t.failure} IS NOT NULL AND length(${t.failure}) > 0 AND ${t.refusal} IS NULL AND ${t.finishedAt} IS NOT NULL)`),
   ],

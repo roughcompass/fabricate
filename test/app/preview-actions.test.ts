@@ -14,6 +14,7 @@ import { drainJobs } from "@/lib/jobs/worker";
 import { BUILD_PREVIEW, decidePreparation, failAttempt, findPreparation, findPreview, openPreparation } from "@/lib/previews/records";
 import type { PackageVerdict } from "@/lib/previews/eligibility";
 import { previewDirectory } from "@/lib/previews/storage";
+import { requestSurvey } from "@/lib/surveys/records";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
 import { buildSource } from "../support/builders";
 import { rawRun } from "../support/db";
@@ -127,8 +128,10 @@ describe("preview Server Actions", () => {
 
   describe("choosing a package", () => {
     function decided(source: RepositorySource, packages: PackageVerdict[]) {
-      const { preparation } = openPreparation(world.db, source, { commitSha: "d".repeat(40), refName: "refs/heads/main", refKind: "branch" });
-      decidePreparation(world.db, preparation.publicId, preparation.requestedAt.getTime(), { document: '{"schema":"fabricate.repository_profile"}', digest: "f".repeat(64) }, { packages, refusal: null });
+      const commitSha = "d".repeat(40);
+      const { preparation } = openPreparation(world.db, source, { commitSha, refName: "refs/heads/main", refKind: "branch" });
+      const { survey } = requestSurvey(world.db, { repositorySourceId: source.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
+      decidePreparation(world.db, preparation.publicId, preparation.requestedAt.getTime(), { surveyId: survey.id, digest: "f".repeat(64) }, { packages, refusal: null });
       rawRun(world.db, "delete from jobs");
       return preparation.publicId;
     }

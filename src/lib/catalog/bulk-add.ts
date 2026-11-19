@@ -38,7 +38,7 @@ export function addRepositories(db: Executor, input: string, boundary?: SourceBo
   const result: { created: RepositorySource[]; failed: BulkFailure[] } = { created: [], failed: [] };
   for (const line of lines) {
     try {
-      result.created.push(registerSource(db, { name: "", cloneUrl: line.cloneUrl, gitRef: line.gitRef }, boundary, "imported"));
+      result.created.push(registerSource(db, { name: "", cloneUrl: line.cloneUrl, gitRef: line.gitRef }, boundary));
     } catch (error) {
       if (!(error instanceof ValidationError)) throw error;
       // A refused URL is shown again without any credentials it carried.

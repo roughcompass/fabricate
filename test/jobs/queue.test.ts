@@ -77,6 +77,27 @@ describe("job queue", () => {
     expect(reload(db, 1).priority).toBe(JOB_PRIORITIES.background);
   });
 
+  it("claims a background job joined at normal priority ahead of other background work", () => {
+    enqueue(db, job("older", { runAfter: at(0), priority: JOB_PRIORITIES.background }));
+    const joined = enqueue(db, job("joined", { runAfter: at(500), priority: JOB_PRIORITIES.background }));
+
+    // Joining without raising leaves the job as it is.
+    expect(enqueue(db, job("joined")).priority).toBe(JOB_PRIORITIES.background);
+    expect(enqueue(db, job("joined", { raisePriority: true }))).toMatchObject({ id: joined.id, priority: JOB_PRIORITIES.normal });
+    // A later background request never lowers it again.
+    expect(enqueue(db, job("joined", { priority: JOB_PRIORITIES.background, raisePriority: true })).priority).toBe(JOB_PRIORITIES.normal);
+
+    expect(claimNext(db, { workerId: "w", now: at(1_000) })?.idempotencyKey).toBe("test.work:joined");
+    expect(claimNext(db, { workerId: "w", now: at(1_000) })?.idempotencyKey).toBe("test.work:older");
+  });
+
+  it("raises only a job still waiting in the queue", () => {
+    enqueue(db, job("started", { priority: JOB_PRIORITIES.background }));
+    const claimed = claimNext(db, { workerId: "w" })!;
+
+    expect(enqueue(db, job("started", { raisePriority: true }))).toMatchObject({ id: claimed.id, state: "running", priority: JOB_PRIORITIES.background });
+  });
+
   it("resumes a job whose lease expired and ignores the stale worker", () => {
     enqueue(db, job("leased", { runAfter: at(0) }));
     const first = claimNext(db, { workerId: "w1", now: at(0), leaseMs: 1_000 })!;

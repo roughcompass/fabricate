@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps<"/repositories/[sou
   return { title: source ? `Versions · ${source.name}` : "Repository not found" };
 }
 
-/** Every profile version of a Repository, newest first: why it was queued, its state, and what it profiled (docs/profiling.md). */
+/** Every version of a Repository, its surveys, newest first: why it was queued, its state, and what it profiled (docs/profiling.md). */
 export default async function VersionsPage({ params, searchParams }: PageProps<"/repositories/[sourceId]/versions">) {
   const [{ sourceId }, query] = await Promise.all([params, searchParams]);
   const source = loadRepository(sourceId);
@@ -41,7 +41,7 @@ export default async function VersionsPage({ params, searchParams }: PageProps<"
           { href: routes.repository(source.publicId), label: source.name },
         ]}
         title="Versions"
-        description={`${countLabel(total, "profile version")} of ${source.name}. A version is queued when the repository is added, edited, or re-profiled, when its reference has new commits, and when the detector changes.`}
+        description={`${countLabel(total, "version")} of ${source.name}, one survey each of a commit with a Surveyor release and configuration. A version runs when the repository is added, edited, or re-profiled, when its reference has a new commit, when Surveyor is upgraded, and when a Run or a preview needs a commit no version has surveyed.`}
         primaryAction={<ReprofileForm source={source} />}
       />
       <Panel flush>
@@ -53,7 +53,7 @@ export default async function VersionsPage({ params, searchParams }: PageProps<"
                 <Th>Version</Th>
                 <Th>Status</Th>
                 <Th>Commit</Th>
-                <Th>Detector release</Th>
+                <Th>Surveyor</Th>
                 <Th>Queued</Th>
               </>
             }
@@ -64,15 +64,19 @@ export default async function VersionsPage({ params, searchParams }: PageProps<"
                   <Primary>
                     <Link href={routes.repositoryVersion(source.publicId, version.version)}>{`Version ${version.version}`}</Link>
                   </Primary>
-                  <Secondary>{TRIGGER_LABELS[version.trigger]}</Secondary>
+                  <Secondary>{version.requestedBy ? <Link href={routes.run(version.requestedBy.assessmentPublicId)}>{`Run of ${version.requestedBy.name}`}</Link> : TRIGGER_LABELS[version.trigger]}</Secondary>
                 </Td>
                 <Td label="Status">
                   <VersionStatus version={version} size="sm" />
                   {version.failure && <Secondary>{version.failure.message}</Secondary>}
                 </Td>
-                <Td label="Commit">{version.commit ? <ShortValue value={version.commit} label="commit" /> : <Secondary>Not acquired</Secondary>}</Td>
-                <Td label="Detector release">
-                  <Tag>{version.assessment.detectorRelease}</Tag>
+                <Td label="Commit">
+                  <ShortValue value={version.commit} label="commit" />
+                  <Secondary mono>{version.survey.reference}</Secondary>
+                </Td>
+                <Td label="Surveyor">
+                  <Tag>{version.survey.surveyorRelease}</Tag>
+                  <Secondary>{`Profile version ${version.survey.profileSchemaVersion}`}</Secondary>
                 </Td>
                 <Td label="Queued">
                   <RelativeTime value={version.createdAt} />

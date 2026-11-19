@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { EvidenceList } from "@/components/results/evidence";
 import { evidenceLocation } from "@/lib/profiles/evidence-locations";
+import type { EvidenceOwner } from "@/lib/web/routes";
 
 const pointer = (value: string): JsonObject => ({ path: "package.json", location: { kind: "pointer", format: "json", pointer: value } });
 const RECORDS: JsonObject = {
@@ -20,10 +21,16 @@ describe("evidence locations", () => {
   });
 
   it("names each record's detector and rule unless told not to", () => {
-    const list = (source?: boolean) => renderToStaticMarkup(createElement(EvidenceList, { ids: ["ev_1"], records: RECORDS, assessmentId: "asm_1", source }));
+    const list = (source?: boolean) => renderToStaticMarkup(createElement(EvidenceList, { ids: ["ev_1"], records: RECORDS, owner: { run: "asm_1" }, source }));
     expect(list()).toContain("package-metadata · manifest.dependencies");
     expect(list(false)).not.toContain("package-metadata");
     expect(list(false)).not.toContain("manifest.dependencies");
     expect(list(false)).toContain("package.json /dependencies/@clack/prompts");
+  });
+
+  it("links each location under its Run, or under its Profile when no Run reached it", () => {
+    const list = (owner: EvidenceOwner) => renderToStaticMarkup(createElement(EvidenceList, { ids: ["ev_1"], records: RECORDS, owner }));
+    expect(list({ run: "asm_1" })).toContain('href="/runs/asm_1/evidence/ev_1"');
+    expect(list({ profile: "prf_1" })).toContain('href="/profiles/prf_1/evidence/ev_1"');
   });
 });

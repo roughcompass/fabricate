@@ -3,7 +3,7 @@ import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { type ArtifactLayout, type PreviewRefKind, jobs, previewBuilds, previewPreparations } from "@/lib/db/schema";
+import { type ArtifactLayout, type PreviewRefKind, jobs, previewBuilds, previewPreparations, surveys } from "@/lib/db/schema";
 import { type JsonObject } from "@repo-facts/contract";
 import { enqueue } from "@/lib/jobs/queue";
 import type { Eligibility, PackageVerdict, Refusal } from "./eligibility";
@@ -98,8 +98,25 @@ export function findPreparation(db: Executor, publicId: string): PreviewPreparat
   return db.select().from(previewPreparations).where(eq(previewPreparations.publicId, publicId)).get();
 }
 
-/** The Profile a decision was made from: the Repository's own, or a document the preparation made itself. */
-export type PreparationProfile = { readonly repositoryProfileId: number; readonly digest: string } | { readonly document: string; readonly digest: string };
+/** The Profile a decision was made from: its commit's survey's (unify-surveys, design decision 6). */
+export interface PreparationProfile {
+  readonly surveyId: number;
+  readonly digest: string;
+}
+
+/** Links the survey a preparation decides from, which continues it when it finishes. */
+export function linkPreparationSurvey(db: Executor, preparationId: number, surveyId: number): void {
+  db.update(previewPreparations).set({ surveyId, updatedAt: new Date() }).where(eq(previewPreparations.id, preparationId)).run();
+}
+
+/** Queues again every preparation waiting on +survey+, now finished, so each decides from its Profile or fails with it. */
+export function continuePreparations(db: Executor, survey: { id: number; state: string }): void {
+  if (survey.state !== "succeeded" && survey.state !== "failed") return;
+  const waiting = db.select().from(previewPreparations).where(and(eq(previewPreparations.surveyId, survey.id), eq(previewPreparations.state, "profiling"))).all();
+  for (const preparation of waiting) {
+    enqueue(db, { kind: PREPARE_PREVIEW, payload: { ...preparationJob(preparation), afterSurvey: true }, idempotencyKey: `${PREPARE_PREVIEW}:${preparation.publicId}:${preparation.requestedAt.getTime()}:survey` });
+  }
+}
 
 /**
  * Records the decision for the request +requested+ (a job payload's time) of
@@ -115,8 +132,7 @@ export function decidePreparation(db: Executor, publicId: string, requested: num
       .update(previewPreparations)
       .set({
         state: refused ? "refused" : "ready",
-        repositoryProfileId: "repositoryProfileId" in profile ? profile.repositoryProfileId : null,
-        profileDocument: "document" in profile ? profile.document : null,
+        surveyId: profile.surveyId,
         profileDigest: profile.digest,
         packages: eligibility.packages as unknown as JsonObject[],
         refusal: refused ? (eligibility.refusal as unknown as JsonObject) : null,
@@ -337,13 +353,18 @@ export function settleAbandonedAttempts(db: Executor, options: { publicId?: stri
  * can be prepared again rather than stay Profiling. Returns those failed.
  */
 export function settleAbandonedPreparations(db: Executor, now = new Date()): string[] {
+  // The request's job, or the one its survey queued when it finished: whichever came last.
+  const key = sql`${`${PREPARE_PREVIEW}:`} || ${previewPreparations.publicId} || ':' || ${previewPreparations.requestedAt}`;
   const rows = db
-    .select({ publicId: previewPreparations.publicId, requestedAt: previewPreparations.requestedAt, job: jobs.id, state: jobs.state, tries: jobs.attempts, maxTries: jobs.maxAttempts, leaseExpiresAt: jobs.leaseExpiresAt, lastError: jobs.lastError })
+    .select({ publicId: previewPreparations.publicId, requestedAt: previewPreparations.requestedAt, survey: surveys.state, job: jobs.id, state: jobs.state, tries: jobs.attempts, maxTries: jobs.maxAttempts, leaseExpiresAt: jobs.leaseExpiresAt, lastError: jobs.lastError })
     .from(previewPreparations)
-    .leftJoin(jobs, eq(jobs.idempotencyKey, sql`${`${PREPARE_PREVIEW}:`} || ${previewPreparations.publicId} || ':' || ${previewPreparations.requestedAt}`))
+    .leftJoin(surveys, eq(surveys.id, previewPreparations.surveyId))
+    .leftJoin(jobs, eq(jobs.id, sql`(SELECT max(j.id) FROM jobs j WHERE j.idempotency_key IN (${key}, ${key} || ':survey'))`))
     .where(eq(previewPreparations.state, "profiling"))
     .all();
   return rows.flatMap((row) => {
+    // A preparation waiting on its survey is continued when the survey finishes.
+    if (row.survey === "queued" || row.survey === "running") return [];
     const reason = abandonment(row, now, "preparation");
     return reason !== null && failPreparation(db, row.publicId, row.requestedAt.getTime(), reason) ? [row.publicId] : [];
   });

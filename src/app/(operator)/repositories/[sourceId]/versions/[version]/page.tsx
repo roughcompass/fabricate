@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: PageProps<"/repositories/[sou
   return { title: found ? `Version ${found.version.version} · ${found.source.name}` : "Version not found" };
 }
 
-/** One profile version of a Repository, whatever its state (docs/profiling.md). */
+/** One version of a Repository, a survey, whatever its state (docs/profiling.md). */
 export default async function VersionPage({ params, searchParams }: PageProps<"/repositories/[sourceId]/versions/[version]">) {
   const [{ sourceId, version }, query] = await Promise.all([params, searchParams]);
   const found = loadVersion(sourceId, version);

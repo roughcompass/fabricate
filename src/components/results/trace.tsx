@@ -5,6 +5,7 @@ import { COLLECTION_BY_ID, SELECTOR_BY_ID } from "@/lib/standards/registry";
 import { EvidenceList } from "./evidence";
 import styles from "./results.module.css";
 import { formatValue } from "./value";
+import type { EvidenceOwner } from "@/lib/web/routes";
 
 const RESULTS: Record<TraceNode["result"], string> = { true: "holds", false: "does_not_hold", unknown: "unknown" };
 
@@ -49,15 +50,15 @@ function describe(node: TraceNode): React.ReactNode {
 }
 
 /** How an expression was read against the evidence: each step's result, the value it observed, and why anything is unknown. */
-export function TraceView({ trace, records, assessmentId, label }: { trace: TraceNode; records: JsonObject; assessmentId: string; label: string }) {
+export function TraceView({ trace, records, owner, label }: { trace: TraceNode; records: JsonObject; owner: EvidenceOwner; label: string }) {
   return (
     <ul className={styles.trace} aria-label={label}>
-      <TraceItem node={trace} records={records} assessmentId={assessmentId} />
+      <TraceItem node={trace} records={records} owner={owner} />
     </ul>
   );
 }
 
-function TraceItem({ node, records, assessmentId }: { node: TraceNode; records: JsonObject; assessmentId: string }) {
+function TraceItem({ node, records, owner }: { node: TraceNode; records: JsonObject; owner: EvidenceOwner }) {
   return (
     <li className={styles.step}>
       <div className={styles.line}>
@@ -72,11 +73,11 @@ function TraceItem({ node, records, assessmentId }: { node: TraceNode; records: 
       )}
       {node.count && <div className={styles.detail}>{node.count.possible === null ? `At least ${node.count.definite}; items that were not seen could add more.` : node.count.possible ? `Between ${node.count.definite} and ${node.count.definite + node.count.possible}.` : `Exactly ${node.count.definite}.`}</div>}
       {node.reason && <div className={styles.muted}>{node.reason}</div>}
-      {node.evidence.length > 0 && <EvidenceList ids={node.evidence} records={records} assessmentId={assessmentId} />}
+      {node.evidence.length > 0 && <EvidenceList ids={node.evidence} records={records} owner={owner} />}
       {node.children && (
         <ul className={styles.trace}>
           {node.children.map((child, index) => (
-            <TraceItem key={index} node={child} records={records} assessmentId={assessmentId} />
+            <TraceItem key={index} node={child} records={records} owner={owner} />
           ))}
         </ul>
       )}
@@ -94,8 +95,8 @@ function TraceItem({ node, records, assessmentId }: { node: TraceNode; records: 
               </div>
               {(item.where || item.trace) && (
                 <ul className={styles.trace}>
-                  {item.where && <TraceItem node={item.where} records={records} assessmentId={assessmentId} />}
-                  {item.trace && <TraceItem node={item.trace} records={records} assessmentId={assessmentId} />}
+                  {item.where && <TraceItem node={item.where} records={records} owner={owner} />}
+                  {item.trace && <TraceItem node={item.trace} records={records} owner={owner} />}
                 </ul>
               )}
             </li>

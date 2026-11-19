@@ -13,6 +13,7 @@ import { reasoningLead } from "@/lib/profiles/reasoning";
 import type { CategoryBlock, CompactBlock, Heading, Row, SharedBlock, SharedCell, SharedRow } from "@/lib/profiles/view";
 import { EvidencePanel } from "./evidence-panel";
 import styles from "./profile.module.css";
+import type { EvidenceOwner } from "@/lib/web/routes";
 
 /**
  * A detector's category description in the interface's words: detectors
@@ -26,7 +27,7 @@ function inVocabulary(text: string): string {
 /** What a cell needs to link evidence: the records, and the Run they belong to. */
 export interface EvidenceContext {
   records: JsonObject;
-  assessmentId: string;
+  owner: EvidenceOwner;
   /** The Profile, whose rows' evidence panels load from it. */
   profileId: string;
 }
@@ -34,7 +35,7 @@ export interface EvidenceContext {
 /** A row's evidence panel, which loads the row's facts and locations when it's opened. */
 function RowEvidence({ table, row, title, context }: { table: string; row: { id: string; evidence: readonly string[] }; title: string; context: EvidenceContext }) {
   const url = `/api/profiles/${context.profileId}/evidence?${new URLSearchParams({ table, row: row.id })}`;
-  return <EvidencePanel url={url} title={title} count={row.evidence.length} first={row.evidence[0] ?? null} assessmentId={context.assessmentId} />;
+  return <EvidencePanel url={url} title={title} count={row.evidence.length} first={row.evidence[0] ?? null} owner={context.owner} />;
 }
 
 /** A category with facts: its heading, its search and rule, and its facts in its own columns, a page at a time when there are many. */
@@ -120,7 +121,7 @@ function RowCellsView({ row, columns, numeric, unit, span, context }: { row: Row
         <ul className={styles.candidates} aria-label="Candidates">
           {row.cells.candidates.map((candidate, index) => (
             <li key={index}>
-              {candidate.text} <EvidenceList ids={candidate.evidence} records={context.records} assessmentId={context.assessmentId} source={false} />
+              {candidate.text} <EvidenceList ids={candidate.evidence} records={context.records} owner={context.owner} source={false} />
             </li>
           ))}
         </ul>
@@ -167,7 +168,7 @@ function CandidateRows({ table, row, candidates, block, span, context }: { table
               {cell ? <CellView cell={cell} /> : null}
               {column === 0 && (
                 <div className={styles.candidateLocation}>
-                  <EvidenceList ids={candidate.evidence} records={context.records} assessmentId={context.assessmentId} source={false} />
+                  <EvidenceList ids={candidate.evidence} records={context.records} owner={context.owner} source={false} />
                 </div>
               )}
             </Td>

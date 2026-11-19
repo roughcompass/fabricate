@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import type { HeldSection, RowEvidence } from "@/lib/profiles/evidence";
 import { parseReasoning } from "@/lib/profiles/reasoning";
 import styles from "./profile.module.css";
-import { routes } from "@/lib/web/routes";
+import { type EvidenceOwner, routes } from "@/lib/web/routes";
 
 type Loading = { state: "idle" | "loading" | "failed" } | { state: "loaded"; evidence: RowEvidence };
 
@@ -21,7 +21,7 @@ type Loading = { state: "idle" | "loading" | "failed" } | { state: "loaded"; evi
  * from +url+ when a pointer rests on the count or the panel opens. Without
  * JavaScript, the count is a link to the row's first evidence record instead.
  */
-export function EvidencePanel({ url, title, count, first, assessmentId }: { url: string; title: string; count: number; first: string | null; assessmentId: string }) {
+export function EvidencePanel({ url, title, count, first, owner }: { url: string; title: string; count: number; first: string | null; owner: EvidenceOwner }) {
   const id = `evidence-${useId().replace(/[^A-Za-z0-9_-]/g, "")}`;
   const panel = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState<Loading>({ state: "idle" });
@@ -53,7 +53,7 @@ export function EvidencePanel({ url, title, count, first, assessmentId }: { url:
         {label}
       </button>
       {first ? (
-        <Link href={routes.evidence(assessmentId, first)} prefetch={false} className={`${styles.evidenceTrigger} ${styles.unscripted}`}>
+        <Link href={routes.evidence(owner, first)} prefetch={false} className={`${styles.evidenceTrigger} ${styles.unscripted}`}>
           {count === 1 ? "Show location" : `Show first of ${formatNumber(count)} locations`}
         </Link>
       ) : (
@@ -69,7 +69,7 @@ export function EvidencePanel({ url, title, count, first, assessmentId }: { url:
           </button>
         </div>
         {loading.state === "loaded" ? (
-          loading.evidence.sections.map((section, index) => <HeldView key={index} section={section} assessmentId={loading.evidence.assessmentId} />)
+          loading.evidence.sections.map((section, index) => <HeldView key={index} section={section} owner={loading.evidence.owner} />)
         ) : loading.state === "failed" ? (
           <p className={styles.sheetMessage} role="alert">
             The evidence couldn&apos;t be loaded.{" "}
@@ -86,13 +86,13 @@ export function EvidencePanel({ url, title, count, first, assessmentId }: { url:
 }
 
 /** Each fact the row holds: its category when there are several, its locations, its key and rule, and its raw value. */
-function HeldView({ section, assessmentId }: { section: HeldSection; assessmentId: string }) {
+function HeldView({ section, owner }: { section: HeldSection; owner: EvidenceOwner }) {
   return (
     <section className={styles.held} aria-label={section.label ?? undefined}>
       {section.label && <h3 className={styles.heldLabel}>{section.label}</h3>}
       <div className={styles.heldPart}>
         <span className={styles.heldPartLabel}>{section.locations.length === 1 ? "Location" : `${formatNumber(section.locations.length)} locations`}</span>
-        <LocationList locations={section.locations} assessmentId={assessmentId} />
+        <LocationList locations={section.locations} owner={owner} />
       </div>
       <dl className={styles.heldFacts}>
         <dt>{section.keys.length + section.moreKeys === 1 ? "Fact" : "Facts"}</dt>

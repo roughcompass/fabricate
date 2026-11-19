@@ -1,66 +1,41 @@
-import { and, eq, inArray, max } from "drizzle-orm";
-import type { Assessment, AssessmentTarget } from "@/lib/assessments/assessment-records";
+import { eq, inArray } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
-import { assessmentTargets, assessments, initiatives, profileVersions, repositoryProfiles, sourceSnapshots } from "@/lib/db/schema";
+import { repositoryProfiles, repositorySources, surveys } from "@/lib/db/schema";
 import type { RepositoryProfile } from "@/lib/profiles/profile-records";
+import type { Survey } from "@/lib/surveys/records";
 
 /*
- * A repository's current Profile (prune-and-consolidate-code, design decision
- * 6): the newest Profile written for it, by any Run, a background profile
- * version or an operator's Assessment alike. A newer Run that failed leaves
- * the older Profile current. Every page that shows a repository's current
+ * A Repository's current Profile (unify-surveys, design decision 4): the
+ * Profile of the survey its `current_survey_id` names, the newest successful
+ * survey of a commit resolved from its configured reference, whether a Run,
+ * a background check, or a preview started it. A newer survey that failed
+ * leaves the older one current. Every page that shows a Repository's current
  * Profile reads it here.
  */
 
 export interface CurrentProfile {
   profile: RepositoryProfile;
-  target: AssessmentTarget;
-  assessment: Assessment;
-  /** The Assessment its Run belongs to. */
-  initiative: { publicId: string; name: string };
+  survey: Survey;
   /** The commit the Profile describes. */
   commit: string;
-  /** Its profile version's number, or null for a Profile from an operator's Run. */
-  version: number | null;
-}
-
-/** Joins a profile version to the one target its Run has: the version's repository. */
-export const versionTarget = and(eq(assessmentTargets.assessmentId, profileVersions.assessmentId), eq(assessmentTargets.repositorySourceId, profileVersions.repositorySourceId));
-
-/** The id of the newest Profile of each repository in +sourceIds+, or of every repository: its current Profile. */
-export function newestProfileIds(db: Executor, sourceIds?: readonly number[]) {
-  return db
-    .select({ id: max(repositoryProfiles.id) })
-    .from(repositoryProfiles)
-    .innerJoin(assessmentTargets, eq(assessmentTargets.id, repositoryProfiles.assessmentTargetId))
-    .where(sourceIds ? inArray(assessmentTargets.repositorySourceId, [...sourceIds]) : undefined)
-    .groupBy(assessmentTargets.repositorySourceId);
+  /** Its survey's version number. */
+  version: number;
 }
 
 /** The current Profile of each repository in +sourceIds+, or of every repository, by source id, in one query. */
 export function currentProfiles(db: Executor, sourceIds?: readonly number[]): Map<number, CurrentProfile> {
   if (sourceIds?.length === 0) return new Map();
   const rows = db
-    .select({
-      profile: repositoryProfiles,
-      target: assessmentTargets,
-      assessment: assessments,
-      initiative: { publicId: initiatives.publicId, name: initiatives.name },
-      commit: sourceSnapshots.commitSha,
-      version: profileVersions.version,
-    })
-    .from(repositoryProfiles)
-    .innerJoin(assessmentTargets, eq(assessmentTargets.id, repositoryProfiles.assessmentTargetId))
-    .innerJoin(assessments, eq(assessments.id, repositoryProfiles.assessmentId))
-    .innerJoin(initiatives, eq(initiatives.id, assessments.initiativeId))
-    .innerJoin(sourceSnapshots, eq(sourceSnapshots.id, repositoryProfiles.sourceSnapshotId))
-    .leftJoin(profileVersions, versionTarget)
-    .where(inArray(repositoryProfiles.id, newestProfileIds(db, sourceIds)))
+    .select({ sourceId: repositorySources.id, profile: repositoryProfiles, survey: surveys })
+    .from(repositorySources)
+    .innerJoin(surveys, eq(surveys.id, repositorySources.currentSurveyId))
+    .innerJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, surveys.id))
+    .where(sourceIds ? inArray(repositorySources.id, [...sourceIds]) : undefined)
     .all();
-  return new Map(rows.map((row) => [row.target.repositorySourceId, row]));
+  return new Map(rows.map((row) => [row.sourceId, { profile: row.profile, survey: row.survey, commit: row.survey.commitSha, version: row.survey.number }]));
 }
 
-/** The current Profile of the repository +sourceId+, or undefined when no Run has profiled it. */
+/** The current Profile of the repository +sourceId+, or undefined when none of its surveys of the configured reference has succeeded. */
 export function currentProfile(db: Executor, sourceId: number): CurrentProfile | undefined {
   return currentProfiles(db, [sourceId]).get(sourceId);
 }

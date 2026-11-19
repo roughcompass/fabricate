@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, not, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
@@ -64,28 +64,12 @@ export function createInitiative(db: Executor, input: InitiativeInput): Initiati
   });
 }
 
-/**
- * The Repository profiling initiative, which migration 0038 seeds: DE FabLab
- * owns it, and each of its Runs profiles one repository as that repository's
- * next profile version (docs/profiling.md). It has no Releases and no page of
- * its own; its Runs are shown under Repositories.
- */
-export const PROFILING_INITIATIVE_ID = "ini_repoprofiling000";
-
-export const PROFILING_FIXED = "DE FabLab owns Repository profiling: its name, objective, scope, and Releases can't change";
-
-/** Repository profiling changes nothing. */
-function refuseScopeChange(initiative: Initiative): void {
-  if (initiative.profiling) throw new ValidationError([{ field: "base", message: PROFILING_FIXED }]);
-}
-
 export function updateInitiative(db: Executor, publicId: string, expectedLockVersion: number, input: InitiativeInput): Initiative {
   return immediate(db, (tx) => {
     const current = getInitiative(tx, publicId);
     if (current.lockVersion !== expectedLockVersion) throw new StaleRecordError(`${current.name} was changed by someone else`);
 
     const values = normalize(input);
-    refuseScopeChange(current);
     const selections = validate(tx, values);
 
     // Clear selections before the mode changes so the all-Repositories trigger holds.
@@ -101,7 +85,6 @@ export function updateInitiative(db: Executor, publicId: string, expectedLockVer
 export function deleteInitiative(db: Executor, publicId: string): void {
   immediate(db, (tx) => {
     const initiative = getInitiative(tx, publicId);
-    if (initiative.profiling) throw new ValidationError([{ field: "base", message: `${initiative.name} is owned by DE FabLab and is retained` }]);
     const assessed = tx.select({ id: assessments.id }).from(assessments).where(eq(assessments.initiativeId, initiative.id)).limit(1).get();
     if (assessed) {
       throw new ValidationError([{ field: "base", message: `${initiative.name} has Runs and is retained so their history stays reviewable` }]);
@@ -126,9 +109,8 @@ export function initiativeById(db: Executor, id: number): Initiative {
   return initiative;
 }
 
-/** Initiatives operators created: not the Repository profiling initiative. */
 export function listInitiatives(db: Executor): Initiative[] {
-  return db.select().from(initiatives).where(not(initiatives.profiling)).orderBy(sql`lower(${initiatives.name})`, asc(initiatives.publicId)).all();
+  return db.select().from(initiatives).orderBy(sql`lower(${initiatives.name})`, asc(initiatives.publicId)).all();
 }
 
 /** The explicit selections of an initiative, in catalog order. */

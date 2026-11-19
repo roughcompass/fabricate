@@ -1,21 +1,20 @@
-import { asc, eq } from "drizzle-orm";
-import type { Assessment, AssessmentTarget, SourceSnapshot } from "@/lib/assessments/assessment-records";
+import { and, asc, eq } from "drizzle-orm";
+import type { AssessmentTarget } from "@/lib/assessments/assessment-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { assessmentTargets, repositoryProfiles } from "@/lib/db/schema";
+import { assessmentTargets, repositoryProfiles, repositorySources, surveys } from "@/lib/db/schema";
 import { type JsonObject, type JsonValue, SKIPPED_INPUT_REASONS } from "@repo-facts/contract";
 import { prepareDocument, readDocument } from "@/lib/documents/digested";
 import { projectProfile } from "@/lib/projection/project";
+import type { Survey } from "@/lib/surveys/records";
 
-/** Persistence for immutable Repository Profiles, one per pinned snapshot. */
+/** Persistence for immutable Repository Profiles, one per successful survey. */
 
 export type RepositoryProfile = typeof repositoryProfiles.$inferSelect;
 
 export interface NewProfile {
-  assessment: Assessment;
-  target: AssessmentTarget;
-  snapshot: SourceSnapshot;
+  survey: Survey;
   document: JsonValue | string;
   /** Structural validation of the document contract; returns problems. */
   validate?: (document: JsonObject) => string[];
@@ -24,9 +23,9 @@ export interface NewProfile {
 export function insertProfile(db: Executor, input: NewProfile): RepositoryProfile {
   const prepared = prepareDocument("repositoryProfile", input.document);
   const issues = new IssueCollector();
-  if (prepared.value.commit !== input.snapshot.commitSha) issues.add("document", "The Profile must describe the pinned commit");
-  if (prepared.value.detector_release !== input.assessment.detectorRelease) issues.add("document", "The Profile must record the Assessment's detector release");
-  if (prepared.value.detector_configuration_digest !== input.assessment.configurationDigest) issues.add("document", "The Profile must record the Assessment's detector configuration digest");
+  if (prepared.value.commit !== input.survey.commitSha) issues.add("document", "The Profile must describe the survey's commit");
+  if (prepared.value.detector_release !== input.survey.surveyorRelease) issues.add("document", "The Profile must record the survey's Surveyor release");
+  if (prepared.value.detector_configuration_digest !== input.survey.configurationDigest) issues.add("document", "The Profile must record the survey's configuration digest");
   for (const problem of input.validate?.(prepared.value) ?? []) issues.add("document", problem);
   issues.throwIfAny();
 
@@ -36,11 +35,9 @@ export function insertProfile(db: Executor, input: NewProfile): RepositoryProfil
       .insert(repositoryProfiles)
       .values({
         publicId: generatePublicId("prf"),
-        assessmentId: input.assessment.id,
-        assessmentTargetId: input.target.id,
-        sourceSnapshotId: input.snapshot.id,
+        surveyId: input.survey.id,
         schemaVersion: prepared.schemaVersion,
-        detectorRelease: input.assessment.detectorRelease,
+        detectorRelease: input.survey.surveyorRelease,
         document: prepared.text,
         digest: prepared.digest,
         createdAt: new Date(),
@@ -62,17 +59,28 @@ export function getProfile(db: Executor, publicId: string): RepositoryProfile {
   return profile;
 }
 
-export function profileOfTarget(db: Executor, targetId: number): RepositoryProfile | undefined {
-  return db.select().from(repositoryProfiles).where(eq(repositoryProfiles.assessmentTargetId, targetId)).get();
+/** The Repository a Profile describes, through its survey. */
+export function profileRepository(db: Executor, profile: Pick<RepositoryProfile, "surveyId">): { id: number; publicId: string; name: string } {
+  return db
+    .select({ id: repositorySources.id, publicId: repositorySources.publicId, name: repositorySources.name })
+    .from(surveys)
+    .innerJoin(repositorySources, eq(repositorySources.id, surveys.repositorySourceId))
+    .where(eq(surveys.id, profile.surveyId))
+    .get()!;
 }
 
-/** Every Profile of an Assessment, in scope order. */
+/** The Profile a survey wrote, once it succeeded. */
+export function profileOfSurvey(db: Executor, surveyId: number): RepositoryProfile | undefined {
+  return db.select().from(repositoryProfiles).where(eq(repositoryProfiles.surveyId, surveyId)).get();
+}
+
+/** Every Profile of an Assessment's completed targets, in scope order. */
 export function profilesOf(db: Executor, assessmentId: number): { profile: RepositoryProfile; target: AssessmentTarget }[] {
   return db
     .select({ profile: repositoryProfiles, target: assessmentTargets })
-    .from(repositoryProfiles)
-    .innerJoin(assessmentTargets, eq(assessmentTargets.id, repositoryProfiles.assessmentTargetId))
-    .where(eq(repositoryProfiles.assessmentId, assessmentId))
+    .from(assessmentTargets)
+    .innerJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, assessmentTargets.surveyId))
+    .where(and(eq(assessmentTargets.assessmentId, assessmentId), eq(assessmentTargets.state, "complete")))
     .orderBy(asc(assessmentTargets.position))
     .all();
 }

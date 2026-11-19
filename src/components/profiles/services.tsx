@@ -88,7 +88,7 @@ function ServiceDetails({ summary, context }: { summary: ServiceSummary; context
           </span>,
         ],
         ["Missing evidence", missing.length ? missing.join(", ").replaceAll("_", " ") : "None"],
-        ["Call sites", <EvidenceList key="calls" ids={Array.isArray(service.call_sites) ? service.call_sites : []} records={context.records} assessmentId={context.assessmentId} />],
+        ["Call sites", <EvidenceList key="calls" ids={Array.isArray(service.call_sites) ? service.call_sites : []} records={context.records} owner={context.owner} />],
         ["Key", <Tag key="key">{summary.key}</Tag>],
       ]}
     />

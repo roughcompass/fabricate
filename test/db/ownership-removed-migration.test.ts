@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
-import { createTestDb, migrateToLatest } from "../support/db";
+import { createTestDb, migrateUpTo } from "../support/db";
 import { migrationFolderAt } from "../support/migrations";
 
 /*
@@ -88,7 +88,7 @@ describe("ownership removed migration", () => {
       T0,
     );
     run("insert into de_console_reads (\"trigger\", status, read_at, applications, recorded) values ('schedule', 'succeeded', ?, 1, 0)", T0);
-    migrateToLatest(db);
+    migrateUpTo(db, "0043_ownership_removed");
   });
   afterEach(() => db.$client.close());
 

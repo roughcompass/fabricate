@@ -1,6 +1,6 @@
 import type { JsonObject } from "@repo-facts/contract";
-import { assessmentById } from "@/lib/assessments/lookups";
 import type { Executor } from "@/lib/db/client";
+import type { EvidenceOwner } from "@/lib/web/routes";
 import { type EvidenceLocation, evidenceLocations } from "./evidence-locations";
 import { findProfile, profileDiagnostics, profileDocument } from "./profile-records";
 import { reasoningLead } from "./reasoning";
@@ -29,7 +29,7 @@ export interface HeldSection {
 }
 
 export interface RowEvidence {
-  assessmentId: string;
+  owner: EvidenceOwner;
   sections: HeldSection[];
 }
 
@@ -61,12 +61,12 @@ export function rowEvidence(loaded: LoadedProfile, table: string, rowId: string)
   // A row that stands for several facts of one category with the same value lists their locations once, then the facts' keys and the value they share.
   if (held.length > 1 && held.every((entry) => entry.category === held[0]!.category)) {
     return {
-      assessmentId: loaded.assessmentId,
+      owner: loaded.owner,
       sections: [{ label: null, locations: evidenceLocations(row.evidence, loaded.records), keys: held.slice(0, MERGED_KEYS).map((entry) => entry.fact.key), moreKeys: Math.max(0, held.length - MERGED_KEYS), rule: null, reasoning: null, raw: raw(held[0]!) }],
     };
   }
   return {
-    assessmentId: loaded.assessmentId,
+    owner: loaded.owner,
     sections: held.map((entry) => ({
       label: held.length > 1 ? (loaded.labels.get(entry.category) ?? entry.category) : null,
       locations: evidenceLocations(entry.fact.evidence, loaded.records),
@@ -82,7 +82,7 @@ export function rowEvidence(loaded: LoadedProfile, table: string, rowId: string)
 /** A Profile's view, with what its panels need to name and link their evidence. */
 export interface LoadedProfile {
   publicId: string;
-  assessmentId: string;
+  owner: EvidenceOwner;
   view: ProfileView;
   records: JsonObject;
   labels: ReadonlyMap<string, string>;
@@ -104,7 +104,7 @@ export function loadProfile(db: Executor, publicId: string): LoadedProfile | und
   const facts = document.fact_document as unknown as FactDocument;
   const loaded: LoadedProfile = {
     publicId,
-    assessmentId: assessmentById(db, profile.assessmentId).publicId,
+    owner: { profile: publicId },
     view: profileView(facts, profileDiagnostics(document)),
     records: (facts.evidence ?? {}) as JsonObject,
     labels: new Map(categoryDefinitions(facts).map((definition) => [definition.id, definition.label])),

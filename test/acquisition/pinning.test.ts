@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { mirrorPath } from "@/lib/acquisition/mirror";
-import { internalRefFor } from "@/lib/assessments/assessment-records";
-import { parseCanonical } from "@repo-facts/contract";
+import { AcquisitionError } from "@/lib/acquisition/errors";
+import { Mirror, mirrorPath, surveyRefFor } from "@/lib/acquisition/mirror";
+import { GitRunner } from "@/lib/git/runner";
+import { getSurvey, pinSurvey } from "@/lib/surveys/records";
 import { acquire, registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
+import { rawRun } from "../support/db";
 import { git } from "../support/git-fixture";
 
-describe("snapshot pinning", () => {
+describe("survey pinning", () => {
   const world = useAcquisitionWorld("pinning");
 
   const objectExists = (gitDir: string, objectId: string) => {
@@ -21,25 +23,43 @@ describe("snapshot pinning", () => {
     git(gitDir, ["prune", "--expire=now"]);
   };
 
-  it("pins the commit under its snapshot id and records verified acquisition metadata", async () => {
+  it("pins the commit under its survey's id and records the pin and the reference it resolved from", async () => {
     const work = world.fixture.repo("work/orders");
     const commit = work.write("README.md", "orders\n").commit();
     const source = registerLocalSource(world.db, world.config, "orders", work.path, "main");
 
-    const { snapshot } = await acquire(world.db, world.config, source);
+    const { survey, resolution, snapshot } = await acquire(world.db, world.config, source);
     const gitDir = mirrorPath(world.config.repositoryStorage, source.publicId);
 
-    expect(snapshot.internalRef).toBe(internalRefFor(snapshot.publicId));
+    expect(snapshot.internalRef).toBe(surveyRefFor(survey.publicId));
+    expect(snapshot.internalRef).toMatch(/^refs\/fabricate\/snapshots\/srv_[a-z0-9]{16}$/);
     expect(git(gitDir, ["rev-parse", snapshot.internalRef]).trim()).toBe(commit);
     expect(git(gitDir, ["rev-parse", `${commit}^{tree}`]).trim()).toBe(snapshot.treeSha);
-    expect(parseCanonical(snapshot.acquisitionMetadata)).toEqual({
-      clone_url: `file://${work.path}`,
-      protocol: "file",
-      ref_kind: "branch",
-      requested_ref: "main",
-      resolved_ref: "refs/heads/main",
-      shallow: true,
-    });
+    expect(resolution).toEqual({ kind: "branch", name: "refs/heads/main", commitSha: commit });
+    expect(getSurvey(world.db, survey.publicId)).toMatchObject({ commitSha: commit, treeSha: snapshot.treeSha, internalRef: snapshot.internalRef, reference: "refs/heads/main", fromConfiguredReference: true });
+  });
+
+  it("keeps a recorded pin: pinning again changes nothing, and the database refuses another", async () => {
+    const work = world.fixture.repo("work/orders");
+    work.write("README.md", "orders\n").commit();
+    const source = registerLocalSource(world.db, world.config, "orders", work.path);
+    const { survey } = await acquire(world.db, world.config, source);
+
+    expect(pinSurvey(world.db, survey, { treeSha: "1".repeat(40), internalRef: surveyRefFor("srv_aaaaaaaaaaaaaaaa") })).toEqual(survey);
+    expect(() => rawRun(world.db, "update surveys set internal_ref = ? where id = ?", surveyRefFor("srv_aaaaaaaaaaaaaaaa"), survey.id)).toThrow(/a pinned commit stays pinned/);
+    expect(() => rawRun(world.db, "update surveys set tree_sha = ? where id = ?", "1".repeat(40), survey.id)).toThrow(/a pinned commit stays pinned/);
+  });
+
+  it("pins only under refs/fabricate/snapshots/", async () => {
+    const work = world.fixture.repo("work/orders");
+    const commit = work.write("README.md", "orders\n").commit();
+    const source = registerLocalSource(world.db, world.config, "orders", work.path);
+    await acquire(world.db, world.config, source);
+    const mirror = new Mirror(new GitRunner({ config: world.config }), source.publicId);
+
+    for (const ref of ["refs/heads/main", "refs/fabricate/incoming/srv_aaaaaaaaaaaaaaaa", "refs/fabricate/snapshots/prf_aaaaaaaaaaaaaaaa"]) {
+      await expect(mirror.pin(ref, commit)).rejects.toBeInstanceOf(AcquisitionError);
+    }
   });
 
   it("keeps pinned commits readable after the branch moves and the mirror is pruned", async () => {

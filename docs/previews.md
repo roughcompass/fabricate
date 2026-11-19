@@ -101,11 +101,11 @@ The chosen commit is pinned in the Repository's clone under `refs/fabricate/prev
 
 Before any build, DE FabLab prepares the pinned commit. Preparation is one per Repository and commit, so two branches at the same commit share it, and it keeps the ref first chosen.
 
-1. **Profiling.** If the Repository's newest Profile is of this commit, DE FabLab decides from it. Otherwise it runs the same detector release against the pinned commit, statically and with the configured analysis limits, exactly as an assessment would, and keeps that Profile with the preparation. It never becomes a profile version, and no Run is created.
+1. **Profiling.** DE FabLab decides from the Profile of the commit's survey under the current Surveyor recipe ([profiling.md](profiling.md)). When the commit has no such survey, it starts one, statically and with the configured analysis limits, exactly as a Run would, and the preparation waits for it. The survey is among the Repository's versions, and becomes its current Profile only when the commit came from the configured reference. No Run is created.
 2. **Deciding.** Each package is checked against the conditions below. The result is **Ready** when at least one package qualifies, or **Not previewable** with each failed condition and the facts behind it. A preparation that stops before deciding is **Failed**, with the reason.
 3. **Choosing a package.** When exactly one package qualifies, its build is queued at once. When several qualify, nothing is queued until the operator chooses one, and the build uses the prepared commit even if the branch has moved since.
 
-Requesting a Not previewable or Failed commit again prepares it again under the current settings, for example after configuring a Node version, reusing the Profile it already made.
+Requesting a Not previewable or Failed commit again prepares it again under the current settings, for example after configuring a Node version, reusing the commit's survey.
 
 ## What can be previewed
 

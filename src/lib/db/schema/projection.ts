@@ -28,11 +28,14 @@ export type EdgeKind = (typeof EDGE_KINDS)[number];
  * them from the documents.
  */
 
+export const DEPENDENCY_FACT_KINDS = ["dependency", "produced"] as const;
+export type DependencyFactKind = (typeof DEPENDENCY_FACT_KINDS)[number];
+
 const digestCheck = (name: string, column: unknown) => check(name, sql`length(${column}) = 64`);
 const versionCheck = (name: string, column: unknown) => check(name, sql`${column} > 0`);
 const jsonArrayCheck = (name: string, column: unknown) => check(name, sql`json_valid(${column}) AND json_type(${column}) = 'array'`);
 
-/** One declared or resolved direct dependency of one manifest in one Profile. */
+/** One declared or resolved direct dependency of one manifest in one Profile, or one package the Profile's repository produces. */
 export const dependencyFacts = sqliteTable(
   "dependency_facts",
   {
@@ -40,12 +43,8 @@ export const dependencyFacts = sqliteTable(
     profileId: integer("profile_id")
       .notNull()
       .references(() => repositoryProfiles.id, { onDelete: "restrict" }),
-    assessmentId: integer("assessment_id")
-      .notNull()
-      .references(() => assessments.id, { onDelete: "restrict" }),
-    assessmentTargetId: integer("assessment_target_id")
-      .notNull()
-      .references(() => assessmentTargets.id, { onDelete: "restrict" }),
+    /** `dependency` for a declared or resolved dependency; `produced` for a package the repository publishes, its version in resolvedVersion. */
+    kind: text("kind", { enum: DEPENDENCY_FACT_KINDS }).notNull(),
     manifest: text("manifest").notNull(),
     packageName: text("package_name").notNull(),
     /** The manifest field that declares it, such as dependencies; null when only a lockfile records it. */
@@ -58,10 +57,11 @@ export const dependencyFacts = sqliteTable(
     projectionVersion: integer("projection_version").notNull(),
   },
   (t) => [
-    index("dependency_facts_assessment_package").on(t.assessmentId, t.packageName),
+    index("dependency_facts_profile_package").on(t.profileId, t.packageName),
+    index("dependency_facts_kind_package").on(t.kind, t.packageName),
     index("dependency_facts_package_version").on(t.packageName, t.resolvedVersion),
-    index("dependency_facts_profile").on(t.profileId),
     check("dependency_facts_package_name", sql`length(${t.packageName}) > 0`),
+    check("dependency_facts_kind", sql.raw(`kind IN (${sqlList(DEPENDENCY_FACT_KINDS)})`)),
     jsonArrayCheck("dependency_facts_evidence", t.evidence),
     digestCheck("dependency_facts_document_digest", t.documentDigest),
     versionCheck("dependency_facts_projection_version", t.projectionVersion),
@@ -178,12 +178,6 @@ export const evidenceIndex = sqliteTable(
     profileId: integer("profile_id")
       .notNull()
       .references(() => repositoryProfiles.id, { onDelete: "restrict" }),
-    assessmentId: integer("assessment_id")
-      .notNull()
-      .references(() => assessments.id, { onDelete: "restrict" }),
-    assessmentTargetId: integer("assessment_target_id")
-      .notNull()
-      .references(() => assessmentTargets.id, { onDelete: "restrict" }),
     evidenceId: text("evidence_id").notNull(),
     path: text("path").notNull(),
     locationKind: text("location_kind", { enum: EVIDENCE_LOCATION_KINDS }).notNull(),
@@ -198,7 +192,6 @@ export const evidenceIndex = sqliteTable(
   },
   (t) => [
     uniqueIndex("evidence_index_profile_evidence").on(t.profileId, t.evidenceId),
-    index("evidence_index_assessment_evidence").on(t.assessmentId, t.evidenceId),
     check("evidence_index_location_kind", sql.raw(`location_kind IN (${sqlList(EVIDENCE_LOCATION_KINDS)})`)),
     check("evidence_index_lines", sql`(${t.locationKind} = 'lines') = (${t.lineStart} IS NOT NULL AND ${t.lineEnd} IS NOT NULL)`),
     check("evidence_index_pointer", sql`(${t.locationKind} = 'pointer') = (${t.pointer} IS NOT NULL)`),

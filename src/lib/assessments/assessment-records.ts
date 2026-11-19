@@ -2,11 +2,12 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import type { RepositorySource } from "@/lib/catalog/source-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError } from "@/lib/db/errors";
-import { generatePublicId, isPublicId } from "@/lib/db/ids";
+import { generatePublicId } from "@/lib/db/ids";
 import { sequenceNumber, sequenceNumbers } from "@/lib/db/sequence";
-import { REF_KINDS, type RefKind, assessmentTargets, assessments, sourceSnapshots } from "@/lib/db/schema";
+import { type RefKind, assessmentTargets, assessments } from "@/lib/db/schema";
 import { type JsonObject, digestOf } from "@repo-facts/contract";
 import type { Initiative } from "@/lib/initiatives/initiative-records";
+import { transitionTarget } from "./transitions";
 
 /**
  * Persistence for Assessments, their immutable scope snapshot, and the
@@ -16,11 +17,8 @@ import type { Initiative } from "@/lib/initiatives/initiative-records";
 
 export type Assessment = typeof assessments.$inferSelect;
 export type AssessmentTarget = typeof assessmentTargets.$inferSelect;
-export type SourceSnapshot = typeof sourceSnapshots.$inferSelect;
 
 export const LAUNCH_TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const OBJECT_ID = /^[0-9a-f]{40}$/;
-
 export interface NewAssessment {
   initiative: Initiative;
   launchToken: string;
@@ -119,12 +117,6 @@ export function targetsOf(db: Executor, assessmentId: number): AssessmentTarget[
   return db.select().from(assessmentTargets).where(eq(assessmentTargets.assessmentId, assessmentId)).orderBy(asc(assessmentTargets.position)).all();
 }
 
-export function targetById(db: Executor, id: number): AssessmentTarget {
-  const target = db.select().from(assessmentTargets).where(eq(assessmentTargets.id, id)).get();
-  if (!target) throw new NotFoundError(`Assessment target ${id} does not exist`);
-  return target;
-}
-
 export function getTarget(db: Executor, publicId: string): AssessmentTarget {
   const target = db.select().from(assessmentTargets).where(eq(assessmentTargets.publicId, publicId)).get();
   if (!target) throw new NotFoundError(`Assessment target ${publicId} does not exist`);
@@ -135,53 +127,17 @@ export function targetReferenceLabel(target: Pick<AssessmentTarget, "gitRef">): 
   return target.gitRef ?? "default branch";
 }
 
-export interface SnapshotInput {
-  /** The snapshot's public id, when its internal ref was created under it first. */
-  publicId?: string;
-  commitSha: string;
-  treeSha: string;
-  refKind: RefKind;
-  resolvedRef: string;
-  acquisitionMetadata: JsonObject;
-  acquiredAt?: Date;
-}
-
-export function internalRefFor(snapshotPublicId: string): string {
-  return `refs/fabricate/snapshots/${snapshotPublicId}`;
-}
-
-/** Records the commit an acquiring target was pinned to. */
-export function recordSnapshot(db: Executor, target: AssessmentTarget, input: SnapshotInput): SourceSnapshot {
-  const issues = new IssueCollector();
-  if (!OBJECT_ID.test(input.commitSha)) issues.add("commitSha", "Commit must be a 40-character lowercase object id");
-  if (!OBJECT_ID.test(input.treeSha)) issues.add("treeSha", "Tree must be a 40-character lowercase object id");
-  if (!REF_KINDS.includes(input.refKind)) issues.add("refKind", "Reference kind is not supported");
-  if (!input.resolvedRef) issues.add("resolvedRef", "Resolved reference is required");
-
-  if (input.publicId !== undefined && !isPublicId(input.publicId, "snp")) issues.add("publicId", "Snapshot id is not valid");
-  issues.throwIfAny();
-
-  const publicId = input.publicId ?? generatePublicId("snp");
+/**
+ * Records how an acquiring target's reference resolved and the survey of its
+ * commit, and moves it to analyzing to wait on that survey.
+ */
+export function linkSurvey(db: Executor, target: AssessmentTarget, link: { refKind: RefKind; resolvedRef: string; surveyId: number }): AssessmentTarget {
   const now = new Date();
-  return db
-    .insert(sourceSnapshots)
-    .values({
-      publicId,
-      assessmentTargetId: target.id,
-      repositorySourceId: target.repositorySourceId,
-      commitSha: input.commitSha,
-      treeSha: input.treeSha,
-      refKind: input.refKind,
-      resolvedRef: input.resolvedRef,
-      internalRef: internalRefFor(publicId),
-      acquisitionMetadata: digestOf(input.acquisitionMetadata).text,
-      acquiredAt: input.acquiredAt ?? now,
-      createdAt: now,
-    })
+  const linked = db
+    .update(assessmentTargets)
+    .set({ refKind: link.refKind, resolvedRef: link.resolvedRef, resolvedAt: now, surveyId: link.surveyId, updatedAt: now })
+    .where(eq(assessmentTargets.id, target.id))
     .returning()
-    .get() as SourceSnapshot;
-}
-
-export function snapshotOf(db: Executor, targetId: number): SourceSnapshot | undefined {
-  return db.select().from(sourceSnapshots).where(eq(sourceSnapshots.assessmentTargetId, targetId)).get();
+    .get();
+  return transitionTarget(db, linked, "analyzing");
 }

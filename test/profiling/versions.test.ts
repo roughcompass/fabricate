@@ -1,27 +1,58 @@
 import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import { targetsOf } from "@/lib/assessments/assessment-records";
+import { surveyRefFor } from "@/lib/acquisition/mirror";
 import { launchAssessment } from "@/lib/assessments/launcher";
-import { transitionAssessment } from "@/lib/assessments/transitions";
-import { ScopeResolutionError } from "@/lib/assessments/scope-resolver";
-import { editSource, registerSource } from "@/lib/catalog/catalog";
-import type { RepositorySource } from "@/lib/catalog/source-records";
+import { registerSource } from "@/lib/catalog/catalog";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
+import type { RepositorySource } from "@/lib/catalog/source-records";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
-import { JOB_PRIORITIES, jobs } from "@/lib/db/schema";
-import { PROFILING_INITIATIVE_ID, getInitiative, listInitiatives, updateInitiative } from "@/lib/initiatives/initiative-records";
-import { findVersion, profileSummaries, profilingActivity, queueProfile, repositoryProfiling, versionCount, versionOfAssessment, versionsOf } from "@/lib/profiling/versions";
+import { type SurveyTrigger, assessments } from "@/lib/db/schema";
+import { listInitiatives } from "@/lib/initiatives/initiative-records";
+import { jobHandlers } from "@/lib/jobs/registry";
+import { drainJobs } from "@/lib/jobs/worker";
+import { requestPreparation } from "@/lib/previews/preparation";
+import { checkProfiles } from "@/lib/profiling/check";
+import { currentProfile } from "@/lib/profiling/current";
+import { TRIGGER_LABELS, findVersion, isActive, profileSummaries, profilingActivity, repositoryProfiling, versionCount, versionsOf } from "@/lib/profiling/versions";
+import { profileOfSurvey } from "@/lib/profiles/profile-records";
+import { surveyRepository } from "@/lib/surveys/background";
+import { type Survey, currentRecipe, moveSurvey, pinSurvey, recordConfiguredResolution, requestSurvey } from "@/lib/surveys/records";
+import { finishSurvey } from "@/lib/surveys/run";
+import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
 import { buildInitiative, buildSource } from "../support/builders";
-import { createTestDb, rawRun } from "../support/db";
-import { GitFixture } from "../support/git-fixture";
-import { manifest } from "../support/profiles";
-import { completeRun } from "../support/scenarios";
+import { createTestDb } from "../support/db";
+import { manifest, memoryProfile, sha1 } from "../support/profiles";
 
-/** Drives version +number+ of +source+ to a Profile, or to a failure. */
-async function finish(db: Db, source: RepositorySource, number: number, outcome: "profiled" | "failed" = "profiled") {
-  const version = findVersion(db, source.id, number)!;
-  await completeRun(db, version.assessment, targetsOf(db, version.assessment.id), [source], [outcome === "failed" ? "failed" : { "package.json": manifest({ name: source.name, version: `1.0.${number}` }) }]);
+let commits = 0;
+
+interface SurveyOptions {
+  trigger?: SurveyTrigger;
+  /** Where it ends: with a Profile by default, failed, or still on its way. */
+  end?: "succeeded" | "failed" | "queued" | "running";
+  fromConfiguredReference?: boolean;
+}
+
+/** A survey of a new commit of +source+ under the current recipe, driven to +end+ as the survey job would. */
+async function survey(db: Db, source: RepositorySource, options: SurveyOptions = {}): Promise<Survey> {
+  const commitSha = sha1(`commit:${source.publicId}:${++commits}`);
+  const { survey: queued } = requestSurvey(db, {
+    repositorySourceId: source.id,
+    commitSha,
+    reference: options.fromConfiguredReference === false ? "refs/heads/feature" : "refs/heads/main",
+    fromConfiguredReference: options.fromConfiguredReference ?? true,
+    trigger: options.trigger ?? "manual",
+    ...currentRecipe(getConfig()),
+  });
+  // Background surveying records which commit the configured reference names.
+  if (options.fromConfiguredReference !== false) recordConfiguredResolution(db, source.id, commitSha, new Date());
+  const end = options.end ?? "succeeded";
+  if (end === "queued") return queued;
+  const running = pinSurvey(db, moveSurvey(db, queued, "running", { attempts: 1 }), { treeSha: sha1(`tree:${commitSha}`), internalRef: surveyRefFor(queued.publicId) });
+  if (end === "running") return running;
+  if (end === "failed") return finishSurvey(db, running, { failure: { code: "source_unavailable", message: "The repository could not be reached" } });
+  const { document } = await memoryProfile({ "package.json": manifest({ name: source.name, version: "1.0.0" }) }, { public_id: source.publicId, name: source.name }, commitSha);
+  return finishSurvey(db, running, { document });
 }
 
 describe("profile versions", () => {
@@ -32,144 +63,145 @@ describe("profile versions", () => {
     orders = buildSource(db, { name: "orders" });
   });
 
-  it("queues version 1 as a background Run of the Repository profiling initiative, profiling the repository alone at its reference", () => {
-    const result = queueProfile(db, orders, "imported");
+  it("numbers a fifth survey 5, and versions 1 to 4 keep their numbers and addresses", async () => {
+    await survey(db, orders, { trigger: "added" });
+    await survey(db, orders, { trigger: "commit", end: "failed" });
+    await survey(db, orders, { trigger: "manual" });
+    await survey(db, orders, { trigger: "preview", fromConfiguredReference: false });
+    const before = [1, 2, 3, 4].map((number) => findVersion(db, orders.id, number)!.survey.publicId);
 
-    expect(result.status).toBe("queued");
-    const version = (result as { version: ReturnType<typeof versionsOf>[number] }).version;
-    expect(version).toMatchObject({ version: 1, trigger: "imported", headCommit: null, profile: null, commit: null, failure: null });
-    expect(version.assessment.initiativeId).toBe(getInitiative(db, PROFILING_INITIATIVE_ID).id);
-    expect(targetsOf(db, version.assessment.id).map((target) => [target.sourcePublicId, target.gitRef])).toEqual([[orders.publicId, orders.gitRef]]);
-    expect(db.select().from(jobs).all().map((job) => [job.kind, job.priority])).toEqual([["assessment.coordinate", JOB_PRIORITIES.background]]);
-    expect(versionOfAssessment(db, version.assessment.id)).toEqual({ version: 1, sourcePublicId: orders.publicId, sourceName: "orders" });
+    const fifth = await survey(db, orders, { trigger: "commit" });
+
+    expect(fifth.number).toBe(5);
+    expect(versionsOf(db, orders.id).map((version) => version.version)).toEqual([5, 4, 3, 2, 1]);
+    expect([1, 2, 3, 4].map((number) => findVersion(db, orders.id, number)!.survey.publicId)).toEqual(before);
+    expect(findVersion(db, orders.id, 5)!.survey.publicId).toBe(fifth.publicId);
   });
 
-  it("queues no second version while one is queued or running, and numbers the next one after it finishes", async () => {
-    queueProfile(db, orders, "imported");
-    expect(queueProfile(db, orders, "manual")).toMatchObject({ status: "active", version: { version: 1 } });
+  it("numbers each repository's surveys on their own", async () => {
+    const ledger = buildSource(db, { name: "ledger" });
+    await survey(db, orders);
+    await survey(db, ledger);
+    await survey(db, orders);
 
-    await finish(db, orders, 1);
-    expect(queueProfile(db, orders, "manual")).toMatchObject({ status: "queued", version: { version: 2, trigger: "manual" } });
     expect(versionsOf(db, orders.id).map((version) => version.version)).toEqual([2, 1]);
-    expect(versionCount(db, orders.id)).toBe(2);
+    expect(versionsOf(db, ledger.id).map((version) => version.version)).toEqual([1]);
   });
 
-  it("names the version it already queued when the same launch token is submitted twice", async () => {
-    queueProfile(db, orders, "imported");
-    await finish(db, orders, 1);
-    const token = crypto.randomUUID();
-    queueProfile(db, orders, "manual", { launchToken: token });
-    await finish(db, orders, 2);
-    expect(queueProfile(db, orders, "manual", { launchToken: token })).toMatchObject({ status: "active", version: { version: 2 } });
-    expect(versionCount(db, orders.id)).toBe(2);
-  });
-
-  it("shows the newest profiled version as current while a later one runs or after one fails", async () => {
-    queueProfile(db, orders, "imported");
-    await finish(db, orders, 1);
-    queueProfile(db, orders, "manual");
-    await finish(db, orders, 2, "failed");
-    queueProfile(db, orders, "manual");
+  it("shows each version's state, commit, Profile, and failure, and pages newest first", async () => {
+    const first = await survey(db, orders);
+    const failed = await survey(db, orders, { end: "failed" });
+    await survey(db, orders, { end: "running" });
+    await survey(db, orders, { end: "queued" });
 
     const versions = versionsOf(db, orders.id);
-    expect(versions.map((version) => [version.version, version.assessment.state, version.profile !== null, version.failure?.code ?? null])).toEqual([
-      [3, "queued", false, null],
-      [2, "failed", false, "source_unavailable"],
-      [1, "complete", true, null],
+    expect(versions.map((version) => [version.version, version.survey.state, version.profile !== null, version.failure?.code ?? null, isActive(version)])).toEqual([
+      [4, "queued", false, null, true],
+      [3, "running", false, null, true],
+      [2, "failed", false, "source_unavailable", false],
+      [1, "succeeded", true, null, false],
     ]);
-    expect(versions[2]!.commit).toMatch(/^[0-9a-f]{40}$/);
-    expect(repositoryProfiling(db, orders.id)).toMatchObject({ current: { version: 1 }, latest: { version: 3 }, count: 3 });
-    expect(findVersion(db, orders.id, 2)?.failure?.message).toBe("The repository could not be reached");
-    expect(findVersion(db, orders.id, 4)).toBeUndefined();
-    expect(findVersion(db, orders.id, 0)).toBeUndefined();
+    expect(versions[3]).toMatchObject({ commit: first.commitSha, profile: { publicId: profileOfSurvey(db, first.id)!.publicId } });
+    expect(findVersion(db, orders.id, 2)).toMatchObject({ commit: failed.commitSha, failure: { code: "source_unavailable", message: "The repository could not be reached" } });
+
+    expect(versionCount(db, orders.id)).toBe(4);
+    expect(versionsOf(db, orders.id, 2, 1).map((version) => version.version)).toEqual([3, 2]);
+    for (const missing of [0, 5, 1.5, -1]) expect(findVersion(db, orders.id, missing)).toBeUndefined();
+    expect(versionCount(db, buildSource(db, { name: "ledger" }).id)).toBe(0);
   });
 
-  it("summarizes every repository's newest version and current Profile in two reads", async () => {
+  it("shows the newest successful survey of the configured reference as current, apart from the newest version", async () => {
+    await survey(db, orders);
+    await survey(db, orders, { end: "failed" });
+    await survey(db, orders, { end: "queued" });
+
+    expect(repositoryProfiling(db, orders.id)).toMatchObject({ current: { version: 1 }, latest: { version: 3, survey: { state: "queued" } }, count: 3 });
+    expect(repositoryProfiling(db, buildSource(db, { name: "ledger" }).id)).toEqual({ current: undefined, latest: undefined, count: 0 });
+  });
+
+  it("summarizes every repository's newest version and current Profile", async () => {
     const ledger = buildSource(db, { name: "ledger" });
+    const shop = buildSource(db, { name: "shop" });
     buildSource(db, { name: "billing" });
-    queueProfile(db, orders, "imported");
-    await finish(db, orders, 1);
-    queueProfile(db, orders, "commit");
-    queueProfile(db, ledger, "imported");
+    await survey(db, orders);
+    await survey(db, orders, { end: "queued" });
+    await survey(db, ledger, { end: "queued" });
+    // A survey of a branch is a version, but never current.
+    await survey(db, shop, { trigger: "preview", fromConfiguredReference: false });
 
     const summaries = profileSummaries(db);
-    expect(summaries.size).toBe(2);
+    expect(summaries.size).toBe(3);
     expect(summaries.get(orders.id)).toMatchObject({ latest: { version: 2, state: "queued", profiled: false }, current: { version: 1, profilePublicId: expect.stringMatching(/^prf_/) } });
     expect(summaries.get(ledger.id)).toMatchObject({ latest: { version: 1, state: "queued", profiled: false }, current: null });
+    expect(summaries.get(shop.id)).toMatchObject({ latest: { version: 1, state: "succeeded", profiled: true }, current: null });
   });
 
-  it("counts what is being profiled and what waits, and changes its version as each one moves", async () => {
+  it("counts surveys running and waiting, and changes its version as each one moves", async () => {
     const ledger = buildSource(db, { name: "ledger" });
     expect(profilingActivity(db)).toMatchObject({ profiling: 0, queued: 0 });
-    queueProfile(db, orders, "imported");
-    queueProfile(db, ledger, "imported");
-    const waiting = profilingActivity(db);
-    expect(waiting).toMatchObject({ profiling: 0, queued: 2 });
+    const waiting = await survey(db, orders, { end: "queued" });
+    await survey(db, ledger, { end: "queued" });
+    const queued = profilingActivity(db);
+    expect(queued).toMatchObject({ profiling: 0, queued: 2 });
 
-    transitionAssessment(db, findVersion(db, orders.id, 1)!.assessment, "acquiring");
+    const running = moveSurvey(db, waiting, "running", { attempts: 1 });
     const started = profilingActivity(db);
     expect(started).toMatchObject({ profiling: 1, queued: 1 });
-    expect(started.version).not.toBe(waiting.version);
+    expect(started.version).not.toBe(queued.version);
 
-    await finish(db, ledger, 1);
-    expect(profilingActivity(db)).toMatchObject({ profiling: 1, queued: 0 });
-  });
-
-  it("keeps versions as recorded, and only for a Repository profiling Run of their repository", () => {
-    const version = (queueProfile(db, orders, "imported") as { version: { assessment: { id: number } } }).version;
-    expect(() => rawRun(db, "update profile_versions set trigger = 'manual'")).toThrow(/never changed/);
-    expect(() => rawRun(db, "delete from profile_versions")).toThrow(/retained/);
-    const other = buildSource(db, { name: "ledger" });
-    expect(() => rawRun(db, "insert into profile_versions (repository_source_id, assessment_id, version, trigger, created_at) values (?, ?, 2, 'manual', 0)", other.id, version.assessment.id)).toThrow(/Repository profiling Run of its repository/);
+    finishSurvey(db, running, { failure: { code: "source_unavailable", message: "The repository could not be reached" } });
+    expect(profilingActivity(db)).toMatchObject({ profiling: 0, queued: 1 });
   });
 });
 
-describe("the Repository profiling initiative", () => {
-  let db: Db;
-  beforeEach(() => {
-    db = createTestDb();
+describe("background profiling", () => {
+  const world = useAcquisitionWorld("profile-versions");
+
+  it("surveys repositories without any Assessment or Run", async () => {
+    const work = world.fixture.repo("fleet/web");
+    work.write("package.json", manifest({ name: "web", version: "1.0.0" })).commit("first");
+    const web = registerLocalSource(world.db, world.config, "web", work.path);
+    await surveyRepository(world.db, web, "added", { config: world.config });
+    await drainJobs(world.db, jobHandlers(world.db, world.config));
+
+    expect(currentProfile(world.db, web.id)).toMatchObject({ version: 1 });
+    expect(listInitiatives(world.db)).toEqual([]);
+    expect(world.db.select().from(assessments).all()).toEqual([]);
   });
 
-  it("takes each Run's scope from its launch, and is the only initiative that does", () => {
-    const orders = buildSource(db, { name: "orders" });
-    expect(() => launchAssessment(db, PROFILING_INITIATIVE_ID, crypto.randomUUID())).toThrow(ScopeResolutionError);
-    expect(() => launchAssessment(db, buildInitiative(db, { sources: [orders] }).publicId, crypto.randomUUID(), getConfig(), { sources: [orders] })).toThrow(/Only the Repository profiling initiative/);
+  it("names what started each version: adding the repository, a new commit, a Run of an Assessment, and a preview", async () => {
+    const work = world.fixture.repo("fleet/web");
+    work.write("package.json", manifest({ name: "web", version: "1.0.0" })).commit("first");
+    const web = registerSource(world.db, { name: "web", cloneUrl: work.url, gitRef: "" }, new SourceBoundary(world.config));
+    const config = withOverrides(world.config, { previews: { enabled: true, trustedSources: [web.canonicalUrl] } });
+    const run = () => drainJobs(world.db, jobHandlers(world.db, config));
+    await run();
+
+    work.write("README.md", "two\n").commit("second");
+    checkProfiles(world.db, "2026-11-18T09:00:00.000Z");
+    await run();
+
+    work.write("README.md", "three\n").commit("third");
+    const initiative = buildInitiative(world.db, { name: "Checkout platform migration", sources: [web] });
+    const { assessment } = launchAssessment(world.db, initiative.publicId, crypto.randomUUID(), config);
+    await run();
+
+    work.git("checkout", "--quiet", "-b", "feature");
+    const feature = work.write("feature.txt", "feature\n").commit("feature");
+    work.checkout("main");
+    await requestPreparation(world.db, web.publicId, { kind: "ref", name: "feature" }, { config });
+    await run();
+
+    const versions = versionsOf(world.db, web.id);
+    expect(versions.map((version) => [version.version, version.trigger, TRIGGER_LABELS[version.trigger], version.survey.state])).toEqual([
+      [4, "preview", "Preview", "succeeded"],
+      [3, "run", "Assessment Run", "succeeded"],
+      [2, "commit", "New commit", "succeeded"],
+      [1, "added", "Added", "succeeded"],
+    ]);
+    expect(versions.map((version) => version.requestedBy)).toEqual([null, { assessmentPublicId: assessment.publicId, name: "Checkout platform migration" }, null, null]);
+    expect(versions[0]).toMatchObject({ commit: feature, survey: { reference: "refs/heads/feature", fromConfiguredReference: false } });
+    // The preview's survey of a branch is a version, but the Run's survey of the reference stays current.
+    expect(currentProfile(world.db, web.id)?.version).toBe(3);
   });
-
-  it("stays out of the operator's Assessments and keeps its name, scope, and empty Releases", () => {
-    const initiative = getInitiative(db, PROFILING_INITIATIVE_ID);
-    expect(listInitiatives(db).map((item) => item.publicId)).not.toContain(PROFILING_INITIATIVE_ID);
-    expect(() => updateInitiative(db, PROFILING_INITIATIVE_ID, initiative.lockVersion, { name: initiative.name, selectionMode: "all" })).toThrow(/can't change/);
-    expect(() => rawRun(db, "update initiatives set name = 'Mine' where public_id = ?", PROFILING_INITIATIVE_ID)).toThrow(/keeps its name/);
-    expect(() => rawRun(db, "delete from initiatives where public_id = ?", PROFILING_INITIATIVE_ID)).toThrow(/retained/);
-    expect(() => rawRun(db, "insert into initiative_targets (initiative_id, repository_source_id, created_at) values (?, ?, 0)", initiative.id, buildSource(db).id)).toThrow(/names its own repository/);
-  });
-});
-
-describe("profiling as the catalog changes", () => {
-  let db: Db;
-  let fixture: GitFixture;
-  let boundary: SourceBoundary;
-  beforeEach(() => {
-    db = createTestDb();
-    fixture = GitFixture.create("profiling");
-    fixture.repo("fleet/orders").write("README.md", "orders").commit();
-    boundary = new SourceBoundary(withOverrides(getConfig(), { allowedRoots: [fixture.dir("fleet")] }));
-    return () => fixture.cleanup();
-  });
-
-  const triggers = (source: RepositorySource) => versionsOf(db, source.id).map((version) => version.trigger);
-  const form = (overrides: Partial<{ name: string; cloneUrl: string; gitRef: string }> = {}) => ({ name: "orders", cloneUrl: `file://${fixture.dir("fleet")}/orders`, gitRef: "", ...overrides });
-
-  it("queues a version when a repository is added, and when its clone URL or reference is edited, but not when only its name changes", async () => {
-    const source = registerSource(db, form(), boundary);
-    expect(triggers(source)).toEqual(["added"]);
-    await finish(db, source, 1);
-
-    const renamed = editSource(db, source.publicId, source.lockVersion, form({ name: "orders-service" }), boundary);
-    expect(triggers(source)).toEqual(["added"]);
-    editSource(db, source.publicId, renamed.lockVersion, form({ name: "orders-service", gitRef: "main" }), boundary);
-    expect(triggers(source)).toEqual(["edited", "added"]);
-  });
-
 });

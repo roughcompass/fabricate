@@ -10,7 +10,7 @@ export type PublicIdPrefix =
   | "ini" // initiative
   | "asm" // assessment
   | "tgt" // assessment target
-  | "snp" // source snapshot
+  | "srv" // survey
   | "prf" // repository profile
   | "map" // relationship map
   | "std" // standard

@@ -1,33 +1,31 @@
 import { eq } from "drizzle-orm";
-import { DETECTOR_RELEASE, analyze, detectorConfiguration } from "@repo-facts/bundle";
 import type { JsonObject } from "@repo-facts/contract";
 import { mirrorPath } from "@/lib/acquisition/mirror";
 import { type RepositorySource, getSource } from "@/lib/catalog/source-records";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
-import { repositorySources } from "@/lib/db/schema";
-import { prepareDocument, readDocument } from "@/lib/documents/digested";
+import { JOB_PRIORITIES, repositorySources } from "@/lib/db/schema";
+import { readDocument } from "@/lib/documents/digested";
 import { failureText } from "@/lib/git/redact";
 import { GitRunner } from "@/lib/git/runner";
-import { buildProfile, profileProblems } from "@/lib/profiles/schema";
 import type { FactDocument } from "@/lib/profiles/states";
-import { currentProfile } from "@/lib/profiling/current";
+import { profileOfSurvey } from "@/lib/profiles/profile-records";
+import { type Survey, currentRecipe, recordConfiguredResolution, requestSurvey, surveyById } from "@/lib/surveys/records";
+import { queueSurvey } from "@/lib/surveys/run";
 import { SnapshotReader } from "@/lib/snapshot/reader";
 import { assertEnrolled, isEnrolled } from "./access";
 import { type ManifestRead, evaluateEligibility, installRootManifests, manifestPath, vitePackages } from "./eligibility";
 import { type PageRead, readPage, viteConfig } from "./pages";
-import { type PreparationProfile, type PreviewPreparation, decidePreparation, failPreparation, findPreparation, openPreparation, startPreview } from "./records";
+import { type PreviewPreparation, decidePreparation, failPreparation, findPreparation, linkPreparationSurvey, openPreparation, startPreview } from "./records";
 import { type RefOptions, type RefRequest, pinCommit, previewPinRef } from "./refs";
 
 /**
  * Prepares a pinned commit for previews before any build exists (design
  * decision 3). A request checks the feature switch and the Repository's
  * enrollment, pins the commit, and queues a `preview.prepare` job. The job
- * decides from the Repository's newest Profile when it's of this commit, or
- * else runs the same detector bundle statically through the snapshot reader
- * at the pin, with the configured analysis budgets, keeping the document with
- * the preparation. It never creates a profile version or touches an
- * assessment. It then reads the install roots' committed manifests, and looks
+ * decides from the Profile of the commit's survey under the current recipe,
+ * starting the survey when there's none and waiting for it, so a commit any
+ * Run, check, or preview already surveyed isn't surveyed again. It then reads the install roots' committed manifests, and looks
  * for each Vite package's committed page, through the same reader, evaluates
  * every package, and, when exactly one qualifies, starts its preview.
  */
@@ -38,6 +36,8 @@ export async function requestPreparation(db: Executor, sourcePublicId: string, r
   const source = getSource(db, sourcePublicId);
   assertEnrolled(config, source);
   const pinned = await pinCommit(db, source, request, { ...options, config });
+  // A request for the configured reference says which commit it names now (unify-surveys, design decision 4).
+  if (request.kind === "ref" && request.name === source.gitRef) recordConfiguredResolution(db, source.id, pinned.commitSha, new Date());
   return openPreparation(db, source, pinned).preparation;
 }
 
@@ -45,6 +45,8 @@ export interface PreparationJob {
   preparation: string;
   /** When the preparation was requested, so a job for an earlier request changes nothing. */
   requested: number;
+  /** Queued by its survey when it finished, rather than by the request. */
+  afterSurvey?: boolean;
 }
 
 /**
@@ -65,7 +67,15 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
     const runner = options.runner ?? new GitRunner({ config });
     const gitDir = mirrorPath(config.repositoryStorage, source.publicId);
     const open = () => SnapshotReader.open(runner, gitDir, previewPinRef(preparation.commitSha), preparation.commitSha, config.analysis);
-    const { profile, document } = await profileOf(db, source, preparation, config, open, options.signal);
+    // Waking from a survey that failed fails the preparation; a new request tries the survey again.
+    const linked = job.afterSurvey && preparation.surveyId !== null ? surveyById(db, preparation.surveyId) : undefined;
+    const survey = linked?.state === "failed" ? linked : previewSurvey(db, source, preparation, config);
+    if (survey.state === "failed") return failPreparation(db, job.preparation, job.requested, `The commit couldn't be surveyed: ${survey.failureMessage ?? survey.failureCode}`);
+    // The survey continues this preparation when it finishes.
+    if (survey.state !== "succeeded") return null;
+    const stored = profileOfSurvey(db, survey.id)!;
+    const document = readDocument("repositoryProfile", stored, `Repository Profile ${stored.publicId}`);
+    const profile = { surveyId: survey.id, digest: stored.digest };
     const facts = document.fact_document as unknown as FactDocument;
     const reader = await open();
     const manifests = await readManifests(reader, installRootManifests(facts));
@@ -85,44 +95,27 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
 }
 
 /**
- * The Profile to decide from: the Repository's newest Profile when it's of
- * this commit, else one this preparation made earlier with the same detector
- * release and configuration, else a new static detector run at the pin.
+ * The survey to decide from (unify-surveys, design decision 6): the commit's
+ * survey under the current recipe, started with the trigger `preview` when
+ * there's none, at the priority of work a person waits on. It's among the
+ * Repository's versions, and becomes current only when the commit came from
+ * the configured reference.
  */
-async function profileOf(
-  db: Executor,
-  source: RepositorySource,
-  preparation: PreviewPreparation,
-  config: FabricateConfig,
-  open: () => Promise<SnapshotReader>,
-  signal?: AbortSignal,
-): Promise<{ profile: PreparationProfile; document: JsonObject }> {
-  const current = currentProfile(db, source.id);
-  if (current && current.commit === preparation.commitSha) {
-    const stored = current.profile;
-    return { profile: { repositoryProfileId: stored.id, digest: stored.digest }, document: readDocument("repositoryProfile", stored, `Repository Profile ${stored.publicId}`) };
-  }
-
-  const { digest: configurationDigest } = detectorConfiguration(config.analysis);
-  if (preparation.profileDocument !== null && preparation.profileDigest !== null) {
-    const kept = readDocument("repositoryProfile", { document: preparation.profileDocument, digest: preparation.profileDigest }, `The Profile of preparation ${preparation.publicId}`);
-    if (kept.detector_release === DETECTOR_RELEASE && kept.detector_configuration_digest === configurationDigest) return { profile: { document: preparation.profileDocument, digest: preparation.profileDigest }, document: kept };
-  }
-
-  const factDocument = await analyze(await open(), signal ? { signal } : {});
-  const prepared = prepareDocument(
-    "repositoryProfile",
-    buildProfile({
-      source: { public_id: source.publicId, name: source.name, clone_url: source.cloneUrl, git_ref: source.gitRef },
-      commit: preparation.commitSha,
-      detectorRelease: DETECTOR_RELEASE,
-      configurationDigest,
-      factDocument,
-    }),
-  );
-  const problems = profileProblems(prepared.value);
-  if (problems.length) throw new Error(`The commit's Profile is not valid: ${problems.join("; ")}`);
-  return { profile: { document: prepared.text, digest: prepared.digest }, document: prepared.value };
+function previewSurvey(db: Executor, source: RepositorySource, preparation: PreviewPreparation, config: FabricateConfig): Survey {
+  return immediate(db, (tx) => {
+    const { survey } = requestSurvey(tx, {
+      repositorySourceId: source.id,
+      commitSha: preparation.commitSha,
+      reference: preparation.refName ?? preparation.commitSha,
+      // Whatever ref the preview named, its survey becomes current only if its commit is the one the configured reference last named.
+      fromConfiguredReference: source.configuredCommit === preparation.commitSha,
+      trigger: "preview",
+      ...currentRecipe(config),
+    });
+    if (survey.state === "queued") queueSurvey(tx, survey, JOB_PRIORITIES.normal);
+    linkPreparationSurvey(tx, preparation.id, survey.id);
+    return survey;
+  });
 }
 
 /** The committed package.json of each of +directories+, read through +reader+. */

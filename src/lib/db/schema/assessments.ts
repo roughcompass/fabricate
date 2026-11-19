@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { initiatives, repositorySources } from "./catalog";
+import { surveys } from "./surveys";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
 
 export const ASSESSMENT_STATES = ["queued", "acquiring", "analyzing", "finalizing", "complete", "complete_with_issues", "failed", "canceled"] as const;
@@ -71,6 +72,12 @@ export const assessmentTargets = sqliteTable(
     cloneUrl: text("clone_url").notNull(),
     canonicalUrl: text("canonical_url").notNull(),
     gitRef: text("git_ref"),
+    /** How its reference resolved, once it did: the kind, the resolved ref, and when. */
+    refKind: text("ref_kind", { enum: REF_KINDS }),
+    resolvedRef: text("resolved_ref"),
+    resolvedAt: timestamp("resolved_at"),
+    /** The survey of its commit, which it waits on and whose Profile it uses. */
+    surveyId: integer("survey_id").references((): AnySQLiteColumn => surveys.id, { onDelete: "restrict" }),
     state: text("state", { enum: TARGET_STATES }).notNull().default("pending"),
     failureCode: text("failure_code"),
     failureMessage: text("failure_message"),
@@ -84,49 +91,16 @@ export const assessmentTargets = sqliteTable(
     uniqueIndex("assessment_targets_position").on(t.assessmentId, t.position),
     uniqueIndex("assessment_targets_source").on(t.assessmentId, t.repositorySourceId),
     index("assessment_targets_repository_source").on(t.repositorySourceId),
+    index("assessment_targets_survey").on(t.surveyId),
     check("assessment_targets_public_id", sql`${t.publicId} GLOB 'tgt_*'`),
     check("assessment_targets_position_range", sql`${t.position} >= 0`),
     check("assessment_targets_state", sql.raw(`state IN (${sqlList(TARGET_STATES)})`)),
     // A failure code is recorded exactly when the target failed.
     check("assessment_targets_failure_code", sql`(${t.failureCode} IS NOT NULL) = (${t.state} = 'failed')`),
-  ],
-);
-
-/**
- * The commit a target was pinned to after successful acquisition. The
- * internal ref keeps the commit reachable in the managed object database.
- */
-export const sourceSnapshots = sqliteTable(
-  "source_snapshots",
-  {
-    id: id(),
-    publicId: publicId(),
-    assessmentTargetId: integer("assessment_target_id")
-      .notNull()
-      .unique()
-      .references(() => assessmentTargets.id, { onDelete: "restrict" }),
-    repositorySourceId: integer("repository_source_id")
-      .notNull()
-      .references(() => repositorySources.id, { onDelete: "restrict" }),
-    commitSha: text("commit_sha").notNull(),
-    treeSha: text("tree_sha").notNull(),
-    refKind: text("ref_kind", { enum: REF_KINDS }).notNull(),
-    resolvedRef: text("resolved_ref").notNull(),
-    internalRef: text("internal_ref").notNull().unique(),
-    acquisitionMetadata: text("acquisition_metadata").notNull(),
-    acquiredAt: timestamp("acquired_at").notNull(),
-    createdAt: createdAt(),
-  },
-  (t) => [
-    index("source_snapshots_commit").on(t.commitSha),
-    index("source_snapshots_repository_source").on(t.repositorySourceId),
-    check("source_snapshots_public_id", sql`${t.publicId} GLOB 'snp_*'`),
-    check(
-      "source_snapshots_object_ids",
-      sql`length(${t.commitSha}) = 40 AND ${t.commitSha} NOT GLOB '*[^0-9a-f]*' AND length(${t.treeSha}) = 40 AND ${t.treeSha} NOT GLOB '*[^0-9a-f]*'`,
-    ),
-    check("source_snapshots_ref_kind", sql.raw(`ref_kind IN (${sqlList(REF_KINDS)})`)),
-    check("source_snapshots_internal_ref", sql`${t.internalRef} = 'refs/fabricate/snapshots/' || ${t.publicId}`),
+    check("assessment_targets_ref_kind", sql.raw(`ref_kind IS NULL OR ref_kind IN (${sqlList(REF_KINDS)})`)),
+    // A target resolves its reference before it waits on a survey, and completes only with one.
+    check("assessment_targets_resolution", sql`(${t.refKind} IS NULL) = (${t.resolvedRef} IS NULL) AND (${t.refKind} IS NULL) = (${t.resolvedAt} IS NULL) AND (${t.surveyId} IS NULL OR ${t.refKind} IS NOT NULL)`),
+    check("assessment_targets_complete_survey", sql`${t.state} <> 'complete' OR ${t.surveyId} IS NOT NULL`),
   ],
 );
 

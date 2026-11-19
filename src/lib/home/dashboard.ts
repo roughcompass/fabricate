@@ -53,7 +53,7 @@ export interface TrendWeek {
   counts: Record<TrendConclusion, number>;
 }
 
-/** How many Evaluations of operator-created Assessments completed with each conclusion, in each of the last +weeks+ seven-day windows, oldest first, the last ending at +now+. */
+/** How many Evaluations completed with each conclusion, in each of the last +weeks+ seven-day windows, oldest first, the last ending at +now+. */
 export function assessmentTrend(db: Executor, now: Date = new Date(), weeks = TREND_WEEKS): TrendWeek[] {
   const end = now.getTime();
   const start = end - weeks * WEEK_MS;
@@ -61,9 +61,7 @@ export function assessmentTrend(db: Executor, now: Date = new Date(), weeks = TR
     select cast((coalesce(e.finished_at, e.created_at) - ${start}) / ${WEEK_MS} as integer) as week,
       json_extract(e.summary, '$.combined.conclusion') as conclusion, count(*) as count
     from evaluations e
-    join initiatives i on i.id = e.initiative_id
     where e.state = 'complete' and coalesce(e.finished_at, e.created_at) > ${start} and coalesce(e.finished_at, e.created_at) <= ${end}
-      and i.profiling = 0
     group by week, conclusion`);
   const result: TrendWeek[] = Array.from({ length: weeks }, (_, index) => ({ start: new Date(start + index * WEEK_MS), counts: { gaps: 0, undetermined: 0, conforms: 0, not_applicable: 0 } }));
   for (const row of rows) {
@@ -89,7 +87,7 @@ export function recentActivity(db: Executor, limit = ACTIVITY_LIMIT): ActivityIt
   const rows = db.all<{ kind: ActivityKind; at: number; name: string; href: string }>(sql`
     select case r.state when 'failed' then 'run_failed' else 'run_completed' end as kind, r.finished_at as at, i.name as name, '/runs/' || r.public_id as href
     from assessments r join initiatives i on i.id = r.initiative_id
-    where r.finished_at is not null and r.state in ('complete', 'complete_with_issues', 'failed') and i.profiling = 0
+    where r.finished_at is not null and r.state in ('complete', 'complete_with_issues', 'failed')
     order by at desc, r.id desc
     limit ${limit}`);
   return rows.map((row) => ({ kind: row.kind, at: new Date(row.at), record: { name: row.name, href: row.href } }));

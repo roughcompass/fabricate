@@ -1,39 +1,46 @@
-import { acquireTarget } from "@/lib/acquisition/acquire";
+import type { Resolution } from "@/lib/acquisition/mirror";
+import { resolveTarget } from "@/lib/acquisition/acquire";
+import { sourceById } from "@/lib/catalog/source-records";
 import { type FabricateConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ASSESSMENT_MACHINE, TARGET_MACHINE, isTerminal } from "@/lib/db/state-machines";
 import { failureText } from "@/lib/git/redact";
+import type { GitRunner } from "@/lib/git/runner";
 import { enqueue } from "@/lib/jobs/queue";
 import { NonRetryableError } from "@/lib/jobs/worker";
-import { analyzeSnapshot } from "@/lib/profiles/analyze";
 import { profilesOf } from "@/lib/profiles/profile-records";
 import { finalizeRelationshipMap } from "@/lib/relationships/finalize";
-import { type Assessment, type AssessmentTarget, getAssessment, getTarget, snapshotOf, targetsOf } from "./assessment-records";
-import { COORDINATE_ASSESSMENT, priorityOfRun } from "./launcher";
+import { recordConfiguredResolution, requestSurvey, surveyById } from "@/lib/surveys/records";
+import { queueSurvey } from "@/lib/surveys/run";
+import { type Assessment, type AssessmentTarget, getAssessment, getTarget, linkSurvey, targetsOf } from "./assessment-records";
+import { COORDINATE_ASSESSMENT, RUN_PRIORITY } from "./launcher";
 import { assessmentById } from "./lookups";
 import { advanceAssessment, transitionAssessment, transitionTarget } from "./transitions";
+import { FINALIZE_ASSESSMENT, requestFinalization, settleTarget } from "./waiting";
 
 /**
- * Assessment orchestration: a coordinator, one acquire-and-analyze job per
- * target, and a finalizer job.
+ * Assessment orchestration: a coordinator, one job per target, and a
+ * finalizer job (unify-surveys, design decision 2).
  *
- * Each target job catches and normalizes its own failures, so one source never
- * blocks another or erases a completed Profile. The last target to reach a
- * terminal state moves the Assessment to finalizing and enqueues the finalizer
- * in the same transaction, so finalization survives a worker restart. The
- * finalizer writes the Relationship Map once and derives the outcome:
- * complete, complete with issues, failed, or canceled.
+ * A target's job resolves its reference to the commit the remote advertises,
+ * then joins that commit's survey under the Run's recipe and waits on it. A
+ * survey that already succeeded completes the target at once; otherwise the
+ * survey continues every waiting target when it finishes. A failure before
+ * the commit is known is the target's own and starts no survey. The last
+ * target to finish moves the Assessment to finalizing and enqueues the
+ * finalizer in the same transaction, so finalization survives a worker
+ * restart. The finalizer writes the Relationship Map once and derives the
+ * outcome: complete, complete with issues, failed, or canceled.
  *
- * Cancellation is a durable request. Jobs check it before acquisition, before
- * analysis, and between detector stages. Completed Profiles are kept, and a
- * canceled Assessment is never finalized as complete. Every handler is
- * idempotent, because an expired lease lets another worker run the same job.
+ * Cancellation is a durable request that targets check before resolving and
+ * before joining; cancelling a Run cancels the targets already waiting, and
+ * leaves the surveys running. Every handler is idempotent, because an expired
+ * lease lets another worker run the same job.
  */
 
 export const PROCESS_TARGET = "assessment.target";
-export const FINALIZE_ASSESSMENT = "assessment.finalize";
 
-export { COORDINATE_ASSESSMENT };
+export { COORDINATE_ASSESSMENT, FINALIZE_ASSESSMENT };
 
 class Canceled extends Error {
   override name = "Canceled";
@@ -45,11 +52,10 @@ export function coordinateAssessment(db: Executor, assessmentPublicId: string): 
     if (isTerminal(ASSESSMENT_MACHINE, assessment.state)) return;
     const targets = targetsOf(tx, assessment.id);
     if (assessment.cancelRequestedAt) {
-      // Canceled before any work started: no target is acquired.
+      // Canceled before any work started: no target is resolved.
       for (const target of targets) if (!isTerminal(TARGET_MACHINE, target.state)) transitionTarget(tx, target, "canceled");
     } else {
-      const priority = priorityOfRun(tx, assessment);
-      for (const target of targets) enqueue(tx, { kind: PROCESS_TARGET, payload: { target: target.publicId }, idempotencyKey: `${PROCESS_TARGET}:${target.publicId}`, priority });
+      for (const target of targets) enqueue(tx, { kind: PROCESS_TARGET, payload: { target: target.publicId }, idempotencyKey: `${PROCESS_TARGET}:${target.publicId}`, priority: RUN_PRIORITY });
     }
     requestFinalization(tx, assessment.id);
   });
@@ -57,6 +63,7 @@ export function coordinateAssessment(db: Executor, assessmentPublicId: string): 
 
 export interface ProcessOptions {
   config?: FabricateConfig;
+  runner?: GitRunner;
   signal?: AbortSignal;
 }
 
@@ -67,32 +74,17 @@ export async function processTarget(db: Executor, targetPublicId: string, option
     if (isTerminal(TARGET_MACHINE, target.state)) return target;
     checkCancellation(db, target.assessmentId);
 
-
-    // A retry resumes after the commit was pinned; it never reacquires a moved reference.
-    let snapshot = snapshotOf(db, target.id);
-    if (!snapshot) {
+    // A retry after the target joined its survey only looks at the survey again.
+    if (target.surveyId === null) {
       if (target.state === "pending") target = transitionTarget(db, target, "acquiring");
       advanceAssessment(db, target.assessmentId, "acquiring");
-      const outcome = await acquireTarget(db, target, { config, ...(options.signal && { signal: options.signal }) });
+      const outcome = await resolveTarget(db, target, { config, ...(options.runner && { runner: options.runner }), ...(options.signal && { signal: options.signal }) });
       if (!outcome.ok) return outcome.target;
-      snapshot = outcome.snapshot;
-      target = getTarget(db, targetPublicId);
+      checkCancellation(db, target.assessmentId);
+      target = joinSurvey(db, getTarget(db, targetPublicId), outcome.resolution);
     }
-
-    checkCancellation(db, target.assessmentId);
-    if (target.state === "acquiring") target = transitionTarget(db, target, "analyzing");
     advanceAssessment(db, target.assessmentId, "analyzing");
-    const analysis = {
-      assessment: assessmentById(db, target.assessmentId),
-      target,
-      snapshot,
-      config,
-      ...(options.signal && { signal: options.signal }),
-      checkpoint: () => checkCancellation(db, target.assessmentId),
-    };
-    await analyzeSnapshot(db, analysis);
-    target = transitionTarget(db, getTarget(db, targetPublicId), "complete");
-    return target;
+    return settleTarget(db, target, surveyById(db, target.surveyId!));
   } catch (error) {
     const current = getTarget(db, targetPublicId);
     if (isTerminal(TARGET_MACHINE, current.state)) return current;
@@ -104,19 +96,35 @@ export async function processTarget(db: Executor, targetPublicId: string, option
   }
 }
 
-function checkCancellation(db: Executor, assessmentId: number): void {
-  if (assessmentById(db, assessmentId).cancelRequestedAt) throw new Canceled("The Run was canceled");
+/**
+ * Records how the target's reference resolved, finds or starts the survey of
+ * its commit under the Run's recipe, raises a queued survey to the Run's
+ * priority, and waits on it: one transaction.
+ */
+function joinSurvey(db: Executor, target: AssessmentTarget, resolution: Resolution): AssessmentTarget {
+  return immediate(db, (tx) => {
+    const assessment = assessmentById(tx, target.assessmentId);
+    const configured = target.gitRef === sourceById(tx, target.repositorySourceId).gitRef;
+    const { survey } = requestSurvey(tx, {
+      repositorySourceId: target.repositorySourceId,
+      commitSha: resolution.commitSha,
+      reference: resolution.name,
+      fromConfiguredReference: configured,
+      trigger: "run",
+      requestedByAssessmentId: assessment.id,
+      surveyorRelease: assessment.detectorRelease,
+      configurationDigest: assessment.configurationDigest,
+      profileSchemaVersion: assessment.profileSchemaVersion,
+    });
+    if (survey.state === "queued") queueSurvey(tx, survey, RUN_PRIORITY);
+    // A Run of the configured reference says which commit it names now.
+    if (configured) recordConfiguredResolution(tx, target.repositorySourceId, resolution.commitSha, new Date());
+    return linkSurvey(tx, target, { refKind: resolution.kind, resolvedRef: resolution.name, surveyId: survey.id });
+  });
 }
 
-/** Moves the Assessment to finalizing and enqueues the finalizer, once every target is terminal. */
-export function requestFinalization(db: Executor, assessmentId: number): void {
-  immediate(db, (tx) => {
-    const assessment = assessmentById(tx, assessmentId);
-    if (assessment.state === "finalizing" || isTerminal(ASSESSMENT_MACHINE, assessment.state)) return;
-    if (targetsOf(tx, assessmentId).some((target) => !isTerminal(TARGET_MACHINE, target.state))) return;
-    transitionAssessment(tx, assessment, "finalizing");
-    enqueue(tx, { kind: FINALIZE_ASSESSMENT, payload: { assessment: assessment.publicId }, idempotencyKey: `${FINALIZE_ASSESSMENT}:${assessment.publicId}`, priority: priorityOfRun(tx, assessment) });
-  });
+function checkCancellation(db: Executor, assessmentId: number): void {
+  if (assessmentById(db, assessmentId).cancelRequestedAt) throw new Canceled("The Run was canceled");
 }
 
 type AggregateOutcome = "complete" | "complete_with_issues" | "failed" | "canceled";

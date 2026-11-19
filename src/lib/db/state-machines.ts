@@ -1,5 +1,5 @@
 import { TransitionError } from "./errors";
-import type { AssessmentState, EvaluationReleaseState, EvaluationState, TargetState } from "./schema";
+import type { AssessmentState, EvaluationReleaseState, EvaluationState, SurveyState, TargetState } from "./schema";
 
 /**
  * Allowed state transitions for every run record. These tables are the
@@ -67,6 +67,19 @@ export const EVALUATION_RELEASE_MACHINE: StateMachine<EvaluationReleaseState> = 
     failed: [],
   },
   terminal: ["complete", "failed"],
+};
+
+/** A survey (unify-surveys, decision 1). A failed survey is retried in place, so only success is final. */
+export const SURVEY_MACHINE: StateMachine<SurveyState> = {
+  name: "Survey",
+  initial: "queued",
+  transitions: {
+    queued: ["running", "failed"],
+    running: ["succeeded", "failed"],
+    succeeded: [],
+    failed: ["queued"],
+  },
+  terminal: ["succeeded"],
 };
 
 /** The states a record moves on from: every state but the terminal ones, in the machine's order. */

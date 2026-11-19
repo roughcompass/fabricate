@@ -16,7 +16,8 @@ describe("projection at Run scale", () => {
     expect(count(db, "graph_nodes", "kind = 'repository'")).toBe(500);
     expect(count(db, "graph_nodes", "kind = 'repository' and repository_source_id is not null")).toBe(500);
     // Every repository depends on react, all but the first on the one before it, and all but the
-    // first two on the one at half its index; for repo-002 that's repo-001 again.
-    expect(count(db, "dependency_facts")).toBe(500 + 499 + 498 - 1);
+    // first two on the one at half its index; for repo-002 that's repo-001 again. Each produces its own package.
+    expect(count(db, "dependency_facts", "kind = 'dependency'")).toBe(500 + 499 + 498 - 1);
+    expect(count(db, "dependency_facts", "kind = 'produced'")).toBe(500);
   });
 });

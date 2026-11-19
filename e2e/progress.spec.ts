@@ -39,13 +39,15 @@ test("shows an Assessment move through queued, active, finalizing, and terminal 
   const scope = page.getByRole("table", { name: "Run scope" });
 
   await step(); // the coordinator enqueues one job per target
-  await step(); // the first target is acquired and analyzed
+  await step(); // the first target resolves its reference and waits on its commit's survey
+  await step(); // and so does the second
   await expect(header).toContainText("Analyzing");
+  await step(); // the first survey profiles its commit and completes the first target
   await expect(page.getByRole("progressbar", { name: "1 of 2 repositories finished" })).toBeVisible();
   await expect(scope.getByRole("row").filter({ hasText: "Complete" })).toHaveCount(1);
-  await expect(scope.getByRole("row").filter({ hasText: "Pending" })).toHaveCount(1);
+  await expect(scope.getByRole("row").filter({ hasText: "Analyzing" })).toHaveCount(1);
 
-  await step(); // the last target hands the Assessment to its finalizer
+  await step(); // the last survey completes the last target, which hands the Assessment to its finalizer
   await expect(header).toContainText("Finalizing");
 
   await step(); // the finalizer writes the map and the outcome

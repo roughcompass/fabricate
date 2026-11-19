@@ -48,7 +48,7 @@ export class SnapshotReader extends PolicyReader {
    */
   static async open(runner: GitRunner, gitDir: string, internalRef: string, expectedCommit: string, budgets: Budgets, options: SnapshotReaderOptions = {}): Promise<SnapshotReader> {
     const previewPin = OBJECT_ID.test(expectedCommit) && internalRef === `refs/fabricate/previews/${expectedCommit}`;
-    if (!/^refs\/fabricate\/snapshots\/snp_[a-z0-9]{16}$/.test(internalRef) && !previewPin) {
+    if (!/^refs\/fabricate\/snapshots\/(?:snp|srv)_[a-z0-9]{16}$/.test(internalRef) && !previewPin) {
       throw new GitError("command_rejected", "Snapshots are read only through pinned internal refs");
     }
     const commitSha = await runner.revParse(gitDir, `${internalRef}^{commit}`);

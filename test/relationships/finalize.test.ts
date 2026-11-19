@@ -10,7 +10,7 @@ import { type MapDocument, mapProblems } from "@/lib/relationships/schema";
 import { buildAssessment, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { manifest } from "../support/profiles";
-import { type Outcome, completeTarget } from "../support/scenarios";
+import { type Outcome, completeTarget, finalizingRun } from "../support/scenarios";
 
 const UI = { "package.json": manifest({ name: "@acme/ui", version: "1.0.0" }) };
 const APP = {
@@ -34,7 +34,7 @@ describe("Relationship Map finalization", () => {
   async function assessed(sources: RepositorySource[], outcomes: Outcome[]) {
     const { assessment, targets } = buildAssessment(db, { sources });
     for (const [index, outcome] of outcomes.entries()) await completeTarget(db, assessment, targets.find((item) => item.sourcePublicId === sources[index]!.publicId)!, outcome);
-    return transitionAssessment(db, assessment, "finalizing");
+    return finalizingRun(db, assessment);
   }
 
   const read = (map: ReturnType<typeof finalizeRelationshipMap>) => mapDocument(map) as unknown as MapDocument;

@@ -143,12 +143,12 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
         <div className={styles.traces}>
           <div>
             <h3>Applicability</h3>
-            <TraceView trace={applicability} records={evidence} assessmentId={assessment.publicId} label="Applicability trace" />
+            <TraceView trace={applicability} records={evidence} owner={{ run: assessment.publicId }} label="Applicability trace" />
           </div>
           <div>
             <h3>Expected condition</h3>
             {condition ? (
-              <TraceView trace={condition} records={evidence} assessmentId={assessment.publicId} label="Condition trace" />
+              <TraceView trace={condition} records={evidence} owner={{ run: assessment.publicId }} label="Condition trace" />
             ) : (
               <p className={styles.muted}>{finding.outcome === "not_applicable" ? "Not evaluated, because the Control does not apply." : "Not evaluated, because whether the Control applies is unknown."}</p>
             )}
@@ -157,7 +157,7 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
       </Section>
 
       <Section title="Evidence" description="Every committed location the observed values came from.">
-        <EvidenceList ids={Object.keys(evidence)} records={evidence} assessmentId={assessment.publicId} />
+        <EvidenceList ids={Object.keys(evidence)} records={evidence} owner={{ run: assessment.publicId }} />
       </Section>
 
       {guidance && (

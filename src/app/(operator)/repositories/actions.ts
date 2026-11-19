@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { LAUNCH_TOKEN } from "@/lib/assessments/assessment-records";
 import { addRepositories } from "@/lib/catalog/bulk-add";
 import { deleteSource, editSource, registerSource, type SourceForm } from "@/lib/catalog/catalog";
 import { getSource } from "@/lib/catalog/source-records";
@@ -9,7 +8,8 @@ import { CloneUrl } from "@/lib/catalog/clone-url";
 import { getDb } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { requirePublicId } from "@/lib/db/ids";
-import { queueProfile } from "@/lib/profiling/versions";
+import { AcquisitionError } from "@/lib/acquisition/errors";
+import { surveyRepository } from "@/lib/surveys/background";
 import { lockVersion, submitForm } from "@/lib/web/actions";
 import { errorsFrom, text } from "@/lib/web/form-data";
 import { withQuery } from "@/lib/web/query";
@@ -47,16 +47,22 @@ export async function updateSource(publicId: string, _previous: SourceFormState,
 }
 
 /**
- * Queues a new profile version of a Repository, unless one is queued or
- * running. The page's launch token makes a repeated submission name the
- * version it already queued. Returns to the Repository's page, or to the
+ * Surveys a Repository's configured reference again (unify-surveys, design
+ * decision 5): reads which commit it names and queues a survey unless one
+ * with the current recipe already succeeded or is on its way, which a
+ * repeated submission finds too. Returns to the Repository's page, or to the
  * list when it was chosen there.
  */
 export async function reprofileSource(formData: FormData): Promise<void> {
   const publicId = repositoryId(text(formData, "publicId", 40));
-  const token = text(formData, "launchToken", 40);
-  const result = queueProfile(getDb(), getSource(getDb(), publicId), "manual", { launchToken: LAUNCH_TOKEN.test(token) ? token : undefined });
-  const notice = result.status === "queued" ? "reprofiled" : "profiling";
+  let notice: string;
+  try {
+    const result = await surveyRepository(getDb(), getSource(getDb(), publicId), "manual");
+    notice = { queued: "reprofiled", active: "profiling", current: "current" }[result.status];
+  } catch (error) {
+    if (!(error instanceof AcquisitionError)) throw error;
+    notice = "unreachable";
+  }
   redirect(text(formData, "from", 10) === "list" ? withQuery(routes.repositories, { notice, source: publicId }) : withQuery(routes.repository(publicId), { notice }));
 }
 

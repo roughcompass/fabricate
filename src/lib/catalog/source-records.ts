@@ -70,6 +70,13 @@ export function findSourceIncludingDeleted(db: Executor, publicId: string): Repo
   return db.select().from(repositorySources).where(eq(repositorySources.publicId, publicId)).get();
 }
 
+/** A Repository by row id, deleted or not, as surveys name it. */
+export function sourceById(db: Executor, id: number): RepositorySource {
+  const source = db.select().from(repositorySources).where(eq(repositorySources.id, id)).get();
+  if (!source) throw new NotFoundError(`Repository source ${id} does not exist`);
+  return source;
+}
+
 export function getSource(db: Executor, publicId: string): RepositorySource {
   const source = findSource(db, publicId);
   if (!source) throw new NotFoundError(`Repository source ${publicId} does not exist`);

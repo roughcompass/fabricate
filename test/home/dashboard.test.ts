@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { WEEK_MS, assessmentTrend, figureChanges, figuresAt, recentActivity, weekChange } from "@/lib/home/dashboard";
 import { fleetSummary } from "@/lib/home/summary";
-import type { Assessment } from "@/lib/assessments/assessment-records";
 import { attentionItems } from "@/lib/home/attention";
-import { queueProfile } from "@/lib/profiling/versions";
+import { currentRecipe, moveSurvey, requestSurvey } from "@/lib/surveys/records";
+import { finishSurvey } from "@/lib/surveys/run";
+import { getConfig } from "@/lib/config";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb } from "../support/db";
 import { buildEvaluation, driveEvaluation, driveRun } from "../support/home";
@@ -76,15 +77,16 @@ describe("Assessment trend", () => {
 });
 
 describe("recent activity", () => {
-  it("leads with the newest finished Run, linking to it, and leaves profile versions out", () => {
+  it("leads with the newest finished Run, linking to it, and leaves background surveys out", () => {
     const db = createTestDb();
     const source = buildSource(db);
     const orders = buildInitiative(db, { name: "Orders review", sources: [source] });
     const older = driveRun(db, buildAssessment(db, { initiative: orders }).assessment, "complete");
     backdate(db, "assessments", "finished_at", older.id, 1);
     const failed = driveRun(db, buildAssessment(db, { initiative: orders }).assessment, "failed");
-    const version = queueProfile(db, source, "imported") as { version: { assessment: Assessment } };
-    driveRun(db, version.version.assessment, "failed");
+    // A background survey that failed is a version of the Repository, not a Run.
+    const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", ...currentRecipe(getConfig()) });
+    finishSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { failure: { code: "source_unavailable", message: "The repository could not be reached" } });
 
     const activity = recentActivity(db);
     expect(attentionItems(db).map((item) => item.kind)).toEqual(["run_failed"]);

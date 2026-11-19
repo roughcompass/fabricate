@@ -5,7 +5,7 @@ import { createdAt, id, sqlList, timestamp, updatedAt } from "./columns";
 export const JOB_STATES = ["queued", "running", "succeeded", "failed"] as const;
 export type JobState = (typeof JOB_STATES)[number];
 
-/** Work people start runs first; background work, such as repository profiling, waits behind it. */
+/** Work people start runs first; background work, such as background surveys, waits behind it. */
 export const JOB_PRIORITIES = { normal: 0, background: -1 } as const;
 
 /**

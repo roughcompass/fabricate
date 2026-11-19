@@ -21,6 +21,12 @@ async function seedFixtureRuns(db: Db): Promise<Assessment[]> {
   return [map, profiled];
 }
 
+/** Packages a Profile document says its repository produces: its producer references. */
+function producedPackages(document: Record<string, unknown>): number {
+  const references = (document.fact_document as { relationship_references?: { type: string; role: string; identifier?: { name?: string } }[] }).relationship_references ?? [];
+  return references.filter((reference) => reference.type === "package" && reference.role === "producer" && reference.identifier?.name).length;
+}
+
 /** Dependency facts a Profile document implies: each declaration, plus each resolved version no declaration names. */
 function expectedDependencies(document: Record<string, unknown>): number {
   const categories = (document.fact_document as { categories: Record<string, { facts: Fact[] }> }).categories;
@@ -40,7 +46,8 @@ describe("projection backfill", () => {
     for (const run of runs) {
       for (const { profile } of profilesOf(db, run.id)) {
         const document = profileDocument(profile) as Record<string, unknown>;
-        expect(count(db, "dependency_facts", "profile_id = ?", profile.id), profile.publicId).toBe(expectedDependencies(document));
+        expect(count(db, "dependency_facts", "profile_id = ? and kind = 'dependency'", profile.id), profile.publicId).toBe(expectedDependencies(document));
+        expect(count(db, "dependency_facts", "profile_id = ? and kind = 'produced'", profile.id), profile.publicId).toBe(producedPackages(document));
         expect(count(db, "evidence_index", "profile_id = ?", profile.id), profile.publicId).toBe(Object.keys((document.fact_document as { evidence: object }).evidence).length);
       }
       const map = mapOf(db, run.id)!;

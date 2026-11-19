@@ -1,13 +1,14 @@
 import crypto from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import { type AssessmentTarget, type SourceSnapshot, recordSnapshot } from "@/lib/assessments/assessment-records";
+import { surveyRefFor } from "@/lib/acquisition/mirror";
 import type { Db } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { sha256 } from "@repo-facts/contract";
 import { DocumentIntegrityError, prepareDocument, readDocument } from "@/lib/documents/digested";
-import { profileDocument, insertProfile, profilesOf } from "@/lib/profiles/profile-records";
+import { profileDocument, insertProfile, profileOfSurvey } from "@/lib/profiles/profile-records";
 import { insertRelationshipMap, mapDocument } from "@/lib/relationships/map-records";
 import { releaseDocument } from "@/lib/standards/standard-records";
+import { type Survey, moveSurvey, pinSurvey, requestSurvey } from "@/lib/surveys/records";
 import { buildAssessment, buildRelease, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { captureValidation } from "../support/validation";
@@ -59,55 +60,62 @@ describe("digested documents", () => {
 
   describe("stored results", () => {
     let db: Db;
-    let target: AssessmentTarget;
-    let snapshot: SourceSnapshot;
+    let survey: Survey;
     let assessment: ReturnType<typeof buildAssessment>["assessment"];
 
     const profileBody = (overrides: Record<string, unknown> = {}) => ({
       schema: "fabricate.repository_profile",
       schema_version: 1,
-      detector_release: assessment.detectorRelease,
-      detector_configuration_digest: assessment.configurationDigest,
-      commit: snapshot.commitSha,
+      detector_release: survey.surveyorRelease,
+      detector_configuration_digest: survey.configurationDigest,
+      commit: survey.commitSha,
       categories: {},
       ...overrides,
     });
 
     beforeEach(() => {
       db = createTestDb();
-      const built = buildAssessment(db, { sources: [buildSource(db)] });
-      assessment = built.assessment;
-      target = built.targets[0]!;
-      rawRun(db, "update assessment_targets set state = 'acquiring' where id = ?", target.id);
-      snapshot = recordSnapshot(db, target, { commitSha: sha1("c"), treeSha: sha1("t"), refKind: "default_branch", resolvedRef: "refs/heads/main", acquisitionMetadata: {} });
-      rawRun(db, "update assessment_targets set state = 'analyzing' where id = ?", target.id);
+      const source = buildSource(db);
+      assessment = buildAssessment(db, { sources: [source] }).assessment;
+      const { survey: queued } = requestSurvey(db, {
+        repositorySourceId: source.id,
+        commitSha: sha1("c"),
+        reference: "refs/heads/main",
+        fromConfiguredReference: true,
+        trigger: "run",
+        requestedByAssessmentId: assessment.id,
+        surveyorRelease: assessment.detectorRelease,
+        configurationDigest: assessment.configurationDigest,
+        profileSchemaVersion: assessment.profileSchemaVersion,
+      });
+      survey = pinSurvey(db, moveSurvey(db, queued, "running", { attempts: 1 }), { treeSha: sha1("t"), internalRef: surveyRefFor(queued.publicId) });
     });
 
-    it("stores one immutable Profile per snapshot and keeps __proto__ keys inert", () => {
+    it("stores one immutable Profile per survey and keeps __proto__ keys inert", () => {
       // An object literal's __proto__ sets the prototype, so the hostile key comes from parsed JSON text.
       const document = JSON.parse(JSON.stringify(profileBody()).replace('"categories":{}', '"categories":{"__proto__":{"polluted":true}}'));
-      const profile = insertProfile(db, { assessment, target, snapshot, document });
+      const profile = insertProfile(db, { survey, document });
 
       expect(profile.digest).toBe(sha256(profile.document));
       const stored = profileDocument(profile) as Record<string, Record<string, unknown>>;
       expect(Object.keys(stored.categories!)).toEqual(["__proto__"]);
       expect(Object.prototype).not.toHaveProperty("polluted");
-      expect(profilesOf(db, assessment.id).map((row) => row.profile.id)).toEqual([profile.id]);
+      expect(profileOfSurvey(db, survey.id)?.id).toBe(profile.id);
 
-      expect(() => insertProfile(db, { assessment, target, snapshot, document })).toThrow(/UNIQUE constraint failed/);
+      expect(() => insertProfile(db, { survey, document })).toThrow(/UNIQUE constraint failed/);
       expect(() => rawRun(db, "update repository_profiles set document = '{}' where id = ?", profile.id)).toThrow(/immutable/);
       expect(() => rawRun(db, "delete from repository_profiles where id = ?", profile.id)).toThrow(/retained/);
       expect(() => profileDocument({ ...profile, document: profile.document.replace("repository_profile", "repository_profilx") })).toThrow(/digest verification/);
     });
 
-    it("rejects a Profile for another commit, detector release, or detector configuration", () => {
-      const error = captureValidation(() => insertProfile(db, { assessment, target, snapshot, document: profileBody({ commit: sha1("other"), detector_release: "other", detector_configuration_digest: "0".repeat(64) }) }));
+    it("rejects a Profile for another commit, Surveyor release, or configuration", () => {
+      const error = captureValidation(() => insertProfile(db, { survey, document: profileBody({ commit: sha1("other"), detector_release: "other", detector_configuration_digest: "0".repeat(64) }) }));
       expect(error.issues).toHaveLength(3);
     });
 
-    it("rejects a Profile for a target that is not being analyzed", () => {
-      rawRun(db, "update assessment_targets set state = 'complete' where id = ?", target.id);
-      expect(() => insertProfile(db, { assessment, target, snapshot, document: profileBody() })).toThrow(/analyzing target/);
+    it("rejects a Profile for a survey that is not running", () => {
+      moveSurvey(db, survey, "failed", { failureCode: "analysis_failed", failureMessage: "Surveyor stopped" });
+      expect(() => insertProfile(db, { survey, document: profileBody() })).toThrow(/written by its running survey/);
     });
 
     it("stores one immutable Relationship Map per Assessment, written while finalizing", () => {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resolveScope } from "@/lib/assessments/scope-resolver";
 import { deleteSource, deletionEffects, registerSource } from "@/lib/catalog/catalog";
-import { findSource, findSourceIncludingDeleted, listSources } from "@/lib/catalog/source-records";
+import { type RepositorySource, findSource, findSourceIncludingDeleted, listSources } from "@/lib/catalog/source-records";
 import { SourceBoundary } from "@/lib/catalog/source-boundary";
 import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
@@ -10,6 +10,7 @@ import { fleetSummary } from "@/lib/home/summary";
 import { selectedSources } from "@/lib/initiatives/initiative-records";
 import { deletePreview } from "@/lib/previews/lifecycle";
 import { versionsOf } from "@/lib/profiling/versions";
+import { requestSurvey } from "@/lib/surveys/records";
 import { buildAssessment, buildInitiative, buildSource } from "../support/builders";
 import { createTestDb, rawRun } from "../support/db";
 import { queuedPreview } from "../support/previews";
@@ -19,6 +20,9 @@ describe("deleting a Repository", () => {
   beforeEach(() => {
     db = createTestDb();
   });
+  /** A queued survey of +source+'s configured reference, as background surveying requests once the reference resolves. */
+  const surveyQueued = (source: RepositorySource) =>
+    requestSurvey(db, { repositorySourceId: source.id, commitSha: "a".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", surveyorRelease: "0.6.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 }).survey;
 
   it("refuses anything but its exact name as confirmation, and changes nothing", () => {
     const orders = buildSource(db, { name: "orders" });
@@ -29,6 +33,7 @@ describe("deleting a Repository", () => {
   it("states what deleting changes: its versions, the Assessments that select it, and the Runs that keep its results", () => {
     const boundary = new SourceBoundary(getConfig());
     const orders = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "" }, boundary);
+    surveyQueued(orders);
     buildInitiative(db, { name: "Checkout", sources: [orders] });
     buildAssessment(db, { sources: [orders] });
 
@@ -45,9 +50,10 @@ describe("deleting a Repository", () => {
     expect(deletionEffects(db, orders).previews).toBe(1);
   });
 
-  it("leaves the catalog, scopes, and counts, cancels a version in progress, and keeps its history", () => {
+  it("leaves the catalog, scopes, and counts, lets a survey in progress finish, and keeps its history", () => {
     const boundary = new SourceBoundary(getConfig());
     const orders = registerSource(db, { name: "orders", cloneUrl: "https://git.example.com/acme/orders.git", gitRef: "" }, boundary);
+    const survey = surveyQueued(orders);
     const billing = buildSource(db, { name: "billing" });
     const checkout = buildInitiative(db, { name: "Checkout", sources: [orders, billing] });
     const { assessment } = buildAssessment(db, { sources: [orders, billing] });
@@ -60,7 +66,7 @@ describe("deleting a Repository", () => {
     expect(fleetSummary(db).repositories).toMatchObject({ total: 1 });
     expect(resolveScope(db, buildInitiative(db)).map((source) => source.name)).toEqual(["billing"]);
     expect(selectedSources(db, checkout.id).map((source) => source.name)).toEqual(["billing"]);
-    expect(versionsOf(db, orders.id)[0]!.assessment.cancelRequestedAt).toBeInstanceOf(Date);
+    expect(versionsOf(db, orders.id).map((version) => version.survey)).toEqual([survey]);
     expect(db.$client.prepare("select source_name from assessment_targets where assessment_id = ? order by source_name").all(assessment.id)).toEqual([{ source_name: "billing" }, { source_name: "orders" }]);
   });
 

@@ -18,9 +18,10 @@ import { StatGroup } from "@/components/ui/stat-group";
 import { Status, humanize } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { ShortValue, Tag } from "@/components/ui/tag";
-import { type AssessmentTarget, snapshotOf, targetReferenceLabel, targetsOf } from "@/lib/assessments/assessment-records";
+import { type AssessmentTarget, targetReferenceLabel, targetsOf } from "@/lib/assessments/assessment-records";
+import { targetCommits } from "@/lib/surveys/records";
 import { assessmentStatus } from "@/lib/assessments/status";
-import { type Executor, getDb } from "@/lib/db/client";
+import { getDb } from "@/lib/db/client";
 import { ASSESSMENT_MACHINE, isTerminal, TARGET_MACHINE } from "@/lib/db/state-machines";
 import { evaluationNumbers, listEvaluations } from "@/lib/evaluations/evaluation-records";
 import { profileDiagnostics, profileDocument, profilesOf, type RepositoryProfile } from "@/lib/profiles/profile-records";
@@ -118,13 +119,12 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
               ? { label: "Relationship Map", value: coverage.complete ? "Complete" : "Partial", hint: <Link href={routes.runMap(assessment.publicId)}>Review the Relationship Map</Link> }
               : { label: "Relationship Map", value: "—", hint: terminal ? "Not available" : "Written when every repository finishes" },
             { label: "Coverage gaps", value: coverage ? coverage.gaps.length : "—" },
-            // A profile version is never evaluated, so its Run doesn't offer one.
-            ...(initiative.profiling ? [] : [{ label: "Evaluations", value: evaluations.length, hint: evaluations.length ? undefined : terminal ? "Start one from the Assessment" : "Available once finished" }]),
+            { label: "Evaluations", value: evaluations.length, hint: evaluations.length ? undefined : terminal ? "Start one from the Assessment" : "Available once finished" },
           ]}
         />
       </Section>
 
-      <ScopeSection db={db} targets={targets} profiles={profiles} terminal={terminal} />
+      <ScopeSection targets={targets} profiles={profiles} commits={targetCommits(db, assessment.id)} terminal={terminal} />
 
       {evaluations.length > 0 && (
         <Section title="Evaluations">
@@ -176,7 +176,7 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
 }
 
 /** The Run's scope as it was when it started, and each repository's progress and Profile. */
-function ScopeSection({ db, targets, profiles, terminal }: { db: Executor; targets: AssessmentTarget[]; profiles: Map<number, RepositoryProfile>; terminal: boolean }) {
+function ScopeSection({ targets, profiles, commits, terminal }: { targets: AssessmentTarget[]; profiles: Map<number, RepositoryProfile>; commits: Map<number, string>; terminal: boolean }) {
   const skippedInputs = (targetId: number) => {
     const profile = profiles.get(targetId);
     return profile ? profileDiagnostics(profileDocument(profile)).skipped.length : 0;
@@ -196,7 +196,7 @@ function ScopeSection({ db, targets, profiles, terminal }: { db: Executor; targe
           }
         >
           {targets.map((target) => {
-            const snapshot = snapshotOf(db, target.id);
+            const commit = commits.get(target.id);
             const profile = profiles.get(target.id);
             const skipped = skippedInputs(target.id);
             return (
@@ -209,9 +209,9 @@ function ScopeSection({ db, targets, profiles, terminal }: { db: Executor; targe
                 </Td>
                 <Td label="Reference">
                   {target.gitRef ? <Tag>{target.gitRef}</Tag> : humanize(targetReferenceLabel(target))}
-                  {snapshot && (
+                  {commit && (
                     <Secondary>
-                      <ShortValue value={snapshot.commitSha} label="commit" />
+                      <ShortValue value={commit} label="commit" />
                     </Secondary>
                   )}
                 </Td>

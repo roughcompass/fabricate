@@ -194,7 +194,7 @@ test("navigates from a relationship to its evidence with the keyboard", async ({
 
 test("opens a repository's focus from its Profile (From a Profile to its focus)", async ({ page, db }) => {
   const world = await seedMapWorld(db);
-  const profile = (db.$client.prepare("select profile.public_id from repository_profiles profile join assessment_targets target on target.id = profile.assessment_target_id where target.source_name = 'fx-board'").get() as { public_id: string }).public_id;
+  const profile = (db.$client.prepare("select profile.public_id from repository_profiles profile join assessment_targets target on target.survey_id = profile.survey_id where target.source_name = 'fx-board'").get() as { public_id: string }).public_id;
   await page.goto(`/profiles/${profile}`);
   await pageHeader(page).getByRole("link", { name: "Relationship Map" }).click();
 

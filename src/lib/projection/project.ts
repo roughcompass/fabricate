@@ -26,7 +26,7 @@ import { chunked } from "@/lib/db/chunked";
  */
 
 /** Bump to change what is projected; the rebuild command then recreates every row. */
-export const PROJECTION_VERSION = 2;
+export const PROJECTION_VERSION = 3;
 
 /** Rows per INSERT, well under SQLite's bound-parameter limit at 16 columns. */
 const CHUNK = 500;
@@ -42,15 +42,9 @@ type MapColumns = "mapId" | "assessmentId" | "documentDigest" | "projectionVersi
 export function projectProfile(db: Executor, profile: RepositoryProfile, document: JsonObject): void {
   const facts = asObject(document.fact_document);
   const categories = asObject(facts?.categories);
-  const common = {
-    profileId: profile.id,
-    assessmentId: profile.assessmentId,
-    assessmentTargetId: profile.assessmentTargetId,
-    documentDigest: profile.digest,
-    projectionVersion: PROJECTION_VERSION,
-  };
+  const common = { profileId: profile.id, documentDigest: profile.digest, projectionVersion: PROJECTION_VERSION };
 
-  const dependencies: DependencyRow[] = dependencyRows(categories).map((row) => ({ ...common, ...row }));
+  const dependencies: DependencyRow[] = [...dependencyRows(categories), ...producedRows(facts)].map((row) => ({ ...common, ...row }));
   for (const chunk of chunked(dependencies, CHUNK)) db.insert(dependencyFacts).values(chunk).run();
 
   const evidence: EvidenceRow[] = evidenceRows(asObject(facts?.evidence)).map((row) => ({ ...common, ...row }));
@@ -138,8 +132,23 @@ function edgeRows(edges: readonly JsonObject[]): { edges: Omit<EdgeRow, MapColum
   return { edges: rows, candidates };
 }
 
+type ProfileColumns = "profileId" | "documentDigest" | "projectionVersion";
+
+/** One row per package the repository produces, from its producer references, which package focuses read instead of Relationship Maps. */
+function producedRows(facts: JsonObject | undefined): Omit<DependencyRow, ProfileColumns>[] {
+  return asArray(facts?.relationship_references)
+    .filter(isJsonObject)
+    .filter((reference) => reference.type === "package" && reference.role === "producer")
+    .flatMap((reference) => {
+      const identifier = asObject(reference.identifier);
+      const name = stringOf(identifier?.name);
+      if (!name) return [];
+      return [{ kind: "produced" as const, manifest: stringOf(identifier?.manifest) ?? "package.json", packageName: name, field: null, specifier: null, resolvedVersion: stringOf(identifier?.version) ?? null, state: reference.basis === "inferred" ? "inferred" : "observed", evidence: sortedUnique(stringsOf(reference.evidence)) }];
+    });
+}
+
 /** One row per declared dependency, joined to its resolved version, plus versions a lockfile records without a declaration. */
-function dependencyRows(categories: JsonObject | undefined): Omit<DependencyRow, "profileId" | "assessmentId" | "assessmentTargetId" | "documentDigest" | "projectionVersion">[] {
+function dependencyRows(categories: JsonObject | undefined): Omit<DependencyRow, ProfileColumns>[] {
   const resolved = new Map<string, { manifest: string; name: string; version: string | null; state: string; evidence: string[] }>();
   for (const fact of factsOf(categories?.resolved_dependencies)) {
     const value = asObject(fact.value);
@@ -160,6 +169,7 @@ function dependencyRows(categories: JsonObject | undefined): Omit<DependencyRow,
     const version = resolved.get(key);
     if (version) joined.add(key);
     rows.push({
+      kind: "dependency",
       manifest,
       packageName: name,
       field: stringOf(value?.field) ?? null,
@@ -171,12 +181,12 @@ function dependencyRows(categories: JsonObject | undefined): Omit<DependencyRow,
   }
   for (const [key, version] of resolved) {
     if (joined.has(key)) continue;
-    rows.push({ manifest: version.manifest, packageName: version.name, field: null, specifier: null, resolvedVersion: version.version, state: version.state, evidence: sortedUnique(version.evidence) });
+    rows.push({ kind: "dependency", manifest: version.manifest, packageName: version.name, field: null, specifier: null, resolvedVersion: version.version, state: version.state, evidence: sortedUnique(version.evidence) });
   }
   return rows;
 }
 
-function evidenceRows(evidence: JsonObject | undefined): Omit<EvidenceRow, "profileId" | "assessmentId" | "assessmentTargetId" | "documentDigest" | "projectionVersion">[] {
+function evidenceRows(evidence: JsonObject | undefined): Omit<EvidenceRow, ProfileColumns>[] {
   const rows: ReturnType<typeof evidenceRows> = [];
   for (const [evidenceId, value] of Object.entries(evidence ?? {})) {
     const record = asObject(value);

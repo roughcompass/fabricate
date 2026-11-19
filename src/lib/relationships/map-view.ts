@@ -10,6 +10,7 @@ import { type RuntimeLink, type RuntimeSystem, compare, runtimeSystems } from ".
 import type { RepositoryRelationship } from "./rollup";
 import { routes } from "@/lib/web/routes";
 import { chunked } from "@/lib/db/chunked";
+import { runProfileIds } from "@/lib/profiles/evidence-owners";
 
 /*
  * Everything a Relationship Map view needs, read from the assessment
@@ -39,12 +40,6 @@ export interface MapView {
   missing: MissingTarget[];
 }
 
-/** The Relationship Map address focused on a target's repository, or null while the Run has no map. */
-export function repositoryFocusHref(db: Executor, assessment: Pick<Assessment, "publicId">, targetId: number): string | null {
-  const node = db.select({ nodeId: graphNodes.nodeId }).from(graphNodes).where(and(eq(graphNodes.assessmentTargetId, targetId), eq(graphNodes.kind, "repository"))).get();
-  return node ? routes.runMap(assessment.publicId, { focus: node.nodeId }) : null;
-}
-
 /** The map record of an Assessment, without its document. */
 function mapRecordOf(db: Executor, assessmentId: number): RelationshipMap | undefined {
   return db.select().from(relationshipMaps).where(eq(relationshipMaps.assessmentId, assessmentId)).get();
@@ -58,7 +53,8 @@ export function loadMapView(db: Executor, assessment: Assessment): MapView | und
     .select({ nodeId: graphNodes.nodeId, label: graphNodes.label, sourceId: graphNodes.repositorySourceId, target: assessmentTargets.publicId, profile: repositoryProfiles.publicId })
     .from(graphNodes)
     .innerJoin(assessmentTargets, eq(assessmentTargets.id, graphNodes.assessmentTargetId))
-    .leftJoin(repositoryProfiles, eq(repositoryProfiles.assessmentTargetId, graphNodes.assessmentTargetId))
+    // A completed target's Profile is its survey's.
+    .leftJoin(repositoryProfiles, and(eq(repositoryProfiles.surveyId, assessmentTargets.surveyId), eq(assessmentTargets.state, "complete")))
     .where(and(eq(graphNodes.mapId, map.id), eq(graphNodes.kind, "repository")))
     .orderBy(asc(graphNodes.label))
     .all();
@@ -165,7 +161,7 @@ export function nodesOf(db: Executor, view: MapView, nodes: readonly string[]): 
 export function evidenceRecords(db: Executor, assessmentId: number, ids: readonly string[]): JsonObject {
   const records: Record<string, JsonObject> = {};
   for (const chunk of chunked([...new Set(ids)])) {
-    for (const row of db.select().from(evidenceIndex).where(and(eq(evidenceIndex.assessmentId, assessmentId), inArray(evidenceIndex.evidenceId, chunk))).all()) {
+    for (const row of db.select().from(evidenceIndex).where(and(inArray(evidenceIndex.profileId, runProfileIds(db, assessmentId)), inArray(evidenceIndex.evidenceId, chunk))).all()) {
       if (records[row.evidenceId]) continue;
       const location: JsonObject =
         row.locationKind === "lines" ? { kind: "lines", start: row.lineStart!, end: row.lineEnd! } : row.locationKind === "pointer" ? { kind: "pointer", format: row.pointerFormat, pointer: row.pointer! } : { kind: "entry" };

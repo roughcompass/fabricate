@@ -2,7 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
-import { acquireSnapshot } from "@/lib/acquisition/acquire";
+import { resolveReference } from "@/lib/acquisition/acquire";
+import { currentRecipe, moveSurvey, requestSurvey } from "@/lib/surveys/records";
+import { pinSurveyCommit } from "@/lib/surveys/run";
 import type { AssessmentTarget } from "@/lib/assessments/assessment-records";
 import { transitionTarget } from "@/lib/assessments/transitions";
 import { resolveCloneUrl } from "@/lib/catalog/catalog";
@@ -61,8 +63,16 @@ export function acquiringTarget(db: Db, source: RepositorySource): AssessmentTar
   return transitionTarget(db, targets[0]!, "acquiring");
 }
 
+/**
+ * Resolves +source+'s reference and pins its commit for a survey, as the
+ * survey job does, without surveying it. Returns the survey, and the pin as
+ * readers open it.
+ */
 export async function acquire(db: Db, config: FabricateConfig, source: RepositorySource, options: { runner?: GitRunner; signal?: AbortSignal } = {}) {
-  const { assessment, targets } = buildAssessment(db, { sources: [source], limits: config.analysis });
-  const target = transitionTarget(db, targets[0]!, "acquiring");
-  return { assessment, target, snapshot: await acquireSnapshot(db, target, { config, runner: options.runner, signal: options.signal }) };
+  const runner = options.runner ?? new GitRunner({ config });
+  const resolution = await resolveReference({ sourcePublicId: source.publicId, cloneUrl: source.cloneUrl, gitRef: source.gitRef }, { config, runner, ...(options.signal && { signal: options.signal }) });
+  const { survey } = requestSurvey(db, { repositorySourceId: source.id, commitSha: resolution.commitSha, reference: resolution.name, fromConfiguredReference: true, trigger: "manual", ...currentRecipe(config) });
+  const running = survey.state === "queued" ? moveSurvey(db, survey, "running", { attempts: survey.attempts + 1 }) : survey;
+  const pinned = await pinSurveyCommit(db, running, source, { config, runner, boundary: new SourceBoundary(config), ...(options.signal && { signal: options.signal }) });
+  return { survey: pinned, resolution, target: { sourcePublicId: source.publicId }, snapshot: { publicId: pinned.publicId, commitSha: pinned.commitSha, treeSha: pinned.treeSha!, internalRef: pinned.internalRef!, refKind: resolution.kind, resolvedRef: resolution.name } };
 }

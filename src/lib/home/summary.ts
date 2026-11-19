@@ -31,13 +31,11 @@ export function repositoryCount(db: Executor, options: { at?: Date } = {}): numb
   return db.get<{ total: number }>(sql`select count(*) as total from repository_sources where ${inCatalog}`)?.total ?? 0;
 }
 
-/** Repositories in the catalog with a current Profile, written by any Run, in one query. */
+/** Repositories in the catalog with a current Profile, in one query. */
 function profiledCount(db: Executor): number {
   const row = db.get<{ profiled: number }>(sql`
-    select count(distinct t.repository_source_id) as profiled
-    from repository_profiles p
-    join assessment_targets t on t.id = p.assessment_target_id
-    join repository_sources s on s.id = t.repository_source_id
-    where s.deleted_at is null`);
+    select count(*) as profiled
+    from repository_sources s
+    where s.deleted_at is null and s.current_survey_id is not null`);
   return row?.profiled ?? 0;
 }

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { type Db, MIGRATIONS_FOLDER, migrateDatabase, openDatabase } from "@/lib/db/client";
+import { migrationFolderAt } from "./migrations";
 
 /** A fresh in-memory database with the migrations in +folder+ applied: by default, every committed one. */
 export function createTestDb(folder: string = MIGRATIONS_FOLDER): Db {
@@ -13,6 +14,11 @@ export function createTestDb(folder: string = MIGRATIONS_FOLDER): Db {
 /** Applies every committed migration +db+ hasn't run yet, as an upgrade does. */
 export function migrateToLatest(db: Db): void {
   migrateDatabase(db);
+}
+
+/** Applies the committed migrations up to and including +tag+ that +db+ hasn't run, to check one migration's effect before later ones change the schema again. */
+export function migrateUpTo(db: Db, tag: string): void {
+  migrateDatabase(db, migrationFolderAt(tag));
 }
 
 /** Creates a migrated database file at +file+ and closes it, for a process the test starts. */

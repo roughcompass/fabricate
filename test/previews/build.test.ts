@@ -20,6 +20,7 @@ import { BUILD_PREVIEW, PREPARE_PREVIEW, type PreviewBuild, decidePreparation, f
 import { pinCommit } from "@/lib/previews/refs";
 import { servePreview } from "@/lib/previews/serving";
 import { attemptLogFile, cacheDirectory, previewDirectory, publishedDirectory } from "@/lib/previews/storage";
+import { requestSurvey } from "@/lib/surveys/records";
 import { registerLocalSource, useAcquisitionWorld } from "../support/acquisition";
 import { rawRun } from "../support/db";
 import type { Tree } from "../support/preview-trees";
@@ -36,7 +37,6 @@ import { manifest } from "../support/profiles";
 
 const NODE = process.versions.node;
 const NODE_BIN = path.dirname(process.execPath);
-const PROFILE = { document: '{"schema":"fabricate.repository_profile"}', digest: "f".repeat(64) };
 
 /** What the fixture build writes into dist/, with {{base}} replaced by the base path it was given. */
 interface Emit {
@@ -124,7 +124,9 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
     const pinned = await pinCommit(world.db, source, { kind: "ref", name: null }, { config });
     const { preparation } = openPreparation(world.db, source, pinned);
     const verdict: PackageVerdict = { directory: packageDir, manifest: "package.json", name: "orders", qualifies: true, conditions: [], plan: buildPlan };
-    decidePreparation(world.db, preparation.publicId, preparation.requestedAt.getTime(), PROFILE, { packages: [verdict], refusal: null });
+    // A survey of the commit to decide from; the decision is recorded here, so it never runs.
+    const { survey } = requestSurvey(world.db, { repositorySourceId: source.id, commitSha: pinned.commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
+    decidePreparation(world.db, preparation.publicId, preparation.requestedAt.getTime(), { surveyId: survey.id, digest: "f".repeat(64) }, { packages: [verdict], refusal: null });
     // Decided here, so its job has nothing left to do; only the build job is queued.
     rawRun(world.db, "delete from jobs where kind = ?", PREPARE_PREVIEW);
     return startPreview(world.db, preparation.publicId, packageDir).preview;

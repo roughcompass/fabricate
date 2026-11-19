@@ -27,7 +27,7 @@ describe("projection rebuild", () => {
   });
 
   it("reports a document whose digest no longer matches, and doesn't project it (Digest mismatch)", () => {
-    const { id, public_id: publicId } = db.$client.prepare("select profile.id, profile.public_id from repository_profiles profile join assessment_targets target on target.id = profile.assessment_target_id where target.source_name = 'web'").get() as { id: number; public_id: string };
+    const { id, public_id: publicId } = db.$client.prepare("select profile.id, profile.public_id from repository_profiles profile join assessment_targets target on target.survey_id = profile.survey_id where target.source_name = 'web'").get() as { id: number; public_id: string };
     rawRun(db, "drop trigger repository_profiles_immutable");
     rawRun(db, "update repository_profiles set document = replace(document, '16.14.0', '16.14.1') where id = ?", id);
 

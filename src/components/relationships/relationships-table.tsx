@@ -80,7 +80,7 @@ export function RelationshipsTable({ page, assessmentId, focusHref, pageHref, co
                   {row.state === "unresolved" && !coverageComplete && <Secondary>A repository that was not assessed might resolve it.</Secondary>}
                 </Td>
                 <Td label="Evidence">
-                  <EvidenceList ids={row.evidence} records={page.evidence} assessmentId={assessmentId} />
+                  <EvidenceList ids={row.evidence} records={page.evidence} owner={{ run: assessmentId }} />
                 </Td>
               </tr>
             ))}

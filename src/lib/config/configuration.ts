@@ -44,8 +44,8 @@ const settingsSchema = z.strictObject({
   demo: z.strictObject({
     enabled: z.boolean(),
   }),
-  // How often the worker checks every repository's reference for new
-  // commits, and the detector for a new release, to queue profile versions.
+  // How often the worker checks every repository's reference for a new
+  // commit, and its current survey for an older recipe, to survey it again.
   profiling: z.strictObject({
     checkMinutes: positiveInteger,
   }),
