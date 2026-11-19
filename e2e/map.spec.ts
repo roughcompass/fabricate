@@ -159,7 +159,9 @@ test("reviews every resolution state and the coverage gap", async ({ page, db })
   const coverage = page.locator("#page-alerts");
   await expect(coverage).toContainText("1 repository did not contribute");
   await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).toContainText("Failed");
-  await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).toContainText("source_unavailable");
+  // The failure in words; its code stays out of the alert (content standard, "Two layers").
+  await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).toContainText("The repository couldn't be reached.");
+  await expect(coverage.getByRole("listitem").filter({ hasText: "billing" })).not.toContainText("source_unavailable");
 
   const resolved = relationshipRow(page, "depends on").filter({ has: page.getByRole("link", { name: "client", exact: true }) });
   await expect(resolved).toContainText("Package dependency, observed in source");

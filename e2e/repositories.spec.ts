@@ -264,3 +264,17 @@ test("Repository: no primary action; Re-profile is in More actions", async ({ pa
   await pageHeader(page).getByRole("button", { name: "More actions" }).click();
   await expect(page.locator("[popover]:popover-open").getByRole("button", { name: "Re-profile" })).toBeVisible();
 });
+
+// page-patterns spec, content standard "Failures".
+test("Version that failed on a Surveyor release mismatch: the reason says it needs a newer release and what to do, with the code only in its details", async ({ page, db }) => {
+  const web = buildRepository(db, { name: "web" });
+  const { survey } = requestSurvey(db, { repositoryId: web.id, commitSha: "c".repeat(40), reference: "refs/heads/main", fromConfiguredReference: true, trigger: "added", surveyorRelease: "0.9.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 3 });
+  moveSurvey(db, survey, "failed", { failureCode: "analysis_failed", failureMessage: `Survey ${survey.publicId} needs Surveyor 0.9.0 with its recorded configuration and Profile version 3, but this worker runs Surveyor 0.7.0` });
+  await page.goto(paths.repositoryVersions(web.publicId));
+  const row = page.getByRole("table", { name: "Versions of web" }).getByRole("row").filter({ hasText: "Version 1" });
+  await expect(row).toContainText("This version needs Surveyor 0.9.0, a newer release than the installed 0.7.0. Upgrade the Frontend Registry, or re-profile the Repository to survey it with 0.7.0.");
+  await expect(row.getByText(survey.publicId)).toBeHidden();
+  await expect(row.getByText("analysis_failed")).toBeHidden();
+  await row.getByText("Details", { exact: true }).click();
+  await expect(row.getByText("analysis_failed")).toBeVisible();
+});

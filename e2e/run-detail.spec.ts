@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { buildRun, buildAssessment, buildRepository } from "../test/support/builders";
 import { manifest } from "../test/support/profiles";
 import { seedRun } from "../test/support/scenarios";
+import { driveRun } from "../test/support/home";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { pageHeader } from "./support/shell";
@@ -92,4 +93,20 @@ test("records a cancellation request for an active Assessment and keeps its scop
   await expect(pageHeader(page)).toContainText("Canceling");
   await expect(page.locator("main").getByText(/[Cc]ancellation (was )?requested/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Cancel Run" })).toHaveCount(0);
+});
+
+// page-patterns spec, content standard "Failures".
+test("Failed Run: the alert says to add a Bitbucket token in Admin, without repeating its title or showing the code", async ({ page, db }) => {
+  const repositories = [buildRepository(db, { name: "orders" }), buildRepository(db, { name: "billing" })];
+  const assessment = buildAssessment(db, { name: "Checkout platform migration", repositories });
+  const run = driveRun(db, buildRun(db, { assessment, repositories }).run, "failed", { failedTargets: 2 });
+  await page.goto(paths.run(run.publicId));
+  const alert = page.locator("#page-alerts").getByText("No repository could be assessed").locator("xpath=ancestor::*[contains(@class, 'alert')][1]");
+  await expect(alert).toContainText("Add a Bitbucket token for its server in Admin");
+  await expect(alert).not.toContainText("authentication_failed");
+  expect((await alert.textContent())!.match(/No repository could be assessed/g)).toHaveLength(1);
+  // Each repository's row leads with the same sentence; its code waits in the row's details.
+  const row = page.getByRole("table", { name: "Run scope" }).getByRole("row").filter({ hasText: "orders" });
+  await expect(row).toContainText("The Git server refused the credentials it was given.");
+  await expect(row.getByText("authentication_failed")).toBeHidden();
 });

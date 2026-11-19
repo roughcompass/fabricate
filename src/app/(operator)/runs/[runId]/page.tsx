@@ -11,6 +11,8 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { pageOf, pageQuery, param, withQuery } from "@/lib/web/query";
 import { Pagination } from "@/components/ui/pagination";
+import { FailureReason } from "@/components/results/failure-reason";
+import { failureKind, failureSentence } from "@/lib/runs/failures";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -56,6 +58,8 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
   const status = runStatus(db, run);
   const terminal = isTerminal(RUN_MACHINE, run.state);
   const failed = targets.filter((target) => target.state === "failed");
+  // A failed Run's alert says what happened when every repository failed the same way, rather than repeating its title.
+  const failedTogether = failed.length > 0 && new Set(failed.map((target) => failureKind(target.failureCode, target.failureMessage))).size === 1;
   const finished = targets.filter((target) => isTerminal(TARGET_MACHINE, target.state)).length;
   const shownState = !terminal && run.cancelRequestedAt ? "canceling" : run.state;
 
@@ -90,14 +94,14 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
           <OutcomeToast outcome={runOutcome(param(query, "notice"), run, name)} />
           {run.state === "complete_with_issues" && (
             <Alert tone="warning" title={`${failed.length} of ${countLabel(targets.length, "repository", "repositories")} could not be assessed`}>
-              <p>{`${failed.map((target) => target.repositoryName).join(", ")}: ${failed[0]?.failureMessage ?? "not assessed"}${failed.length > 1 ? " (and more below)" : ""}.`}</p>
+              <p>{`${failed.map((target) => target.repositoryName).join(", ")}: ${failed[0] ? failureSentence(failed[0].failureCode, failed[0].failureMessage) : "not assessed"}${failed.length > 1 ? " (and more below)" : ""}.`}</p>
               <p>Their relationships are missing from the Relationship Map, and Evaluations treat what they could contain as unknown.</p>
             </Alert>
           )}
           {run.state === "failed" && (
             <Alert tone="error" title="No repository could be assessed">
               {/* The stored reason often repeats the title; the rows below give each repository's reason. */}
-              {run.failureReason && !/^No repository could be assessed\.?$/i.test(run.failureReason) ? run.failureReason : "Each repository's reason is listed below."}
+              {failedTogether ? failureSentence(failed[0]!.failureCode, failed[0]!.failureMessage) : "Each repository's reason is listed below."}
             </Alert>
           )}
           {run.state === "canceled" && (
@@ -221,8 +225,7 @@ function ScopeSection({ targets, profiles, commits, terminal, requested, href }:
                 </Td>
                 <Td label="Status">
                   <Status state={target.state} />
-                  {target.failureMessage && <Secondary>{target.failureMessage}</Secondary>}
-                  {target.failureCode && <Secondary mono>{target.failureCode}</Secondary>}
+                  {target.state === "failed" && <FailureReason code={target.failureCode} message={target.failureMessage} />}
                 </Td>
                 <Td label="Profile">
                   {profile ? (

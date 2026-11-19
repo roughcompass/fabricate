@@ -13,6 +13,7 @@ import { ShortValue, Tag } from "@/components/ui/tag";
 import { getDb } from "@/lib/db/client";
 import { TRIGGER_LABELS, versionCount, versionsOf } from "@/lib/profiling/versions";
 import { ReprofileForm, VersionStatus } from "../version-parts";
+import { FailureReason } from "@/components/results/failure-reason";
 import { routes } from "@/lib/web/routes";
 import { loadRepository } from "../load";
 
@@ -69,7 +70,7 @@ export default async function VersionsPage({ params, searchParams }: PageProps<"
                 </Td>
                 <Td label="Status">
                   <VersionStatus version={version} size="sm" />
-                  {version.failure && <Secondary>{version.failure.message}</Secondary>}
+                  {version.failure && <FailureReason code={version.failure.code} message={version.failure.message} />}
                 </Td>
                 <Td label="Commit">
                   <ShortValue value={version.commit} label="commit" />

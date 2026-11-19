@@ -21,6 +21,7 @@ import { surveyRequestFailure } from "@/lib/surveys/background";
 import { PREVIEW_OUTCOME_PARAMS, previewOutcome, repositoryOutcome } from "../outcomes";
 import { PreviewsSection } from "./previews-section";
 import { VersionStatus } from "./version-parts";
+import { failureSentence } from "@/lib/runs/failures";
 import { Menu, MenuAction } from "@/components/ui/menu";
 import { reprofileRepository } from "../actions";
 import styles from "@/components/profiles/profile-body.module.css";
@@ -132,7 +133,7 @@ export function RepositoryView({
                 </Link>
               }
             >
-              {failed.failure?.message ?? "Its survey failed."}
+              {failureSentence(failed.failure?.code ?? "analysis_failed", failed.failure?.message)}
             </Alert>
           )}
           {unreadable && (
@@ -184,7 +185,7 @@ function NoProfile({ version, latest }: { version: ProfileVersion | undefined; l
   if (version) {
     return (
       <EmptyState title={`Version ${version.version} couldn't be profiled`} icon="alert">
-        {version.failure ? `${humanize(version.failure.code)}: ${version.failure.message}` : "Its survey failed."}
+        {version.failure ? failureSentence(version.failure.code, version.failure.message) : "Its survey failed."}
       </EmptyState>
     );
   }
