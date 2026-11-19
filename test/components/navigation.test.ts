@@ -59,6 +59,10 @@ const EXPECTED: Record<string, string | null> = {
   "/admin/system": "system",
   "/admin/bitbucket-tokens": "bitbucket-tokens",
   "/admin/bitbucket-tokens/new": "bitbucket-tokens",
+  "/adoption": "adoption",
+  "/adoption/design-systems/[designSystemId]": "adoption",
+  "/adoption/design-systems/[designSystemId]/components/[componentName]": "adoption",
+  "/adoption/packages/[...packageName]": "adoption",
   "/design-system": null,
   "/design-system/error-demo": null,
 };
@@ -92,6 +96,7 @@ describe("primary menu", () => {
       [null, ["Home"]],
       ["Assessments", ["Repositories", "All Assessments", "Standards"]],
       ["Templates", ["Salt Patterns"]],
+      ["Insights", ["Adoption"]],
       ["Admin", ["System", "Bitbucket tokens"]],
     ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
@@ -102,6 +107,7 @@ describe("primary menu", () => {
     expect(shape(BASE)).toEqual([
       [null, ["Home"]],
       ["Assessments", ["Repositories", "All Assessments", "Standards"]],
+      ["Insights", ["Adoption"]],
       ["Admin", ["System", "Bitbucket tokens"]],
     ]);
     for (const route of ["/templates", "/templates/payments-hub/preview"]) expect(locate(route, BASE), route).toBeNull();

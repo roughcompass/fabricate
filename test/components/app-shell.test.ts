@@ -27,7 +27,7 @@ describe("application shell", () => {
   it("shows Home, the Assessments group, and Admin when the demo is disabled (Demo disabled)", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
     const flags = nav.props.nav as NavFlags;
-    expect(visibleGroups(flags).flatMap((group) => group.items).map((entry) => entry.label)).toEqual(["Home", "Repositories", "All Assessments", "Standards", "System", "Bitbucket tokens"]);
+    expect(visibleGroups(flags).flatMap((group) => group.items).map((entry) => entry.label)).toEqual(["Home", "Repositories", "All Assessments", "Standards", "Adoption", "System", "Bitbucket tokens"]);
   });
 
   it("adds Salt Patterns in its own group when the demo is enabled, opening its list", () => {
@@ -37,6 +37,7 @@ describe("application shell", () => {
       [null, "/"],
       ["Assessments", "/repositories"],
       ["Templates", "/templates"],
+      ["Insights", "/adoption"],
       ["Admin", "/admin/system"],
     ]);
   });

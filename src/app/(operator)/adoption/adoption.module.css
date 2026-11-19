@@ -1,0 +1,10 @@
+@layer pages {
+  /* Repositories named in a sentence, linked. */
+  .links { overflow-wrap: anywhere; }
+  /* A component's or prop's values, each with its count. */
+  .values { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: 0; padding: 0; list-style: none; }
+  .muted { color: var(--color-text-secondary); }
+  /* The snapshot comparison's choices, on one row. */
+  .compare { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); }
+  .stack { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
+}

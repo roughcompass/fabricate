@@ -1,5 +1,7 @@
 import type { Locator } from "@playwright/test";
 import { addBitbucketToken } from "../src/lib/admin/bitbucket-tokens";
+import { storeEntry } from "../src/lib/catalog/entries";
+import { saltEntry } from "../test/support/catalog";
 import { buildRepository } from "../test/support/builders";
 import { expect, expectNoNestedBorders, test } from "./support/fixtures";
 import { seedResults } from "./support/results";
@@ -70,6 +72,7 @@ test("No nested bordered containers on any surface", async ({ page, db, sourcesD
 async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sourcesDir: string): Promise<Surface[]> {
   const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...demoSurfaces()];
   addBitbucketToken(db, { name: "Platform team", serverUrl: "https://bitbucket.example.com", token: "BBDC-surface-token-0000" });
+  storeEntry(db, saltEntry());
   const url = (name: string) => surfaces.find(([candidate]) => candidate === name)![1];
   const profile = url("06-profile");
   const evidenceId = url("06-evidence").split("/").at(-1)!;
@@ -78,6 +81,12 @@ async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sources
     ["10-repository-version", `${url("03-repository")}/versions/1`],
     ["10-profile-evidence", `${profile}/evidence/${evidenceId}`],
     ["10-system", "/admin/system"],
+    ["10-adoption", "/adoption"],
+    ["10-adoption-salt", "/adoption/design-systems/salt"],
+    ["10-adoption-salt-html", "/adoption/design-systems/salt?view=html"],
+    ["10-adoption-salt-snapshots", "/adoption/design-systems/salt?view=snapshots"],
+    ["10-adoption-button", "/adoption/design-systems/salt/components/Button"],
+    ["10-adoption-package", "/adoption/packages/@salt-ds/core"],
     ["10-bitbucket-tokens", "/admin/bitbucket-tokens"],
     ["10-bitbucket-token-new", "/admin/bitbucket-tokens/new"],
     ["10-unknown-address", "/no-such-page"],

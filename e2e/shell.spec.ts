@@ -38,8 +38,8 @@ test.describe("on a wide viewport", () => {
   test("Full menu: Home, then the Assessments, Templates, and Admin groups under headings and dividers", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
-    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Salt Patterns", "System", "Bitbucket tokens"]);
-    await expect(nav.locator("hr")).toHaveCount(3);
+    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Salt Patterns", "Adoption", "System", "Bitbucket tokens"]);
+    await expect(nav.locator("hr")).toHaveCount(4);
     await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["Repositories", "All Assessments", "Standards"]);
     await expect(nav.getByRole("list", { name: "Templates" }).getByRole("link")).toHaveText(["Salt Patterns"]);
     await expect(nav.getByRole("list", { name: "Admin" }).getByRole("link")).toHaveText(["System", "Bitbucket tokens"]);

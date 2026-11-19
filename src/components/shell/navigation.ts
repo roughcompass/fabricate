@@ -21,7 +21,7 @@ export interface NavItem {
  * first apart.
  */
 export interface MenuGroup {
-  readonly id: "main" | "assessments" | "build" | "admin";
+  readonly id: "main" | "assessments" | "build" | "insights" | "admin";
   readonly heading?: string;
   readonly items: readonly NavItem[];
 }
@@ -41,6 +41,9 @@ const ADMIN_ITEMS: readonly NavItem[] = [
   { id: "system", label: "System", href: "/admin/system", icon: "monitor", match: [/^\/admin(\/system)?\/?$/] },
   { id: "bitbucket-tokens", label: "Bitbucket tokens", href: "/admin/bitbucket-tokens", icon: "lock", match: [/^\/admin\/bitbucket-tokens(\/.*)?$/] },
 ];
+
+/** Insights: Adoption Analytics, how the fleet uses the design systems and packages the Reference Catalog describes. */
+const INSIGHTS_ITEMS: readonly NavItem[] = [{ id: "adoption", label: "Adoption", href: "/adoption", icon: "grid", match: [/^\/adoption(\/.*)?$/] }];
 
 export const SALT_PATTERNS = { id: "salt-patterns", label: "Salt Patterns", href: "/templates", icon: "sparkle", match: [/^\/templates(\/.*)?$/] } as const satisfies NavItem;
 
@@ -62,6 +65,7 @@ export function visibleGroups(flags: NavFlags): readonly MenuGroup[] {
     { id: "main", items: [HOME] },
     { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS },
     ...(flags.demo ? [{ id: "build", heading: "Templates", items: [SALT_PATTERNS] } as const] : []),
+    { id: "insights", heading: "Insights", items: INSIGHTS_ITEMS },
     { id: "admin", heading: "Admin", items: ADMIN_ITEMS },
   ];
 }
