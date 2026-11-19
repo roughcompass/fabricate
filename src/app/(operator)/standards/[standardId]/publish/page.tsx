@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { countLabel } from "@/components/ui/count";
 import { DescriptionList } from "@/components/ui/description-list";
+import { Disclosure } from "@/components/ui/disclosure";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
 import { Panel } from "@/components/ui/panel";
@@ -106,7 +107,6 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
             ["Purpose", standard.purpose],
             ["Controls", preview.controls],
             ["Reads", `Repository Profile ${versions(schemas?.repository_profile)} · Relationship Map ${versions(schemas?.relationship_map)}`],
-            ["Content digest", <Tag key="digest" copy label="digest">{preview.digest}</Tag>],
           ]}
         />
       </Section>
@@ -116,6 +116,11 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
           <ControlList controls={document.controls ?? []} />
         </Panel>
       </Section>
+
+      {/* The digest identifies the content exactly; it belongs with the details, not the overview (page-patterns spec, "Digests out of the overview"). */}
+      <Disclosure summary="Details" variant="plain">
+        <DescriptionList surface items={[["Content digest", <Tag key="digest" copy label="digest">{preview.digest}</Tag>]]} />
+      </Disclosure>
     </FormTemplate>
   );
 }

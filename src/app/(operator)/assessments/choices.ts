@@ -18,7 +18,8 @@ export function releaseChoices(db: Executor): Choice[] {
     return {
       value: release.publicId,
       label: releaseLabel(standard, release),
-      description: `${countLabel(controls, "Control")} · published ${formatDate(release.publishedAt)} · digest ${release.digest.slice(0, 12)}`,
+      // Its digest is in the Release's details, not here (page-patterns spec, "Digests out of the overview").
+      description: `${countLabel(controls, "Control")} · published ${formatDate(release.publishedAt)}`,
     };
   });
 }

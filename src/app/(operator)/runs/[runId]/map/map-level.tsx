@@ -15,7 +15,7 @@ import { SearchField } from "@/components/ui/search-field";
 import { Section } from "@/components/ui/section";
 import { statusLabel } from "@/components/ui/status";
 import { targetsOf } from "@/lib/runs/run-records";
-import { type RelationshipScope, SEARCH_KINDS, type SearchMatch, focusOf, relationshipPage, searchMap } from "@/lib/relationships/levels";
+import { type RelationshipScope, SEARCH_KINDS, type SearchMatch, focusOf, packageFocusHref, relationshipPage, searchMap } from "@/lib/relationships/levels";
 import type { MapView } from "@/lib/relationships/map-view";
 import type { LoadedMap } from "./load";
 import styles from "./map.module.css";
@@ -150,6 +150,7 @@ export function MapLevel({
         page={page}
         runId={record.publicId}
         focusHref={(nodeId) => withQuery(levelHref, { focus: nodeId })}
+        packageHref={(name) => packageFocusHref(levelHref, name)}
         pageHref={(number) => withQuery(levelHref, { ...keep, page: pageQuery(number) })}
         coverageComplete={view.missing.length === 0}
         description={focus ? `The relationships of ${focus.label}, from the repository that declared each one.` : scopeDescription}

@@ -192,7 +192,7 @@ function diagramFor(db: Executor, view: MapView, levelHref: string, nodeRows: re
   );
   const groups = new Map(rows.flat().map((box) => [box.nodeId, groupOf(box.nodeId)]));
   const model = diagramModel(groups, edges, labelOf);
-  return { rows, model, thirdParty: model.thirdPartyPackages.map((name) => ({ name, href: withQuery(levelHref, { focus: focusParam.package(name) }) })) };
+  return { rows, model, thirdParty: model.thirdPartyPackages.map((name) => ({ name, href: packageFocusHref(levelHref, name) })) };
 }
 
 // ---------------------------------------------------------------------------
@@ -276,7 +276,7 @@ export function focusOf(db: Executor, view: MapView, levelHref: string, focus: s
     profileHref: repository?.profile ? routes.profile(repository.profile) : null,
     dependents,
     dependencies,
-    thirdParty: thirdParty.map((name) => ({ name, href: withQuery(levelHref, { focus: focusParam.package(name) }) })),
+    thirdParty: thirdParty.map((name) => ({ name, href: packageFocusHref(levelHref, name) })),
     producer: null,
     declarations: [],
     evidence: evidenceRecords(db, view.run.id, evidenceIds),
@@ -487,16 +487,23 @@ export interface RelationshipPage {
   page: number;
   pages: number;
   evidence: JsonObject;
+  /** Third-party packages in scope, which no repository in the Run produces: grouped by name, out of the rows, each with how many repositories here declare it. */
+  thirdParty: { name: string; dependents: number }[];
 }
 
 export type RelationshipScope = { kind: "from"; nodes: ReadonlySet<string> } | { kind: "touching"; node: string } | { kind: "package"; name: string };
 
 /** One page of the relationships in scope, in reading order: by declaring repository, type, then what it refers to. */
 export function relationshipPage(db: Executor, view: MapView, scope: RelationshipScope, requested?: string | number): RelationshipPage {
-  const edgeIds = scopedEdgeIds(db, view, scope);
+  const scoped = scopedEdgeIds(db, view, scope);
+  // A dependency nobody in the Run produces is a third-party package: counted, with the packages one disclosure away, not a row each. A package's own focus keeps them as rows.
+  const outside = scope.kind === "package" ? [] : thirdPartyEdges(db, view, scoped);
+  const left = new Set(outside.map((edge) => edge.id));
+  const edgeIds = left.size ? scoped.filter((id) => !left.has(id)) : scoped;
+  const thirdParty = thirdPartyPackages(outside);
   const total = edgeIds.length;
   const { page: current, pages } = pageNumber(requested, total, PAGE_SIZE);
-  if (total === 0) return { rows: [], total, page: current, pages, evidence: {} as JsonObject };
+  if (total === 0) return { rows: [], total, page: current, pages, evidence: {} as JsonObject, thirdParty };
 
   const ordered = db.all<{ edge_id: string }>(sql`
     SELECT edge.edge_id FROM graph_edges AS edge
@@ -522,7 +529,32 @@ export function relationshipPage(db: Executor, view: MapView, scope: Relationshi
       evidence: [...edge.evidence],
     };
   });
-  return { rows, total, page: current, pages, evidence: evidenceRecords(db, view.run.id, rows.flatMap((row) => row.evidence)) };
+  return { rows, total, page: current, pages, evidence: evidenceRecords(db, view.run.id, rows.flatMap((row) => row.evidence)), thirdParty };
+}
+
+/** The third-party edges among +edgeIds+: each one's ID, the package it names, and the repository that declares it. */
+function thirdPartyEdges(db: Executor, view: MapView, edgeIds: readonly string[]): { id: string; name: string; from: string }[] {
+  if (edgeIds.length === 0) return [];
+  return db
+    .all<{ edge_id: string; from_node: string; reference_identifier: string | null }>(
+      sql`SELECT edge_id, from_node, reference_identifier FROM graph_edges WHERE map_id = ${view.map.id} AND kind = 'third_party' AND edge_id IN (SELECT value FROM json_each(${JSON.stringify(edgeIds)}))`,
+    )
+    .map((row) => {
+      const identifier = (row.reference_identifier ? JSON.parse(row.reference_identifier) : {}) as Record<string, string>;
+      return { id: row.edge_id, from: row.from_node, name: identifier.name ?? Object.values(identifier).join(" ") };
+    });
+}
+
+/** Each third-party package once, by name, with how many repositories declare it. */
+function thirdPartyPackages(edges: readonly { name: string; from: string }[]): RelationshipPage["thirdParty"] {
+  const dependents = new Map<string, Set<string>>();
+  for (const edge of edges) dependents.set(edge.name, (dependents.get(edge.name) ?? new Set()).add(edge.from));
+  return [...dependents].map(([name, from]) => ({ name, dependents: from.size })).sort((a, b) => compare(a.name, b.name));
+}
+
+/** The address that focuses the package +name+ at the level +levelHref+. */
+export function packageFocusHref(levelHref: string, name: string): string {
+  return withQuery(levelHref, { focus: focusParam.package(name) });
 }
 
 function scopedEdgeIds(db: Executor, view: MapView, scope: RelationshipScope): string[] {

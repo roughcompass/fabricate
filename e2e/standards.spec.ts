@@ -172,7 +172,10 @@ test("distinguishes drafts from Releases and shows exact publication inputs befo
   await expect(page.getByRole("heading", { name: "Publish Engineering baseline v1" })).toBeVisible();
   const publication = page.getByRole("region", { name: "Publication" });
   await expect(publication).toContainText(`From draft version${saved.lockVersion}`);
-  await expect(publication).toContainText(preview.digest);
+  // page-patterns spec, "Digests out of the overview": the content digest is in the details, not the overview.
+  await expect(publication).not.toContainText(preview.digest);
+  await page.locator("summary", { hasText: "Details" }).click();
+  await expect(page.locator("details[open]")).toContainText(preview.digest);
   // Every Control is shown in full before publication.
   await expect(page.getByRole("article", { name: "Control services-configurable" })).toContainText("service.endpoint_derivation");
 
