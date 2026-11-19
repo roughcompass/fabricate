@@ -3,6 +3,8 @@ import path from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOverlappingContent, test } from "./support/fixtures";
 import { openTool, setView, waitForRegions } from "./support/demo";
+import { framedRun } from "./support/fixture-app";
+import { application, runOrdersPortal, waitForPage } from "./support/running-app";
 import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
 import { useTheme } from "./support/shell";
@@ -229,76 +231,66 @@ test("captures every template demo surface at desktop and mobile width, in both 
 });
 
 /**
- * Captures each hero application with each toolbar tool open, in both
- * application themes, with the toolbar in the matching operator theme.
+ * Captures the fixture application running with each toolbar tool open, with
+ * the toolbar in each operator theme.
  */
-test("captures each toolbar tool over every hero application, in both themes", async ({ page, context, db: _db, baseURL }) => {
+test("captures each toolbar tool over a running application, in both operator themes", async ({ page, context, db, baseURL }) => {
+  test.setTimeout(240_000);
   const output = path.join(OUTPUT, "toolbar");
   fs.rmSync(output, { recursive: true, force: true });
   fs.mkdirSync(output, { recursive: true });
-  const heroes = ["payments-workspace", "client-onboarding", "market-watch", "operations-console"];
   const tools: [id: string, dialog: string][] = [
-    ["microfrontends", "Microfrontends"],
     ["accessibility", "Accessibility"],
     ["timing", "Timing"],
-    ["settings", "Settings"],
     ["share", "Share"],
     ["comments", "Comments"],
   ];
   await page.setViewportSize({ width: 1280, height: 900 });
+  const running = await runOrdersPortal(page, db);
+  // One comment, so the comments list and a pin show.
+  await page.keyboard.press("c");
+  await application(page).getByRole("button", { name: "Export orders" }).click();
+  const composer = page.getByRole("dialog", { name: "New comment" });
+  await composer.getByLabel("Your name").fill("Sam Rivera");
+  await composer.getByLabel("Comment", { exact: true }).fill("Can this use the shared component?");
+  await composer.getByRole("button", { name: "Post comment" }).click();
+  await expect(composer).toBeHidden();
   for (const theme of THEMES) {
     await useTheme(context, theme, baseURL!);
-    for (const slug of heroes) {
-      await page.goto(`/run/ref-${slug}`);
-      await waitForRegions(page);
-      await setView(page, { theme });
-      await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
-      if (theme === "light") {
-        // One comment per hero, so the comments list and a pin show.
-        await page.keyboard.press("c");
-        await page.locator("[data-demo-mfe] [data-demo-anchor]").first().click();
-        const composer = page.getByRole("dialog", { name: "New comment" });
-        if (await composer.getByLabel("Your name").count()) await composer.getByLabel("Your name").fill("Sam Rivera");
-        await composer.getByLabel("Comment", { exact: true }).fill("Can this use the shared component?");
-        await composer.getByRole("button", { name: "Post comment" }).click();
-        await expect(composer).toBeHidden();
-        await page.getByRole("dialog", { name: "Comment 1" }).getByRole("button", { name: "Close comment" }).click();
+    await page.goto(framedRun(running, "/accounts"));
+    await waitForPage(page, "Accounts");
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    for (const [name, dialog] of tools) {
+      await openTool(page, name);
+      const panel = page.getByRole("dialog", { name: dialog });
+      await expect(panel).toBeVisible();
+      if (name === "accessibility") {
+        await panel.getByRole("button", { name: /Run audit/ }).click();
+        await expect(panel.locator("[data-audit-result]").first()).toBeVisible();
       }
-      for (const [name, dialog] of tools) {
-        await openTool(page, name);
-        const panel = page.getByRole("dialog", { name: dialog });
-        await expect(panel).toBeVisible();
-        if (name === "accessibility") {
-          await panel.getByRole("button", { name: /Run audit/ }).click();
-          await expect(panel.locator("[data-audit-result]").first()).toBeVisible();
-        }
-        if (name === "share") await expect(panel.getByLabel("Link to this view")).toBeVisible();
-        await page.screenshot({ path: path.join(output, `${slug}-${name}-${theme}.jpg`), type: "jpeg", quality: 75 });
-      }
-      await page.keyboard.press("Escape");
+      if (name === "share") await expect(panel.getByLabel("Link to this view")).toBeVisible();
+      await page.screenshot({ path: path.join(output, `orders-portal-${name}-${theme}.jpg`), type: "jpeg", quality: 75 });
     }
+    await page.keyboard.press("Escape");
   }
-  expect(fs.readdirSync(output)).toHaveLength(heroes.length * tools.length * THEMES.length);
+  expect(fs.readdirSync(output)).toHaveLength(tools.length * THEMES.length);
 });
 
 /**
  * Captures the toolbar's own states at desktop and 375px widths, in both
  * operator themes: at rest, the open and filtered menu, each tool panel, the
- * Session create form, the composer with its formatting bar, and the hidden
- * tab.
+ * composer with its formatting bar, and the hidden tab.
  */
-test("captures the toolbar's states at desktop and mobile width, in both operator themes", async ({ page, context, db: _db, baseURL }) => {
+test("captures the toolbar's states at desktop and mobile width, in both operator themes", async ({ page, context, db, baseURL }) => {
+  test.setTimeout(240_000);
   const output = path.join(OUTPUT, "toolbar-states");
   fs.rmSync(output, { recursive: true, force: true });
   fs.mkdirSync(output, { recursive: true });
   const panels: [id: string, dialog: string][] = [
     ["comments", "Comments"],
     ["share", "Share"],
-    ["microfrontends", "Microfrontends"],
     ["accessibility", "Accessibility"],
     ["timing", "Timing"],
-    ["session", "Session"],
-    ["settings", "Settings"],
     ["shortcuts", "Preferences / Keyboard shortcuts"],
   ];
   const menu = page.getByRole("dialog", { name: "Toolbar", exact: true });
@@ -308,19 +300,20 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
     await page.screenshot({ path: path.join(output, `${name}-${viewport}-${theme}.jpg`), type: "jpeg", quality: 75 });
     count++;
   };
+  const running = await runOrdersPortal(page, db);
   for (const theme of THEMES) {
     await useTheme(context, theme, baseURL!);
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize(viewport);
-      await page.goto("/run/ref-payments-workspace");
-      await waitForRegions(page);
+      await page.goto(framedRun(running, "/accounts"));
+      await waitForPage(page, "Accounts");
       await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
       await capture("rest", theme, viewport.name);
 
       await page.getByRole("button", { name: /^Open toolbar menu/ }).click();
       await expect(menu).toBeVisible();
       await capture("menu", theme, viewport.name);
-      await page.keyboard.type("set");
+      await page.keyboard.type("tim");
       await capture("menu-filtered", theme, viewport.name);
       await page.keyboard.press("Escape");
 
@@ -331,14 +324,8 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
         await page.keyboard.press("Escape");
       }
 
-      await openTool(page, "session");
-      await page.getByRole("dialog", { name: "Session" }).getByRole("button", { name: "New profile" }).click();
-      await expect(page.getByRole("form", { name: "New profile" })).toBeVisible();
-      await capture("session-create", theme, viewport.name);
-      await page.keyboard.press("Escape");
-
       await openTool(page, "comment");
-      await page.locator('[data-demo-anchor="send-payment"]').click();
+      await application(page).getByRole("button", { name: "Export orders" }).click();
       const composer = page.getByRole("dialog", { name: "New comment" });
       await composer.getByLabel("Comment", { exact: true }).fill("Make this **primary**");
       await composer.getByRole("button", { name: "Formatting" }).click();
@@ -348,7 +335,7 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
         .poll(() =>
           page.evaluate(() => {
             const box = document.querySelector('[role="dialog"][aria-label="New comment"]')!.getBoundingClientRect();
-            const controls = document.querySelector('[data-demo-toolbar="controls"]')!.getBoundingClientRect();
+            const controls = document.querySelector('[data-toolbar="controls"]')!.getBoundingClientRect();
             return box.bottom <= controls.top || box.top >= controls.bottom || box.right <= controls.left || box.left >= controls.right;
           }),
         )
@@ -363,5 +350,5 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
     }
   }
   expect(fs.readdirSync(output)).toHaveLength(count);
-  expect(count).toBe((panels.length + 6) * VIEWPORTS.length * THEMES.length);
+  expect(count).toBe((panels.length + 5) * VIEWPORTS.length * THEMES.length);
 });

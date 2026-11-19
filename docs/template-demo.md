@@ -4,6 +4,8 @@ The template demo shows how a team could start an application from a pre-built s
 
 Everything in the demo is simulated. See [What is simulated](#what-is-simulated) before you present it.
 
+> **Changing:** the demo is being replaced by applications built from real repositories (openspec `add-applications`). The toolbar now runs over an application's build at `/run/<application>`, with Comment, Comments, Share, Accessibility, and Timing; a template's reference deployment opens without it. The storyline below describes the demo before that change, and is rewritten with it.
+
 ## Before you present
 
 1. Start the Frontend Registry with the demo on: `FRONTEND_REGISTRY_DEMO=true npm run dev`, or use the hosted demo.

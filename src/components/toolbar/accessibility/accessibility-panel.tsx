@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/form";
-import { IMPACTS, IMPACT_LABELS, type AuditResult } from "@/demo/toolbar/accessibility/audit";
-import styles from "@/demo/toolbar/accessibility/accessibility.module.css";
+import { IMPACTS, IMPACT_LABELS, type AuditResult } from "@/components/toolbar/accessibility/audit";
+import styles from "@/components/toolbar/accessibility/accessibility.module.css";
 import { useTargetDocument } from "../target-document";
 import { ToolPanel } from "../tool-panel";
 import { type Found, useAudit } from "./audit-state";

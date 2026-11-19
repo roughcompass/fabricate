@@ -20,8 +20,6 @@ export interface RoutingOverride {
   readonly environment: EnvironmentId;
 }
 
-const ENVIRONMENT_NAMES: Readonly<Record<EnvironmentId, string>> = { production: "Production", sandbox: "Sandbox", dev: "Dev" };
-
 /**
  * Where a member is served without overrides. A sandbox serves every member
  * from the sandbox. A dev environment builds only the template's child
@@ -49,21 +47,5 @@ export function availableEnvironments(member: GroupMember, deployed: Environment
   return built ? ["production", deployed] : ["production"];
 }
 
-/** "Sandbox", "Dev", or "Production (fallback)". */
-export function environmentLabel(routing: Pick<MemberRouting, "environment" | "reason">): string {
-  return routing.reason === "fallback" ? `${ENVIRONMENT_NAMES[routing.environment]} (fallback)` : ENVIRONMENT_NAMES[routing.environment];
-}
 
-export function environmentName(environment: EnvironmentId): string {
-  return ENVIRONMENT_NAMES[environment];
-}
 
-/** The simulated routing response headers the debug mode shows for a member. */
-export function routingHeaders(routing: MemberRouting): [name: string, value: string][] {
-  return [
-    ["x-demo-mfe", routing.member],
-    ["x-demo-mfe-version", routing.version],
-    ["x-demo-mfe-environment", routing.environment],
-    ["x-demo-mfe-reason", routing.reason],
-  ];
-}

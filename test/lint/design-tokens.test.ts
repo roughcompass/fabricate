@@ -128,8 +128,8 @@ export function violations(file: string, source: string, runtimeTokens: Readonly
   const local = definedIn(source);
   const problems: string[] = [];
   const report = (declaration: Declaration, reason: string) => problems.push(`${file}:${declaration.line} ${declaration.property}: ${reason}`);
-  // The demo toolbar's tools (src/demo/toolbar/) are operator interface, like shared components.
-  const expectedLayer = file.startsWith("src/components/") || file.startsWith("src/demo/toolbar/")
+  // The toolbar's tools are operator interface, like shared components.
+  const expectedLayer = file.startsWith("src/components/")
     ? "@layer components"
     : file === RUNTIME_TOKENS
       ? "@layer runtime-tokens"

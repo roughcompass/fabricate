@@ -4,15 +4,12 @@ import { type HTMLAttributes, useLayoutEffect, useRef, useState } from "react";
 import { type Position, type Size, intersects, placeOutside } from "./placement";
 import { useToolbarBounds } from "./toolbar-bounds";
 
-/** Matches --space-3: the gap a corner overlay keeps from the viewport's edges. */
-const EDGE_GAP = 12;
 /** Matches --space-6: the gap between a mode banner and the bottom of the viewport. */
 const BANNER_GAP = 24;
 
 /** Where an overlay would go, given its own size and the viewport's. */
 export type Preferred = (box: Size, viewport: Size) => Position;
 
-export const topRight: Preferred = (box, viewport) => ({ top: EDGE_GAP, left: viewport.width - EDGE_GAP - box.width });
 export const bottomCenter: Preferred = (box, viewport) => ({ top: viewport.height - BANNER_GAP - box.height, left: (viewport.width - box.width) / 2 });
 
 interface Frame {

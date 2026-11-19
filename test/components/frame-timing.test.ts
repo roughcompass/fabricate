@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isInspectorMessage, isToolbarEvent, markToolbarEvent } from "@/components/toolbar/inspector/protocol";
 import { addressOf, routeOf } from "@/components/toolbar/target-document";
 import { addLoads, pageLoad } from "@/components/toolbar/timing/load-order";
-import { waterfall } from "@/demo/toolbar/timing/timing";
+import { waterfall } from "@/components/toolbar/timing/timing";
 
 /*
  * What the toolbar works out from a framed application (add-applications,

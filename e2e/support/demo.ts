@@ -1,9 +1,6 @@
 import { createRequire } from "node:module";
-import type { Browser, BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { itemById } from "../../src/components/toolbar/toolbar-context";
-import type { Db } from "../../src/lib/db/client";
-import { WORKSPACE_COOKIE, newWorkspaceKey } from "../../src/lib/demo/workspace-key";
-import { ensureWorkspace, setHints } from "../../src/lib/demo/workspaces";
 import { expect } from "./fixtures";
 
 /** Helpers for the template demo's running applications. */
@@ -55,18 +52,6 @@ export async function audit(page: Page, also: string[] = []): Promise<AuditViola
   }, [AUDIT_TAGS, also] as const);
 }
 
-/**
- * Another visitor's browser: a fresh context with a demo workspace of its own,
- * with guided hints off like the test's main browser.
- */
-export async function visitorContext(browser: Browser, db: Db, baseURL: string): Promise<BrowserContext> {
-  const context = await browser.newContext({ baseURL });
-  const key = newWorkspaceKey();
-  setHints(db, ensureWorkspace(db, key).id, { off: true });
-  await context.addCookies([{ name: WORKSPACE_COOKIE, value: key, url: baseURL, httpOnly: true, sameSite: "Lax" }]);
-  return context;
-}
-
 const menuDialog = (page: Page) => page.getByRole("dialog", { name: "Toolbar", exact: true });
 
 /** Opens the toolbar menu from the pill. */
@@ -99,7 +84,7 @@ export async function startComment(page: Page) {
  */
 export async function expectToolbarOnTop(page: Page): Promise<void> {
   const covered = await page.evaluate(() => {
-    const controls = document.querySelector('[data-demo-toolbar="controls"]');
+    const controls = document.querySelector('[data-toolbar="controls"]');
     if (!controls) return ["no toolbar controls"];
     const visibleBox = (element: HTMLElement) => {
       let { left, top, right, bottom } = element.getBoundingClientRect();

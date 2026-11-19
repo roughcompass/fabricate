@@ -4,11 +4,6 @@ import { expect } from "./fixtures";
 /** The sidebar's navigation. */
 const primaryNavigation = (page: Page) => page.getByRole("navigation", { name: "Primary" });
 
-/** Opens a top-level section from the sidebar. */
-export async function openSection(page: Page, name: string): Promise<void> {
-  await primaryNavigation(page).getByRole("link", { name, exact: true }).click();
-}
-
 /**
  * Waits until the page has hydrated, before clicking controls that work only
  * with JavaScript: the shell's Hide sidebar control submits a form until then,

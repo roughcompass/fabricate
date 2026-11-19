@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
-import { RATING_LABELS, VITALS, formatMs, formatVital, rate, rateVital, slowestInteraction, waterfall } from "@/demo/toolbar/timing/timing";
-import styles from "@/demo/toolbar/timing/timing.module.css";
+import { RATING_LABELS, VITALS, formatMs, formatVital, rate, rateVital, slowestInteraction, waterfall } from "@/components/toolbar/timing/timing";
+import styles from "@/components/toolbar/timing/timing.module.css";
 import { ToolPanel } from "../tool-panel";
 import { useTiming } from "./timing-state";
 

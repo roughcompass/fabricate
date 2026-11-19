@@ -1,16 +1,18 @@
+import { applicationsUnavailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
 import { jsonBody, stringField } from "@/lib/demo/api";
-import { demoUnavailable } from "@/lib/demo/guard";
 import { writableWorkspace } from "@/lib/demo/request";
 import { isHintAction, isHintSequence, nextHints } from "@/lib/demo/hints";
 import { setHints } from "@/lib/demo/workspaces";
 
 /**
  * Updates the visitor's guided-hint state (template-demo/demo-mode spec):
- * finish or dismiss a sequence, replay both, or turn hints off or on.
+ * finish or dismiss a sequence, replay it, or turn hints off or on. Hints
+ * belong to running applications, so this answers only while applications are
+ * offered.
  */
 export async function POST(request: Request) {
-  const unavailable = demoUnavailable();
+  const unavailable = applicationsUnavailable();
   if (unavailable) return unavailable;
   const body = await jsonBody(request);
   if (body instanceof Response) return body;

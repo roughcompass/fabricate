@@ -1,6 +1,6 @@
 import type { Frame, Page } from "@playwright/test";
 import { templateBySlug } from "../src/lib/demo/catalog";
-import { startComment, waitForRegions } from "./support/demo";
+import { waitForRegions } from "./support/demo";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { pageHeader } from "./support/shell";
 
@@ -164,11 +164,11 @@ test("shows the application in the frame without the toolbar, even after navigat
   await page.goto("/templates/payments-workspace/preview");
   const frame = await framed(page);
   await expect(frame.locator("[data-demo-portal]")).toHaveAttribute("data-demo-embedded", "true");
-  await expect(frame.locator("[data-demo-toolbar]")).toHaveCount(0);
+  await expect(frame.locator("[data-toolbar]")).toHaveCount(0);
   await frame.locator('[data-demo-anchor="nav-activity"]').click();
   await frame.waitForURL(/\/run\/ref-payments-workspace\/activity\?embed=1$/);
   await expect(frame.locator('[data-demo-mfe="payment-activity"]')).toBeVisible();
-  await expect(frame.locator("[data-demo-toolbar]")).toHaveCount(0);
+  await expect(frame.locator("[data-toolbar]")).toHaveCount(0);
 });
 
 test("keeps the tab, device, and orientation across a reload", async ({ page, db: _db }) => {
@@ -204,7 +204,7 @@ test("reads the template's files, with microfrontends.json listing the group", a
   await expect(page.getByRole("figure", { name: "src/payee-list.tsx" })).toContainText('from "@salt-ds/core"');
 });
 
-test("opens full screen in a new tab with the toolbar, at the route shown in the frame", async ({ page, context, db: _db }) => {
+test("opens full screen in a new tab, at the route shown in the frame", async ({ page, context, db: _db }) => {
   const template = templateBySlug("client-onboarding")!;
   await page.goto("/templates/client-onboarding/preview");
   await framed(page);
@@ -212,7 +212,8 @@ test("opens full screen in a new tab with the toolbar, at the route shown in the
   await full.waitForLoadState("domcontentloaded");
   expect(new URL(full.url()).pathname).toBe(`/run/ref-client-onboarding/${template.app.routes[0]!.path}`);
   await waitForRegions(full);
-  await expect(full.getByRole("complementary", { name: "Toolbar", exact: true })).toBeVisible();
+  // The toolbar runs over applications' builds only (add-applications, task 8.5), not over a template's reference deployment.
+  await expect(full.getByRole("complementary", { name: "Toolbar", exact: true })).toHaveCount(0);
   await full.close();
 
   // After navigating inside the frame, full screen opens that route.
@@ -224,30 +225,6 @@ test("opens full screen in a new tab with the toolbar, at the route shown in the
   await again.waitForLoadState("domcontentloaded");
   expect(new URL(again.url()).pathname).toBe(`/run/ref-client-onboarding/${second.path}`);
   await again.close();
-});
-
-test("keeps a visitor's comments on a reference deployment private to their workspace", async ({ page, context, browser, db: _db }) => {
-  await page.goto("/templates/payments-workspace/preview");
-  const [full] = await Promise.all([context.waitForEvent("page"), page.getByRole("link", { name: /Open full screen/ }).click()]);
-  await waitForRegions(full);
-  await startComment(full);
-  await full.locator('[data-demo-anchor="send-payment"]').click();
-  const composer = full.getByRole("dialog", { name: "New comment" });
-  await composer.getByLabel("Your name").fill("Sam Rivera");
-  await composer.getByLabel("Comment", { exact: true }).fill("Only my workspace sees this");
-  await composer.getByRole("button", { name: "Post comment" }).click();
-  await expect(full.locator('[data-comment-pin="1"]')).toBeVisible();
-
-  // A second visitor, in another browser, opens the same template full screen.
-  const other = await browser.newContext({ baseURL: new URL(page.url()).origin });
-  const visitor = await other.newPage();
-  await visitor.goto("/templates/payments-workspace/preview");
-  const [theirs] = await Promise.all([other.waitForEvent("page"), visitor.getByRole("link", { name: /Open full screen/ }).click()]);
-  await waitForRegions(theirs);
-  await expect(theirs.getByRole("complementary", { name: "Toolbar", exact: true })).toBeVisible();
-  await expect(theirs.locator("[data-comment-pin]")).toHaveCount(0);
-  await expect(theirs.getByRole("button", { name: /^Open toolbar menu/ })).toHaveAccessibleName("Open toolbar menu");
-  await other.close();
 });
 
 test.describe("the icon controls", () => {

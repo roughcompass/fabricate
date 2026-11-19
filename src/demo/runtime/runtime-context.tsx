@@ -3,7 +3,6 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { createContext, use, useEffect, useEffectEvent, useMemo, useSyncExternalStore } from "react";
 import { type AppDefinition, type AppRoute, type Profile, type Template, routeByPath, runPath, startRoute } from "@/lib/demo/catalog";
-import { type MemberRouting, resolveRouting } from "@/lib/demo/routing";
 import type { Bus } from "./bus";
 import type { RuntimeDescriptor } from "./descriptor";
 import { type ProfilesStore, resolveProfile } from "./profiles";
@@ -57,13 +56,6 @@ export function useVersions(): Record<string, string> {
   const { app, descriptor } = useRuntime();
   const { overrides } = useViewState();
   return useMemo(() => effectiveVersions(app, descriptor.environment, overrides), [app, descriptor.environment, overrides]);
-}
-
-/** Where each member is served from, and why. */
-export function useRouting(): Record<string, MemberRouting> {
-  const { app, descriptor } = useRuntime();
-  const { overrides } = useViewState();
-  return useMemo(() => resolveRouting(app, descriptor.environment, overrides), [app, descriptor.environment, overrides]);
 }
 
 /** The application route the address names: /run/<id>/<route>, or the start route. */

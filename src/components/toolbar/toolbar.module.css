@@ -93,12 +93,13 @@
   .side { position: absolute; top: 50%; right: calc(100% + var(--space-5)); translate: 0 -50%; }
   /*
    * Room below the menu for a guided hint that points into it, on a viewport too narrow for the hint beside it:
-   * the menu gives up that much height and moves up by half of it, so the room opens at the bottom.
+   * the menu gives up that much height, and its bottom sits that far above the viewport's edge, however tall it is.
+   * The host's middle is the viewport's, so from there the bottom is half the viewport down, less the gap and the room.
    */
   .side[data-room] {
     /* A fallback only: the toolbar sets the room it needs inline. */
     --_room: var(--space-16);
-    translate: 0 calc(-50% - var(--_room) / 2);
+    translate: 0 calc(50dvh - var(--space-4) - var(--_room) - 100%);
   }
   .side[data-room] .menu { max-height: calc(100dvh - 2 * var(--space-4) - var(--_room)); }
   .menu, .panel {
@@ -149,8 +150,10 @@
     &:hover { background: var(--color-bg-muted); }
     &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
   }
-  .contextName { flex: 1 1 auto; min-width: 0; overflow: hidden; font-weight: var(--font-weight-medium); text-overflow: ellipsis; white-space: nowrap; }
-  .contextMeta { display: inline-flex; flex: none; gap: var(--space-1); color: var(--color-text-secondary); }
+  .contextText { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
+  .contextName { overflow: hidden; font-weight: var(--font-weight-medium); text-overflow: ellipsis; white-space: nowrap; }
+  .contextMeta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); color: var(--color-text-secondary); }
+  .contextCode { font-family: var(--font-family-mono); font-size: var(--font-size-caption); }
   .shortcutRow { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); }
   .roundButton {
     display: inline-grid;
@@ -213,6 +216,8 @@
 
   /* Preferences / Keyboard shortcuts. */
   .shortcuts { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+  .preferences { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+  .preferencesTitle { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
   .shortcut { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
   .shortcutName { flex: 1 1 auto; min-width: 0; }
 }

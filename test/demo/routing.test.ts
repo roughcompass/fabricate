@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { memberById, templateBySlug } from "@/lib/demo/catalog";
-import { availableEnvironments, environmentLabel, resolveRouting, routingHeaders } from "@/lib/demo/routing";
+import { availableEnvironments, resolveRouting } from "@/lib/demo/routing";
 
 const app = templateBySlug("payments-workspace")!.app;
 
@@ -14,9 +14,7 @@ describe("microfrontend routing", () => {
   it("serves child members from dev and the portal shell from production as a fallback in a dev application", () => {
     const routing = resolveRouting(app, "dev");
     expect(routing["payments-shell"]).toMatchObject({ environment: "production", reason: "fallback" });
-    expect(environmentLabel(routing["payments-shell"]!)).toBe("Production (fallback)");
     for (const member of ["payee-list", "transfer-form", "payment-activity"]) expect(routing[member]).toMatchObject({ environment: "dev", reason: "default" });
-    expect(environmentLabel(routing["payee-list"]!)).toBe("Dev");
   });
 
   it("serves reference deployments from production", () => {
@@ -49,14 +47,5 @@ describe("microfrontend routing", () => {
     expect(availableEnvironments(child, "dev")).toEqual(["production", "dev"]);
     expect(availableEnvironments(shell, "dev")).toEqual(["production"]);
     expect(availableEnvironments(child, "production")).toEqual(["production"]);
-  });
-
-  it("describes a routing decision as simulated response headers", () => {
-    expect(routingHeaders(resolveRouting(app, "dev")["payments-shell"]!)).toEqual([
-      ["x-demo-mfe", "payments-shell"],
-      ["x-demo-mfe-version", "5.2.0"],
-      ["x-demo-mfe-environment", "production"],
-      ["x-demo-mfe-reason", "fallback"],
-    ]);
   });
 });

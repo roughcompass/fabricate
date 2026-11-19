@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { HintState } from "@/lib/demo/hints";
 import { routes } from "@/lib/web/routes";
 import { ApplicationToolbar } from "./application-toolbar";
 import { sessionThreadStore } from "./comments/thread-store";
@@ -17,14 +18,15 @@ import styles from "./running-application.module.css";
  *
  * Comment threads are kept in the browser tab under +threadsKey+ until the
  * workspace's threads take a commit and an element anchor; that store then
- * replaces sessionThreadStore here.
+ * replaces sessionThreadStore here. +hints+ is the workspace's guided-hint
+ * state.
  */
-export function RunningApplication({ slug, src, base, commit, title, context, threadsKey }: { slug: string; src: string; base: string; commit: string; title: string; context: MenuContext; threadsKey: string }) {
+export function RunningApplication({ slug, src, base, commit, title, context, threadsKey, hints }: { slug: string; src: string; base: string; commit: string; title: string; context: MenuContext; threadsKey: string; hints: HintState }) {
   const [store] = useState(() => sessionThreadStore(threadsKey));
   return (
     <TargetFrame src={src} base={base} commit={commit} title={title} className={styles.frame}>
       <FollowRoute slug={slug} />
-      <ApplicationToolbar context={context} store={store} />
+      <ApplicationToolbar context={context} store={store} hints={hints} />
     </TargetFrame>
   );
 }

@@ -6,6 +6,7 @@ import { APPLICATION_STATUS_LABELS } from "@/lib/applications/status";
 import { getDb } from "@/lib/db/client";
 import { referenceTemplate, routeByPath } from "@/lib/demo/catalog";
 import { demoEnabled } from "@/lib/demo/guard";
+import { currentWorkspace } from "@/lib/demo/request";
 import { routes } from "@/lib/web/routes";
 
 /**
@@ -37,8 +38,9 @@ export default async function RunRoute({ params }: PageProps<"/run/[slug]/[[...p
       base={base}
       commit={application.current.commitSha}
       title={application.name}
-      context={{ name: application.name, environment: `${application.trackedBranch} · ${application.current.commitSha.slice(0, 12)} · ${APPLICATION_STATUS_LABELS[application.status]}`, href: routes.application(application.slug) }}
+      context={{ name: application.name, branch: application.trackedBranch, commit: application.current.commitSha, status: APPLICATION_STATUS_LABELS[application.status], href: routes.application(application.slug) }}
       threadsKey={`frontend-registry:threads:${application.publicId}`}
+      hints={(await currentWorkspace())?.hints ?? {}}
     />
   );
 }

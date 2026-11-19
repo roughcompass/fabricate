@@ -1,4 +1,4 @@
-import type { Brand, BrandId, Persona, Profile, Provider, ProviderId } from "./types";
+import type { Brand, BrandId, Profile, Provider, ProviderId } from "./types";
 
 /**
  * The four portal brands (design.md, decision 20). Payments, Global Banking,
@@ -38,7 +38,3 @@ export function builtInProfile(id: string | undefined): Profile | undefined {
   return BUILT_IN_PROFILES.find((profile) => profile.id === id);
 }
 
-/** The built-in profile with a persona, whose id a share link stores for links from before profiles. */
-export function builtInProfileFor(persona: Persona): Profile {
-  return BUILT_IN_PROFILES.find((profile) => profile.persona === persona)!;
-}

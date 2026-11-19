@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { boundRef, remeasureToolbarBounds } from "@/demo/toolbar/toolbar-bounds";
+import { boundRef, remeasureToolbarBounds } from "./toolbar-bounds";
 import { markToolbarEvent } from "./inspector/protocol";
 import { ShortcutsPanel } from "./shortcuts-panel";
 import { useOptionalTargetDocument } from "./target-document";
@@ -18,14 +18,14 @@ import styles from "./toolbar.module.css";
  * toolbar spec): a pill docked to the middle of the right edge, a menu that
  * finds every tool, and one tool panel at a time, all opening to the left of
  * the pill. It is operator interface: it follows the operator's theme, never
- * the portal's.
+ * the application's.
  *
  * Its controls live in the browser's top layer (a manual popover), so nothing
  * on the page and none of the toolbar's own overlays can paint over them
  * (design.md, decision 1). The overlays it draws over the page sit in a
  * separate layer below.
  */
-export function DemoToolbar({ panels, overlays, commentCount = 0, context }: { panels?: Partial<Record<ToolId, React.ReactNode>>; overlays?: React.ReactNode; commentCount?: number; context: MenuContext }) {
+export function Toolbar({ panels, overlays, commentCount = 0, context }: { panels?: Partial<Record<ToolId, React.ReactNode>>; overlays?: React.ReactNode; commentCount?: number; context: MenuContext }) {
   const prefs = useToolbarPrefs();
   const [tool, setTool] = useState<ToolId | null>(null);
   const [mode, setMode] = useState<ToolbarMode>("none");
@@ -159,10 +159,10 @@ export function DemoToolbar({ panels, overlays, commentCount = 0, context }: { p
 
   return (
     <ToolbarContext value={api}>
-      <div className={styles.overlays} data-demo-toolbar="overlays">
+      <div className={styles.overlays} data-toolbar="overlays">
         {overlays}
       </div>
-      <div ref={host} popover="manual" className={styles.host} data-demo-toolbar="controls" data-collapsed={prefs.collapsed || undefined}>
+      <div ref={host} popover="manual" className={styles.host} data-toolbar="controls" data-collapsed={prefs.collapsed || undefined}>
         {panel && (
           <div ref={boundRef("panel")} className={styles.side}>
             {panel}
@@ -178,10 +178,7 @@ export function DemoToolbar({ panels, overlays, commentCount = 0, context }: { p
             <Icon name="chevronLeft" size={14} />
           </button>
         ) : (
-          <aside ref={boundRef("pill")} className={styles.pill} aria-label="Toolbar" aria-describedby="demo-toolbar-description">
-            <span id="demo-toolbar-description" className="visually-hidden">
-              Builds and deployments are simulated.
-            </span>
+          <aside ref={boundRef("pill")} className={styles.pill} aria-label="Toolbar">
             {active && (
               <button
                 type="button"

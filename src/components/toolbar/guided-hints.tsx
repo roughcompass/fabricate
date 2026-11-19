@@ -1,11 +1,10 @@
 "use client";
 
 import { createContext, use, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
-import { ToolbarContext } from "@/components/toolbar/toolbar-context";
 import { Button } from "@/components/ui/button";
 import { type HintAction, type HintSequence, type HintState, hintsShown, nextHints } from "@/lib/demo/hints";
-import { type Rect, rectOf } from "./geometry";
-import { PLACEMENT_MARGIN, type Size, placeOutside } from "./placement";
+import { PLACEMENT_MARGIN, type Rect, type Size, placeOutside } from "./placement";
+import { ToolbarContext } from "./toolbar-context";
 import { useToolbarBounds } from "./toolbar-bounds";
 import styles from "./hints.module.css";
 
@@ -13,8 +12,13 @@ import styles from "./hints.module.css";
  * Guided hints for self-serve visitors (template-demo/demo-mode spec): a short
  * sequence of dismissible hints, each pointing at a part of the page. Finishing
  * or dismissing a sequence is remembered for the workspace, and a visitor can
- * replay the hints or turn them off.
+ * replay the hints or turn them off, in the toolbar's Preferences.
  */
+
+function rectOf(element: Element): Rect {
+  const box = element.getBoundingClientRect();
+  return { top: box.top, left: box.left, width: box.width, height: box.height };
+}
 
 export interface Hint {
   /** The element the hint points at. */
@@ -29,9 +33,12 @@ export interface Hint {
   readonly placement: "above" | "below" | "left";
 }
 
+/** Where the workspace's hint state is stored (src/app/api/workspace/hints). */
+const HINTS_ENDPOINT = "/api/workspace/hints";
+
 function postHints(action: HintAction, sequence?: HintSequence): Promise<HintState | null> {
   // keepalive: a visitor may dismiss the hints and leave the page at once.
-  return fetch("/api/demo/hints", { method: "POST", keepalive: true, headers: { "content-type": "application/json" }, body: JSON.stringify({ action, sequence }) })
+  return fetch(HINTS_ENDPOINT, { method: "POST", keepalive: true, headers: { "content-type": "application/json" }, body: JSON.stringify({ action, sequence }) })
     .then((response) => (response.ok ? response.json() : null))
     .then((data: { hints: HintState } | null) => data?.hints ?? null)
     .catch(() => null);
@@ -121,7 +128,7 @@ function HintSequenceView({ sequence, hints, onFinish }: { sequence: HintSequenc
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => measure());
     };
-    // Targets can appear after a scripted load, so keep looking for a moment.
+    // Targets can appear a moment later, as when the menu opens, so keep looking for a moment.
     const retry = window.setInterval(schedule, 250);
     const stop = window.setTimeout(() => window.clearInterval(retry), 4000);
     window.addEventListener("resize", schedule);
@@ -183,7 +190,7 @@ function HintSequenceView({ sequence, hints, onFinish }: { sequence: HintSequenc
   const position = hint.placement === "above" ? { left, bottom: Math.min(layout.height - rect.top + 12, layout.height - CARD_HEIGHT - 12) } : { left, top: Math.max(12, below) };
 
   return (
-    <div className={styles.hint} style={{ ...position, width }} role="dialog" aria-label={label} data-hint={sequence} data-demo-toolbar="">
+    <div className={styles.hint} style={{ ...position, width }} role="dialog" aria-label={label} data-hint={sequence} data-toolbar="hint">
       {body}
     </div>
   );
@@ -223,7 +230,7 @@ function MenuHint({ rect, viewport, label, sequence, children }: { rect: Rect; v
   useEffect(() => () => toolbar?.setMenuRoom(0), [toolbar]);
 
   return (
-    <div ref={card} className={styles.hint} style={{ width, ...(position ?? { top: 0, left: 0, visibility: "hidden" }) }} role="dialog" aria-label={label} data-hint={sequence} data-demo-toolbar="">
+    <div ref={card} className={styles.hint} style={{ width, ...(position ?? { top: 0, left: 0, visibility: "hidden" }) }} role="dialog" aria-label={label} data-hint={sequence} data-toolbar="hint">
       {children}
     </div>
   );
@@ -231,9 +238,9 @@ function MenuHint({ rect, viewport, label, sequence, children }: { rect: Rect; v
 
 const menuItem = (id: string) => `[data-toolbar-menu] [role="option"][data-toolbar-item="${id}"]`;
 
-/** The running application's hints open the toolbar menu and point into it (design.md, decision 9). */
+/** A running application's hints open the toolbar menu and point, in turn, to Accessibility, Timing, and Comment (template-demo/demo-mode spec). */
 export const RUNTIME_HINTS: readonly Hint[] = [
   { target: menuItem("accessibility"), title: "Audit accessibility", text: "Run an automated audit on this page and see each problem outlined in place.", placement: "left" },
-  { target: menuItem("microfrontends"), title: "Swap microfrontend versions", text: "See which microfrontend serves each part of the page, and switch any of them to another version.", placement: "left" },
+  { target: menuItem("timing"), title: "See what's slow", text: "Check this page's Web Vitals, the order its files loaded in, and how long each click or key press took.", placement: "left" },
   { target: menuItem("comment"), title: "Comment on anything", text: "Choose any element on the page and leave a comment that stays attached to it.", placement: "left" },
 ];

@@ -5,12 +5,10 @@ import {
   BRAND_IDS,
   BRANDS,
   BUILT_IN_PROFILES,
-  PERSONAS,
   REFERENCE_PREFIX,
   TEMPLATES,
   type AppDefinition,
   builtInProfile,
-  builtInProfileFor,
   loadSequence,
   memberById,
   plantedVersions,
@@ -180,7 +178,6 @@ describe("template catalog", () => {
       ["approver", "Sam Rivera", "Approver", "New York"],
       ["administrator", "Alex Morgan", "Administrator", "Singapore"],
     ]);
-    expect(PERSONAS.map((persona) => builtInProfileFor(persona).persona)).toEqual(["Analyst", "Approver", "Administrator"]);
     expect(builtInProfile("approver")?.name).toBe("Sam Rivera");
     expect(builtInProfile("nobody")).toBeUndefined();
   });

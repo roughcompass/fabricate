@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { CommentBody } from "@/demo/toolbar/comments/comment-body";
-import styles from "@/demo/toolbar/comments/comments.module.css";
+import { CommentBody } from "@/components/toolbar/comments/comment-body";
+import styles from "@/components/toolbar/comments/comments.module.css";
 import { useTargetDocument } from "../target-document";
 import { ToolPanel } from "../tool-panel";
 import { useToolbar } from "../toolbar-context";

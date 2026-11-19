@@ -1,8 +1,10 @@
 /**
  * The timing tool's model (template-demo/toolbar spec): interaction ratings,
- * the load waterfall, and Web Vitals. No React or browser dependencies, so
- * the rules can be tested directly.
+ * the load waterfall, and Web Vitals' thresholds. No React or browser
+ * dependencies, so the rules can be tested directly.
  */
+
+import { formatNumber } from "@/components/ui/count";
 
 export type Rating = "good" | "needs-improvement" | "poor";
 
@@ -13,36 +15,18 @@ export function rate(durationMs: number): Rating {
   return rateVital("INP", durationMs);
 }
 
-export interface Interaction {
-  readonly id: number;
-  readonly kind: "Click" | "Tap" | "Key press";
-  /** The element the visitor used, described for people: `button "Recalculate totals"`. */
-  readonly target: string;
-  readonly member: string;
+/** An interaction's duration, from input to the next paint. */
+interface Timed {
   readonly durationMs: number;
-  /** Measured to the next frame after the handlers, because the browser lacks Event Timing. */
-  readonly approximate: boolean;
-}
-
-export interface WaterfallLoad {
-  readonly member: string;
-  readonly version: string;
-  /** When the load began, from the start of the route. */
-  readonly startMs: number;
-  /** Measured until the member painted; null while it is still loading. */
-  readonly durationMs: number | null;
-  readonly kind: "load" | "swap";
-  /** For a swap, the version it replaced. */
-  readonly from?: string;
 }
 
 /** What a waterfall row needs: when a load began, and how long it took, or null while it's still loading. */
-interface Timed {
+interface Started {
   readonly startMs: number;
   readonly durationMs: number | null;
 }
 
-export type WaterfallRow<L extends Timed = WaterfallLoad> = L & {
+type WaterfallRow<L extends Started> = L & {
   readonly slowest: boolean;
   /** Bar position as fractions of the whole waterfall. */
   readonly offset: number;
@@ -50,29 +34,29 @@ export type WaterfallRow<L extends Timed = WaterfallLoad> = L & {
 };
 
 /** The loads in the order they started, the slowest finished one flagged, scaled to the latest finish. */
-export function waterfall<L extends Timed>(loads: readonly L[]): WaterfallRow<L>[] {
+export function waterfall<L extends Started>(loads: readonly L[]): WaterfallRow<L>[] {
   const end = Math.max(1, ...loads.map((load) => load.startMs + (load.durationMs ?? 0)));
   const slowest = loads.reduce<L | null>((worst, load) => (load.durationMs !== null && (!worst || load.durationMs > worst.durationMs!) ? load : worst), null);
-  // A stable sort keeps the script's order for loads that start together.
+  // A stable sort keeps the reported order for loads that start together.
   return [...loads]
     .map((load, index) => ({ load, index }))
     .sort((left, right) => left.load.startMs - right.load.startMs || left.index - right.index)
     .map(({ load }) => ({ ...load, slowest: load === slowest, offset: load.startMs / end, width: Math.max((load.durationMs ?? 0) / end, 0.01) }));
 }
 
-export function slowestInteraction<I extends Pick<Interaction, "durationMs">>(interactions: readonly I[]): I | null {
+export function slowestInteraction<I extends Timed>(interactions: readonly I[]): I | null {
   return interactions.reduce<I | null>((worst, interaction) => (!worst || interaction.durationMs > worst.durationMs ? interaction : worst), null);
 }
 
 export function formatMs(ms: number): string {
-  return `${Math.round(ms).toLocaleString("en-US")} ms`;
+  return `${formatNumber(Math.round(ms))} ms`;
 }
 
 /**
  * Interaction to Next Paint over the given interactions: the slowest, less one
  * outlier for every 50, as browsers report it. Null before any interaction.
  */
-export function interactionToNextPaint(interactions: readonly Pick<Interaction, "durationMs">[]): number | null {
+export function interactionToNextPaint(interactions: readonly Timed[]): number | null {
   if (!interactions.length) return null;
   const durations = interactions.map((interaction) => interaction.durationMs).sort((left, right) => right - left);
   return durations[Math.min(durations.length - 1, Math.floor(durations.length / 50))]!;

@@ -14,6 +14,8 @@ import { publishFiles } from "../support/previews";
 import { redirectOf, useAppDb } from "../support/next";
 
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
+// A visitor with no workspace yet.
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 
 /*
  * A running application's page (add-applications, task 8.1, and the /run

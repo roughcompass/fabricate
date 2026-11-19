@@ -9,7 +9,12 @@ import styles from "./toolbar.module.css";
 /** The running application the menu's context row names. */
 export interface MenuContext {
   readonly name: string;
-  readonly environment: string;
+  /** The branch it tracks, as it's shown: main. */
+  readonly branch: string;
+  /** The commit of the build it runs, in full; the row shows it short. */
+  readonly commit: string;
+  /** Its build status, as it's shown: Ready. */
+  readonly status: string;
   /** Its page in the Frontend Registry, opened in a new tab. */
   readonly href: string;
 }
@@ -96,9 +101,13 @@ export function ToolbarMenu({ context, commentCount, highlight, onClose }: { con
       {!filtering && (
         <>
           <a href={context.href} target="_blank" rel="noopener" className={styles.contextRow} data-menu-context="">
-            <span className={styles.contextName}>{context.name}</span>
-            <span className={styles.contextMeta}>
-              <span>{context.environment}</span>
+            <span className={styles.contextText}>
+              <span className={styles.contextName}>{context.name}</span>
+              <span className={styles.contextMeta}>
+                <code className={styles.contextCode}>{context.branch}</code>
+                <code className={styles.contextCode}>{context.commit.slice(0, 12)}</code>
+                <span>{context.status}</span>
+              </span>
             </span>
             <Icon name="external" size={14} />
             <span className="visually-hidden"> (opens in a new tab)</span>

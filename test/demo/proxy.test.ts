@@ -53,14 +53,14 @@ describe("demo workspace proxy", () => {
     expect(keys.size).toBe(50);
   });
 
-  it.each(["/templates", "/templates/market-watch", "/templates/market-watch/preview", "/run/ref-market-watch/watch", "/s/abc", "/api/demo/comments"])(
+  it.each(["/templates", "/templates/market-watch", "/templates/market-watch/preview", "/run/ref-market-watch/watch", "/s/abc", "/api/demo/comments", "/applications", "/applications/orders-portal", "/run/orders-portal/accounts", "/api/workspace/hints", "/api/applications/orders-portal/threads"])(
     "runs on the demo path %s",
     (url) => {
       expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);
     },
   );
 
-  it.each(["/", "/repositories", "/standards", "/assessments/new", "/runs/asm_0000000000000001", "/design-system", "/api/health", "/api/test/reset", "/templatesx", "/running", "/newsroom", "/applications"])(
+  it.each(["/", "/repositories", "/standards", "/assessments/new", "/runs/asm_0000000000000001", "/design-system", "/api/health", "/api/test/reset", "/templatesx", "/running", "/newsroom", "/applicationsx"])(
     "issues no credential on the operator path %s",
     (url) => {
       const response = proxy(request(url));

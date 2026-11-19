@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PLACEMENT_MARGIN, type Rect, intersects, placeOutside } from "@/demo/toolbar/placement";
+import { PLACEMENT_MARGIN, type Rect, intersects, placeOutside } from "@/components/toolbar/placement";
 
 const desktop = { width: 1280, height: 900 };
 const mobile = { width: 375, height: 812 };

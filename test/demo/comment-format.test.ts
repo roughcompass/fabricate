@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CommentBody } from "@/demo/toolbar/comments/comment-body";
+import { CommentBody } from "@/components/toolbar/comments/comment-body";
 import { FORMAT_MARKERS, commentText, formatComment, toggleMarker } from "@/lib/demo/comment-format";
 import { normalizeBody } from "@/lib/demo/comments";
 

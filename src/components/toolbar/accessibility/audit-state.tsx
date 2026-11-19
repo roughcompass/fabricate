@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, use, useState } from "react";
-import { AUDIT_TAGS, type AuditReport, type RawViolation, summarize } from "@/demo/toolbar/accessibility/audit";
+import { AUDIT_TAGS, type AuditReport, type RawViolation, summarize } from "@/components/toolbar/accessibility/audit";
 import { AXE_SCRIPT } from "../inspector/protocol";
 import { useTargetDocument } from "../target-document";
 

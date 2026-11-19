@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert } from "@/components/ui/alert";
+import type { HintState } from "@/lib/demo/hints";
 import { AccessibilityPanel } from "./accessibility/accessibility-panel";
 import { AuditOverlay } from "./accessibility/audit-overlay";
 import { AuditProvider } from "./accessibility/audit-state";
@@ -8,20 +9,22 @@ import { CommentLayer } from "./comments/comment-layer";
 import { CommentsPanel } from "./comments/comments-panel";
 import { CommentsProvider, useComments } from "./comments/comments-state";
 import type { ThreadStore } from "./comments/thread-store";
-import { DemoToolbar } from "./demo-toolbar";
+import { GuidedHints, HintsContext, RUNTIME_HINTS, useHintControls } from "./guided-hints";
 import { useTargetDocument } from "./target-document";
 import { TimingPanel } from "./timing/timing-panel";
 import { TimingProvider } from "./timing/timing-state";
+import { Toolbar } from "./toolbar";
 import type { MenuContext } from "./toolbar-menu";
 import styles from "./running-application.module.css";
 
 /**
  * The toolbar over a running application in a frame (add-applications,
  * design decisions 5 and 6), with the tools that inspect the frame's own
- * page: Comment and Comments, Accessibility, and Timing. It needs to read the
- * page, so when the frame isn't same-origin it says so and doesn't start.
+ * page: Comment and Comments, Accessibility, and Timing, and the guided hints
+ * that point to them, from the workspace's +hints+ state. It needs to read
+ * the page, so when the frame isn't same-origin it says so and doesn't start.
  */
-export function ApplicationToolbar({ context, store }: { context: MenuContext; store: ThreadStore }) {
+export function ApplicationToolbar({ context, store, hints }: { context: MenuContext; store: ThreadStore; hints: HintState }) {
   const target = useTargetDocument();
   if (target.state === "unreadable")
     return (
@@ -35,26 +38,30 @@ export function ApplicationToolbar({ context, store }: { context: MenuContext; s
     <CommentsProvider store={store}>
       <AuditProvider>
         <TimingProvider>
-          <Toolbar context={context} />
+          <Tools context={context} hints={hints} />
         </TimingProvider>
       </AuditProvider>
     </CommentsProvider>
   );
 }
 
-function Toolbar({ context }: { context: MenuContext }) {
+function Tools({ context, hints: initial }: { context: MenuContext; hints: HintState }) {
   const comments = useComments();
+  const hints = useHintControls(initial);
   return (
-    <DemoToolbar
-      context={context}
-      commentCount={comments.threads.filter((thread) => thread.status === "open").length}
-      panels={{ comments: <CommentsPanel />, accessibility: <AccessibilityPanel />, timing: <TimingPanel /> }}
-      overlays={
-        <>
-          <AuditOverlay />
-          <CommentLayer />
-        </>
-      }
-    />
+    <HintsContext value={hints}>
+      <Toolbar
+        context={context}
+        commentCount={comments.threads.filter((thread) => thread.status === "open").length}
+        panels={{ comments: <CommentsPanel />, accessibility: <AccessibilityPanel />, timing: <TimingPanel /> }}
+        overlays={
+          <>
+            <AuditOverlay />
+            <CommentLayer />
+            <GuidedHints sequence="runtime" hints={RUNTIME_HINTS} controls={hints} />
+          </>
+        }
+      />
+    </HintsContext>
   );
 }

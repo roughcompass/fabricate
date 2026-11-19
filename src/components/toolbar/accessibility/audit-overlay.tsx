@@ -1,7 +1,7 @@
 "use client";
 
-import styles from "@/demo/toolbar/accessibility/accessibility.module.css";
-import { Placed } from "@/demo/toolbar/placed";
+import styles from "@/components/toolbar/accessibility/accessibility.module.css";
+import { Placed } from "@/components/toolbar/placed";
 import { useTargetDocument, useTargetRects } from "../target-document";
 import { useAudit } from "./audit-state";
 

@@ -21,7 +21,7 @@ import { preferenceCookieRenames } from "@/lib/web/preference-cookies";
  */
 
 /** Where a workspace credential is issued. */
-const WORKSPACE_PATHS = /^\/(templates|run|s|api\/demo)(\/|$)/;
+const WORKSPACE_PATHS = /^\/(templates|applications|run|s|api\/demo|api\/workspace|api\/applications)(\/|$)/;
 
 export function proxy(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { PortalRuntime } from "@/demo/runtime/portal-runtime";
-import { RuntimeToolbar } from "@/demo/runtime/runtime-toolbar";
 import { applicationsAvailable } from "@/lib/applications/availability";
 import { findApplication } from "@/lib/applications/records";
 import { getDb } from "@/lib/db/client";
@@ -59,10 +58,6 @@ export default async function RunLayout({ children, params }: { children: React.
   const profiles = resolved?.workspace ? listProfiles(getDb(), resolved.workspace.id) : [];
   const descriptor = resolved && runtimeDescriptor(resolved.view, resolved.workspace, resolved.token, profiles);
   if (!descriptor) notFound();
-  return (
-    <PortalRuntime descriptor={descriptor}>
-      {children}
-      <RuntimeToolbar />
-    </PortalRuntime>
-  );
+  // The toolbar runs over applications only: its tools inspect a framed build.
+  return <PortalRuntime descriptor={descriptor}>{children}</PortalRuntime>;
 }

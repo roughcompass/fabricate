@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, use, useEffect, useState } from "react";
-import { interactionToNextPaint } from "@/demo/toolbar/timing/timing";
+import { interactionToNextPaint } from "@/components/toolbar/timing/timing";
 import { INSPECTOR_SCRIPT, type InspectedInteraction, type MeasuredVital, type Rating, isInspectorMessage } from "../inspector/protocol";
 import { routeOf, useTargetDocument } from "../target-document";
 import { type PageLoad, addLoads, pageLoad } from "./load-order";

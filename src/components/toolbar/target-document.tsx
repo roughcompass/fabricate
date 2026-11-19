@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, use, useEffect, useEffectEvent, useRef, useState } from "react";
-import type { Rect } from "@/demo/toolbar/placement";
+import type { Rect } from "@/components/toolbar/placement";
 
 /**
  * The document the toolbar's tools inspect (add-applications, design decision

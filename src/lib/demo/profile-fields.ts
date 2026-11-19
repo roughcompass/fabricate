@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BUILT_IN_PROFILES, PERSONAS } from "./catalog";
+import { PERSONAS } from "./catalog";
 
 /**
  * The rules for a session profile's fields (template-demo/toolbar spec),
@@ -47,7 +47,3 @@ export const DUPLICATE_NAME = "A profile with that name already exists";
 
 export const nameKey = (name: string) => name.toLowerCase();
 
-export function nameTaken(name: string, others: readonly { readonly name: string }[]): boolean {
-  const key = nameKey(name.trim());
-  return [...BUILT_IN_PROFILES, ...others].some((profile) => nameKey(profile.name) === key);
-}
