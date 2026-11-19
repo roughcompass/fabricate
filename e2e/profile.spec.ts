@@ -551,3 +551,17 @@ test("Largest heading: on a Repository's Dependencies view, the page title is la
   // Headings step down from the title without skipping a level.
   expect(others.every((heading) => heading.level === "H2" || heading.level === "H3")).toBe(true);
 });
+
+// product-site spec, "A Repository's current Profile is readable as JSON".
+test("A Profile for an agent: the Repository's details link its current Profile as JSON, whose Digest header is the fact document digest they show", async ({ page, db, request }) => {
+  const { storefront } = await seedStorefront(db);
+  await page.goto(`${paths.repository(storefront.publicId)}?tab=diagnostics`);
+  await page.getByText("Details", { exact: true }).last().click();
+  const json = page.getByRole("link", { name: "Current Profile as JSON" });
+  await expect(json).toHaveAttribute("href", `/repositories/${storefront.publicId}/profile.json`);
+  const shown = (await page.locator("dt", { hasText: /^Fact document digest$/ }).locator("xpath=following-sibling::dd[1]").textContent())!.trim();
+  expect(shown).toMatch(/^[0-9a-f]{64}$/);
+  const response = await request.get(`/repositories/${storefront.publicId}/profile.json`);
+  expect(response.status()).toBe(200);
+  expect(response.headers().digest).toContain(shown);
+});

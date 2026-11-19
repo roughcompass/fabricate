@@ -383,7 +383,7 @@ A group with no records shows an `EmptyState` in a panel with the actions that c
 
 ### Forms
 
-Create and edit forms use the Form template and one `Panel` whose footer holds Cancel and the primary action. Submit labels read "Create <noun>" for new records and "Save changes" for edits; the draft editor uses "Save draft". A record's destructive action sits in a separate danger `Panel` after the form, confirmed with `ConfirmDialog`. A Repository's Settings is the Settings template instead: General, whose plain form has no Panel or Cancel, and the danger section, a `Panel` in the danger tone, whose delete is confirmed in three steps that end in typing the repository's name (docs/profiling.md).
+Create and edit forms use the Form template and one `Panel` whose footer holds Cancel and the primary action. Submit labels read "Create <noun>" for new records and "Save changes" for edits; the draft editor uses "Save draft". A record's destructive action sits in a separate danger `Panel` after the form, confirmed with `ConfirmDialog`. A Repository's Settings, titled "Settings for web", is the Settings template instead: General, a plain form with Cancel and Save changes under its fields, and the danger section, a `Panel` in the danger tone, whose Delete Repository is confirmed in three steps that end in typing the repository's name (docs/profiling.md). A Repository's page has no primary action: Re-profile, which is maintenance, is in its More actions menu, and its header links Versions of web and Settings for web. The Diagnostics view's Details name the Profile's fact document digest, the one `/repositories/<id>/profile.json` sends as its `Digest` header, and link that address on the Repository's own page.
 
 ### Filters
 

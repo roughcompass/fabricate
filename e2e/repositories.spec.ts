@@ -5,7 +5,7 @@ import { versionsOf } from "../src/lib/profiling/versions";
 import { moveSurvey, requestSurvey } from "../src/lib/surveys/records";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
-import { toasts } from "./support/shell";
+import { pageHeader, pageTitle, toasts } from "./support/shell";
 
 const rowMenu = async (page: Page, name: string) => {
   await page.getByRole("button", { name: `Actions for ${name}` }).click();
@@ -51,10 +51,11 @@ test("adds and edits a Source with validation feedback", async ({ page, db: _db 
   await expect(page.getByRole("heading", { level: 1, name: "orders" })).toBeVisible();
   await expect(page.getByText("Not profiled yet")).toBeVisible();
   // Re-profile reads the reference at once, and says when it can't.
-  await page.getByRole("button", { name: "Re-profile" }).click();
+  await pageHeader(page).getByRole("button", { name: "More actions" }).click();
+  await page.locator("[popover]:popover-open").getByRole("button", { name: "Re-profile" }).click();
   await expect(toasts(page).getByText("orders's reference couldn't be read.")).toBeVisible();
-  await page.getByRole("link", { name: "Settings" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await pageHeader(page).getByRole("link", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Settings for orders" })).toBeVisible();
   await page.getByLabel("Reference").fill("release");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(toasts(page).getByText("Running and past Runs keep the configuration they started with.")).toBeVisible();
@@ -72,15 +73,15 @@ test("deletes a Repository only after its effects are read and its name is typed
 
   await page.goto(`/repositories/${orders.publicId}/settings`);
   const zone = page.locator("#danger-zone");
-  await expect(zone).toContainText("Once you delete a repository, there is no going back. Please be certain.");
-  await zone.getByRole("button", { name: "Delete this repository" }).click();
+  await expect(zone).toContainText("Removes orders from the Frontend Registry; the Runs that included it keep their results.");
+  await zone.getByRole("button", { name: "Delete Repository" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Delete orders" });
-  await dialog.getByRole("button", { name: "I want to delete this repository" }).click();
-  await expect(dialog).toContainText("Unexpected bad things will happen if you don't read this!");
+  await dialog.getByRole("button", { name: "Show what deleting it does" }).click();
+  await expect(dialog).toContainText("Deleting it can't be undone.");
   await dialog.getByRole("button", { name: "I have read and understand these effects" }).click();
 
-  const remove = dialog.getByRole("button", { name: "Delete this repository" });
+  const remove = dialog.getByRole("button", { name: "Delete Repository" });
   await expect(remove).toBeDisabled();
   await dialog.getByLabel(/To confirm, type/).fill("order");
   await expect(remove).toBeDisabled();
@@ -102,13 +103,13 @@ test.describe("without JavaScript", () => {
 
     await page.goto(`/repositories/${orders.publicId}/settings`);
     const zone = page.locator("#danger-zone");
-    await expect(zone.getByRole("button", { name: "Delete this repository" })).toHaveCount(1);
+    await expect(zone.getByRole("button", { name: "Delete Repository" })).toHaveCount(1);
     await zone.getByLabel(/To confirm, type/).fill("order");
-    await zone.getByRole("button", { name: "Delete this repository" }).click();
+    await zone.getByRole("button", { name: "Delete Repository" }).click();
     await expect(page.getByText("Type orders to confirm")).toBeVisible();
 
     await page.locator("#danger-zone").getByLabel(/To confirm, type/).fill("orders");
-    await page.locator("#danger-zone").getByRole("button", { name: "Delete this repository" }).click();
+    await page.locator("#danger-zone").getByRole("button", { name: "Delete Repository" }).click();
     await expect(page.getByText("orders was deleted.")).toBeVisible();
   });
 });
@@ -220,4 +221,44 @@ test("the catalog stays usable at mobile width", async ({ page, db }) => {
   await expect(page.getByText("orders-with-a-long-name")).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await expect(page.getByRole("link", { name: "New Repository" })).toBeVisible();
+});
+
+// page-patterns spec, "Page titles and browser titles name the record"; page-templates spec, Settings.
+test("A record's own pages name it: Settings for web and Versions of web, both linked from its page header", async ({ page, db }) => {
+  const web = buildRepository(db, { name: "web" });
+  await page.goto(`/repositories/${web.publicId}`);
+  await pageHeader(page).getByRole("link", { name: "Settings" }).click();
+  await expect(pageTitle(page)).toHaveText("Settings for web");
+  await expect(page).toHaveTitle("Settings for web · Frontend Registry");
+  await page.goto(`/repositories/${web.publicId}`);
+  await pageHeader(page).getByRole("link", { name: /^Versions/ }).click();
+  await expect(pageTitle(page)).toHaveText("Versions of web");
+  await expect(page).toHaveTitle("Versions of web · Frontend Registry");
+});
+
+test("Repository settings: the Settings template, with breadcrumbs to web, Cancel, and Delete Repository in the danger section, which asks for the name", async ({ page, db }) => {
+  const web = buildRepository(db, { name: "web" });
+  await page.goto(`/repositories/${web.publicId}/settings`);
+  await expect(pageHeader(page)).toHaveAttribute("data-template", "settings");
+  await expect(pageHeader(page).getByRole("navigation", { name: "Breadcrumb" }).getByRole("link")).toHaveText(["Repositories", "web"]);
+  await expect(page.getByRole("region", { name: "General" }).getByRole("link", { name: "Cancel" })).toHaveAttribute("href", `/repositories/${web.publicId}`);
+  // Destructive actions sit only in the danger section, last.
+  await expect(pageHeader(page).getByRole("button")).toHaveCount(0);
+  const danger = page.locator("#danger-zone");
+  await expect(danger.getByRole("heading", { name: "Danger zone" })).toBeVisible();
+  await danger.getByRole("button", { name: "Delete Repository" }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete web" });
+  await dialog.getByRole("button", { name: "Show what deleting it does" }).click();
+  await dialog.getByRole("button", { name: "I have read and understand these effects" }).click();
+  await expect(dialog.getByLabel(/To confirm, type .*web/)).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Delete Repository" })).toBeDisabled();
+});
+
+// page-templates spec, Details: "Repository".
+test("Repository: no primary action; Re-profile is in More actions", async ({ page, db }) => {
+  const web = buildRepository(db, { name: "web" });
+  await page.goto(`/repositories/${web.publicId}`);
+  await expect(pageHeader(page).locator('[data-variant="primary"]')).toHaveCount(0);
+  await pageHeader(page).getByRole("button", { name: "More actions" }).click();
+  await expect(page.locator("[popover]:popover-open").getByRole("button", { name: "Re-profile" })).toBeVisible();
 });

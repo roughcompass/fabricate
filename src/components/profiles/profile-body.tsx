@@ -107,7 +107,7 @@ export function ProfileTabs({ profile, query, base }: { profile: RepositoryProfi
  * its Overview says why. +base+ is the page's address; +query+ holds the view,
  * the dependency filters, and each table's page.
  */
-export function ProfileBody({ profile, query, base }: { profile: RepositoryProfile; query: Record<string, string | string[] | undefined>; base: string }) {
+export function ProfileBody({ profile, query, base, jsonHref }: { profile: RepositoryProfile; query: Record<string, string | string[] | undefined>; base: string; /** The address of its fact document as JSON, when it's the Repository's current Profile. */ jsonHref?: string }) {
   const { document, commit, facts, diagnostics, view, panels, relationships, current } = profileViews(profile, param(query, "tab"));
   const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, owner: { profile: profile.publicId }, profileId: profile.publicId };
   const filters: Filters = { kind: param(query, "kind") || undefined, manifest: param(query, "manifest") || undefined, package: param(query, "package") || undefined };
@@ -223,6 +223,9 @@ export function ProfileBody({ profile, query, base }: { profile: RepositoryProfi
                       ["Commit", <Tag key="commit" copy label="commit">{commit}</Tag>],
                       [SURVEYOR_RELEASE_LABEL, <Tag key="release">{String(document.detector_release)}</Tag>],
                       ["Profile digest", <ShortValue key="digest" value={profile.digest} label="digest" />],
+                      // The digest profile.json sends as its Digest header, so an agent can check what it read.
+                      ["Fact document digest", <Tag key="fact-digest" copy label="fact document digest">{String(document.fact_document_digest)}</Tag>],
+                      ...(jsonHref ? [["As JSON", <a key="json" href={jsonHref}>Current Profile as JSON</a>] as const] : []),
                       ["Created", <RelativeTime key="created" value={profile.createdAt} />],
                       ["ID", <Tag key="id" copy label="ID">{profile.publicId}</Tag>],
                     ]}
