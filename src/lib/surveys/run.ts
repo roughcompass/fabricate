@@ -9,19 +9,23 @@ import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, jobs, surveys } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
+import type { JsonObject } from "@repo-facts/contract";
 import { failureText } from "@/lib/git/redact";
 import { GitRunner } from "@/lib/git/runner";
 import { type Job, enqueue } from "@/lib/jobs/queue";
 import { surveyDocument } from "@/lib/profiles/analyze";
 import { insertProfile } from "@/lib/profiles/profile-records";
 import { profileProblems } from "@/lib/profiles/schema";
+import { catalogRecipe, recipeDigest } from "@/lib/catalog/recipe";
+import { suppliedEntries } from "@/lib/catalog/supply";
 import { type Survey, getSurvey, moveSurvey, pinSurvey, surveyById, updateCurrentSurvey } from "./records";
 
 /*
  * The survey job (unify-surveys, design decisions 1 to 4): pin the survey's
  * commit in the Repository's mirror, fetching only when the mirror lacks it,
- * run Surveyor on it, and store the Profile. Finishing is one transaction:
- * the Profile and its projection, the survey's state, the Repository's
+ * run Surveyor on it with every current Reference Catalog entry, and store
+ * the Profile. Finishing is one transaction: the Profile and its projection,
+ * the survey's state and the Catalog part of its recipe, the Repository's
  * current survey, and every Run target and preview preparation waiting on it.
  */
 
@@ -52,8 +56,9 @@ export async function runSurvey(db: Executor, publicId: string, options: RunSurv
   try {
     survey = await pinSurveyCommit(db, survey, repository, { config, runner, boundary: options.boundary ?? new SourceBoundary(config), ...(options.signal && { signal: options.signal }) });
     phase = "analysis";
-    const document = await surveyDocument({ survey, repository, config, runner, ...(options.signal && { signal: options.signal }) });
-    return finishSurvey(db, survey, { document });
+    const supplied = suppliedEntries(db, config);
+    const document = await surveyDocument({ survey, repository, config, runner, entries: supplied.entries, ...(options.signal && { signal: options.signal }) });
+    return finishSurvey(db, survey, { document, things: supplied.catalog.things });
   } catch (error) {
     // A stopping worker leaves the survey running; its job runs again.
     if (options.signal?.aborted) throw error;
@@ -109,7 +114,10 @@ export function settleAbandonedSurveys(db: Executor, now = new Date()): Survey[]
   });
 }
 
-type Outcome = { document: Parameters<typeof insertProfile>[1]["document"] } | { failure: { code: string; message: string } };
+type Outcome =
+  /** Its Profile, and the described things it was given entries of; without them, the things its fact document names entries of. */
+  | { document: JsonObject; things?: readonly string[] }
+  | { failure: { code: string; message: string } };
 
 /** Finishes a running survey in one transaction: its Profile, state, the current pointer, and everything waiting on it. */
 export function finishSurvey(db: Executor, survey: Survey, outcome: Outcome): Survey {
@@ -119,7 +127,8 @@ export function finishSurvey(db: Executor, survey: Survey, outcome: Outcome): Su
     let finished: Survey;
     if ("document" in outcome) {
       insertProfile(tx, { survey: current, document: outcome.document, validate: profileProblems });
-      finished = moveSurvey(tx, current, "succeeded", { failureCode: null, failureMessage: null });
+      const catalog = catalogRecipe(outcome.document.fact_document, outcome.things);
+      finished = moveSurvey(tx, current, "succeeded", { failureCode: null, failureMessage: null, catalog, catalogDigest: recipeDigest(catalog) });
       updateCurrentSurvey(tx, finished);
     } else {
       finished = moveSurvey(tx, current, "failed", { failureCode: outcome.failure.code, failureMessage: outcome.failure.message });

@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
-import { type CatalogThing, type PackageFiles, buildEntry, readPackage } from "@repo-facts/catalog-builder";
+import { type CatalogThing, type PackageFiles, buildEntry, readPackage, readTarball } from "@repo-facts/catalog-builder";
 import type { DesignSystemEntry } from "@repo-facts/contract";
 
 /*
@@ -46,8 +46,8 @@ export function saltEntry(): DesignSystemEntry {
 }
 
 /** A gzipped npm tarball holding +files+ under `package/`, with a package.json naming +name+ at +version+. */
-export function packageTarball(name: string, version: string, files: Readonly<Record<string, string>> = {}, manifest: Record<string, unknown> = {}): Buffer {
-  const entries: [string, Buffer][] = [["package/package.json", Buffer.from(JSON.stringify({ name, version, ...manifest }))], ...Object.entries(files).map(([file, text]): [string, Buffer] => [`package/${file}`, Buffer.from(text)])];
+export function packageTarball(name: string, version: string, files: Readonly<Record<string, string | Uint8Array>> = {}, manifest: Record<string, unknown> = {}): Buffer {
+  const entries: [string, Buffer][] = [["package/package.json", Buffer.from(JSON.stringify({ name, version, ...manifest }))], ...Object.entries(files).map(([file, content]): [string, Buffer] => [`package/${file}`, Buffer.from(content)])];
   const blocks: Buffer[] = [];
   for (const [file, content] of entries) {
     const header = Buffer.alloc(512);
@@ -100,6 +100,14 @@ export function saltCore(version: string, time: string): Published {
     ...RULED_COMPONENTS.map((name) => `export declare function ${name}(props: { children?: unknown }): JSX.Element;`),
   ].join("\n");
   return { name: "@salt-ds/core", version, time, tarball: packageTarball("@salt-ds/core", version, { "dist-types/index.d.ts": declarations }, { types: "dist-types/index.d.ts" }), dependencies: { "@salt-ds/icons": "^1.19.0" } };
+}
+
+/** +published+'s files republished at +version+, at +time+, as a later snapshot of the same data. */
+export function republished(published: Published, version: string, time: string): Published {
+  const files = readTarball(published.tarball);
+  const manifest = JSON.parse(Buffer.from(files.get("package.json")!).toString("utf8")) as Record<string, unknown>;
+  files.delete("package.json");
+  return { ...published, version, time, tarball: packageTarball(published.name, version, Object.fromEntries(files), { ...manifest, name: published.name, version }) };
 }
 
 export interface FakeRegistry {

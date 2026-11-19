@@ -3,7 +3,7 @@
 import path from "node:path";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
-import { jobHandlers, jobLimits } from "@/lib/jobs/registry";
+import { HOLD_BACKGROUND, jobHandlers, jobLimits } from "@/lib/jobs/registry";
 import { Worker } from "@/lib/jobs/worker";
 import { scheduleCatalogChecks } from "@/lib/catalog/check";
 import { scheduleProfileChecks } from "@/lib/profiling/check";
@@ -22,6 +22,8 @@ async function main(): Promise<void> {
     concurrency: getConfig().workerConcurrency,
     // Preview builds run at most previews.concurrency at once, across workers, so they can't hold every slot.
     limits: jobLimits(),
+    // Background surveys wait for Catalog builds, so they compare against the entries being built.
+    holdBackground: HOLD_BACKGROUND,
     log: (message) => console.log(`[worker] ${message}`),
   });
   // The Catalog check runs first, so the entries surveys need are queued before the profiling check queues surveys.

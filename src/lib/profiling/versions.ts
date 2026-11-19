@@ -23,6 +23,7 @@ export const TRIGGER_LABELS: Record<SurveyTrigger, string> = {
   edited: "Edited",
   commit: "New commit",
   recipe: `${PRODUCT.surveyor} upgrade`,
+  catalog: `${PRODUCT.referenceCatalog} update`,
   manual: "Re-profiled",
   run: "Assessment Run",
   preview: "Preview",

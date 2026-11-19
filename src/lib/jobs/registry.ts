@@ -43,6 +43,13 @@ export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConf
   };
 }
 
+/**
+ * Job kinds that hold background work back while they're queued or running:
+ * Catalog builds, so background surveys, such as every Repository's after a
+ * Surveyor upgrade, run with the entries being built rather than before them.
+ */
+export const HOLD_BACKGROUND: readonly string[] = [BUILD_ENTRY];
+
 /** Job kinds with their own limit on how many run at once, apart from the worker's concurrency (design decision 8). */
 export function jobLimits(config: FrontendRegistryConfig = getConfig()): KindLimits {
   return { [BUILD_PREVIEW]: config.previews.concurrency };

@@ -64,7 +64,7 @@ describe("surveys", () => {
       // A Run asking for the same key joins the background survey as it is.
       const { run } = buildRun(db, { repositories: [web] });
       expect(request(web, A, { trigger: "run", requestedByRunId: run.id })).toEqual({ survey: first.survey, queued: false });
-      expect(surveyOfKey(db, web.id, A, recipe)?.id).toBe(first.survey.id);
+      expect(surveyOfKey(db, web.id, A, recipe, { things: [], entries: [] })?.id).toBe(first.survey.id);
 
       // Another commit, or the same commit under another recipe, is another survey.
       const upgraded = currentRecipe(withOverrides(getConfig(), { analysis: { maxFiles: 7 } }));

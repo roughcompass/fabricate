@@ -9,9 +9,10 @@ import { type Survey, currentRecipe } from "@/lib/surveys/records";
 import { buildProfile } from "./schema";
 
 /**
- * Runs the pinned Surveyor bundle on a survey's pinned commit and returns
- * its Profile document. The bundle sees the commit only through a
- * SnapshotReader. The worker must run the recipe the survey records, or the
+ * Runs the pinned Surveyor bundle on a survey's pinned commit, comparing it
+ * against the Reference Catalog entries given, and returns its Profile
+ * document. The bundle sees the commit only through a SnapshotReader, and
+ * downloads nothing. The worker must run the recipe the survey records, or the
  * Profile wouldn't be the one its key promises, so analysis refuses to run.
  */
 
@@ -22,6 +23,8 @@ export class AnalysisMismatchError extends Error {
 export interface SurveyCommitInput {
   survey: Survey;
   repository: Pick<Repository, "publicId">;
+  /** The Reference Catalog entries to compare against, as stored: every current entry of each described thing. */
+  entries?: readonly JsonObject[];
   config?: FrontendRegistryConfig;
   runner?: GitRunner;
   signal?: AbortSignal;
@@ -36,7 +39,7 @@ export async function surveyDocument(input: SurveyCommitInput): Promise<JsonObje
   }
   if (!survey.internalRef) throw new AnalysisMismatchError(`Survey ${survey.publicId} has no pinned commit`);
   const reader = await openSnapshot({ repositoryPublicId: repository.publicId }, { internalRef: survey.internalRef, commitSha: survey.commitSha }, { config, ...(input.runner && { runner: input.runner }) });
-  const factDocument = await analyze(reader, { ...(input.signal && { signal: input.signal }) });
+  const factDocument = await analyze(reader, { entries: input.entries ?? [], ...(input.signal && { signal: input.signal }) });
   return buildProfile({
     repository: repository.publicId,
     commit: survey.commitSha,

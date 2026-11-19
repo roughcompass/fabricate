@@ -7,7 +7,9 @@ import { type JobState, JOB_PRIORITIES, catalogEntries, jobs } from "@/lib/db/sc
 import { type Job, enqueue, jobPayload } from "@/lib/jobs/queue";
 import { NonRetryableError } from "@/lib/jobs/worker";
 import { type CatalogConfiguration, type DescribedThing, catalogConfiguration } from "./configuration";
+import { currentCatalog } from "./current";
 import { type Stored, type StoredEntry, entryByDigest, storeEntry } from "./entries";
+import { requestCatalogUpdates } from "./updates";
 
 /*
  * Catalog builds (establish-frontend-registry, design decision 5). Each
@@ -19,7 +21,9 @@ import { type Stored, type StoredEntry, entryByDigest, storeEntry } from "./entr
  * The Catalog Builder downloads the thing's packages from the configured
  * registry and reads them as data. A build that fails stores nothing, so the
  * entries in use stay as they were. One that writes an entry already stored,
- * such as a rebuild whose inputs didn't change, stores nothing new.
+ * such as a rebuild whose inputs didn't change, stores nothing new. One that
+ * stores a new entry requests a background survey of each Repository whose
+ * current survey's entries a survey would no longer pick.
  */
 
 export const BUILD_ENTRY = "catalog.build";
@@ -82,7 +86,10 @@ export async function runBuild(db: Executor, request: BuildRequest, options: Run
     if (error instanceof CatalogBuildError) throw buildFailure(error);
     throw error;
   }
-  return storeEntry(db, entry, { buildJobId: options.jobId ?? null });
+  const stored = storeEntry(db, entry, { buildJobId: options.jobId ?? null });
+  // A new entry may replace the one a Repository's current survey used.
+  if (stored.stored) requestCatalogUpdates(db, currentCatalog(db, catalog), `catalog:${stored.entry.digest}`);
+  return stored;
 }
 
 class RetryableBuildFailure extends Error {
