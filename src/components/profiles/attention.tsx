@@ -47,13 +47,13 @@ export function NeedsAttention({ attention, base, limit }: { attention: Attentio
   );
   if (limit !== undefined) {
     return (
-      <Panel level={3} title="Needs attention" footer={rest > 0 ? <Link href={profileSectionHref(base, "needs-attention")} className={styles.panelLink}>{`All ${attention.items.length} in Diagnostics`}</Link> : undefined}>
+      <Panel title="Needs attention" footer={rest > 0 ? <Link href={profileSectionHref(base, "needs-attention")} className={styles.panelLink}>{`All ${attention.items.length} in Diagnostics`}</Link> : undefined}>
         {content}
       </Panel>
     );
   }
   return (
-    <Section title="Needs attention" id="needs-attention" level={3}>
+    <Section title="Needs attention" id="needs-attention">
       <Panel>{content}</Panel>
     </Section>
   );

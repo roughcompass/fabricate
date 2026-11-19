@@ -40,6 +40,9 @@ export const profilePin = cache((profile: RepositoryProfile): { document: JsonOb
 export const PROFILE_DESCRIPTION = "Every fact comes from committed files at this commit, read as data. Nothing in the repository was run.";
 
 
+/** Headings for categories named as their view is, so a view never repeats its tab's name as a heading (page-templates spec, "Largest heading"). */
+const VIEW_NAMED: Readonly<Record<string, string>> = { composition: "Composition mechanisms" };
+
 /** Rows per page of a long table, so a large repository's Profile stays quick to load and to read. */
 const PROFILE_PAGE_SIZE = 50;
 
@@ -120,6 +123,8 @@ export function ProfileBody({ profile, query, base }: { profile: RepositoryProfi
 
   const category = (block: CategoryBlock) => {
     const { id, label } = block.heading.definition;
+    // A category named as its view is, such as Composition, takes a heading that doesn't repeat the view's name.
+    if (label === current.label) block = { ...block, heading: { ...block.heading, definition: { ...block.heading.definition, label: VIEW_NAMED[id] ?? `${label} facts` } } };
     const { page, pages, start, href } = paging(id, block.rows.length);
     return <CategoryTable key={id} block={{ ...block, rows: block.rows.slice(start, start + PROFILE_PAGE_SIZE) }} context={context} pagination={<Pagination label={`${label} pages`} page={page} pages={pages} href={href} scrollToTop />} />;
   };
@@ -142,7 +147,7 @@ export function ProfileBody({ profile, query, base }: { profile: RepositoryProfi
 
   const services = () => {
     const { page, pages, start, href } = paging("services", view.services.length);
-    return <ServiceDependencies key="services" level={3} services={view.services.slice(start, start + PROFILE_PAGE_SIZE)} total={view.services.length} context={context} pagination={<Pagination label="Service Dependency pages" page={page} pages={pages} href={href} scrollToTop />} />;
+    return <ServiceDependencies key="services" services={view.services.slice(start, start + PROFILE_PAGE_SIZE)} total={view.services.length} context={context} pagination={<Pagination label="Service Dependency pages" page={page} pages={pages} href={href} scrollToTop />} />;
   };
 
   // A large repository skips tens of thousands of inputs, so its diagnostics page like any long table.
@@ -192,20 +197,22 @@ export function ProfileBody({ profile, query, base }: { profile: RepositoryProfi
         <div className={styles.layout}>
           <SectionNav label={`${current.label} sections`} jumpLabel="Jump to section" groups={navigation(current)} />
           <div className={styles.content}>
-            <Section id={`view-${current.id}`} title={current.label} description={current.question}>
+            {/* The view's answer, under its question, named for assistive technology; on screen the selected tab names it, so no heading repeats it. */}
+            <section id={`view-${current.id}`} className={styles.answer} aria-label={current.label}>
+              <p className={styles.question}>{current.question}</p>
               {panel && panel.rows.length > 0 && <Answer panel={panel} base={base} />}
-            </Section>
+            </section>
             {current.id === "composition" && <Relationships relationships={relationships} />}
             {current.id === "services" && services()}
             {blocks(current)}
             {current.id === "diagnostics" && (
               <>
                 <NeedsAttention attention={view.attention} base={base} />
-                <Section id="diagnostics" level={3} title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent.">
+                <Section id="diagnostics" title="Skipped inputs" description="Files that were not read or not understood. Facts they could affect are unknown, never absent.">
                   {diagnostics.skipped.length ? diagnosticTable("diagnostics", "Skipped inputs", diagnostics.skipped) : <p className={styles.muted}>Every input was read and understood.</p>}
                 </Section>
                 {diagnostics.notes.length > 0 && (
-                  <Section id="other-diagnostics" level={3} title="Other diagnostics" description="Inconsistencies and unsupported constructs the detectors noted without skipping the input.">
+                  <Section id="other-diagnostics" title="Other diagnostics" description="Inconsistencies and unsupported constructs the detectors noted without skipping the input.">
                     {diagnosticTable("other-diagnostics", "Other diagnostics", diagnostics.notes)}
                   </Section>
                 )}

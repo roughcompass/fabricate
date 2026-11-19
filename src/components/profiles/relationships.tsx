@@ -21,7 +21,6 @@ export function Relationships({ relationships }: { relationships: RepositoryRela
   return (
     <Section
       id="relationships"
-      level={3}
       title="Relationships"
       description="Repositories this one uses and is used by, resolved across the newest Assessment Run that included it."
       actions={mapHref ? <Link href={mapHref} className={styles.panelLink}>Open in the Relationship Map</Link> : undefined}

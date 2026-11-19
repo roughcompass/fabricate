@@ -3,7 +3,6 @@ import { NoValuePlaceholder } from "@/components/results/no-value";
 import { Alert } from "@/components/ui/alert";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Panel } from "@/components/ui/panel";
-import { Section } from "@/components/ui/section";
 import { StatGroup } from "@/components/ui/stat-group";
 import { Status, spaced, statusLabel } from "@/components/ui/status";
 import type { OverviewRow, OverviewValue } from "@/lib/profiles/overview";
@@ -24,7 +23,8 @@ import styles from "./profile.module.css";
 export function ProfileOverview({ view, panels, base }: { view: ProfileView; panels: readonly SummaryPanel[]; base: string }) {
   const { kind } = view;
   return (
-    <Section id="overview" title="Overview">
+    // Named for assistive technology; on screen the selected tab names it.
+    <section id="overview" className={styles.overview} aria-label="Overview">
       {!kind.frontend && (
         <Alert tone="info" title="Not a frontend web repository">
           {`No UI framework, UI elements, composition mechanism, browser bundler, or markup was found${kind.languages.length ? `; its main languages are ${kind.languages.join(", ")}` : ""}. The Composition and Design system views apply only to frontend web repositories, so they're left out; its dependencies, services, and tooling are below.`}
@@ -38,7 +38,6 @@ export function ProfileOverview({ view, panels, base }: { view: ProfileView; pan
           return (
             <Panel
               key={panel.title}
-              level={3}
               title={panel.title}
               actions={panel.tab === "overview" ? undefined : <Link href={profileTabHref(base, panel.tab)} className={styles.panelLink}>{`Open ${tab.label}`}</Link>}
             >
@@ -47,7 +46,7 @@ export function ProfileOverview({ view, panels, base }: { view: ProfileView; pan
           );
         })}
       </div>
-    </Section>
+    </section>
   );
 }
 
