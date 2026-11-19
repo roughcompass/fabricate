@@ -18,7 +18,7 @@ const shared: Settings = {
   profiling: { checkMinutes: 60 },
   catalog: { registry: "https://registry.npmjs.org/" },
   adoption: { snapshotDays: 7, rarelyUsedPercentile: 25 },
-  previews: { enabled: false, trustedSources: [], nodeVersions: {}, storage: "storage/previews", concurrency: 1, timeoutMinutes: 15, maxOutputBytes: 209_715_200, maxStorageBytes: 5_368_709_120 },
+  previews: { enabled: false, browser: null, trustedSources: [], nodeVersions: {}, storage: "storage/previews", concurrency: 1, timeoutMinutes: 15, maxOutputBytes: 209_715_200, maxStorageBytes: 5_368_709_120 },
 };
 
 describe("configuration", () => {
@@ -245,6 +245,7 @@ describe("configuration", () => {
       for (const environment of ["development", "test", "production"] as const) {
         expect(loadConfig({ appRoot: process.cwd(), environment, env: {} }).previews).toEqual({
           enabled: false,
+          browser: null,
           trustedSources: [],
           nodeVersions: {},
           storage: path.join(process.cwd(), "storage/previews"),
@@ -266,6 +267,12 @@ describe("configuration", () => {
       expect(config.previews.nodeVersions).toEqual({ "22.11.0": "/opt/node-22/bin", "20.18.1": path.join(appRoot, "runtimes/node-20/bin") });
     });
 
+    it("capture screenshots with Playwright's Chromium unless a channel or a browser's absolute path is given", () => {
+      expect(load().previews.browser).toBeNull();
+      expect(load(withPreviews({ browser: "msedge" })).previews.browser).toBe("msedge");
+      expect(load(withPreviews({ browser: "/usr/bin/chromium" })).previews.browser).toBe("/usr/bin/chromium");
+    });
+
     it("keep preview storage under the app root unless an absolute directory is given", () => {
       expect(load().previews.storage).toBe(path.join(appRoot, "storage/previews"));
       expect(load(withPreviews({ storage: "/srv/previews" })).previews.storage).toBe("/srv/previews");
@@ -274,6 +281,7 @@ describe("configuration", () => {
     it("apply typed environment overrides", () => {
       const config = load({ shared }, {
         FRONTEND_REGISTRY_PREVIEWS: "true",
+        FRONTEND_REGISTRY_PREVIEWS_BROWSER: "chrome",
         FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES: "https://git.example.com/acme/orders.git \n ssh://git@git.example.com/acme/admin.git",
         FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS: ["22.11.0=/opt/node-22/bin", "20.18.1=/opt/node-20/bin"].join(path.delimiter),
         FRONTEND_REGISTRY_PREVIEWS_STORAGE: "/var/lib/frontend-registry/previews",
@@ -285,6 +293,7 @@ describe("configuration", () => {
 
       expect(config.previews).toEqual({
         enabled: true,
+        browser: "chrome",
         trustedSources: ["https://git.example.com/acme/orders", "ssh://git.example.com/acme/admin"],
         nodeVersions: { "22.11.0": "/opt/node-22/bin", "20.18.1": "/opt/node-20/bin" },
         storage: "/var/lib/frontend-registry/previews",
@@ -316,6 +325,8 @@ describe("configuration", () => {
       ["a scp-style trusted source", { trustedSources: ["git@git.example.com:acme/orders.git"] }, /not a valid clone URL/],
       ["a blank trusted source", { trustedSources: [" "] }, ConfigurationError],
       ["a zero storage limit", { maxStorageBytes: 0 }, ConfigurationError],
+      ["a relative browser path", { browser: "bin/chrome" }, /a Playwright channel, such as chrome, or an absolute path/],
+      ["a blank browser", { browser: " " }, ConfigurationError],
     ])("reject %s in the file", (_label, previews, error) => {
       expect(() => load(withPreviews(previews as Partial<Settings["previews"]>))).toThrow(error);
     });

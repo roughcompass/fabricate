@@ -4,7 +4,7 @@ A repository preview builds one client-rendered single-page application, or a mi
 
 Previews are the one place the Frontend Registry builds repository code. Assessments and Profiles stay strictly static, and a preview never adds facts to a Profile.
 
-> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications' builds and automatic rebuilds are in place below the pages that show them, which add-applications builds next.
+> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications' builds, automatic rebuilds, and screenshots are in place below the pages that show them, which add-applications builds next.
 
 ## Turn previews on
 
@@ -14,6 +14,7 @@ Previews are off by default. While `previews.enabled` is off, no Repository page
 |---|---|---|
 | `previews.enabled` (`FRONTEND_REGISTRY_PREVIEWS`) | `false` | Turns previews on. |
 | `previews.trustedSources` | none | The remotes enrolled for previews, by clone URL. |
+| `previews.browser` (`FRONTEND_REGISTRY_PREVIEWS_BROWSER`) | none | The headless browser that captures applications' screenshots: Playwright's Chromium when unset, or a Playwright channel such as `chrome`, or a browser's absolute path. See [Screenshots](#screenshots). |
 | `previews.nodeVersions` | none | Each Node version a build may use, mapped to the directory that holds its `node` binary. |
 | `previews.storage` (`FRONTEND_REGISTRY_PREVIEWS_STORAGE`) | `storage/previews` | Where builds run and keep their logs, published output, and package caches. Yarn builds need it outside any directory with Yarn's configuration; see [The build's environment](#the-builds-environment). |
 | `previews.concurrency` | 1 | How many preview builds run at once, apart from the worker's other jobs. |
@@ -47,10 +48,10 @@ npm run previews:doctor
 
 In a release (see the README's Run in production), run `node dist/previews-doctor.cjs` from the release directory instead.
 
-For each `previews.nodeVersions` entry, the doctor checks that the directory's `node` reports that version and that its corepack runs pnpm and Yarn. They run in the environment a build's install gets: corepack's and the package managers' caches under `.cache/` in `previews.storage`, and a throwaway `HOME` and `TMPDIR`, so your own are never read or changed. The first run downloads corepack's default pnpm and Yarn, as a build would, so the registry must be reachable. It also checks `git` on the worker's `PATH` and `tar` where extraction looks for it. It prints a line for each check, names anything missing or wrong, and exits with a non-zero status if any check fails. With no Node versions configured, it says previews can't build anything and fails.
+For each `previews.nodeVersions` entry, the doctor checks that the directory's `node` reports that version and that its corepack runs pnpm and Yarn. They run in the environment a build's install gets: corepack's and the package managers' caches under `.cache/` in `previews.storage`, and a throwaway `HOME` and `TMPDIR`, so your own are never read or changed. The first run downloads corepack's default pnpm and Yarn, as a build would, so the registry must be reachable. It also checks `git` on the worker's `PATH`, `tar` where extraction looks for it, and that the [screenshot browser](#screenshots) launches headless, naming a missing one and how to install it. It prints a line for each check, names anything missing or wrong, and exits with a non-zero status if any check fails. With no Node versions configured, it says previews can't build anything and fails.
 
 ```text
-Preview toolchain: previews.nodeVersions, git, and tar. Package manager caches: /srv/frontend-registry/storage/previews/.cache
+Preview toolchain: previews.nodeVersions, git, tar, and the screenshot browser. Package manager caches: /srv/frontend-registry/storage/previews/.cache
 FAIL Node 20.18.1: /home/frontend-registry/.local/share/mise/installs/node/20.18.1/bin has no node executable
 skip Node 20.18.1 pnpm: needs Node 20.18.1's node to run
 skip Node 20.18.1 Yarn: needs Node 20.18.1's node to run
@@ -59,7 +60,8 @@ ok   Node 22.11.0 pnpm: corepack runs pnpm 10.4.1
 ok   Node 22.11.0 Yarn: corepack runs Yarn 1.22.22
 ok   git: /usr/bin/git, git version 2.50.1
 ok   tar: /usr/bin/tar, bsdtar 3.5.3 - libarchive 3.7.4
-1 of 8 checks failed: Node 20.18.1.
+ok   Screenshot browser: Playwright's Chromium 159.0.8154.6 launches headless
+1 of 9 checks failed: Node 20.18.1.
 ```
 
 The web server needs none of this.
@@ -229,7 +231,7 @@ A worker that stops in the middle of a build gives the attempt back to the queue
 
 ## Applications
 
-An application (add-applications) is a Repository's package that the Frontend Registry keeps built from one branch. Its builds are ordinary previews of that Repository, commit, and package, made by the pipeline above, so a commit is built once whether an application or an operator asked for it. An application points at two of them: its current build, the last that succeeded, and its latest attempt. A newer commit's build becomes current only when it succeeds, so a failed or refused commit leaves the last good build serving.
+An application (add-applications) is a Repository's package that the Frontend Registry keeps built from one branch. Its builds are ordinary previews of that Repository, commit, and package, made by the pipeline above, so a commit is built once whether an application or an operator asked for it. An application points at two of them: its current build, the last that succeeded, and its latest attempt. A newer commit's build becomes current only when it succeeds, so a failed or refused commit leaves the last good build serving and its screenshot shown.
 
 ### Automatic rebuilds
 
@@ -241,6 +243,16 @@ The worker reads every application's tracked branch on the profiling check's sch
 - **Switching branch** starts an attempt at the new branch's head, replacing any under way. The current build stays in use until the new branch's build succeeds.
 
 Checks need previews on and the Repository enrolled. While previews are off, nothing is read or built, and applications keep their state.
+
+### Screenshots
+
+After an application's build publishes, a `preview.screenshot` job captures it, one at a time across the worker. The worker starts a static server of its own on `127.0.0.1` at a free port, which serves `/previews/<preview>/` through the same serving module as the web server, with the same checks, and opens the build's page in a headless browser at the Desktop size, 1440 by 900 pixels. It waits for the page's load event and then for 500 milliseconds without network requests, up to 20 seconds in all, and captures what's shown then, so a page still loading at the limit is captured as it is. It writes `screenshot.webp` and a 720-pixel-wide `card.webp` under `screenshots/<attempt>-<claim>/` in the preview's storage directory, beside the build's output and never under its served path, and removes the preview's earlier captures. The web server serves them only through the application's address, `/applications/<slug>/screenshot` and `?size=card`.
+
+A capture that fails, because the browser can't start or the page can't be opened, records the screenshot as unavailable with the reason, and never fails the build: the build stays current, and the card says no screenshot is available. The next successful build is captured again.
+
+The browser is `previews.browser`: Playwright's Chromium by default, installed on the worker's host as the worker's user with `npx playwright install chromium`, or a Playwright channel such as `chrome` or `msedge` for an installed browser, or a Chromium-based browser's absolute path. `npm run previews:doctor` checks that it launches. The web server needs no browser.
+
+Like a preview's page, the browser runs the application's own scripts, with the worker's network access, so a screenshot is subject to the same trust as enrollment ([Security](#security)).
 
 ## Tested repositories
 

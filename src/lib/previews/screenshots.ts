@@ -1,9 +1,13 @@
+import fs from "node:fs";
+import path from "node:path";
 import { and, eq, sql } from "drizzle-orm";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { jobs, previewScreenshots } from "@/lib/db/schema";
 import { failureText } from "@/lib/git/redact";
 import { enqueue } from "@/lib/jobs/queue";
 import type { PreviewBuild } from "./records";
+import { previewDirectory } from "./storage";
 
 /**
  * Screenshots of published previews (add-applications, design decision 4).
@@ -19,6 +23,10 @@ import type { PreviewBuild } from "./records";
 export type PreviewScreenshot = typeof previewScreenshots.$inferSelect;
 
 export const CAPTURE_SCREENSHOT = "preview.screenshot";
+
+/** The images a capture writes, by size. */
+export const SCREENSHOT_FILES = { full: "screenshot.webp", card: "card.webp" } as const;
+export type ScreenshotSize = keyof typeof SCREENSHOT_FILES;
 
 export function findScreenshot(db: Executor, previewId: number): PreviewScreenshot | undefined {
   return db.select().from(previewScreenshots).where(eq(previewScreenshots.previewId, previewId)).get();
@@ -49,12 +57,29 @@ export function requestScreenshot(db: Executor, preview: Pick<PreviewBuild, "id"
   return screenshot;
 }
 
+export interface ScreenshotJob {
+  preview: string;
+  /** When the capture was requested, so a job for an earlier request changes nothing. */
+  requested: number;
+}
+
 function screenshotJob(previewPublicId: string, screenshot: Pick<PreviewScreenshot, "requestedAt">): { preview: string; requested: number } {
   return { preview: previewPublicId, requested: screenshot.requestedAt.getTime() };
 }
 
 function screenshotJobKey(previewPublicId: string, screenshot: Pick<PreviewScreenshot, "requestedAt">): string {
   return `${CAPTURE_SCREENSHOT}:${previewPublicId}:${screenshot.requestedAt.getTime()}`;
+}
+
+/** Records the captured images in +directory+ for the request +requested+, unless it was since requested again. */
+export function completeScreenshot(db: Executor, previewId: number, requested: number, directory: string, now = new Date()): boolean {
+  return (
+    db
+      .update(previewScreenshots)
+      .set({ state: "ready", directory, reason: null, capturedAt: now, updatedAt: now })
+      .where(and(eq(previewScreenshots.previewId, previewId), eq(previewScreenshots.state, "pending"), eq(previewScreenshots.requestedAt, new Date(requested))))
+      .run().changes === 1
+  );
 }
 
 /** Records why the request +requested+ couldn't be captured, unless it was since requested again. */
@@ -88,4 +113,18 @@ export function settleAbandonedScreenshots(db: Executor, now = new Date()): numb
     if (abandoned && failScreenshot(db, row.previewId, row.requestedAt.getTime(), "The capture stopped before it finished: the worker running it stopped or lost the job.", now)) settled += 1;
   }
   return settled;
+}
+
+/** Where a capture of the artifact +artifact+ (out/<attempt>-<claim>) writes its images, relative to the preview's directory. */
+export function screenshotDirectoryName(artifact: string): string {
+  const key = artifact.split("/").at(-1) ?? "";
+  if (!/^\d+-[a-z0-9]+$/.test(key)) throw new Error(`${JSON.stringify(artifact)} doesn't name a published artifact`);
+  return `screenshots/${key}`;
+}
+
+/** The image file of a ready screenshot, or null when it has none or its file is missing. */
+export function screenshotFile(config: FrontendRegistryConfig, previewPublicId: string, screenshot: Pick<PreviewScreenshot, "state" | "directory">, size: ScreenshotSize): string | null {
+  if (screenshot.state !== "ready" || screenshot.directory === null || !/^screenshots\/\d+-[a-z0-9]+$/.test(screenshot.directory)) return null;
+  const file = path.join(previewDirectory(config, previewPublicId), ...screenshot.directory.split("/"), SCREENSHOT_FILES[size]);
+  return fs.existsSync(file) ? file : null;
 }

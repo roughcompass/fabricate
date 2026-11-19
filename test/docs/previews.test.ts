@@ -23,4 +23,9 @@ describe("docs/previews.md", () => {
     expect(rebuilds).toContain(`once per \`profiling.checkMinutes\` (default ${profiling.checkMinutes}, \`FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES\`), and once when it starts, in the same \`profiling.check\` job`);
     expect(rebuilds).toContain("four remotes at a time");
   });
+
+  it("documents the screenshot's size, wait, limit, and files as the capture takes them", () => {
+    const screenshots = section("Screenshots");
+    for (const fact of ["1440 by 900 pixels", "500 milliseconds without network requests, up to 20 seconds", "`screenshot.webp` and a 720-pixel-wide `card.webp`", "`npx playwright install chromium`"]) expect(screenshots).toContain(fact);
+  });
 });

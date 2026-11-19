@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import semver from "semver";
 import type { FrontendRegistryConfig } from "@/lib/config";
+import { BrowserUnavailableError, browserLabel, launchBrowser } from "./browser";
 import type { BuildPlan } from "./eligibility";
 import { type CommandResult, TAR_PATH, runCommand } from "./process";
 import { cacheDirectory } from "./storage";
@@ -18,7 +19,8 @@ import { failureText } from "@/lib/git/redact";
  * corepack's and the package managers' caches under `previews.storage` and a
  * throwaway HOME and TMPDIR, so nothing reads or writes the user's own. It
  * also finds `git` where the Git runner looks for it, on the worker's PATH,
- * and `tar` where extraction looks for it.
+ * and `tar` where extraction looks for it. checkBrowser checks the headless
+ * browser that captures applications' screenshots.
  */
 
 export type CheckStatus = "ok" | "failed" | "skipped";
@@ -144,6 +146,36 @@ export async function checkToolchain(config: FrontendRegistryConfig, options: Do
     await fsp.rm(scratch, { recursive: true, force: true });
   }
   return checks;
+}
+
+/** Launches a browser and answers its version, closing it again. */
+export type BrowserProbe = (config: FrontendRegistryConfig) => Promise<string>;
+
+/**
+ * Checks that the browser applications' screenshots are captured with,
+ * `previews.browser`, launches headless on this host (add-applications,
+ * design decision 4), naming what's missing when it doesn't.
+ */
+export async function checkBrowser(config: FrontendRegistryConfig, options: { probe?: BrowserProbe; onCheck?: (check: ToolchainCheck) => void } = {}): Promise<ToolchainCheck> {
+  const subject = "Screenshot browser";
+  let check: ToolchainCheck;
+  try {
+    const version = await (options.probe ?? probeBrowser)(config);
+    check = { subject, status: "ok", detail: `${browserLabel(config)} ${version} launches headless` };
+  } catch (error) {
+    check = { subject, status: "failed", detail: error instanceof BrowserUnavailableError ? error.message : `${browserLabel(config)} couldn't start: ${failureText(error, 600)}` };
+  }
+  options.onCheck?.(check);
+  return check;
+}
+
+async function probeBrowser(config: FrontendRegistryConfig): Promise<string> {
+  const browser = await launchBrowser(config);
+  try {
+    return browser.version();
+  } finally {
+    await browser.close();
+  }
 }
 
 /** One check as the doctor prints it. */

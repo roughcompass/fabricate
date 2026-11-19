@@ -8,8 +8,10 @@ import { FINALIZE_EVALUATION, finalizeEvaluation, runEvaluationRelease } from "@
 import { EVALUATE_RELEASE } from "@/lib/evaluations/start";
 import { checkApplications } from "@/lib/applications/check";
 import { runPreviewBuild } from "@/lib/previews/build";
+import { runScreenshot } from "@/lib/previews/capture";
 import { runPreparation } from "@/lib/previews/preparation";
 import { BUILD_PREVIEW, PREPARE_PREVIEW } from "@/lib/previews/records";
+import { CAPTURE_SCREENSHOT } from "@/lib/previews/screenshots";
 import { CHECK_PROFILES, runScheduledProfileCheck } from "@/lib/profiling/check";
 import { findRepository } from "@/lib/repositories/repository-records";
 import { type BackgroundTrigger, REQUEST_SURVEY, surveyRepository } from "@/lib/surveys/background";
@@ -49,6 +51,8 @@ export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConf
     // Each claim of the job is its own claim of the attempt (job attempts count claims), so only the latest can publish.
     [BUILD_PREVIEW]: async (payload, context) =>
       void (await runPreviewBuild(db, { preview: String(payload.preview), attempt: Number(payload.attempt) }, { config, signal: context.signal, claim: `${context.job.leaseOwner ?? "worker"}#${context.job.id}.${context.job.attempts}` })),
+    // A capture that fails records the screenshot as unavailable rather than failing the job; only a stopped worker's is run again.
+    [CAPTURE_SCREENSHOT]: async (payload, context) => void (await runScreenshot(db, { preview: String(payload.preview), requested: Number(payload.requested) }, { config, signal: context.signal })),
   };
 }
 
@@ -59,7 +63,7 @@ export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConf
  */
 export const HOLD_BACKGROUND: readonly string[] = [BUILD_ENTRY];
 
-/** Job kinds with their own limit on how many run at once, apart from the worker's concurrency (design decision 8). */
+/** Job kinds with their own limit on how many run at once, apart from the worker's concurrency (design decision 8): preview builds, and screenshots, one browser at a time. */
 export function jobLimits(config: FrontendRegistryConfig = getConfig()): KindLimits {
-  return { [BUILD_PREVIEW]: config.previews.concurrency };
+  return { [BUILD_PREVIEW]: config.previews.concurrency, [CAPTURE_SCREENSHOT]: 1 };
 }

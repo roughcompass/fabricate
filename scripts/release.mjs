@@ -60,8 +60,10 @@ try {
   // The docs the web server serves: the Frontend Registry's own, and Surveyor's reference from its installed package, which tracing leaves out.
   copy("docs");
   copy("node_modules/@repo-facts/contract/docs");
-  // The worker bundle loads the native SQLite binding from node_modules.
+  // The worker bundle loads the native SQLite binding from node_modules, and playwright-core, which drives the
+  // headless browser that captures applications' screenshots; the browser itself is installed on the worker's host.
   copy("node_modules/better-sqlite3");
+  copy("node_modules/playwright-core");
   // Standalone tracing copies the whole project directory; keep only what the processes run or read.
   const keep = new Set([".next", "server.js", "node_modules", "package.json", "config", "dist", "drizzle", "docs", "public"]);
   for (const name of fs.readdirSync(target)) if (!keep.has(name)) fs.rmSync(path.join(target, name), { recursive: true, force: true });

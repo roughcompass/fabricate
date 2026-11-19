@@ -1,12 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import http from "node:http";
+import { Readable } from "node:stream";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { editRepository } from "@/lib/repositories/registration";
 import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { contentType, isNavigation, servePreview } from "@/lib/previews/serving";
 import { type PreviewBuild, failAttempt, findPreview, rebuildPreview } from "@/lib/previews/records";
+import { type PreviewServer, previewRoute, startPreviewServer } from "@/lib/previews/static-server";
 import { previewDirectory } from "@/lib/previews/storage";
 import { buildRepository } from "../support/builders";
 import { rawRun } from "../support/db";
@@ -15,9 +18,26 @@ import { useAppDb } from "../support/next";
 
 /*
  * Serving a preview's published artifact under /previews/<id>/ (design
- * decision 6, spec "Previews are served under a Frontend Registry path"), through the
- * route handler itself.
+ * decision 6, spec "Previews are served under a Frontend Registry path"),
+ * through the route handler itself, and over HTTP through the in-process
+ * server the worker captures screenshots with (add-applications, task 4.1),
+ * which share one serving module.
  */
+
+/** A request for +path+, sent as is, so neither the client nor a URL parser normalizes its segments. */
+function overHttp(server: PreviewServer, path: string, headers: Record<string, string>, method = "GET"): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const request = http.request(`${server.origin}/`, { method, path, headers }, (incoming) => {
+      const responseHeaders = new Headers();
+      for (const [name, value] of Object.entries(incoming.headers)) if (value !== undefined) responseHeaders.set(name, Array.isArray(value) ? value.join(", ") : value);
+      const empty = method === "HEAD" || incoming.statusCode === 304;
+      if (empty) incoming.resume();
+      resolve(new Response(empty ? null : (Readable.toWeb(incoming) as ReadableStream<Uint8Array>), { status: incoming.statusCode, headers: responseHeaders }));
+    });
+    request.on("error", reject);
+    request.end();
+  });
+}
 
 const PAGE = '<!doctype html><html><head><script type="module" src="/previews/{{id}}/assets/app.js"></script></head><body><div id="root"></div></body></html>\n';
 const STANDALONE = {
@@ -29,9 +49,21 @@ const STANDALONE = {
   "about.html": '<a href="/about">about</a>',
 };
 
-describe("serving previews", () => {
+/** How a test reaches the serving module: through the web server's route handler, or over HTTP to the worker's in-process server. */
+const TRANSPORTS = ["the route", "the in-process server"] as const;
+
+describe.each(TRANSPORTS)("serving previews through %s", (transport) => {
   const original = getConfig();
   const app = useAppDb();
+  let server: PreviewServer | null = null;
+
+  beforeAll(async () => {
+    // With no options, it reads the configuration and database each test sets, as the route does.
+    if (transport === "the in-process server") server = await startPreviewServer();
+  });
+  afterAll(async () => {
+    await server?.close();
+  });
   let storage: string;
   let config: FrontendRegistryConfig;
   let repository: Repository;
@@ -58,16 +90,18 @@ describe("serving previews", () => {
     return publishFiles(app.db, config, preview, { "index.html": PAGE.replace("{{id}}", preview.publicId), ...files }, entry);
   }
 
-  /** The route's answer to a request for +url+, with +headers+. */
+  /** The answer to a request for +url+, with +headers+. */
   async function get(url: string, headers: Record<string, string> = {}, method = "GET"): Promise<Response> {
+    if (server) return overHttp(server, url, headers, method);
     const route = await import("@/app/previews/[preview]/[[...path]]/route");
     const [, , preview, ...rest] = new URL(url, "http://localhost").pathname.split("/");
     const request = new Request(new URL(url, "http://localhost"), { method, headers });
     const params = Promise.resolve({ preview: decodeURIComponent(preview!), path: rest.length ? rest.map((segment) => decodeURIComponent(segment)) : undefined });
     return method === "HEAD" ? route.HEAD(request, { params }) : route.GET(request, { params });
   }
-  /** The route's answer for raw path segments, as Next.js passes them decoded. */
+  /** The answer for raw path segments, as Next.js passes them decoded, or as each is sent encoded over HTTP. */
   async function segments(preview: PreviewBuild, parts: string[]): Promise<Response> {
+    if (server) return overHttp(server, `/previews/${preview.publicId}/${parts.map((part) => encodeURIComponent(part)).join("/")}`, { "sec-fetch-dest": "document" });
     const route = await import("@/app/previews/[preview]/[[...path]]/route");
     return route.GET(new Request(`http://localhost/previews/${preview.publicId}/x`, { headers: { "sec-fetch-dest": "document" } }), { params: Promise.resolve({ preview: preview.publicId, path: parts }) });
   }
@@ -274,6 +308,23 @@ describe("serving previews", () => {
       fs.renameSync(root, moved);
       fs.symlinkSync(moved, root);
       expect((await get(`${base(preview)}assets/app.js`)).status).toBe(404);
+    });
+  });
+
+  describe("the in-process server's paths", () => {
+    it("decodes each segment of a preview path as the web server's router does, and leaves other paths alone", () => {
+      expect(previewRoute("/previews/pvw_0123456789abcdef")).toEqual({ preview: "pvw_0123456789abcdef", segments: [] });
+      expect(previewRoute("/previews/pvw_0123456789abcdef/")).toEqual({ preview: "pvw_0123456789abcdef", segments: [] });
+      expect(previewRoute("/previews/pvw_0123456789abcdef/a%2Fb/c%20d")).toEqual({ preview: "pvw_0123456789abcdef", segments: ["a/b", "c d"] });
+      expect(previewRoute("/previews/pvw_0123456789abcdef/%E0%A4%A")).toBeNull();
+      for (const other of ["/", "/previews", "/previews/", "/api/health", "/repositories/src_0123456789abcdef"]) expect(previewRoute(other), other).toBeNull();
+    });
+
+    it.runIf(transport === "the in-process server")("answers 404 for every other path, and for other methods", async () => {
+      const preview = standalone();
+      expect((await overHttp(server!, "/api/health", page)).status).toBe(404);
+      expect((await overHttp(server!, base(preview), page, "POST")).status).toBe(404);
+      expect((await overHttp(server!, base(preview), page)).status).toBe(200);
     });
   });
 
