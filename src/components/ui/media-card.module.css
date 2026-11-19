@@ -76,4 +76,23 @@
     .frame { transition: none; }
   }
   .image { object-fit: cover; object-position: top left; }
+
+  /*
+   * A build's states in place of the picture. The placeholder is the page's
+   * skeleton shimmer over a sketch of a page: a fade, never a sweep, and still
+   * for people who prefer reduced motion. The failure state and the
+   * unavailable image are still: an icon and a line of text on the muted fill.
+   */
+  .placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); background: var(--color-bg-subtle); }
+  .placeholderBar, .placeholderBlock { display: block; border-radius: var(--radius-sm); background: var(--color-bg-muted); animation: shimmer var(--duration-spin) var(--ease-standard) infinite alternate; }
+  .placeholderBar { width: 60%; height: var(--space-4); }
+  .placeholderBar[data-width="short"] { width: 35%; }
+  .placeholderBlock { flex: 1; border-radius: var(--radius-md); }
+  .stateImage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-4); background: var(--color-bg-subtle); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); text-align: center; }
+  .stateImage[data-tone="error"] svg { color: var(--color-error); }
+
+  @keyframes shimmer {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+  }
 }

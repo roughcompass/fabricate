@@ -1,0 +1,23 @@
+@layer pages {
+  /* The control row sits close to what it controls, rather than a page section's distance away. */
+  .workspace { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+  /* The control row: the tabs, then, on the Preview tab, the ref choice and the device controls at its end. */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
+  .end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-left: auto; min-width: 0; }
+  .refForm { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .refForm select { max-width: var(--size-label); }
+
+  /* The frame area while there's no build to run: the build state, as a card or the application page shows it. */
+  .state { position: relative; display: grid; aspect-ratio: 16 / 10; margin: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-muted); }
+  .caption { position: absolute; right: 0; bottom: 0; left: 0; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
+
+  /* The Code tab: the file tree beside the selected file. */
+  .code { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+  .source { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+  .muted { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); }
+
+  @container content (max-width: 767px) {
+    .code { grid-template-columns: minmax(0, 1fr); }
+    .end { margin-left: 0; }
+  }
+}

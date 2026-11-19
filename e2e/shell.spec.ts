@@ -36,12 +36,12 @@ test.describe("on a wide viewport", () => {
     await expectCurrent(page, "All Assessments");
   });
 
-  test("Full menu: Home; Registry; Assessments; Templates; Insights; and Admin, under headings and dividers", async ({ page, db: _db }) => {
+  test("Full menu: Home; Registry with Applications; Assessments; Templates; Insights; and Admin, under headings and dividers", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
-    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "All Assessments", "Standards", "Salt Patterns", "Adoption", "System", "Bitbucket tokens"]);
+    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "Applications", "All Assessments", "Standards", "Salt Patterns", "Adoption", "System", "Bitbucket tokens"]);
     await expect(nav.locator("hr")).toHaveCount(5);
-    await expect(nav.getByRole("list", { name: "Registry" }).getByRole("link")).toHaveText(["Repositories"]);
+    await expect(nav.getByRole("list", { name: "Registry" }).getByRole("link")).toHaveText(["Repositories", "Applications"]);
     await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["All Assessments", "Standards"]);
     await expect(nav.getByRole("list", { name: "Templates" }).getByRole("link")).toHaveText(["Salt Patterns"]);
     await expect(nav.getByRole("list", { name: "Insights" }).getByRole("link")).toHaveText(["Adoption"]);

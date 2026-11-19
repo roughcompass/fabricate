@@ -52,9 +52,16 @@ export const routes = {
   /** One of its previews (docs/previews.md): its device frame, state, and build log, with +query+ such as its device. */
   repositoryPreview: (repositoryId: string, previewId: string, query?: Query) => withQuery(`/repositories/${repositoryId}/previews/${previewId}`, query),
 
-  /** Applications (add-applications): the gallery, and each application's page by its slug. */
+  /** Applications (add-applications): the gallery, onboarding, and each application's page, settings, and preview mode by its slug. */
   applications: "/applications",
-  application: (slug: string) => `/applications/${slug}`,
+  newApplication: (query?: Query) => withQuery("/applications/new", query),
+  application: (slug: string, query?: Query) => withQuery(`/applications/${slug}`, query),
+  applicationSettings: (slug: string, query?: Query) => withQuery(`/applications/${slug}/settings`, query),
+  applicationPreview: (slug: string, query?: Query) => withQuery(`/applications/${slug}/preview`, query),
+  /** The status of the applications a page shows, which it polls while one is building. */
+  applicationsStatus: (publicIds: readonly string[]) => withQuery("/api/applications/status", { ids: publicIds.join(",") }),
+  /** An application running full screen under the toolbar, at +path+ within it (add-applications task 8.1). */
+  runningApplication: (slug: string, path = "") => `/run/${slug}${path ? `/${path.replace(/^\/+/, "")}` : ""}`,
   /** An application's current screenshot, or its card image, at +version+ (Application.screenshot.version) so a new one loads anew. */
   applicationScreenshot: (slug: string, version: string, size: "full" | "card" = "full") => withQuery(`/applications/${slug}/screenshot`, { ...(size === "card" && { size }), v: version }),
   /** The application running full screen under the toolbar, at its own +route+ (`/accounts/42`), with +query+ such as a share link's token. */

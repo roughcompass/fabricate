@@ -42,6 +42,11 @@ describe("navigation skeletons", () => {
     ["/standards/std_abc", "details"],
     ["/standards/std_abc/draft", "editor"],
     ["/standards/std_abc/releases/rel_1", "details"],
+    ["/applications", "cards"],
+    ["/applications/new", "focused-flow"],
+    ["/applications/orders-portal", "details"],
+    ["/applications/orders-portal/settings", "settings"],
+    ["/applications/orders-portal/preview", "focused"],
     ["/templates", "cards"],
     ["/templates/market-watch", "details"],
     ["/templates/market-watch/preview", "focused"],
@@ -58,14 +63,13 @@ describe("navigation skeletons", () => {
     expect(skeletonFor("/api/health")).toBeNull();
     expect(skeletonFor("/run/ref-market-watch/watch")).toBeNull();
     expect(skeletonFor("/s/token")).toBeNull();
-    expect(skeletonFor("/applications")).toBeNull();
     expect(skeletonFor("/portals/ptl_abc")).toBeNull();
     expect(skeletonFor("/about")).toBeNull();
   });
 
   it("has a not-found page for each section", () => {
     expect(fs.existsSync(path.resolve("src/app/not-found.tsx")), "root").toBe(true);
-    for (const section of ["adoption", "assessments", "runs", "evaluations", "profiles", "repositories", "standards", "templates"]) {
+    for (const section of ["adoption", "applications", "assessments", "runs", "evaluations", "profiles", "repositories", "standards", "templates"]) {
       expect(fs.existsSync(path.resolve("src/app/(operator)", section, "not-found.tsx")), section).toBe(true);
     }
   });

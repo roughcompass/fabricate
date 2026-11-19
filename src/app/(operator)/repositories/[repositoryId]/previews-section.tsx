@@ -215,13 +215,13 @@ function planSummary(plan: BuildPlan): string {
   return `${TOOL_LABELS[plan.buildTool]}, ${plan.packageManager.name}${plan.packageManager.version ? ` ${plan.packageManager.version}` : ""}, Node ${plan.node.version}${layout}`;
 }
 
-/** Each condition that failed, for each package, with the facts and evidence behind it. */
-function RefusalTable({ refusal, verdicts }: { refusal: Refusal | null; verdicts: readonly PackageVerdict[] }) {
+/** Each condition that failed, for each package, with the facts and evidence behind it; onboarding shows it too. */
+export function RefusalTable({ refusal, verdicts, label = "Why the commit can't be previewed" }: { refusal: Refusal | null; verdicts: readonly PackageVerdict[]; label?: string }) {
   const names = new Map(verdicts.map((verdict) => [verdict.directory, verdict]));
   const conditions = refusal?.conditions ?? [];
   return (
     <Table
-      label="Why the commit can't be previewed"
+      label={label}
       head={
         <>
           <Th>Package</Th>

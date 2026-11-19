@@ -1,11 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Icon } from "./icon";
 import styles from "./media-card.module.css";
+
+/**
+ * What the card's image area shows: a picture with its text alternative, or
+ * one of a build's states in its place. `building` is a placeholder that
+ * moves while a build runs, hidden from assistive technology, since the card
+ * states it in text; `failure` stands for a build that never succeeded,
+ * also stated in text; `unavailable` is the neutral image for a picture that
+ * couldn't be taken, which says so.
+ */
+export type MediaCardImage = { src: string; alt: string } | { state: "building" | "failure" | "unavailable" };
 
 interface MediaCardProps {
   title: string;
   description: string;
-  image: { src: string; alt: string };
+  image: MediaCardImage;
   /** The record the card opens. Without it the card is shown as unavailable. */
   href?: string;
   /** Tags and badges under the description. */
@@ -39,10 +50,38 @@ export function MediaCard({ title, description, image, href, footer, headingLeve
         {footer && <div className={styles.footer}>{footer}</div>}
       </div>
       <div className={styles.media}>
-        <div className={styles.frame}>
-          <Image src={image.src} alt={image.alt} fill unoptimized sizes="(max-width: 767px) 100vw, 400px" className={styles.image} />
+        <div className={styles.frame} data-image-state={"state" in image ? image.state : "image"}>
+          <MediaImage image={image} />
         </div>
       </div>
     </article>
+  );
+}
+
+/** The picture, or the build state shown in its place, as a card or a record's page shows it. */
+export function MediaImage({ image, sizes = "(max-width: 767px) 100vw, 400px" }: { image: MediaCardImage; sizes?: string }) {
+  if (!("state" in image)) return <Image src={image.src} alt={image.alt} fill unoptimized sizes={sizes} className={styles.image} />;
+  if (image.state === "building") {
+    return (
+      <span className={styles.placeholder} aria-hidden="true" data-placeholder="">
+        <span className={styles.placeholderBar} />
+        <span className={styles.placeholderBar} data-width="short" />
+        <span className={styles.placeholderBlock} />
+      </span>
+    );
+  }
+  if (image.state === "failure") {
+    return (
+      <span className={styles.stateImage} data-tone="error" aria-hidden="true">
+        <Icon name="alert" size={24} />
+        <span>No successful build yet</span>
+      </span>
+    );
+  }
+  return (
+    <span className={styles.stateImage} role="img" aria-label="Screenshot unavailable">
+      <Icon name="eye" size={24} />
+      <span aria-hidden="true">Screenshot unavailable</span>
+    </span>
   );
 }

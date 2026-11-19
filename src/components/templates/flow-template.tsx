@@ -20,6 +20,12 @@ interface FlowProps extends SpecimenOption {
   footer?: React.ReactNode;
   /** Shown in place of the steps when the task can't start yet, with the action that makes it possible. */
   empty?: TemplateEmpty;
+  /**
+   * A focused flow, such as onboarding an application: the sidebar hidden,
+   * and the shell header's back button, from the `@header` slot, returning to
+   * where the flow was opened, in place of breadcrumbs.
+   */
+  focused?: boolean;
 }
 
 /**
@@ -28,10 +34,11 @@ interface FlowProps extends SpecimenOption {
  * content, and a footer with Cancel, Previous, and Next or the finishing
  * action. Modeled on Cloudscape's multipage create and Salt's Wizard.
  */
-export function FlowTemplate({ header, alerts, steps, current, children, footer, empty, specimen }: FlowProps) {
+export function FlowTemplate({ header, alerts, steps, current, children, footer, empty, focused = false, specimen }: FlowProps) {
   const step = steps[current - 1] ?? steps[0]!;
   return (
     <Page width="form">
+      {focused && !specimen && <span hidden data-focused-page="" data-focused-flow="" />}
       <PageHeader template="flow" {...header} alerts={alerts} {...specimenHeader(specimen)} />
       {empty ? (
         <EmptyZone empty={empty} />
@@ -51,11 +58,12 @@ export function FlowTemplate({ header, alerts, steps, current, children, footer,
   );
 }
 
-/** A Flow while it loads: the header, the step indicator, and the step's fields. */
-export function FlowSkeleton() {
+/** A Flow while it loads: the header, the step indicator, and the step's fields; focused, with the sidebar already hidden. */
+export function FlowSkeleton({ focused = false }: { focused?: boolean }) {
   return (
     <Page width="form" busy>
-      <HeaderSkeleton breadcrumbs />
+      {focused && <span hidden data-focused-page="" data-focused-flow="" />}
+      <HeaderSkeleton breadcrumbs={!focused} />
       <span className={styles.stepsSkeleton}>
         <Skeleton width="long" />
       </span>
