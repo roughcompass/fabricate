@@ -1,4 +1,4 @@
-# Repositories
+# Repositories and their versions
 
 A Repository is a Git repository registered by its clone URL and reference, and surveyed whenever either moves.
 

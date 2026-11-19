@@ -22,8 +22,7 @@ export interface DocsProblem {
 }
 
 /** The top-level paths of the app's pages and addresses a docs page may link to. */
-// Adoption's pages join this list when they exist (task 6.4); until then the docs name them without a link.
-const APP_ROUTES = ["/", "/repositories", "/assessments", "/runs", "/evaluations", "/standards", "/profiles", "/admin", "/templates", "/about", "/docs", "/llms.txt", "/llms-full.txt"];
+const APP_ROUTES = ["/", "/repositories", "/assessments", "/runs", "/evaluations", "/standards", "/profiles", "/adoption", "/admin", "/templates", "/about", "/docs", "/llms.txt", "/llms-full.txt"];
 
 /** Whether +text+ is one sentence: it ends with a period, and no sentence ends before it. */
 export function isOneSentence(text: string): boolean {

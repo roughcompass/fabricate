@@ -124,9 +124,10 @@ test("Landmarks on every page: one banner outside one main, and no region for an
       const named = (element: Element) => element.hasAttribute("aria-label") || element.hasAttribute("aria-labelledby");
       const regions = [...document.querySelectorAll("section, [role=region]")].filter((element) => element.matches("[role=region]") || named(element));
       return {
-        banners: document.querySelectorAll("header[data-shell-header], [role=banner]").length,
+        // The operator shell's header, or on the product site, the site's.
+        banners: document.querySelectorAll("header[data-shell-header], header[data-site-header], [role=banner]").length,
         mains: document.querySelectorAll("main, [role=main]").length,
-        bannerInMain: Boolean(document.querySelector("main [data-shell-header]")),
+        bannerInMain: Boolean(document.querySelector("main :is([data-shell-header], [data-site-header])")),
         perItem: regions.filter((region) => region.closest("li, tr, [role=listitem], [role=row]")).map((region) => region.getAttribute("aria-label") ?? region.id),
         regions: regions.length,
       };

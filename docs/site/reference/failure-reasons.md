@@ -31,7 +31,7 @@ A file Surveyor skips, for being too large or unreadable, isn't a failure: the f
 
 ## Building a Catalog entry
 
-A Catalog build that fails stores nothing, and the entries in use stay as they were. The System status page shows its reason.
+A Catalog build that fails stores nothing, and the entries in use stay as they were. The System page, under Admin, shows its reason.
 
 | Reason | What happened | What to do |
 | --- | --- | --- |

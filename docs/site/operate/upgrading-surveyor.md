@@ -11,7 +11,7 @@ Each Frontend Registry release pins one Surveyor release. You upgrade Surveyor b
 3. **Surveys catch up.** The profiling check finds every repository's current survey under the older Surveyor release and surveys it again, in the background, with the trigger Surveyor upgrade. Work people start goes first.
 4. **Profiles switch over.** Each repository's earlier Profile stays current until its new survey succeeds. Versions from the earlier release stay readable.
 
-[System status](system-status.md) shows the installed release and how many repositories have caught up.
+The System page, under Admin, shows the installed release and how many repositories have caught up; see [System status](system-status.md).
 
 ## Profiles from the earlier release
 

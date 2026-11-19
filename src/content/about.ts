@@ -27,6 +27,7 @@ const ADD: Action = { label: "Add your repository", href: "/repositories/bulk" }
 const DOCS: Action = { label: "Read the docs", href: "/docs" };
 
 export const ABOUT = {
+  /** How links to the page name it, such as Home's. */
   title: "About the Frontend Registry",
   description: `What the ${PRODUCT.name} is, why to use it, and how to start.`,
 
@@ -95,7 +96,7 @@ export const ABOUT = {
     audiences: [
       { audience: "App owners", benefit: { text: "Add your repository once. It's surveyed again when its branch gets new commits, and its Profile stays current without a form to fill in.", route: "/repositories/bulk" } },
       { audience: "Product managers", benefit: { text: "Find any repository and read what it's built on, with the evidence, without asking its team.", route: "/repositories" } },
-      { audience: "Design-system teams", benefit: { text: "See, in each repository's Profile, which of your components it renders, the props it passes, and the raw HTML your components could replace.", route: "/repositories/:id" } },
+      { audience: "Design-system teams", benefit: { text: "See your design system's adoption across the fleet: which components are used, rarely used, or unused, the props passed to each, the raw HTML your components could replace, and the versions in use.", route: "/adoption/design-systems/:id" } },
       { audience: "Platform teams", benefit: { text: "Write Standards as Controls, and assess repositories against them, with a Finding for each one.", route: "/assessments/new" } },
     ] satisfies readonly { audience: string; benefit: Claim }[],
   },
@@ -134,7 +135,11 @@ export const ABOUT = {
     heading: "Add your repository",
     text: "It takes one clone URL, and its first Profile follows in the background.",
     action: ADD,
-    links: [{ label: "Read the docs", href: "/docs" }, { label: "Add your repository, step by step", href: "/docs/get-started/add-your-repository" }] satisfies readonly Action[],
+    links: [
+      { label: "Read the docs", href: "/docs" },
+      { label: "Add your repository, step by step", href: "/docs/get-started/add-your-repository" },
+      { label: "The System page", href: "/admin/system" },
+    ] satisfies readonly Action[],
   },
 } as const;
 

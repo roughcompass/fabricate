@@ -132,7 +132,7 @@ test.describe("the marketing page", () => {
   test("runs its sections in order, under one h1, with Add your repository in the hero and at the end (Section order)", async ({ page, db }) => {
     buildRepository(db, { name: "web" });
     await page.goto("/about");
-    await expect(page).toHaveTitle("About the Frontend Registry · Frontend Registry");
+    await expect(page).toHaveTitle("Every CIB frontend repository and what it's built on, in one place · Frontend Registry");
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(page.locator("main h2")).toHaveText(SECTIONS);
     const adds = page.getByRole("main").getByRole("link", { name: "Add your repository", exact: true });

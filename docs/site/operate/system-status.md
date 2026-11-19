@@ -1,21 +1,31 @@
 # System status
 
-The System status page shows the Surveyor release, the Reference Catalog entries in use, recent Catalog builds, and re-survey progress.
+The System page shows the Surveyor release, the Reference Catalog entries in use, recent Catalog builds, and re-survey progress.
 
-Find it under Admin as System.
+Open [System](/admin/system), under Admin.
 
-## What it shows
+## Re-survey progress
 
-- **Surveyor release.** The release the worker surveys with, and its configuration digest. Together with the Profile version and the entries a survey uses, they make a survey's recipe.
-- **Reference Catalog entries in use.** For each described thing, the current entry of each version: its kind, version, sources, when it was built, and its digest.
-- **Recent Catalog builds.** Each build's thing and version, why it was queued, and its outcome: stored a new entry, matched an entry already stored, or failed with its reason and when.
-- **Next checks.** When the next profiling check and Catalog check are due.
-- **Re-survey progress.** How many registered repositories have a newest version made with the current recipe, how many are waiting to be surveyed again, and how many failed. Each count opens the Repositories list filtered to those repositories.
+Three figures count the registered repositories by their newest version. Each opens the Repositories list filtered to those repositories, with its **Recipe** filter set.
 
-## After an upgrade
+| Figure | Counts | Recipe filter |
+| --- | --- | --- |
+| Current recipe | Repositories whose newest version was made with today's recipe: this Surveyor release, configuration, and Profile version, and the Reference Catalog entries a survey would pick now | On the current recipe |
+| Waiting | Repositories on an older recipe, queued, or being surveyed, and those with no version yet | Waiting to be surveyed |
+| Failed | Repositories whose newest version failed | Failed its newest survey |
 
-After a new Surveyor release, every repository's recipe is older, so the waiting count starts at the number of repositories and falls as background surveys finish. Failures show with their reasons; see [Failure reasons](../reference/failure-reasons.md).
+After a new Surveyor release, every repository's recipe is older, so Waiting starts at the number of repositories and falls as background surveys finish. Failures show with their reasons on each repository's page; see [Failure reasons](../reference/failure-reasons.md).
 
-## When a Catalog build failed
+## Surveyor
 
-A failed build changes nothing: the entries in use stay, and repositories keep being surveyed against them. The page shows the failure, its time, and its reason, such as `registry_unreachable`. [Catalog builds](catalog-builds.md) says when it's tried again.
+The release every survey runs with, its Profile version, and its configuration digest, and when the next survey check and the next Catalog check are due.
+
+## Catalog builds
+
+The newest builds of Reference Catalog entries, newest first: the entry each built and why it was queued, its outcome, and when. **Built** stored a new entry; **Built, unchanged** wrote the entry already stored; a failed build says what went wrong, with the Catalog Builder's reason and message under Details. When the newest build failed, the page leads with an alert that names it.
+
+A failed build changes nothing: the entries in use stay, and repositories keep being surveyed against them. [Catalog builds](catalog-builds.md) says when it's tried again.
+
+## Reference Catalog entries
+
+For each described thing, the entry of each version in use that surveys pick, with its sources, when it was built, and its digest.

@@ -21,9 +21,9 @@ A build downloads the thing's packages at that version from `catalog.registry`, 
 | --- | --- |
 | A new entry | It's stored, and repositories whose current survey would now get it are surveyed again |
 | The same entry as before | Nothing is stored; inputs that didn't change give the same digest |
-| Failed | Nothing is stored, and the entries in use stay; the reason shows on the System status page |
+| Failed | Nothing is stored, and the entries in use stay; the reason shows on the System page, under Admin |
 
-A build that can't reach the registry is retried twice, seconds apart. Any failed build is tried again the next day. Every build is kept, so the System status page can show their history.
+A build that can't reach the registry is retried twice, seconds apart. Any failed build is tried again the next day. Every build is kept, so the System page can show their history.
 
 ## The registry
 

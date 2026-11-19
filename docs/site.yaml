@@ -34,7 +34,7 @@ sections:
         title: The four parts
         summary: The Frontend Registry, Surveyor, the Reference Catalog, and the Catalog Builder each do one job and agree through versioned formats.
       - path: repositories
-        title: Repositories
+        title: Repositories and their versions
         summary: A Repository is a Git repository registered by its clone URL and reference, and surveyed whenever either moves.
       - path: profiles-and-recipes
         title: Profiles and recipes
@@ -108,7 +108,7 @@ sections:
         summary: Run the Frontend Registry as a web server and a worker over one database, from a release built for it.
       - path: system-status
         title: System status
-        summary: The System status page shows the Surveyor release, the Reference Catalog entries in use, recent Catalog builds, and re-survey progress.
+        summary: The System page shows the Surveyor release, the Reference Catalog entries in use, recent Catalog builds, and re-survey progress.
       - path: re-surveys
         title: Re-surveys
         summary: The worker surveys a repository again when its commit, the Surveyor release, or a Reference Catalog entry it used changes.

@@ -6,25 +6,36 @@ Adoption Analytics totals what every registered repository's current Profile say
 
 ## Open your design system
 
-1. Open **Adoption**. It lists the design systems and packages the Frontend Registry tracks.
-2. Choose **Salt** to open Salt's adoption page.
+1. Open [Adoption](/adoption). It shows how many registered Repositories its figures cover, and a panel for each design system and package the Frontend Registry tracks.
+2. In Salt's panel, choose **Salt adoption** to open [Salt's adoption page](/adoption/design-systems/salt).
 
-## What the page shows
+## What Salt's page shows
 
-- **Coverage.** How many registered repositories the figures cover. A repository without a Profile yet, or whose design-system facts are unknown, is listed as not covered and never counted as not using Salt.
-- **Components tracked and used.** Tracked components are those the newest Salt entry in the Reference Catalog lists. Used ones are those at least one covered repository renders in its app code.
-- **Total usages.** How many times Salt components are rendered, in app code first, with stories and tests apart.
-- **Most used, rarely used, and unused.** Rarely used components are the bottom quarter of used components by usages. Unused components are tracked components no covered repository renders in its app code.
-- **Replaceable HTML.** Raw elements, such as a plain `button`, that a Salt component replaces, with how often and where they're written.
-- **Token use.** The share of style declarations that could use a Salt token and do, with both counts.
-- **Versions.** Which Salt versions repositories resolve and declare.
+Its figures lead the page:
 
-Open a component to see the repositories that use it, the props they pass and the values of props with a fixed set, the props nobody passes, how often it's customized, and which repositories have stories for it.
+| Figure | Means |
+| --- | --- |
+| Components used | Salt components at least one covered repository renders in its app code, of the components tracked |
+| Usages in app code | Places Salt components are rendered in app code, with the counts in stories and tests beside it |
+| Repositories using it | Covered repositories whose Profile recognizes Salt, of those covered |
+| Unused components | Tracked components no covered repository renders in its app code |
+| Token use | The share of style declarations that could use a Salt token and do, with both counts |
 
-Sections that come from Salt's own published data, such as patterns, say the date of that data.
+Its views go further:
+
+- **Components:** every component, with its repositories and its usages in app code, stories, and tests, and how many are customized. Filter it to the most used, the rarely used, or the unused components, or search by name.
+- **Replaceable HTML:** raw elements, such as a plain `button`, that a Salt component replaces, with their usages and the repositories that write them.
+- **Versions:** the Salt versions repositories resolve and declare.
+- **Snapshots:** the figures at each weekly snapshot, and any two compared.
+
+When some registered repositories have no Profile yet, or Profiles that don't describe design systems, the page says how many aren't covered and lists them. They're never counted as not using Salt.
+
+## Open a component
+
+Choose a component to see where it's used: the repositories that render it, the props they pass in app code and the values of props with a fixed set, the props no usage passes, how often it's customized, and which repositories have stories for it.
 
 ## Change over time
 
-The Frontend Registry takes a snapshot of every figure each week, and each figure shows its change since the previous snapshot. You can compare any two snapshots.
+The Frontend Registry takes a snapshot of every figure each week, and each figure shows its change since the previous one.
 
 [Read Adoption Analytics](../guides/adoption.md) defines every figure.
