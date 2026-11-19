@@ -19,6 +19,7 @@
     "db:migrate": "tsx src/lib/db/migrate-cli.ts",
     "projection:rebuild": "tsx src/lib/projection/rebuild-cli.ts",
     "config": "tsx src/lib/config/print-cli.ts",
+    "previews:doctor": "tsx src/lib/previews/doctor-cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

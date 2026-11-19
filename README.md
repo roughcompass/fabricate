@@ -46,7 +46,7 @@ npm run build       # Next.js standalone server, dist/worker.cjs, dist/migrate.c
 
 `npm run test:fleet` needs the harness `fleet/` repositories next to this directory, or `FLEET_ROOT` set to their location. It starts its own server on port 3200 with `fleet/` as the only allowed root and a throwaway database and repository store in `tmp/fleet-run/`. It then imports the fleet, runs a baseline Assessment, authors two Standards in the editor, and runs an Evaluation. It never reads `fleet-kit/`.
 
-The lint rules forbid `eval`, the `Function` constructor, the `vm` module, computed `import()`, `require()`, and regular expressions built from data. Only `src/lib/git/runner.ts` may import `child_process`. A test in `test/lint/` keeps these rules in force.
+The lint rules forbid `eval`, the `Function` constructor, the `vm` module, computed `import()`, `require()`, and regular expressions built from data. Only `src/lib/git/runner.ts` and `src/lib/previews/process.ts`, which runs [preview builds](docs/previews.md) for enrolled remotes, may import `child_process`. A test in `test/lint/` keeps these rules in force.
 
 ## Configure DE FabLab
 
@@ -72,8 +72,27 @@ Environment variables override the file:
 | `deConsole.source` | `FABRICATE_DE_CONSOLE_SOURCE` | none; an export file or `https://` endpoint, see [docs/ownership.md](docs/ownership.md#the-de-console-import) |
 | `deConsole.refreshMinutes` | `FABRICATE_DE_CONSOLE_REFRESH_MINUTES` | 60 |
 | `profiling.checkMinutes` | `FABRICATE_PROFILING_CHECK_MINUTES` | 60; how often the worker checks every Repository for new commits and a new detector, see [docs/profiling.md](docs/profiling.md) |
+| `previews.enabled` | `FABRICATE_PREVIEWS` | `false`; whether Repository previews exist, see [docs/previews.md](docs/previews.md) |
+| `previews.trustedSources` | `FABRICATE_PREVIEWS_TRUSTED_SOURCES` | none; the clone URLs of the remotes enrolled for previews |
+| `previews.nodeVersions` | `FABRICATE_PREVIEWS_NODE_VERSIONS` | none; each Node version a preview build may use, mapped to its binary directory |
+| `previews.storage` | `FABRICATE_PREVIEWS_STORAGE` | `storage/previews`; where preview builds run and keep their logs, published output, and package caches |
+| `previews.concurrency` | `FABRICATE_PREVIEWS_CONCURRENCY` | 1; preview builds that run at once |
+| `previews.timeoutMinutes` | `FABRICATE_PREVIEWS_TIMEOUT_MINUTES` | 15 |
+| `previews.maxOutputBytes` | `FABRICATE_PREVIEWS_MAX_OUTPUT_BYTES` | 209715200 (200 MiB); the largest output one build can publish |
+| `previews.maxStorageBytes` | `FABRICATE_PREVIEWS_MAX_STORAGE_BYTES` | 5368709120 (5 GiB); the published output and latest logs of every preview together, kept under it by deleting the least recently used; the package caches are pruned past half of it |
 
-The DE Console endpoint's read-only token comes only from `FABRICATE_DE_CONSOLE_TOKEN`, never from the file. List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_DEMO` accepts `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+The DE Console endpoint's read-only token comes only from `FABRICATE_DE_CONSOLE_TOKEN`, never from the file. List variables use the platform path separator, which is `:` on macOS and Linux. `FABRICATE_PREVIEWS_TRUSTED_SOURCES` separates clone URLs with spaces or newlines instead, and `FABRICATE_PREVIEWS_NODE_VERSIONS` lists `version=directory` pairs, such as `22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin`. `FABRICATE_DEMO` and `FABRICATE_PREVIEWS` accept `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+
+### Preview toolchain
+
+Repository previews are off by default. When they're on, the worker builds enrolled repositories with Node versions its host provides; DE FabLab installs none. Install each version with [mise](https://mise.jdx.dev), set its `previews.nodeVersions` entry to that version's `bin` directory, written out in full, and check the result:
+
+```sh
+mise install node@22.11.0
+FABRICATE_PREVIEWS_NODE_VERSIONS="22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin" npm run previews:doctor
+```
+
+The doctor checks that each configured directory's `node` reports its version and that its corepack runs pnpm and Yarn, and that `git` and `tar` are where the worker finds them. It prints a line for each check, names anything missing or wrong, and exits non-zero if any check fails. See [docs/previews.md](docs/previews.md#the-workers-toolchain).
 
 ### Template demo
 
