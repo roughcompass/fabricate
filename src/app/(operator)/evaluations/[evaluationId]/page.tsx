@@ -15,7 +15,10 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { Select } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
-import { param } from "@/lib/web/query";
+import { type Query, type SearchParams, param, withQuery } from "@/lib/web/query";
+import { ControlOpener } from "./control-opener";
+import { SearchField } from "@/components/ui/search-field";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -32,7 +35,7 @@ import type { Outcome } from "@/lib/evaluations/controls";
 import { coverageGapsOf, evaluationNumber, type EvaluationRelease, evaluationReleasesOf, findEvaluation, outcomeLabel, SEVERITIES } from "@/lib/evaluations/evaluation-records";
 import { type Conclusion, OUTCOME_ORDER } from "@/lib/evaluations/summary";
 import { assessmentById } from "@/lib/assessments/assessment-records";
-import { releaseById, standardById } from "@/lib/standards/standard-records";
+import { releaseById, releaseDocument, standardById } from "@/lib/standards/standard-records";
 import { evaluationOutcome } from "../outcomes";
 import styles from "./evaluation.module.css";
 import { routes } from "@/lib/web/routes";
@@ -70,7 +73,9 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
   });
   const evaluated = releases.filter(({ pinned }) => pinned.state === "complete" || pinned.state === "failed").length;
 
-  const findings = filterFindings(db, evaluation.id, releases.map(({ pinned }) => pinned), query);
+  // Each Release's Control titles, from its one document, so the Findings list reads no Finding document.
+  const pinnedReleases = releases.map(({ pinned, release }) => ({ id: pinned.id, position: pinned.position, titles: controlTitles(releaseDocument(release)) }));
+  const findings = filterFindings(db, evaluation.id, pinnedReleases, query, (position, key) => param(query, findingsPageParam(position, key)));
   const summaries = new Map(((summary?.releases ?? []) as JsonObject[]).map((entry) => [String(entry.release), entry]));
   const combined = (summary?.combined ?? null) as JsonObject | null;
   const conclusionOf = (entry: JsonObject | null | undefined) => CONCLUSIONS[(entry?.conclusion as Conclusion | undefined) ?? "not_applicable"];
@@ -173,7 +178,7 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
         )}
       </Section>
 
-      <FindingsSection evaluationId={evaluation.publicId} releases={releases} findings={findings} terminal={status.terminal} />
+      <FindingsSection evaluationId={evaluation.publicId} releases={releases} findings={findings} terminal={status.terminal} query={query} />
 
       <Disclosure summary="Details" variant="plain">
         <DescriptionList surface
@@ -189,10 +194,34 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
   );
 }
 
-/** The Findings, filtered by the address and grouped by Release and Control, each opening its own page. */
-function FindingsSection({ evaluationId, releases, findings, terminal }: { evaluationId: string; releases: { pinned: EvaluationRelease; label: string }[]; findings: FilteredFindings; terminal: boolean }) {
-  const { all, controls, subjects, filters, filtered, shown } = findings;
+/**
+ * The address parameter of one Control's page of Findings, by the Release's
+ * position in the Evaluation and the Control's key, such as `page_0_has-ci` for the first Release:
+ * both are fixed for the Evaluation, so a paged Control keeps its address.
+ */
+const findingsPageParam = (position: number, controlKey: string) => `page_${position}_${controlKey}`;
+
+/**
+ * Up to this many Findings, every Control carries its first page, collapsed
+ * or not. Beyond it, as with a fleet's Evaluation, a Control carries its
+ * Findings only once opened, by its page in the address, so the page stays
+ * fast however many it holds.
+ */
+const INLINE_FINDINGS = 200;
+
+/** A Release's Control titles by key. */
+function controlTitles(document: JsonObject): Map<string, string> {
+  const controls = Array.isArray(document.controls) ? (document.controls as JsonObject[]) : [];
+  return new Map(controls.map((control) => [String(control.key), String(control.title)]));
+}
+
+/** The Findings, filtered by the address and grouped by Release and Control, each opening its own page; a Control with more than 50 pages its own. */
+function FindingsSection({ evaluationId, releases, findings, terminal, query }: { evaluationId: string; releases: { pinned: EvaluationRelease; label: string }[]; findings: FilteredFindings; terminal: boolean; query: SearchParams }) {
+  const { total, shown, controls, subjects, filters, filtered, byRelease } = findings;
   const base = routes.evaluation(evaluationId);
+  // A page link keeps the filters and every other Control's page; the filter form sends only the filters, so changing one returns each Control to its first page.
+  const current: Query = Object.fromEntries(Object.entries(query).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));
+  const { subject: _subject, ...withoutSubject } = filters;
   return (
     <Section id="findings" title="Findings" description="One Finding per Control and subject, grouped by Release and Control; each says what was expected, what was observed, and why.">
       <FilterBar key={JSON.stringify(filters)} action={base} label="Filter Findings" filtered={filtered} clearHref={base}>
@@ -200,69 +229,89 @@ function FindingsSection({ evaluationId, releases, findings, terminal }: { evalu
         <Select id="filter-outcome" name="outcome" label="Outcome" size="sm" defaultValue={filters.outcome ?? ""} options={[{ value: "", label: "Any outcome" }, ...OUTCOME_ORDER.map((outcome) => ({ value: outcome, label: outcomeLabel(outcome) }))]} />
         <Select id="filter-severity" name="severity" label="Severity" size="sm" defaultValue={filters.severity ?? ""} options={[{ value: "", label: "Any severity" }, ...severityOptions(SEVERITIES)]} />
         <Select id="filter-control" name="control" label="Control" size="sm" defaultValue={filters.control ?? ""} options={[{ value: "", label: "Any Control" }, ...controls.map(([key, title]) => ({ value: key, label: title }))]} />
-        <Select id="filter-subject" name="subject" label="Subject" size="sm" defaultValue={filters.subject ?? ""} options={[{ value: "", label: "Any subject" }, ...subjects.map(([key, subject]) => ({ value: key, label: subject }))]} />
+        {/* A fleet has hundreds of subjects, too many for a select: the field keeps the subjects whose name contains its text, and suggests their names. */}
+        <SearchField id="filter-subject" name="subject" label="Subject" size="sm" placeholder="Any subject" defaultValue={filters.subject ?? ""} list="filter-subject-names" clearHref={withQuery(base, withoutSubject)} />
+        <datalist id="filter-subject-names">
+          {subjects.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
       </FilterBar>
       <p role="status" className={styles.count}>
-        {filtered ? `Showing ${shown.length} of ${countLabel(all.length, "Finding")}` : countLabel(all.length, "Finding")}
+        {filtered ? `Showing ${shown} of ${countLabel(total, "Finding")}` : countLabel(total, "Finding")}
       </p>
 
-      {shown.length === 0 && (
+      {shown === 0 && (
         <Panel flush>
-          <EmptyState title={all.length === 0 ? "No Findings yet" : "No matching Findings"}>{all.length === 0 ? (terminal ? "This Evaluation produced no Findings." : "Findings appear as each Release is evaluated.") : "No Finding matches these filters."}</EmptyState>
+          <EmptyState title={total === 0 ? "No Findings yet" : "No matching Findings"}>{total === 0 ? (terminal ? "This Evaluation produced no Findings." : "Findings appear as each Release is evaluated.") : "No Finding matches these filters."}</EmptyState>
         </Panel>
       )}
 
       {releases.map(({ pinned, label }) => {
-        const group = shown.filter(({ finding }) => finding.evaluationReleaseId === pinned.id);
-        if (!group.length) return null;
-        const byControl = [...new Map(group.map(({ finding }) => [finding.controlKey, group.filter((item) => item.finding.controlKey === finding.controlKey)])).values()];
+        const list = byRelease.get(pinned.position);
+        if (!list) return null;
         return (
-          <Section key={pinned.id} id={`release-${pinned.position}`} level={3} title={label} description={`${countLabel(byControl.length, "Control")} · ${countLabel(group.length, "Finding")}`}>
+          <Section key={pinned.id} id={`release-${pinned.position}`} level={3} title={label} description={`${countLabel(list.length, "Control")} · ${countLabel(list.reduce((sum, control) => sum + control.total, 0), "Finding")}`}>
             <Panel flush>
               <ul className={styles.controls} aria-label={`${label} Controls`}>
-                {byControl.map((items) => {
-                  const { finding, document } = items[0]!;
-                  const control = document.control as JsonObject;
-                  const counts = OUTCOME_ORDER.map((outcome) => [outcome, items.filter((item) => item.finding.outcome === outcome).length] as const).filter(([, count]) => count > 0);
+                {list.map((control) => {
+                  const pageParam = findingsPageParam(pinned.position, control.key);
+                  const requested = param(query, pageParam);
+                  // Inline while the Findings are few; otherwise only while the address opens it.
+                  const carried = shown <= INLINE_FINDINGS || requested !== undefined;
+                  const anchor = `control-${pinned.position}-${control.key}`;
                   return (
-                    <li key={finding.controlKey}>
-                      <details className={styles.control} open={filtered}>
+                    <li key={control.key} id={anchor} className={styles.controlItem}>
+                      {/* Open while filtered to a few Findings, and on a page the address names, so a page link lands on the Findings it shows. */}
+                      <details className={styles.control} open={(filtered && shown <= INLINE_FINDINGS) || requested !== undefined}>
                         <summary className={styles.summary}>
                           <Icon name="chevronRight" size={14} className={styles.chevron} />
                           <span className={styles.title}>
-                            <span className={styles.controlTitle}>{String(control.title)}</span>
-                            <Tag>{finding.controlKey}</Tag>
+                            <span className={styles.controlTitle}>{control.title}</span>
+                            <Tag>{control.key}</Tag>
                           </span>
-                          <Severity value={finding.severity} />
+                          <Severity value={control.severity} />
                           <span className={styles.counts}>
-                            {counts.map(([outcome, count]) => (
+                            {control.counts.map(([outcome, count]) => (
                               <Status key={outcome} state={outcome} size="sm" label={`${count} ${statusLabel(outcome)}`} />
                             ))}
                           </span>
                         </summary>
-                        <Table
-                          label={`${String(control.title)} Findings`}
-                          head={
-                            <>
-                              <Th>Subject</Th>
-                              <Th>Outcome</Th>
-                            </>
-                          }
-                        >
-                          {items.map((item) => (
-                            <tr key={item.finding.publicId}>
-                              <Td label="Subject">
-                                {/* The link opens the Finding, named by its Control and subject. */}
-                                <Link href={routes.finding(evaluationId, item.finding.publicId)} aria-label={`${String(control.title)}: ${String((item.document.subject as JsonObject).name)}`}>
-                                  {String((item.document.subject as JsonObject).name)}
-                                </Link>
-                              </Td>
-                              <Td label="Outcome">
-                                <Status state={item.finding.outcome as Outcome} />
-                              </Td>
-                            </tr>
-                          ))}
-                        </Table>
+                        {carried ? (
+                          <>
+                            <Table
+                              label={`${control.title} Findings`}
+                              head={
+                                <>
+                                  <Th>Subject</Th>
+                                  <Th>Outcome</Th>
+                                </>
+                              }
+                            >
+                              {control.rows.map((row) => (
+                                <tr key={row.publicId}>
+                                  <Td label="Subject">
+                                    {/* The link opens the Finding, named by its Control and subject. */}
+                                    <Link href={routes.finding(evaluationId, row.publicId)} aria-label={`${control.title}: ${row.subject}`}>
+                                      {row.subject}
+                                    </Link>
+                                  </Td>
+                                  <Td label="Outcome">
+                                    <Status state={row.outcome as Outcome} />
+                                  </Td>
+                                </tr>
+                              ))}
+                            </Table>
+                            {control.pages > 1 && (
+                              <div className={styles.pages}>
+                                {/* Every page names its number, the first too, so paging back keeps the Control open. */}
+                                <Pagination label={`${control.title} Findings pages`} page={control.page} pages={control.pages} href={(number) => withQuery(base, { ...current, [pageParam]: number }, anchor)} scrollToTop />
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <ControlOpener href={withQuery(base, { ...current, [pageParam]: 1 }, anchor)} label={`Show its ${countLabel(control.total, "Finding")}`} />
+                        )}
                       </details>
                     </li>
                   );
@@ -275,4 +324,3 @@ function FindingsSection({ evaluationId, releases, findings, terminal }: { evalu
     </Section>
   );
 }
-
