@@ -39,7 +39,7 @@ export async function preparePreview(repositoryPublicId: string, _previous: Prep
   const db = getDb();
   const config = getConfig();
   const repository = findRepository(db, repositoryPublicId);
-  if (!repository || !isEnrolled(config, repository)) notFound();
+  if (!repository || !isEnrolled(db, config, repository)) notFound();
   const values = { ref: text(formData, "ref", 300), commit: text(formData, "commit", 100).trim() };
 
   let request: RefRequest;

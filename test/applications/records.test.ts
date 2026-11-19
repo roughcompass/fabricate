@@ -7,7 +7,7 @@ import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
 import { applications, jobs, previewBuilds } from "@/lib/db/schema";
-import { PreviewAccessError } from "@/lib/previews/access";
+import { PreviewAccessError, findEnrollment, isEnrolled } from "@/lib/previews/access";
 import { BUILD_PREVIEW, failAttempt, findPreview } from "@/lib/previews/records";
 import { buildRepository } from "../support/builders";
 import { decidedPreparation, onboard, qualifyingVerdict, refusedVerdict } from "../support/applications";
@@ -70,18 +70,47 @@ describe("application records", () => {
 
     it("refuses a package that doesn't qualify, a missing or long name, and a long description", () => {
       const preparation = decidedPreparation(app.db, repository, [qualifyingVerdict("."), refusedVerdict("packages/ledger")]);
-      expect(issues(() => createApplication(app.db, { repository: repository.publicId, branch: "main", packageDir: "packages/ledger", preparation: preparation.publicId, name: " ", description: "x".repeat(281) }, config))).toEqual({
+      expect(issues(() => createApplication(app.db, { repository: repository.publicId, branch: "main", packageDir: "packages/ledger", preparation: preparation.publicId, name: " ", description: "x".repeat(281), trusted: true }, config))).toEqual({
         name: ["Enter a name"],
         description: ["Use at most 280 characters"],
         package: ["Choose a package that can be previewed"],
       });
-      expect(issues(() => createApplication(app.db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: preparation.publicId, name: "x".repeat(81), description: "" }, config))).toEqual({ name: ["Use at most 80 characters"] });
-      expect(issues(() => createApplication(app.db, { repository: repository.publicId, branch: "refs/tags/v1", packageDir: ".", preparation: preparation.publicId, name: "Ledger", description: "" }, config))).toEqual({ branch: ["Choose a branch"] });
+      expect(issues(() => createApplication(app.db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: preparation.publicId, name: "x".repeat(81), description: "", trusted: true }, config))).toEqual({ name: ["Use at most 80 characters"] });
+      expect(issues(() => createApplication(app.db, { repository: repository.publicId, branch: "refs/tags/v1", packageDir: ".", preparation: preparation.publicId, name: "Ledger", description: "", trusted: true }, config))).toEqual({ branch: ["Choose a branch"] });
     });
 
-    it("refuses while previews are off or the Repository isn't enrolled", () => {
+    it("refuses while previews are off", () => {
       expect(() => onboard(app.db, withOverrides(config, { previews: { enabled: false } }), repository)).toThrow(PreviewAccessError);
-      expect(() => onboard(app.db, withOverrides(config, { previews: { trustedSources: [] } }), repository)).toThrow(/not enrolled for previews/);
+      expect(app.db.select().from(applications).all()).toEqual([]);
+    });
+
+    it("refuses without the trust confirmation, and creates nothing (Trust not confirmed)", () => {
+      const preparation = decidedPreparation(app.db, repository);
+      const unenrolled = withOverrides(config, { previews: { trustedSources: [] } });
+      expect(issues(() => createApplication(app.db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: preparation.publicId, name: "Orders portal", description: "", trusted: false }, unenrolled))).toEqual({
+        trusted: ["Confirm that you trust this repository's code. Creating the application builds and serves it."],
+      });
+      expect(app.db.select().from(applications).all()).toEqual([]);
+      expect(isEnrolled(app.db, unenrolled, repository)).toBe(false);
+    });
+
+    it("enrolls the remote with the application, recording which one, and keeps it when every application of the remote is deleted", () => {
+      const unenrolled = withOverrides(config, { previews: { trustedSources: [] } });
+      expect(isEnrolled(app.db, unenrolled, repository)).toBe(false);
+      const created = onboard(app.db, unenrolled, repository, { name: "Orders portal" });
+      expect(isEnrolled(app.db, unenrolled, repository)).toBe(true);
+      expect(findEnrollment(app.db, repository.canonicalUrl)).toMatchObject({ applicationPublicId: created.publicId, applicationName: "Orders portal" });
+
+      // A second application of the remote finds it enrolled already.
+      const admin = onboard(app.db, unenrolled, repository, { name: "Admin", packageDir: "apps/admin", preparation: decidedPreparation(app.db, repository, [qualifyingVerdict("apps/admin")]) });
+      expect(findEnrollment(app.db, repository.canonicalUrl)?.applicationPublicId).toBe(created.publicId);
+
+      deleteApplication(app.db, created.publicId);
+      deleteApplication(app.db, admin.publicId);
+      expect(isEnrolled(app.db, unenrolled, repository)).toBe(true);
+      // Pointing the Repository at another remote ends it, as with the configured list.
+      expect(isEnrolled(app.db, unenrolled, { ...repository, canonicalUrl: "https://git.example.com/acme/spa-orders-fork" })).toBe(false);
+      expect(isEnrolled(app.db, withOverrides(unenrolled, { previews: { enabled: false } }), repository)).toBe(false);
     });
 
     it("derives a free slug that never takes an address /applications uses", () => {

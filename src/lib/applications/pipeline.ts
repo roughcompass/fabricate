@@ -4,13 +4,14 @@ import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, StaleRecordError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { applications, previewPreparations, repositories } from "@/lib/db/schema";
+import { type BuildTrigger, applications, previewPreparations, repositories } from "@/lib/db/schema";
 import { updateLocked } from "@/lib/db/optimistic";
-import { assertEnrolled } from "@/lib/previews/access";
+import { PreviewAccessError, assertEnrolled, enrollRemote } from "@/lib/previews/access";
 import { type Condition, packageTraits } from "@/lib/previews/eligibility";
 import { type PreviewPreparation, openPreparation, preparationPackages, preparationRefusal, rebuildPreview, startPreview } from "@/lib/previews/records";
 import { requestScreenshot } from "@/lib/previews/screenshots";
 import { type RefOptions, pinCommit } from "@/lib/previews/refs";
+import { settleNewestHistory, startHistory } from "./history";
 import { type ApplicationReason, type ApplicationRow, applicationOfPackage, checkDetails, getApplicationRow, nameKey, normalizeDetails, settleApplications, slugFor } from "./records";
 
 /**
@@ -46,22 +47,25 @@ export interface CreateApplicationInput {
   readonly preparation: string;
   readonly name: string;
   readonly description: string;
+  /** Whether the operator confirmed they trust the repository's code to be built and served. */
+  readonly trusted: boolean;
 }
 
 /**
- * Records an application and starts its first build, from the decided
- * preparation of its tracked branch's commit, in one transaction. Throws
- * ValidationError for its name and description, a package that doesn't
- * qualify or is already an application, or a preparation that isn't the
- * Repository's or isn't decided; and PreviewAccessError while previews are
- * off or the Repository isn't enrolled.
+ * Records an application, enrolls its remote for previews unless it's
+ * enrolled already, and starts its first build, from the decided preparation
+ * of its tracked branch's commit, in one transaction (design decision 10).
+ * Throws ValidationError for its name and description, a missing trust
+ * confirmation, a package that doesn't qualify or is already an application,
+ * or a preparation that isn't the Repository's or isn't decided; and
+ * PreviewAccessError while previews are off.
  * @public The Applications pages and their actions use this (add-applications tasks 5 to 8).
  */
 export function createApplication(db: Executor, input: CreateApplicationInput, config: FrontendRegistryConfig = getConfig()): ApplicationRow {
   return immediate(db, (tx) => {
     const repository = tx.select().from(repositories).where(eq(repositories.publicId, input.repository)).get();
     if (!repository || repository.deletedAt !== null) throw new NotFoundError(`Unknown Repository ${input.repository}`);
-    assertEnrolled(config, repository);
+    if (!config.previews.enabled) throw new PreviewAccessError("disabled", "Previews are turned off");
     const preparation = tx.select().from(previewPreparations).where(eq(previewPreparations.publicId, input.preparation)).get();
     const issues = new IssueCollector();
     const trackedRef = qualifiedBranch(input.branch);
@@ -72,6 +76,7 @@ export function createApplication(db: Executor, input: CreateApplicationInput, c
     else if (!preparationPackages(preparation).some((verdict) => verdict.directory === input.packageDir && verdict.qualifies)) issues.add("package", "Choose a package that can be previewed");
     const taken = applicationOfPackage(tx, repository.id, input.packageDir);
     if (taken) issues.add("package", `This package is already the application ${taken.name}`);
+    if (!input.trusted) issues.add("trusted", "Confirm that you trust this repository's code. Creating the application builds and serves it.");
     issues.throwIfAny();
 
     const { name, description } = normalizeDetails(input);
@@ -101,6 +106,9 @@ export function createApplication(db: Executor, input: CreateApplicationInput, c
       if (isUniqueViolation(error)) throw new ValidationError([{ field: "name", message: `${name} is already the name of an application, or its package is already one. Check both.` }]);
       throw error;
     }
+    // The operator confirmed trust: the remote is enrolled, if it isn't already, with the first build.
+    enrollRemote(tx, repository, application);
+    startHistory(tx, application, "first", preparation!, now);
     startPackageBuild(tx, application, preparation!);
     return getApplicationRow(tx, application.publicId);
   });
@@ -124,14 +132,14 @@ export async function buildApplication(db: Executor, publicId: string, options: 
   const before = getApplicationRow(db, publicId);
   refuseWhileActive(before);
   const repository = repositoryOf(db, before);
-  assertEnrolled(config, repository);
+  assertEnrolled(db, config, repository);
   const pinned = await pinCommit(db, repository, { kind: "ref", name: before.trackedRef }, { ...options, config });
   return immediate(db, (tx) => {
     const application = getApplicationRow(tx, publicId);
     // Another request started an attempt while the branch was read.
     refuseWhileActive(application);
     const { preparation } = openPreparation(tx, repository, pinned);
-    return attach(tx, application, preparation, options);
+    return attach(tx, application, preparation, { force: options.force, trigger: options.force ? "rebuild" : "automatic" });
   });
 }
 
@@ -168,7 +176,7 @@ export async function editApplication(db: Executor, publicId: string, expectedLo
   issues.throwIfAny();
   const moved = trackedRef !== before.trackedRef;
   const repository = repositoryOf(db, before);
-  if (moved) assertEnrolled(config, repository);
+  if (moved) assertEnrolled(db, config, repository);
   const pinned = moved ? await pinCommit(db, repository, { kind: "ref", name: trackedRef }, { ...options, config }) : null;
 
   return immediate(db, (tx) => {
@@ -180,7 +188,7 @@ export async function editApplication(db: Executor, publicId: string, expectedLo
     const { name, description } = normalizeDetails(edit);
     const updated = updateLocked(tx, applications, current, { name, nameKey: nameKey(name), description, trackedRef: trackedRef!, updatedAt: new Date() }, `${current.name} was changed by someone else`);
     if (!pinned) return updated;
-    return attach(tx, updated, openPreparation(tx, repository, pinned).preparation, {});
+    return attach(tx, updated, openPreparation(tx, repository, pinned).preparation, { trigger: "branch" });
   });
 }
 
@@ -189,7 +197,7 @@ export async function editApplication(db: Executor, publicId: string, expectedLo
  * latest, superseding any before it, and builds its package now when the
  * commit is already decided.
  */
-function attach(db: Executor, application: ApplicationRow, preparation: PreviewPreparation, options: { force?: boolean }): ApplicationRow {
+function attach(db: Executor, application: ApplicationRow, preparation: PreviewPreparation, options: { force?: boolean; trigger: BuildTrigger }): ApplicationRow {
   const now = new Date();
   const attempt = updateLocked(
     db,
@@ -198,33 +206,38 @@ function attach(db: Executor, application: ApplicationRow, preparation: PreviewP
     { latestPreparationId: preparation.id, latestCommitSha: preparation.commitSha, latestPreviewId: null, latestOutcome: "building", latestReasons: null, latestRequestedAt: now, updatedAt: now },
     `${application.name} was changed by someone else`,
   );
+  startHistory(db, attempt, options.trigger, preparation, now);
   startPackageBuild(db, attempt, preparation, options);
   return getApplicationRow(db, application.publicId);
 }
 
 /** Starts the build of +application+'s package from the decided +preparation+, or records why it can't be built. */
 export function startPackageBuild(db: Executor, application: ApplicationRow, preparation: PreviewPreparation, options: { force?: boolean } = {}): void {
-  const own = eq(applications.id, application.id);
+  // Its latest outcome, and its newest attempt in its history, alike.
+  const settle = (values: Parameters<typeof settleApplications>[2], build?: { id: number; attempt: number }) => {
+    settleApplications(db, eq(applications.id, application.id), values);
+    settleNewestHistory(db, application.id, { preview: build, outcome: values.outcome, reasons: values.reasons });
+  };
   // Still profiling: the decision starts it (afterPreparationDecided).
   if (preparation.state === "profiling") return;
   if (preparation.state === "failed") {
-    settleApplications(db, own, { outcome: "failed", reasons: [{ text: preparation.failure ?? "The commit couldn't be prepared." }] });
+    settle({ outcome: "failed", reasons: [{ text: preparation.failure ?? "The commit couldn't be prepared." }] });
     return;
   }
   const verdict = preparationPackages(preparation).find((candidate) => candidate.directory === application.packageDir);
   const facts = verdict ? packageTraits(verdict) : undefined;
   if (preparation.state === "refused" || !verdict?.qualifies) {
-    settleApplications(db, own, { outcome: "not_previewable", reasons: refusalReasons(preparation, application.packageDir), facts });
+    settle({ outcome: "not_previewable", reasons: refusalReasons(preparation, application.packageDir), facts });
     return;
   }
   const { preview, created } = startPreview(db, preparation.publicId, application.packageDir);
   // A failed build of the commit is tried again; a successful one only when the operator asked to rebuild.
   const latest = !created && (preview.attemptState === "failed" || (options.force && preview.attemptState === "ready")) ? rebuildPreview(db, preview.publicId) : preview;
   if (latest.attemptState === "ready") {
-    settleApplications(db, own, { outcome: "ready", latestPreview: latest.id, current: latest.id, facts });
+    settle({ outcome: "ready", latestPreview: latest.id, current: latest.id, facts }, latest);
     requestScreenshot(db, latest);
   } else {
-    settleApplications(db, own, { outcome: "building", latestPreview: latest.id, facts });
+    settle({ outcome: "building", latestPreview: latest.id, facts }, latest);
   }
 }
 

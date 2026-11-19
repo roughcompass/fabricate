@@ -90,3 +90,53 @@ export const applications = sqliteTable(
     check("applications_ready", sql`${t.latestOutcome} <> 'ready' OR (${t.currentPreviewId} IS NOT NULL AND ${t.currentPreviewId} = ${t.latestPreviewId})`),
   ],
 );
+
+/** Why an application started an attempt: its first build, the automatic check, a rebuild, or a branch switch. */
+export const BUILD_TRIGGERS = ["first", "automatic", "rebuild", "branch"] as const;
+export type BuildTrigger = (typeof BUILD_TRIGGERS)[number];
+
+/** An attempt's outcome in the history: as an application's latest outcome, or replaced by a newer attempt before its commit was built. */
+export const BUILD_OUTCOMES = [...APPLICATION_OUTCOMES, "replaced"] as const;
+export type BuildOutcome = (typeof BUILD_OUTCOMES)[number];
+
+/**
+ * An application's build history (add-applications, catalog spec "The
+ * application page lists its builds"): each attempt it started, with the
+ * commit and branch, the preparation that decided it, and, once its package's
+ * build started, the preview and that preview's attempt. Builds of other
+ * refs that preview mode starts aren't the application's, and aren't here.
+ * Deleting the application deletes its history.
+ */
+export const applicationBuilds = sqliteTable(
+  "application_builds",
+  {
+    id: id(),
+    applicationId: integer("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
+    trigger: text("trigger", { enum: BUILD_TRIGGERS }).notNull(),
+    trackedRef: text("tracked_ref").notNull(),
+    commitSha: text("commit_sha").notNull(),
+    preparationId: integer("preparation_id")
+      .notNull()
+      .references(() => previewPreparations.id, { onDelete: "restrict" }),
+    previewId: integer("preview_id").references(() => previewBuilds.id, { onDelete: "restrict" }),
+    /** The preview's attempt this build is, once the package's build started. */
+    attempt: integer("attempt"),
+    outcome: text("outcome", { enum: BUILD_OUTCOMES }).notNull().default("building"),
+    reasons: text("reasons", { mode: "json" }).$type<JsonObject[]>(),
+    startedAt: timestamp("started_at").notNull(),
+    finishedAt: timestamp("finished_at"),
+  },
+  (t) => [
+    index("application_builds_application").on(t.applicationId, t.startedAt),
+    index("application_builds_preview").on(t.previewId, t.attempt),
+    check("application_builds_trigger", sql.raw(`"trigger" IN (${sqlList(BUILD_TRIGGERS)})`)),
+    check("application_builds_outcome", sql.raw(`outcome IN (${sqlList(BUILD_OUTCOMES)})`)),
+    check("application_builds_commit", sql`length(${t.commitSha}) = 40 AND ${t.commitSha} NOT GLOB '*[^0-9a-f]*'`),
+    check("application_builds_tracked_ref", sql`${t.trackedRef} GLOB 'refs/heads/?*'`),
+    check("application_builds_attempt", sql`(${t.previewId} IS NULL) = (${t.attempt} IS NULL) AND (${t.attempt} IS NULL OR ${t.attempt} >= 1)`),
+    check("application_builds_reasons", sql`(${t.outcome} IN ('failed', 'not_previewable')) = (${t.reasons} IS NOT NULL) AND (${t.reasons} IS NULL OR (json_valid(${t.reasons}) AND json_type(${t.reasons}) = 'array'))`),
+    check("application_builds_finished", sql`(${t.outcome} = 'building') = (${t.finishedAt} IS NULL)`),
+  ],
+);

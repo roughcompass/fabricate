@@ -68,7 +68,7 @@ The web server needs none of this.
 
 ### Enrolling a remote
 
-Only enrolled remotes can be previewed. Add each remote's clone URL to `previews.trustedSources`:
+Only enrolled remotes can be previewed. A remote is enrolled in one of two ways: its clone URL is listed in `previews.trustedSources`, or an operator created an [application](#applications) from it after confirming they trust its code. To enroll remotes in the configuration, add each clone URL to `previews.trustedSources`:
 
 ```json
 "previews": {
@@ -78,7 +78,11 @@ Only enrolled remotes can be previewed. Add each remote's clone URL to `previews
 }
 ```
 
-The Frontend Registry compares remotes by the same canonical identity it uses to detect duplicate Repositories: it ignores the SSH user, default ports, host case, a trailing slash, and a trailing `.git`. A Repository's name or ID never enrolls it, and neither does adding the Repository or assessing it. Renaming a Repository keeps its enrollment, and pointing it at another remote ends it. The Frontend Registry checks enrollment again before queued work runs, so removing a remote from the list stops its pending previews.
+The Frontend Registry compares remotes by the same canonical identity it uses to detect duplicate Repositories: it ignores the SSH user, default ports, host case, a trailing slash, and a trailing `.git`. A Repository's name or ID never enrolls it, and neither does adding the Repository or assessing it. Renaming a Repository keeps its enrollment, and pointing it at another remote ends it. The Frontend Registry checks enrollment again before queued work runs, so removing a remote from the list stops its pending builds.
+
+Creating an application enrolls its remote in the same step that records the application and queues its first build, if the remote isn't enrolled already. The operator must first confirm that they trust the repository's code to be built and served. The Frontend Registry records the enrollment in its database, by the remote's canonical identity, with when it was made and which application made it, by that application's ID and name then. Removing the remote from `previews.trustedSources` doesn't end an enrollment an application made, and neither does deleting that application or every application of the remote: the remote stays enrolled until the record is removed from the database.
+
+Deciding whether a commit can be previewed reads it statically, as a survey does, so onboarding decides a commit before its remote is enrolled. Only an enrolled remote's packages are built.
 
 ## Security
 
@@ -232,7 +236,7 @@ A worker that stops in the middle of a build gives the attempt back to the queue
 
 ## Applications
 
-An application (add-applications) is a Repository's package that the Frontend Registry keeps built from one branch. Its builds are ordinary previews of that Repository, commit, and package, made by the pipeline above, so a commit is built once whether an application or an operator asked for it. An application points at two of them: its current build, the last that succeeded, and its latest attempt. A newer commit's build becomes current only when it succeeds, so a failed or refused commit leaves the last good build serving and its screenshot shown.
+An application (add-applications) is a Repository's package that the Frontend Registry keeps built from one branch. Its builds are ordinary previews of that Repository, commit, and package, made by the pipeline above, so a commit is built once whether an application or an operator asked for it. An application points at two of them: its current build, the last that succeeded, and its latest attempt. It also keeps a history of every attempt it starts: its first build, those the automatic check starts, a Rebuild, and a branch switch, each with its commit, the preview and attempt that built it, and how it ended. Previews of other branches and tags that preview mode builds aren't in it. A newer commit's build becomes current only when it succeeds, so a failed or refused commit leaves the last good build serving and its screenshot shown.
 
 ### Automatic rebuilds
 

@@ -9,10 +9,12 @@ import { type FrontendRegistryConfig, withOverrides } from "@/lib/config";
 import { applications, jobs, previewBuilds } from "@/lib/db/schema";
 import { jobPayload } from "@/lib/jobs/queue";
 import { jobHandlers } from "@/lib/jobs/registry";
+import { enrollRemote } from "@/lib/previews/access";
 import { requestPreparation } from "@/lib/previews/preparation";
 import { BUILD_PREVIEW, PREPARE_PREVIEW, failAttempt, findPreparation } from "@/lib/previews/records";
 import { RUN_SURVEY } from "@/lib/surveys/run";
 import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
+import { rawRun } from "../support/db";
 import type { BareRepo, Repo } from "../support/git-fixture";
 import { publishFiles } from "../support/previews";
 import { VITE_REACT_APP } from "../support/preview-trees";
@@ -66,7 +68,7 @@ describe("applications check", () => {
     config = withOverrides(world.config, { previews: { enabled: true, trustedSources: [repository.cloneUrl], nodeVersions: NODE } });
     const preparation = await requestPreparation(world.db, repository.publicId, { kind: "ref", name: "refs/heads/main" }, { config });
     await runPreparations();
-    createApplication(world.db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: findPreparation(world.db, preparation.publicId)!.publicId, name: "Orders portal", description: "" }, config);
+    createApplication(world.db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: findPreparation(world.db, preparation.publicId)!.publicId, name: "Orders portal", description: "", trusted: true }, config);
     publishFiles(world.db, config, latestPreview(), { "index.html": "<!doctype html>" });
     expect(shown().status).toBe("ready");
   }
@@ -149,15 +151,20 @@ describe("applications check", () => {
     expect(await check()).toMatchObject({ started: 1, unreadable: 0 });
   });
 
-  it("checks nothing while previews are off, or for a Repository no longer enrolled", async () => {
+  it("checks nothing while previews are off, or for a remote neither listed nor enrolled by an application", async () => {
     await readyApplication();
     push({ "src/note.ts": "export const note = 1;\n" }, "second");
     const enrolled = config;
     config = withOverrides(enrolled, { previews: { enabled: false } });
     expect(await check()).toEqual({ checked: 0, started: 0, unreadable: 0 });
+    // Neither listed nor enrolled by an application.
     config = withOverrides(enrolled, { previews: { trustedSources: [] } });
+    rawRun(world.db, "delete from preview_enrollments");
     expect(await check()).toEqual({ checked: 0, started: 0, unreadable: 0 });
     expect(shown().status).toBe("ready");
+    // Enrolled by its application alone, as onboarding enrolls it.
+    enrollRemote(world.db, repository, shown());
+    expect(await check()).toEqual({ checked: 1, started: 1, unreadable: 0 });
   });
 
   it("runs in the profiling check's job, after the profiling check", async () => {

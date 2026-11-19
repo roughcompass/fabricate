@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ApplicationBuildError, buildApplication, createApplication, editApplication, rebuildApplication } from "@/lib/applications/pipeline";
+import { applicationHistory } from "@/lib/applications/history";
 import { type Application, getApplication, getApplicationRow } from "@/lib/applications/records";
 import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, withOverrides } from "@/lib/config";
@@ -40,7 +41,7 @@ describe("application builds", () => {
     repository = registerLocalRepository(world.db, world.config, "spa-orders", remote.path);
     config = withOverrides(world.config, { previews: { enabled: true, trustedSources: [repository.cloneUrl] } });
     const preparation = decide(world.db, repository, await requestPreparation(world.db, repository.publicId, { kind: "ref", name: "refs/heads/main" }, { config }));
-    createApplication(world.db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: preparation.publicId, name: "Orders portal", description: "" }, config);
+    createApplication(world.db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: preparation.publicId, name: "Orders portal", description: "", trusted: true }, config);
     return shown();
   }
 
@@ -195,6 +196,41 @@ describe("application builds", () => {
 
     publish(main);
     expect(shown()).toMatchObject({ status: "building", current: null });
+  });
+
+  it("records each attempt the application starts, newest first, with its build and outcome, and not other refs' previews (Build history)", async () => {
+    const created = await onboarded();
+    const first = publish(latestPreview());
+    const second = push("second");
+    await buildApplication(world.db, created.publicId, { config });
+    decide(world.db, repository, latestPreparation());
+    failAttempt(world.db, latestPreview().publicId, { attempt: 1 }, "The install failed");
+    await rebuildApplication(world.db, created.publicId, { config });
+    publish(latestPreview());
+    const release = push("release", "release/2.0");
+    let before = shown();
+    await editApplication(world.db, before.publicId, before.lockVersion, { name: "Orders portal", description: "", branch: "release/2.0" }, { config });
+    // Switched back before the release branch was decided: that attempt is replaced.
+    before = shown();
+    await editApplication(world.db, before.publicId, before.lockVersion, { name: "Orders portal", description: "", branch: "main" }, { config });
+    // A preview of another ref, as preview mode starts one, isn't the application's.
+    decide(world.db, repository, await requestPreparation(world.db, repository.publicId, { kind: "ref", name: "refs/heads/release/2.0" }, { config }));
+
+    const history = applicationHistory(world.db, getApplicationRow(world.db, created.publicId).id);
+    expect(history.map((entry) => [entry.trigger, entry.branch, entry.commitSha, entry.outcome, entry.build?.attempt ?? null])).toEqual([
+      ["branch", "main", second, "ready", 2],
+      ["branch", "release/2.0", release, "replaced", null],
+      ["rebuild", "main", second, "ready", 2],
+      ["automatic", "main", second, "failed", 1],
+      ["first", "main", first.commitSha, "ready", 1],
+    ]);
+    expect(history[3]).toMatchObject({ reasons: [{ text: "The install failed" }], build: { logKept: false, latestAttempt: 2, latestState: "ready" } });
+    expect(history[4]!.durationMs).toBeGreaterThanOrEqual(0);
+    expect(history[4]!.build).toMatchObject({ preview: first.publicId, repository: repository.publicId });
+
+    // A rebuild started from the latest build's preview page is the application's too.
+    rebuildPreview(world.db, latestPreview().publicId);
+    expect(applicationHistory(world.db, getApplicationRow(world.db, created.publicId).id)[0]).toMatchObject({ trigger: "rebuild", outcome: "building", finishedAt: null, durationMs: null, build: { attempt: 3 } });
   });
 
   it("refuses a branch the remote doesn't have, changing nothing", async () => {

@@ -40,7 +40,7 @@ export function requestPreview(db: Executor, preparationPublicId: string, packag
   return immediate(db, (tx) => {
     const preparation = tx.select().from(previewPreparations).where(eq(previewPreparations.publicId, preparationPublicId)).get();
     if (!preparation) throw new NotFoundError(`Preview preparation ${preparationPublicId} does not exist`);
-    assertEnrolled(config, repositoryOf(tx, preparation.repositoryId));
+    assertEnrolled(tx, config, repositoryOf(tx, preparation.repositoryId));
     return startPreview(tx, preparationPublicId, packageDir);
   });
 }
@@ -50,7 +50,7 @@ export function requestRebuild(db: Executor, publicId: string, config: FrontendR
   return immediate(db, (tx) => {
     const preview = findPreview(tx, publicId);
     if (!preview) throw new NotFoundError(`Preview ${publicId} does not exist`);
-    assertEnrolled(config, repositoryOf(tx, preview.repositoryId));
+    assertEnrolled(tx, config, repositoryOf(tx, preview.repositoryId));
     return rebuildPreview(tx, publicId);
   });
 }

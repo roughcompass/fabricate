@@ -78,5 +78,5 @@ export function decide(db: Db, repository: Repository, preparation: PreviewPrepa
 export function onboard(db: Db, config: FrontendRegistryConfig, repository: Repository, options: { name?: string; description?: string; packageDir?: string; branch?: string; preparation?: PreviewPreparation; framework?: string } = {}) {
   const packageDir = options.packageDir ?? ".";
   const preparation = options.preparation ?? decidedPreparation(db, repository, [qualifyingVerdict(packageDir, { framework: options.framework })]);
-  return createApplication(db, { repository: repository.publicId, branch: options.branch ?? "main", packageDir, preparation: preparation.publicId, name: options.name ?? "Orders portal", description: options.description ?? "Order tracking for partners" }, config);
+  return createApplication(db, { repository: repository.publicId, branch: options.branch ?? "main", packageDir, preparation: preparation.publicId, name: options.name ?? "Orders portal", description: options.description ?? "Order tracking for partners", trusted: true }, config);
 }

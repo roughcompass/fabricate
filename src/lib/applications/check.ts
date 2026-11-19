@@ -57,7 +57,7 @@ export async function checkApplications(db: Executor, config: FrontendRegistryCo
     .innerJoin(repositories, eq(repositories.id, applications.repositoryId))
     .where(and(ne(applications.latestOutcome, "building"), isNull(repositories.deletedAt)))
     .all()
-    .filter((row) => isEnrolled(config, row.repository));
+    .filter((row) => isEnrolled(db, config, row.repository));
   const remotes = new Map<number, { repository: Repository; applications: typeof rows }>();
   for (const row of rows) {
     const remote = remotes.get(row.repository.id) ?? { repository: row.repository, applications: [] };
