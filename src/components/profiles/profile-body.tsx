@@ -1,3 +1,4 @@
+import { DocsHelp } from "@/components/site/docs-help";
 import type { JsonObject } from "@repo-facts/contract";
 import { cache } from "react";
 import { NeedsAttention } from "@/components/profiles/attention";
@@ -235,6 +236,7 @@ export function ProfileBody({ profile, query, base, jsonHref }: { profile: Repos
           </div>
         </div>
       )}
+      <DocsHelp path="get-started/find-and-read-a-profile" />
     </div>
   );
 }

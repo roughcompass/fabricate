@@ -1,3 +1,4 @@
+import { docsAction } from "@/components/site/docs-help";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -87,6 +88,7 @@ export default async function DesignSystemAdoptionPage({ params, searchParams }:
   const header = {
     breadcrumbs: [{ href: routes.adoption, label: "Adoption" }],
     title: name,
+    secondaryActions: [docsAction("guides/adoption")],
     meta: [
       `Covers ${formatNumber(coverage.covered.length)} of ${countLabel(coverage.registered, "Repository", "Repositories")}`,
       `${name} ${tracked.entry.version} entry`,

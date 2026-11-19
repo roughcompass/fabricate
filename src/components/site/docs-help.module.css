@@ -1,0 +1,12 @@
+@layer components {
+  .help {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    min-height: var(--size-control-sm);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-secondary);
+    line-height: var(--line-height-secondary);
+  }
+}

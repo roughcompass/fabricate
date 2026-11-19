@@ -1,3 +1,4 @@
+import { docsAction } from "@/components/site/docs-help";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { IndexTemplate } from "@/components/templates/index-template";
@@ -32,7 +33,7 @@ export default async function StandardsPage({ searchParams }: PageProps<"/standa
 
   return (
     <IndexTemplate
-      header={{ title: "Standards", description: "Desired engineering state, written as Controls that Evaluations check; publishing a draft creates a Release.", primaryAction: create }}
+      header={{ title: "Standards", description: "Desired engineering state, written as Controls that Evaluations check; publishing a draft creates a Release.", primaryAction: create, secondaryActions: [docsAction("guides/write-a-standard")] }}
       pagination={<Pagination label="Standards pages" page={page} pages={pages} href={(number) => withQuery(routes.standards, { page: pageQuery(number) })} />}
       empty={all.length ? undefined : { title: "No Standards yet", icon: "file", action: create, children: "A Standard describes the desired state that Evaluations compare Assessments with." }}
     >

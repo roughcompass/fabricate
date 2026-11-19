@@ -1,3 +1,4 @@
+import { docsAction } from "@/components/site/docs-help";
 import type { Metadata } from "next";
 import { DetailsTemplate } from "@/components/templates/details-template";
 import Link from "next/link";
@@ -51,7 +52,7 @@ export default async function StandardPage({ params, searchParams }: PageProps<"
         title: standard.name,
         description: standard.purpose,
         // The draft's actions are the page's: the Draft section holds none.
-        secondaryActions: [...(draft ? [{ href: routes.standardDraft(standard.publicId), label: "Edit draft", icon: "edit" as const }] : []), { href: routes.standardEdit(standard.publicId), label: "Edit name and purpose", icon: "edit" }],
+        secondaryActions: [...(draft ? [{ href: routes.standardDraft(standard.publicId), label: "Edit draft", icon: "edit" as const }] : []), { href: routes.standardEdit(standard.publicId), label: "Edit name and purpose", icon: "edit" }, docsAction("guides/write-a-standard")],
         primaryAction: draft ? (
           <ButtonLink href={routes.standardPublish(standard.publicId)} variant="primary" icon="lock">
             Review and publish

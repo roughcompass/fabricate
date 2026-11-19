@@ -312,3 +312,38 @@ test.describe("accessibility", () => {
     });
   }
 });
+
+test.describe("links from the interface to the docs", () => {
+  test("a Repository's Profile links to the docs page on reading a Profile, by its title (Profile help)", async ({ page, db }) => {
+    const web = buildRepository(db, { name: "web" });
+    await seedSurvey(db, web);
+    for (const tab of ["", "?tab=dependencies"]) {
+      await page.goto(`/repositories/${web.publicId}${tab}`);
+      const help = page.locator("[data-docs-help]");
+      await expect(help.getByRole("link", { name: "Find a repository and read its Profile" })).toHaveAttribute("href", "/docs/get-started/find-and-read-a-profile");
+    }
+    await page.locator("[data-docs-help]").getByRole("link").click();
+    await expect(pageTitle(page)).toHaveText("Find a repository and read its Profile");
+  });
+
+  test("Home links to the marketing page, by its name (New reader on Home)", async ({ page, db: _db }) => {
+    await page.goto(paths.home);
+    await pageHeader(page).getByRole("link", { name: "About the Frontend Registry" }).click();
+    await expect(page).toHaveURL("/about");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every CIB frontend repository and what it's built on, in one place");
+  });
+
+  test("Adoption, Standards, and System link to the docs pages that explain them", async ({ page, db }) => {
+    storeEntry(db, saltEntry());
+    const links: [url: string, name: string, href: string][] = [
+      ["/adoption", "Docs: Read Adoption Analytics", "/docs/guides/adoption"],
+      ["/adoption/design-systems/salt", "Docs: Read Adoption Analytics", "/docs/guides/adoption"],
+      ["/standards", "Docs: Write a Standard", "/docs/guides/write-a-standard"],
+      ["/admin/system", "Docs: System status", "/docs/operate/system-status"],
+    ];
+    for (const [url, name, href] of links) {
+      await page.goto(url);
+      await expect(pageHeader(page).getByRole("link", { name }), url).toHaveAttribute("href", href);
+    }
+  });
+});

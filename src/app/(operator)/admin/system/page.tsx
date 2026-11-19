@@ -1,3 +1,4 @@
+import { docsAction } from "@/components/site/docs-help";
 import type { Metadata } from "next";
 import { DashboardPanel, DashboardTemplate } from "@/components/templates/dashboard-template";
 import { Alert } from "@/components/ui/alert";
@@ -46,7 +47,7 @@ export default function SystemPage() {
   const latest = catalogBuilds(db, 1)[0];
   return (
     <DashboardTemplate
-      header={{ title: "System", description: `What the ${PRODUCT.name} surveys with, and how far re-surveying has come.` }}
+      header={{ title: "System", description: `What the ${PRODUCT.name} surveys with, and how far re-surveying has come.`, secondaryActions: [docsAction("operate/system-status")] }}
       alerts={
         latest?.state === "failed" && (
           <Alert tone="warning" title={`The latest Catalog build, of ${entryName(latest.request)}, failed`}>

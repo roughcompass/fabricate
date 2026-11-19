@@ -1,3 +1,4 @@
+import { ABOUT } from "@/content/about";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DashboardPanel, DashboardTemplate } from "@/components/templates/dashboard-template";
@@ -53,7 +54,11 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             New Assessment
           </ButtonLink>
         ),
-        secondaryActions: [{ href: "/repositories/bulk", label: "Add Repositories", icon: "layers" }],
+        // New readers start from the product page (product-site spec, "New reader on Home").
+        secondaryActions: [
+          { href: "/repositories/bulk", label: "Add Repositories", icon: "layers" },
+          { href: "/about", label: ABOUT.title, icon: "info" },
+        ],
       }}
       attention={<NeedsAttention requested={param(query, "page")} />}
       figures={<FleetFigures />}

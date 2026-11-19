@@ -1,3 +1,4 @@
+import { docsAction } from "@/components/site/docs-help";
 import type { Metadata } from "next";
 import { DashboardPanel, DashboardTemplate } from "@/components/templates/dashboard-template";
 import { countLabel, formatNumber } from "@/components/ui/count";
@@ -30,7 +31,7 @@ export default function AdoptionPage() {
   const packages = trackedPackages(config);
   return (
     <DashboardTemplate
-      header={{ title: "Adoption", description: `How the fleet's Repositories use the design systems and packages the ${PRODUCT.referenceCatalog} describes.` }}
+      header={{ title: "Adoption", description: `How the fleet's Repositories use the design systems and packages the ${PRODUCT.referenceCatalog} describes.`, secondaryActions: [docsAction("guides/adoption")] }}
       alerts={<CoverageAlert coverage={coverage} />}
       figures={
         <StatGroup
