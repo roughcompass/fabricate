@@ -23,6 +23,8 @@ import { type Evaluation, evaluationNumbers, evaluationReleasesOf, listEvaluatio
 import { type Assessment, scopeLabel, selectedReleases, selectedRepositories } from "@/lib/assessments/assessment-records";
 import { releaseById, releaseLabel, standardById } from "@/lib/standards/standard-records";
 import { startEvaluationAction } from "../../evaluations/actions";
+import { evaluableRun } from "@/lib/evaluations/start";
+import { Menu, MenuItem } from "@/components/ui/menu";
 import { startRun } from "../actions";
 import { LaunchForm } from "../launch-form";
 import { assessmentOutcome } from "../outcomes";
@@ -34,8 +36,6 @@ export async function generateMetadata({ params }: PageProps<"/assessments/[asse
   const assessment = loadAssessment((await params).assessmentId);
   return { title: assessment?.name ?? "Assessment not found" };
 }
-
-const reusable = (state: string) => state === "complete" || state === "complete_with_issues";
 
 interface RunRow {
   run: Run;
@@ -200,20 +200,17 @@ function RunsSection({ assessment, runs, hasReleases, requested, href }: { asses
                   </Td>
                   <Td align="actions">
                     <RowActions>
-                      {!reusable(run.state) ? (
+                      {!evaluableRun(run.state) ? (
                         <Secondary>{run.state === "failed" || run.state === "canceled" ? "No results to evaluate" : "Evaluate once finished"}</Secondary>
-                      ) : !hasReleases ? (
-                        <Link href={routes.assessmentEdit(assessment.publicId, "initiative-releases")}>Select a Release to evaluate</Link>
                       ) : (
-                        <LaunchForm
-                          action={startEvaluationAction.bind(null, assessment.publicId, run.publicId)}
-                          launchToken={crypto.randomUUID()}
-                          label="Start Evaluation"
-                          accessibleName={`Start Evaluation of Run #${number}`}
-                          failure={`The Evaluation of Run #${number} was not started.`}
-                          variant="secondary"
-                          size="sm"
-                        />
+                        // A row's actions are in its overflow menu, like every list's.
+                        <Menu label={`Actions for Run #${number}`}>
+                          {hasReleases ? (
+                            <LaunchForm action={startEvaluationAction.bind(null, assessment.publicId, run.publicId)} launchToken={crypto.randomUUID()} label="Start Evaluation" failure={`The Evaluation of Run #${number} was not started.`} menuItem />
+                          ) : (
+                            <MenuItem href={routes.assessmentEdit(assessment.publicId, "initiative-releases")}>Select a Release to evaluate</MenuItem>
+                          )}
+                        </Menu>
                       )}
                     </RowActions>
                   </Td>

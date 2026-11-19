@@ -25,6 +25,15 @@ export interface TemplateEmpty {
   icon?: IconName;
 }
 
+/**
+ * The page header's props while the page is empty: an empty state that offers
+ * an action holds the page's primary action, so the header doesn't repeat it
+ * (page-patterns spec, "Empty list").
+ */
+export function headerWhileEmpty<H extends { primaryAction?: React.ReactNode }>(header: H, empty: TemplateEmpty | undefined): H {
+  return empty?.action ? { ...header, primaryAction: undefined } : header;
+}
+
 /** A template's empty state, on its own surface. */
 export function EmptyZone({ empty }: { empty: TemplateEmpty }) {
   return (

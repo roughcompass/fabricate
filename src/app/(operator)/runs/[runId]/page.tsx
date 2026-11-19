@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type { Metadata } from "next";
 import { DetailsTemplate } from "@/components/templates/details-template";
 import Link from "next/link";
@@ -34,6 +35,10 @@ import { cancelRun } from "../actions";
 import { runOutcome } from "../outcomes";
 import { routes } from "@/lib/web/routes";
 import { loadRun } from "./load";
+import { LaunchForm } from "../../assessments/launch-form";
+import { startEvaluationAction } from "../../evaluations/actions";
+import { evaluableRun } from "@/lib/evaluations/start";
+import { selectedReleases } from "@/lib/assessments/assessment-records";
 import { liveRepositoryIds } from "@/lib/repositories/repository-records";
 import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
 
@@ -63,6 +68,8 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
   const failedTogether = failed.length > 0 && new Set(failed.map((target) => failureKind(target.failureCode, target.failureMessage))).size === 1;
   const finished = targets.filter((target) => isTerminal(TARGET_MACHINE, target.state)).length;
   const shownState = !terminal && run.cancelRequestedAt ? "canceling" : run.state;
+  const evaluable = evaluableRun(run.state);
+  const hasReleases = selectedReleases(db, assessment.id).length > 0;
 
   return (
     <DetailsTemplate
@@ -83,6 +90,12 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
               ]
             : []),
         ],
+        // A finished Run's next step is its Evaluation, against the Releases its Assessment selects now.
+        primaryAction:
+          evaluable && hasReleases ? (
+            <LaunchForm action={startEvaluationAction.bind(null, assessment.publicId, run.publicId)} launchToken={crypto.randomUUID()} label="Start Evaluation" failure={`The Evaluation of ${name} was not started.`} />
+          ) : undefined,
+        secondaryActions: evaluable && !hasReleases ? [{ href: routes.assessmentEdit(assessment.publicId, "initiative-releases"), label: "Select a Release to evaluate", icon: "checklist" }] : undefined,
         extraActions: !terminal && !run.cancelRequestedAt ? (
           <ConfirmDialog action={cancelRun.bind(null, run.publicId)} trigger={{ label: "Cancel Run", icon: "slash" }} title={`Cancel ${name}?`} confirmLabel="Cancel Run" tone="danger">
             <p>Repositories that have not finished stop at their next check. Completed Profiles are kept.</p>
@@ -125,7 +138,7 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
               ? { label: "Relationship Map", value: <Status state={coverage.complete ? "complete" : "partial"} label={coverage.complete ? "Complete" : "Partial"} />, status: true, hint: <Link href={routes.runMap(run.publicId)}>Review the Relationship Map</Link> }
               : { label: "Relationship Map", value: "—", hint: terminal ? "Nothing was mapped" : "Written when every repository finishes" },
             { label: "Coverage gaps", value: coverage ? coverage.gaps.length : "—" },
-            { label: "Evaluations", value: evaluations.length, hint: evaluations.length ? undefined : terminal ? "Start one from the Assessment" : "Available once finished" },
+            { label: "Evaluations", value: evaluations.length, hint: evaluations.length || evaluable ? undefined : terminal ? "No results to evaluate" : "Available once finished" },
           ]}
         />
       </Section>

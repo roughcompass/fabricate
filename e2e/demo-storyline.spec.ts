@@ -91,7 +91,6 @@ test("runs the presenter storyline from the Salt Patterns gallery to a reset", a
 
   // Reset the demo from Salt Patterns: the comments and the share link are gone.
   await page.goto("/templates");
-  await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.getByRole("dialog", { name: "Reset the demo?" }).getByRole("button", { name: "Reset demo" }).click();
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("The demo was reset.")).toBeVisible();

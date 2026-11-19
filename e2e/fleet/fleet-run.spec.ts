@@ -164,6 +164,7 @@ test("assesses the synthetic fleet, authors Standards in the editor, and runs a 
     await releases.getByLabel("Fleet engineering baseline v1").check();
     await releases.getByLabel("Fleet relationships v1").check();
     await page.getByRole("button", { name: "Save changes" }).click();
+    await page.getByRole("table", { name: "Run history" }).getByRole("button", { name: "Actions for Run #1" }).click();
     await page.getByRole("table", { name: "Run history" }).getByRole("button", { name: "Start Evaluation" }).click();
     await expect(toast(page, "Evaluation #1 was started.")).toBeVisible();
     await run();

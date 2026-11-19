@@ -2,7 +2,7 @@ import Link from "next/link";
 import { countLabel } from "@/components/ui/count";
 import { Page, PageHeader, type TemplateHeader } from "@/components/ui/page";
 import { Section } from "@/components/ui/section";
-import { EmptyZone, FiguresSkeleton, HeaderSkeleton, type SpecimenOption, TableSkeleton, type TemplateEmpty, Zone, specimenHeader } from "./parts";
+import { EmptyZone, headerWhileEmpty, FiguresSkeleton, HeaderSkeleton, type SpecimenOption, TableSkeleton, type TemplateEmpty, Zone, specimenHeader } from "./parts";
 import styles from "./templates.module.css";
 
 /** A hub's section of related records: at most five previewed, and a link to all of them. */
@@ -40,7 +40,7 @@ interface DetailsProps extends SpecimenOption {
 export function DetailsTemplate({ header, alerts, related, empty, children, specimen }: DetailsProps) {
   return (
     <Page>
-      <PageHeader template="details" {...header} alerts={alerts} {...specimenHeader(specimen)} />
+      <PageHeader template="details" {...headerWhileEmpty(header, empty)} alerts={alerts} {...specimenHeader(specimen)} />
       {empty ? <EmptyZone empty={empty} /> : children}
       {related?.map((section) => (
         <Zone key={section.title} name="related">

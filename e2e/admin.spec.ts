@@ -10,7 +10,7 @@ import { manifest } from "../test/support/profiles";
 import { seedSurvey } from "../test/support/scenarios";
 import { expect, test } from "./support/fixtures";
 import { serverConfig } from "./support/results";
-import { expectCurrentItem, pageTitle, toasts } from "./support/shell";
+import { expectCurrentItem, pageHeader, pageTitle, toasts } from "./support/shell";
 
 
 const TOKEN = "BBDC-NzA2MzQ1NjYxMjM0OkxhYmNkZWZnaGlqa2xtbm9w";
@@ -19,7 +19,7 @@ test("saves a Bitbucket Server token, shows only its last four characters, and d
   await page.goto("/admin/bitbucket-tokens");
   await expect(page.getByText("No Bitbucket tokens yet")).toBeVisible();
 
-  await page.getByRole("link", { name: "Add token" }).first().click();
+  await page.getByRole("link", { name: "Add token" }).click();
   // The owner comes first.
   await expect(page.locator("form input:not([type=hidden])").first()).toHaveAccessibleName(/Owner/);
   await page.getByLabel("Owner").fill("Platform team");
@@ -49,6 +49,16 @@ test("saves a Bitbucket Server token, shows only its last four characters, and d
   await dialog.getByRole("button", { name: "Delete token" }).click();
   await expect(toasts(page).getByText("Platform team was deleted.")).toBeVisible();
   await expect(page.getByText("No Bitbucket tokens yet")).toBeVisible();
+});
+
+// page-patterns spec, "Empty list".
+test("Empty list: the empty state offers Add token as the page's only primary action, and the page header doesn't repeat it", async ({ page, db: _db }) => {
+  await page.goto("/admin/bitbucket-tokens");
+  const primaries = page.getByRole("main").locator('[data-variant="primary"]');
+  await expect(primaries).toHaveCount(1);
+  await expect(primaries).toHaveText("Add token");
+  await expect(pageHeader(page).getByRole("link", { name: "Add token" })).toHaveCount(0);
+  await expect(page.getByRole("main").getByText("No Bitbucket tokens yet")).toBeVisible();
 });
 
 const SALT_APP = {

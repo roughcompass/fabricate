@@ -193,7 +193,6 @@ test("removes custom profiles when the demo is reset", async ({ page }) => {
   await profileRadio(page, "Priya Shah").check();
 
   await page.goto("/templates");
-  await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("button", { name: "Reset demo" }).click();
   const dialog = page.getByRole("dialog", { name: "Reset the demo?" });
   await expect(dialog).toContainText("session profiles");

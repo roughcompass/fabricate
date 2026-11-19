@@ -41,7 +41,6 @@ test("keeps two visitors' comments and resets apart", async ({ page, browser, ba
 
   // One visitor's reset leaves the other's work alone.
   await page.goto("/templates");
-  await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.getByRole("dialog", { name: "Reset the demo?" }).getByRole("button", { name: "Reset demo" }).click();
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("The demo was reset.")).toBeVisible();

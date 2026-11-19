@@ -32,15 +32,24 @@ test("Opening the gallery: titled Salt Patterns, with the search, the filter rai
   await expect(page.getByText("Showing 16 of 16 templates")).toBeVisible();
   await expect(cards(page)).toHaveCount(16);
   expect((await cardTitles(page)).slice(0, 4)).toEqual(["Client onboarding", "Market watch", "Operations console", "Payments workspace"]);
-  // No primary action; resetting the demo is under More actions.
+  // No primary action, and no destructive one: resetting the demo is in its own section, last.
   const header = pageHeader(page);
   await expect(header.locator('[data-variant="primary"]')).toHaveCount(0);
-  await expect(header.getByRole("button", { name: "More actions" })).toBeVisible();
+  await expect(header.getByRole("button")).toHaveCount(0);
 });
 
-test("Reset demo: More actions asks first, then the gallery says the demo was reset", async ({ page, db: _db }) => {
+// page-patterns spec, "No destructive actions in the header".
+test("No destructive actions in the header: Reset demo sits in a separate section at the end of the gallery", async ({ page, db: _db }) => {
   await page.goto("/templates");
-  await page.getByRole("button", { name: "More actions" }).click();
+  await expect(pageHeader(page).getByRole("button", { name: "Reset demo" })).toHaveCount(0);
+  const reset = page.getByRole("region", { name: "Reset the demo" });
+  await expect(reset.getByRole("button", { name: "Reset demo" })).toBeVisible();
+  // It's the page's last section.
+  expect(await page.getByRole("main").locator("section").last().getAttribute("aria-labelledby")).toBe(await reset.getAttribute("aria-labelledby"));
+});
+
+test("Reset demo: it asks first, then the gallery says the demo was reset", async ({ page, db: _db }) => {
+  await page.goto("/templates");
   await page.getByRole("button", { name: "Reset demo" }).click();
   const dialog = page.getByRole("dialog", { name: "Reset the demo?" });
   await expect(dialog).toContainText("Your comments, share links, and session profiles are removed.");

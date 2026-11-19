@@ -3,7 +3,7 @@ import { unstable_rethrow } from "next/navigation";
 import { Page, PageHeader, type TemplateHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { PanelBoundary, PanelFailure } from "./panel-boundary";
-import { EmptyZone, FiguresSkeleton, HeaderSkeleton, type SpecimenOption, TableSkeleton, type TemplateEmpty, Zone, specimenHeader } from "./parts";
+import { EmptyZone, headerWhileEmpty, FiguresSkeleton, HeaderSkeleton, type SpecimenOption, TableSkeleton, type TemplateEmpty, Zone, specimenHeader } from "./parts";
 import styles from "./templates.module.css";
 
 interface DashboardProps extends SpecimenOption {
@@ -29,7 +29,7 @@ interface DashboardProps extends SpecimenOption {
 export function DashboardTemplate({ header, alerts, attention, figures, empty, children, specimen }: DashboardProps) {
   return (
     <Page>
-      <PageHeader template="dashboard" {...header} alerts={alerts} {...specimenHeader(specimen)} />
+      <PageHeader template="dashboard" {...headerWhileEmpty(header, empty)} alerts={alerts} {...specimenHeader(specimen)} />
       {attention && <Zone name="attention">{attention}</Zone>}
       {empty ? (
         <EmptyZone empty={empty} />

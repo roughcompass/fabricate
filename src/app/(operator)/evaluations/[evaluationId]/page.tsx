@@ -86,8 +86,8 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
         ],
         title: name,
         status: <Status state={evaluation.state} />,
+        // The Run is the last breadcrumb, so the meta row doesn't repeat it.
         meta: [
-          <Link key="assessment" href={routes.run(run.publicId)}>{`Run #${found.runNumber}`}</Link>,
           countLabel(releases.length, "Release"),
           <span key="started">
             Started <RelativeTime value={evaluation.createdAt} />

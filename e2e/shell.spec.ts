@@ -82,13 +82,15 @@ test.describe("on a wide viewport", () => {
 
   test("The create pages that left the menu are offered on their list pages", async ({ page, db }) => {
     buildRepository(db);
-    await page.goto(paths.assessments);
-    await expect(pageHeader(page).getByRole("link", { name: "New Assessment" })).toBeVisible();
     await page.goto(paths.repositories);
     await expect(pageHeader(page).getByRole("link", { name: "New Repository" })).toBeVisible();
     await expect(pageHeader(page).getByRole("link", { name: "Add Repositories" })).toBeVisible();
-    await page.goto("/standards");
-    await expect(pageHeader(page).getByRole("link", { name: "New Standard" })).toBeVisible();
+    // An empty list offers its create page once, in its empty state, not again in the page header.
+    for (const [url, name] of [[paths.assessments, "New Assessment"], ["/standards", "New Standard"]] as const) {
+      await page.goto(url);
+      await expect(page.getByRole("main").getByRole("link", { name })).toHaveCount(1);
+      await expect(pageHeader(page).getByRole("link", { name })).toHaveCount(0);
+    }
   });
 
   test("Page outside every item: the gallery shows the primary menu with nothing current", async ({ page, db: _db }) => {
