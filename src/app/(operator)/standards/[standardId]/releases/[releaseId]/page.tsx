@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
+import { DetailsTemplate } from "@/components/templates/details-template";
 import { notFound } from "next/navigation";
 import { ActionButton } from "@/components/ui/button";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
@@ -38,24 +38,23 @@ export default async function ReleasePage({ params, searchParams }: PageProps<"/
   const versions = (list: readonly number[]) => list.map((version) => `v${version}`).join(", ") || "none";
 
   return (
-    <Page>
-      <PageHeader
-        breadcrumbs={[
+    <DetailsTemplate
+      header={{
+        breadcrumbs: [
           { href: "/standards", label: "Standards" },
           { href: routes.standard(standard.publicId), label: standard.name },
-        ]}
-        title={`${published?.name ?? standard.name} v${release.version}`}
-        status={<Status state="published" />}
-        description={published?.purpose}
-        extraActions={
-          hasDraft ? undefined : (
-            <ActionButton action={reviseStandard.bind(null, standard.publicId, release.publicId)} icon="edit">
-              Start a draft from this Release
-            </ActionButton>
-          )
-        }
-        alerts={<OutcomeToast outcome={releaseOutcome(param(query, "notice"), release)} />}
-      />
+        ],
+        title: `${published?.name ?? standard.name} v${release.version}`,
+        status: <Status state="published" />,
+        description: published?.purpose,
+        extraActions: hasDraft ? undefined : (
+          <ActionButton action={reviseStandard.bind(null, standard.publicId, release.publicId)} icon="edit">
+            Start a draft from this Release
+          </ActionButton>
+        ),
+      }}
+      alerts={<OutcomeToast outcome={releaseOutcome(param(query, "notice"), release)} />}
+    >
 
       <Section title="Release">
         <DescriptionList surface
@@ -83,6 +82,6 @@ export default async function ReleasePage({ params, searchParams }: PageProps<"/
           ]}
         />
       </Disclosure>
-    </Page>
+    </DetailsTemplate>
   );
 }

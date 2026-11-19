@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DashboardPanel, DashboardTemplate } from "@/components/templates/dashboard-template";
 import { ButtonLink } from "@/components/ui/button";
 import { countLabel, formatNumber, percentOf } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { pageNumber, param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Pagination } from "@/components/ui/pagination";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -33,153 +33,171 @@ function requestTime(): number {
 }
 
 /**
- * Home (home spec), read in the order a person acts: the actions that start
- * work, in the header; what needs someone, first; then where the fleet
- * stands, as four cards that each open the list they count, with the share
- * they cover and their change over the last seven days; then the Assessment
- * trend beside the latest finished Runs. Every visitor sees the same page.
+ * Home (home spec), a Dashboard read in the order a person acts: the actions
+ * that start work, in the header; what needs someone, first; then where the
+ * fleet stands, as figure cards that each open the list they count, with the
+ * share they cover and their change over the last seven days; then the
+ * Assessment trend beside the latest finished Runs. Each part reads its own
+ * figures, so one that fails shows its error and the others render. Every
+ * visitor sees the same page.
  */
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const query = await searchParams;
-  const db = getDb();
-  const summary = fleetSummary(db);
-  const profiling = profilingActivity(db);
-  const items = attentionItems(db);
-  const { page, pages } = pageNumber(param(query, "page"), items.length, ATTENTION_PAGE_SIZE);
-  const shown = items.slice((page - 1) * ATTENTION_PAGE_SIZE, page * ATTENTION_PAGE_SIZE);
-
-  const then = figuresAt(db, new Date(requestTime() - WEEK_MS));
-  const changes = figureChanges(summary, then);
-  const trend = assessmentTrend(db);
-  const activity = recentActivity(db).slice(0, ACTIVITY_SHOWN);
-
   return (
-    <Page>
-      <PageHeader
-        title="Home"
-        description="What needs attention, where the fleet's Repositories and Assessments stand, and what changed this week."
-        primaryAction={
+    <DashboardTemplate
+      header={{
+        title: "Home",
+        description: "What needs attention, where the fleet's Repositories and Assessments stand, and what changed this week.",
+        primaryAction: (
           <ButtonLink href="/assessments/new" variant="primary" icon="plus">
             New Assessment
           </ButtonLink>
-        }
-        secondaryActions={[{ href: "/repositories/bulk", label: "Add Repositories", icon: "layers" }]}
-      />
+        ),
+        secondaryActions: [{ href: "/repositories/bulk", label: "Add Repositories", icon: "layers" }],
+      }}
+      attention={<NeedsAttention requested={param(query, "page")} />}
+      figures={<FleetFigures />}
+    >
+      <DashboardPanel title="Assessment trend" description="Evaluations completed each week, by conclusion, over the last eight weeks." link={{ href: assessmentsHref(), label: "All Assessments" }}>
+        <AssessmentTrend />
+      </DashboardPanel>
+      <DashboardPanel title="Recent activity" description="The latest finished Runs." link={{ href: assessmentsHref(), label: "All Assessments" }} flush>
+        <RecentActivity />
+      </DashboardPanel>
+    </DashboardTemplate>
+  );
+}
 
-      <div id="needs-attention" className={styles.attention}>
-        <Panel title="Needs attention" description={items.length > 0 ? countLabel(items.length, "problem") : undefined} flush={shown.length > 0}>
-          {shown.length > 0 ? (
-            <Table
-              label="Needs attention"
-              head={
+/** What needs someone, newest first, twenty to a page; nothing to do takes one line, so it never pushes the figures down. */
+function NeedsAttention({ requested }: { requested: string | undefined }) {
+  const items = attentionItems(getDb());
+  const { page, pages } = pageNumber(requested, items.length, ATTENTION_PAGE_SIZE);
+  const shown = items.slice((page - 1) * ATTENTION_PAGE_SIZE, page * ATTENTION_PAGE_SIZE);
+  return (
+    <div id="needs-attention" className={styles.attention}>
+      <Panel title="Needs attention" description={items.length > 0 ? countLabel(items.length, "problem") : undefined} flush={shown.length > 0}>
+        {shown.length > 0 ? (
+          <Table
+            label="Needs attention"
+            head={
+              <>
+                <Th>Problem</Th>
+                <Th>Record</Th>
+                <Th>Since</Th>
+              </>
+            }
+          >
+            {shown.map((item) => (
+              <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : item.evaluation.publicId}`} item={item} />
+            ))}
+          </Table>
+        ) : (
+          <div className={styles.clear}>
+            <Status state="clear" label="Nothing needs attention" />
+            <span className={styles.muted}>{"Home checks each Assessment's latest Run and Evaluation."}</span>
+          </div>
+        )}
+      </Panel>
+      <Pagination label="Needs attention pages" page={page} pages={pages} href={(number) => (number === 1 ? "/#needs-attention" : `/?page=${number}#needs-attention`)} />
+    </div>
+  );
+}
+
+/** Where the fleet stands: the Repositories cards beside the Assessments card, or each group's empty state. */
+function FleetFigures() {
+  const db = getDb();
+  const summary = fleetSummary(db);
+  const profiling = profilingActivity(db);
+  const changes = figureChanges(summary, figuresAt(db, new Date(requestTime() - WEEK_MS)));
+  return (
+    <div className={styles.overview}>
+      <section className={styles.group} data-group="repositories" aria-label="Repositories">
+        {summary.repositories.empty ? (
+          <Panel title="Repositories" description="Every Repository, each profiled in the background.">
+            <EmptyState
+              title="No Repositories yet"
+              icon="git"
+              action={
                 <>
-                  <Th>Problem</Th>
-                  <Th>Record</Th>
-                  <Th>Since</Th>
+                  <ButtonLink href="/repositories/bulk" variant="secondary" icon="layers">
+                    Add Repositories
+                  </ButtonLink>
+                  <ButtonLink href="/repositories/new" variant="secondary" icon="plus">
+                    New Repository
+                  </ButtonLink>
                 </>
               }
             >
-              {shown.map((item) => (
-                <AttentionRow key={`${item.kind}-${"run" in item ? item.run.publicId : item.evaluation.publicId}`} item={item} />
-              ))}
-            </Table>
-          ) : (
-            // Nothing to do takes one line, so it never pushes the figures down.
-            <div className={styles.clear}>
-              <Status state="clear" label="Nothing needs attention" />
-              <span className={styles.muted}>{"Home checks each Assessment's latest Run and Evaluation."}</span>
-            </div>
-          )}
-        </Panel>
-        <Pagination label="Needs attention pages" page={page} pages={pages} href={(number) => (number === 1 ? "/#needs-attention" : `/?page=${number}#needs-attention`)} />
-      </div>
+              Register Git repositories to profile and assess them.
+            </EmptyState>
+          </Panel>
+        ) : (
+          <dl className={styles.cards} aria-label="Repositories">
+            <RepositoryCards repositories={summary.repositories} profiling={profiling.profiling + profiling.queued} changes={changes} />
+          </dl>
+        )}
+      </section>
 
-      <div className={styles.overview}>
-        <section className={styles.group} data-group="repositories" aria-label="Repositories">
-          {summary.repositories.empty ? (
-            <Panel title="Repositories" description="Every Repository, each profiled in the background.">
-              <EmptyState
-                title="No Repositories yet"
-                icon="git"
-                action={
-                  <>
-                    <ButtonLink href="/repositories/bulk" variant="secondary" icon="layers">
-                      Add Repositories
-                    </ButtonLink>
-                    <ButtonLink href="/repositories/new" variant="secondary" icon="plus">
-                      New Repository
-                    </ButtonLink>
-                  </>
-                }
-              >
-                Register Git repositories to profile and assess them.
-              </EmptyState>
-            </Panel>
-          ) : (
-            <dl className={styles.cards} aria-label="Repositories">
-              <RepositoryCards repositories={summary.repositories} profiling={profiling.profiling + profiling.queued} changes={changes} />
-            </dl>
-          )}
-        </section>
+      <section className={styles.group} data-group="assessments" aria-label="Assessments">
+        {summary.assessments.empty ? (
+          <Panel title="Assessments" description="By the conclusion of each Assessment's latest completed Evaluation.">
+            <EmptyState
+              title="No Assessments yet"
+              icon="checklist"
+              action={
+                <ButtonLink href="/assessments/new" variant="secondary" icon="plus">
+                  New Assessment
+                </ButtonLink>
+              }
+            >
+              An Assessment scopes Repositories for Runs and evaluates them against Standard Releases.
+            </EmptyState>
+          </Panel>
+        ) : (
+          <dl className={`${styles.cards} ${styles.single}`} aria-label="Assessments">
+            <AssessmentCard assessments={summary.assessments} changes={changes} />
+          </dl>
+        )}
+      </section>
+    </div>
+  );
+}
 
-        <section className={styles.group} data-group="assessments" aria-label="Assessments">
-          {summary.assessments.empty ? (
-            <Panel title="Assessments" description="By the conclusion of each Assessment's latest completed Evaluation.">
-              <EmptyState
-                title="No Assessments yet"
-                icon="checklist"
-                action={
-                  <ButtonLink href="/assessments/new" variant="secondary" icon="plus">
-                    New Assessment
-                  </ButtonLink>
-                }
-              >
-                An Assessment scopes Repositories for Runs and evaluates them against Standard Releases.
-              </EmptyState>
-            </Panel>
-          ) : (
-            <dl className={`${styles.cards} ${styles.single}`} aria-label="Assessments">
-              <AssessmentCard assessments={summary.assessments} changes={changes} />
-            </dl>
-          )}
-        </section>
-      </div>
+/** Eight weeks of completed Evaluations by conclusion. */
+function AssessmentTrend() {
+  const trend = assessmentTrend(getDb());
+  return (
+    <BarChart
+      id="assessment-trend"
+      label="Evaluations completed each week, by conclusion"
+      groupLabel="Week of"
+      series={TREND_SERIES}
+      groups={trend.map((week) => ({ label: formatShortDate(week.start), values: week.counts }))}
+      empty="No Evaluation completed in the last eight weeks."
+    />
+  );
+}
 
-      <div className={styles.row} data-columns="2">
-        <Panel title="Assessment trend" description="Evaluations completed each week, by conclusion, over the last eight weeks.">
-          <BarChart
-            id="assessment-trend"
-            label="Evaluations completed each week, by conclusion"
-            groupLabel="Week of"
-            series={TREND_SERIES}
-            groups={trend.map((week) => ({ label: formatShortDate(week.start), values: week.counts }))}
-            empty="No Evaluation completed in the last eight weeks."
-          />
-        </Panel>
-
-        <Panel title="Recent activity" description="The latest finished Runs." flush={activity.length > 0}>
-          {activity.length > 0 ? (
-            <ol className={styles.activity} aria-label="Recent activity">
-              {activity.map((item) => (
-                <li key={`${item.kind}-${item.record.href}-${item.at.getTime()}`} data-activity={item.kind}>
-                  <span className={styles.activityWhat}>
-                    <Status state={item.kind === "run_failed" ? "failed" : "complete"}>
-                      <span className="visually-hidden">{ACTIVITY_LABELS[item.kind]} </span>
-                      <Link href={item.record.href}>{item.record.name}</Link>
-                    </Status>
-                  </span>
-                  <span className={styles.muted}>
-                    <RelativeTime value={item.at} />
-                  </span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <EmptyState title="Nothing has happened yet">Finished Runs appear here.</EmptyState>
-          )}
-        </Panel>
-      </div>
-    </Page>
+/** The latest finished Runs, each with its outcome as a status dot. */
+function RecentActivity() {
+  const activity = recentActivity(getDb()).slice(0, ACTIVITY_SHOWN);
+  if (activity.length === 0) return <EmptyState title="Nothing has happened yet">Finished Runs appear here.</EmptyState>;
+  return (
+    <ol className={styles.activity} aria-label="Recent activity">
+      {activity.map((item) => (
+        <li key={`${item.kind}-${item.record.href}-${item.at.getTime()}`} data-activity={item.kind}>
+          <span className={styles.activityWhat}>
+            <Status state={item.kind === "run_failed" ? "failed" : "complete"}>
+              <span className="visually-hidden">{ACTIVITY_LABELS[item.kind]} </span>
+              <Link href={item.record.href}>{item.record.name}</Link>
+            </Status>
+          </span>
+          <span className={styles.muted}>
+            <RelativeTime value={item.at} />
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -198,8 +216,6 @@ const ACTIVITY_LABELS: Record<ActivityKind, string> = {
   run_completed: "Run finished:",
   run_failed: "Run failed:",
 };
-
-
 
 /** A week's change, set apart by direction so it reads at a glance, and stated in words so it never relies on color. */
 function Change({ change }: { change: string }) {
@@ -227,7 +243,7 @@ function RepositoryCards({ repositories, profiling, changes }: { repositories: F
   const { total, profiled } = repositories;
   return (
     <>
-      <div className={styles.card} data-figure="Repositories">
+      <div className={styles.card} data-figure="Repositories" data-key-figure="">
         <dt className={styles.cardLabel}>Repositories</dt>
         <dd className={styles.cardValue}>
           <Link href={repositoriesHref()}>{formatNumber(total)}</Link>
@@ -235,7 +251,7 @@ function RepositoryCards({ repositories, profiling, changes }: { repositories: F
         <dd className={styles.muted}>Registered</dd>
         <Change change={changes.repositories!} />
       </div>
-      <div className={styles.card} data-figure="Profiled">
+      <div className={styles.card} data-figure="Profiled" data-key-figure="">
         <dt className={styles.cardLabel}>Profiled</dt>
         {/* A count, not a link: the Repositories list can't be filtered to the profiled ones. */}
         <dd className={styles.cardValue}>
@@ -262,7 +278,7 @@ function AssessmentCard({ assessments, changes }: { assessments: FleetSummary["a
   const { total, byConclusion } = assessments;
   const shown = CONCLUSIONS.filter((conclusion) => conclusion.id !== "not_applicable" || byConclusion.not_applicable > 0);
   return (
-    <div className={styles.card} data-figure="Assessments">
+    <div className={styles.card} data-figure="Assessments" data-key-figure="">
       <dt className={styles.cardLabel}>Assessments</dt>
       <dd className={styles.cardValue}>
         <Link href={assessmentsHref()}>{formatNumber(total)}</Link>

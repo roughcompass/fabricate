@@ -4,7 +4,7 @@ import { previewPublication } from "../src/lib/standards/publish";
 import { createStandard, draftDocument, draftOf, getStandard, listStandards, releasesOf, saveDraft } from "../src/lib/standards/standard-records";
 import { sampleStandard } from "../test/support/standards";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
-import { toasts } from "./support/shell";
+import { pageHeader, pageTitle, toasts, waitForHydration } from "./support/shell";
 
 const control = (page: Page, number: number) => page.getByRole("region", { name: new RegExp(`^Control ${number}\\b`) });
 const builder = (scope: ReturnType<typeof control>, legend: string) => scope.getByRole("group", { name: legend, exact: true });
@@ -236,4 +236,17 @@ test("starts a Standard from the Salt adherence starter, then reviews and publis
   await page.getByRole("dialog", { name: "Publish Salt adherence v1?" }).getByRole("button", { name: "Publish v1" }).click();
   await expect(toasts(page).getByText("Release v1 was published.")).toBeVisible();
   expect(releasesOf(db, standard!.id).map((release) => release.profileSchemaVersions)).toEqual([[2]]);
+});
+
+// operator-interface/page-templates spec, Editor.
+test("Standard draft: the title names the draft, its status counts the saved draft's issues, and Save draft is secondary while everything is saved", async ({ page, db }) => {
+  const { standard } = createStandard(db, { name: "Incomplete", purpose: "Not ready" });
+  await page.goto(`/standards/${standard.publicId}/draft`);
+  await expect(pageTitle(page)).toHaveText("Incomplete draft");
+  await expect(pageHeader(page).locator("[data-header-status]")).toContainText("1 issue");
+  await expect(page.getByText("All changes saved · 1 issue to fix")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save draft" })).toHaveAttribute("data-variant", "secondary");
+  await waitForHydration(page);
+  await page.getByRole("button", { name: "Add Control" }).first().click();
+  await expect(page.getByRole("button", { name: "Save draft" })).toHaveAttribute("data-variant", "primary");
 });

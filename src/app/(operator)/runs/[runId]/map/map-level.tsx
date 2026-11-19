@@ -1,4 +1,5 @@
 import Form from "next/form";
+import { AnalysisTemplate } from "@/components/templates/analysis-template";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FocusPanel } from "@/components/relationships/focus";
@@ -8,7 +9,6 @@ import type { Crumb } from "@/components/ui/breadcrumbs";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { pageQuery, param, searchTerm, withQuery } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { SearchField } from "@/components/ui/search-field";
 import { Section } from "@/components/ui/section";
@@ -36,14 +36,18 @@ function runCrumbs(run: LoadedMap, withMap: boolean): Crumb[] {
 /** The page a Run shows before its map is written. */
 export function NoMap({ run }: { run: LoadedMap }) {
   return (
-    <Page>
-      <PageHeader breadcrumbs={runCrumbs(run, false)} title="Relationship Map" />
+    <AnalysisTemplate
+      header={{
+        breadcrumbs: runCrumbs(run, false),
+        title: "Relationship Map",
+      }}
+    >
       <Panel flush>
         <EmptyState title="No Relationship Map yet" icon="network">
           The map is written once every scoped repository has finished, from the Profiles that completed.
         </EmptyState>
       </Panel>
-    </Page>
+    </AnalysisTemplate>
   );
 }
 
@@ -88,34 +92,35 @@ export function MapLevel({
   const failures = new Map(targetsOf(db, record.id).flatMap((target) => (target.failureMessage ? [[target.publicId, target.failureMessage] as const] : [])));
 
   return (
-    <Page>
-      <PageHeader
-        breadcrumbs={runCrumbs(run, levelHref !== view.base)}
-        title={title}
-        description={description}
-        alerts={
-          view.missing.length > 0 && (
-            <Alert tone="warning" title={`${countLabel(view.missing.length, "repository", "repositories")} did not contribute`}>
-              <ul>
-                {view.missing.map((gap) => (
-                  <li key={gap.target}>
-                    <strong>{gap.source}</strong>
-                    {` · ${statusLabel(gap.state)}: `}
-                    {failures.get(gap.target) ?? (gap.state === "canceled" ? "stopped before it finished" : "no reason was recorded")}
-                    {gap.reason && (
-                      <>
-                        {" "}
-                        <span className={styles.code}>{gap.reason}</span>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <p>Relationships these repositories declare are missing, and an unresolved reference might belong to one of them. Evaluations treat what they could contain as unknown.</p>
-            </Alert>
-          )
-        }
-      />
+    <AnalysisTemplate
+      header={{
+        breadcrumbs: runCrumbs(run, levelHref !== view.base),
+        title,
+        description,
+      }}
+      alerts={
+        view.missing.length > 0 && (
+          <Alert tone="warning" title={`${countLabel(view.missing.length, "repository", "repositories")} did not contribute`}>
+            <ul>
+              {view.missing.map((gap) => (
+                <li key={gap.target}>
+                  <strong>{gap.source}</strong>
+                  {` · ${statusLabel(gap.state)}: `}
+                  {failures.get(gap.target) ?? (gap.state === "canceled" ? "stopped before it finished" : "no reason was recorded")}
+                  {gap.reason && (
+                    <>
+                      {" "}
+                      <span className={styles.code}>{gap.reason}</span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p>Relationships these repositories declare are missing, and an unresolved reference might belong to one of them. Evaluations treat what they could contain as unknown.</p>
+          </Alert>
+        )
+      }
+    >
 
       <div>
         <Form key={search} action={levelHref} scroll={false} className={styles.search} role="search" aria-label="Search the map">
@@ -154,7 +159,7 @@ export function MapLevel({
         coverageComplete={view.missing.length === 0}
         description={focus ? `The relationships of ${focus.label}, from the repository that declared each one.` : scopeDescription}
       />
-    </Page>
+    </AnalysisTemplate>
   );
 }
 

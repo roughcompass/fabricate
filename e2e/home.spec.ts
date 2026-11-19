@@ -4,12 +4,13 @@ import { buildEvaluation, driveEvaluation, driveRun } from "../test/support/home
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { seedResults } from "./support/results";
+import { pageTitle } from "./support/shell";
 
 // operator-interface/home spec: Home at the root address, its figures and the
 // exact lists they open, Needs attention, and the shell's ways to reach it.
 
 const primary = (page: Page) => page.getByRole("navigation", { name: "Primary" });
-const title = (page: Page) => page.locator("[data-shell-header]").getByRole("heading", { level: 1 });
+const title = pageTitle;
 const attention = (page: Page) => page.getByRole("table", { name: "Needs attention" }).locator("tbody tr");
 
 type Db = Parameters<typeof buildRepository>[0];

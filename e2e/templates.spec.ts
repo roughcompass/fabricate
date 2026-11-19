@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
-import { expectCurrentItem, pageHeader } from "./support/shell";
+import { expectCurrentItem, pageHeader, pageTitle } from "./support/shell";
 
 /** The Find your template gallery (template-gallery spec). */
 
@@ -259,7 +259,7 @@ test.describe("template detail", () => {
     const crumbs = pageHeader(page).getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
     await expect(crumbs.first()).toHaveText("Salt Patterns");
     await crumbs.first().click();
-    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Salt Patterns");
+    await expect(pageTitle(page)).toHaveText("Salt Patterns");
   });
 
   test("shows a community template's author", async ({ page, db: _db }) => {

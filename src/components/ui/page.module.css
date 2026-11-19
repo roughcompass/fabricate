@@ -1,45 +1,50 @@
 @layer components {
   /*
-   * A page spans the content column: the shell header runs its full width,
-   * and every other part is centered at the page's measure with the gutters
-   * at its edges. A flex column, not a grid, so the sticky header can travel
-   * the whole page.
+   * A page fills the content column below the shell header: every part is
+   * centered at the page's measure, with the gutters at its edges.
    */
-  .page { --_measure: var(--size-content); display: flex; flex-direction: column; gap: var(--space-8); width: 100%; min-width: 0; }
+  .page { --_measure: var(--size-content); display: flex; flex-direction: column; gap: var(--space-8); width: 100%; min-width: 0; padding-top: var(--space-8); }
   .page[data-width="form"] { --_measure: var(--size-form); gap: var(--space-6); }
   .page > * { width: min(100% - 2 * var(--space-gutter), var(--_measure)); min-width: 0; margin-inline: auto; }
-  .page > [data-shell-header] { width: 100%; }
 
+  /*
+   * The page header: breadcrumbs, the title row, the meta row, the
+   * description, and the view tabs, in that order.
+   */
   .header { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
-  .titleRow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
-  .heading { display: flex; flex: 1; flex-direction: column; gap: var(--space-2); min-width: min(100%, var(--size-dialog)); }
-  /* Keeps the actions at the end when the header has nothing but actions. */
-  .spacer { flex: 1; }
-  .titleLine { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
-  /* An inline title, for the gallery's specimens; pages show theirs in the shell header. */
+  .titleRow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3) var(--space-4); }
+  .titleLine { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: min(100%, var(--size-dialog)); }
+  /* The page's largest heading; a long title wraps to two lines, then truncates, with the whole title in its tooltip. */
   .title {
+    display: -webkit-box;
     min-width: 0;
-    font-size: var(--font-size-heading);
+    overflow: hidden;
+    font-size: var(--font-size-subtitle);
     font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-heading);
+    line-height: var(--line-height-subtitle);
     letter-spacing: var(--letter-spacing-heading);
     overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
+  .status { display: inline-flex; align-items: center; color: var(--color-text); }
 
   .meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
-  .status { display: inline-flex; align-items: center; margin-inline-end: var(--space-1); color: var(--color-text); font-size: var(--font-size-body); line-height: var(--line-height-body); }
   .metaItem { display: inline-flex; align-items: center; gap: var(--space-2); }
   .metaItem + .metaItem::before { content: "·"; color: var(--color-text-tertiary); }
   .description { max-width: var(--size-prose); color: var(--color-text-secondary); }
+  /* The view tabs close the header; their own rule marks its end. */
+  .tabs { margin-top: var(--space-2); }
 
   .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
   .always, .wide { display: contents; }
   .narrow { display: none; }
 
   @container content (max-width: 767px) {
-    .page { gap: var(--space-6); }
+    .page { gap: var(--space-6); padding-top: var(--space-6); }
     .titleRow { flex-direction: column; align-items: stretch; }
-    .heading { min-width: 0; }
+    .titleLine { min-width: 0; }
     .wide { display: none; }
     .narrow { display: inline-flex; }
   }

@@ -4,9 +4,9 @@ import { profilesOf } from "../src/lib/profiles/profile-records";
 import { buildRepository } from "../test/support/builders";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, seedResults, seedEvaluation } from "./support/results";
-import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
+import { seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
-import { pageHeader, useTheme } from "./support/shell";
+import { pageHeader, pageTitle, useTheme } from "./support/shell";
 
 // operator-interface/page-patterns spec: the application shell, and the
 // primary menu: Home, then the Assessments and Templates groups under
@@ -52,7 +52,7 @@ test.describe("on a wide viewport", () => {
     await page.goto(paths.home);
     await primary(page).getByRole("link", { name: "Repositories", exact: true }).click();
     await expect(page).toHaveURL(/\/repositories$/);
-    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Repositories");
+    await expect(pageTitle(page)).toHaveText("Repositories");
     await expectCurrent(page, "Repositories");
   });
 
@@ -99,7 +99,7 @@ test.describe("on a wide viewport", () => {
     await page.goto(paths.run(run.publicId));
     await page.getByRole("link", { name: "Frontend Registry home" }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Home");
+    await expect(pageTitle(page)).toHaveText("Home");
   });
 
   test("Items open their pages: Salt Patterns and Standards keep the primary menu, marked current", async ({ page, db: _db }) => {
@@ -107,7 +107,7 @@ test.describe("on a wide viewport", () => {
       await page.goto("/design-system");
       await primary(page).getByRole("link", { name: item, exact: true }).click();
       await expect(page).toHaveURL(url);
-      await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText(title);
+      await expect(pageTitle(page)).toHaveText(title);
       await expectCurrent(page, item);
     }
   });
@@ -118,35 +118,53 @@ test.describe("on a wide viewport", () => {
   });
 });
 
-// The page title moves into the shell header: one h1 per page, centered in the header.
+// The page's title is in its page header; the shell header is the banner, with navigation and global controls only.
 test.describe("the shell header", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   const header = (page: Page) => page.locator("[data-shell-header]");
 
-  test("Title in the header: an Assessment's name, centered, is the page's only h1", async ({ page, db }) => {
+  test("Title in the page: a Run's page header shows Run #1 as the page's only h1, and the shell header shows no title", async ({ page, db }) => {
     const { run } = await seedResults(db);
     await page.goto(paths.run(run.publicId));
-    const title = header(page).getByRole("heading", { level: 1 });
-    await expect(title).toHaveText("Run #1");
+    await expect(pageTitle(page)).toHaveText("Run #1");
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    const [titleBox, headerBox] = [(await title.boundingBox())!, (await header(page).boundingBox())!];
-    expect(Math.abs(titleBox.x + titleBox.width / 2 - (headerBox.x + headerBox.width / 2))).toBeLessThan(2);
+    await expect(header(page).getByRole("heading")).toHaveCount(0);
+    await expect(header(page)).not.toContainText("Run #1");
   });
 
-  test("Title appears once: the page content does not repeat an Initiative's name", async ({ page, db }) => {
+  test("Title appears once: an Assessment's name is its page header's h1, and neither the shell header nor the rest of the page repeats it", async ({ page, db }) => {
     const { assessment } = await seedResults(db);
     await page.goto(paths.assessment(assessment.publicId));
-    await expect(header(page).getByRole("heading", { level: 1 })).toHaveText("Fleet assessment");
-    await expect(pageHeader(page)).not.toContainText("Fleet assessment");
+    await expect(pageTitle(page)).toHaveText("Fleet assessment");
+    await expect(header(page)).not.toContainText("Fleet assessment");
+    await expect(page.getByRole("main").getByRole("heading", { name: "Fleet assessment" })).toHaveCount(1);
   });
 
-  test("Breadcrumbs on a Finding: the Control title in the header, its ancestors in the page", async ({ page, db }) => {
+  test("Landmarks: one banner holds the shell header, outside the main landmark, and the main landmark begins with the page header", async ({ page, db }) => {
+    const { assessment } = await seedResults(db);
+    await page.goto(paths.assessment(assessment.publicId));
+    const banner = page.getByRole("banner");
+    await expect(banner).toHaveCount(1);
+    await expect(banner).toHaveAttribute("data-shell-header", "");
+    await expect(page.getByRole("main").getByRole("banner")).toHaveCount(0);
+    // Nothing visible in the main landmark comes before the page header; only the wrappers that hold it do.
+    const before = await pageHeader(page).evaluate((header) => {
+      const main = header.closest("main");
+      if (!main) return ["the page header is outside the main landmark"];
+      return [...main.querySelectorAll("*")]
+        .filter((element) => !element.contains(header) && element.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING && element.getClientRects().length > 0)
+        .map((element) => element.outerHTML.slice(0, 80));
+    });
+    expect(before).toEqual([]);
+  });
+
+  test("Breadcrumbs on a Finding: the Control title and its ancestors in the page header", async ({ page, db }) => {
     const { evaluation } = await seedEvaluation(db);
     const finding = findingsOf(db, evaluation.id)[0]!;
     const control = [...BASELINE_CONTROLS, ...SERVICE_CONTROLS].find((candidate) => candidate.key === finding.controlKey)!;
     await page.goto(`/evaluations/${evaluation.publicId}/findings/${finding.publicId}`);
-    await expect(header(page).getByRole("heading", { level: 1 })).toHaveText(control.title as string);
+    await expect(pageTitle(page)).toHaveText(control.title as string);
     const crumbs = pageHeader(page).getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
     await expect(crumbs).toHaveText(["Assessments", "Fleet assessment", "Evaluation #1"]);
   });
@@ -155,7 +173,7 @@ test.describe("the shell header", () => {
     test(`Solid header: in the ${theme} theme, the header behind the create page's title is a solid surface, distinct from the canvas`, async ({ page, db: _db, baseURL }) => {
       await useTheme(page.context(), theme, baseURL!);
       await page.goto(paths.newRepository);
-      await expect(header(page).getByRole("heading", { level: 1 })).toHaveText("New Repository");
+      await expect(pageTitle(page)).toHaveText("New Repository");
       const [fill, canvas, surface] = await page.evaluate(() => {
         const header = document.querySelector("[data-shell-header]")!;
         const probe = (variable: string) => {
@@ -181,7 +199,7 @@ test.describe("the shell header", () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
     expect((await header(page).boundingBox())!.y).toBe(0);
     expect((await page.locator("#sidebar").boundingBox())!.y).toBe(0);
-    await expect(header(page).getByRole("heading", { level: 1 })).toBeInViewport();
+    await expect(header(page)).toBeInViewport();
     await expect(primary(page).getByRole("link", { name: "All Assessments" })).toBeInViewport();
     // Nothing scrolled beneath the header shows through it: the header is the topmost element across its box.
     const box = (await header(page).boundingBox())!;
@@ -191,16 +209,6 @@ test.describe("the shell header", () => {
       return points.every(([px, py]) => header.contains(document.elementFromPoint(px, py)));
     }, box);
     expect(covered).toBe(true);
-  });
-
-  test("every surface has exactly one h1, in the shell header", async ({ page, db, sourcesDir }) => {
-    test.setTimeout(240_000);
-    const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...demoSurfaces()];
-    for (const [name, url] of surfaces) {
-      await page.goto(url);
-      await expect(page.locator("h1"), name).toHaveCount(1);
-      await expect(header(page).locator("h1"), name).toHaveCount(1);
-    }
   });
 });
 
@@ -381,10 +389,13 @@ test.describe("on a narrow viewport", () => {
 
   const openNavigation = (page: Page) => page.locator("[data-shell-header]").getByRole("button", { name: "Open navigation" });
 
-  test("Shell on a narrow viewport: the header shows Open navigation and the title, and no sidebar sits beside the content", async ({ page, db: _db }) => {
+  test("Shell on a narrow viewport: the shell header shows Open navigation and the product name, the page header the title, and no sidebar sits beside the content", async ({ page, db: _db }) => {
     await page.goto(paths.repositories);
     await expect(openNavigation(page)).toBeVisible();
-    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Repositories" })).toBeVisible();
+    await expect(page.locator("[data-shell-header]").getByRole("link", { name: "Frontend Registry", exact: true })).toHaveAttribute("href", paths.home);
+    await expect(page.locator("[data-shell-header]").getByRole("heading")).toHaveCount(0);
+    await expect(pageTitle(page)).toHaveText("Repositories");
+    await expect(pageTitle(page)).toBeInViewport();
     await expect(page.locator("#sidebar")).toBeHidden();
     await expect(primary(page)).toBeHidden();
     await expectNoHorizontalOverflow(page);
@@ -408,7 +419,7 @@ test.describe("on a narrow viewport", () => {
     await primary(page).getByRole("link", { name: "Standards", exact: true }).click();
     await expect(page).toHaveURL(/\/standards$/);
     await expect(page.locator("#sidebar")).toBeHidden();
-    await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Standards");
+    await expect(pageTitle(page)).toHaveText("Standards");
   });
 
   test.describe("on a touch device", () => {

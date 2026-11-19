@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { IndexTemplate } from "@/components/templates/index-template";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { oneOf, param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Status, statusLabel } from "@/components/ui/status";
@@ -49,25 +49,27 @@ export default async function AssessmentsPage({ searchParams }: PageProps<"/asse
   );
 
   return (
-    <Page>
-      <PageHeader
-        title="Assessments"
-        description="Each Assessment scopes repositories for Runs and selects Standard Releases to evaluate them against."
-        primaryAction={create}
-        alerts={<OutcomeToast outcome={assessmentListOutcome(param(query, "notice"))} />}
-      />
-
-      <Tabs label="Filter Assessments">
-        <TabLink href={assessmentsHref()} active={conclusion === null} count={all.length}>
-          All
-        </TabLink>
-        {CONCLUSION_FILTERS.filter((filter) => filter !== "not_applicable" || counts.not_applicable > 0 || conclusion === filter).map((filter) => (
-          <TabLink key={filter} href={assessmentsHref({ conclusion: filter })} active={conclusion === filter} count={counts[filter]}>
-            <Status state={conclusionState(filter)} size="sm" />
+    <IndexTemplate
+      header={{ title: "Assessments", description: "Each Assessment scopes repositories for Runs and selects Standard Releases to evaluate them against.", primaryAction: create }}
+      alerts={<OutcomeToast outcome={assessmentListOutcome(param(query, "notice"))} />}
+      tabs={
+        <Tabs label="Filter Assessments">
+          <TabLink href={assessmentsHref()} active={conclusion === null} count={all.length}>
+            All
           </TabLink>
-        ))}
-      </Tabs>
-
+          {CONCLUSION_FILTERS.filter((filter) => filter !== "not_applicable" || counts.not_applicable > 0 || conclusion === filter).map((filter) => (
+            <TabLink key={filter} href={assessmentsHref({ conclusion: filter })} active={conclusion === filter} count={counts[filter]}>
+              <Status state={conclusionState(filter)} size="sm" />
+            </TabLink>
+          ))}
+        </Tabs>
+      }
+      empty={
+        all.length === 0
+          ? { title: "No Assessments yet", icon: "checklist", action: create, children: "An Assessment covers all Repositories or a chosen subset, and can evaluate them against published Standard Releases." }
+          : undefined
+      }
+    >
       <Panel flush>
         {rows.length > 0 ? (
           <Table
@@ -103,16 +105,23 @@ export default async function AssessmentsPage({ searchParams }: PageProps<"/asse
               </tr>
             ))}
           </Table>
-        ) : conclusion ? (
-          <EmptyState title="No matching Assessments">{conclusion === "none" ? "Every Assessment has a completed Evaluation." : `No Assessment's latest completed Evaluation concluded “${statusLabelOf(conclusion)}”.`}</EmptyState>
         ) : (
-          <EmptyState title="No Assessments yet" icon="checklist" action={create}>
-            An Assessment covers all Repositories or a chosen subset, and can evaluate them against published Standard Releases.
-          </EmptyState>
+          // Some Assessments exist, so no rows means a tab filtered them all out.
+          conclusion && (
+            <EmptyState
+              title="No matching Assessments"
+              action={
+                <ButtonLink href={assessmentsHref()} size="sm">
+                  Clear filters
+                </ButtonLink>
+              }
+            >
+              {conclusion === "none" ? "Every Assessment has a completed Evaluation." : `No Assessment's latest completed Evaluation concluded “${statusLabelOf(conclusion)}”.`}
+            </EmptyState>
+          )
         )}
       </Panel>
-
-    </Page>
+    </IndexTemplate>
   );
 }
 

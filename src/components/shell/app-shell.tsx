@@ -4,7 +4,7 @@ import { SIDEBAR_WIDTH } from "@/lib/web/sidebar";
 import { BrandLink } from "./brand-link";
 import { HOME, NO_OPTIONAL_AREAS, type NavFlags } from "./navigation";
 import { NavigationFeedback } from "./navigation-feedback";
-import { SIDEBAR_ID } from "./shell-header";
+import { SIDEBAR_ID, ShellHeader } from "./shell-header";
 import { SidebarNav } from "./sidebar-nav";
 import { SidebarResizer } from "./sidebar-resizer";
 import { SidebarToggle } from "./sidebar-toggle";
@@ -21,14 +21,16 @@ const DEFAULT_SIDEBAR: SidebarPreferences = { width: SIDEBAR_WIDTH.default, hidd
 /**
  * The frame around every page (operator-interface/page-patterns spec): a skip
  * link; a full-height sidebar with the product mark, the navigation, and the
- * theme control; and the content column, which holds the main region. Below
- * 1024px the sidebar is a drawer instead. The sidebar's width and hidden
+ * theme control; and the content column, which holds the shell header, the
+ * page's banner landmark, above the main region. Below 1024px the sidebar is
+ * a drawer instead. A focused page passes its own `header`, with a back
+ * button in place of the sidebar controls. The sidebar's width and hidden
  * state come from the operator's cookies, so the first paint already has
  * them. Salt Patterns appears in the navigation only while the template demo
  * is enabled. The product mark opens Home, or wherever links to Home lead in
  * this configuration.
  */
-export function AppShell({ theme, nav = NO_OPTIONAL_AREAS, sidebar = DEFAULT_SIDEBAR, children }: { theme: Theme; nav?: NavFlags; sidebar?: SidebarPreferences; children: React.ReactNode }) {
+export function AppShell({ theme, nav = NO_OPTIONAL_AREAS, sidebar = DEFAULT_SIDEBAR, header = <ShellHeader />, children }: { theme: Theme; nav?: NavFlags; sidebar?: SidebarPreferences; header?: React.ReactNode; children: React.ReactNode }) {
   return (
     <>
       <a className={styles.skip} href="#main">
@@ -58,6 +60,7 @@ export function AppShell({ theme, nav = NO_OPTIONAL_AREAS, sidebar = DEFAULT_SID
           <SidebarResizer initialWidth={sidebar.width} />
         </div>
         <div className={styles.column}>
+          {header}
           <main id="main" className={styles.main} tabIndex={-1}>
             <NavigationFeedback>{children}</NavigationFeedback>
           </main>

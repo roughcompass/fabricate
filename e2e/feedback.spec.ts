@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { buildAssessment } from "../test/support/builders";
 import { expect, test } from "./support/fixtures";
-import { waitForHydration, toasts } from "./support/shell";
+import { pageHeader, waitForHydration, toasts } from "./support/shell";
 import { paths } from "./support/paths";
 
 /** The feedback infrastructure, exercised through the component gallery's demos. */
@@ -193,7 +193,7 @@ test.describe("without JavaScript", () => {
 test("Unknown Assessment: a not-found page inside the shell links to its section's list", async ({ page, db: _db }) => {
   await page.goto("/runs/asm_doesnotexist0000");
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
-  await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Run not found" })).toBeVisible();
+  await expect(pageHeader(page).getByRole("heading", { level: 1, name: "Run not found" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to Assessments" })).toHaveAttribute("href", paths.assessments);
 });
 
@@ -201,7 +201,7 @@ test("Unknown address: a not-found page inside the shell links to Home", async (
   const response = await page.goto("/no-such-page");
   expect(response?.status()).toBe(404);
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
-  await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
+  await expect(pageHeader(page).getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to Home" })).toHaveAttribute("href", paths.home);
 });
 
@@ -211,7 +211,7 @@ test.describe("an unexpected error", () => {
   test("Unexpected server error: the error page offers Try again and Home, without internal details", async ({ page }) => {
     await page.goto("/design-system/error-demo");
     const main = page.locator("main");
-    await expect(main.locator("[data-shell-header]").getByRole("heading", { level: 1, name: "Something went wrong" })).toBeVisible();
+    await expect(pageHeader(main).getByRole("heading", { level: 1, name: "Something went wrong" })).toBeVisible();
     await expect(main.getByRole("button", { name: "Try again" })).toBeVisible();
     await expect(main.getByRole("link", { name: "Go to Home" })).toHaveAttribute("href", paths.home);
     await expect(main).not.toContainText("internal detail");

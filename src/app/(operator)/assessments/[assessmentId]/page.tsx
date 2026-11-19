@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { DetailsTemplate } from "@/components/templates/details-template";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,7 +9,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { countLabel } from "@/components/ui/count";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
@@ -77,20 +77,21 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
   const editHref = routes.assessmentEdit(assessment.publicId);
 
   return (
-    <Page>
-      <PageHeader
-        breadcrumbs={[{ href: "/assessments", label: "Assessments" }]}
-        title={assessment.name}
-        meta={[
+    <DetailsTemplate
+      header={{
+        breadcrumbs: [{ href: "/assessments", label: "Assessments" }],
+        title: assessment.name,
+        meta: [
           <span key="created">
             Created <RelativeTime value={assessment.createdAt} />
           </span>,
-        ]}
-        description={assessment.objective || undefined}
-        secondaryActions={[{ href: editHref, label: "Edit", icon: "edit" }]}
-        primaryAction={<LaunchForm action={startRun.bind(null, assessment.publicId)} launchToken={crypto.randomUUID()} label="Start Run" failure="The Run was not started because its scope could not be resolved." />}
-        alerts={<OutcomeToast outcome={assessmentOutcome(param(query, "notice"), assessment)} />}
-      />
+        ],
+        description: assessment.objective || undefined,
+        secondaryActions: [{ href: editHref, label: "Edit", icon: "edit" }],
+        primaryAction: <LaunchForm action={startRun.bind(null, assessment.publicId)} launchToken={crypto.randomUUID()} label="Start Run" failure="The Run was not started because its scope could not be resolved." />,
+      }}
+      alerts={<OutcomeToast outcome={assessmentOutcome(param(query, "notice"), assessment)} />}
+    >
 
       <Section title="Overview">
         <DescriptionList surface
@@ -151,7 +152,7 @@ export default async function AssessmentPage({ params, searchParams }: PageProps
           ]}
         />
       </Disclosure>
-    </Page>
+    </DetailsTemplate>
   );
 }
 

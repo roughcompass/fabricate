@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 import { expect } from "./fixtures";
 
 /** The sidebar's navigation. */
@@ -24,8 +24,11 @@ export async function expectCurrentItem(page: Page, item: string, current: "page
   await expect(primaryNavigation(page).getByRole("link", { name: item, exact: true })).toHaveAttribute("aria-current", current);
 }
 
-/** The page header: the page's title, breadcrumbs, and actions. */
-export const pageHeader = (page: Page) => page.locator("[data-page-header]");
+/** The page header: the page's title, breadcrumbs, and actions; within +scope+, and of one template when +template+ is given, as in the gallery's specimens. */
+export const pageHeader = (scope: Page | Locator, template?: string) => scope.locator(template ? `[data-page-header][data-template="${template}"]` : "[data-page-header]");
+
+/** The page's title: its only top-level heading, in its page header (page-patterns spec, "Title in the page"). */
+export const pageTitle = (page: Page) => pageHeader(page).getByRole("heading", { level: 1 });
 
 /** The toasts on screen, newest last. */
 export const toasts = (page: Page) => page.getByRole("region", { name: "Notifications" }).getByRole("listitem");

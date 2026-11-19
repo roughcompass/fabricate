@@ -1,10 +1,10 @@
 import { type Evidence, type JsonObject, type ResolvedEvidence, redactCredentials, resolveEvidence } from "@repo-facts/contract";
+import { DetailsTemplate } from "@/components/templates/details-template";
 import { Alert } from "@/components/ui/alert";
 import type { Crumb } from "@/components/ui/breadcrumbs";
 import { CodeBlock } from "@/components/ui/code-block";
 import { DescriptionList } from "@/components/ui/description-list";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { ShortValue, Tag } from "@/components/ui/tag";
@@ -50,20 +50,21 @@ export async function EvidenceView({ breadcrumbs, repository, record: found, pin
   const excerpt = resolved?.ok ? redactCredentials(resolved.excerpt) : "";
 
   return (
-    <Page>
-      <PageHeader
-        breadcrumbs={breadcrumbs}
-        title={evidenceLocation(found)}
-        description="Committed content that a fact, relationship, or Finding cites, re-read from the pinned snapshot and verified against its recorded digests."
-        alerts={
-          resolved !== null &&
-          !resolved.ok && (
-            <Alert tone="warning" title="Evidence could not be verified">
-              {REFUSALS[resolved.reason] ?? "The cited content could not be verified."} Nothing is shown rather than content that may not be what the detector read.
-            </Alert>
-          )
-        }
-      />
+    <DetailsTemplate
+      header={{
+        breadcrumbs,
+        title: evidenceLocation(found),
+        description: "Committed content that a fact, relationship, or Finding cites, re-read from the pinned snapshot and verified against its recorded digests.",
+      }}
+      alerts={
+        resolved !== null &&
+        !resolved.ok && (
+          <Alert tone="warning" title="Evidence could not be verified">
+            {REFUSALS[resolved.reason] ?? "The cited content could not be verified."} Nothing is shown rather than content that may not be what the detector read.
+          </Alert>
+        )
+      }
+    >
 
       <Section title="Record">
         <DescriptionList
@@ -97,6 +98,6 @@ export async function EvidenceView({ breadcrumbs, repository, record: found, pin
           </div>
         )}
       </Section>
-    </Page>
+    </DetailsTemplate>
   );
 }

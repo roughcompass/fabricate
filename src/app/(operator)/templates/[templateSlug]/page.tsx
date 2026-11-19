@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { DetailsTemplate } from "@/components/templates/details-template";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ButtonLink } from "@/components/ui/button";
 import { DescriptionList } from "@/components/ui/description-list";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
@@ -26,17 +26,16 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[te
   const brand = BRANDS[template.brand];
 
   return (
-    <Page>
-      <PageHeader
-        breadcrumbs={[{ href: "/templates", label: "Salt Patterns" }]}
-        title={template.title}
-        description={template.description}
-        extraActions={
-          <ButtonLink href={`/templates/${template.slug}/preview`} icon="eye">
-            Preview template
-          </ButtonLink>
-        }
-      />
+    <DetailsTemplate
+      header={{
+        breadcrumbs: [{ href: "/templates", label: "Salt Patterns" }],
+        title: template.title,
+        description: template.description,
+        extraActions: <ButtonLink href={`/templates/${template.slug}/preview`} icon="eye">
+          Preview template
+        </ButtonLink>,
+      }}
+    >
 
       <div className={styles.detail}>
         <div className={styles.overview}>
@@ -84,6 +83,6 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[te
           </Table>
         </Panel>
       </Section>
-    </Page>
+    </DetailsTemplate>
   );
 }

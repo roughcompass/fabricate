@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ContentTemplate } from "@/components/templates/content-template";
 import { type Outcome, OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { InjectedError } from "./demos";
 import { ContentSpecimens, StatusSpecimens } from "./specimens/content";
 import { ChartSpecimens, TableSpecimens } from "./specimens/data";
 import { FormSpecimens } from "./specimens/forms";
 import { FoundationSpecimens } from "./specimens/foundations";
 import { ControlSpecimens, FeedbackSpecimens } from "./specimens/interaction";
+import { TEMPLATE_SECTIONS, TemplateSpecimens } from "./specimens/templates";
 import styles from "./design-system.module.css";
 
 export const metadata: Metadata = { title: "Design system" };
@@ -19,8 +20,10 @@ const OUTCOMES: Record<string, Omit<Outcome, "id">> = {
 };
 
 /**
- * Every shared component in every variant and state, in both themes. Available
- * in development and test environments only.
+ * Every shared component in every variant and state, and every page template
+ * with its empty and loading states, in both themes, on the Content template
+ * with the components' index beside them. Available in development and test
+ * environments only.
  */
 export default async function DesignSystemPage({ searchParams }: PageProps<"/design-system">) {
   if (process.env.NODE_ENV === "production") notFound();
@@ -60,16 +63,20 @@ export default async function DesignSystemPage({ searchParams }: PageProps<"/des
     ["dialog", "Confirmation dialog"],
     ["form-feedback", "Form feedback"],
     ["page-header", "Page header"],
+    ...TEMPLATE_SECTIONS,
   ];
+  const step = Number(param(query, "flowStep"));
+  const flow = { step: step >= 1 && step <= 3 ? Math.trunc(step) : 1, name: param(query, "flowName") ?? "", kind: param(query, "flowKind") ?? "" };
 
   return (
-    <Page>
-      <PageHeader
-        title="Design system"
-        description="Every shared component in its variants and states, in the light and dark themes. docs/design-system.md describes when to use each one."
-        alerts={<OutcomeToast outcome={outcome} />}
-      />
-      <div className={styles.gallery}>
+    <ContentTemplate
+      header={{
+        title: "Design system",
+        description: "Every shared component and page template in its variants and states, in the light and dark themes. docs/design-system.md describes when to use each one.",
+      }}
+      alerts={<OutcomeToast outcome={outcome} />}
+      navLabel="Components"
+      nav={
         <ul className={styles.index} aria-label="Components">
           {sections.map(([id, title]) => (
             <li key={id}>
@@ -77,6 +84,9 @@ export default async function DesignSystemPage({ searchParams }: PageProps<"/des
             </li>
           ))}
         </ul>
+      }
+    >
+      <div className={styles.gallery}>
         {param(query, "inject") === "pageerror" && <InjectedError />}
 
         <FoundationSpecimens />
@@ -87,7 +97,8 @@ export default async function DesignSystemPage({ searchParams }: PageProps<"/des
         <ChartSpecimens />
         <ControlSpecimens tone={tone} kinds={kinds} />
         <FeedbackSpecimens />
+        <TemplateSpecimens flow={flow} />
       </div>
-    </Page>
+    </ContentTemplate>
   );
 }

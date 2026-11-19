@@ -1,6 +1,7 @@
 import { buildAssessment, buildRepository } from "../test/support/builders";
 import { expect, test } from "./support/fixtures";
 import { paths } from "./support/paths";
+import { pageTitle } from "./support/shell";
 
 // Recently retired addresses redirect permanently, and addresses retired more
 // than 30 days ago open the not-found page (operator-interface/page-patterns
@@ -49,5 +50,5 @@ test("Root address: opens Home without redirecting to the Assessments list", asy
   await page.goto(paths.home);
   await expect(page).toHaveURL(/\/$/);
   await expect(page).toHaveTitle("Home · Frontend Registry");
-  await expect(page.locator("[data-shell-header]").getByRole("heading", { level: 1 })).toHaveText("Home");
+  await expect(pageTitle(page)).toHaveText("Home");
 });

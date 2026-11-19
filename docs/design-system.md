@@ -229,7 +229,8 @@ Content sits on white surfaces over the gray canvas, as in Vercel's dashboard: t
 | `SectionNav` (`section-nav.tsx`, client) | Navigation to the sections of a long page with each section's state: in view beside the content on wide screens, a disclosure on narrow ones, with the section in view marked current |
 | `Tooltip` (`tooltip.tsx`) | A short explanation on hover and keyboard focus |
 | `ProgressBar` (`progress-bar.tsx`) | Finished work out of the total |
-| `Skeleton` (`skeleton.tsx`) | Placeholders, and the list, Repositories, detail, and form page skeletons |
+| `Skeleton` (`skeleton.tsx`) | Placeholders, from which each page template's skeleton is built, and the Repositories table's skeleton, laid out like its columns |
+| `StepIndicator` (`step-indicator.tsx`) | A flow's steps and where the reader is: "Step 2 of 3", then each step's title, done steps checked and the current one marked. The Flow template shows it |
 | `Icon` (`icon.tsx`) | Inline SVG icons on a 24px grid, drawn with the current text color. The gallery's Icons specimen shows every one |
 | `Indicator` (`indicator.tsx`) | The one state indicator: a dot, a ring, a dash, or a blank that keeps its place, in its tone, pulsing only for work under way. `Status`, `StateIndicator`, the section menu, and Home's legend all draw it, and `toneClass` is the one map from a tone to its color, which `Severity`, toasts, and Home's conclusion bar paint with. `test/lint/consistency.test.ts` fails on a dot, a tone map, a focus ring, or a surface drawn anywhere else |
 | `useHydrated` (`use-hydrated.ts`, client) | Whether a client component has hydrated: false in the server render and the first client render, so they match, then true. A control that works without JavaScript renders its fallback until then |

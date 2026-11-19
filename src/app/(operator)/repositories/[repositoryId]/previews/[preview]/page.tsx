@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { EditorTemplate } from "@/components/templates/editor-template";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { DeviceControls } from "@/components/preview/device-controls";
 import { DeviceFrame, PreviewScale } from "@/components/preview/device-frame";
-import { ShellHeader } from "@/components/shell/shell-header";
 import { Alert, PageAlerts } from "@/components/ui/alert";
 import { ActionButton } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -13,7 +13,6 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
-import { Page } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
@@ -80,8 +79,7 @@ export default async function RepositoryPreviewPage({ params, searchParams }: Pa
   const log = await readLogChunk(getConfig(), preview);
 
   return (
-    <Page>
-      <ShellHeader title={`Preview ${name}`} back={{ href: `${routes.repository(repository.publicId)}#previews`, label: `Back to ${repository.name}` }} />
+    <EditorTemplate focused={{ title: `Preview ${name}` }}>
       <OutcomeToast outcome={previewOutcome(getDb(), param(query, "notice"), preview.publicId)} strip={PREVIEW_OUTCOME_PARAMS} />
 
       <div className={styles.workspace}>
@@ -151,7 +149,7 @@ export default async function RepositoryPreviewPage({ params, searchParams }: Pa
           <DescriptionList surface items={details(preview, base)} />
         </Disclosure>
       </div>
-    </Page>
+    </EditorTemplate>
   );
 }
 

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import { DetailsTemplate } from "@/components/templates/details-template";
 import { notFound } from "next/navigation";
-import { PROFILE_DESCRIPTION, ProfileBody } from "@/components/profiles/profile-body";
+import { PROFILE_DESCRIPTION, ProfileBody, ProfileTabs } from "@/components/profiles/profile-body";
 import { Alert } from "@/components/ui/alert";
-import { Page, PageHeader } from "@/components/ui/page";
 import { cache } from "react";
 import { repositoryById } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
@@ -40,19 +40,21 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
   // A deleted Repository's Profiles stay with the Runs that used them, without its actions.
   if (found.repository.deletedAt) {
     return (
-      <Page>
-        <PageHeader
-          breadcrumbs={[{ href: routes.repositories, label: "Repositories" }]}
-          title={found.repository.name}
-          description={PROFILE_DESCRIPTION}
-          alerts={
-            <Alert tone="info" title="This Repository was deleted">
-              {`Version ${found.version.version} stays with the Runs that used it.`}
-            </Alert>
-          }
-        />
+      <DetailsTemplate
+        header={{
+          breadcrumbs: [{ href: routes.repositories, label: "Repositories" }],
+          title: found.repository.name,
+          description: PROFILE_DESCRIPTION,
+          tabs: <ProfileTabs profile={found.profile} query={query} base={routes.profile(found.profile.publicId)} />,
+        }}
+        alerts={
+          <Alert tone="info" title="This Repository was deleted">
+            {`Version ${found.version.version} stays with the Runs that used it.`}
+          </Alert>
+        }
+      >
         <ProfileBody profile={found.profile} query={query} base={routes.profile(found.profile.publicId)} />
-      </Page>
+      </DetailsTemplate>
     );
   }
   const latest = versionsOf(getDb(), found.repository.id, 1)[0];

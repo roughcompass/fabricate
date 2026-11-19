@@ -2,10 +2,31 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DetailSkeleton, FocusedSkeleton, FormSkeleton, HomeSkeleton, ListSkeleton, RepositoriesSkeleton } from "@/components/ui/skeleton";
+import { AnalysisSkeleton } from "@/components/templates/analysis-template";
+import { DashboardSkeleton } from "@/components/templates/dashboard-template";
+import { DetailsSkeleton } from "@/components/templates/details-template";
+import { EditorSkeleton } from "@/components/templates/editor-template";
+import { FormSkeleton } from "@/components/templates/form-template";
+import { IndexSkeleton } from "@/components/templates/index-template";
+import { SettingsSkeleton } from "@/components/templates/settings-template";
+import { RepositoriesTableSkeleton } from "@/components/ui/skeleton";
 import { type SkeletonKind, skeletonFor } from "./skeleton-routes";
 
-const SKELETONS: Record<SkeletonKind, () => React.ReactNode> = { home: HomeSkeleton, list: ListSkeleton, repositories: RepositoriesSkeleton, detail: DetailSkeleton, form: FormSkeleton, focused: FocusedSkeleton };
+/** Each kind's skeleton: its template's, shaped as the pages of that kind lay out their zones. */
+const SKELETONS: Record<SkeletonKind, () => React.ReactNode> = {
+  dashboard: () => <DashboardSkeleton figures={3} />,
+  index: () => <IndexSkeleton />,
+  "index-tabs": () => <IndexSkeleton tabs={4} />,
+  repositories: () => <IndexSkeleton actions={2} filters table={<RepositoriesTableSkeleton />} />,
+  cards: () => <IndexSkeleton actions={0} cards />,
+  details: () => <DetailsSkeleton />,
+  "details-tabs": () => <DetailsSkeleton tabs={7} />,
+  analysis: () => <AnalysisSkeleton figures={0} />,
+  form: () => <FormSkeleton />,
+  editor: () => <EditorSkeleton />,
+  settings: () => <SettingsSkeleton />,
+  focused: () => <EditorSkeleton focused />,
+};
 /** Fast navigations finish before this, so they never flash a skeleton. */
 const DELAY = 150;
 /** A navigation that has not finished by then has failed or been abandoned. */
@@ -61,13 +82,12 @@ export function NavigationFeedback({ children }: { children: React.ReactNode }) 
     };
   }, [pending]);
 
-  const Skeleton = navigating ? SKELETONS[pending] : null;
   return (
     <>
       <div hidden={navigating} style={{ display: "contents" }}>
         {children}
       </div>
-      {Skeleton && <Skeleton />}
+      {navigating && SKELETONS[pending]()}
     </>
   );
 }

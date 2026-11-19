@@ -58,31 +58,56 @@ function overviewPanels(db: Executor, profile: RepositoryProfile, facts: FactDoc
   return { panels, relationships, declared };
 }
 
-/**
- * A Profile as views, one per question a reader brings to a repository:
- * Overview, then Composition, Dependencies, Design system, Services,
- * Tooling, and Diagnostics, each in the address as `tab`. The
- * Overview answers each question in a few rows that link to the view holding
- * their facts; every other view leads with that answer, then shows its
- * categories in full with their search, state, and evidence. A repository
- * that isn't a frontend web repository has no frontend views, and its
- * Overview says why. +base+ is the page's address; +query+ holds the view,
- * the dependency filters, and each table's page.
- */
-export function ProfileBody({ profile, query, base }: { profile: RepositoryProfile; query: Record<string, string | string[] | undefined>; base: string }) {
+/** What a Profile's views read, once per request: the page header's tabs and the selected view share it. */
+const profileViews = cache((profile: RepositoryProfile, requested: string | undefined) => {
   const db = getDb();
   const { document, commit } = profilePin(profile);
   const facts = document.fact_document as unknown as FactDocument;
   const diagnostics = profileDiagnostics(document);
   const view = profileView(facts, diagnostics);
+  const { panels, relationships, declared } = overviewPanels(db, profile, facts, view);
+  const visible = view.tabs.filter((tab) => tab.visible);
+  const current = visible.find((tab) => tab.id === (isProfileTab(requested) ? requested : "overview")) ?? visible[0]!;
+  const counts: Partial<Record<ProfileTabId, number>> = { dependencies: declared.length, services: view.services.length, diagnostics: view.attention.items.length };
+  return { document, commit, facts, diagnostics, view, panels, relationships, declared, visible, current, counts };
+});
+
+/**
+ * A Profile's views as tabs, each in the address as `tab`: the page header's
+ * last child on a Repository's, a version's, and a Profile's page
+ * (page-templates spec, Details with view tabs).
+ */
+export function ProfileTabs({ profile, query, base }: { profile: RepositoryProfile; query: Record<string, string | string[] | undefined>; base: string }) {
+  const { visible, current, counts } = profileViews(profile, param(query, "tab"));
+  return (
+    <>
+      <ProfileHashLink base={base} current={current.id} />
+      <Tabs label="Profile views">
+        {visible.map((tab) => (
+          <TabLink key={tab.id} href={profileTabHref(base, tab.id)} active={tab.id === current.id} count={counts[tab.id]}>
+            {tab.label}
+          </TabLink>
+        ))}
+      </Tabs>
+    </>
+  );
+}
+
+/**
+ * A Profile's selected view, one per question a reader brings to a
+ * repository: Overview, then Composition, Dependencies, Design system,
+ * Services, Tooling, and Diagnostics, chosen by ProfileTabs in the page
+ * header. The Overview answers each question in a few rows that link to the
+ * view holding their facts; every other view leads with that answer, then
+ * shows its categories in full with their search, state, and evidence. A
+ * repository that isn't a frontend web repository has no frontend views, and
+ * its Overview says why. +base+ is the page's address; +query+ holds the view,
+ * the dependency filters, and each table's page.
+ */
+export function ProfileBody({ profile, query, base }: { profile: RepositoryProfile; query: Record<string, string | string[] | undefined>; base: string }) {
+  const { document, commit, facts, diagnostics, view, panels, relationships, current } = profileViews(profile, param(query, "tab"));
   const context: EvidenceContext = { records: (facts.evidence ?? {}) as JsonObject, owner: { profile: profile.publicId }, profileId: profile.publicId };
   const filters: Filters = { kind: param(query, "kind") || undefined, manifest: param(query, "manifest") || undefined, package: param(query, "package") || undefined };
-
-  const { panels, relationships, declared } = overviewPanels(db, profile, facts, view);
-
-  const visible = view.tabs.filter((tab) => tab.visible);
-  const requested = param(query, "tab");
-  const current = visible.find((tab) => tab.id === (isProfileTab(requested) ? requested : "overview")) ?? visible[0]!;
 
   // Each long table pages on its own, in the address as `<category>_page`, keeping the rest of the query.
   const paging = (id: string, total: number) => {
@@ -158,20 +183,9 @@ export function ProfileBody({ profile, query, base }: { profile: RepositoryProfi
   };
 
   const panel = panels.find((candidate) => candidate.tab === current.id);
-  const declaredCount = declared.length;
-  const counts: Partial<Record<ProfileTabId, number>> = { dependencies: declaredCount, services: view.services.length, diagnostics: view.attention.items.length };
 
   return (
     <div className={styles.body}>
-      <ProfileHashLink base={base} current={current.id} />
-      <Tabs label="Profile views">
-        {visible.map((tab) => (
-          <TabLink key={tab.id} href={profileTabHref(base, tab.id)} active={tab.id === current.id} count={counts[tab.id]}>
-            {tab.label}
-          </TabLink>
-        ))}
-      </Tabs>
-
       {current.id === "overview" ? (
         <ProfileOverview view={view} panels={panels} base={base} />
       ) : (

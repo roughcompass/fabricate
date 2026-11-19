@@ -9,12 +9,12 @@ export interface StatItem {
   href?: string;
 }
 
-/** Key figures in one bordered row, divided rather than boxed individually. */
+/** Key figures in one bordered row, divided rather than boxed individually; a row holds at most five (page-templates spec). */
 export function StatGroup({ stats, label }: { stats: readonly StatItem[]; label?: string }) {
   return (
-    <dl className={styles.group} aria-label={label} data-panel="">
+    <dl className={styles.group} aria-label={label} data-panel="" data-key-figures="">
       {stats.map((stat) => (
-        <div key={stat.label} className={styles.stat}>
+        <div key={stat.label} className={styles.stat} data-key-figure="">
           <dt className={styles.label}>{stat.label}</dt>
           <dd className={styles.value}>{stat.href ? <Link href={stat.href}>{stat.value}</Link> : stat.value}</dd>
           {stat.hint && <dd className={styles.hint}>{stat.hint}</dd>}

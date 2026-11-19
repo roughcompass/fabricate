@@ -1,5 +1,6 @@
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { BrandLink } from "@/components/shell/brand-link";
 import { ShellHeader } from "@/components/shell/shell-header";
 import { SidebarToggle } from "@/components/shell/sidebar-toggle";
 import { ButtonLink } from "@/components/ui/button";
@@ -20,10 +21,11 @@ function elements(node: ReactNode, found: Element[] = []): Element[] {
 
 const BACK = { href: "/templates/payments-workspace", label: "Back to Payments workspace" };
 
-// operator-interface/page-patterns spec: preview mode is a focused page.
+// operator-interface/page-patterns spec: the shell header holds navigation and
+// global controls, never a page's title; preview mode is a focused page.
 describe("shell header", () => {
   it("holds a back button in place of the sidebar controls on a focused page", () => {
-    const tree = elements(ShellHeader({ title: "Preview Payments workspace", back: BACK }));
+    const tree = elements(ShellHeader({ back: BACK }));
     expect(tree[0]!.props["data-shell-header"]).toBe("focused");
     const back = tree.find((element) => element.type === ButtonLink)!;
     expect(back.props).toMatchObject({ href: "/templates/payments-workspace", label: "Back to Payments workspace", variant: "tertiary", size: "md", icon: "arrowLeft" });
@@ -32,27 +34,24 @@ describe("shell header", () => {
     expect(tree.some((element) => element.props["aria-label"] === "Open navigation")).toBe(false);
   });
 
-  it("keeps the title as the one top-level heading, for assistive technology only", () => {
-    const headings = elements(ShellHeader({ title: "Preview Payments workspace", back: BACK })).filter((element) => element.type === "h1");
-    expect(headings).toHaveLength(1);
-    expect(headings[0]!.props.className).toBe("visually-hidden");
-    expect(headings[0]!.props.children).toBe("Preview Payments workspace");
+  it("is a header element, so the shell renders it as the page's banner landmark (Landmarks)", () => {
+    expect(elements(ShellHeader({}))[0]!.type).toBe("header");
+    expect(elements(ShellHeader({ back: BACK }))[0]!.type).toBe("header");
   });
 
-  it("renders as before without a back button", () => {
-    const tree = elements(ShellHeader({ title: "Payments workspace" }));
+  it("shows no page title and no heading (Title in the page)", () => {
+    for (const props of [{}, { back: BACK }]) {
+      expect(elements(ShellHeader(props)).some((element) => /^h[1-6]$/.test(String(element.type)))).toBe(false);
+    }
+  });
+
+  it("holds Show sidebar, Open navigation, and the product name, which opens Home (Shell on a narrow viewport)", () => {
+    const tree = elements(ShellHeader({}));
     expect(tree[0]!.props["data-shell-header"]).toBe("");
     expect(tree.some((element) => element.type === ButtonLink)).toBe(false);
     expect(tree.find((element) => element.type === SidebarToggle)!.props.to).toBe("shown");
     expect(tree.find((element) => element.props["aria-label"] === "Open navigation")!.props.popoverTarget).toBe("sidebar");
-    const heading = tree.find((element) => element.type === "h1")!;
-    expect(heading.props.className).not.toBe("visually-hidden");
-    expect(heading.props.title).toBe("Payments workspace");
-  });
-
-  it("marks a focused skeleton's header, with a placeholder for the back button", () => {
-    const tree = elements(ShellHeader({ back: "placeholder" }));
-    expect(tree[0]!.props["data-shell-header"]).toBe("focused");
-    expect(tree.some((element) => element.type === ButtonLink || element.type === SidebarToggle || element.type === "h1")).toBe(false);
+    const product = tree.find((element) => element.type === BrandLink)!;
+    expect(product.props).toMatchObject({ href: "/", children: "Frontend Registry" });
   });
 });

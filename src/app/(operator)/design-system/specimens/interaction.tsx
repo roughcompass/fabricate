@@ -1,4 +1,5 @@
 import { Alert } from "@/components/ui/alert";
+import { TabLink, Tabs } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FilterBar } from "@/components/ui/filter-bar";
@@ -211,10 +212,11 @@ export function FeedbackSpecimens() {
       <Specimen
         id="page-header"
         title="Page header"
-        description="Breadcrumbs, the title and status, a meta line, one sentence, and the actions: one primary, with secondary links in a menu on narrow screens."
+        description="Breadcrumbs, the title row with the page's only h1, its status, and its actions, the meta row, one sentence, and the view tabs, last. Each template fixes which of them show."
         render={() => (
           <>
             <PageHeader
+              template="details"
               alerts={false}
               headingLevel={3}
               breadcrumbs={[
@@ -231,8 +233,19 @@ export function FeedbackSpecimens() {
                   Start Evaluation
                 </Button>
               }
+              tabs={
+                <Tabs label="Run views">
+                  <TabLink href="#page-header" active>
+                    Overview
+                  </TabLink>
+                  <TabLink href="#page-header" active={false} count={6}>
+                    Repositories
+                  </TabLink>
+                </Tabs>
+              }
             />
             <PageHeader
+              template="index"
               alerts={false}
               headingLevel={3}
               title="Repositories"

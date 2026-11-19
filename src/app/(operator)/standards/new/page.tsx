@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Page, PageHeader } from "@/components/ui/page";
+import { FormTemplate } from "@/components/templates/form-template";
 import { ToggleGroup } from "@/components/ui/toggle-group";
 import { STARTERS, findStarter } from "@/lib/standards/starters";
 import { createStandard } from "../actions";
@@ -14,12 +14,13 @@ export default async function NewStandardPage({ searchParams }: PageProps<"/stan
   const starter = findStarter(typeof requested === "string" ? requested : null);
 
   return (
-    <Page width="form">
-      <PageHeader
-        breadcrumbs={[{ href: "/standards", label: "Standards" }]}
-        title="New Standard"
-        description={starter ? "The draft starts with the starter's Controls; review and change them before you publish." : "Name the Standard and describe its purpose; you add Controls in its draft."}
-      />
+    <FormTemplate
+      header={{
+        breadcrumbs: [{ href: "/standards", label: "Standards" }],
+        title: "New Standard",
+        description: starter ? "The draft starts with the starter's Controls; review and change them before you publish." : "Name the Standard and describe its purpose; you add Controls in its draft.",
+      }}
+    >
       <ToggleGroup action="/standards/new" label="Start from" name="starter" selected={starter?.id ?? BLANK} options={[{ value: BLANK, label: "Blank" }, ...STARTERS.map((item) => ({ value: item.id, label: item.label }))]} />
       <StandardForm
         key={starter?.id ?? BLANK}
@@ -29,6 +30,6 @@ export default async function NewStandardPage({ searchParams }: PageProps<"/stan
         cancelHref="/standards"
         {...(starter && { starter: starter.id })}
       />
-    </Page>
+    </FormTemplate>
   );
 }

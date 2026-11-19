@@ -1,6 +1,7 @@
 @layer pages {
   .gallery { display: flex; flex-direction: column; gap: var(--space-12); }
-  .index { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; list-style: none; font-size: var(--font-size-secondary); }
+  /* The components' index, beside the specimens (the Content template's navigation). */
+  .index { display: flex; flex-direction: column; gap: var(--space-1); max-height: calc(100dvh - var(--size-header) - 2 * var(--space-6)); margin: 0; padding: 0; overflow-y: auto; list-style: none; font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
 
   .specimen { display: flex; flex-direction: column; gap: var(--space-4); scroll-margin-top: calc(var(--size-header) + var(--space-4)); }
   .specimenHeader { display: flex; flex-direction: column; gap: var(--space-1); }
@@ -32,6 +33,8 @@
   .stack { display: flex; flex-direction: column; gap: var(--space-4); }
   .narrow { max-width: var(--size-toast); }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--size-nav)), 1fr)); gap: var(--space-4); }
+  /* A page template, framed as a page within the specimen. */
+  .templateFrame { display: flex; flex: 1 1 100%; flex-direction: column; min-width: 0; padding-bottom: var(--space-6); border-radius: var(--radius-lg); outline: 1px dashed var(--color-border); outline-offset: -1px; }
   .railDemo { display: grid; grid-template-columns: var(--size-nav) 1fr; gap: var(--space-6); align-items: start; }
 
   /* Color specimen: each swatch takes its token through --_swatch, set on the element. */
@@ -47,6 +50,8 @@
   .swatchRole { color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); }
 
   @container content (max-width: 767px) {
-    .railDemo { grid-template-columns: 1fr; }
+    /* A page template, framed as a page within the specimen. */
+  .templateFrame { display: flex; flex: 1 1 100%; flex-direction: column; min-width: 0; padding-bottom: var(--space-6); border-radius: var(--radius-lg); outline: 1px dashed var(--color-border); outline-offset: -1px; }
+  .railDemo { grid-template-columns: 1fr; }
   }
 }

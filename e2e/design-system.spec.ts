@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
+import { pageHeader } from "./support/shell";
 
 /** The component gallery, and the component behavior it demonstrates. */
 
@@ -310,4 +311,53 @@ test.describe("without JavaScript", () => {
     await expect(page).toHaveURL(/tone=success/);
     await expect(page.getByText("Filtered to success")).toBeVisible();
   });
+});
+
+// operator-interface/page-templates spec: the gallery shows every template.
+const TEMPLATE_NAMES = ["Dashboard", "Index", "Details", "Analysis", "Form", "Flow", "Editor", "Settings", "Content", "System"];
+
+test("Gallery shows every template: each of the ten with its empty and loading states, in both themes", async ({ page }) => {
+  await page.goto("/design-system");
+  const index = page.getByRole("list", { name: "Components" });
+  for (const name of TEMPLATE_NAMES) {
+    await expect(index.getByRole("link", { name: `${name} template`, exact: true })).toHaveAttribute("href", `#template-${name.toLowerCase()}`);
+    for (const theme of ["light", "dark"] as const) {
+      const frame = page.getByRole("region", { name: `${name} template, ${theme}` });
+      await expect(frame, `${name}, ${theme}`).toHaveAttribute("data-theme", theme);
+      // The example and the empty state each show the template's page header; a System page shows its two conditions instead.
+      const states = name === "System" ? ["Not found", "Error", "Loading"] : ["Example", "Empty", "Loading"];
+      for (const state of states) await expect(frame.getByText(state, { exact: true }), `${name}, ${theme}: ${state}`).toBeVisible();
+      expect(await pageHeader(frame, name.toLowerCase()).count(), `${name}, ${theme}`).toBeGreaterThanOrEqual(2);
+      await expect(frame.locator('[aria-busy="true"]'), `${name}, ${theme}: skeleton`).toHaveCount(1);
+    }
+  }
+  // Specimens title their headers below the gallery's own headings, so the page keeps one h1.
+  await expect(page.locator("h1")).toHaveCount(1);
+});
+
+test("Flow in the gallery: every step keeps the task's title and shows its position, and the review links back to each step", async ({ page }) => {
+  await page.goto("/design-system#template-flow");
+  const flow = () => page.getByRole("region", { name: "Flow template, light" });
+  const title = () => pageHeader(flow(), "flow").getByRole("heading", { name: "Add a Repository" });
+
+  await expect(title()).toBeVisible();
+  await expect(flow().getByText("Step 1 of 3")).toBeVisible();
+  await flow().getByRole("textbox", { name: "Name" }).fill("web");
+  await flow().getByRole("button", { name: "Next" }).click();
+
+  await expect(page).toHaveURL(/flowStep=2/);
+  await expect(title()).toBeVisible();
+  await expect(flow().getByText("Step 2 of 3")).toBeVisible();
+  await flow().getByText("Library", { exact: true }).click();
+  await flow().getByRole("button", { name: "Next" }).click();
+
+  await expect(page).toHaveURL(/flowStep=3/);
+  await expect(title()).toBeVisible();
+  await expect(flow().getByText("Step 3 of 3")).toBeVisible();
+  await expect(flow().getByText("web", { exact: true })).toBeVisible();
+  await expect(flow().getByText("Library", { exact: true })).toBeVisible();
+  await expect(flow().getByRole("link", { name: "Change kind" })).toBeVisible();
+  await flow().getByRole("link", { name: "Change name" }).click();
+  await expect(flow().getByText("Step 1 of 3")).toBeVisible();
+  await expect(flow().getByRole("textbox", { name: "Name" })).toHaveValue("web");
 });

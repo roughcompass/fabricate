@@ -3,7 +3,7 @@
 import "./globals.css";
 import Link from "next/link";
 import { HOME } from "@/components/shell/navigation";
-import { SystemPage } from "@/components/shell/system-page";
+import { SystemTemplate } from "@/components/templates/system-template";
 import { buttonProps } from "@/components/ui/button-content";
 import { PRODUCT, browserTitle } from "@/lib/product";
 
@@ -18,7 +18,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
       <body>
         <title>{browserTitle("Something went wrong")}</title>
         <main>
-          <SystemPage
+          <SystemTemplate
             icon="alert"
             title="Something went wrong"
             actions={
@@ -34,7 +34,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
           >
             <p>{`The ${PRODUCT.name} could not be shown. If trying again does not work, the server log has the details.`}</p>
             {error.digest && <p>{`Reference ${error.digest}`}</p>}
-          </SystemPage>
+          </SystemTemplate>
         </main>
       </body>
     </html>

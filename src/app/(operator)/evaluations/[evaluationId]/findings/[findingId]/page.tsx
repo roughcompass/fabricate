@@ -1,4 +1,5 @@
 import { type JsonObject, SHARED_CATEGORIES } from "@repo-facts/contract";
+import { DetailsTemplate } from "@/components/templates/details-template";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,7 +9,6 @@ import { EvidenceList } from "@/components/results/evidence";
 import { TraceView } from "@/components/results/trace";
 import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Section } from "@/components/ui/section";
 import { Severity, Status } from "@/components/ui/status";
 import { ShortValue, Tag } from "@/components/ui/tag";
@@ -85,17 +85,18 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
     );
 
   return (
-    <Page>
-      <PageHeader
-        breadcrumbs={[
+    <DetailsTemplate
+      header={{
+        breadcrumbs: [
           { href: "/assessments", label: "Assessments" },
           { href: routes.assessment(assessment.publicId), label: assessment.name },
           { href: routes.evaluation(evaluation.publicId), label: `Evaluation #${number}` },
-        ]}
-        title={String(control.title)}
-        status={<Status state={finding.outcome} />}
-        meta={[String(subject.name), releaseLink, <Severity key="severity" value={finding.severity} />]}
-      />
+        ],
+        title: String(control.title),
+        status: <Status state={finding.outcome} />,
+        meta: [String(subject.name), releaseLink, <Severity key="severity" value={finding.severity} />],
+      }}
+    >
 
       <Section title="Result">
         <p className={styles.reasoning}>{String(document.reasoning)}</p>
@@ -175,6 +176,6 @@ export default async function FindingPage({ params }: PageProps<"/evaluations/[e
           ]}
         />
       </Disclosure>
-    </Page>
+    </DetailsTemplate>
   );
 }

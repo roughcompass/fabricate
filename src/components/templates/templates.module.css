@@ -1,0 +1,143 @@
+@layer components {
+  /* A zone below the page header. */
+  .zone { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+  .muted { color: var(--color-text-secondary); }
+
+  /* Dashboard: a fixed grid of panels, two to a row on a wide column. */
+  .panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: var(--space-6); min-width: 0; }
+  .panelCell { display: flex; flex-direction: column; min-width: 0; }
+  .panelCell > * { flex: 1; }
+  .panelCell[data-wide] { grid-column: 1 / -1; }
+
+  /* Index: a filter rail beside the results. */
+  .railLayout { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); align-items: start; gap: var(--space-8); }
+  .column { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+
+  /* Details: a hub's related records. */
+  .related { display: flex; flex-direction: column; margin: 0; padding: 0; border: var(--surface-border); border-radius: var(--surface-radius); background: var(--surface-background); list-style: none; }
+  .related > li { padding: var(--space-3) var(--space-5); }
+  .related > li + li { border-top: 1px solid var(--color-border-subtle); }
+
+  /* Form: a footer of its own, when the actions aren't in a form element. */
+  .formFooter { display: flex; }
+
+  /* Editor: outline and preview panes beside the editing area, and the sticky save bar. */
+  .editorPanes { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); align-items: start; gap: var(--space-6); }
+  .editorPanes[data-preview] { grid-template-columns: var(--size-nav) minmax(0, 1fr) minmax(0, 1fr); }
+  /* As the draft editor's own bar: elevated, a little above the viewport's bottom edge. */
+  .saveBar {
+    position: sticky;
+    bottom: var(--space-4);
+    z-index: var(--z-sticky);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-elevated);
+    box-shadow: var(--shadow-toast);
+  }
+  /* The focused variant: the content column given to one subject. */
+  .focused { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+
+  /* Settings: sections, with their list beside them on wide columns. */
+  .settingsLayout { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); align-items: start; gap: var(--space-8); }
+  .settingsSections { display: flex; flex-direction: column; gap: var(--space-10); min-width: 0; max-width: var(--size-prose); }
+
+  /* Content, docs: the navigation, the article, and its headings. */
+  .docsLayout { display: grid; grid-template-columns: var(--size-nav) minmax(0, 1fr); align-items: start; gap: var(--space-8); }
+  .docsLayout[data-toc] { grid-template-columns: var(--size-nav) minmax(0, 1fr) var(--size-filter); }
+  .article { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
+  .navWide { position: sticky; top: calc(var(--size-header) + var(--space-6)); display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+  .navNarrow { display: none; }
+  .toc { position: sticky; top: calc(var(--size-header) + var(--space-6)); min-width: 0; }
+
+  /* Content, marketing: the hero, then full-width sections. */
+  .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--space-10); padding-block: var(--space-12); }
+  .heroText { display: flex; flex-direction: column; gap: var(--space-4); }
+  .heroTitle { font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); line-height: var(--line-height-display); letter-spacing: var(--letter-spacing-display); }
+  .heroLead { max-width: var(--size-prose); color: var(--color-text-secondary); font-size: var(--font-size-subtitle); line-height: var(--line-height-subtitle); }
+  .heroActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .heroMedia { min-width: 0; }
+  .marketingSections { display: flex; flex-direction: column; gap: var(--space-16); }
+
+  /* System: the status block, centered on a surface. */
+  .status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-12) var(--space-4);
+    border: var(--surface-border);
+    border-radius: var(--surface-radius);
+    background: var(--surface-background);
+    text-align: center;
+  }
+  .statusIcon {
+    display: grid;
+    place-items: center;
+    width: var(--size-control-lg);
+    height: var(--size-control-lg);
+    margin-bottom: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    color: var(--color-text-secondary);
+  }
+  .statusText { display: flex; flex-direction: column; gap: var(--space-2); max-width: var(--size-dialog); color: var(--color-text-secondary); }
+  .statusActions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-4); }
+
+  /* Skeletons: placeholders in the places each template puts its parts. */
+  .block, .actionSkeleton, .tabSkeleton, .searchSkeleton, .cardSkeleton, .chartSkeleton, .workspaceSkeleton, .saveBarSkeleton {
+    display: block;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-muted);
+    animation: shimmer var(--duration-spin) var(--ease-standard) infinite alternate;
+  }
+  .headerSkeleton { display: flex; flex-direction: column; gap: var(--space-3); }
+  .titleRowSkeleton { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); }
+  .titleSkeleton { display: block; flex: 1; min-width: min(100%, var(--size-dialog)); }
+  .actionsSkeleton { display: flex; gap: var(--space-2); }
+  .actionSkeleton { width: calc(2 * var(--space-16)); height: var(--size-control-md); }
+  .actionSkeleton[data-primary] { width: calc(4 * var(--space-10)); }
+  .tabsSkeleton { display: flex; gap: var(--space-4); padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
+  .tabSkeleton { width: var(--space-16); height: var(--space-5); }
+  .panelSkeleton { border: var(--surface-border); border-radius: var(--surface-radius); background: var(--surface-background); }
+  .rowSkeleton { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: var(--space-6); padding: var(--space-4) var(--space-5); }
+  .rowSkeleton + .rowSkeleton { border-top: 1px solid var(--color-border-subtle); }
+  .figuresSkeleton { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--size-filter)), 1fr)); gap: 1px; overflow: hidden; border: var(--surface-border); border-radius: var(--surface-radius); background: var(--color-border); }
+  .figureSkeleton { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-5); background: var(--color-bg); }
+  .fieldsSkeleton { display: flex; flex-direction: column; gap: var(--space-6); padding: var(--surface-padding); border: var(--surface-border); border-radius: var(--surface-radius); background: var(--surface-background); }
+  .fieldSkeleton { display: flex; flex-direction: column; gap: var(--space-2); }
+  .filtersSkeleton { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .countSkeleton { width: var(--size-label); }
+  .searchSkeleton { width: calc(var(--size-filter) + var(--space-8)); height: var(--size-control-sm); }
+  .cardsSkeleton { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--size-card), 1fr)); gap: var(--space-4); }
+  .cardSkeleton { height: var(--size-card); border-radius: var(--surface-radius); }
+  .chartSkeleton { height: var(--size-card); border-radius: var(--surface-radius); }
+  .stepsSkeleton { display: block; }
+  .workspaceSkeleton { min-height: var(--size-dialog); border-radius: var(--radius-lg); }
+  .saveBarSkeleton { height: var(--size-control-lg); border-radius: var(--surface-radius); }
+
+  @container content (max-width: 1023px) {
+    .panels { grid-template-columns: minmax(0, 1fr); }
+    .docsLayout[data-toc] { grid-template-columns: var(--size-nav) minmax(0, 1fr); }
+    .toc { display: none; }
+    .editorPanes[data-preview] { grid-template-columns: var(--size-nav) minmax(0, 1fr); }
+    .editorPanes [data-zone="preview"] { grid-column: 1 / -1; }
+  }
+
+  @container content (max-width: 767px) {
+    .railLayout, .editorPanes, .editorPanes[data-preview], .settingsLayout, .docsLayout, .docsLayout[data-toc], .hero { grid-template-columns: minmax(0, 1fr); }
+    .navWide { display: none; }
+    .navNarrow { display: block; }
+    .hero { padding-block: var(--space-8); }
+    .heroTitle { font-size: var(--font-size-subtitle); line-height: var(--line-height-subtitle); letter-spacing: var(--letter-spacing-heading); }
+    .heroLead { font-size: var(--font-size-body); line-height: var(--line-height-body); }
+    .titleSkeleton { min-width: 0; }
+    .countSkeleton { flex-basis: 100%; }
+    .searchSkeleton { flex: 1; width: auto; }
+  }
+
+  @keyframes shimmer {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+  }
+}

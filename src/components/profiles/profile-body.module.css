@@ -5,7 +5,7 @@
   .content { display: flex; flex-direction: column; gap: var(--space-12); min-width: 0; }
 
   /*
-   * Three heading levels a reader can tell apart: the page title in the shell
+   * Three heading levels a reader can tell apart: the page title in the page
    * header; each part of the Profile (Overview, Inventory, Diagnostics) at the
    * subtitle size on a rule; and each category under it at the heading size.
    * Categories in a part sit further apart than a category's own heading,

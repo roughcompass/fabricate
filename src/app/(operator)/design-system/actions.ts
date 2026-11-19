@@ -19,6 +19,12 @@ export async function confirmDemo(): Promise<void> {
   redirect("/design-system?notice=confirmed#dialog");
 }
 
+/** Stands in for discarding a flow's values: it opens the Flow template's example at its first step, empty. */
+export async function discardFlowDemo(): Promise<void> {
+  developmentOnly();
+  redirect("/design-system#template-flow");
+}
+
 export interface DemoFormState {
   values: { name: string };
   errors: Partial<Record<"name" | "base", string[]>>;

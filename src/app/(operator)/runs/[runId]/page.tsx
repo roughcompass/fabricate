@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DetailsTemplate } from "@/components/templates/details-template";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProgressPoller } from "@/components/progress-poller";
@@ -9,7 +10,6 @@ import { DescriptionList } from "@/components/ui/description-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -59,13 +59,12 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
   const shownState = !terminal && run.cancelRequestedAt ? "canceling" : run.state;
 
   return (
-    <Page>
-      {!status.terminal && <ProgressPoller url={routes.runStatus(run.publicId)} version={status.version} />}
-      <PageHeader
-        breadcrumbs={context.parents}
-        title={name}
-        status={<Status state={shownState} />}
-        meta={[
+    <DetailsTemplate
+      header={{
+        breadcrumbs: context.parents,
+        title: name,
+        status: <Status state={shownState} />,
+        meta: [
           countLabel(targets.length, "Repository", "Repositories"),
           <span key="started">
             Started <RelativeTime value={run.createdAt} />
@@ -77,38 +76,38 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
                 </span>,
               ]
             : []),
-        ]}
-        description="Each scoped repository is pinned to a commit and profiled without running its code."
-        extraActions={
-          !terminal && !run.cancelRequestedAt ? (
-            <ConfirmDialog action={cancelRun.bind(null, run.publicId)} trigger={{ label: "Cancel Run", icon: "slash" }} title={`Cancel ${name}?`} confirmLabel="Cancel Run" tone="danger">
-              <p>Repositories that have not finished stop at their next check. Completed Profiles are kept.</p>
-            </ConfirmDialog>
-          ) : undefined
-        }
-        alerts={
-          <>
-            <OutcomeToast outcome={runOutcome(param(query, "notice"), run, name)} />
-            {run.state === "complete_with_issues" && (
-              <Alert tone="warning" title={`${failed.length} of ${countLabel(targets.length, "repository", "repositories")} could not be assessed`}>
-                <p>{`${failed.map((target) => target.repositoryName).join(", ")}: ${failed[0]?.failureMessage ?? "not assessed"}${failed.length > 1 ? " (and more below)" : ""}.`}</p>
-                <p>Their relationships are missing from the Relationship Map, and Evaluations treat what they could contain as unknown.</p>
-              </Alert>
-            )}
-            {run.state === "failed" && (
-              <Alert tone="error" title="No repository could be assessed">
-                {/* The stored reason often repeats the title; the rows below give each repository's reason. */}
-                {run.failureReason && !/^No repository could be assessed\.?$/i.test(run.failureReason) ? run.failureReason : "Each repository's reason is listed below."}
-              </Alert>
-            )}
-            {run.state === "canceled" && (
-              <Alert tone="info" title={`${countLabel(profiles.size, "completed Profile")} ${profiles.size === 1 ? "remains" : "remain"} reviewable.`}>
-                Repositories that had not finished when the Run was canceled were not profiled.
-              </Alert>
-            )}
-          </>
-        }
-      />
+        ],
+        description: "Each scoped repository is pinned to a commit and profiled without running its code.",
+        extraActions: !terminal && !run.cancelRequestedAt ? (
+          <ConfirmDialog action={cancelRun.bind(null, run.publicId)} trigger={{ label: "Cancel Run", icon: "slash" }} title={`Cancel ${name}?`} confirmLabel="Cancel Run" tone="danger">
+            <p>Repositories that have not finished stop at their next check. Completed Profiles are kept.</p>
+          </ConfirmDialog>
+        ) : undefined,
+      }}
+      alerts={
+        <>
+          <OutcomeToast outcome={runOutcome(param(query, "notice"), run, name)} />
+          {run.state === "complete_with_issues" && (
+            <Alert tone="warning" title={`${failed.length} of ${countLabel(targets.length, "repository", "repositories")} could not be assessed`}>
+              <p>{`${failed.map((target) => target.repositoryName).join(", ")}: ${failed[0]?.failureMessage ?? "not assessed"}${failed.length > 1 ? " (and more below)" : ""}.`}</p>
+              <p>Their relationships are missing from the Relationship Map, and Evaluations treat what they could contain as unknown.</p>
+            </Alert>
+          )}
+          {run.state === "failed" && (
+            <Alert tone="error" title="No repository could be assessed">
+              {/* The stored reason often repeats the title; the rows below give each repository's reason. */}
+              {run.failureReason && !/^No repository could be assessed\.?$/i.test(run.failureReason) ? run.failureReason : "Each repository's reason is listed below."}
+            </Alert>
+          )}
+          {run.state === "canceled" && (
+            <Alert tone="info" title={`${countLabel(profiles.size, "completed Profile")} ${profiles.size === 1 ? "remains" : "remain"} reviewable.`}>
+              Repositories that had not finished when the Run was canceled were not profiled.
+            </Alert>
+          )}
+        </>
+      }
+    >
+      {!status.terminal && <ProgressPoller url={routes.runStatus(run.publicId)} version={status.version} />}
 
       <Section title="Overview">
         {!terminal && <ProgressBar value={finished} max={targets.length} label={`${finished} of ${countLabel(targets.length, "repository", "repositories")} finished`} />}
@@ -172,7 +171,7 @@ export default async function RunPage({ params, searchParams }: PageProps<"/runs
           ]}
         />
       </Disclosure>
-    </Page>
+    </DetailsTemplate>
   );
 }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IndexTemplate } from "@/components/templates/index-template";
 import Form from "next/form";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -9,7 +10,6 @@ import { FilterRail } from "@/components/ui/filter-rail";
 import { MediaCard } from "@/components/ui/media-card";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { SearchField } from "@/components/ui/search-field";
 import { BRANDS, BRAND_IDS, PROVIDERS, PROVIDER_IDS, TEMPLATES } from "@/lib/demo/catalog";
 import { EMPTY_QUERY, filterTemplates, galleryHref, isFiltered, optionCounts, parseGalleryQuery } from "@/lib/demo/gallery";
@@ -32,33 +32,18 @@ export default async function TemplatesPage({ searchParams }: PageProps<"/templa
   const clearHref = galleryHref(EMPTY_QUERY);
 
   return (
-    <Page>
-      <PageHeader
-        title="Salt Patterns"
-        description="Jumpstart your app development process with pre-built solutions from DE Web and our community."
-        extraActions={
+    <IndexTemplate
+      header={{
+        title: "Salt Patterns",
+        description: "Jumpstart your app development process with pre-built solutions from DE Web and our community.",
+        extraActions: (
           <ConfirmDialog action={resetDemo} trigger={{ label: "Reset demo", icon: "undo" }} menu={{ label: "More actions" }} title="Reset the demo?" confirmLabel="Reset demo" tone="danger">
             {"Your comments, share links, and session profiles are removed. The templates and other visitors' work are not affected."}
           </ConfirmDialog>
-        }
-        alerts={<OutcomeToast outcome={demoOutcome(param(params, "notice"))} />}
-      />
-
-      <Form key={query.search} action="/templates" scroll={false} className={styles.search} role="search" aria-label="Search templates">
-        <HiddenFields values={{ brand: query.brands, provider: query.providers }} />
-        <SearchField
-          id="template-search"
-          name="q"
-          label="Search templates"
-          hideLabel
-          size="lg"
-          placeholder="Search by name, description, tag, or author"
-          defaultValue={query.search}
-          clearHref={galleryHref({ ...query, search: "" })}
-        />
-      </Form>
-
-      <div className={styles.layout}>
+        ),
+      }}
+      alerts={<OutcomeToast outcome={demoOutcome(param(params, "notice"))} />}
+      rail={
         <FilterRail
           key={galleryHref({ ...query, search: "" })}
           action="/templates"
@@ -73,45 +58,59 @@ export default async function TemplatesPage({ searchParams }: PageProps<"/templa
           filtered={filtered}
           clearHref={clearHref}
         />
-
-        <section className={styles.results} aria-labelledby="templates-results">
-          <h2 id="templates-results" className="visually-hidden">
-            Salt Patterns
-          </h2>
-          <p className={styles.count} role="status">{`Showing ${templates.length} of ${countLabel(TEMPLATES.length, "template")}`}</p>
-
-          {templates.length > 0 ? (
-            <ul className={styles.grid}>
-              {templates.map((template) => (
-                <li key={template.slug}>
-                  <MediaCard
-                    title={template.title}
-                    description={template.description}
-                    image={template.preview}
-                    href={`/templates/${template.slug}`}
-                    footer={<TemplateBadges template={template} />}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Panel flush>
-              <EmptyState
-                title="No templates match"
-                icon="search"
-                action={
-                  <ButtonLink href={clearHref} variant="primary">
-                    Clear filters
-                  </ButtonLink>
-                }
-              >
-                {query.search ? `No template matches “${query.search}” with the chosen filters.` : "No template matches the chosen filters."}
-              </EmptyState>
-            </Panel>
-          )}
-        </section>
-      </div>
-    </Page>
+      }
+      filters={
+        <Form key={query.search} action="/templates" scroll={false} className={styles.search} role="search" aria-label="Search templates">
+          <HiddenFields values={{ brand: query.brands, provider: query.providers }} />
+          <SearchField
+            id="template-search"
+            name="q"
+            label="Search templates"
+            hideLabel
+            size="lg"
+            placeholder="Search by name, description, tag, or author"
+            defaultValue={query.search}
+            clearHref={galleryHref({ ...query, search: "" })}
+          />
+        </Form>
+      }
+    >
+      <section className={styles.results} aria-labelledby="templates-results">
+        <h2 id="templates-results" className="visually-hidden">
+          Salt Patterns
+        </h2>
+        <p className={styles.count} role="status">{`Showing ${templates.length} of ${countLabel(TEMPLATES.length, "template")}`}</p>
+        {templates.length > 0 ? (
+          <ul className={styles.grid}>
+            {templates.map((template) => (
+              <li key={template.slug}>
+                <MediaCard
+                  title={template.title}
+                  description={template.description}
+                  image={template.preview}
+                  href={`/templates/${template.slug}`}
+                  footer={<TemplateBadges template={template} />}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Panel flush>
+            <EmptyState
+              title="No templates match"
+              icon="search"
+              action={
+                <ButtonLink href={clearHref} variant="primary">
+                  Clear filters
+                </ButtonLink>
+              }
+            >
+              {query.search ? `No template matches “${query.search}” with the chosen filters.` : "No template matches the chosen filters."}
+            </EmptyState>
+          </Panel>
+        )}
+      </section>
+    </IndexTemplate>
   );
 }
 

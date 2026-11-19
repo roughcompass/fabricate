@@ -1,0 +1,21 @@
+@layer components {
+  .indicator { display: flex; flex-direction: column; gap: var(--space-2); }
+  .position { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .steps { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin: 0; padding: 0; list-style: none; }
+  .step { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-text-secondary); }
+  .step[data-state="current"] { color: var(--color-text); font-weight: var(--font-weight-medium); }
+  .marker {
+    display: inline-grid;
+    place-items: center;
+    width: var(--size-icon-lg);
+    height: var(--size-icon-lg);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-caption);
+    font-variant-numeric: tabular-nums;
+  }
+  /* Done and current steps take the primary fill, as other filled marks do. */
+  .step[data-state="current"] .marker, .step[data-state="done"] .marker { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary); }
+  .label { font-size: var(--font-size-body); line-height: var(--line-height-body); }
+}

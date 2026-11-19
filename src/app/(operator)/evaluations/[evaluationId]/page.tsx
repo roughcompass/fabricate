@@ -1,4 +1,5 @@
 import type { JsonObject } from "@repo-facts/contract";
+import { DetailsTemplate } from "@/components/templates/details-template";
 import { parseCanonical } from "@repo-facts/contract";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -15,7 +16,6 @@ import { Select } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -76,16 +76,15 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
   const conclusionOf = (entry: JsonObject | null | undefined) => CONCLUSIONS[(entry?.conclusion as Conclusion | undefined) ?? "not_applicable"];
 
   return (
-    <Page>
-      {!status.terminal && <ProgressPoller url={routes.evaluationStatus(evaluation.publicId)} version={status.version} />}
-      <PageHeader
-        breadcrumbs={[
+    <DetailsTemplate
+      header={{
+        breadcrumbs: [
           { href: "/assessments", label: "Assessments" },
           { href: routes.assessment(assessment.publicId), label: assessment.name },
-        ]}
-        title={name}
-        status={<Status state={evaluation.state} />}
-        meta={[
+        ],
+        title: name,
+        status: <Status state={evaluation.state} />,
+        meta: [
           <Link key="assessment" href={routes.run(run.publicId)}>{`Run #${found.runNumber}`}</Link>,
           countLabel(releases.length, "Release"),
           <span key="started">
@@ -98,26 +97,28 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
                 </span>,
               ]
             : []),
-        ]}
-        description="A diagnostic comparison of one Run with the Standard Releases pinned when the Evaluation started."
-        alerts={
-          <>
-            <OutcomeToast outcome={evaluationOutcome(param(query, "notice"), evaluation, name)} />
-            {evaluation.state === "failed" && (
-              <Alert tone="error" title="The Evaluation failed">
-                {evaluation.failureReason ?? "It could not finish."}
-              </Alert>
-            )}
-            {gaps.length > 0 && (
-              <Alert tone="warning" title={`${countLabel(gaps.length, "repository", "repositories")} in the Run had no Profile`}>
-                {gaps.length === 1
-                  ? "What it could contain is unknown, so Controls that depend on it are Indeterminate rather than Meets or Gap."
-                  : "What they could contain is unknown, so Controls that depend on them are Indeterminate rather than Meets or Gap."}
-              </Alert>
-            )}
-          </>
-        }
-      />
+        ],
+        description: "A diagnostic comparison of one Run with the Standard Releases pinned when the Evaluation started.",
+      }}
+      alerts={
+        <>
+          <OutcomeToast outcome={evaluationOutcome(param(query, "notice"), evaluation, name)} />
+          {evaluation.state === "failed" && (
+            <Alert tone="error" title="The Evaluation failed">
+              {evaluation.failureReason ?? "It could not finish."}
+            </Alert>
+          )}
+          {gaps.length > 0 && (
+            <Alert tone="warning" title={`${countLabel(gaps.length, "repository", "repositories")} in the Run had no Profile`}>
+              {gaps.length === 1
+                ? "What it could contain is unknown, so Controls that depend on it are Indeterminate rather than Meets or Gap."
+                : "What they could contain is unknown, so Controls that depend on them are Indeterminate rather than Meets or Gap."}
+            </Alert>
+          )}
+        </>
+      }
+    >
+      {!status.terminal && <ProgressPoller url={routes.evaluationStatus(evaluation.publicId)} version={status.version} />}
 
       <Section title="Overview" description={releases.length > 1 ? "Each Release is concluded separately; Indeterminate and Not applicable never count as Gap or Meets." : "Indeterminate and Not applicable never count as Gap or Meets."}>
         {!status.terminal && <ProgressBar value={evaluated} max={releases.length} label={`${evaluated} of ${countLabel(releases.length, "Release")} evaluated`} />}
@@ -183,7 +184,7 @@ export default async function EvaluationPage({ params, searchParams }: PageProps
           ]}
         />
       </Disclosure>
-    </Page>
+    </DetailsTemplate>
   );
 }
 

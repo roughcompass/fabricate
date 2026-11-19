@@ -15,7 +15,8 @@ const ALL: NavFlags = { demo: true };
 function routes(directory = OPERATOR): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(directory, entry.name);
-    if (entry.isDirectory()) return routes(full);
+    // A parallel route's slot, such as the shell header's @header, mirrors pages that exist on their own.
+    if (entry.isDirectory()) return entry.name.startsWith("@") ? [] : routes(full);
     // Route groups such as (operator) aren't part of the address.
     return entry.name === "page.tsx" ? [`/${path.relative(OPERATOR, directory).split(path.sep).filter((segment) => !/^\(.*\)$/.test(segment)).join("/")}`.replace(/\/$/, "") || "/"] : [];
   });

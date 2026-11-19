@@ -14,7 +14,7 @@ export function Specimen({ id, title, description, render, single = false, stack
       </div>
       <div className={single || stacked ? styles.single : styles.pair}>
         {(single ? (["light"] as const) : (["light", "dark"] as const)).map((theme) => (
-          <div key={theme} data-theme={theme} className={styles.frame} role="region" aria-label={`${title}, ${theme}`}>
+          <div key={theme} data-theme={theme} data-specimen="" className={styles.frame} role="region" aria-label={`${title}, ${theme}`}>
             {render(theme)}
           </div>
         ))}

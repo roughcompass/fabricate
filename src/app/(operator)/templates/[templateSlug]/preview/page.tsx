@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
+import { EditorTemplate } from "@/components/templates/editor-template";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CodeBlock } from "@/components/ui/code-block";
 import { Icon } from "@/components/ui/icon";
 import { DeviceControls } from "@/components/preview/device-controls";
 import { DeviceFrame, PreviewScale } from "@/components/preview/device-frame";
-import { ShellHeader } from "@/components/shell/shell-header";
-import { Page } from "@/components/ui/page";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { referenceId, runPath, startRoute, templateBySlug } from "@/lib/demo/catalog";
 import { referenceUrl } from "@/lib/demo/deployments";
@@ -99,8 +98,7 @@ export default async function PreviewPage({ params, searchParams }: PageProps<"/
   const action = `/templates/${template.slug}/preview`;
 
   return (
-    <Page>
-      <ShellHeader title={`Preview ${template.title}`} back={{ href: `/templates/${template.slug}`, label: `Back to ${template.title}` }} />
+    <EditorTemplate focused={{ title: `Preview ${template.title}` }}>
 
       <div className={styles.workspace}>
         <PreviewScale>
@@ -142,6 +140,6 @@ export default async function PreviewPage({ params, searchParams }: PageProps<"/
           )}
         </PreviewScale>
       </div>
-    </Page>
+    </EditorTemplate>
   );
 }

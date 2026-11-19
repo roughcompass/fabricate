@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Page, PageHeader } from "@/components/ui/page";
+import { FormTemplate } from "@/components/templates/form-template";
 import { listRepositories } from "@/lib/repositories/repository-records";
 import { getDb } from "@/lib/db/client";
 import { createAssessment } from "../actions";
@@ -11,8 +11,13 @@ export const metadata: Metadata = { title: "New Assessment" };
 export default function NewAssessmentPage() {
   const db = getDb();
   return (
-    <Page width="form">
-      <PageHeader breadcrumbs={[{ href: "/assessments", label: "Assessments" }]} title="New Assessment" description="Choose which repositories to assess and, optionally, which published Releases to evaluate them against." />
+    <FormTemplate
+      header={{
+        breadcrumbs: [{ href: "/assessments", label: "Assessments" }],
+        title: "New Assessment",
+        description: "Choose which repositories to assess and, optionally, which published Releases to evaluate them against.",
+      }}
+    >
       <AssessmentForm
         action={createAssessment}
         initial={{ values: { name: "", objective: "", selectionMode: "all", repositoryPublicIds: [], standardReleasePublicIds: [] }, errors: {} }}
@@ -22,6 +27,6 @@ export default function NewAssessmentPage() {
         submitLabel="Create Assessment"
         cancelHref="/"
       />
-    </Page>
+    </FormTemplate>
   );
 }

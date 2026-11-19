@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProgressPoller } from "@/components/progress-poller";
+import { IndexTemplate } from "@/components/templates/index-template";
 import { ButtonLink } from "@/components/ui/button";
 import { countLabel } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,7 +9,6 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { Menu, MenuAction, MenuItem } from "@/components/ui/menu";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param, searchTerm } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { Status, humanize } from "@/components/ui/status";
 import { SearchField } from "@/components/ui/search-field";
@@ -45,35 +45,55 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
   );
 
   return (
-    <Page>
-      <PageHeader
-        title="Repositories"
-        description="Git repositories available to Assessments, each profiled in the background whenever it changes. Edits apply to Runs started afterward."
-        secondaryActions={[
-          { href: "/repositories/bulk", label: "Add in bulk", icon: "layers" },
-        ]}
-        primaryAction={create}
-        alerts={<OutcomeToast outcome={repositoryOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"))} />}
-      />
-
-      <div className={styles.toolbar}>
-        <p className={styles.count}>{countLabel(repositories.length, "Repository", "Repositories")}{repositories.length !== all.length ? ` of ${all.length}` : ""}</p>
-        <FilterBar key={search} action="/repositories" label="Search Repositories" filtered={Boolean(search)} clearHref={repositoriesHref()}>
-          <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref()} />
-        </FilterBar>
-      </div>
-
-      {busy && (
+    <IndexTemplate
+      header={{
+        title: "Repositories",
+        description: "Git repositories available to Assessments, each profiled in the background whenever it changes. Edits apply to Runs started afterward.",
+        secondaryActions: [{ href: "/repositories/bulk", label: "Add in bulk", icon: "layers" }],
+        primaryAction: create,
+      }}
+      alerts={<OutcomeToast outcome={repositoryOutcome(db, param(query, "notice"), param(query, "source"), param(query, "count"))} />}
+      filters={
         <>
-          {/* Refreshes the list as each version starts and finishes. */}
-          <ProgressPoller url="/api/repositories/profiling" version={activity.version} intervalMs={3_000} />
-          <p className={styles.activity} role="status" data-profiling-activity="">
-            {activity.profiling > 0 && <Status state="analyzing" label={`Profiling ${countLabel(activity.profiling, "Repository", "Repositories")}`} />}
-            {activity.queued > 0 && <Status state="queued" label={`${activity.queued} queued`} />}
-          </p>
+          <div className={styles.toolbar}>
+            <p className={styles.count}>
+              {countLabel(repositories.length, "Repository", "Repositories")}
+              {repositories.length !== all.length ? ` of ${all.length}` : ""}
+            </p>
+            <FilterBar key={search} action="/repositories" label="Search Repositories" filtered={Boolean(search)} clearHref={repositoriesHref()}>
+              <SearchField id="source-search" name="q" label="Search Repositories" hideLabel size="sm" placeholder="Search by name or clone URL" defaultValue={search} clearHref={repositoriesHref()} />
+            </FilterBar>
+          </div>
+          {busy && (
+            <>
+              {/* Refreshes the list as each version starts and finishes. */}
+              <ProgressPoller url="/api/repositories/profiling" version={activity.version} intervalMs={3_000} />
+              <p className={styles.activity} role="status" data-profiling-activity="">
+                {activity.profiling > 0 && <Status state="analyzing" label={`Profiling ${countLabel(activity.profiling, "Repository", "Repositories")}`} />}
+                {activity.queued > 0 && <Status state="queued" label={`${activity.queued} queued`} />}
+              </p>
+            </>
+          )}
         </>
-      )}
-
+      }
+      empty={
+        all.length === 0
+          ? {
+              title: "No Repositories yet",
+              icon: "git",
+              action: (
+                <>
+                  <ButtonLink href="/repositories/bulk" icon="layers">
+                    Add in bulk
+                  </ButtonLink>
+                  {create}
+                </>
+              ),
+              children: "Register file://, https://, or ssh:// Git repositories one at a time, or paste many clone URLs at once.",
+            }
+          : undefined
+      }
+    >
       <Panel flush>
         {repositories.length > 0 ? (
           <Table
@@ -126,26 +146,12 @@ export default async function RepositoriesPage({ searchParams }: PageProps<"/rep
               </tr>
             ))}
           </Table>
-        ) : search ? (
-          <EmptyState title="No matching Repositories" icon="search">{`No Repository name or clone URL contains “${search}”.`}</EmptyState>
         ) : (
-          <EmptyState
-            title="No Repositories yet"
-            icon="git"
-            action={
-              <>
-                <ButtonLink href="/repositories/bulk" icon="layers">
-                  Add in bulk
-                </ButtonLink>
-                {create}
-              </>
-            }
-          >
-            Register file://, https://, or ssh:// Git repositories one at a time, or paste many clone URLs at once.
-          </EmptyState>
+          // The filter bar above offers Clear filters.
+          <EmptyState title="No matching Repositories" icon="search">{`No Repository name or clone URL contains “${search}”.`}</EmptyState>
         )}
       </Panel>
-    </Page>
+    </IndexTemplate>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { HOME } from "@/components/shell/navigation";
-import { SystemPage } from "@/components/shell/system-page";
+import { SystemTemplate } from "@/components/templates/system-template";
 import { buttonProps } from "@/components/ui/button-content";
 
 /**
@@ -12,7 +12,7 @@ import { buttonProps } from "@/components/ui/button-content";
  */
 export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return (
-    <SystemPage
+    <SystemTemplate
       icon="alert"
       title="Something went wrong"
       actions={
@@ -28,6 +28,6 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
     >
       <p>This page could not be shown. Trying again often works; if it keeps failing, the server log has the details.</p>
       {error.digest && <p>{`Reference ${error.digest}`}</p>}
-    </SystemPage>
+    </SystemTemplate>
   );
 }

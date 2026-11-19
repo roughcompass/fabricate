@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { FormTemplate } from "@/components/templates/form-template";
 import { notFound } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { listRuns } from "@/lib/runs/run-records";
 import { listRepositories } from "@/lib/repositories/repository-records";
@@ -29,15 +29,16 @@ export default async function EditAssessmentPage({ params }: PageProps<"/assessm
   const assessed = listRuns(db, assessment.id).length > 0;
 
   return (
-    <Page width="form">
-      <PageHeader
-        breadcrumbs={[
+    <FormTemplate
+      header={{
+        breadcrumbs: [
           { href: "/assessments", label: "Assessments" },
           { href: routes.assessment(assessment.publicId), label: assessment.name },
-        ]}
-        title="Edit Assessment"
-        description="Changes apply to future Runs and Evaluations only."
-      />
+        ],
+        title: "Edit Assessment",
+        description: "Changes apply to future Runs and Evaluations only.",
+      }}
+    >
       <AssessmentForm
         action={updateAssessment.bind(null, assessment.publicId)}
         initial={{
@@ -70,6 +71,6 @@ export default async function EditAssessmentPage({ params }: PageProps<"/assessm
           }
         />
       )}
-    </Page>
+    </FormTemplate>
   );
 }

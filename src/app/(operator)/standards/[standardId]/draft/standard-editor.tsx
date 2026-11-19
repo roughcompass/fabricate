@@ -14,6 +14,7 @@ import { Tag } from "@/components/ui/tag";
 import { issueLocation } from "@/lib/standards/issue-location";
 import type { EditorVocabulary } from "../../vocabulary";
 import type { DraftSaveState } from "../../form-state";
+import { useReportDraftIssues } from "./draft-status";
 import { ExpressionEditor, type Json, defaultPredicate } from "./expression-editor";
 import { fieldProps } from "./fields";
 import { type ControlDraft, useControlList } from "./use-control-list";
@@ -28,6 +29,8 @@ import styles from "./editor.module.css";
  */
 
 interface StandardEditorProps {
+  /** The Standard's public ID, which the page header's status follows. */
+  standard: string;
   action: (previous: DraftSaveState, formData: FormData) => Promise<DraftSaveState>;
   initial: DraftSaveState;
   document: { [key: string]: Json };
@@ -40,18 +43,19 @@ const SUBJECT_OPTIONS = [
   { value: "relationship_map", label: "The Relationship Map" },
 ];
 
-export function StandardEditor({ action, initial, document, vocabulary, publishHref }: StandardEditorProps) {
+export function StandardEditor({ standard, action, initial, document, vocabulary, publishHref }: StandardEditorProps) {
   // The editor opens the Control an issue is in and focuses the field itself.
   return (
     <ActionForm action={action} initial={initial} focusInvalid={false} className={styles.editor}>
-      {(state) => <EditorBody state={state} document={document} vocabulary={vocabulary} publishHref={publishHref} />}
+      {(state) => <EditorBody standard={standard} state={state} document={document} vocabulary={vocabulary} publishHref={publishHref} />}
     </ActionForm>
   );
 }
 
 /** The editor's Controls and save bar, from the state of its latest save. */
-function EditorBody({ state, document, vocabulary, publishHref }: { state: DraftSaveState } & Pick<StandardEditorProps, "document" | "vocabulary" | "publishHref">) {
+function EditorBody({ standard, state, document, vocabulary, publishHref }: { state: DraftSaveState } & Pick<StandardEditorProps, "standard" | "document" | "vocabulary" | "publishHref">) {
   const { controls, open, dirty, issues, errorsFor, issueCount, setExpanded, update, move, add, remove, showIssue, serialized } = useControlList(document, vocabulary, state);
+  useReportDraftIssues(standard, issues.length);
 
   return (
     <>
@@ -142,7 +146,10 @@ function EditorBody({ state, document, vocabulary, publishHref }: { state: Draft
               Review and publish
             </ButtonLink>
           )}
-          <SubmitButton pendingLabel="Saving">Save draft</SubmitButton>
+          {/* Save is the primary action only while there's something to save (page-templates spec, Editor). */}
+          <SubmitButton pendingLabel="Saving" variant={dirty ? "primary" : "secondary"}>
+            Save draft
+          </SubmitButton>
         </div>
       </div>
     </>

@@ -3,36 +3,45 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { skeletonFor } from "@/components/shell/skeleton-routes";
 
-// A navigation shows the skeleton of the page being opened (design.md, decision 9).
+// A navigation shows the skeleton of the page being opened: its template's
+// skeleton (page-templates spec, "Every template has designed empty and loading states").
 describe("navigation skeletons", () => {
   it.each([
-    ["/", "home"],
-    ["/assessments", "list"],
+    ["/", "dashboard"],
+    ["/assessments", "index-tabs"],
     ["/repositories", "repositories"],
     ["/repositories/bulk", "form"],
-    ["/standards", "list"],
+    ["/standards", "index"],
+    ["/admin/bitbucket-tokens", "index"],
+    ["/admin/bitbucket-tokens/new", "form"],
     ["/assessments/new", "form"],
     ["/assessments/ini_abc/edit", "form"],
     ["/repositories/new", "form"],
-    ["/repositories/src_abc/settings", "form"],
+    ["/repositories/src_abc", "details-tabs"],
+    ["/repositories/src_abc/versions", "index"],
+    ["/repositories/src_abc/versions/3", "details-tabs"],
+    ["/repositories/src_abc/settings", "settings"],
     ["/repositories/src_abc/previews/pvw_abc", "focused"],
     ["/standards/new", "form"],
     ["/standards/std_abc/edit", "form"],
-    ["/assessments/ini_abc", "detail"],
-    ["/runs/asm_abc", "detail"],
-    ["/runs/asm_abc/map", "detail"],
-    ["/runs/asm_abc/evidence/ev_1", "detail"],
-    ["/evaluations/evl_abc", "detail"],
-    ["/evaluations/evl_abc/findings/fnd_1", "detail"],
-    ["/profiles/prf_abc", "detail"],
-    ["/standards/std_abc", "detail"],
-    ["/standards/std_abc/draft", "detail"],
-    ["/standards/std_abc/releases/rel_1", "detail"],
-    ["/templates", "list"],
-    ["/templates/market-watch", "detail"],
+    ["/standards/std_abc/publish", "form"],
+    ["/assessments/ini_abc", "details"],
+    ["/runs/asm_abc", "details"],
+    ["/runs/asm_abc/map", "analysis"],
+    ["/runs/asm_abc/map/systems/sys_1", "analysis"],
+    ["/runs/asm_abc/evidence/ev_1", "details"],
+    ["/evaluations/evl_abc", "details"],
+    ["/evaluations/evl_abc/findings/fnd_1", "details"],
+    ["/profiles/prf_abc", "details-tabs"],
+    ["/profiles/prf_abc/evidence/ev_1", "details"],
+    ["/standards/std_abc", "details"],
+    ["/standards/std_abc/draft", "editor"],
+    ["/standards/std_abc/releases/rel_1", "details"],
+    ["/templates", "cards"],
+    ["/templates/market-watch", "details"],
     ["/templates/market-watch/preview", "focused"],
     ["/templates/payments-workspace/preview", "focused"],
-    ["/templates/payments-workspace", "detail"],
+    ["/templates/payments-workspace", "details"],
   ])("shows the %s page's skeleton as %s", (pathname, kind) => {
     expect(skeletonFor(pathname)).toBe(kind);
   });
@@ -53,6 +62,9 @@ describe("navigation skeletons", () => {
     }
   });
 
+  // The templates' skeletons show while a navigation waits, through NavigationFeedback, rather than from loading.tsx:
+  // a Suspense boundary streams the page behind its fallback, which only a script reveals, so a browser without
+  // JavaScript would see only the skeleton, and a page that isn't found would answer 200.
   it("uses no route loading files, which would stream large pages behind a skeleton", () => {
     const found: string[] = [];
     const walk = (directory: string) => {

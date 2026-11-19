@@ -97,13 +97,15 @@
   }
 
   /*
-   * A focused page, such as preview mode, marks its header (ShellHeader's back variant), and the sidebar is hidden
-   * at every width while it is on the page. The operator's stored state is untouched, so the next page shows the
-   * sidebar as they left it. A page hidden behind a navigation skeleton doesn't count.
+   * A focused page, such as preview mode, marks its content (the Editor template's focused variant, and its
+   * skeleton), and the sidebar is hidden at every width while it is on the page, with the header's sidebar
+   * controls. The operator's stored state is untouched, so the next page shows the sidebar as they left it. A page
+   * hidden behind a navigation skeleton doesn't count.
    */
-  .shell:has([data-shell-header="focused"]:not([hidden] *)) .sidebar { display: none; }
+  .shell:has([data-focused-page]:not([hidden] *)) .sidebar { display: none; }
+  .shell:has([data-focused-page]:not([hidden] *)) [data-sidebar-control] { display: none; }
   @media (min-width: 1024px) {
-    .shell:has([data-shell-header="focused"]:not([hidden] *)) { grid-template-columns: 0 minmax(0, 1fr); }
+    .shell:has([data-focused-page]:not([hidden] *)) { grid-template-columns: 0 minmax(0, 1fr); }
   }
 
   .footer {
@@ -123,7 +125,7 @@
     .column { grid-column: 1; }
   }
 
-  /* Pages set their own measure and gutters (Page), so the shell header can span the column. */
+  /* Pages set their own measure and gutters (Page), so the shell header spans the column above them. */
   .main {
     padding-bottom: var(--space-16);
     &:focus { outline: none; }

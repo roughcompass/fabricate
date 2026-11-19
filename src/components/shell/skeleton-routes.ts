@@ -1,27 +1,36 @@
-/** Which page skeleton matches the page at a path; null for paths with none. */
-export type SkeletonKind = "home" | "list" | "repositories" | "detail" | "form" | "focused";
+/**
+ * Which page skeleton matches the page at a path; null for paths with none.
+ * Each is a template's skeleton (src/components/templates/), shaped as that
+ * page lays out its template's zones.
+ */
+export type SkeletonKind = "dashboard" | "index" | "index-tabs" | "repositories" | "cards" | "details" | "details-tabs" | "analysis" | "form" | "editor" | "settings" | "focused";
 
 const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
-  [/^\/$/, "home"],
+  [/^\/$/, "dashboard"],
   [/^\/(assessments|repositories|standards)\/new\/?$/, "form"],
-  [/^\/(assessments|repositories|standards)\/[^/]+\/edit\/?$/, "form"],
-  // The Repositories list lays out its own toolbar and columns.
-  [/^\/repositories\/?$/, "repositories"],
-  [/^\/(assessments|standards)\/?$/, "list"],
+  [/^\/(assessments|standards)\/[^/]+\/(edit|publish)\/?$/, "form"],
   [/^\/repositories\/bulk\/?$/, "form"],
-  [/^\/repositories\/[^/]+\/settings\/?$/, "form"],
-  [/^\/admin\/bitbucket-tokens\/?$/, "list"],
   [/^\/admin\/bitbucket-tokens\/new\/?$/, "form"],
-  // A Repository's page, its versions, and each version.
-  [/^\/repositories\/src_[^/]+(\/versions(\/[^/]+)?)?\/?$/, "detail"],
+  // The Repositories list lays out its own filter bar and columns.
+  [/^\/repositories\/?$/, "repositories"],
+  // The Assessments list has a tab for each conclusion.
+  [/^\/assessments\/?$/, "index-tabs"],
+  [/^\/(standards|admin\/bitbucket-tokens)\/?$/, "index"],
+  [/^\/repositories\/src_[^/]+\/versions\/?$/, "index"],
+  [/^\/repositories\/src_[^/]+\/settings\/?$/, "settings"],
+  // A Repository's page and each version show its Profile's views.
+  [/^\/repositories\/src_[^/]+(\/versions\/[^/]+)?\/?$/, "details-tabs"],
+  [/^\/profiles\/[^/]+\/?$/, "details-tabs"],
   // A repository preview is a focused page, like template preview.
   [/^\/repositories\/src_[^/]+\/previews\/[^/]+\/?$/, "focused"],
-  [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "detail"],
+  [/^\/runs\/[^/]+\/map(\/.*)?$/, "analysis"],
+  [/^\/standards\/[^/]+\/draft\/?$/, "editor"],
+  [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "details"],
   // The template demo's operator pages; running applications have no skeleton.
   // Preview mode is a focused page: its skeleton hides the sidebar as soon as the navigation starts.
   [/^\/templates\/[^/]+\/preview\/?$/, "focused"],
-  [/^\/templates\/?$/, "list"],
-  [/^\/templates\/[^/]+\/?$/, "detail"],
+  [/^\/templates\/?$/, "cards"],
+  [/^\/templates\/[^/]+\/?$/, "details"],
 ];
 
 export function skeletonFor(pathname: string): SkeletonKind | null {

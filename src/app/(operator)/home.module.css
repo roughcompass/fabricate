@@ -1,8 +1,4 @@
 @layer pages {
-  /* Home's rows of panels (home spec, "Home is laid out as a dashboard"): side by side at equal heights, stacked on a narrow content column. */
-  .row { display: grid; gap: var(--space-4); align-items: stretch; }
-  .row[data-columns="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
   /* Where the fleet stands: two Repositories cards and the Assessments card, three across. */
   .overview { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
   .group { display: flex; min-width: 0; }
@@ -52,6 +48,6 @@
   .attention { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 
   @container content (max-width: 1023px) {
-    .row[data-columns="2"], .overview { grid-template-columns: minmax(0, 1fr); }
+    .overview { grid-template-columns: minmax(0, 1fr); }
   }
 }

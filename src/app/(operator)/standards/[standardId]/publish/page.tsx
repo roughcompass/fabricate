@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { FormTemplate } from "@/components/templates/form-template";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -7,7 +8,6 @@ import { countLabel } from "@/components/ui/count";
 import { DescriptionList } from "@/components/ui/description-list";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { Section } from "@/components/ui/section";
 import { Tag } from "@/components/ui/tag";
@@ -53,42 +53,48 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
   );
 
   return (
-    <Page>
-      <PageHeader
-        breadcrumbs={[
+    <FormTemplate
+      header={{
+        breadcrumbs: [
           { href: "/standards", label: "Standards" },
           { href: routes.standard(standard.publicId), label: standard.name },
-        ]}
-        title={`Publish ${standard.name} v${nextVersion}`}
-        description="Review exactly what will be published."
-        primaryAction={publish}
-        alerts={
-          <>
-            <OutcomeToast outcome={publishOutcome(param(query, "notice"), standard)} />
-            {preview.issues.length > 0 && (
-              <Alert
-                tone="warning"
-                title={`The draft has ${countLabel(preview.issues.length, "problem")}, so it cannot be published`}
-                actions={
-                  <ButtonLink href={routes.standardDraft(standard.publicId)} icon="edit" size="sm">
-                    Fix the draft
-                  </ButtonLink>
-                }
-              >
-                <ul>
-                  {preview.issues.map((issue) => (
-                    <li key={`${issue.field}:${issue.message}`}>
-                      <strong>{issueLocation(issue.field, controls)}</strong>
-                      {`: ${issue.message}`}
-                    </li>
-                  ))}
-                </ul>
-              </Alert>
-            )}
-          </>
-        }
-      />
-
+        ],
+        title: `Publish ${standard.name} v${nextVersion}`,
+        description: "Review exactly what will be published.",
+      }}
+      width="content"
+      footer={
+        <>
+          <ButtonLink href={routes.standard(standard.publicId)}>Cancel</ButtonLink>
+          {publish}
+        </>
+      }
+      alerts={
+        <>
+          <OutcomeToast outcome={publishOutcome(param(query, "notice"), standard)} />
+          {preview.issues.length > 0 && (
+            <Alert
+              tone="warning"
+              title={`The draft has ${countLabel(preview.issues.length, "problem")}, so it cannot be published`}
+              actions={
+                <ButtonLink href={routes.standardDraft(standard.publicId)} icon="edit" size="sm">
+                  Fix the draft
+                </ButtonLink>
+              }
+            >
+              <ul>
+                {preview.issues.map((issue) => (
+                  <li key={`${issue.field}:${issue.message}`}>
+                    <strong>{issueLocation(issue.field, controls)}</strong>
+                    {`: ${issue.message}`}
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
+        </>
+      }
+    >
       <Section title="Publication">
         <DescriptionList surface
           items={[
@@ -108,6 +114,6 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
           <ControlList controls={document.controls ?? []} />
         </Panel>
       </Section>
-    </Page>
+    </FormTemplate>
   );
 }

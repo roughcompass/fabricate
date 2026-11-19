@@ -244,7 +244,7 @@
     line-height: var(--line-height-body);
   }
 
-  /* The page title, in the shell header: the heading step, like section headings. */
+  /* A top-level heading's default; the page header sets the page title at the subtitle size (page.module.css). */
   h1 {
     font-size: var(--font-size-heading);
     font-weight: var(--font-weight-semibold);

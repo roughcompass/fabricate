@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DetailsTemplate } from "@/components/templates/details-template";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionButton, ButtonLink } from "@/components/ui/button";
@@ -8,7 +9,6 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OutcomeToast } from "@/components/ui/outcome-toast";
 import { param } from "@/lib/web/query";
-import { Page, PageHeader } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Section } from "@/components/ui/section";
@@ -45,14 +45,15 @@ export default async function StandardPage({ params, searchParams }: PageProps<"
   const releases = releasesOf(db, standard.id);
 
   return (
-    <Page>
-      <PageHeader
-        breadcrumbs={[{ href: "/standards", label: "Standards" }]}
-        title={standard.name}
-        description={standard.purpose}
-        secondaryActions={[{ href: routes.standardEdit(standard.publicId), label: "Edit name and purpose", icon: "edit" }]}
-        alerts={<OutcomeToast outcome={standardOutcome(param(query, "notice"), standard)} />}
-      />
+    <DetailsTemplate
+      header={{
+        breadcrumbs: [{ href: "/standards", label: "Standards" }],
+        title: standard.name,
+        description: standard.purpose,
+        secondaryActions: [{ href: routes.standardEdit(standard.publicId), label: "Edit name and purpose", icon: "edit" }],
+      }}
+      alerts={<OutcomeToast outcome={standardOutcome(param(query, "notice"), standard)} />}
+    >
 
       <Section
         title="Draft"
@@ -149,6 +150,6 @@ export default async function StandardPage({ params, searchParams }: PageProps<"
           ]}
         />
       </Disclosure>
-    </Page>
+    </DetailsTemplate>
   );
 }
