@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 import { LEGACY_REDIRECTS } from "./src/lib/web/redirects";
+import { DOCS_REWRITES } from "./src/lib/web/rewrites";
 
 const root = path.dirname(new URL(import.meta.url).pathname);
 
@@ -34,6 +35,10 @@ const nextConfig: NextConfig = {
   // Addresses the product no longer serves open the pages that replaced them (src/lib/web/redirects.ts).
   redirects() {
     return Promise.resolve(LEGACY_REDIRECTS);
+  },
+  // A docs page's Markdown, at its `.md` address or for `Accept: text/markdown` (src/lib/web/rewrites.ts).
+  rewrites() {
+    return Promise.resolve({ beforeFiles: DOCS_REWRITES, afterFiles: [], fallback: [] });
   },
 };
 

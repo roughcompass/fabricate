@@ -80,6 +80,11 @@ for (const [key, entry] of pinned) {
 }
 for (const name of Object.keys(installed)) if (!pinned.some(([key]) => key === `node_modules/${name}`)) problems.push(`${name} is in the release but not in the lockfile`);
 
+// The docs the web server serves.
+for (const file of ["docs/site.yaml", "node_modules/@repo-facts/contract/docs/detector-contract.md", "node_modules/@repo-facts/contract/docs/reference-catalog.md"]) {
+  if (!fs.existsSync(path.join(release, file))) problems.push(`${file} is not in the release, so the docs can't be served`);
+}
+
 const bundle = installed["@repo-facts/bundle"];
 console.log(`Scanned ${files} files in ${path.relative(root, release)}${token ? " for the registry token" : " (no token given; checked for literal _authToken values only)"}.`);
 console.log(`Surveyor release: @repo-facts/bundle ${bundle?.version ?? "missing"} from commit ${bundle?.provenance?.commit ?? "unknown"}; lockfile pins ${lock.packages["node_modules/@repo-facts/bundle"]?.version}.`);

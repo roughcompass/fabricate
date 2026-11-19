@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/worker/main.ts!", "src/lib/db/migrate-cli.ts!", "src/lib/db/vacuum-cli.ts!", "src/lib/projection/rebuild-cli.ts!", "src/lib/config/print-cli.ts!", "src/lib/previews/doctor-cli.ts!", "next.config.ts!", "src/lib/web/redirects.ts!", "scripts/*.{mjs,ts}!"],
+  "entry": ["src/worker/main.ts!", "src/lib/db/migrate-cli.ts!", "src/lib/db/vacuum-cli.ts!", "src/lib/projection/rebuild-cli.ts!", "src/lib/config/print-cli.ts!", "src/lib/previews/doctor-cli.ts!", "next.config.ts!", "src/lib/web/redirects.ts!", "src/lib/web/rewrites.ts!", "scripts/*.{mjs,ts}!"],
   "project": ["src/**/*.{ts,tsx}!", "scripts/**/*.{mjs,ts}!"],
   "ignore": ["src/demo/runtime/generated/**"],
   "ignoreExportsUsedInFile": true,
