@@ -7,7 +7,12 @@ import { createTestDb, migrateToLatest, rawRun } from "../support/db";
 import { EXPORT_ORDERS, commitOf, viewedApplicationIn } from "../support/views";
 
 const DEMO_TABLES = ["demo_comments", "demo_shares", "demo_threads", "demo_workspaces"];
+/** Every table a workspace owns: the demo_ tables, and each workspace's choice of session preset (restore-toolbar-tools-and-branch-previews, design decision 8). */
+const WORKSPACE_TABLES = [...DEMO_TABLES, "session_preset_choices"];
 const DEMO_MIGRATIONS = ["0013_demo", "0014_demo_origin", "0015_demo_profiles", "0033_demo_imports_removed", "0037_demo_applications_removed", "0056_comments_and_shares_for_applications"];
+/** Migrations that change product tables and workspace tables together; their workspace statements are left out of the product schema. */
+const MIXED_MIGRATIONS = ["0058_saved_previews_and_session_presets"];
+const WORKSPACE_NAME = /demo_|session_preset_choices/;
 const DIGEST = "a".repeat(64);
 
 function tables(db: Db): string[] {
@@ -21,7 +26,10 @@ function count(db: Db, table: string): number {
 // Workspace tables (template-demo/demo-mode spec): owned by an anonymous
 // workspace and removed with it. Since add-applications (design decision 7)
 // their threads and share links belong to applications, removed with them
-// too; nothing else references or is referenced by them.
+// too. Since restore-toolbar-tools-and-branch-previews (design decisions 5
+// and 8) threads and share links also record a saved preview, and each
+// workspace's choice of session preset names one of an application's
+// presets. No product table references a workspace table.
 describe("demo schema", () => {
   let db: Db;
   beforeEach(() => {
@@ -60,27 +68,34 @@ describe("demo schema", () => {
       journal.entries = journal.entries.filter((entry) => !DEMO_MIGRATIONS.includes(entry.tag));
       fs.writeFileSync(journalFile, JSON.stringify(journal));
       for (const tag of DEMO_MIGRATIONS) fs.rmSync(path.join(folder, `${tag}.sql`));
+      for (const tag of MIXED_MIGRATIONS) {
+        const file = path.join(folder, `${tag}.sql`);
+        const statements = fs.readFileSync(file, "utf8").split("--> statement-breakpoint");
+        fs.writeFileSync(file, statements.filter((statement) => !WORKSPACE_NAME.test(statement)).join("--> statement-breakpoint"));
+      }
 
       const product = createTestDb(folder);
       const before = tables(product);
       const schemaOf = (handle: Db) =>
-        handle.$client.prepare("select name, sql from sqlite_master where name not like 'demo_%' and name not like 'sqlite_%' and name <> '__drizzle_migrations' order by name").all();
+        handle.$client
+          .prepare("select name, sql from sqlite_master where name not like 'demo_%' and name not like 'session_preset_choices%' and name not like 'sqlite_%' and name <> '__drizzle_migrations' order by name")
+          .all();
       const productSchema = schemaOf(product);
       product.$client.close();
 
-      expect(tables(db).filter((table) => !before.includes(table))).toEqual(DEMO_TABLES);
+      expect(tables(db).filter((table) => !before.includes(table))).toEqual(WORKSPACE_TABLES);
       expect(schemaOf(db)).toEqual(productSchema);
     } finally {
       fs.rmSync(folder, { recursive: true, force: true });
     }
   });
 
-  it("refers only to workspaces and applications, and no product table refers to a workspace table", () => {
+  it("refers only to workspaces, applications, saved previews, and session presets, and no product table refers to a workspace table", () => {
     for (const table of tables(db)) {
       const references = (db.$client.prepare(`pragma foreign_key_list(${table})`).all() as { table: string }[]).map((row) => row.table);
       for (const target of references) {
-        if (table.startsWith("demo_")) expect(target.startsWith("demo_") || target === "applications", `${table} -> ${target}`).toBe(true);
-        else expect(target.startsWith("demo_"), `${table} -> ${target}`).toBe(false);
+        if (WORKSPACE_TABLES.includes(table)) expect(target.startsWith("demo_") || ["applications", "application_previews", "session_presets"].includes(target), `${table} -> ${target}`).toBe(true);
+        else expect(WORKSPACE_TABLES.includes(target), `${table} -> ${target}`).toBe(false);
       }
     }
   });
@@ -139,6 +154,10 @@ describe("demo schema", () => {
     const owned = thread(owner);
     rawRun(db, "insert into demo_comments (public_id, thread_id, author_workspace_id, author_name, body, created_at) values ('cmt_0000000000000001', ?, ?, 'Sam', 'Ship v2', 0)", owned, owner);
     share(owner);
+    // The owner's choice of a session preset goes with it; the preset is the application's and stays.
+    const presetOf = viewedApplicationIn(db).id;
+    rawRun(db, "insert into session_presets (public_id, application_id, name, name_key, entries, created_at, updated_at) values ('ses_0000000000000001', ?, 'Admin user', 'admin user', '[{\"store\":\"local\",\"name\":\"user\",\"value\":\"admin\"}]', 0, 0)", presetOf);
+    rawRun(db, "insert into session_preset_choices (workspace_id, application_id, preset_id) values (?, ?, 1)", owner, presetOf);
 
     // A visitor's reply on the owner's thread survives the visitor's reset.
     rawRun(db, "insert into demo_comments (public_id, thread_id, author_workspace_id, author_name, body, created_at) values ('cmt_0000000000000002', ?, ?, 'Robin', 'Agreed', 1)", owned, visitor);
@@ -147,7 +166,8 @@ describe("demo schema", () => {
     expect(db.$client.prepare("select author_workspace_id as author from demo_comments where public_id = 'cmt_0000000000000002'").get()).toEqual({ author: null });
 
     rawRun(db, "delete from demo_workspaces where id = ?", owner);
-    for (const table of DEMO_TABLES) expect(count(db, table), table).toBe(0);
+    for (const table of WORKSPACE_TABLES) expect(count(db, table), table).toBe(0);
+    expect(count(db, "session_presets")).toBe(1);
   });
 
   it("rejects malformed hint state, share routes, and comments", () => {
