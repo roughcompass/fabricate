@@ -1,10 +1,13 @@
 import path from "node:path";
 import type { Db } from "../../src/lib/db/client";
 import { type BuildComposition, buildComposition } from "../../src/lib/applications/composition";
+import { createSavedPreview } from "../../src/lib/applications/pipeline";
+import { type SavedPreview, findSavedPreview } from "../../src/lib/applications/saved-previews";
 import { storeEntry } from "../../src/lib/catalog/entries";
 import { saltEntry } from "../../test/support/catalog";
 import { E2E_PREVIEW_SOURCES } from "./env";
-import { type FixtureApplication, commitToRemote, fixtureRemote, fixtureRepository, onboardFixture } from "./fixture-app";
+import { type FixtureApplication, commitToRemote, fixtureRemote, fixtureRepository, onboardFixture, settle } from "./fixture-app";
+import { serverConfig } from "./results";
 
 /*
  * The microfrontend fixtures (restore-toolbar-tools-and-branch-previews,
@@ -18,8 +21,9 @@ import { type FixtureApplication, commitToRemote, fixtureRemote, fixtureReposito
  * feature/blue-quotes to Quotes panel and feature/dark-blotter to Quotes
  * desk, and onboards both through the application pipeline, as
  * `buildOrdersPortal` does for Orders portal, with packages from the kept
- * package cache. Salt's Reference Catalog entry is stored first, so the
- * surveys recognize Salt and its provider.
+ * package cache, then saves a preview of each branch. Salt's Reference
+ * Catalog entry is stored first, so the surveys recognize Salt and its
+ * provider.
  *
  * As built, Quotes desk loads quotesPanel from 127.0.0.1:9311 and its ticker
  * from 127.0.0.1:9312, where nothing listens, so it shows "Quotes
@@ -65,19 +69,35 @@ export interface QuotesApplications {
   readonly desk: FixtureApplication;
   readonly panel: FixtureApplication;
   readonly commits: QuotesCommits;
+  /** The saved previews of feature/blue-quotes and feature/dark-blotter, Ready, unless setup was asked not to save them. */
+  readonly blueQuotes: SavedPreview | null;
+  readonly darkBlotter: SavedPreview | null;
+}
+
+/** Saves a preview of +branch+ of +build+'s application and settles its build, failing unless it's Ready. */
+async function savePreview(db: Db, build: FixtureApplication, branch: string): Promise<SavedPreview> {
+  const { saved } = await createSavedPreview(db, build.application.publicId, { ref: `refs/heads/${branch}` }, { config: serverConfig() });
+  await settle(db);
+  const ready = findSavedPreview(db, build.application.publicId, saved.key)!;
+  if (ready.status !== "ready" || !ready.current) throw new Error(`The saved preview of ${branch} isn't Ready: ${ready.status}`);
+  return ready;
 }
 
 /**
  * Fresh remotes for both fixtures, onboarded as the applications Quotes
  * panel and Quotes desk, each Ready with its current build of main and its
- * screenshot.
+ * screenshot, and, unless +saved+ is false, with a saved preview of its
+ * feature branch.
  */
-export async function buildQuotes(db: Db): Promise<QuotesApplications> {
+export async function buildQuotes(db: Db, options: { saved?: boolean } = {}): Promise<QuotesApplications> {
   const commits = quotesRemotes();
   storeEntry(db, saltEntry());
   const panel = await onboardFixture(db, fixtureRepository(db, QUOTES_PANEL_REMOTE, "quotes-panel"), { name: QUOTES_PANEL_NAME, description: "Live quotes, as a Module Federation remote and a single-spa ticker." });
   const desk = await onboardFixture(db, fixtureRepository(db, QUOTES_DESK_REMOTE, "quotes-desk"), { name: QUOTES_DESK_NAME, description: "A trading desk that composes the quotes panel and its ticker." });
-  return { desk, panel, commits };
+  if (options.saved === false) return { desk, panel, commits, blueQuotes: null, darkBlotter: null };
+  const blueQuotes = await savePreview(db, panel, BLUE_QUOTES);
+  const darkBlotter = await savePreview(db, desk, DARK_BLOTTER);
+  return { desk, panel, commits, blueQuotes, darkBlotter };
 }
 
 /** What the Profile of +build+'s current commit says it's composed of. */

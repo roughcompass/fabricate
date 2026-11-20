@@ -38,7 +38,7 @@ const background = (page: Page) => application(page).locator(":root").evaluate((
 
 test.describe("theme", () => {
   test("Dark applies without a reload, nested provider included; it survives a reload; and the application's own restores it", async ({ page, db }) => {
-    const { panel } = await buildQuotes(db);
+    const { panel } = await buildQuotes(db, { saved: false });
     await run(page, panel, "Quotes panel");
     // The remote's own page renders its root provider and the exposed module's nested one.
     expect(await providers(page)).toEqual(["html light salt-density-medium", "div light salt-density-medium"]);
@@ -84,7 +84,7 @@ test.describe("theme", () => {
 
 test.describe("event bus", () => {
   test("logs quotes:selected from the application and single-spa's routing events, and filters by name", async ({ page, db }) => {
-    const { desk } = await buildQuotes(db);
+    const { desk } = await buildQuotes(db, { saved: false });
     await run(page, desk, "Quotes desk");
     await application(page).getByRole("button", { name: "ACME" }).click();
     await expect(application(page).getByText("Selected: ACME")).toBeVisible();
@@ -109,7 +109,7 @@ test.describe("event bus", () => {
   });
 
   test("sends quotes:selected and the page shows EURUSD, refusing invalid JSON and a missing name first", async ({ page, db }) => {
-    const { desk } = await buildQuotes(db);
+    const { desk } = await buildQuotes(db, { saved: false });
     await run(page, desk, "Quotes desk");
     await openTool(page, "settings");
     const form = settings(page).locator("form").filter({ has: page.getByRole("heading", { name: "Send an event" }) });
@@ -145,7 +145,7 @@ test.describe("event bus", () => {
   });
 
   test("the log starts over when the frame reloads, and keeps through a route change", async ({ page, db }) => {
-    const { desk } = await buildQuotes(db);
+    const { desk } = await buildQuotes(db, { saved: false });
     await run(page, desk, "Quotes desk");
     await application(page).getByRole("button", { name: "GLOBEX" }).click();
     await application(page).getByRole("link", { name: "Blotter" }).click();

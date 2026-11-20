@@ -84,7 +84,7 @@ test("answers not found for an application that doesn't exist, with a way back t
 });
 
 test("agent attaches before module scripts: the event Quotes desk dispatches from its first module script is logged", async ({ page, db }) => {
-  const { desk } = await buildQuotes(db);
+  const { desk } = await buildQuotes(db, { saved: false });
   // The frame opens only once the agent can run in its first document, and the agent runs there before the page's own scripts.
   await page.goto(framedRun(desk, "/"));
   await waitForPage(page, "Quotes desk");

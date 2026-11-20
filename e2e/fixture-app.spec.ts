@@ -68,9 +68,13 @@ test("installs from the kept package cache with no registry to reach", async ({ 
 });
 
 test("onboards Quotes panel and Quotes desk, built with Rspack, each Profile reporting its composition and Salt", async ({ page, db }) => {
-  const { desk, panel, commits } = await buildQuotes(db);
+  const { desk, panel, commits, blueQuotes, darkBlotter } = await buildQuotes(db);
   expect(panel.application).toMatchObject({ name: "Quotes panel", status: "ready", current: { commitSha: commits.panel } });
   expect(desk.application).toMatchObject({ name: "Quotes desk", status: "ready", current: { commitSha: commits.desk } });
+  // Each feature branch is a saved preview, built and captured.
+  expect(blueQuotes).toMatchObject({ key: "feature-blue-quotes", label: "feature/blue-quotes", status: "ready", current: { commitSha: commits.blueQuotes } });
+  expect(darkBlotter).toMatchObject({ key: "feature-dark-blotter", label: "feature/dark-blotter", status: "ready", current: { commitSha: commits.darkBlotter } });
+  expect(blueQuotes!.screenshot).not.toBeNull();
   for (const build of [panel, desk]) expect(build.application.facts).toMatchObject({ frameworks: ["React"], buildTool: "Rspack" });
 
   // The remote exposes ./Quotes, is a single-spa application through its ticker, and renders Salt's provider.
@@ -97,4 +101,11 @@ test("onboards Quotes panel and Quotes desk, built with Rspack, each Profile rep
   await expect(page.getByRole("complementary", { name: "Ticker" })).toHaveText("Ticker unavailable");
   await page.goto(`${desk.base}blotter`);
   await expect(page.getByRole("heading", { name: "Blotter", level: 1 })).toBeVisible();
+
+  // The saved previews build their branches.
+  await page.goto(`/previews/${blueQuotes!.current!.preview}/`);
+  await expect(page.getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+  expect(await (await page.request.get(`/previews/${blueQuotes!.current!.preview}/ticker.js`)).text()).toContain("Blue ticker: ");
+  await page.goto(`/previews/${darkBlotter!.current!.preview}/blotter`);
+  await expect(page.getByRole("heading", { name: "Dark blotter", level: 1 })).toBeVisible();
 });
