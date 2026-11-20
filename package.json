@@ -31,7 +31,7 @@
     "lint": "eslint --max-warnings=0 .",
     "knip": "knip && knip --production --config knip.production.json",
     "typecheck": "next typegen && tsc --noEmit",
-    "duplication": "jscpd --min-lines 8 --min-tokens 70 --threshold 0.5 --reporters console src test e2e scripts",
+    "duplication": "jscpd --min-lines 8 --min-tokens 70 --threshold 0.5 --reporters console --ignore \"**/test/fixtures/apps/**\" src test e2e scripts",
     "check": "npm run typecheck && npm run lint && npm run knip && npm run duplication && npm test"
   },
   "dependencies": {

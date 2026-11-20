@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quotes desk</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "@fixtures/quotes-panel": "http://127.0.0.1:9312/ticker.js"
+        }
+      }
+    </script>
+    <script type="module">
+      // The desk's first module script: it says the desk is starting, before anything else runs.
+      window.dispatchEvent(new CustomEvent("quotes:desk-starting", { detail: { at: "first module script" } }));
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <aside id="single-spa-application:@fixtures/quotes-panel" aria-label="Ticker" style="padding: 8px 24px">Ticker unavailable</aside>
+  </body>
+</html>

@@ -17,6 +17,7 @@ import { TimingPanel } from "./timing/timing-panel";
 import { TimingProvider } from "./timing/timing-state";
 import { Toolbar } from "./toolbar";
 import type { MenuContext } from "./toolbar-menu";
+import { type ToolbarView, ToolbarViewContext } from "./view-context";
 import styles from "./running-application.module.css";
 
 /**
@@ -24,11 +25,13 @@ import styles from "./running-application.module.css";
  * design decisions 5 and 6), with the tools that inspect the frame's own
  * page: Comment and Comments, Accessibility, and Timing; Share, for the
  * application +slug+ in the view the share link +share+ opened, if any; and
- * the guided hints that point to them, from the workspace's +hints+ state. It
- * needs to read the page, so when the frame isn't same-origin it says so and
- * doesn't start.
+ * the guided hints that point to them, from the workspace's +hints+ state.
+ * The tools read the +view+ (restore-toolbar-tools-and-branch-previews):
+ * the application or saved preview shown, and what the Profile of its
+ * build's commit says it's composed of. It needs to read the page, so when
+ * the frame isn't same-origin it says so and doesn't start.
  */
-export function ApplicationToolbar({ slug, share, context, store, hints }: { slug: string; share: string | null; context: MenuContext; store: ThreadStore; hints: HintState }) {
+export function ApplicationToolbar({ slug, share, context, store, hints, view }: { slug: string; share: string | null; context: MenuContext; store: ThreadStore; hints: HintState; view: ToolbarView }) {
   const target = useTargetDocument();
   if (target.state === "unreadable")
     return (
@@ -39,13 +42,15 @@ export function ApplicationToolbar({ slug, share, context, store, hints }: { slu
       </div>
     );
   return (
-    <CommentsProvider store={store}>
-      <AuditProvider>
-        <TimingProvider>
-          <Tools context={context} hints={hints} share={<SharePanel slug={slug} name={context.name} share={share} />} />
-        </TimingProvider>
-      </AuditProvider>
-    </CommentsProvider>
+    <ToolbarViewContext value={view}>
+      <CommentsProvider store={store}>
+        <AuditProvider>
+          <TimingProvider>
+            <Tools context={context} hints={hints} share={<SharePanel slug={slug} name={context.name} share={share} />} />
+          </TimingProvider>
+        </AuditProvider>
+      </CommentsProvider>
+    </ToolbarViewContext>
   );
 }
 

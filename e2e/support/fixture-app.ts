@@ -9,7 +9,7 @@ import { requestPreparation } from "../../src/lib/previews/preparation";
 import type { PreviewBuild } from "../../src/lib/previews/records";
 import { cacheDirectory } from "../../src/lib/previews/storage";
 import { resolveCloneUrl } from "../../src/lib/repositories/registration";
-import { type Repository, findRepositoryByCanonicalUrl, insertRepository } from "../../src/lib/repositories/repository-records";
+import { type Repository, findRepositoryByCanonicalUrl, getRepository, insertRepository } from "../../src/lib/repositories/repository-records";
 import { SourceBoundary } from "../../src/lib/repositories/source-boundary";
 import { routes } from "../../src/lib/web/routes";
 import { git } from "../../test/support/git-fixture";
@@ -68,33 +68,48 @@ function applyChange(directory: string, change: FixtureChange): void {
   }
 }
 
+/** Replaces +remote+ with the fixture sources at +source+ committed on main, as +message+, and returns its head commit. */
+export function fixtureRemote(source: string, remote: string, message: string): string {
+  fs.rmSync(remote, { recursive: true, force: true });
+  copySources(source, remote);
+  git(remote, ["init", "--quiet", "-b", "main"]);
+  git(remote, ["add", "--all"]);
+  git(remote, ["commit", "--quiet", "-m", message]);
+  return git(remote, ["rev-parse", "HEAD"]).trim();
+}
+
 /** Replaces the remote with the fixture's sources committed on main, and returns its head commit. */
 export function ordersPortalRemote(): string {
-  fs.rmSync(ORDERS_PORTAL_REMOTE, { recursive: true, force: true });
-  copySources(SOURCE, ORDERS_PORTAL_REMOTE);
-  git(ORDERS_PORTAL_REMOTE, ["init", "--quiet", "-b", "main"]);
-  git(ORDERS_PORTAL_REMOTE, ["add", "--all"]);
-  git(ORDERS_PORTAL_REMOTE, ["commit", "--quiet", "-m", "Orders portal"]);
-  return git(ORDERS_PORTAL_REMOTE, ["rev-parse", "HEAD"]).trim();
+  return fixtureRemote(SOURCE, ORDERS_PORTAL_REMOTE, "Orders portal");
+}
+
+/** Commits +change+ to +remote+, on +branch+ (created from main when it's new), and returns the commit. */
+export function commitToRemote(remote: string, change: FixtureChange, options: { branch?: string; message?: string } = {}): string {
+  const branch = options.branch ?? "main";
+  const branches = git(remote, ["branch", "--format=%(refname:short)"]).split("\n");
+  git(remote, branches.includes(branch) ? ["checkout", "--quiet", branch] : ["checkout", "--quiet", "-b", branch, "main"]);
+  applyChange(remote, change);
+  git(remote, ["add", "--all"]);
+  git(remote, ["commit", "--quiet", "-m", options.message ?? "Change the fixture"]);
+  const commit = git(remote, ["rev-parse", "HEAD"]).trim();
+  git(remote, ["checkout", "--quiet", "main"]);
+  return commit;
 }
 
 /** Commits +change+ to the remote, on +branch+ (created from main when it's new), and returns the commit. */
 export function commitToOrdersPortal(change: FixtureChange, options: { branch?: string; message?: string } = {}): string {
-  const branch = options.branch ?? "main";
-  const branches = git(ORDERS_PORTAL_REMOTE, ["branch", "--format=%(refname:short)"]).split("\n");
-  git(ORDERS_PORTAL_REMOTE, branches.includes(branch) ? ["checkout", "--quiet", branch] : ["checkout", "--quiet", "-b", branch, "main"]);
-  applyChange(ORDERS_PORTAL_REMOTE, change);
-  git(ORDERS_PORTAL_REMOTE, ["add", "--all"]);
-  git(ORDERS_PORTAL_REMOTE, ["commit", "--quiet", "-m", options.message ?? "Change the orders portal"]);
-  const commit = git(ORDERS_PORTAL_REMOTE, ["rev-parse", "HEAD"]).trim();
-  git(ORDERS_PORTAL_REMOTE, ["checkout", "--quiet", "main"]);
-  return commit;
+  return commitToRemote(ORDERS_PORTAL_REMOTE, change, { message: "Change the orders portal", ...options });
+}
+
+/** The Repository for +remote+, registered as +name+ on first use like any other. */
+export function fixtureRepository(db: Db, remote: string, name: string): Repository {
+  const resolved = resolveCloneUrl(`file://${remote}`, new SourceBoundary(serverConfig()));
+  return findRepositoryByCanonicalUrl(db, resolved.canonicalUrl) ?? insertRepository(db, { name, ...resolved, gitRef: null });
 }
 
 /** The Repository for the remote, registered on first use like any other. */
 export function ordersPortalRepository(db: Db): Repository {
-  const remote = resolveCloneUrl(`file://${ORDERS_PORTAL_REMOTE}`, new SourceBoundary(serverConfig()));
-  return findRepositoryByCanonicalUrl(db, remote.canonicalUrl) ?? insertRepository(db, { name: "orders-portal", ...remote, gitRef: null });
+  return fixtureRepository(db, ORDERS_PORTAL_REMOTE, "orders-portal");
 }
 
 /**
@@ -143,13 +158,13 @@ export interface FixtureApplication {
 
 export const ORDERS_PORTAL_NAME = "Orders portal";
 
-/** The application named +name+ as it stands, with its current build, failing unless it's Ready with a screenshot. */
-function readyApplication(db: Db, slug: string): FixtureApplication {
+/** The application at +slug+ as it stands, with its current build, failing unless it's Ready with a screenshot. */
+export function readyApplication(db: Db, slug: string): FixtureApplication {
   const application = getApplication(db, slug);
   if (application.status !== "ready" || !application.current) throw new Error(`${application.name} isn't Ready: ${application.status}, ${application.latest.reasons.map((reason) => reason.text).join(" ")}`);
   if (!application.screenshot) throw new Error(`${application.name} has no screenshot of its current build`);
   const preview = db.select().from(previewBuilds).where(eq(previewBuilds.publicId, application.current.preview)).get()!;
-  return { repository: ordersPortalRepository(db), application, preview, base: `/previews/${preview.publicId}/` };
+  return { repository: getRepository(db, application.repository.publicId), application, preview, base: `/previews/${preview.publicId}/` };
 }
 
 /**
@@ -162,12 +177,20 @@ function readyApplication(db: Db, slug: string): FixtureApplication {
  * `ordersPortalRemote` first.
  */
 export async function buildOrdersPortal(db: Db, options: { name?: string } = {}): Promise<FixtureApplication> {
+  return onboardFixture(db, ordersPortalRepository(db), { name: options.name ?? ORDERS_PORTAL_NAME, description: "Accounts, orders, and settings for the orders team." });
+}
+
+/**
+ * Onboards +repository+'s main branch as an application named +name+, as
+ * onboarding's pages do, and settles every job, so it returns the
+ * application Ready, with its current build and its screenshot.
+ */
+export async function onboardFixture(db: Db, repository: Repository, details: { name: string; description: string }): Promise<FixtureApplication> {
   const config = serverConfig();
-  const repository = ordersPortalRepository(db);
   linkKeptPackageCache();
   const preparation = await prepareBranch(db, repository.publicId, "main", { config });
   await settle(db);
-  const created = createApplication(db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: preparation.publicId, name: options.name ?? ORDERS_PORTAL_NAME, description: "Accounts, orders, and settings for the orders team.", trusted: true }, config);
+  const created = createApplication(db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: preparation.publicId, ...details, trusted: true }, config);
   await settle(db);
   return readyApplication(db, created.slug);
 }

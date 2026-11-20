@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { RunningApplication } from "@/components/toolbar/running-application";
 import { requireApplications } from "@/lib/applications/availability";
+import { buildComposition } from "@/lib/applications/composition";
 import { findApplication } from "@/lib/applications/records";
 import { APPLICATION_STATUS_LABELS } from "@/lib/applications/status";
 import { getConfig } from "@/lib/config";
@@ -53,6 +54,7 @@ export default async function RunRoute({ params, searchParams }: PageProps<"/run
       share={view.access === "share" ? token : null}
       notice={notice}
       hints={workspace?.hints ?? {}}
+      composition={buildComposition(db, build.preview, application.packageDir)}
     />
   );
 }

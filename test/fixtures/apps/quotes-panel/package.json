@@ -1,0 +1,22 @@
+{
+  "name": "@fixtures/quotes-panel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live quotes, as a Module Federation remote and a single-spa ticker.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "rspack build --mode production"
+  },
+  "dependencies": {
+    "@salt-ds/core": "1.75.0",
+    "@salt-ds/theme": "1.48.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@rspack/cli": "2.2.8",
+    "@rspack/core": "2.2.8"
+  }
+}
