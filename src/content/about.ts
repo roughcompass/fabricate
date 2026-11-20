@@ -32,7 +32,7 @@ export const ABOUT = {
   description: `What the ${PRODUCT.name} is, why to use it, and how to start.`,
 
   hero: {
-    // Decision 14 offers two headline directions; DE product and design choose one when they approve the copy.
+    // Decision 14's first headline direction, approved with the rest of this copy on 2026-11-19 (CHANGELOG.md).
     title: "Every CIB frontend repository and what it's built on, in one place",
     lead: `The ${PRODUCT.name} is the Digital Enablement team's official registry of CIB frontend applications.`,
     actions: [ADD, DOCS] as const,
