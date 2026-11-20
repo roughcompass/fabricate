@@ -205,7 +205,9 @@ function EligibilityStep({ choices, packages, cancel }: { choices: Choices; pack
           <Alert tone="error" title={`${choices.repository!.name} can't become an application`}>
             Applications need a client-rendered single-page application whose build produces static files. Each failed condition is below, with the facts behind it.
           </Alert>
-          <RefusalTable refusal={preparationRefusal(preparation)} verdicts={preparationPackages(preparation)} label="Why the branch can't become an application" />
+          <div className={styles.refusal}>
+            <RefusalTable refusal={preparationRefusal(preparation)} verdicts={preparationPackages(preparation)} label="Why the branch can't become an application" />
+          </div>
         </>
       )}
       {preparation.state === "ready" && <PackageChoice choices={choices} packages={packages} qualifying={qualifying} />}

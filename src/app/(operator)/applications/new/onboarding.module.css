@@ -16,4 +16,10 @@
   .chosen strong { color: var(--color-text); font-weight: var(--font-weight-medium); }
   .checking { display: flex; flex-direction: column; gap: var(--space-2); }
   .changeable { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); }
+  /*
+   * The refusal's four columns don't fit the step's panel, which is narrower than the content column, so the
+   * panel is their content container: the table lays out for its width, as labelled rows, instead of breaking
+   * names and paths mid-word.
+   */
+  .refusal { container: content / inline-size; }
 }

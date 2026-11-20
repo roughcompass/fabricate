@@ -155,6 +155,9 @@ test("A repository in another language: each failed condition is named, and no C
   await expect(page.getByText(/Applications need a client-rendered single-page application whose build produces static files/)).toBeVisible();
   const conditions = page.getByRole("table", { name: "Why the branch can't become an application" });
   await expect(conditions).toContainText("browser framework");
+  // The step's panel is narrower than four columns need, so each condition is a block of labelled rows, its reason as wide as the table (the walkthrough found names broken mid-word).
+  const [table, reason] = await Promise.all([conditions.boundingBox(), conditions.getByRole("cell").filter({ hasText: "browser framework" }).first().boundingBox()]);
+  expect(reason!.width).toBeGreaterThan(table!.width * 0.6);
   await expect(page.getByRole("button", { name: "Create application" })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Name" })).toHaveCount(0);
 });

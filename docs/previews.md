@@ -4,7 +4,7 @@ A repository preview builds one client-rendered single-page application, or a mi
 
 Previews are the one place the Frontend Registry builds repository code. Assessments and Profiles stay strictly static, and a preview never adds facts to a Profile.
 
-> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications' builds, automatic rebuilds, and screenshots are in place below the pages that show them, which add-applications builds next.
+> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications, with their pages, onboarding, builds, automatic rebuilds, screenshots, and preview mode, are in place, and were checked against the fleet on 2026-11-19 ([verification/applications-walkthrough.md](../verification/applications-walkthrough.md)); running an application full screen comes with the toolbar.
 
 ## Turn previews on
 
@@ -237,6 +237,8 @@ A worker that stops in the middle of a build gives the attempt back to the queue
 ## Applications
 
 An application (add-applications) is a Repository's package that the Frontend Registry keeps built from one branch. Its builds are ordinary previews of that Repository, commit, and package, made by the pipeline above, so a commit is built once whether an application or an operator asked for it. An application points at two of them: its current build, the last that succeeded, and its latest attempt. It also keeps a history of every attempt it starts: its first build, those the automatic check starts, a Rebuild, and a branch switch, each with its commit, the preview and attempt that built it, and how it ended. Previews of other branches and tags that preview mode builds aren't in it. A newer commit's build becomes current only when it succeeds, so a failed or refused commit leaves the last good build serving and its screenshot shown.
+
+Onboarding (New application, or a Repository page's Create application) checks the chosen branch's head before anything is built: it prepares that commit as [Preparing a commit](#preparing-a-commit) describes, which reads it statically and needs no enrollment, and shows Checking… until it's decided. Creating the application then enrolls the remote, after the operator confirms trust, records the application, and queues its first build, in one step. In preview mode, choosing another branch or tag builds the application's package at its head as an ordinary preview of the Repository; it never changes the tracked branch or the current build, and isn't in the application's build history.
 
 ### Automatic rebuilds
 
