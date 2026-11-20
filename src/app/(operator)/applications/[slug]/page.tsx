@@ -123,8 +123,10 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
     >
       <div className={styles.detail}>
         <div className={styles.overview}>
+          {/* Beside the image the overview has a third of the page, so each term sits above its value, which keeps a commit or a package's path on one line. */}
           <DescriptionList
             surface
+            layout="columns"
             items={[
               ["Repository", <Link key="repository" href={routes.repository(application.repository.publicId)}>{application.repository.name}</Link>],
               ["Package", application.packageDir === "." ? "The repository root" : <Tag key="package">{application.packageDir}</Tag>],

@@ -231,6 +231,11 @@ test.describe("an application's page", () => {
     await expect(overview).toContainText("React · Vite · pnpm");
     await expect(overview).toContainText("Ready");
     await expect(page.getByRole("figure").getByRole("img", { name: `Screenshot of Orders portal at commit ${preview.commitSha.slice(0, 7)}` })).toBeVisible();
+    // Beside the image, each term sits above its value, and the commit keeps to one line (the walkthrough found it broken across two).
+    const term = await overview.getByText("Current build", { exact: true }).boundingBox();
+    const commit = await overview.getByText(preview.commitSha.slice(0, 7), { exact: true }).boundingBox();
+    expect(commit!.y).toBeGreaterThanOrEqual(term!.y + term!.height - 1);
+    expect(commit!.height).toBeLessThan(term!.height * 1.6);
   });
 
   test("Later build fails: the page keeps the screenshot, says Latest build failed with the reason and its log, and lists the builds newest first", async ({ page, db, sourcesDir }) => {

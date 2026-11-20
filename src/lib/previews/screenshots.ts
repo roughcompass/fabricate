@@ -125,6 +125,7 @@ export function screenshotDirectoryName(artifact: string): string {
 /** The image file of a ready screenshot, or null when it has none or its file is missing. */
 export function screenshotFile(config: FrontendRegistryConfig, previewPublicId: string, screenshot: Pick<PreviewScreenshot, "state" | "directory">, size: ScreenshotSize): string | null {
   if (screenshot.state !== "ready" || screenshot.directory === null || !/^screenshots\/\d+-[a-z0-9]+$/.test(screenshot.directory)) return null;
-  const file = path.join(previewDirectory(config, previewPublicId), ...screenshot.directory.split("/"), SCREENSHOT_FILES[size]);
-  return fs.existsSync(file) ? file : null;
+  // The ignores keep the web server's build from tracing every file the pattern could reach: the images live in previews.storage, outside the build.
+  const file = path.join(/*turbopackIgnore: true*/ previewDirectory(config, previewPublicId), ...screenshot.directory.split("/"), SCREENSHOT_FILES[size]);
+  return fs.existsSync(/*turbopackIgnore: true*/ file) ? file : null;
 }
