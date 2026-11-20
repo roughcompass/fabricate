@@ -72,6 +72,8 @@ const settingsSchema = z.strictObject({
   // their logs, published output, and package caches live under storage.
   // browser is what captures applications' screenshots: Playwright's
   // Chromium when null, else a Playwright channel or a browser's path.
+  // refCacheSeconds is how long preview mode reuses a remote's branches and
+  // tags before reading them again; 0 reads them on every view.
   previews: z.strictObject({
     enabled: z.boolean(),
     browser: z
@@ -87,6 +89,7 @@ const settingsSchema = z.strictObject({
     timeoutMinutes: positiveInteger,
     maxOutputBytes: positiveInteger,
     maxStorageBytes: positiveInteger,
+    refCacheSeconds: z.int().min(0),
   }),
 });
 
@@ -136,6 +139,7 @@ export const ENV_KEYS = {
   previewsTimeoutMinutes: "FRONTEND_REGISTRY_PREVIEWS_TIMEOUT_MINUTES",
   previewsMaxOutputBytes: "FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES",
   previewsMaxStorageBytes: "FRONTEND_REGISTRY_PREVIEWS_MAX_STORAGE_BYTES",
+  previewsRefCacheSeconds: "FRONTEND_REGISTRY_PREVIEWS_REF_CACHE_SECONDS",
 } as const;
 
 export interface AnalysisBudgets {
@@ -160,6 +164,8 @@ export interface PreviewSettings {
   readonly timeoutMinutes: number;
   readonly maxOutputBytes: number;
   readonly maxStorageBytes: number;
+  /** How long preview mode reuses a remote's branches and tags, in seconds; 0 reads them on every view. */
+  readonly refCacheSeconds: number;
 }
 
 export interface FrontendRegistryConfig {
@@ -308,6 +314,7 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
       timeoutMinutes: settings.previews.timeoutMinutes,
       maxOutputBytes: settings.previews.maxOutputBytes,
       maxStorageBytes: settings.previews.maxStorageBytes,
+      refCacheSeconds: settings.previews.refCacheSeconds,
     },
     settings,
   });
@@ -404,6 +411,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [previews, "timeoutMinutes", integer(ENV_KEYS.previewsTimeoutMinutes)],
     [previews, "maxOutputBytes", integer(ENV_KEYS.previewsMaxOutputBytes)],
     [previews, "maxStorageBytes", integer(ENV_KEYS.previewsMaxStorageBytes)],
+    [previews, "refCacheSeconds", integer(ENV_KEYS.previewsRefCacheSeconds)],
   ];
   for (const [target, key, value] of assignments) if (value !== undefined) target[key] = value;
   result.analysis = analysis;
@@ -416,7 +424,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
 }
 
 /** Variables added after the rename, which never had an old name to fall back to. */
-const NEW_SINCE_RENAME: ReadonlySet<string> = new Set([ENV_KEYS.catalogRegistry, ENV_KEYS.adoptionSnapshotDays, ENV_KEYS.adoptionRarelyUsedPercentile, ENV_KEYS.previewsBrowser]);
+const NEW_SINCE_RENAME: ReadonlySet<string> = new Set([ENV_KEYS.catalogRegistry, ENV_KEYS.adoptionSnapshotDays, ENV_KEYS.adoptionRarelyUsedPercentile, ENV_KEYS.previewsBrowser, ENV_KEYS.previewsRefCacheSeconds]);
 
 /**
  * The environment with each variable's name from before the rename read where its

@@ -183,6 +183,33 @@ test("A tag that can't be previewed: the frame area shows the failure indicator 
   await expect(page.locator('[data-ref-state="refused"]')).toContainText(/browser framework|no such package/);
 });
 
+test.describe("a remote with many tags, without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("lists branches and the highest-numbered tags, finds the rest by name, and shows the one chosen", async ({ page, db, sourcesDir }) => {
+    await ordersPortal(db, sourcesDir);
+    const remote = path.join(sourcesDir, "orders-web");
+    for (let index = 0; index < 30; index += 1) git(remote, ["tag", `v1.0.${index}`]);
+    await page.goto(preview);
+    const choice = page.getByRole("combobox", { name: "Branch or tag" });
+    await expect(choice.locator("option")).toHaveCount(1 + 1 + 20);
+    await expect(choice.locator("optgroup[label='Tags'] option").first()).toHaveText("v1.0.29");
+    await expect(page.getByRole("status").filter({ hasText: "The list has every branch and the highest-numbered 20 of 31 tags." })).toBeVisible();
+
+    const finder = page.getByRole("search", { name: "Find a branch or tag" });
+    await finder.getByRole("searchbox", { name: "Find a branch or tag" }).fill("v1.0.3");
+    await finder.getByRole("button", { name: "Find" }).click();
+    await expect(page).toHaveURL(/find=v1\.0\.3/);
+    await expect(page.getByRole("status").filter({ hasText: "1 branch or tag matches “v1.0.3”." })).toBeVisible();
+    await expect(choice.locator("optgroup[label='Tags'] option")).toHaveText(["v1.0.3"]);
+    // The ref shown stays choosable once the search is cleared.
+    await choice.selectOption("refs/tags/v1.0.3");
+    await page.getByRole("button", { name: "Show" }).click();
+    await expect(page).toHaveURL(/ref=refs%2Ftags%2Fv1\.0\.3/);
+    await expect(choice).toHaveValue("refs/tags/v1.0.3");
+  });
+});
+
 test.describe("the controls and the browser window", () => {
   test("names each icon control with a tooltip on focus, and frames the build in a centered window with equal padding", async ({ page, db, sourcesDir }) => {
     await ordersPortal(db, sourcesDir);

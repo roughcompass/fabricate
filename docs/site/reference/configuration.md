@@ -34,6 +34,7 @@ Settings live in `config/frontend-registry.json`. Its `shared` section applies e
 | `previews.timeoutMinutes` | `FRONTEND_REGISTRY_PREVIEWS_TIMEOUT_MINUTES` | 15 |
 | `previews.maxOutputBytes` | `FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES` | 209715200 |
 | `previews.maxStorageBytes` | `FRONTEND_REGISTRY_PREVIEWS_MAX_STORAGE_BYTES` | 5368709120 |
+| `previews.refCacheSeconds` | `FRONTEND_REGISTRY_PREVIEWS_REF_CACHE_SECONDS` | 60; how long preview mode reuses a remote's branches and tags, 0 to read them on every view |
 
 List variables separate entries with the platform's path separator, `:` on macOS and Linux. Trusted preview sources are separated by spaces, and Node versions are `version=directory` pairs. Switches accept `true`, `false`, `1`, or `0`.
 
