@@ -16,7 +16,7 @@ Its **current Profile** is the Profile of its newest successful survey of the co
 
 ## Access
 
-The worker reads remotes with its own credentials: an SSH agent for `ssh://` remotes, and a Git credential helper for `https://` ones. A clone URL never holds credentials. A local `file://` Repository must sit inside a root the installation allows. See [Configuration and environment variables](../reference/configuration.md).
+The worker reads remotes with the installation's credentials: an SSH agent for `ssh://` remotes, the Bitbucket token saved for a Bitbucket server's `https://` remotes, and a Git credential helper for other `https://` ones. A clone URL never holds credentials. A local `file://` Repository must sit inside a root the installation allows. See [Git credentials](../reference/configuration.md#git-credentials).
 
 ## Deleting one
 

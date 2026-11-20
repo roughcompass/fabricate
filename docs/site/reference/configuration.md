@@ -15,7 +15,7 @@ Settings live in `config/frontend-registry.json`. Its `shared` section applies e
 | `workerConcurrency` | `FRONTEND_REGISTRY_WORKER_CONCURRENCY` | 3; jobs the worker runs at once |
 | `database` | `FRONTEND_REGISTRY_DATABASE` | `storage/fabricate.sqlite3`, a name kept so existing installations keep their data |
 | `repositoryStorage` | `FRONTEND_REGISTRY_REPOSITORY_STORAGE` | `storage/repositories`; the worker's Git mirrors |
-| `gitCredentialHelper` | `FRONTEND_REGISTRY_GIT_CREDENTIAL_HELPER` | None; a Git credential helper for HTTPS remotes |
+| `gitCredentialHelper` | `FRONTEND_REGISTRY_GIT_CREDENTIAL_HELPER` | None; a Git credential helper for HTTPS remotes that have no [saved Bitbucket token](#bitbucket-tokens) |
 | `analysis.maxBlobBytes` | `FRONTEND_REGISTRY_MAX_BLOB_BYTES` | 1048576; the largest file Surveyor reads |
 | `analysis.maxLockfileBytes` | `FRONTEND_REGISTRY_MAX_LOCKFILE_BYTES` | 33554432; the largest lockfile |
 | `analysis.maxFiles` | `FRONTEND_REGISTRY_MAX_FILES` | 4000 |
@@ -43,7 +43,32 @@ The things the Reference Catalog describes are listed in `config/catalog.yaml`: 
 
 ## Git credentials
 
-The Frontend Registry never stores Git credentials, and refuses clone URLs that hold them. For HTTPS remotes, set `gitCredentialHelper`; the system and global Git configuration are ignored. For SSH remotes, load the key into an SSH agent the worker reaches through `SSH_AUTH_SOCK`.
+A clone URL never holds credentials: the Frontend Registry refuses one that does. Git reaches a remote with what the installation gives it:
+
+- **Bitbucket Server and Data Center over HTTPS:** a token saved for the server under Admin; see [Bitbucket tokens](#bitbucket-tokens).
+- **Other HTTPS remotes:** set `gitCredentialHelper`. The system and global Git configuration are ignored, so a helper configured only there isn't used.
+- **SSH remotes:** load the key into an SSH agent the worker reaches through `SSH_AUTH_SOCK`. Git runs in batch mode, so a missing or locked key fails instead of prompting.
+
+### Bitbucket tokens
+
+A saved Bitbucket token is what Git sends to the repositories on its server when it lists their branches and tags and fetches their commits: for Runs, background surveys, and Re-profile. It isn't used for SSH or local repositories, or for preview mode's list of branches and tags and preview builds.
+
+To save one, open [Bitbucket tokens](/admin/bitbucket-tokens), under Admin, and choose **Add token**:
+
+1. **Owner** is who the token belongs to, such as a person or a team. It only labels the token.
+2. **Server** is the server's base URL: its `https://` address, with its context path if it has one. It's the start of the server's clone URLs, before `/scm/`, so for clone URLs like `https://bitbucket.example.com/bitbucket/scm/team/app.git` it's `https://bitbucket.example.com/bitbucket`.
+3. **Token** is an HTTP access token or a personal access token with Repository read permission for every repository on that server the Frontend Registry should read. A project's or a repository's HTTP access token reads only that project or repository, so for several projects, use a personal access token of an account that can read them all. Once saved, it's shown only by its last four characters.
+
+Git sends the token, as a bearer token, only to clone URLs on the same origin, port included, whose path is the server's context path or under it, so `https://bitbucket.example.com/bitbucket` isn't used for `https://bitbucket.example.com/bitbucket-other/…`. When saved servers on one origin are nested, the one with the longer path is used. Clone URLs whose paths hold `%`-escapes or a `;` get no token.
+
+A server has one token, whoever owns it. A second save for the same server, in any spelling of its address, is refused under **Server** with "This server already has a token, saved for *owner*; delete it to save a new one", and the saved token stays. To replace a token, such as when Bitbucket refuses it, delete it first: on [Bitbucket tokens](/admin/bitbucket-tokens), open the actions in its row, choose **Delete**, and confirm with **Delete token**. Then add the new one. Git uses the new token from its next read. Deleting a token here doesn't revoke it in Bitbucket.
+
+A Git request with a saved token tries no other credential and follows no redirect:
+
+- When Bitbucket refuses the token, the repository fails with `authentication_failed`; replace the token.
+- When the server redirects, the repository fails with `source_unavailable`; change the repository's clone URL to its canonical one, as Bitbucket's Clone dialog shows it.
+
+Tokens are stored in the database as given, so the database file is as sensitive as the tokens.
 
 ## Names from before
 

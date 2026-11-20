@@ -153,9 +153,10 @@ The SQLite database and the managed Git object databases share one directory. In
 
 ### Git credentials
 
-The Frontend Registry never stores credentials. It rejects clone URLs that embed a password or access token, and it never shows credentials on Repositories or in Run records.
+The Frontend Registry rejects clone URLs that embed a password or access token, and it never shows credentials on Repositories or in Run records.
 
-- **HTTPS:** set `gitCredentialHelper` to a Git credential helper available to the worker, such as `osxkeychain` or `store`. The Frontend Registry ignores the system and global Git configuration, so a helper configured only there is not used.
+- **Bitbucket Server and Data Center over HTTPS:** save an access token with Repository read permission for each server under Admin, at `/admin/bitbucket-tokens`. Its server is the base URL of the server's clone URLs, with any context path, such as `https://bitbucket.example.com/bitbucket`. A server has one token; to replace it, delete it, then add the new one. Git sends it as a bearer header, in its own environment, with the `ls-remote` and `fetch` that Runs, background surveys, and Re-profile run for a clone URL on that server, with no credential helper and no redirects. Preview mode's ref list and preview builds don't use it. See [Git credentials](docs/site/reference/configuration.md#git-credentials).
+- **Other HTTPS remotes:** set `gitCredentialHelper` to a Git credential helper available to the worker, such as `osxkeychain` or `store`. The Frontend Registry ignores the system and global Git configuration, so a helper configured only there is not used.
 - **SSH:** load the key into an SSH agent that the worker can reach through `SSH_AUTH_SOCK`. Git runs in batch mode, so a missing or locked key fails the acquisition instead of prompting.
 
 ## Run in production
@@ -234,7 +235,7 @@ The code names records as the interface does. The database keeps the names its t
 | Assessments | `/assessments`, `/assessments/new`, and `/assessments/<ini_ id>` with its `/edit` page |
 | Runs | `/runs/<asm_ id>`, with its `/map` and `/evidence/<id>` pages |
 | Repositories | `/repositories`, `/repositories/new`, `/repositories/bulk`, and `/repositories/<src_ id>` with its `/settings`, `/versions`, and `/versions/<number>` pages |
-| Admin | `/admin/bitbucket-tokens` and `/admin/bitbucket-tokens/new`; `/admin` opens the first. Bitbucket Server access tokens are saved in the SQLite database as given and never shown again, only their last four characters, so the database file is as sensitive as the tokens |
+| Admin | `/admin/bitbucket-tokens` and `/admin/bitbucket-tokens/new`; `/admin` opens the first. Bitbucket Server access tokens, one per server, are saved in the SQLite database as given and never shown again, only their last four characters, so the database file is as sensitive as the tokens. Git sends a server's token to its HTTPS clone URLs |
 | Evaluations and Profiles | `/evaluations/<id>` and `/profiles/<id>`, unchanged |
 
 `/` opens Home: the fleet's figures, each linked to the list it counts, and the problems that need attention. Addresses from before the rename, under `/initiatives`, `/sources`, and `/assessments/<asm_ id>`, redirect permanently to the new ones (`next.config.ts`).

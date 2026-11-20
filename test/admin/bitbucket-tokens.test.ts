@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
 import { addBitbucketToken, bitbucketTokenFor, deleteBitbucketToken, findBitbucketToken, listBitbucketTokens, serverBaseUrl } from "@/lib/admin/bitbucket-tokens";
 import type { Db } from "@/lib/db/client";
@@ -80,6 +81,12 @@ describe("Bitbucket Server tokens", () => {
     end`);
     expect(issuesOf(() => addBitbucketToken(db, form()))).toEqual({ serverUrl: "This server already has a token; delete it to save a new one" });
     expect(listBitbucketTokens(db)).toEqual([]);
+  });
+
+  it("is quoted in the operator docs as a duplicate save reports it", () => {
+    addBitbucketToken(db, form());
+    const { serverUrl } = issuesOf(() => addBitbucketToken(db, form({ name: "Web team" })));
+    expect(fs.readFileSync("docs/site/reference/configuration.md", "utf8")).toContain(`"${serverUrl!.replace("Platform team", "*owner*")}"`);
   });
 
   it("frees a server for a new token once its token is deleted", () => {

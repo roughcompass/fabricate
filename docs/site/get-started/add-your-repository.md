@@ -2,7 +2,7 @@
 
 Register your repository once, and the Frontend Registry surveys it and keeps its Profile current.
 
-You need the repository's clone URL. The Frontend Registry reads it with the credentials its worker already has, so leave any user name, password, or token out of the URL.
+You need the repository's clone URL. The Frontend Registry reads it with the credentials its installation already has, such as a Bitbucket token an administrator saved for its server, so leave any user name, password, or token out of the URL.
 
 ## Add it
 

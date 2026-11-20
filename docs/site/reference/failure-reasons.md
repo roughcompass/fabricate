@@ -8,8 +8,8 @@ A survey that can't fetch its commit, and a Run's repository that can't read its
 
 | Reason | What happened | What to do |
 | --- | --- | --- |
-| `authentication_failed` | The remote refused the worker's credentials | Give the worker access, through an SSH key in its agent or a Git credential helper; then Re-profile |
-| `source_unavailable` | The remote couldn't be reached, or doesn't have the repository | Check the clone URL in the repository's Settings, and that the remote is up |
+| `authentication_failed` | The remote refused the worker's credentials | Give the worker access: for a Bitbucket server, save a token with read access for it under Admin, or delete and replace the one it refused; otherwise an SSH key in its agent or a Git credential helper. Then Re-profile. See [Git credentials](configuration.md#git-credentials) |
+| `source_unavailable` | The remote couldn't be reached, doesn't have the repository, or redirected a request that carried a saved Bitbucket token | Check the clone URL in the repository's Settings, and that the remote is up; after a redirect, use the canonical clone URL |
 | `invalid_ref` | The reference names no branch, tag, or commit the remote has | Fix the reference in Settings |
 | `ambiguous_ref` | The reference names both a branch and a tag | Name it in full, such as `refs/heads/main` |
 | `timeout` | Git took longer than the configured timeout | Try again; an administrator can raise `gitTimeoutSeconds` |

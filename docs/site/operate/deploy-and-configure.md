@@ -28,7 +28,7 @@ Keep the storage directory outside the release directory, through `FRONTEND_REGI
 
 Every setting can be set in `config/frontend-registry.json` or by an environment variable: see [Configuration and environment variables](../reference/configuration.md). At least:
 
-- give the worker Git access to your remotes, through an SSH agent or a credential helper;
+- give the worker Git access to your remotes: a token saved under Admin for each Bitbucket server, and an SSH agent or a credential helper for other remotes (see [Git credentials](../reference/configuration.md#git-credentials));
 - point `catalog.registry` at a registry the worker can reach, such as CIB's internal npm mirror, so it can build Reference Catalog entries.
 
 ## When a change alters the projection

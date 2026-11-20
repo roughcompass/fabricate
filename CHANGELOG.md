@@ -18,8 +18,18 @@ It also brings applications (OpenSpec change `add-applications`), available whil
 
 Upgrading: back up `storage/fabricate.sqlite3`, then run `npm run db:migrate`, `npm run projection:rebuild`, and `npm run db:vacuum` (see the README).
 
+It also reads private Bitbucket repositories with saved tokens (OpenSpec change `use-saved-git-tokens`):
+
+- **Saved tokens on Git reads.** Runs, background surveys, and Re-profile send the Bitbucket token saved for a repository's server, as a bearer header, when Git lists its references and fetches its commits. Such a request uses no credential helper and follows no redirect, and its failures never show the token. Preview mode's ref list and preview builds don't use it.
+- **One token per server.** A server has one saved token, whoever owns it; a second save is refused on the Server field until the first is deleted. Migration 0057 keeps the newest token of a server that has several and deletes the others, and `npm run db:migrate` lists each one it deleted.
+- **Pinned versions.** `better-sqlite3` 13.0.3, and `@playwright/test` and `playwright-core` 1.65.0, so tests and screenshots share one Chromium build.
+
+Upgrading from the release before it: stop the web server and worker, back up the database, run `npm install` and `npx playwright install chromium`, then `npm run db:migrate`, and read what it says it deleted before starting them again.
+
 ### Approval
 
 The marketing copy in `src/content/about.ts`, including its hero headline ("Every CIB frontend repository and what it's built on, in one place"), and the docs under `docs/site/` were approved for release by Martin on 2026-11-19 (task 10.11).
 
 The interface text of applications, onboarding, preview mode, the toolbar, share links, and workspaces, and `docs/applications.md`, were approved for release by Martin on 2026-11-19.
+
+Not yet approved: the interface text `use-saved-git-tokens` adds or changes (the Add token form's Owner and Server descriptions, the duplicate-save error on Server, and the `authentication_failed` failure sentence), and its changes to `docs/site/` (`reference/configuration.md`, `reference/failure-reasons.md`, `concepts/repositories.md`, `operate/deploy-and-configure.md`, and `get-started/add-your-repository.md`).
