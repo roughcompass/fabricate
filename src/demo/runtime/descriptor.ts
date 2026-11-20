@@ -1,7 +1,20 @@
-import type { EnvironmentId, Profile } from "@/lib/demo/catalog";
-import type { ShareState } from "@/lib/demo/shares";
+import type { EnvironmentId, Persona, Profile } from "@/lib/demo/catalog";
 import type { HintState } from "@/lib/demo/workspaces";
 import type { PortalExperience } from "./portal/types";
+
+/**
+ * A view's state as the demo's share links captured it: its route,
+ * microfrontend overrides, theme, and session profile. Share links now
+ * belong to applications (add-applications), so a reference deployment
+ * never receives one; the runtime keeps the type until it's removed.
+ */
+export interface ShareState {
+  readonly route: string;
+  readonly overrides: Readonly<Record<string, { readonly version: string; readonly environment: EnvironmentId }>>;
+  readonly theme: "light" | "dark";
+  readonly persona: string;
+  readonly profile?: { readonly name: string; readonly persona: Persona; readonly region: string };
+}
 
 /**
  * Everything the browser needs to run one view of an application, resolved on

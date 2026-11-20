@@ -1,67 +1,56 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
-import { resolveView } from "@/lib/demo/access";
-import { type ShareState, createShare, findShare } from "@/lib/demo/shares";
+import { type ViewedApplication, resolveApplicationView, sharedApplication } from "@/lib/demo/access";
+import { createShare, findShare } from "@/lib/demo/shares";
 import { newWorkspaceKey } from "@/lib/demo/workspace-key";
 import { type Workspace, ensureWorkspace, resetWorkspace } from "@/lib/demo/workspaces";
 import { createTestDb } from "../support/db";
+import { commitOf, viewedApplicationIn } from "../support/views";
 
-const STATE: ShareState = { route: "watch", overrides: {}, theme: "dark", persona: "approver" };
+/*
+ * Who sees which view of a running application (template-demo/demo-mode
+ * spec, "Each visitor works in an anonymous workspace"): each workspace its
+ * own, and the sharer's through a share link to that application.
+ */
 
-describe("demo view access", () => {
+describe("application views", () => {
   let db: Db;
   let owner: Workspace;
   let stranger: Workspace;
+  let orders: ViewedApplication;
   beforeEach(() => {
     db = createTestDb();
     owner = ensureWorkspace(db, newWorkspaceKey());
     stranger = ensureWorkspace(db, newWorkspaceKey());
+    orders = viewedApplicationIn(db, "Orders portal");
   });
   afterEach(() => db.$client.close());
 
-  it("refuses unknown templates and anything that isn't a reference deployment", () => {
-    expect(resolveView(db, "ref-no-such-template", owner)).toBeNull();
-    expect(resolveView(db, "app_0000000000000000", owner)).toBeNull();
-    expect(resolveView(db, "../etc/passwd", owner)).toBeNull();
+  const share = (workspace: Workspace, application = orders) => createShare(db, application.id, workspace.id, { commit: commitOf("a"), route: "/accounts/42" });
+
+  it("gives each workspace its own private view of an application", () => {
+    expect(resolveApplicationView(db, orders, owner)).toEqual({ application: orders, viewWorkspaceId: owner.id, access: "own" });
+    expect(resolveApplicationView(db, orders, stranger)).toMatchObject({ access: "own", viewWorkspaceId: stranger.id });
+    expect(resolveApplicationView(db, orders, null)).toMatchObject({ access: "own", viewWorkspaceId: null });
   });
 
-  it("gives each workspace its own private view of a reference deployment", () => {
-    const mine = resolveView(db, "ref-market-watch", owner);
-    const theirs = resolveView(db, "ref-market-watch", stranger);
-    const anonymous = resolveView(db, "ref-market-watch", null);
+  it("shares a view, exposing the sharer's comments only through the link, to that application only", () => {
+    const token = share(owner);
+    expect(resolveApplicationView(db, orders, stranger, token)).toMatchObject({ access: "share", viewWorkspaceId: owner.id, share: { commit: commitOf("a"), route: "/accounts/42" } });
+    expect(resolveApplicationView(db, orders, null, token).viewWorkspaceId).toBe(owner.id);
+    expect(sharedApplication(db, findShare(db, token)!)).toEqual(orders);
 
-    expect(mine).toMatchObject({ access: "reference", viewWorkspaceId: owner.id });
-    expect(theirs).toMatchObject({ access: "reference", viewWorkspaceId: stranger.id });
-    expect(anonymous).toMatchObject({ access: "reference", viewWorkspaceId: null });
-    expect(mine!.template.slug).toBe("market-watch");
+    // Another application, a forged token, or a malformed one opens the visitor's own view.
+    const billing = viewedApplicationIn(db, "Billing");
+    expect(resolveApplicationView(db, billing, stranger, token)).toMatchObject({ access: "own", viewWorkspaceId: stranger.id });
+    expect(resolveApplicationView(db, orders, stranger, "A".repeat(43))).toMatchObject({ access: "own", viewWorkspaceId: stranger.id });
+    expect(resolveApplicationView(db, orders, stranger, "nope")).toMatchObject({ access: "own" });
   });
 
-  it("shares a reference deployment view, exposing the sharer's private comments only through the link", () => {
-    const token = createShare(db, "market-watch", owner.id, STATE);
-
-    expect(resolveView(db, "ref-market-watch", stranger, token)).toMatchObject({ access: "share", viewWorkspaceId: owner.id, shareState: STATE });
-    expect(resolveView(db, "ref-market-watch", null, token)?.viewWorkspaceId).toBe(owner.id);
-    expect(resolveView(db, "ref-market-watch", stranger)?.viewWorkspaceId).toBe(stranger.id);
-  });
-
-  it("refuses a token used for a different reference deployment, a forged token, and a malformed token", () => {
-    const token = createShare(db, "market-watch", owner.id, STATE);
-
-    expect(resolveView(db, "ref-payments-workspace", stranger, token)).toBeNull();
-    expect(resolveView(db, "ref-market-watch", stranger, "A".repeat(43))).toBeNull();
-    expect(resolveView(db, "ref-market-watch", stranger, "nope")).toBeNull();
-  });
-
-  it("stops honoring a link once the sharer resets the demo", () => {
-    const token = createShare(db, "market-watch", owner.id, STATE);
-
+  it("stops honoring a link once the sharer resets their workspace", () => {
+    const token = share(owner);
     resetWorkspace(db, owner.id);
-    expect(resolveView(db, "ref-market-watch", stranger, token)).toBeNull();
     expect(findShare(db, token)).toBeNull();
-  });
-
-  it("rejects share state outside the schema", () => {
-    expect(() => createShare(db, "market-watch", owner.id, { ...STATE, theme: "neon" } as never)).toThrow();
-    expect(() => createShare(db, "market-watch", owner.id, { ...STATE, route: "../admin" })).toThrow();
+    expect(resolveApplicationView(db, orders, stranger, token)).toMatchObject({ access: "own", viewWorkspaceId: stranger.id });
   });
 });

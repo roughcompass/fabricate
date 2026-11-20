@@ -1,43 +1,27 @@
 import { NextResponse } from "next/server";
+import { applicationsAvailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
-import { referenceId, routeByPath, runPath, startRoute, templateBySlug } from "@/lib/demo/catalog";
-import { demoUnavailable } from "@/lib/demo/guard";
-import { shareCookieName } from "@/lib/demo/runtime-view";
+import { sharedApplication } from "@/lib/demo/access";
 import { findShare } from "@/lib/demo/shares";
-import { WORKSPACE_COOKIE_MAX_AGE } from "@/lib/demo/workspace-key";
+import { routes } from "@/lib/web/routes";
 
 /**
- * A share link that no longer resolves opens the running application's
- * not-found page, which offers a way back (page-patterns spec), rather than a
- * bare 404. A relative Location keeps the browser on the host it used.
+ * Opens a share link (template-demo/toolbar spec, "Shared links open the
+ * captured view"): the application running at the captured route, with the
+ * token in the address, so the page opens the shared view's comments and
+ * the captured commit's build, or the current build when that one is gone.
+ * A link that no longer resolves, because the sharer reset their workspace
+ * or the application was deleted, and any link while previews are off, opens
+ * the running application's not-found page, which offers a way back
+ * (page-patterns spec, "Share links that no longer resolve lead back to
+ * Applications") and shows nothing of the application. Relative Locations
+ * keep the browser on the host it used.
  */
-const notFound = () => new NextResponse(null, { status: 303, headers: { Location: "/run/unavailable" } });
-
-/**
- * Opens a share link: remembers its token for the application in an httpOnly
- * cookie (the runtime renders from a layout, which cannot read query
- * parameters) and redirects to the shared route (design.md, decision 11).
- */
-export async function GET(request: Request, { params }: { params: Promise<{ token: string }> }) {
-  const unavailable = demoUnavailable();
-  if (unavailable) return unavailable;
+export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const share = findShare(getDb(), token);
-  const template = share && templateBySlug(share.referenceSlug);
-  if (!share || !template) return notFound();
-  const applicationId = referenceId(template.slug);
-
-  const route = routeByPath(template.app, share.state.route) ?? startRoute(template.app);
-  // A relative Location keeps the browser on the host it used, where its cookies are.
-  const response = new NextResponse(null, { status: 303, headers: { Location: runPath(applicationId, route.path) } });
-  response.cookies.set({
-    name: shareCookieName(applicationId),
-    value: token,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: new URL(request.url).protocol === "https:",
-    path: "/",
-    maxAge: WORKSPACE_COOKIE_MAX_AGE,
-  });
-  return response;
+  const db = getDb();
+  const share = applicationsAvailable() ? findShare(db, token) : null;
+  const application = share && sharedApplication(db, share);
+  const location = share && application ? routes.runningApplication(application.slug, share.route, { share: token }) : "/run/unavailable";
+  return new NextResponse(null, { status: 303, headers: { Location: location } });
 }

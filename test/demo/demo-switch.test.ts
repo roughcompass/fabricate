@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getConfig, setConfig, withOverrides } from "@/lib/config";
 import { type Db, setDb } from "@/lib/db/client";
-import { createShare } from "@/lib/demo/shares";
 import { WORKSPACE_COOKIE, newWorkspaceKey } from "@/lib/demo/workspace-key";
 import { ensureWorkspace } from "@/lib/demo/workspaces";
 import { createTestDb } from "../support/db";
@@ -16,14 +15,12 @@ vi.mock("next/navigation", async () => ({ ...(await import("../support/next")).n
 describe("demo switch off", () => {
   let db: Db;
   const applicationId = "ref-market-watch";
-  let token: string;
 
   beforeEach(() => {
     db = createTestDb();
     setDb(db);
     const key = newWorkspaceKey();
-    const workspace = ensureWorkspace(db, key);
-    token = createShare(db, "market-watch", workspace.id, { route: "watch", overrides: {}, theme: "light", persona: "analyst" });
+    ensureWorkspace(db, key);
     cookieJar.clear();
     cookieJar.set(WORKSPACE_COOKIE, key);
     setConfig(withOverrides(getConfig(), { demo: { enabled: false } }));
@@ -48,35 +45,6 @@ describe("demo switch off", () => {
     // Without the demo, the layout leaves the address to the page, which finds no application by that name.
     expect(await RunLayout({ children: null, params: Promise.resolve({ slug: applicationId }) })).toBeNull();
     expect(await redirectOf(RunRoute({ params: Promise.resolve({ slug: applicationId, path: ["watch"] }), searchParams: Promise.resolve({}) }))).toBe("not-found");
-  });
-
-  it("answers 404 for a share link and every demo endpoint", async () => {
-    const share = await import("@/app/s/[token]/route");
-    const threads = await import("@/app/api/demo/threads/route");
-    const shares = await import("@/app/api/demo/shares/route");
-    const replies = await import("@/app/api/demo/threads/[threadId]/comments/route");
-    const status = await import("@/app/api/demo/threads/[threadId]/status/route");
-    const profiles = await import("@/app/api/demo/profiles/route");
-    const profile = await import("@/app/api/demo/profiles/[profileId]/route");
-    const post = (body: unknown) => new Request("http://localhost/api/demo", { method: "POST", body: JSON.stringify(body) });
-
-    expect((await share.GET(new Request(`http://localhost/s/${token}`), { params: Promise.resolve({ token }) })).status).toBe(404);
-    expect((await threads.GET(new Request(`http://localhost/api/demo/threads?application=${applicationId}`))).status).toBe(404);
-    expect((await threads.POST(post({ application: applicationId }))).status).toBe(404);
-    expect((await shares.POST(post({ application: applicationId, state: { route: "watch", overrides: {}, theme: "light", persona: "analyst" } }))).status).toBe(404);
-    expect((await replies.POST(post({ application: applicationId, body: "Hi" }), { params: Promise.resolve({ threadId: "thr_0000000000000000" }) })).status).toBe(404);
-    expect((await status.POST(post({ application: applicationId, status: "resolved" }), { params: Promise.resolve({ threadId: "thr_0000000000000000" }) })).status).toBe(404);
-    // Whatever the body: the switch is checked before anything is read.
-    const malformed = () => new Request("http://localhost/api/demo", { method: "POST", body: "not json" });
-    expect((await status.POST(post({}), { params: Promise.resolve({ threadId: "thr_0000000000000000" }) })).status).toBe(404);
-    expect((await threads.POST(malformed())).status).toBe(404);
-    expect((await shares.POST(malformed())).status).toBe(404);
-    expect((await replies.POST(malformed(), { params: Promise.resolve({ threadId: "thr_0000000000000000" }) })).status).toBe(404);
-    expect((await profiles.POST(malformed())).status).toBe(404);
-    expect((await profiles.GET()).status).toBe(404);
-    expect((await profiles.POST(post({ name: "Priya Shah", persona: "Approver", region: "Mumbai" }))).status).toBe(404);
-    expect((await profile.PATCH(post({ name: "Priya Shah", persona: "Approver", region: "Mumbai" }), { params: Promise.resolve({ profileId: "dpf_0000000000000000" }) })).status).toBe(404);
-    expect((await profile.DELETE(post({}), { params: Promise.resolve({ profileId: "dpf_0000000000000000" }) })).status).toBe(404);
   });
 
   it("refuses the demo's Server Actions", async () => {

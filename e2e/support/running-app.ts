@@ -1,5 +1,7 @@
-import type { FrameLocator, Page } from "@playwright/test";
+import type { Browser, BrowserContext, FrameLocator, Page } from "@playwright/test";
 import type { Db } from "../../src/lib/db/client";
+import { WORKSPACE_COOKIE, newWorkspaceKey } from "../../src/lib/demo/workspace-key";
+import { type Workspace, ensureWorkspace, findWorkspace, setHints } from "../../src/lib/demo/workspaces";
 import { expect } from "./fixtures";
 import { type FixtureApplication, buildOrdersPortal, framedRun, ordersPortalRemote } from "./fixture-app";
 
@@ -32,4 +34,24 @@ export async function runOrdersPortal(page: Page, db: Db, route = "/accounts"): 
 export async function openBuild(page: Page, build: FixtureApplication, route = "/accounts"): Promise<void> {
   await page.goto(framedRun(build, route));
   await waitForPage(page, route.startsWith("/settings") ? "Settings" : "Accounts");
+}
+
+/**
+ * Another visitor's browser: a fresh context with a workspace of its own,
+ * with guided hints off like the test's main browser.
+ */
+export async function visitorContext(browser: Browser, db: Db, baseURL: string): Promise<BrowserContext> {
+  const context = await browser.newContext({ baseURL });
+  const key = newWorkspaceKey();
+  setHints(db, ensureWorkspace(db, key).id, { off: true });
+  await context.addCookies([{ name: WORKSPACE_COOKIE, value: key, url: baseURL, httpOnly: true, sameSite: "Lax" }]);
+  return context;
+}
+
+/** The workspace of the browser +context+, from its credential. */
+export async function workspaceOf(context: BrowserContext, db: Db): Promise<Workspace> {
+  const key = (await context.cookies()).find((cookie) => cookie.name === WORKSPACE_COOKIE)?.value;
+  const workspace = findWorkspace(db, key);
+  if (!workspace) throw new Error("This browser has no workspace yet");
+  return workspace;
 }

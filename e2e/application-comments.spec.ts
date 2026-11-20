@@ -1,18 +1,21 @@
 import { createRequire } from "node:module";
+import { eq } from "drizzle-orm";
+import { generatePublicId } from "../src/lib/db/ids";
+import { applications, demoThreads } from "../src/lib/db/schema";
+import { THREAD_LIMIT } from "../src/lib/demo/workspaces";
 import type { Page } from "@playwright/test";
 import { expectToolbarOnTop, openTool, startComment } from "./support/demo";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { commitToOrdersPortal, rebuildOrdersPortal } from "./support/fixture-app";
-import { application, openBuild, runOrdersPortal, waitForPage } from "./support/running-app";
+import { application, openBuild, runOrdersPortal, waitForPage, workspaceOf } from "./support/running-app";
 import { useTheme } from "./support/shell";
 
 /*
  * Comments on a running application's own elements (add-applications, task
  * 8.2; template-demo/toolbar spec, "Comments stay bound to their element,
- * route, and commit"), on the fixture application in its frame. Threads are
- * kept in the browser tab until the workspace's threads take a commit and an
- * element anchor.
+ * route, and commit"), on the fixture application in its frame, kept in the
+ * visitor's workspace and private to it until it shares a view.
  */
 
 test.skip(!E2E_PREVIEWS, "Previews are off (E2E_PREVIEWS=0)");
@@ -127,6 +130,23 @@ test("keeps a pin on a newer build that still renders its element, and lists one
   await expect(panel(page).locator("[data-thread]").filter({ hasText: "Too slow" })).toHaveAttribute("data-visible", "true");
 });
 
+test("refuses a thread past the workspace's limit, saying how to make room (Thread limit)", async ({ page, context, db }) => {
+  const { application: orders, preview } = await runOrdersPortal(page, db);
+  await comment(page, exportOrders(page), "The first one", "Sam Rivera");
+  const workspace = await workspaceOf(context, db);
+  const now = new Date();
+  db.insert(demoThreads)
+    .values(Array.from({ length: THREAD_LIMIT - 1 }, () => ({ publicId: generatePublicId("thr"), applicationId: db.select({ id: applications.id }).from(applications).where(eq(applications.publicId, orders.publicId)).get()!.id, viewWorkspaceId: workspace.id, route: "/settings", commitSha: preview.commitSha, anchor: { path: "body", tag: "body", fingerprint: "" }, offsetX: 0.5, offsetY: 0.5, createdAt: now })))
+    .run();
+  await page.keyboard.press("Escape");
+  await startComment(page);
+  await application(page).getByRole("button", { name: "Recalculate totals" }).click();
+  await composer(page).getByLabel("Comment", { exact: true }).fill("One too many");
+  await composer(page).getByRole("button", { name: "Post comment" }).click();
+  await expect(composer(page)).toContainText("This workspace has 500 open comment threads, the most it can hold. Resolve some threads, or reset the workspace from Applications, to start another.");
+  await expect(pin(page, 501)).toHaveCount(0);
+});
+
 test("replies, resolves, and reopens a thread", async ({ page, db }) => {
   await runOrdersPortal(page, db);
   await comment(page, exportOrders(page), "Make this primary", "Sam Rivera");
@@ -216,7 +236,7 @@ test.describe("the composer", () => {
     const thread = page.getByRole("dialog", { name: "Comment 1" });
     await expect(thread.locator("strong", { hasText: "primary" })).toBeVisible();
     await expect(thread).not.toContainText("**");
-    const stored = await page.evaluate((key) => JSON.parse(window.sessionStorage.getItem(key)!) as { threads: { route: string; commit: string; anchor: { tag: string; fingerprint: string }; comments: { body: string }[] }[] }, `frontend-registry:threads:${running.publicId}`);
+    const stored = await page.evaluate(async (slug) => (await (await fetch(`/api/workspace/threads?application=${slug}`)).json()) as { threads: { route: string; commit: string; anchor: { tag: string; fingerprint: string }; comments: { body: string }[] }[] }, running.slug);
     expect(stored.threads[0]!.comments[0]!.body).toBe("Make this **primary**");
     expect(stored.threads[0]).toMatchObject({ route: "/accounts", anchor: { tag: "button", fingerprint: "Export orders" } });
   });

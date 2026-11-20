@@ -1,11 +1,14 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { PERSONAS } from "../../demo/catalog/types";
-import { createdAt, id, publicId, sqlList, timestamp, updatedAt } from "./columns";
+import { type AnySQLiteColumn, check, index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import type { JsonObject } from "@repo-facts/contract";
+import { applications } from "./applications";
+import { createdAt, id, publicId, sqlList, timestamp } from "./columns";
 
-// Template demo data (design.md, decision 4). These tables never reference
-// Repository, Assessment, Run, Evaluation, or Standard rows, and nothing outside
-// src/lib/demo reads them. Deleting a workspace removes everything it owns.
+// Anonymous workspaces and what they hold: comment threads and share links on
+// applications (template-demo/demo-mode spec; add-applications, design
+// decision 7). Only src/lib/demo reads them. Deleting a workspace removes
+// everything it owns, and deleting an application removes its threads and
+// share links.
 
 export const THREAD_STATUSES = ["open", "resolved"] as const;
 export type ThreadStatus = (typeof THREAD_STATUSES)[number];
@@ -37,20 +40,33 @@ export const demoWorkspaces = sqliteTable(
   ],
 );
 
-/** A comment thread on one view: a reference deployment as seen from one workspace. */
+/** A commit SHA: 40 lowercase hex characters. */
+const commitCheck = (column: AnySQLiteColumn) => sql`length(${column}) = 40 AND ${column} NOT GLOB '*[^0-9a-f]*'`;
+/** An application's own route: a path from its root, such as /accounts/42. */
+const routeCheck = (column: AnySQLiteColumn) => sql`${column} GLOB '/*' AND length(${column}) <= 2048`;
+
+/**
+ * A comment thread on one view: an application as seen from one workspace
+ * (add-applications, design decision 7). It records the route and the commit
+ * of the build it was placed on, and the element by its anchor: a CSS path,
+ * its tag, and a fingerprint of its text. Deleting the application deletes
+ * its threads.
+ */
 export const demoThreads = sqliteTable(
   "demo_threads",
   {
     id: id(),
     publicId: publicId(),
-    referenceSlug: text("reference_slug").notNull(),
+    applicationId: integer("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
     viewWorkspaceId: integer("view_workspace_id")
       .notNull()
       .references(() => demoWorkspaces.id, { onDelete: "cascade" }),
     route: text("route").notNull(),
-    member: text("member").notNull(),
-    memberVersion: text("member_version").notNull(),
-    anchor: text("anchor").notNull(),
+    commitSha: text("commit_sha").notNull(),
+    /** The element: `{ path, tag, fingerprint }`. */
+    anchor: text("anchor", { mode: "json" }).$type<JsonObject>().notNull(),
     offsetX: real("offset_x").notNull(),
     offsetY: real("offset_y").notNull(),
     status: text("status", { enum: THREAD_STATUSES }).notNull().default("open"),
@@ -58,11 +74,15 @@ export const demoThreads = sqliteTable(
     resolvedAt: timestamp("resolved_at"),
   },
   (t) => [
-    index("demo_threads_reference").on(t.referenceSlug, t.viewWorkspaceId),
+    index("demo_threads_view").on(t.applicationId, t.viewWorkspaceId),
+    index("demo_threads_workspace").on(t.viewWorkspaceId, t.status),
     check("demo_threads_public_id", sql`${t.publicId} GLOB 'thr_*'`),
     check("demo_threads_status", sql.raw(`status IN (${sqlList(THREAD_STATUSES)})`)),
     check("demo_threads_offsets", sql`${t.offsetX} BETWEEN 0 AND 1 AND ${t.offsetY} BETWEEN 0 AND 1`),
     check("demo_threads_resolved", sql`(${t.status} = 'resolved') = (${t.resolvedAt} IS NOT NULL)`),
+    check("demo_threads_route", routeCheck(t.route)),
+    check("demo_threads_commit_sha", commitCheck(t.commitSha)),
+    check("demo_threads_anchor", sql`json_valid(${t.anchor}) AND json_type(${t.anchor}) = 'object'`),
   ],
 );
 
@@ -89,59 +109,33 @@ export const demoComments = sqliteTable(
 );
 
 /**
- * A share link to one view. The link carries a random token; only its SHA-256
- * digest is stored. Resetting the sharer's workspace removes the row, so the
- * link stops working.
+ * A share link to one view of an application (add-applications, design
+ * decision 7): the commit of the build shown and the route, with the
+ * sharer's workspace, whose comments the link shows. The link carries a
+ * random token; only its SHA-256 digest is stored. Resetting the sharer's
+ * workspace or deleting the application removes the row, so the link stops
+ * working.
  */
 export const demoShares = sqliteTable(
   "demo_shares",
   {
     id: id(),
     tokenDigest: text("token_digest").notNull().unique(),
-    referenceSlug: text("reference_slug").notNull(),
+    applicationId: integer("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
     viewWorkspaceId: integer("view_workspace_id")
       .notNull()
       .references(() => demoWorkspaces.id, { onDelete: "cascade" }),
-    /** The captured route, overrides, theme, and persona, as a JSON object. */
-    state: text("state").notNull(),
+    commitSha: text("commit_sha").notNull(),
+    route: text("route").notNull(),
     createdAt: createdAt(),
   },
   (t) => [
     index("demo_shares_view_workspace").on(t.viewWorkspaceId),
+    index("demo_shares_application").on(t.applicationId),
     check("demo_shares_token_digest", sql`length(${t.tokenDigest}) = 64`),
-    check("demo_shares_state", sql`json_valid(${t.state}) AND json_type(${t.state}) = 'object'`),
-  ],
-);
-
-/**
- * A session profile a visitor created: who is using a running application,
- * with a persona and a region (template-demo/toolbar spec; design.md,
- * decision 6). Profiles belong to the workspace, so every application the
- * visitor opens offers them. name_key is the name lowercased in code (SQLite's
- * lower() folds only ASCII), unique within the workspace; the built-in
- * profiles' names are refused in code.
- */
-export const demoProfiles = sqliteTable(
-  "demo_profiles",
-  {
-    id: id(),
-    publicId: publicId(),
-    workspaceId: integer("workspace_id")
-      .notNull()
-      .references(() => demoWorkspaces.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    nameKey: text("name_key").notNull(),
-    persona: text("persona", { enum: PERSONAS }).notNull(),
-    region: text("region").notNull(),
-    createdAt: createdAt(),
-    updatedAt: updatedAt(),
-  },
-  (t) => [
-    uniqueIndex("demo_profiles_name").on(t.workspaceId, t.nameKey),
-    index("demo_profiles_workspace").on(t.workspaceId, t.createdAt),
-    check("demo_profiles_public_id", sql`${t.publicId} GLOB 'dpf_*'`),
-    check("demo_profiles_name", sql`length(trim(${t.name})) BETWEEN 1 AND 60`),
-    check("demo_profiles_persona", sql.raw(`persona IN (${sqlList(PERSONAS)})`)),
-    check("demo_profiles_region", sql`length(trim(${t.region})) BETWEEN 1 AND 60`),
+    check("demo_shares_commit_sha", commitCheck(t.commitSha)),
+    check("demo_shares_route", routeCheck(t.route)),
   ],
 );

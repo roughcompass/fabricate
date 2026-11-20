@@ -1,0 +1,24 @@
+import { applicationsUnavailable } from "@/lib/applications/availability";
+import { getDb } from "@/lib/db/client";
+import { jsonBody, writableView } from "@/lib/demo/api";
+import { createShare, shareInputSchema } from "@/lib/demo/shares";
+
+/**
+ * Creates a share link to the view of a running application the visitor has
+ * open (template-demo/toolbar spec, "Visitors can share an application
+ * view"): the application, the commit of the build shown, and the route,
+ * with the view's comments. A link made from a shared view shares that view.
+ */
+export async function POST(request: Request) {
+  // Availability comes first, so it answers not found whatever the body.
+  const unavailable = applicationsUnavailable();
+  if (unavailable) return unavailable;
+  const body = await jsonBody(request);
+  if (body instanceof Response) return body;
+  const input = shareInputSchema.safeParse(body);
+  if (!input.success) return Response.json({ error: "Invalid view" }, { status: 400 });
+  const resolved = await writableView(request);
+  if (resolved instanceof Response) return resolved;
+  const token = createShare(getDb(), resolved.view.application.id, resolved.view.viewWorkspaceId, input.data);
+  return Response.json({ path: `/s/${token}` }, { status: 201 });
+}

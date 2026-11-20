@@ -15,8 +15,3 @@ export function demoEnabled(): boolean {
 export function requireDemo(): void {
   if (!demoEnabled()) notFound();
 }
-
-/** For route handlers: a 404 response when the demo is off, otherwise null. */
-export function demoUnavailable(): Response | null {
-  return demoEnabled() ? null : new Response(null, { status: 404 });
-}

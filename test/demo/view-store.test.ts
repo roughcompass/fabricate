@@ -3,7 +3,7 @@ import { availableProfiles, createProfilesStore, resolveProfile, sharedProfileOf
 import { SHARED_PROFILE_ID, createViewStore, stateFromShare } from "@/demo/runtime/view-store";
 import { storageKey } from "@/demo/runtime/storage";
 import { type LoadEntry, type Profile, templateBySlug } from "@/lib/demo/catalog";
-import type { ShareState } from "@/lib/demo/shares";
+import type { ShareState } from "@/demo/runtime/descriptor";
 
 const app = templateBySlug("payments-workspace")!.app;
 const VIEW = "app_0000000000000001:1:0";

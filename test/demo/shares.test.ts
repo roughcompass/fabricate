@@ -1,19 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { stateFromShare } from "@/demo/runtime/view-store";
 import type { Db } from "@/lib/db/client";
-import { demoShares } from "@/lib/db/schema";
-import { templateBySlug } from "@/lib/demo/catalog";
-import { type ShareState, createShare, findShare, shareStateSchema } from "@/lib/demo/shares";
+import { applications, demoShares } from "@/lib/db/schema";
+import { createShare, findShare, shareInputSchema } from "@/lib/demo/shares";
 import { newWorkspaceKey } from "@/lib/demo/workspace-key";
-import { ensureWorkspace } from "@/lib/demo/workspaces";
+import { ensureWorkspace, keyDigest } from "@/lib/demo/workspaces";
+import { eq } from "drizzle-orm";
 import { createTestDb } from "../support/db";
+import { commitOf, viewedApplicationIn } from "../support/views";
 
-const STATE: ShareState = { route: "payees", overrides: {}, theme: "dark", persona: "approver" };
-const PRIYA = { name: "Priya Shah", persona: "Approver", region: "Mumbai" } as const;
+/*
+ * Share links to a view of a running application (template-demo/toolbar
+ * spec, "Visitors can share an application view"; add-applications, task
+ * 8.6): the application, the commit of the build shown, and the route, with
+ * the sharer's workspace. Only the token's digest is stored.
+ */
 
-// Share links carry a snapshot of the active session profile (template-demo/
-// toolbar spec; toolbar-updates design.md, decision 7).
-describe("share link profile snapshots", () => {
+describe("share links", () => {
   let db: Db;
   let workspace: number;
   beforeEach(() => {
@@ -22,29 +24,37 @@ describe("share link profile snapshots", () => {
   });
   afterEach(() => db.$client.close());
 
-  it("stores and reads back a profile snapshot, trimmed, beside the matching built-in persona id", () => {
-    const token = createShare(db, "payments-workspace", workspace, { ...STATE, profile: { name: " Priya Shah ", persona: "Approver", region: "Mumbai " } });
-    expect(findShare(db, token)?.state).toEqual({ ...STATE, profile: PRIYA });
-    expect(JSON.parse(db.select().from(demoShares).get()!.state)).toMatchObject({ persona: "approver", profile: PRIYA });
+  it("captures the application, commit, and route, storing only the token's digest", () => {
+    const orders = viewedApplicationIn(db);
+    const token = createShare(db, orders.id, workspace, { commit: commitOf("a"), route: "/accounts/42" });
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(findShare(db, token)).toEqual({ applicationId: orders.id, viewWorkspaceId: workspace, commit: commitOf("a"), route: "/accounts/42" });
+    const row = db.select().from(demoShares).get()!;
+    expect(row.tokenDigest).toBe(keyDigest(token));
+    expect(JSON.stringify(row)).not.toContain(token);
   });
 
-  it("refuses a snapshot that breaks the profile rules", () => {
-    for (const profile of [
-      { ...PRIYA, name: "" },
-      { ...PRIYA, name: "x".repeat(61) },
-      { ...PRIYA, region: "Mum\u0000bai" },
-      { ...PRIYA, persona: "Owner" },
-      { ...PRIYA, role: "Approver" },
-      { name: "Priya Shah" },
+  it("refuses a view outside the rules", () => {
+    for (const input of [
+      { commit: "abc", route: "/accounts" },
+      { commit: commitOf("A"), route: "/accounts" },
+      { commit: commitOf("a"), route: "accounts" },
+      { commit: commitOf("a"), route: "/acc ounts" },
+      { commit: commitOf("a"), route: "/acc\u0000ounts" },
+      { commit: commitOf("a"), route: `/${"a".repeat(2048)}` },
+      { commit: commitOf("a"), route: "/accounts", theme: "dark" },
     ]) {
-      expect(shareStateSchema.safeParse({ ...STATE, profile }).success, JSON.stringify(profile)).toBe(false);
+      expect(shareInputSchema.safeParse(input).success, JSON.stringify(input)).toBe(false);
     }
   });
 
-  it("still reads a link from before profiles, which opens as the built-in profile its persona names", () => {
-    const token = createShare(db, "payments-workspace", workspace, STATE);
-    const share = findShare(db, token)!;
-    expect(share.state.profile).toBeUndefined();
-    expect(stateFromShare(templateBySlug("payments-workspace")!.app, share.state).profileId).toBe("approver");
+  it("finds nothing for a forged or malformed token, and stops working once the application is deleted", () => {
+    const orders = viewedApplicationIn(db);
+    const token = createShare(db, orders.id, workspace, { commit: commitOf("a"), route: "/" });
+    expect(findShare(db, "A".repeat(43))).toBeNull();
+    expect(findShare(db, "nope")).toBeNull();
+    expect(findShare(db, undefined)).toBeNull();
+    db.delete(applications).where(eq(applications.id, orders.id)).run();
+    expect(findShare(db, token)).toBeNull();
   });
 });

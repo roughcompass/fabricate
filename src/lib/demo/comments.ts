@@ -1,20 +1,24 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { formatNumber } from "@/components/ui/count";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { type ThreadStatus, demoComments, demoThreads } from "@/lib/db/schema";
-import type { DemoView } from "./access";
-import { memberById, routeByPath } from "./catalog";
-import { COMMENT_LIMIT, normalizeDisplayName } from "./workspaces";
-import { formatNumber } from "@/components/ui/count";
+import type { ApplicationView } from "./access";
+import { commitSchema, routeSchema } from "./shares";
+import { COMMENT_LIMIT, DemoLimitError, THREAD_LIMIT, normalizeDisplayName } from "./workspaces";
 
 /**
- * Comment threads anchored to rendered elements (template-demo/toolbar spec).
- * Every operation is scoped to one view: a thread belongs to a reference
- * deployment as seen from one workspace, so a visitor never
- * reads or changes another view's threads. Bodies are stored as written,
- * Markdown markers included; comment-format.ts styles them only for display.
+ * Comment threads on a running application's elements (template-demo/toolbar
+ * spec, "Comments stay bound to their element, route, and commit";
+ * add-applications, design decision 7). Every operation is scoped to one
+ * view: an application as seen from one workspace, so a visitor never reads
+ * or changes another view's threads. A thread records the route and the
+ * commit of the build it was placed on, and the element by its anchor: a CSS
+ * path, its tag, and a fingerprint of its text. Bodies are stored as
+ * written, Markdown markers included; comment-format.ts styles them only for
+ * display.
  */
 
 interface CommentRecord {
@@ -24,12 +28,20 @@ interface CommentRecord {
   readonly createdAt: string;
 }
 
+export const anchorSchema = z.strictObject({
+  path: z.string().min(1).max(1000),
+  tag: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
+  fingerprint: z.string().max(200),
+});
+
+export type Anchor = z.infer<typeof anchorSchema>;
+
+/** A thread as the toolbar shows it (src/components/toolbar/comments/thread-store.ts). */
 export interface ThreadRecord {
   readonly id: string;
   readonly route: string;
-  readonly member: string;
-  readonly memberVersion: string;
-  readonly anchor: string;
+  readonly commit: string;
+  readonly anchor: Anchor;
   readonly offsetX: number;
   readonly offsetY: number;
   readonly status: ThreadStatus;
@@ -38,10 +50,9 @@ export interface ThreadRecord {
 }
 
 export const threadInputSchema = z.strictObject({
-  route: z.string().regex(/^[a-z0-9-]{1,40}$/),
-  member: z.string().regex(/^[a-z0-9-]{1,60}$/),
-  memberVersion: z.string().min(1).max(40),
-  anchor: z.string().regex(/^[A-Za-z0-9_:.-]{1,120}$/),
+  route: routeSchema,
+  commit: commitSchema,
+  anchor: anchorSchema,
   offsetX: z.number().min(0).max(1),
   offsetY: z.number().min(0).max(1),
   body: z.string(),
@@ -51,7 +62,7 @@ export const threadInputSchema = z.strictObject({
 export type ThreadInput = z.infer<typeof threadInputSchema>;
 
 /** A view with a workspace to write in: comments always belong to one. */
-export type WritableView = DemoView & { readonly viewWorkspaceId: number };
+export type WritableView = ApplicationView & { readonly viewWorkspaceId: number };
 
 export interface Author {
   readonly workspaceId: number;
@@ -71,12 +82,12 @@ export function authorName(stored: string | null, provided: string | undefined):
   throw new ValidationError([{ field: "authorName", message: "Enter a display name" }]);
 }
 
-function viewCondition(view: DemoView & { viewWorkspaceId: number }) {
-  return and(eq(demoThreads.referenceSlug, view.template.slug), eq(demoThreads.viewWorkspaceId, view.viewWorkspaceId));
+function viewCondition(view: WritableView) {
+  return and(eq(demoThreads.applicationId, view.application.id), eq(demoThreads.viewWorkspaceId, view.viewWorkspaceId));
 }
 
 /** Every thread in a view, oldest first, with its comments. */
-export function listThreads(db: Executor, view: DemoView): ThreadRecord[] {
+export function listThreads(db: Executor, view: ApplicationView): ThreadRecord[] {
   if (view.viewWorkspaceId === null) return [];
   const threads = db.select().from(demoThreads).where(viewCondition(view as WritableView)).orderBy(asc(demoThreads.createdAt), asc(demoThreads.id)).all();
   if (!threads.length) return [];
@@ -89,9 +100,8 @@ export function listThreads(db: Executor, view: DemoView): ThreadRecord[] {
   return threads.map((thread) => ({
     id: thread.publicId,
     route: thread.route,
-    member: thread.member,
-    memberVersion: thread.memberVersion,
-    anchor: thread.anchor,
+    commit: thread.commitSha,
+    anchor: thread.anchor as Anchor,
     offsetX: thread.offsetX,
     offsetY: thread.offsetY,
     status: thread.status,
@@ -102,26 +112,24 @@ export function listThreads(db: Executor, view: DemoView): ThreadRecord[] {
   }));
 }
 
-/** Starts a thread on an element in the view, with its first comment. */
+/**
+ * Starts a thread on an element in the view, with its first comment. A
+ * workspace holds at most THREAD_LIMIT open threads (template-demo/demo-mode
+ * spec, "Workspace comments are bounded"); resolving threads makes room.
+ */
 export function createThread(db: Executor, view: WritableView, author: Author, input: ThreadInput, now = new Date()): string {
-  const { template } = view;
-  const member = memberById(template.app, input.member);
-  const issues = [];
-  if (!routeByPath(template.app, input.route)) issues.push({ field: "route", message: "This route is not part of the application" });
-  if (!member) issues.push({ field: "member", message: "This microfrontend is not part of the application" });
-  else if (!member.versions.some((version) => version.version === input.memberVersion)) issues.push({ field: "memberVersion", message: "This version is not available" });
-  if (issues.length) throw new ValidationError(issues);
   const body = normalizeBody(input.body);
   return immediate(db, (tx) => {
+    const open = tx.select({ n: count() }).from(demoThreads).where(and(eq(demoThreads.viewWorkspaceId, view.viewWorkspaceId), eq(demoThreads.status, "open"))).get()!.n;
+    if (open >= THREAD_LIMIT) throw new DemoLimitError(`This workspace has ${formatNumber(THREAD_LIMIT)} open comment threads, the most it can hold. Resolve some threads, or reset the workspace from Applications, to start another.`);
     const thread = tx
       .insert(demoThreads)
       .values({
         publicId: generatePublicId("thr"),
-        referenceSlug: template.slug,
+        applicationId: view.application.id,
         viewWorkspaceId: view.viewWorkspaceId,
         route: input.route,
-        member: input.member,
-        memberVersion: input.memberVersion,
+        commitSha: input.commit,
         anchor: input.anchor,
         offsetX: input.offsetX,
         offsetY: input.offsetY,

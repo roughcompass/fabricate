@@ -1,6 +1,6 @@
 import { type AppDefinition, DEFAULT_PROFILE, type EnvironmentId, type LoadEntry, builtInProfile, memberById } from "@/lib/demo/catalog";
 import { resolveRouting } from "@/lib/demo/routing";
-import type { ShareState } from "@/lib/demo/shares";
+import type { ShareState } from "./descriptor";
 import { readStored, writeStored } from "./storage";
 
 /**

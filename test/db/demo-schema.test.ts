@@ -4,9 +4,10 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type Db, MIGRATIONS_FOLDER } from "@/lib/db/client";
 import { createTestDb, migrateToLatest, rawRun } from "../support/db";
+import { EXPORT_ORDERS, commitOf, viewedApplicationIn } from "../support/views";
 
 const DEMO_TABLES = ["demo_comments", "demo_shares", "demo_threads", "demo_workspaces"];
-const DEMO_MIGRATIONS = ["0013_demo", "0014_demo_origin", "0033_demo_imports_removed", "0037_demo_applications_removed"];
+const DEMO_MIGRATIONS = ["0013_demo", "0014_demo_origin", "0015_demo_profiles", "0033_demo_imports_removed", "0037_demo_applications_removed", "0056_comments_and_shares_for_applications"];
 const DIGEST = "a".repeat(64);
 
 function tables(db: Db): string[] {
@@ -17,8 +18,10 @@ function count(db: Db, table: string): number {
   return (db.$client.prepare(`select count(*) as n from ${table}`).get() as { n: number }).n;
 }
 
-// Template demo tables (design.md, decision 4): separate from product data,
-// owned by an anonymous workspace, and removed with it.
+// Workspace tables (template-demo/demo-mode spec): owned by an anonymous
+// workspace and removed with it. Since add-applications (design decision 7)
+// their threads and share links belong to applications, removed with them
+// too; nothing else references or is referenced by them.
 describe("demo schema", () => {
   let db: Db;
   beforeEach(() => {
@@ -33,12 +36,17 @@ describe("demo schema", () => {
   const thread = (workspaceId: number, publicId = "thr_0000000000000001") => {
     rawRun(
       db,
-      "insert into demo_threads (public_id, reference_slug, view_workspace_id, route, member, member_version, anchor, offset_x, offset_y, created_at) values (?, 'market-watch', ?, 'watch', 'watchlist', '1.8.0', 'filter', 0.5, 0.5, 0)",
+      "insert into demo_threads (public_id, application_id, view_workspace_id, route, commit_sha, anchor, offset_x, offset_y, created_at) values (?, ?, ?, '/accounts', ?, ?, 0.5, 0.5, 0)",
       publicId,
+      viewedApplicationIn(db).id,
       workspaceId,
+      commitOf("a"),
+      JSON.stringify(EXPORT_ORDERS),
     );
     return (db.$client.prepare("select id from demo_threads where public_id = ?").get(publicId) as { id: number }).id;
   };
+  const share = (workspaceId: number, digest = DIGEST, route = "/accounts") =>
+    rawRun(db, "insert into demo_shares (token_digest, application_id, view_workspace_id, commit_sha, route, created_at) values (?, ?, ?, ?, ?, 0)", digest, viewedApplicationIn(db).id, workspaceId, commitOf("a"), route);
 
   it("adds exactly the demo tables on top of the product schema and leaves product tables unchanged", () => {
     // Migrate a copy of drizzle/ without the demo migration to get the product schema alone.
@@ -67,27 +75,26 @@ describe("demo schema", () => {
     }
   });
 
-  it("declares no foreign key from a demo table to a product table, or from a product table to a demo table", () => {
+  it("refers only to workspaces and applications, and no product table refers to a workspace table", () => {
     for (const table of tables(db)) {
       const references = (db.$client.prepare(`pragma foreign_key_list(${table})`).all() as { table: string }[]).map((row) => row.table);
-      for (const target of references) expect(table.startsWith("demo_"), `${table} -> ${target}`).toBe(target.startsWith("demo_"));
+      for (const target of references) {
+        if (table.startsWith("demo_")) expect(target.startsWith("demo_") || target === "applications", `${table} -> ${target}`).toBe(true);
+        else expect(target.startsWith("demo_"), `${table} -> ${target}`).toBe(false);
+      }
     }
   });
 
-  it("puts every thread and share link on a reference deployment", () => {
+  it("puts every thread and share link on an application", () => {
     const owner = workspace();
     expect(() =>
-      rawRun(
-        db,
-        "insert into demo_threads (public_id, view_workspace_id, route, member, member_version, anchor, offset_x, offset_y, created_at) values ('thr_0000000000000001', ?, 'watch', 'watchlist', '1.8.0', 'filter', 0.5, 0.5, 0)",
-        owner,
-      ),
-    ).toThrow(/NOT NULL constraint failed: demo_threads.reference_slug/);
-    expect(() => rawRun(db, "insert into demo_shares (token_digest, view_workspace_id, state, created_at) values (?, ?, '{}', 0)", DIGEST, owner)).toThrow(/NOT NULL constraint failed: demo_shares.reference_slug/);
+      rawRun(db, "insert into demo_threads (public_id, view_workspace_id, route, commit_sha, anchor, offset_x, offset_y, created_at) values ('thr_0000000000000001', ?, '/', ?, '{}', 0.5, 0.5, 0)", owner, commitOf("a")),
+    ).toThrow(/NOT NULL constraint failed: demo_threads.application_id/);
+    expect(() => rawRun(db, "insert into demo_shares (token_digest, view_workspace_id, commit_sha, route, created_at) values (?, ?, ?, '/', 0)", DIGEST, owner, commitOf("a"))).toThrow(/NOT NULL constraint failed: demo_shares.application_id/);
     expect(() => thread(owner)).not.toThrow();
   });
 
-  it("removes visitors' deployments with their threads, comments, and share links, keeping reference deployments' (migration 0037)", () => {
+  it("removes visitors' deployments (migration 0037), then every template's threads, comments, and share links (migration 0056)", () => {
     const folder = fs.mkdtempSync(path.join(os.tmpdir(), "frontend-registry-migrations-"));
     try {
       fs.cpSync(MIGRATIONS_FOLDER, folder, { recursive: true });
@@ -119,9 +126,7 @@ describe("demo schema", () => {
 
       migrateToLatest(earlier);
       expect(tables(earlier)).not.toContain("demo_applications");
-      expect(earlier.$client.prepare("select public_id, reference_slug from demo_threads").all()).toEqual([{ public_id: "thr_0000000000000002", reference_slug: "market-watch" }]);
-      expect(earlier.$client.prepare("select public_id from demo_comments").all()).toEqual([{ public_id: "cmt_0000000000000002" }]);
-      expect(earlier.$client.prepare("select reference_slug from demo_shares").all()).toEqual([{ reference_slug: "market-watch" }]);
+      expect([count(earlier, "demo_threads"), count(earlier, "demo_comments"), count(earlier, "demo_shares"), count(earlier, "demo_workspaces")]).toEqual([0, 0, 0, 1]);
       earlier.$client.close();
     } finally {
       fs.rmSync(folder, { recursive: true, force: true });
@@ -133,7 +138,7 @@ describe("demo schema", () => {
     const visitor = workspace("b".repeat(64));
     const owned = thread(owner);
     rawRun(db, "insert into demo_comments (public_id, thread_id, author_workspace_id, author_name, body, created_at) values ('cmt_0000000000000001', ?, ?, 'Sam', 'Ship v2', 0)", owned, owner);
-    rawRun(db, "insert into demo_shares (token_digest, reference_slug, view_workspace_id, state, created_at) values (?, 'market-watch', ?, '{}', 0)", DIGEST, owner);
+    share(owner);
 
     // A visitor's reply on the owner's thread survives the visitor's reset.
     rawRun(db, "insert into demo_comments (public_id, thread_id, author_workspace_id, author_name, body, created_at) values ('cmt_0000000000000002', ?, ?, 'Robin', 'Agreed', 1)", owned, visitor);
@@ -145,12 +150,10 @@ describe("demo schema", () => {
     for (const table of DEMO_TABLES) expect(count(db, table), table).toBe(0);
   });
 
-  it("rejects malformed hint state, share state, and comments", () => {
+  it("rejects malformed hint state, share routes, and comments", () => {
     const owner = workspace();
     expect(() => rawRun(db, "update demo_workspaces set hints = '[]' where id = ?", owner)).toThrow(/demo_workspaces_hints/);
-    expect(() => rawRun(db, "insert into demo_shares (token_digest, reference_slug, view_workspace_id, state, created_at) values (?, 'market-watch', ?, 'nope', 0)", DIGEST, owner)).toThrow(
-      /demo_shares_state/,
-    );
+    expect(() => share(owner, DIGEST, "accounts")).toThrow(/demo_shares_route/);
     const owned = thread(owner);
     expect(() => rawRun(db, "insert into demo_comments (public_id, thread_id, author_name, body, created_at) values ('cmt_0000000000000001', ?, 'Sam', ?, 0)", owned, "x".repeat(2001))).toThrow(
       /demo_comments_body/,

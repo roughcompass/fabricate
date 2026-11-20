@@ -1,37 +1,73 @@
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
-import { type Template, referenceId, referenceTemplate, templateBySlug } from "./catalog";
-import { type ShareState, findShare } from "./shares";
+import { applications, previewBuilds } from "@/lib/db/schema";
+import { openPreview } from "@/lib/previews/access";
+import { type Share, findShare } from "./shares";
 import type { Workspace } from "./workspaces";
 
 /**
- * Who may see which view of a running reference deployment (design.md,
- * decision 4). A view is a template's reference deployment together with the
- * workspace whose comments it shows: the visiting workspace, or the sharer's
- * workspace for a share link.
+ * Who may see which view of a running application (template-demo/demo-mode
+ * spec; add-applications, design decision 7). A view is an application
+ * together with the workspace whose comments it shows: the visiting
+ * workspace, or the sharer's workspace for a share link. Applications
+ * themselves are shared by every workspace.
  */
 
-export interface DemoView {
-  readonly template: Template;
-  /** Null for a reference deployment seen by a visitor who has not written anything yet. */
+/** The application a view is of: its row id, public id, and slug. */
+export interface ViewedApplication {
+  readonly id: number;
+  readonly publicId: string;
+  readonly slug: string;
+}
+
+export interface ApplicationView {
+  readonly application: ViewedApplication;
+  /** Null for a visitor who hasn't written anything yet, whose workspace doesn't exist. */
   readonly viewWorkspaceId: number | null;
-  readonly access: "reference" | "share";
-  /** The state captured by the share link this view was opened through. */
-  readonly shareState?: ShareState;
+  readonly access: "own" | "share";
+  /** The share link the view was opened through. */
+  readonly share?: Share;
+}
+
+const viewedColumns = { id: applications.id, publicId: applications.publicId, slug: applications.slug };
+
+/** The application at /run/<slug>, or null. */
+export function viewedApplication(db: Executor, slug: string): ViewedApplication | null {
+  return db.select(viewedColumns).from(applications).where(eq(applications.slug, slug)).get() ?? null;
+}
+
+/** The application +share+ links to. Deleting an application deletes its share links, so it's there while the link is. */
+export function sharedApplication(db: Executor, share: Pick<Share, "applicationId">): ViewedApplication | null {
+  return db.select(viewedColumns).from(applications).where(eq(applications.id, share.applicationId)).get() ?? null;
 }
 
 /**
- * Resolves the view a visitor may open, or null when they may not open it.
- * A share token grants the shared view to anyone holding it, but only for the
- * reference deployment it was created for.
+ * The view of +application+ a visitor may open: the shared view when
+ * +shareToken+ is a link to this application, otherwise their own. A token
+ * for another application, or one that no longer resolves, grants nothing,
+ * so the visitor sees their own view.
  */
-export function resolveView(db: Executor, applicationId: string, visitor: Workspace | null, shareToken?: string | null): DemoView | null {
-  if (shareToken) {
-    const share = findShare(db, shareToken);
-    const template = share && templateBySlug(share.referenceSlug);
-    if (!share || !template || referenceId(template.slug) !== applicationId) return null;
-    return { template, viewWorkspaceId: share.viewWorkspaceId, access: "share", shareState: share.state };
-  }
+export function resolveApplicationView(db: Executor, application: ViewedApplication, visitor: Workspace | null, shareToken?: string | null): ApplicationView {
+  const share = shareToken ? findShare(db, shareToken) : null;
+  if (share && share.applicationId === application.id) return { application, viewWorkspaceId: share.viewWorkspaceId, access: "share", share };
+  return { application, viewWorkspaceId: visitor?.id ?? null, access: "own" };
+}
 
-  const template = referenceTemplate(applicationId);
-  return template ? { template, viewWorkspaceId: visitor?.id ?? null, access: "reference" } : null;
+/**
+ * The build of +application+ at +commit+ that a share link captured, when
+ * it's still served: a preview of the application's Repository and package
+ * at that commit, undeleted and published. Null once it was pruned or
+ * deleted, so the link opens the current build instead (template-demo/
+ * toolbar spec, "Shared links open the captured view").
+ */
+export function sharedBuild(db: Executor, config: FrontendRegistryConfig, application: ViewedApplication, commit: string): { readonly preview: string; readonly commitSha: string } | null {
+  const row = db
+    .select({ publicId: previewBuilds.publicId })
+    .from(previewBuilds)
+    .innerJoin(applications, and(eq(applications.repositoryId, previewBuilds.repositoryId), eq(applications.packageDir, previewBuilds.packageDir)))
+    .where(and(eq(applications.id, application.id), eq(previewBuilds.commitSha, commit), isNull(previewBuilds.deletedAt), isNotNull(previewBuilds.artifact)))
+    .orderBy(desc(previewBuilds.id))
+    .get();
+  return row && openPreview(db, config, row.publicId) ? { preview: row.publicId, commitSha: commit } : null;
 }

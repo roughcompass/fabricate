@@ -1,5 +1,5 @@
 import { BUILT_IN_PROFILES, DEFAULT_PROFILE, type Profile } from "@/lib/demo/catalog";
-import type { ShareState } from "@/lib/demo/shares";
+import type { ShareState } from "./descriptor";
 import { SHARED_PROFILE_ID } from "./view-store";
 
 /**

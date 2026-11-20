@@ -16,6 +16,7 @@ import {
   touchWorkspace,
 } from "@/lib/demo/workspaces";
 import { createTestDb } from "../support/db";
+import { EXPORT_ORDERS, commitOf, viewedApplicationIn } from "../support/views";
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = new Date("2026-09-30T12:00:00Z");
@@ -31,7 +32,7 @@ describe("demo workspaces", () => {
   const addReferenceThread = (workspaceId: number) =>
     db
       .insert(demoThreads)
-      .values({ publicId: generatePublicId("thr"), referenceSlug: "market-watch", viewWorkspaceId: workspaceId, route: "watch", member: "watchlist", memberVersion: "1.8.0", anchor: "filter", offsetX: 0.5, offsetY: 0.5, createdAt: NOW })
+      .values({ publicId: generatePublicId("thr"), applicationId: viewedApplicationIn(db).id, viewWorkspaceId: workspaceId, route: "/accounts", commitSha: commitOf("a"), anchor: EXPORT_ORDERS, offsetX: 0.5, offsetY: 0.5, createdAt: NOW })
       .run();
   const rows = (table: typeof demoThreads | typeof demoShares | typeof demoWorkspaces) => db.select().from(table).all().length;
   const threadsOf = (workspaceId: number) => db.select().from(demoThreads).all().filter((thread) => thread.viewWorkspaceId === workspaceId).length;
@@ -52,7 +53,7 @@ describe("demo workspaces", () => {
   it("refuses a missing or malformed credential", () => {
     expect(findWorkspace(db, undefined)).toBeNull();
     expect(findWorkspace(db, "short")).toBeNull();
-    expect(() => ensureWorkspace(db, "short")).toThrow(/no demo workspace/);
+    expect(() => ensureWorkspace(db, "short")).toThrow(/has no workspace yet/);
   });
 
   it("keeps two visitors' workspaces apart", () => {
@@ -107,13 +108,14 @@ describe("demo workspaces", () => {
     expect(maybePurgeIdleWorkspaces(db, new Date(NOW.getTime() + 61 * 60 * 1000))).toBe(0);
   });
 
-  it("resets one workspace without touching another", () => {
+  it("resets one workspace's comments, share links, display name, and hints, without touching another or the applications", () => {
     const key = newWorkspaceKey();
     const presenter = ensureWorkspace(db, key, NOW);
     const visitor = ensureWorkspace(db, newWorkspaceKey(), NOW);
     addReferenceThread(presenter.id);
     addReferenceThread(visitor.id);
-    db.insert(demoShares).values({ tokenDigest: "b".repeat(64), referenceSlug: "market-watch", viewWorkspaceId: presenter.id, state: "{}", createdAt: NOW }).run();
+    const orders = viewedApplicationIn(db, "Orders portal");
+    db.insert(demoShares).values({ tokenDigest: "b".repeat(64), applicationId: orders.id, viewWorkspaceId: presenter.id, commitSha: commitOf("a"), route: "/accounts", createdAt: NOW }).run();
     setHints(db, presenter.id, { off: true, runtime: "done" });
     setDisplayName(db, presenter.id, "Sam");
 
@@ -121,9 +123,10 @@ describe("demo workspaces", () => {
 
     expect(reset.resetEpoch).toBe(presenter.resetEpoch + 1);
     expect(reset.hints).toEqual({});
-    expect(reset.displayName).toBe("Sam");
+    expect(reset.displayName).toBeNull();
     expect(db.select().from(demoThreads).all().map((thread) => thread.viewWorkspaceId)).toEqual([visitor.id]);
     expect(rows(demoShares)).toBe(0);
     expect(findWorkspace(db, key)!.id).toBe(presenter.id);
+    expect(db.$client.prepare("select count(*) as n from applications").get()).toEqual({ n: 3 });
   });
 });

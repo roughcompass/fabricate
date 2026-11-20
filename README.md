@@ -62,7 +62,7 @@ npm run build       # Next.js standalone server, dist/worker.cjs, dist/migrate.c
 
 `npm run test:visual` seeds a representative Assessment, checks each product surface for horizontal overflow and overlapping content at 1280 and 375 pixels wide, and writes full-page screenshots to `verification/screenshots/`. The committed screenshots are the output of the last design review.
 
-Browser tests of a running application use `test/fixtures/apps/orders-portal`, a small Vite and React application, built through the real preview pipeline (`e2e/support/fixture-app.ts`) and framed under the toolbar by a test-only page, `/test/run/<preview>`. Its packages come from the public npm registry on the first run, which needs network access, and from the package cache in `tmp/e2e/package-cache/` after that, which the tests' reset leaves in place. Keep that directory between CI runs.
+Browser tests of a running application use `test/fixtures/apps/orders-portal`, a small Vite and React application, onboarded through the real application records and preview pipeline (`e2e/support/fixture-app.ts`) and run under the toolbar at `/run/<application>`. Its packages come from the public npm registry on the first run, which needs network access, and from the package cache in `tmp/e2e/package-cache/` after that, which the tests' reset leaves in place. Keep that directory between CI runs.
 
 The toolbar's timing inspector runs inside the application's own page, so it's bundled on its own, into the committed `public/toolbar/inspector.js`. After changing `src/components/toolbar/inspector/`, or upgrading web-vitals or esbuild, run `npm run build:inspector` and commit the bundle; a unit test fails until it matches.
 

@@ -1,18 +1,22 @@
 import { and, eq, lt } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
-import { demoProfiles, demoShares, demoThreads, demoWorkspaces } from "@/lib/db/schema";
+import { demoShares, demoThreads, demoWorkspaces } from "@/lib/db/schema";
 import { keyDigest } from "./workspace-digest";
 import { isWorkspaceKey } from "./workspace-key";
 import { type HintState, parseHints } from "./hints";
 
 /**
- * Anonymous demo workspaces (template-demo/demo-mode spec; design.md,
- * decisions 3 and 16). A workspace row exists only after its first write, and
- * browsing alone leaves nothing behind.
+ * Anonymous workspaces (template-demo/demo-mode spec, "Each visitor works in
+ * an anonymous workspace"): a visitor's comment threads and share links on
+ * applications, their display name, and their guidance state. A workspace
+ * row exists only after its first write, and browsing alone leaves nothing
+ * behind.
  */
 
 export const COMMENT_LIMIT = 2000;
+/** The open comment threads a workspace can hold (template-demo/demo-mode spec, "Workspace comments are bounded"). */
+export const THREAD_LIMIT = 500;
 const DISPLAY_NAME_LIMIT = 60;
 const IDLE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -43,7 +47,7 @@ export function findWorkspace(db: Executor, key: string | undefined): Workspace 
 
 /** The visitor's workspace, created on the first write. */
 export function ensureWorkspace(db: Executor, key: string, now = new Date()): Workspace {
-  if (!isWorkspaceKey(key)) throw new ValidationError([{ field: "workspace", message: "This browser has no demo workspace. Reload the page and try again." }]);
+  if (!isWorkspaceKey(key)) throw new ValidationError([{ field: "workspace", message: "This browser has no workspace yet. Reload the page and try again." }]);
   return immediate(db, (tx) => {
     const digest = keyDigest(key);
     const existing = tx.select().from(demoWorkspaces).where(eq(demoWorkspaces.keyDigest, digest)).get();
@@ -103,22 +107,22 @@ export function setHints(db: Executor, workspaceId: number, hints: HintState): H
 }
 
 /**
- * Clears a workspace: its threads and share links on reference deployments,
- * its custom session profiles, and its guidance state. Other workspaces and
- * the reference deployments are untouched. The reset epoch advances so state
- * the browser kept from before is ignored.
+ * Clears a workspace (template-demo/demo-mode spec, "Visitors can reset
+ * their workspace's comments and share links"): its comment threads, its
+ * share links, which stop working, and its display name, and restores its
+ * guidance state. Applications and other workspaces are untouched. The reset
+ * epoch advances so state the browser kept from before is ignored.
  */
 export function resetWorkspace(db: Executor, workspaceId: number): Workspace {
   return immediate(db, (tx) => {
     tx.delete(demoThreads).where(eq(demoThreads.viewWorkspaceId, workspaceId)).run();
     tx.delete(demoShares).where(eq(demoShares.viewWorkspaceId, workspaceId)).run();
-    tx.delete(demoProfiles).where(eq(demoProfiles.workspaceId, workspaceId)).run();
     const current = tx.select().from(demoWorkspaces).where(eq(demoWorkspaces.id, workspaceId)).get();
-    if (!current) throw new ValidationError([{ field: "workspace", message: "This demo workspace no longer exists" }]);
+    if (!current) throw new ValidationError([{ field: "workspace", message: "This workspace no longer exists" }]);
     return toWorkspace(
       tx
         .update(demoWorkspaces)
-        .set({ hints: "{}", resetEpoch: current.resetEpoch + 1 })
+        .set({ displayName: null, hints: "{}", resetEpoch: current.resetEpoch + 1 })
         .where(eq(demoWorkspaces.id, workspaceId))
         .returning()
         .get(),
