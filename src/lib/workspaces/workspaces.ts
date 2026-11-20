@@ -1,7 +1,7 @@
 import { and, eq, lt } from "drizzle-orm";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
-import { shareLinks, commentThreads, workspaces } from "@/lib/db/schema";
+import { sessionPresetChoices, shareLinks, commentThreads, workspaces } from "@/lib/db/schema";
 import { keyDigest } from "./workspace-digest";
 import { isWorkspaceKey } from "./workspace-key";
 import { type HintState, parseHints } from "./hints";
@@ -108,14 +108,16 @@ export function setHints(db: Executor, workspaceId: number, hints: HintState): H
 /**
  * Clears a workspace (template-demo/demo-mode spec, "Visitors can reset
  * their workspace's comments and share links"): its comment threads, its
- * share links, which stop working, and its display name, and restores its
- * guidance state. Applications and other workspaces are untouched, and so
+ * share links, which stop working, its choices of session presets, and its
+ * display name, and restores its guidance state. Applications, their saved
+ * previews and session presets, and other workspaces are untouched, and so
  * are replies the visitor left in views others shared, which are theirs.
  */
 export function resetWorkspace(db: Executor, workspaceId: number): Workspace {
   return immediate(db, (tx) => {
     tx.delete(commentThreads).where(eq(commentThreads.viewWorkspaceId, workspaceId)).run();
     tx.delete(shareLinks).where(eq(shareLinks.viewWorkspaceId, workspaceId)).run();
+    tx.delete(sessionPresetChoices).where(eq(sessionPresetChoices.workspaceId, workspaceId)).run();
     const current = tx.select().from(workspaces).where(eq(workspaces.id, workspaceId)).get();
     if (!current) throw new ValidationError([{ field: "workspace", message: "This workspace no longer exists" }]);
     return toWorkspace(

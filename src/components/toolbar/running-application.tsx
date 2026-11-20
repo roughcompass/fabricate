@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { HintState } from "@/lib/workspaces/hints";
 import { routes } from "@/lib/web/routes";
 import { ApplicationToolbar } from "./application-toolbar";
+import type { SessionStart } from "./session/session-state";
 import { workspaceThreadStore } from "./comments/thread-store";
 import { TargetFrame, useTargetDocument } from "./target-document";
 import type { MenuContext } from "./toolbar-menu";
@@ -27,17 +28,18 @@ import styles from "./running-application.module.css";
  * state. +preview+ is the key of the saved preview shown, which the address
  * keeps as `/run/<slug>@<key>`, or null for the tracked branch.
  * +composition+ is what the Profile of the build's commit says it's
- * composed of.
+ * composed of, and +session+ the application's session presets with the one
+ * the visitor starts it with.
  */
-export function RunningApplication(props: { slug: string; preview: string | null; src: string; base: string; commit: string; title: string; context: MenuContext; share: string | null; notice: string | null; hints: HintState; composition: BuildComposition }) {
-  const { slug, preview, src, base, commit, title, context, share, notice, hints, composition } = props;
+export function RunningApplication(props: { slug: string; preview: string | null; src: string; base: string; commit: string; title: string; context: MenuContext; share: string | null; notice: string | null; hints: HintState; composition: BuildComposition; session: SessionStart }) {
+  const { slug, preview, src, base, commit, title, context, share, notice, hints, composition, session } = props;
   const [store] = useState(() => workspaceThreadStore(slug, share, preview));
   const [view] = useState(() => ({ slug, name: context.name, preview, key: viewKey(slug, preview), composition }));
   return (
     <TargetFrame src={src} base={base} commit={commit} title={title} className={styles.frame}>
       <FollowRoute slug={slug} preview={preview} />
       {notice && <Notice text={notice} />}
-      <ApplicationToolbar slug={slug} preview={preview} share={share} context={context} store={store} hints={hints} view={view} />
+      <ApplicationToolbar slug={slug} preview={preview} share={share} context={context} store={store} hints={hints} view={view} session={session} />
     </TargetFrame>
   );
 }

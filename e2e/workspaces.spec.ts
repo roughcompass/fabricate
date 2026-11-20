@@ -3,7 +3,9 @@ import { startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { framedRun } from "./support/fixture-app";
-import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage } from "./support/running-app";
+import { buildQuotes } from "./support/quotes-fixtures";
+import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage, workspaceOf } from "./support/running-app";
+import { choosePreset, chosenPreset, createPreset, listPresets } from "../src/lib/workspaces/presets";
 
 /*
  * Anonymous workspaces on running applications (template-demo/demo-mode
@@ -11,7 +13,9 @@ import { application, resetFromApplications, runOrdersPortal, visitorContext, wa
  * reset their workspace's comments and share links"; add-applications, task
  * 8.7): every visitor sees the same application and only their own comments,
  * a returning browser finds them again, and Reset workspace, at the end of
- * the Applications page, clears one workspace alone.
+ * the Applications page, clears one workspace alone. Session presets are the
+ * application's, and only each workspace's choice of one is its own
+ * (restore-toolbar-tools-and-branch-previews, task 10.6).
  */
 
 test.skip(!E2E_PREVIEWS, "Previews are off (E2E_PREVIEWS=0)");
@@ -93,4 +97,34 @@ test("finds a returning visitor's workspace and comments in the same browser pro
   await expect(pins(again)).toHaveCount(1);
   await expect(pins(again).first()).toHaveAccessibleName(/by Alex: Still here tomorrow/);
   await returning.close();
+});
+
+test("Reset workspace clears the visitor's preset choices and leaves the application's presets (Presets are the application's, choices are the visitor's)", async ({ page, context, browser, baseURL, db }) => {
+  const { desk } = await buildQuotes(db, { saved: false });
+  const id = (db.$client.prepare("select id from applications where slug = ?").get(desk.application.slug) as { id: number }).id;
+  await page.goto(framedRun(desk));
+  await waitForPage(page, "Quotes desk");
+  const admin = createPreset(db, id, { name: "Admin user", entries: [{ store: "local", name: "desk:user", value: '{"role":"admin"}' }] }, null);
+  const presenter = await workspaceOf(context, db);
+  choosePreset(db, presenter.id, id, admin.publicId);
+  await page.reload();
+  await waitForPage(page, "Quotes desk");
+  await expect(application(page).locator("[data-startup-user]")).toHaveText("admin");
+
+  // Another browser sees the preset, and starts with its own storage.
+  const visitor = await visitorContext(browser, db, baseURL!);
+  const second = await visitor.newPage();
+  await second.goto(framedRun(desk));
+  await waitForPage(second, "Quotes desk");
+  await expect(application(second).locator("[data-startup-user]")).toHaveText("none");
+  await second.keyboard.press("p");
+  await expect(second.getByRole("dialog", { name: "Session" }).locator('[data-preset="Admin user"]')).toBeVisible();
+
+  await resetFromApplications(page);
+  expect(chosenPreset(db, presenter.id, id)).toBeNull();
+  expect(listPresets(db, id).map((preset) => preset.name)).toEqual(["Admin user"]);
+  await page.goto(framedRun(desk));
+  await waitForPage(page, "Quotes desk");
+  await expect(application(page).locator("[data-startup-user]")).toHaveText("none");
+  await visitor.close();
 });

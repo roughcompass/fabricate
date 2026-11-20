@@ -30,7 +30,7 @@ describe("Reset workspace", () => {
   it("is a section of its own, saying what goes and what stays, whose trigger submits the reset before JavaScript runs", () => {
     const html = renderToStaticMarkup(createElement(ResetWorkspaceSection));
     expect(html).toMatch(/<h2 [^>]*>Reset workspace<\/h2>/);
-    expect(html).toContain("Removes the comment threads in your views, your share links, and your display name, and shows the guided hints again. Replies you left in views others shared with you stay there.");
+    expect(html).toContain("Removes the comment threads in your views, your share links, your choices of session presets, and your display name, and shows the guided hints again. Replies you left in views others shared with you stay there.");
     expect(html).toMatch(/<button type="submit"[^>]*>.*Reset workspace<\/button>/);
   });
 

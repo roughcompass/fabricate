@@ -13,6 +13,8 @@ import { GuidedHints, HintsContext, RUNTIME_HINTS, useHintControls } from "./gui
 import { MicrofrontendsPanel } from "./microfrontends/microfrontends-panel";
 import { MicrofrontendsProvider } from "./microfrontends/microfrontends-state";
 import { RegionsOverlay } from "./microfrontends/regions-overlay";
+import { SessionPanel } from "./session/session-panel";
+import { type SessionStart, SessionProvider } from "./session/session-state";
 import { SettingsPanel } from "./settings/settings-panel";
 import { SettingsProvider } from "./settings/settings-state";
 import { SharePanel } from "./share-panel";
@@ -33,11 +35,12 @@ import styles from "./running-application.module.css";
  * link +share+ opened, if any; and the guided hints that point to them, from
  * the workspace's +hints+ state. Microfrontends
  * (restore-toolbar-tools-and-branch-previews) lists what the +view+ is
- * composed of and routes its microfrontends, and Settings switches its theme
- * and logs the page's event bus. It needs to read the page, so when the
+ * composed of and routes its microfrontends, Session starts it with one of
+ * its +session+ presets, and Settings switches its theme and logs the page's
+ * event bus. It needs to read the page, so when the
  * frame isn't same-origin it says so and doesn't start.
  */
-export function ApplicationToolbar({ slug, preview, share, context, store, hints, view }: { slug: string; preview: string | null; share: string | null; context: MenuContext; store: ThreadStore; hints: HintState; view: ToolbarView }) {
+export function ApplicationToolbar({ slug, preview, share, context, store, hints, view, session }: { slug: string; preview: string | null; share: string | null; context: MenuContext; store: ThreadStore; hints: HintState; view: ToolbarView; session: SessionStart }) {
   const target = useTargetDocument();
   if (target.state === "unreadable")
     return (
@@ -54,7 +57,9 @@ export function ApplicationToolbar({ slug, preview, share, context, store, hints
           <TimingProvider>
             <SettingsProvider>
               <MicrofrontendsProvider>
-                <Tools context={context} hints={hints} share={<SharePanel slug={slug} preview={preview} name={context.name} share={share} />} />
+                <SessionProvider start={session}>
+                  <Tools context={context} hints={hints} share={<SharePanel slug={slug} preview={preview} name={context.name} share={share} />} />
+                </SessionProvider>
               </MicrofrontendsProvider>
             </SettingsProvider>
           </TimingProvider>
@@ -72,7 +77,7 @@ function Tools({ context, hints: initial, share }: { context: MenuContext; hints
       <Toolbar
         context={context}
         commentCount={comments.threads.filter((thread) => thread.status === "open").length}
-        panels={{ comments: <CommentsPanel />, share, microfrontends: <MicrofrontendsPanel />, accessibility: <AccessibilityPanel />, timing: <TimingPanel />, settings: <SettingsPanel /> }}
+        panels={{ comments: <CommentsPanel />, share, microfrontends: <MicrofrontendsPanel />, accessibility: <AccessibilityPanel />, timing: <TimingPanel />, session: <SessionPanel />, settings: <SettingsPanel /> }}
         overlays={
           <>
             <AuditOverlay />

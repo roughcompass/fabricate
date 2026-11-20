@@ -39,10 +39,10 @@ export async function resetWorkspaceAction(): Promise<void> {
  */
 export function ResetWorkspaceSection() {
   return (
-    <Section title="Reset workspace" description="Removes the comment threads in your views, your share links, and your display name, and shows the guided hints again. Replies you left in views others shared with you stay there.">
+    <Section title="Reset workspace" description="Removes the comment threads in your views, your share links, your choices of session presets, and your display name, and shows the guided hints again. Replies you left in views others shared with you stay there.">
       <div>
         <ConfirmDialog action={resetWorkspaceAction} trigger={{ label: "Reset workspace", icon: "undo" }} title="Reset your workspace?" confirmLabel="Reset workspace" tone="danger">
-          {"Removes the comment threads in your views, your share links, and your display name, so links you shared stop working. Replies you left in views others shared with you stay there."}
+          {"Removes the comment threads in your views, your share links, your choices of session presets, and your display name, so links you shared stop working. Replies you left in views others shared with you stay there."}
         </ConfirmDialog>
       </div>
     </Section>
