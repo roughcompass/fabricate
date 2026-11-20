@@ -90,7 +90,7 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
       const decided = decidePreparation(tx, job.preparation, job.requested, profile, eligibility);
       // With exactly one qualifying package there's nothing to choose; it's built only for an enrolled remote.
       const qualifying = eligibility.packages.filter((verdict) => verdict.qualifies);
-      if (decided?.state === "ready" && qualifying.length === 1 && isEnrolled(tx, config, repository)) startPreview(tx, decided.publicId, qualifying[0]!.directory);
+      if (decided?.state === "ready" && qualifying.length === 1 && isEnrolled(tx, config, repository)) startPreview(tx, decided.publicId, qualifying[0]!.directory, { priority: preparationPriority(tx, decided) });
       return decided;
     });
   } catch (error) {

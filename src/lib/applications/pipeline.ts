@@ -386,7 +386,8 @@ export function startPackageBuild(db: Executor, target: BuildTarget, preparation
     settle({ outcome: "not_previewable", reasons: refusalReasons(preparation, packageDir), facts });
     return;
   }
-  const queue = { priority: options.priority };
+  // Asked for at normal priority, a build a saved preview's automatic rebuild queued in the background moves up.
+  const queue = { priority: options.priority ?? JOB_PRIORITIES.normal };
   const { preview, created } = startPreview(db, preparation.publicId, packageDir, queue);
   // A failed build of the commit is tried again; a successful one only when the operator asked to rebuild.
   const latest = !created && (preview.attemptState === "failed" || (options.force && preview.attemptState === "ready")) ? rebuildPreview(db, preview.publicId, queue) : preview;

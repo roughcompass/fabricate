@@ -33,7 +33,7 @@ export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConf
       const log = (message: string) => console.log(`[worker] ${message}`);
       runScheduledProfileCheck(db, config, { slot: String(payload.slot), log });
       const result = await checkApplications(db, config, { signal: context.signal, log });
-      if (result.checked > 0) log(`applications check: ${result.checked} applications, ${result.started} builds started, ${result.unreadable} unreadable`);
+      if (result.checked > 0) log(`applications check: ${result.checked} tracked and saved refs, ${result.started} builds started, ${result.unreadable} unreadable`);
     },
     [RUN_SURVEY]: async (payload, context) => void (await runSurvey(db, String(payload.survey), { config, signal: context.signal })),
     // A deleted Repository isn't surveyed; a reference that can't be read fails the job, which records why.

@@ -2,16 +2,19 @@ import fs from "node:fs";
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { checkApplications } from "@/lib/applications/check";
-import { createApplication } from "@/lib/applications/pipeline";
+import { createApplication, createSavedPreview } from "@/lib/applications/pipeline";
 import { getApplication, getApplicationRow } from "@/lib/applications/records";
+import { findSavedPreview, getSavedPreviewRow } from "@/lib/applications/saved-previews";
 import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, withOverrides } from "@/lib/config";
-import { applications, jobs, previewBuilds } from "@/lib/db/schema";
-import { jobPayload } from "@/lib/jobs/queue";
+import { JOB_PRIORITIES, applications, jobs, previewBuilds } from "@/lib/db/schema";
+import { GitRunner } from "@/lib/git/runner";
+import { claimNext, jobPayload } from "@/lib/jobs/queue";
 import { jobHandlers } from "@/lib/jobs/registry";
 import { enrollRemote } from "@/lib/previews/access";
 import { requestPreparation } from "@/lib/previews/preparation";
 import { BUILD_PREVIEW, PREPARE_PREVIEW, failAttempt, findPreparation } from "@/lib/previews/records";
+import { CAPTURE_SCREENSHOT } from "@/lib/previews/screenshots";
 import { RUN_SURVEY } from "@/lib/surveys/run";
 import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { rawRun } from "../support/db";
@@ -73,11 +76,23 @@ describe("applications check", () => {
     expect(shown().status).toBe("ready");
   }
 
-  function push(files: Record<string, string>, message: string): string {
+  function push(files: Record<string, string>, message: string, branch = "main"): string {
+    if (branch !== "main") work.git("checkout", "--quiet", ...(work.git("branch", "--list", branch).trim() ? [] : ["-b"]), branch);
     for (const [file, content] of Object.entries(files)) work.write(file, content);
     const commit = work.commit(message);
-    work.git("push", "--quiet", remote.path, "main");
+    work.git("push", "--quiet", remote.path, branch);
+    if (branch !== "main") work.checkout("main");
     return commit;
+  }
+
+  const saved = (key: string) => findSavedPreview(world.db, shown().publicId, key)!;
+  const savedLatest = (key: string) => world.db.select().from(previewBuilds).where(eq(previewBuilds.id, getSavedPreviewRow(world.db, saved(key).publicId).latestPreviewId!)).get()!;
+  /** Saves a preview of +ref+ and publishes its first build, unless its commit's build already published. */
+  async function readySaved(ref: string, key: string): Promise<void> {
+    await createSavedPreview(world.db, shown().publicId, { ref }, { config });
+    await runPreparations();
+    if (saved(key).status !== "ready") publishFiles(world.db, config, savedLatest(key), { "index.html": "<!doctype html>" });
+    expect(saved(key).status).toBe("ready");
   }
 
   it("builds a pushed commit once, and queues nothing when the check runs again (Branch moves)", async () => {
@@ -165,6 +180,115 @@ describe("applications check", () => {
     // Enrolled by its application alone, as onboarding enrolls it.
     enrollRemote(world.db, repository, shown());
     expect(await check()).toEqual({ checked: 1, started: 1, unreadable: 0 });
+  });
+
+  describe("saved previews", () => {
+    it("builds a saved branch that moved, never a saved tag, and doesn't retry a failed commit (A saved branch moves, Tag left alone, Failed commit isn't retried)", async () => {
+      await readyApplication();
+      push({ "src/nav.ts": "export const nav = 1;\n" }, "New nav", "feature/new-nav");
+      work.git("tag", "v1.1.0", "feature/new-nav");
+      work.git("push", "--quiet", remote.path, "v1.1.0");
+      await readySaved("refs/heads/feature/new-nav", "feature-new-nav");
+      await readySaved("refs/tags/v1.1.0", "v1.1.0");
+      expect(await check()).toEqual({ checked: 3, started: 0, unreadable: 0 });
+
+      const good = saved("feature-new-nav").current!;
+      const moved = push({ "src/nav.ts": "export const nav = 2;\n" }, "Broken nav", "feature/new-nav");
+      // The tag is moved too, as a force-push would; the check still leaves it alone.
+      work.git("tag", "-f", "v1.1.0", "feature/new-nav");
+      work.git("push", "--quiet", "--force", remote.path, "v1.1.0");
+      expect(await check()).toEqual({ checked: 3, started: 1, unreadable: 0 });
+      expect(saved("feature-new-nav")).toMatchObject({ status: "building", latest: { commitSha: moved }, current: { preview: good.preview } });
+      expect(saved("v1.1.0")).toMatchObject({ status: "ready" });
+
+      await runPreparations();
+      failAttempt(world.db, savedLatest("feature-new-nav").publicId, { attempt: 1 }, "The build failed");
+      expect(saved("feature-new-nav")).toMatchObject({ status: "latest_build_failed", current: { preview: good.preview } });
+      const before = buildJobs().length;
+      expect(await check()).toEqual({ checked: 3, started: 0, unreadable: 0 });
+      await runPreparations();
+      expect(buildJobs()).toHaveLength(before);
+    });
+
+    it("marks a saved ref gone from the remote, keeps its build, and clears the mark when it returns (Branch deleted after merging)", async () => {
+      await readyApplication();
+      const head = push({ "src/nav.ts": "export const nav = 1;\n" }, "New nav", "feature/new-nav");
+      await readySaved("refs/heads/feature/new-nav", "feature-new-nav");
+      const kept = saved("feature-new-nav").current!;
+
+      work.git("push", "--quiet", remote.path, "--delete", "feature/new-nav");
+      expect(await check()).toEqual({ checked: 2, started: 0, unreadable: 1 });
+      expect(saved("feature-new-nav")).toMatchObject({ status: "ready", current: { preview: kept.preview } });
+      const gone = saved("feature-new-nav").remoteMissingAt;
+      expect(gone).toBeInstanceOf(Date);
+      expect(logged.at(-1)).toBe("applications check: spa-orders has no branch feature/new-nav, which Orders portal keeps a preview of");
+      // Still gone: the mark keeps when it was first missed.
+      await check();
+      expect(saved("feature-new-nav").remoteMissingAt).toEqual(gone);
+
+      work.git("push", "--quiet", remote.path, `${head}:refs/heads/feature/new-nav`);
+      expect(await check()).toEqual({ checked: 2, started: 0, unreadable: 0 });
+      expect(saved("feature-new-nav").remoteMissingAt).toBeNull();
+    });
+
+    it("reads the remote once for the tracked branch and 20 saved branches (No extra reads of the remote)", async () => {
+      await readyApplication();
+      const head = work.head();
+      const applicationId = getApplicationRow(world.db, shown().publicId).id;
+      for (let index = 0; index < 20; index++) {
+        work.git("branch", `feature/${index}`);
+        rawRun(
+          world.db,
+          "insert into application_previews (public_id, application_id, key, ref, latest_commit_sha, latest_outcome, latest_reasons, latest_requested_at, created_at, updated_at) values (?, ?, ?, ?, ?, 'failed', '[{\"text\":\"no\"}]', 0, 0, 0)",
+          `apv_${String(index).padStart(16, "0")}`,
+          applicationId,
+          `feature-${index}`,
+          `refs/heads/feature/${index}`,
+          head,
+        );
+      }
+      work.git("push", "--quiet", remote.path, "--all");
+      let reads = 0;
+      const runner = new (class extends GitRunner {
+        override lsRemote(...args: Parameters<GitRunner["lsRemote"]>) {
+          reads += 1;
+          return super.lsRemote(...args);
+        }
+      })({ config });
+      expect(await checkApplications(world.db, config, { runner })).toEqual({ checked: 21, started: 0, unreadable: 0 });
+      expect(reads).toBe(1);
+    });
+
+    it("queues a saved branch's rebuild, and its screenshot, behind the tracked branch's (Both move at once)", async () => {
+      await readyApplication();
+      push({ "src/nav.ts": "export const nav = 1;\n" }, "New nav", "feature/new-nav");
+      await readySaved("refs/heads/feature/new-nav", "feature-new-nav");
+      const tracked = push({ "src/note.ts": "export const note = 1;\n" }, "second");
+      const feature = push({ "src/nav.ts": "export const nav = 2;\n" }, "Newer nav", "feature/new-nav");
+      // Only what this check queues is waiting.
+      world.db.update(jobs).set({ state: "succeeded", finishedAt: new Date() }).where(eq(jobs.state, "queued")).run();
+
+      expect(await check()).toMatchObject({ started: 2 });
+      // The tracked branch's preparation is claimed first.
+      const first = claimNext(world.db, { workerId: "test" })!;
+      expect(first.kind).toBe(PREPARE_PREVIEW);
+      expect(findPreparation(world.db, String(jobPayload(first).preparation))!.commitSha).toBe(tracked);
+      world.db.update(jobs).set({ state: "queued", leaseOwner: null, leaseExpiresAt: null, attempts: 0 }).where(eq(jobs.id, first.id)).run();
+
+      await runPreparations();
+      const builds = world.db.select().from(jobs).where(and(eq(jobs.kind, BUILD_PREVIEW), eq(jobs.state, "queued"))).all();
+      const priorityOf = (commit: string) => builds.find((job) => job.payload.includes(world.db.select().from(previewBuilds).where(eq(previewBuilds.commitSha, commit)).get()!.publicId))!.priority;
+      expect([priorityOf(tracked), priorityOf(feature)]).toEqual([JOB_PRIORITIES.normal, JOB_PRIORITIES.background]);
+      const next = claimNext(world.db, { workerId: "test" })!;
+      expect(jobPayload(next).preview).toBe(latestPreview().publicId);
+
+      // The saved branch's screenshot waits behind the application's.
+      publishFiles(world.db, config, savedLatest("feature-new-nav"), { "index.html": "<!doctype html>" });
+      publishFiles(world.db, config, latestPreview(), { "index.html": "<!doctype html>" });
+      const captures = world.db.select().from(jobs).where(and(eq(jobs.kind, CAPTURE_SCREENSHOT), eq(jobs.state, "queued"))).all();
+      expect(captures.find((job) => job.payload.includes(latestPreview().publicId))!.priority).toBe(JOB_PRIORITIES.normal);
+      expect(captures.find((job) => job.payload.includes(savedLatest("feature-new-nav").publicId))!.priority).toBe(JOB_PRIORITIES.background);
+    });
   });
 
   it("runs in the profiling check's job, after the profiling check", async () => {

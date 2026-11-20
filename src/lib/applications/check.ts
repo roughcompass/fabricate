@@ -1,17 +1,18 @@
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { normalizeAcquisitionError } from "@/lib/acquisition/acquire";
 import type { Advertisement } from "@/lib/acquisition/mirror";
 import type { Repository } from "@/lib/repositories/repository-records";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
-import { applications, repositories } from "@/lib/db/schema";
+import { JOB_PRIORITIES, applicationPreviews, applications, repositories } from "@/lib/db/schema";
 import type { GitRunner } from "@/lib/git/runner";
 import { isEnrolled } from "@/lib/previews/access";
 import { settleAbandonedAttempts, settleAbandonedPreparations } from "@/lib/previews/records";
 import { readRemote } from "@/lib/previews/refs";
 import { settleAbandonedScreenshots } from "@/lib/previews/screenshots";
-import { ApplicationBuildError, buildApplication } from "./pipeline";
+import { ApplicationBuildError, buildApplication, buildSavedPreview } from "./pipeline";
 import { branchLabel } from "./records";
+import { refKind, refLabel } from "./saved-previews";
 
 /*
  * The automatic check for new commits (add-applications, design decision 3;
@@ -25,17 +26,24 @@ import { branchLabel } from "./records";
  * latest attempt's, so it isn't tried again until the branch moves or an
  * operator rebuilds. A remote that can't be read is logged and skipped,
  * leaving its applications as they were, and the next check reads it again.
+ *
+ * Saved previews are compared against the same read of their remote
+ * (restore-toolbar-tools-and-branch-previews, design decision 3), so they add
+ * no remote reads: a saved branch that moved starts an attempt, queued at
+ * background priority behind tracked branches and operator actions; a saved
+ * tag is never rebuilt; and a saved ref the remote no longer has is marked
+ * missing, keeping its last build, until it returns.
  */
 
 /** How many remotes the check reads at once. */
 const PARALLEL_REMOTES = 4;
 
 export interface ApplicationCheckResult {
-  /** Applications whose branch the check read, or tried to. */
+  /** Applications and saved previews whose branch or tag the check read, or tried to. */
   readonly checked: number;
-  /** Applications whose tracked branch had moved, for which an attempt started. */
+  /** Applications and saved branches that had moved, for which an attempt started. */
   readonly started: number;
-  /** Applications whose remote, or tracked branch, couldn't be read. */
+  /** Applications and saved previews whose remote, or ref, couldn't be read. */
   readonly unreadable: number;
 }
 
@@ -51,32 +59,55 @@ export async function checkApplications(db: Executor, config: FrontendRegistryCo
   settleAbandonedPreparations(db);
   settleAbandonedAttempts(db);
   settleAbandonedScreenshots(db);
+  const enrolled = new Map<number, boolean>();
+  const isChecked = (repository: Repository) => enrolled.get(repository.id) ?? enrolled.set(repository.id, isEnrolled(db, config, repository)).get(repository.id)!;
   const rows = db
     .select({ publicId: applications.publicId, name: applications.name, trackedRef: applications.trackedRef, latestCommitSha: applications.latestCommitSha, repository: repositories })
     .from(applications)
     .innerJoin(repositories, eq(repositories.id, applications.repositoryId))
     .where(and(ne(applications.latestOutcome, "building"), isNull(repositories.deletedAt)))
     .all()
-    .filter((row) => isEnrolled(db, config, row.repository));
-  const remotes = new Map<number, { repository: Repository; applications: typeof rows }>();
-  for (const row of rows) {
-    const remote = remotes.get(row.repository.id) ?? { repository: row.repository, applications: [] };
-    remote.applications.push(row);
-    remotes.set(row.repository.id, remote);
-  }
+    .filter((row) => isChecked(row.repository));
+  const saved = db
+    .select({ id: applicationPreviews.id, publicId: applicationPreviews.publicId, ref: applicationPreviews.ref, latestCommitSha: applicationPreviews.latestCommitSha, missing: applicationPreviews.remoteMissingAt, name: applications.name, repository: repositories })
+    .from(applicationPreviews)
+    .innerJoin(applications, eq(applications.id, applicationPreviews.applicationId))
+    .innerJoin(repositories, eq(repositories.id, applications.repositoryId))
+    .where(and(ne(applicationPreviews.latestOutcome, "building"), isNull(repositories.deletedAt)))
+    .all()
+    .filter((row) => isChecked(row.repository));
+  const remotes = new Map<number, { repository: Repository; applications: typeof rows; saved: typeof saved }>();
+  const remoteOf = (repository: Repository) => remotes.get(repository.id) ?? remotes.set(repository.id, { repository, applications: [], saved: [] }).get(repository.id)!;
+  for (const row of rows) remoteOf(row.repository).applications.push(row);
+  for (const row of saved) remoteOf(row.repository).saved.push(row);
 
   let started = 0;
   let unreadable = 0;
-  await eachLimited([...remotes.values()], PARALLEL_REMOTES, async ({ repository, applications: tracked }) => {
+  const missing: number[] = [];
+  const returned: number[] = [];
+  /** Starts an attempt, counting it; one another request started meanwhile is already on its way. */
+  const start = async (what: string, ref: string, build: () => Promise<unknown>) => {
+    try {
+      await build();
+      started += 1;
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
+      if (error instanceof ApplicationBuildError) return;
+      unreadable += 1;
+      options.log?.(`applications check: ${what} couldn't start a build of ${ref}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+  await eachLimited([...remotes.values()], PARALLEL_REMOTES, async ({ repository, applications: tracked, saved: kept }) => {
     let advertised: Advertisement;
     try {
       advertised = await readRemote(repository, { config, runner: options.runner, signal: options.signal });
     } catch (error) {
       if (options.signal?.aborted) throw error;
-      unreadable += tracked.length;
+      unreadable += tracked.length + kept.length;
       options.log?.(`applications check: ${repository.name}'s remote couldn't be read: ${normalizeAcquisitionError(error).message}`);
       return;
     }
+    const refOptions = { config, runner: options.runner, signal: options.signal };
     for (const application of tracked) {
       const head = advertised.refs.get(application.trackedRef);
       if (!head) {
@@ -84,20 +115,39 @@ export async function checkApplications(db: Executor, config: FrontendRegistryCo
         options.log?.(`applications check: ${repository.name} has no branch ${branchLabel(application.trackedRef)}, which ${application.name} tracks`);
         continue;
       }
-      if (head === application.latestCommitSha) continue;
-      try {
-        await buildApplication(db, application.publicId, { config, runner: options.runner, signal: options.signal });
-        started += 1;
-      } catch (error) {
-        if (options.signal?.aborted) throw error;
-        // An attempt another request started meanwhile is already on its way.
-        if (error instanceof ApplicationBuildError) continue;
+      if (head !== application.latestCommitSha) await start(application.name, branchLabel(application.trackedRef), () => buildApplication(db, application.publicId, refOptions));
+    }
+    // Saved previews after tracked branches, and their builds behind them in the queue.
+    for (const preview of kept) {
+      const head = advertised.refs.get(preview.ref);
+      if (!head) {
         unreadable += 1;
-        options.log?.(`applications check: ${application.name} couldn't start a build of ${branchLabel(application.trackedRef)}: ${error instanceof Error ? error.message : String(error)}`);
+        if (preview.missing === null) {
+          missing.push(preview.id);
+          options.log?.(`applications check: ${repository.name} has no ${refKind(preview.ref)} ${refLabel(preview.ref)}, which ${preview.name} keeps a preview of`);
+        }
+        continue;
       }
+      if (preview.missing !== null) returned.push(preview.id);
+      if (refKind(preview.ref) === "tag" || head === preview.latestCommitSha) continue;
+      await start(`${preview.name} (${refLabel(preview.ref)})`, refLabel(preview.ref), () => buildSavedPreview(db, preview.publicId, { ...refOptions, priority: JOB_PRIORITIES.background }));
     }
   });
-  return { checked: rows.length, started, unreadable };
+  markRemoteMissing(db, missing, returned);
+  return { checked: rows.length + saved.length, started, unreadable };
+}
+
+/** How many saved previews one statement marks; a fleet can have thousands. */
+const MARK_BATCH = 500;
+
+/** Records that the remote no longer has the saved previews +missing+, and has +returned+ again. */
+function markRemoteMissing(db: Executor, missing: readonly number[], returned: readonly number[]): void {
+  const now = new Date();
+  for (const [ids, value] of [[missing, now], [returned, null]] as const) {
+    for (let start = 0; start < ids.length; start += MARK_BATCH) {
+      db.update(applicationPreviews).set({ remoteMissingAt: value }).where(inArray(applicationPreviews.id, ids.slice(start, start + MARK_BATCH))).run();
+    }
+  }
 }
 
 /** Runs +work+ on every item, at most +limit+ at a time. */

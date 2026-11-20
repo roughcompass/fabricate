@@ -223,7 +223,7 @@ export function startPreview(db: Executor, preparationPublicId: string, packageD
       .where(and(eq(previewBuilds.repositoryId, preparation.repositoryId), eq(previewBuilds.commitSha, preparation.commitSha), eq(previewBuilds.packageDir, packageDir), isNull(previewBuilds.deletedAt)))
       .get();
     if (existing) {
-      if (existing.attemptState === "queued") enqueueAttempt(tx, existing, options.priority);
+      if (existing.attemptState === "queued" && options.priority !== undefined) enqueueAttempt(tx, existing, options.priority);
       return { preview: existing, created: false };
     }
 
@@ -271,7 +271,7 @@ export function rebuildPreview(db: Executor, publicId: string, options: QueueOpt
     const preview = findPreview(tx, publicId);
     if (!preview) throw new NotFoundError(`Preview ${publicId} does not exist`);
     if (preview.attemptState === "queued" || preview.attemptState === "building") {
-      if (preview.attemptState === "queued") enqueueAttempt(tx, preview, options.priority);
+      if (preview.attemptState === "queued" && options.priority !== undefined) enqueueAttempt(tx, preview, options.priority);
       return preview;
     }
     const now = new Date();
