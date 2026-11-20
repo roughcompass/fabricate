@@ -5,6 +5,7 @@ import { E2E_PACKAGE_CACHE, E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { ORDERS_PORTAL_BRANDS, buildOrdersPortal, commitToOrdersPortal, ordersPortalRemote, previewOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
 import { paths } from "./support/paths";
+import { buildQuotes, quotesComposition } from "./support/quotes-fixtures";
 import { serverConfig } from "./support/results";
 
 /*
@@ -64,6 +65,50 @@ test("installs from the kept package cache with no registry to reach", async ({ 
   const preview = await previewOrdersPortal(db, { ref: "offline" });
   expect(preview.attemptState).toBe("ready");
   expect(log(preview)).toContain("==> ready");
+});
+
+test("onboards Quotes panel and Quotes desk, built with Rspack, each Profile reporting its composition and Salt", async ({ page, db }) => {
+  const { desk, panel, commits, blueQuotes, darkBlotter } = await buildQuotes(db);
+  expect(panel.application).toMatchObject({ name: "Quotes panel", status: "ready", current: { commitSha: commits.panel } });
+  expect(desk.application).toMatchObject({ name: "Quotes desk", status: "ready", current: { commitSha: commits.desk } });
+  // Each feature branch is a saved preview, built and captured.
+  expect(blueQuotes).toMatchObject({ key: "feature-blue-quotes", label: "feature/blue-quotes", status: "ready", current: { commitSha: commits.blueQuotes } });
+  expect(darkBlotter).toMatchObject({ key: "feature-dark-blotter", label: "feature/dark-blotter", status: "ready", current: { commitSha: commits.darkBlotter } });
+  expect(blueQuotes!.screenshot).not.toBeNull();
+  for (const build of [panel, desk]) expect(build.application.facts).toMatchObject({ frameworks: ["React"], buildTool: "Rspack" });
+
+  // The remote exposes ./Quotes, is a single-spa application through its ticker, and renders Salt's provider.
+  expect(quotesComposition(db, panel)).toEqual({ packageName: "@fixtures/quotes-panel", remotes: [], imports: [], singleSpa: { rootConfig: false, application: true }, containers: [{ name: "quotesPanel", exposes: ["./Quotes"] }], saltProvider: true });
+  // The host loads it at its development address, maps the ticker in its import map, and starts single-spa.
+  expect(quotesComposition(db, desk)).toEqual({
+    packageName: "@fixtures/quotes-desk",
+    remotes: [{ alias: "quotesPanel", container: "quotesPanel", entry: "http://127.0.0.1:9311/remoteEntry.js" }],
+    imports: [{ specifier: "@fixtures/quotes-panel", url: "http://127.0.0.1:9312/ticker.js" }],
+    singleSpa: { rootConfig: true, application: false },
+    containers: [],
+    saltProvider: true,
+  });
+
+  // The remote's own page renders its exposed module, and ships the ticker beside it.
+  await page.goto(panel.base);
+  await expect(page.getByRole("heading", { name: "Quotes panel", level: 2 })).toBeVisible();
+  expect((await page.request.get(`${panel.base}ticker.js`)).status()).toBe(200);
+  expect((await page.request.get(`${panel.base}remoteEntry.js`)).status()).toBe(200);
+
+  // As built, the host's remote and ticker point where nothing listens.
+  await page.goto(desk.base);
+  await expect(page.getByRole("heading", { name: "Quotes desk", level: 1 })).toBeVisible();
+  await expect(page.getByText("Quotes unavailable")).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Ticker" })).toHaveText("Ticker unavailable");
+  await page.goto(`${desk.base}blotter`);
+  await expect(page.getByRole("heading", { name: "Blotter", level: 1 })).toBeVisible();
+
+  // The saved previews build their branches.
+  await page.goto(`/previews/${blueQuotes!.current!.preview}/`);
+  await expect(page.getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+  expect(await (await page.request.get(`/previews/${blueQuotes!.current!.preview}/ticker.js`)).text()).toContain("Blue ticker: ");
+  await page.goto(`/previews/${darkBlotter!.current!.preview}/blotter`);
+  await expect(page.getByRole("heading", { name: "Dark blotter", level: 1 })).toBeVisible();
 });
 
 test("saves previews of feature/new-nav and v1.1.0, each built and captured, served under its own preview path (restore-toolbar-tools-and-branch-previews, task 3.7)", async ({ page, db, request }) => {

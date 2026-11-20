@@ -1,0 +1,25 @@
+@layer components {
+  /* The Session tool: what the application starts with, its presets, and the form that creates or edits one. */
+  .note { padding: var(--space-2) var(--space-3); border: 1px solid var(--color-warning-border); border-radius: var(--radius-md); background: var(--color-warning-bg); color: var(--color-text); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .section { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+  .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .sectionTitle { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .muted { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .error { color: var(--color-text); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+
+  .list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+  .row { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border-subtle); }
+  .row:last-child { border-bottom: 0; }
+  .rowMain { display: flex; align-items: center; gap: var(--space-1); }
+  .rowText { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
+  .rowName { overflow: hidden; font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); text-overflow: ellipsis; white-space: nowrap; }
+  .rowMeta { overflow: hidden; color: var(--color-text-secondary); font-size: var(--font-size-caption); line-height: var(--line-height-caption); text-overflow: ellipsis; white-space: nowrap; }
+  .confirm { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-error-border); border-radius: var(--radius-md); background: var(--color-error-bg); }
+
+  .form { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); border: var(--surface-border); border-radius: var(--surface-radius); background: var(--color-bg-subtle); }
+  .formTitle { font-size: var(--font-size-secondary); font-weight: var(--font-weight-semibold); line-height: var(--line-height-secondary); }
+  .entries { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+  .entry { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: var(--space-2) var(--space-3) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); }
+  .entryLegend { padding: 0 var(--space-1); color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); line-height: var(--line-height-caption); }
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+}

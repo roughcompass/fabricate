@@ -2,6 +2,8 @@
 
 import { createContext, use, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Rect } from "@/components/toolbar/placement";
+import { AgentChannel, browserScheduler, fetchAgentText, injectAgent, runAgent, watchDocuments } from "./frame-agent";
+import { type InspectorMessage, isInspectorMessage, registryOf } from "./inspector/protocol";
 
 /**
  * The document the toolbar's tools inspect (add-applications, design decision
@@ -14,7 +16,17 @@ import type { Rect } from "@/components/toolbar/placement";
  * from the Frontend Registry's own origin under /previews/. A frame that can't
  * be read leaves the state "unreadable", and the toolbar says so instead of
  * starting.
+ *
+ * The frame opens its first address only once the page is ready for it
+ * (restore-toolbar-tools-and-branch-previews, design decisions 6 to 8): the
+ * frame agent's text has been fetched, so it can run in the new document at
+ * once, and every preload step a tool added has run, such as applying a
+ * session preset or arming version routing. Reloads a tool asks for run them
+ * again.
  */
+
+/** A step that runs before the frame loads a document the toolbar opens: its first, and each reload. It returns the address to open, changed or as it was. */
+export type Preload = (address: string) => string | Promise<string>;
 
 export type TargetState = "loading" | "ready" | "unreadable";
 
@@ -36,6 +48,18 @@ export interface TargetDocument {
   readonly changes: number;
   /** Opens +route+ in the frame, as a navigation of its own page. */
   navigate(route: string): void;
+  /**
+   * Opens +address+, a route with its query under the base, or the route
+   * and query shown now, in the frame again, after every preload step has
+   * run, replacing the frame's history entry.
+   */
+  reload(address?: string): void;
+  /** Adds a step that runs before each document the toolbar opens in the frame; returns a function that removes it. */
+  addPreload(step: Preload): () => void;
+  /** The frame agent's id for the page shown, once it runs there; every message it posts carries it. */
+  readonly page: string | null;
+  /** The frame agent's messages, by page (useAgentMessages). */
+  readonly channel: AgentChannel;
   /** A rectangle in the frame's viewport, in the coordinates of the page around it. */
   toParent(rect: Rect): Rect;
   /** The part of the page around it that the frame shows. */
@@ -75,6 +99,15 @@ function readable(frame: HTMLIFrameElement): Window | null {
     return view;
   } catch {
     return null;
+  }
+}
+
+/** Whether the frame still shows its initial blank page, before its first address opens. */
+function blank(frame: HTMLIFrameElement): boolean {
+  try {
+    return !frame.contentWindow || frame.contentWindow.location.href === "about:blank";
+  } catch {
+    return false;
   }
 }
 
@@ -126,6 +159,46 @@ interface Loaded {
 }
 
 /**
+ * Opens documents in the frame for the toolbar: it runs the preload steps on
+ * an address, then opens what they return, with the watcher armed for the
+ * new document. A load started later supersedes one still running its steps.
+ */
+class FrameOpener {
+  private frame: HTMLIFrameElement | null = null;
+  private watcher: ReturnType<typeof watchDocuments> | null = null;
+  private preloads: Preload[] = [];
+  private loads = 0;
+
+  attach(frame: HTMLIFrameElement | null, watcher: ReturnType<typeof watchDocuments> | null): void {
+    this.frame = frame;
+    this.watcher = watcher;
+  }
+
+  readonly addPreload = (step: Preload): (() => void) => {
+    this.preloads = [...this.preloads, step];
+    return () => {
+      this.preloads = this.preloads.filter((each) => each !== step);
+    };
+  };
+
+  check(): void {
+    this.watcher?.check();
+  }
+
+  async open(address: string): Promise<void> {
+    const load = ++this.loads;
+    let next = address;
+    for (const step of [...this.preloads]) next = await step(next);
+    const frame = this.frame;
+    if (load !== this.loads || !frame) return;
+    this.watcher?.arm();
+    const view = readable(frame);
+    if (view) view.location.replace(next);
+    else frame.src = next;
+  }
+}
+
+/**
  * A running application's page in a same-origin frame, with the target
  * document its tools inspect. +src+ is the frame's first address; after that
  * the page keeps its own, and `navigate` moves it. The children, such as the
@@ -138,9 +211,49 @@ export function TargetFrame({ src, base, commit, title, className, children }: {
   const [route, setRoute] = useState(() => routeOf(new URL(src, "http://localhost").pathname, base));
   const [search, setSearch] = useState(() => new URL(src, "http://localhost").search);
   const [changes, setChanges] = useState(0);
-  // The frame's address is set once; React must not move it back when the page navigates.
+  const [page, setPage] = useState<string | null>(null);
+  const [channel] = useState(() => new AgentChannel());
+  // The frame's first address; React never sets it, so it can't move the frame back when the page navigates.
   const [initialSrc] = useState(src);
   const current = useRef(`${route}${search}`);
+  const [opener] = useState(() => new FrameOpener());
+
+  // The agent's messages, from this frame's window, on this origin only.
+  useEffect(() => {
+    if (!frame) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== frame.contentWindow || event.origin !== window.location.origin || !isInspectorMessage(event.data)) return;
+      channel.push(event.data);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [frame, channel]);
+
+  // Early attach: the agent runs in each new document as soon as it exists, then the first address opens.
+  useEffect(() => {
+    if (!frame) return;
+    let text: string | null = null;
+    let live = true;
+    const watch = watchDocuments(
+      frame,
+      (view) => {
+        if (text) runAgent(view, text);
+        const registry = registryOf(view);
+        if (registry) setPage(registry.page);
+      },
+      browserScheduler(),
+    );
+    opener.attach(frame, watch);
+    void fetchAgentText().then((agent) => {
+      text = agent;
+      if (live) void opener.open(initialSrc);
+    });
+    return () => {
+      live = false;
+      watch.stop();
+      opener.attach(null, null);
+    };
+  }, [frame, initialSrc, opener]);
 
   // A change of the query alone, such as a tab kept in it, is a change of page too.
   const follow = useEffectEvent((view: Window) => {
@@ -156,6 +269,8 @@ export function TargetFrame({ src, base, commit, title, className, children }: {
     if (!frame) return;
     let stop = () => {};
     const attach = () => {
+      // The initial blank page loads before the first address opens.
+      if (blank(frame)) return;
       stop();
       stop = () => {};
       const view = readable(frame);
@@ -164,6 +279,11 @@ export function TargetFrame({ src, base, commit, title, className, children }: {
         setState("unreadable");
         return;
       }
+      opener.check();
+      // Load's fallback, when the agent couldn't run early.
+      const registry = registryOf(view);
+      if (registry) setPage(registry.page);
+      else injectAgent(view.document, () => setPage(registryOf(view)?.page ?? null));
       const loadedRoute = routeOf(view.location.pathname, base);
       current.current = `${loadedRoute}${view.location.search}`;
       setRoute(loadedRoute);
@@ -180,7 +300,7 @@ export function TargetFrame({ src, base, commit, title, className, children }: {
       frame.removeEventListener("load", attach);
       stop();
     };
-  }, [frame, base]);
+  }, [frame, base, opener]);
 
   const toParent = (rect: Rect): Rect => {
     if (!frame) return rect;
@@ -203,16 +323,42 @@ export function TargetFrame({ src, base, commit, title, className, children }: {
     navigate(next) {
       loaded?.window.location.assign(addressOf(next, base));
     },
+    reload(address) {
+      const target = new URL(address ?? `${route}${search}`, "http://localhost");
+      void opener.open(`${addressOf(target.pathname, base)}${target.search}`);
+    },
+    addPreload: opener.addPreload,
+    page,
+    channel,
     toParent,
     viewport: () => (frame ? toParent({ top: 0, left: 0, width: frame.clientWidth, height: frame.clientHeight }) : { top: 0, left: 0, width: 0, height: 0 }),
   };
 
   return (
     <TargetDocumentContext value={target}>
-      <iframe ref={setFrame} src={initialSrc} title={title} className={className} data-target-frame="" />
+      <iframe ref={setFrame} title={title} className={className} data-target-frame="" />
       {children}
     </TargetDocumentContext>
   );
+}
+
+/**
+ * Calls +listener+ with every message the frame agent posted from the page
+ * shown, those it sent before this was called first, then each new one, and
+ * starts over with the next page.
+ */
+export function useAgentMessages(listener: (message: InspectorMessage) => void): string | null {
+  const { channel, page } = useTargetDocument();
+  const onMessage = useEffectEvent(listener);
+  useEffect(() => (page ? channel.subscribe(page, (message) => onMessage(message)) : undefined), [channel, page]);
+  return page;
+}
+
+/** Adds +step+ to the steps that run before each document the toolbar opens in the frame, while mounted. */
+export function usePreload(step: Preload): void {
+  const { addPreload } = useTargetDocument();
+  const run = useEffectEvent((address: string) => step(address));
+  useEffect(() => addPreload((address) => run(address)), [addPreload]);
 }
 
 const EMPTY = new Map<never, Rect>();

@@ -11,7 +11,9 @@ import { useTheme } from "./support/shell";
 /*
  * The toolbar over a running application (template-demo/toolbar spec;
  * add-applications, task 8.5): Comment, Comments, Share, Accessibility, and
- * Timing, over the fixture application in its frame.
+ * Timing, with Microfrontends, Session, and Settings restored
+ * (restore-toolbar-tools-and-branch-previews, task 8.2), over the fixture
+ * application in its frame.
  */
 
 test.skip(!E2E_PREVIEWS, "Previews are off (E2E_PREVIEWS=0)");
@@ -125,10 +127,11 @@ test.describe("the menu", () => {
     await expect(menu(page).getByRole("combobox", { name: "What do you need?" })).toBeFocused();
     await expect(menu(page).getByRole("combobox")).toHaveAttribute("placeholder", "What do you need?");
     const shortcuts = menu(page).getByRole("group", { name: "Shortcuts" }).getByRole("button");
-    expect(await shortcuts.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")))).toEqual(["Comment", "Share", "Accessibility", "Timing"]);
-    for (const group of ["Collaboration", "Inspect", "More"]) await expect(menu(page).getByRole("group", { name: group })).toBeVisible();
-    await expect(menu(page).getByRole("group", { name: "Runtime" })).toHaveCount(0);
-    expect(await menu(page).getByRole("option").evaluateAll((options) => options.map((option) => option.getAttribute("data-toolbar-item")))).toEqual(["comment", "comments", "share", "accessibility", "timing", "shortcuts", "hide"]);
+    expect(await shortcuts.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")))).toEqual(["Comment", "Share", "Microfrontends", "Accessibility", "Timing", "Session", "Settings"]);
+    for (const group of ["Collaboration", "Inspect", "Runtime", "More"]) await expect(menu(page).getByRole("group", { name: group })).toBeVisible();
+    expect(await menu(page).getByRole("group", { name: "Inspect" }).getByRole("option").allInnerTexts()).toEqual(["Microfrontends\nM", "Accessibility\nA", "Timing\nT"]);
+    expect(await menu(page).getByRole("group", { name: "Runtime" }).getByRole("option").allInnerTexts()).toEqual(["Session\nP", "Settings\nS"]);
+    expect(await menu(page).getByRole("option").evaluateAll((options) => options.map((option) => option.getAttribute("data-toolbar-item")))).toEqual(["comment", "comments", "share", "microfrontends", "accessibility", "timing", "session", "settings", "shortcuts", "hide"]);
     const [menuBox, pillBox] = [(await menu(page).boundingBox())!, (await toolbar(page).boundingBox())!];
     expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(pillBox.x);
 
@@ -167,12 +170,33 @@ test.describe("the menu", () => {
     await expect(menu(page).getByRole("option", { name: "Hide toolbar" })).toHaveAttribute("aria-selected", "true");
   });
 
-  test("says when nothing matches, and the removed tools aren't found (No match)", async ({ page }) => {
+  test("says when nothing matches (No match)", async ({ page }) => {
     await openToolbarMenu(page);
-    for (const query of ["zzz", "micro", "session", "settings"]) {
+    for (const query of ["zzz", "environment"]) {
       await menu(page).getByRole("combobox").fill(query);
       await expect(menu(page).getByText("No matching tools")).toBeVisible();
       await expect(menu(page).getByRole("option")).toHaveCount(0);
+    }
+  });
+
+  test("finds the restored tools by name and by other words, under their groups (Finding a tool by another word)", async ({ page }) => {
+    await openToolbarMenu(page);
+    for (const [query, name, group] of [
+      ["micro", "Microfrontends", "Inspect"],
+      ["mfe", "Microfrontends", "Inspect"],
+      ["routing", "Microfrontends", "Inspect"],
+      ["session", "Session", "Runtime"],
+      ["storage", "Session", "Runtime"],
+      ["cookies", "Session", "Runtime"],
+      ["dark", "Settings", "Runtime"],
+      ["density", "Settings", "Runtime"],
+      ["events", "Settings", "Runtime"],
+    ] as const) {
+      await menu(page).getByRole("combobox").fill(query);
+      const option = menu(page).getByRole("group", { name: group }).getByRole("option");
+      await expect(option, query).toHaveCount(1);
+      await expect(option).toHaveAccessibleName(name);
+      await expect(option).toHaveAttribute("aria-selected", "true");
     }
   });
 
@@ -247,6 +271,20 @@ test.describe("panels", () => {
     await expect(page.getByRole("dialog", { name: "Share" })).toBeVisible();
     await page.keyboard.press("Escape");
 
+    // The restored tools' keys: M, then P, then S, each with focus inside its panel.
+    for (const [key, name] of [
+      ["m", "Microfrontends"],
+      ["p", "Session"],
+      ["s", "Settings"],
+    ] as const) {
+      await page.keyboard.press(key);
+      const restored = page.getByRole("dialog", { name });
+      await expect(restored).toBeVisible();
+      expect(await restored.evaluate((element) => element.contains(document.activeElement)), name).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(restored).toBeHidden();
+    }
+
     // Opened from the menu, a panel returns focus to the menu button.
     await openTool(page, "timing");
     await expect(page.getByRole("dialog", { name: "Timing" })).toBeVisible();
@@ -261,12 +299,15 @@ test.describe("keyboard shortcuts", () => {
     const reference = page.getByRole("dialog", { name: "Preferences / Keyboard shortcuts" });
     await expect(reference).toBeVisible();
     const rows = reference.getByRole("list", { name: "Keyboard shortcuts" }).getByRole("listitem");
-    await expect(rows).toHaveCount(7);
+    await expect(rows).toHaveCount(10);
     for (const [name, key] of [
       ["Start or stop comment mode", "C"],
       ["Share", "L"],
+      ["Microfrontends", "M"],
       ["Accessibility", "A"],
       ["Timing", "T"],
+      ["Session", "P"],
+      ["Settings", "S"],
       ["Keyboard shortcuts", "?"],
       ["Hide or show the toolbar", "."],
       ["Close the menu or panel, or leave the current mode", "Esc"],
@@ -296,7 +337,7 @@ test.describe("keyboard shortcuts", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     // Wherever focus is: in the toolbar's page or the application's.
-    for (const key of ["a", "t", "l", "c", "."]) {
+    for (const key of ["a", "t", "l", "c", "m", "p", "s", "."]) {
       await page.keyboard.press(key);
       await expect(page.getByRole("dialog")).toHaveCount(0);
     }

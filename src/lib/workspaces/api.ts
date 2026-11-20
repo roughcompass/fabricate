@@ -92,3 +92,22 @@ export function stringField(body: Record<string, unknown>, name: string, max = 2
   const value = body[name];
   return typeof value === "string" ? value.slice(0, max) : "";
 }
+
+/**
+ * Whether a request that changes something came from the Frontend
+ * Registry's own pages: the browser says so in `Sec-Fetch-Site`, or, without
+ * it, in an `Origin` naming the host the request was made to. A request
+ * from another site is refused, whatever cookies it carries.
+ */
+export function fromOwnOrigin(request: Request): boolean {
+  const site = request.headers.get("sec-fetch-site");
+  if (site !== null) return site === "same-origin";
+  const origin = request.headers.get("origin");
+  if (origin === null) return true;
+  try {
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? new URL(request.url).host;
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}

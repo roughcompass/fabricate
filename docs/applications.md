@@ -1,6 +1,6 @@
 # Applications
 
-An application is a frontend that the Frontend Registry keeps built from one branch of a Repository. It is a single-page application, or a microfrontend whose build emits a page of its own. Each time the branch moves, the Frontend Registry builds it again and captures a screenshot of the result. It can also keep [saved previews](#saved-previews) of other branches and tags. You can run it at a device's size in preview mode, or full screen under the toolbar, where you can comment on it, share a view of it, and check its accessibility and timing.
+An application is a frontend that the Frontend Registry keeps built from one branch of a Repository. It is a single-page application, or a microfrontend whose build emits a page of its own. Each time the branch moves, the Frontend Registry builds it again and captures a screenshot of the result. It can also keep [saved previews](#saved-previews) of other branches and tags. You can run it at a device's size in preview mode, or full screen under the toolbar, where you can comment on it, share a view of it, check its accessibility and timing, see what it's composed of, start it with a session preset, and switch its theme.
 
 Applications are built by the same pipeline as [repository previews](previews.md). They exist only while previews are on (`previews.enabled`; see [Turn previews on](previews.md#turn-previews-on)). While previews are off, the Applications menu item is gone, and every application page answers not found. Turning previews off deletes nothing, so the applications come back when previews are turned on again.
 
@@ -197,17 +197,22 @@ An application that doesn't exist, or has no successful build yet, answers **App
 
 ## The toolbar
 
-The toolbar works on the running application's page, which the Frontend Registry serves from its own origin. Select the pill's menu button, or use a tool's key, to open the menu. The menu's search, **What do you need?**, finds a tool by its name or by words such as "a11y", "web vitals", or "link"; the arrow keys move, Enter opens, and Esc closes. With no search, the menu also names the application, its branch, and the commit shown; selecting that line opens the application's page in the Frontend Registry, in a new tab.
+The toolbar works on the running application's page, which the Frontend Registry serves from its own origin. Select the pill's menu button, or use a tool's key, to open the menu. The menu's search, **What do you need?**, finds a tool by its name or by words such as "a11y", "web vitals", "link", "mfe", "routing", "storage", "cookies", "dark", "density", or "events"; the arrow keys move, Enter opens, and Esc closes. With no search, the menu also names the application, its branch, and the commit shown; selecting that line opens the application's page in the Frontend Registry, in a new tab.
 
 | Tool | Key | What it does |
 |---|---|---|
 | **Comment** | C | Turns comment mode on: choose any element on the page to start a thread on it. |
 | **Comments** | | Lists this view's threads, open and resolved. |
 | **Share** | L | Creates a link to this view. |
+| **Microfrontends** | M | Lists what the application is composed of, and routes a remote or import-map entry to another build. |
 | **Accessibility** | A | Audits the page for WCAG 2 A and AA problems. |
-| **Timing** | T | Shows the page's Web Vitals, its load order, and how long each interaction took. |
+| **Timing** | T | Shows the page's Web Vitals, its load order, how long each interaction took, and its hot spots. |
+| **Session** | P | Chooses the session preset the application starts with, and edits the application's presets. |
+| **Settings** | S | Switches a Salt application's theme, and logs the page's event bus. |
 | **Keyboard shortcuts** | ? | Lists the keys, and turns single-key shortcuts and guided hints on or off. |
 | **Hide toolbar** | . | Shrinks the toolbar to a **Show toolbar** tab at the right edge; press **.** again to bring it back. |
+
+The menu groups them under **Collaboration** (Comment, Comments, and Share), **Inspect** (Microfrontends, Accessibility, and Timing), **Runtime** (Session and Settings), and **More**.
 
 Keys work anywhere on the page, the application included, except while you type in a field, and not with Command, Control, or Alt held. Esc closes the open tooltip, menu, mode, or panel, in that order. If the keys conflict with your browser or assistive technology, clear **Use single-key shortcuts** under **Keyboard shortcuts**; Esc always works. Whether the toolbar is hidden, and whether single-key shortcuts are on, are kept in your browser for every application. While a tool's panel is open, or comment mode is on, its button sits on the pill, and selecting it closes the tool.
 
@@ -223,7 +228,34 @@ A thread placed on another preview is listed as **Not visible in this view**, wi
 
 ### Share
 
-**Share** creates a link to the view: the application, the saved preview shown, if any, the commit of the build shown, the route with its query, and your comments on it. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. See [Share links](#share-links).
+**Share** creates a link to the view: the application, the saved preview shown, if any, the commit of the build shown, the route with its query, and your comments on it. It also captures the Salt theme chosen in Settings, the Microfrontends routing, and the name of the session preset the view starts with, never the preset's entries. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. Whenever the view has routing, a theme, or a preset, the panel says what opening the link does in the recipient's browser: it applies your routing, which registers the routing service worker there, it applies your theme, and it starts with the preset, whose values aren't in the link. See [Share links](#share-links).
+
+### Microfrontends
+
+**Microfrontends** lists what the running application is composed of, from two sources:
+- **The Profile** of the build's commit: its Module Federation remotes, with the addresses they're loaded from as built, its single-spa roles, and its import-map entries.
+- **The page:** the remote entries it requested, Module Federation runtime instances and containers, the import maps on it, and the single-spa application containers mounted on it. A remote entry the Profile couldn't resolve, because code chose its address, is listed as **Found on the page**, with the address requested.
+
+Each microfrontend shows its name, its mechanism, the address it's loaded from now, and one state: **Loaded**, **Not loaded yet**, **Failed to load**, or **Routed**. A remote whose address code chooses reads **Loaded by code** until the page requests it. With nothing to list, the panel says no Module Federation remotes, single-spa applications, or import maps were found in the Profile or on the page; a remote or single-spa application shown through its own page says so instead.
+
+**Version routing.** Select a microfrontend to see its **Version** choice: **As built**, then the current build and each saved preview of every application that builds it, each with its branch or tag and commit. A Module Federation remote is built by an application whose Profile declares a container of the remote's name that exposes modules, as the Relationship Map matches them; an import-map entry, by an application whose package has the entry's name. A saved preview still building is listed as unavailable. The choice accepts no other address: routing reaches only builds the Frontend Registry has. When no application builds a microfrontend, the choice offers only As built, and says that creating an application from the remote's repository makes its builds available.
+
+Choices stay **Pending** until you select **Reload application**, which reads **Reload application (N changes)** when several are pending; it applies them and reloads the frame at its route. A routed microfrontend shows **Routed**, with the application, branch or tag, and commit it's routed to. **Reset routing** returns every microfrontend to As built and reloads.
+
+Routing sends the requests for a microfrontend's entry, and the files under its address, to the same paths in the chosen build: a remote's entry directory maps to the directory of the same file there, and the entry's origin to the build's root, so chunks that load relative to the entry or to its origin follow it. For an import-map entry, the page's import map, native or SystemJS, names the file at the entry's path in the chosen build before the page reads it, and so does an import-map file the page requests. A service worker does the routing, in your browser only: the toolbar registers it with the scope of the build shown, `/previews/<build>/`, and arms it with the view's routing before each load of the frame and every few seconds while the page is open. It routes only the frame of this running application, in this browser, and keeps routing across reloads until it's reset; the view's routing is kept under `frontend-registry:routing:<view>`. Preview mode, the build's preview page, other tabs, and other browsers aren't routed, except through a share link. Reset routing unregisters the worker once no other view of that build is routed.
+
+Routing is unavailable, and the panel says why, when:
+- the Frontend Registry isn't served over HTTPS or from localhost, since browsers allow service workers only there. Routing works on localhost; a hosted Frontend Registry needs HTTPS for it;
+- the browser doesn't allow service workers;
+- the application registers its own service worker for its build's path, which can't run beside the routing worker, and then no Version choice is offered;
+- a microfrontend has no address the page requests;
+- the chosen build has no file at the entry's path, which is refused before reloading, naming the file.
+
+A routed build that shares dependencies with the page differently, such as a remote built against another React, fails as it would anywhere, and Microfrontends names the build it's routed to, so the cause shows.
+
+**Regions.** When the page has single-spa application containers, **Show regions** outlines each mounted application's container, labeled with its name and **As built** or what it's routed to. **Select on page** outlines the region under the pointer or keyboard focus; click it, or press Enter, to select that microfrontend in the panel, and the application doesn't receive the click. Esc ends it, selecting nothing. Module Federation modules have no region of their own on the page, so a remote can't be outlined or selected on it, and the panel says so.
+
+Microfrontends offers versions, not environments: the Frontend Registry has no deployed environments, and the only real variants of a microfrontend are its application's current build and saved previews, which the Version choice already offers.
 
 ### Accessibility
 
@@ -235,14 +267,59 @@ A thread placed on another preview is listed as **Not visible in this view**, wi
 - **Web Vitals:** LCP, CLS, FCP, and TTFB, measured with Google's web-vitals library, and INP, from your interactions with the application, each rated Good, Needs improvement, or Poor at the usual thresholds, such as 2.5 and 4 seconds for LCP.
 - **Load order:** the scripts, stylesheets, and Module Federation remote entries the page loaded, in the order they started, with the slowest marked.
 - **Interactions:** each click, tap, or key press in the application and how long the page took to respond, the latest 50, with the slowest so far. **Clear interactions** empties the list. A browser without the Event Timing API shows approximate times, marked ≈. The toolbar's own controls are never timed.
+- **Hot spots:** the elements behind interactions that took longer than 200 milliseconds, rated **Needs improvement** (up to 500) or **Poor** (above 500), as interactions are. Interactions on one element, on one route, make one hot spot. They're ranked by each element's slowest interaction, and listed with the element, how many slow interactions it had, and the slowest time. **Show hot spots** outlines those on the route shown, each labeled with its rank, its time, and its rating, such as `#1 · 650 ms · Poor`. The outlines follow their elements as the page scrolls, resizes, or changes, stay while the panel is closed, and pass beneath the toolbar's controls. Selecting a hot spot scrolls its element into view and highlights it. An element that a re-render replaced is found again in the same place; one that's gone, or on another route, is listed as **Not on this page**, with its route. Hot spots come from the interactions measured since the page loaded, never the toolbar's own, so **Clear interactions** clears them too, and a time measured without Event Timing is marked ≈. When no interaction on the route took longer than 200 milliseconds, Timing says so.
+
+### Session
+
+**Session** chooses what the application starts with in your browser, from its **session presets**: named sets of local storage items, session storage items, cookies, and query parameters, such as "Admin user" or "Feature flag on".
+
+- **Start with** lists the application's own storage first, then each preset by name, with what it sets by kind, such as `1 local storage item · 1 cookie · 1 query parameter`. Choosing one reloads the frame at its route with it. The choice is kept for your workspace and the application, and applies to its tracked branch and its saved previews each time you open it; another visitor's choice never changes yours.
+- **Applying** happens before the build loads: the frame waits while the Frontend Registry writes the preset's local and session storage items, sets its cookies, and adds its query parameters to the frame's address, replacing any of the same name, so the address reads, for example, `/run/quotes-desk/blotter?desk=fx`. Cookies are set on the Frontend Registry's origin for the build's own path, `/previews/<build>/`, so Frontend Registry pages outside it never receive them. Cookies for the application's own domains, and `HttpOnly` cookies, can't be set, so a preset can't stand in for cookies its backend sets.
+- **Switching** to another option first restores each item and cookie the preset set to what it held before, removing those that didn't exist, and leaves its query parameters out of the address. What a preset replaced is recorded in your browser under `frontend-registry:session:<view>`.
+
+**Presets** belong to the application, not to a workspace: everyone who opens it, in any workspace or through a share link, sees, creates, edits, and deletes the same ones, since there's no sign-in and no owner. Each shows when it was last changed, and by whom when that workspace has a display name. **New preset** opens the form: a name, and entries that each have a kind, **Local storage**, **Session storage**, **Cookie**, or **Query parameter**, a name, and a value; **Add entry** and **Remove entry** change them, and **Create preset** or **Save preset** saves it. Editing the preset you start with applies it again at once. An edit someone else saved first is refused, and the form shows their entries to change again. **Delete** asks for confirmation, since it removes the preset for everyone who opens the application; anyone who had chosen it starts with the application's own storage on their next load, after what it set in their browser is restored.
+
+The limits:
+- an application can have 20 presets, and a preset between 1 and 50 entries;
+- a preset's name can have up to 60 characters, unique among the application's presets ignoring case;
+- an entry's name can have up to 256 characters, and its value up to 4,096;
+- local storage, session storage, and cookie names starting with `frontend-registry`, which are the Frontend Registry's own, are refused, as are cookie names that aren't valid and the query parameter `share`, which share links use.
+
+Presets are stored unencrypted with their application. Everyone who can open the application can read them, and so can any build the browser runs, and what a preset writes to storage is readable by every build on the Frontend Registry's origin. Never put real secrets in them; the panel and the form say so.
+
+### Settings
+
+**Settings** has two sections.
+
+**Theme** switches the application's Salt theme, without reloading. It's offered only when the Profile of the build's commit shows that the application's package renders a Salt provider; otherwise it says the switch needs one, and offers no choice.
+- **Mode:** the application's own, **Light**, or **Dark**.
+- **Density:** the application's own, **High**, **Medium**, **Low**, or **Touch**.
+- **Accent** and **Corner**, for a page that uses Salt's next theme.
+
+The switch sets Salt's own `data-mode` attribute and `salt-density-*` class, and the next theme's `data-accent` and `data-corner`, on every Salt provider element in the page: the document's root and each nested provider, such as a remote's. It puts them back when the application renders its providers again, and choosing the application's own restores what the application set. It changes Salt's styles only: code that reads the theme from JavaScript, the application's own theme setting, and anything Salt doesn't style keep the application's choice. The choice is kept in your browser for the application or saved preview shown, under `frontend-registry:theme:<view>`, and applies each time you open it there.
+
+**Event bus** logs, newest first, the events the page dispatches on its window and document, the messages its window receives, and the messages it posts to the Frontend Registry's page, single-spa's routing events included. Each entry shows its kind, its name, its time since the page loaded, its detail as JSON, and whether the application or the toolbar sent it. The log keeps the latest 200 entries; **Filter by name** narrows it, and **Clear log** empties it. It doesn't log the browser's own events, events on other elements, broadcast channels, buses kept in JavaScript objects, such as `@mf/shell-bus`, messages between other frames, or anything sent before the toolbar attached to the page; a script early in the page's head can run before it attaches. The log stays in the page: loading another document in the frame starts a new one, a route change keeps it, and it's never stored or shared.
+
+**Send an event** dispatches an event in the page and logs it as sent by the toolbar. **Send as** offers **Event on window**, **Event on document**, and **Message to the page**. **Event name** is required, except for a message, and **Detail** takes JSON, `{}` by default; anything else is refused, saying what to enter.
+
+The toolbar runs its frame agent in each new document the frame loads as soon as the document exists, before the page's deferred and module scripts, which is where Vite, Rspack, and webpack builds start, so the log sees a page's earliest events. When that can't happen, it adds the agent once the page has loaded.
 
 ## Share links
 
 A share link, `/s/<token>`, opens the application at the captured route, on the captured commit's build, with the sharer's comment threads on that application. A link made on a saved preview opens that preview at its own address, `/run/<slug>@<key>/<route>`. Anyone with the link can read those threads, reply, resolve and reopen them, and add their own, under their own name; their comments are kept in the sharer's workspace. The token is long and random, and the Frontend Registry stores only its digest.
 
+Opening a link also applies, in the recipient's browser and for that view only, what the sharer had set:
+- **Their Microfrontends routing,** which registers the routing service worker for the routed build there (see [Microfrontends](#microfrontends)). It isn't kept for the recipient's own view.
+- **Their Salt theme,** which Settings shows chosen for that view. It isn't kept for the recipient's own view.
+- **Their session preset,** with its entries as the preset holds them now, read from the application's presets. The recipient's own choice stays as it was, and the Session panel says the shared view starts with the preset. The captured route leaves out the query parameters the preset adds, and opening the link adds them again.
+
 When what the link captured is gone, it opens the nearest build, with a notice:
 - **The captured build was pruned:** the current build opens at the captured route, the saved preview's for a link to one. The notice reads "The shared commit … is no longer available, so this is the current build.", or for a saved preview, "…, so this is feature/new-nav's current build."
 - **The saved preview was removed:** the application's current build opens at its own address, with "The shared preview of fix/totals was removed, so this is the application's current build."
+- **A routed build is gone:** that microfrontend loads as built, with "The shared routing of quotesPanel was dropped, because the build it named is gone."
+- **The preset was deleted:** the view starts with the recipient's own choice, with "The shared preset "Admin user" no longer exists, so this view starts with your own choice."
+
+When several apply, the notice says each of them.
 
 A link has no expiry date and can't be revoked on its own. It stops working when:
 - the sharer resets their workspace;
@@ -254,11 +331,11 @@ A link that stops working opens **Application not available**, without saying wh
 
 ## Workspaces
 
-Each browser that opens Applications, a running application, or a share link gets an anonymous workspace, with no sign-in. The workspace holds that browser's comment threads, share links, display name, and guided hints. It's tied to the browser by an `HttpOnly` cookie, which scripts can't read, and the Frontend Registry stores only the cookie's digest. Applications are shared by every workspace, but no one sees another workspace's comments except through a share link.
+Each browser that opens Applications, a running application, or a share link gets an anonymous workspace, with no sign-in. The workspace holds that browser's comment threads, share links, choices of session presets, display name, and guided hints. It's tied to the browser by an `HttpOnly` cookie, which scripts can't read, and the Frontend Registry stores only the cookie's digest. Applications, their saved previews, and their session presets are shared by every workspace, but no one sees another workspace's comments except through a share link.
 
 - **Limits:** a comment can have up to 2,000 characters, and a workspace up to 500 open threads, across every application. At the limit, starting a thread or reopening a resolved one is refused, asking you to resolve threads, or to reset the workspace, first.
-- **Idle workspaces:** a workspace that hasn't been used for 30 days is deleted, with its threads and share links.
-- **Reset workspace**, the last section of the Applications page, deletes your workspace's threads, including those others started or replied to through your links, and your share links, so they stop working. It also forgets your display name, and shows the guided hints again. It asks for confirmation first. Applications, other workspaces, and comments you added through someone else's link aren't affected, and the toolbar's preferences in your browser stay.
+- **Idle workspaces:** a workspace that hasn't been used for 30 days is deleted, with its threads, share links, and preset choices. The session presets it created stay with their applications.
+- **Reset workspace**, the last section of the Applications page, deletes your workspace's threads, including those others started or replied to through your links, and your share links, so they stop working. It also clears your choices of session presets, so your applications start with their own storage, forgets your display name, and shows the guided hints again. It asks for confirmation first. Applications, their saved previews and session presets, other workspaces, and comments you added through someone else's link aren't affected, and the toolbar's preferences in your browser stay.
 
 **Guided hints** are three short tips the first time you run an application: auditing accessibility, seeing what's slow, and commenting on anything. **Dismiss hints** or **Finish hints** puts them away for the workspace. Under **Keyboard shortcuts**, **Show guided hints** turns them on or off, and **Replay hints** shows them again.
 
