@@ -10,6 +10,8 @@ import { CommentsPanel } from "./comments/comments-panel";
 import { CommentsProvider, useComments } from "./comments/comments-state";
 import type { ThreadStore } from "./comments/thread-store";
 import { GuidedHints, HintsContext, RUNTIME_HINTS, useHintControls } from "./guided-hints";
+import { SettingsPanel } from "./settings/settings-panel";
+import { SettingsProvider } from "./settings/settings-state";
 import { SharePanel } from "./share-panel";
 import { useTargetDocument } from "./target-document";
 import { HotSpotsOverlay } from "./timing/hot-spots-overlay";
@@ -26,10 +28,9 @@ import styles from "./running-application.module.css";
  * page: Comment and Comments, Accessibility, and Timing; Share, for the
  * application +slug+ in the view the share link +share+ opened, if any; and
  * the guided hints that point to them, from the workspace's +hints+ state.
- * The tools read the +view+ (restore-toolbar-tools-and-branch-previews):
- * the application or saved preview shown, and what the Profile of its
- * build's commit says it's composed of. It needs to read the page, so when
- * the frame isn't same-origin it says so and doesn't start.
+ * Settings (restore-toolbar-tools-and-branch-previews) switches the theme
+ * of the +view+ and logs the page's event bus. It needs to read the page, so
+ * when the frame isn't same-origin it says so and doesn't start.
  */
 export function ApplicationToolbar({ slug, share, context, store, hints, view }: { slug: string; share: string | null; context: MenuContext; store: ThreadStore; hints: HintState; view: ToolbarView }) {
   const target = useTargetDocument();
@@ -46,7 +47,9 @@ export function ApplicationToolbar({ slug, share, context, store, hints, view }:
       <CommentsProvider store={store}>
         <AuditProvider>
           <TimingProvider>
-            <Tools context={context} hints={hints} share={<SharePanel slug={slug} name={context.name} share={share} />} />
+            <SettingsProvider>
+              <Tools context={context} hints={hints} share={<SharePanel slug={slug} name={context.name} share={share} />} />
+            </SettingsProvider>
           </TimingProvider>
         </AuditProvider>
       </CommentsProvider>
@@ -62,7 +65,7 @@ function Tools({ context, hints: initial, share }: { context: MenuContext; hints
       <Toolbar
         context={context}
         commentCount={comments.threads.filter((thread) => thread.status === "open").length}
-        panels={{ comments: <CommentsPanel />, share, accessibility: <AccessibilityPanel />, timing: <TimingPanel /> }}
+        panels={{ comments: <CommentsPanel />, share, accessibility: <AccessibilityPanel />, timing: <TimingPanel />, settings: <SettingsPanel /> }}
         overlays={
           <>
             <AuditOverlay />

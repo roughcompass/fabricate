@@ -1,7 +1,8 @@
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
-import { ordersPortalRemote } from "./support/fixture-app";
+import { framedRun, ordersPortalRemote } from "./support/fixture-app";
 import { paths } from "./support/paths";
+import { buildQuotes } from "./support/quotes-fixtures";
 import { openTool } from "./support/toolbar";
 import { application, runOrdersPortal, visitorContext, waitForPage } from "./support/running-app";
 
@@ -80,4 +81,18 @@ test("answers not found for an application that doesn't exist, with a way back t
   await expect(page.getByRole("heading", { name: "Application not available", level: 1 })).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to Applications" })).toHaveAttribute("href", paths.applications);
   expect(db).toBeTruthy();
+});
+
+test("agent attaches before module scripts: the event Quotes desk dispatches from its first module script is logged", async ({ page, db }) => {
+  const { desk } = await buildQuotes(db);
+  // The frame opens only once the agent can run in its first document, and the agent runs there before the page's own scripts.
+  await page.goto(framedRun(desk, "/"));
+  await waitForPage(page, "Quotes desk");
+  await openTool(page, "settings");
+  const settings = page.getByRole("dialog", { name: "Settings" });
+  const starting = settings.locator("[data-bus-name='quotes:desk-starting']");
+  await expect(starting).toHaveCount(1);
+  await expect(starting).toContainText('{"at":"first module script"}');
+  // It runs once per page: added on load as well, it would log nothing twice.
+  expect(await application(page).locator("script[data-frontend-registry-inspector]").count()).toBe(0);
 });

@@ -179,6 +179,23 @@ A thread is bound to its element, the route it's on, and the commit of the build
 - **Interactions:** each click, tap, or key press in the application and how long the page took to respond, the latest 50, with the slowest so far. **Clear interactions** empties the list. A browser without the Event Timing API shows approximate times, marked ≈. The toolbar's own controls are never timed.
 - **Hot spots:** the elements behind interactions that took longer than 200 milliseconds, rated **Needs improvement** (up to 500) or **Poor** (above 500), as interactions are. Interactions on one element, on one route, make one hot spot. They're ranked by each element's slowest interaction, and listed with the element, how many slow interactions it had, and the slowest time. **Show hot spots** outlines those on the route shown, each labeled with its rank, its time, and its rating, such as `#1 · 650 ms · Poor`. The outlines follow their elements as the page scrolls, resizes, or changes, stay while the panel is closed, and pass beneath the toolbar's controls. Selecting a hot spot scrolls its element into view and highlights it. An element that a re-render replaced is found again in the same place; one that's gone, or on another route, is listed as **Not on this page**, with its route. Hot spots come from the interactions measured since the page loaded, never the toolbar's own, so **Clear interactions** clears them too, and a time measured without Event Timing is marked ≈. When no interaction on the route took longer than 200 milliseconds, Timing says so.
 
+### Settings
+
+**Settings** has two sections.
+
+**Theme** switches the application's Salt theme, without reloading. It's offered only when the Profile of the build's commit shows that the application's package renders a Salt provider; otherwise it says the switch needs one, and offers no choice.
+- **Mode:** the application's own, **Light**, or **Dark**.
+- **Density:** the application's own, **High**, **Medium**, **Low**, or **Touch**.
+- **Accent** and **Corner**, for a page that uses Salt's next theme.
+
+The switch sets Salt's own `data-mode` attribute and `salt-density-*` class, and the next theme's `data-accent` and `data-corner`, on every Salt provider element in the page: the document's root and each nested provider, such as a remote's. It puts them back when the application renders its providers again, and choosing the application's own restores what the application set. It changes Salt's styles only: code that reads the theme from JavaScript, the application's own theme setting, and anything Salt doesn't style keep the application's choice. The choice is kept in your browser for the application or saved preview shown, under `frontend-registry:theme:<view>`, and applies each time you open it there.
+
+**Event bus** logs, newest first, the events the page dispatches on its window and document, the messages its window receives, and the messages it posts to the Frontend Registry's page, single-spa's routing events included. Each entry shows its kind, its name, its time since the page loaded, its detail as JSON, and whether the application or the toolbar sent it. The log keeps the latest 200 entries; **Filter by name** narrows it, and **Clear log** empties it. It doesn't log the browser's own events, events on other elements, broadcast channels, buses kept in JavaScript objects, such as `@mf/shell-bus`, messages between other frames, or anything sent before the toolbar attached to the page; a script early in the page's head can run before it attaches. The log stays in the page: loading another document in the frame starts a new one, a route change keeps it, and it's never stored or shared.
+
+**Send an event** dispatches an event in the page and logs it as sent by the toolbar. **Send as** offers **Event on window**, **Event on document**, and **Message to the page**. **Event name** is required, except for a message, and **Detail** takes JSON, `{}` by default; anything else is refused, saying what to enter.
+
+The toolbar runs its frame agent in each new document the frame loads as soon as the document exists, before the page's deferred and module scripts, which is where Vite, Rspack, and webpack builds start, so the log sees a page's earliest events. When that can't happen, it adds the agent once the page has loaded.
+
 ## Share links
 
 A share link, `/s/<token>`, opens the application at the captured route, on the captured commit's build, with the sharer's comment threads on that application. Anyone with the link can read those threads, reply, resolve and reopen them, and add their own, under their own name; their comments are kept in the sharer's workspace. The token is long and random, and the Frontend Registry stores only its digest.

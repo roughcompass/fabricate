@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext } from "react";
+import { createContext, use } from "react";
 import type { BuildComposition } from "@/lib/applications/composition";
 
 /**
@@ -20,6 +20,12 @@ export interface ToolbarView {
 }
 
 export const ToolbarViewContext = createContext<ToolbarView | null>(null);
+
+export function useToolbarView(): ToolbarView {
+  const view = use(ToolbarViewContext);
+  if (!view) throw new Error("useToolbarView must be used inside a running application's toolbar");
+  return view;
+}
 
 /** A view's key: the application's slug, with the saved preview's key after an `@`. */
 export function viewKey(slug: string, preview: string | null): string {
