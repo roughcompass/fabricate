@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/worker/main.ts", "scripts/*.{mjs,ts}", "src/components/toolbar/inspector/inspector.ts"],
+  "entry": ["src/worker/main.ts", "scripts/*.{mjs,ts}", "src/components/toolbar/inspector/inspector.ts", "src/components/toolbar/routing/worker.ts"],
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{mjs,ts}", "test/**/*.ts", "e2e/**/*.ts"],
   "ignoreExportsUsedInFile": true,
   "ignoreUnresolved": ["worker=src/worker/main.ts"],

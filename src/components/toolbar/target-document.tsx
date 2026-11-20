@@ -354,6 +354,13 @@ export function useAgentMessages(listener: (message: InspectorMessage) => void):
   return page;
 }
 
+/** Adds +step+ to the steps that run before each document the toolbar opens in the frame, while mounted. */
+export function usePreload(step: Preload): void {
+  const { addPreload } = useTargetDocument();
+  const run = useEffectEvent((address: string) => step(address));
+  useEffect(() => addPreload((address) => run(address)), [addPreload]);
+}
+
 const EMPTY = new Map<never, Rect>();
 
 function rectOf(element: Element): Rect {

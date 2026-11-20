@@ -167,6 +167,33 @@ A thread is bound to its element, the route it's on, and the commit of the build
 
 **Share** creates a link to the view: the application, the commit of the build shown, the route with its query, and your comments on it. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. See [Share links](#share-links).
 
+### Microfrontends
+
+**Microfrontends** lists what the running application is composed of, from two sources:
+- **The Profile** of the build's commit: its Module Federation remotes, with the addresses they're loaded from as built, its single-spa roles, and its import-map entries.
+- **The page:** the remote entries it requested, Module Federation runtime instances and containers, the import maps on it, and the single-spa application containers mounted on it. A remote entry the Profile couldn't resolve, because code chose its address, is listed as **Found on the page**, with the address requested.
+
+Each microfrontend shows its name, its mechanism, the address it's loaded from now, and one state: **Loaded**, **Not loaded yet**, **Failed to load**, or **Routed**. A remote whose address code chooses reads **Loaded by code** until the page requests it. With nothing to list, the panel says no Module Federation remotes, single-spa applications, or import maps were found in the Profile or on the page; a remote or single-spa application shown through its own page says so instead.
+
+**Version routing.** Select a microfrontend to see its **Version** choice: **As built**, then the current build and each saved preview of every application that builds it, each with its branch or tag and commit. A Module Federation remote is built by an application whose Profile declares a container of the remote's name that exposes modules, as the Relationship Map matches them; an import-map entry, by an application whose package has the entry's name. A saved preview still building is listed as unavailable. The choice accepts no other address: routing reaches only builds the Frontend Registry has. When no application builds a microfrontend, the choice offers only As built, and says that creating an application from the remote's repository makes its builds available.
+
+Choices stay **Pending** until you select **Reload application**, which reads **Reload application (N changes)** when several are pending; it applies them and reloads the frame at its route. A routed microfrontend shows **Routed**, with the application, branch or tag, and commit it's routed to. **Reset routing** returns every microfrontend to As built and reloads.
+
+Routing sends the requests for a microfrontend's entry, and the files under its address, to the same paths in the chosen build: a remote's entry directory maps to the directory of the same file there, and the entry's origin to the build's root, so chunks that load relative to the entry or to its origin follow it. For an import-map entry, the page's import map, native or SystemJS, names the file at the entry's path in the chosen build before the page reads it, and so does an import-map file the page requests. A service worker does the routing, in your browser only: the toolbar registers it with the scope of the build shown, `/previews/<build>/`, and arms it with the view's routing before each load of the frame and every few seconds while the page is open. It routes only the frame of this running application, in this browser, and keeps routing across reloads until it's reset; the view's routing is kept under `frontend-registry:routing:<view>`. Preview mode, the build's preview page, other tabs, and other browsers aren't routed, except through a share link. Reset routing unregisters the worker once no other view of that build is routed.
+
+Routing is unavailable, and the panel says why, when:
+- the Frontend Registry isn't served over HTTPS or from localhost, since browsers allow service workers only there. Routing works on localhost; a hosted Frontend Registry needs HTTPS for it;
+- the browser doesn't allow service workers;
+- the application registers its own service worker for its build's path, which can't run beside the routing worker, and then no Version choice is offered;
+- a microfrontend has no address the page requests;
+- the chosen build has no file at the entry's path, which is refused before reloading, naming the file.
+
+A routed build that shares dependencies with the page differently, such as a remote built against another React, fails as it would anywhere, and Microfrontends names the build it's routed to, so the cause shows.
+
+**Regions.** When the page has single-spa application containers, **Show regions** outlines each mounted application's container, labeled with its name and **As built** or what it's routed to. **Select on page** outlines the region under the pointer or keyboard focus; click it, or press Enter, to select that microfrontend in the panel, and the application doesn't receive the click. Esc ends it, selecting nothing. Module Federation modules have no region of their own on the page, so a remote can't be outlined or selected on it, and the panel says so.
+
+Microfrontends offers versions, not environments: the Frontend Registry has no deployed environments, and the only real variants of a microfrontend are its application's current build and saved previews, which the Version choice already offers.
+
 ### Accessibility
 
 **Run audit** runs axe-core in the application's page, never on the toolbar, against axe-core's WCAG 2 A and AA rules (its `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` tags), and lists the violations by rule, with their totals by impact, Critical, Serious, Moderate, and Minor. Each result names its elements, the route they're on, and how to fix it. **Show outlines on the page** outlines each affected element with its result's number. Frames inside the application aren't audited. When the page changes after an audit, the results say they may be out of date, and **Run audit again** refreshes them.

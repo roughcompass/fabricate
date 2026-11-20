@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
-import { INSPECTOR_BUNDLE, buildInspector } from "../../scripts/build-inspector";
+import { INSPECTOR_BUNDLE, ROUTING_WORKER_MODULE, buildInspector, buildRoutingWorker } from "../../scripts/build-inspector";
 import { INSPECTOR_MESSAGE, INSPECTOR_SCRIPT } from "../../src/components/toolbar/inspector/protocol";
 
 /*
@@ -18,5 +18,11 @@ describe("the frame agent's bundle", () => {
   it("is served where the toolbar loads it from, and tags its messages", () => {
     expect(INSPECTOR_BUNDLE.endsWith(`public${INSPECTOR_SCRIPT}`)).toBe(true);
     expect(fs.readFileSync(INSPECTOR_BUNDLE, "utf8")).toContain(INSPECTOR_MESSAGE);
+  });
+});
+
+describe("the routing worker's module", () => {
+  it("matches its sources; run `npm run build:inspector` when it doesn't", async () => {
+    expect(fs.readFileSync(ROUTING_WORKER_MODULE, "utf8") === (await buildRoutingWorker())).toBe(true);
   });
 });

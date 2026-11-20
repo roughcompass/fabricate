@@ -78,9 +78,10 @@ test("onboards Quotes panel and Quotes desk, built with Rspack, each Profile rep
   for (const build of [panel, desk]) expect(build.application.facts).toMatchObject({ frameworks: ["React"], buildTool: "Rspack" });
 
   // The remote exposes ./Quotes, is a single-spa application through its ticker, and renders Salt's provider.
-  expect(quotesComposition(db, panel)).toEqual({ remotes: [], imports: [], singleSpa: { rootConfig: false, application: true }, containers: [{ name: "quotesPanel", exposes: ["./Quotes"] }], saltProvider: true });
+  expect(quotesComposition(db, panel)).toEqual({ packageName: "@fixtures/quotes-panel", remotes: [], imports: [], singleSpa: { rootConfig: false, application: true }, containers: [{ name: "quotesPanel", exposes: ["./Quotes"] }], saltProvider: true });
   // The host loads it at its development address, maps the ticker in its import map, and starts single-spa.
   expect(quotesComposition(db, desk)).toEqual({
+    packageName: "@fixtures/quotes-desk",
     remotes: [{ alias: "quotesPanel", container: "quotesPanel", entry: "http://127.0.0.1:9311/remoteEntry.js" }],
     imports: [{ specifier: "@fixtures/quotes-panel", url: "http://127.0.0.1:9312/ticker.js" }],
     singleSpa: { rootConfig: true, application: false },

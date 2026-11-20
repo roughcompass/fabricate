@@ -140,6 +140,19 @@ export async function servePreview(request: Request, publicId: string, segments:
   return fileResponse(request, file, { type: contentType(served), tag: `${preview.artifact}:${served}`, rebase: page && entry.rebase === true ? base : null });
 }
 
+/**
+ * Whether the published output of +preview+ has a regular file at
+ * +relative+, a path of plain segments, as serving would answer it: version
+ * routing refuses a build without the file a microfrontend's entry names
+ * (restore-toolbar-tools-and-branch-previews, design decision 7).
+ */
+export async function publishedFileExists(config: FrontendRegistryConfig, preview: { publicId: string; artifact: string | null }, relative: string): Promise<boolean> {
+  const parts = relative.split("/");
+  if (preview.artifact === null || !safeSegments(parts)) return false;
+  const root = await artifactRoot(config, preview);
+  return root !== null && (await regularFile(root, parts.join("/"))) !== null;
+}
+
 /** The published directory, resolved, when it's where the preview's row says, inside the preview's own directory. */
 async function artifactRoot(config: FrontendRegistryConfig, preview: { publicId: string; artifact: string | null }): Promise<string | null> {
   try {

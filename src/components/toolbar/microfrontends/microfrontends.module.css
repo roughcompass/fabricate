@@ -1,0 +1,43 @@
+@layer components {
+  /* The Microfrontends tool: the members, the selected one's detail, and the actions. */
+  .muted { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  .sectionTitle { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); line-height: var(--line-height-body); }
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+  .members { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  .member {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover { background: var(--color-bg-muted); }
+    &:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
+    &[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-bg-selected); }
+  }
+  .memberName { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); font-weight: var(--font-weight-medium); }
+  .memberName code { font-family: var(--font-family-mono); }
+  .memberMeta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: var(--line-height-caption); }
+  .address { overflow-wrap: anywhere; color: var(--color-text); font-family: var(--font-family-mono); }
+  .flag, .flagPending { padding: 0 var(--space-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-full); color: var(--color-text); font-size: var(--font-size-caption); line-height: var(--line-height-secondary); }
+  .flag[data-state="failed"] { border-color: var(--color-error-border); background: var(--color-error-bg); }
+  .flag[data-state="routed"] { border-color: var(--color-primary); }
+  .flagPending { border-style: dashed; }
+  .detail { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+  .detail code { font-family: var(--font-family-mono); }
+
+  /* Region outlines and Select on page's banner, over the page; they never take its pointer events. */
+  .layer { position: fixed; inset: 0; pointer-events: none; }
+  .banner { position: fixed; max-width: calc(100vw - 2 * var(--space-2)); padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); background: var(--color-primary); color: var(--color-on-primary); font-size: var(--font-size-secondary); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); text-align: center; text-wrap: balance; }
+  .outline { position: fixed; border: 2px solid var(--color-focus); border-radius: var(--radius-md); }
+  .outlineLabel { position: fixed; padding: 0 var(--space-2); border-radius: var(--radius-sm); background: var(--color-primary); color: var(--color-on-primary); font-size: var(--font-size-caption); font-weight: var(--font-weight-medium); line-height: var(--line-height-secondary); white-space: nowrap; }
+}

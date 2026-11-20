@@ -1,5 +1,5 @@
 import path from "node:path";
-import { HtmlRspackPlugin, container } from "@rspack/core";
+import { CopyRspackPlugin, HtmlRspackPlugin, container } from "@rspack/core";
 
 const root = import.meta.dirname;
 
@@ -58,6 +58,7 @@ const config = {
       },
     }),
     new HtmlRspackPlugin({ template: path.resolve(root, "src/index.html") }),
+    new CopyRspackPlugin({ patterns: [{ from: path.resolve(root, "src/sw.js"), to: "sw.js" }] }),
   ],
 };
 

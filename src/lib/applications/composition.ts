@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import type { Executor } from "@/lib/db/client";
-import { previewBuilds, previewPreparations } from "@/lib/db/schema";
+import { previewBuilds, previewPreparations, repositoryProfiles } from "@/lib/db/schema";
 import { isJsonObject } from "@/lib/json";
+import { ProfiledRepository } from "@/lib/previews/profiled-repository";
 import { profileDocument, profileOfSurvey } from "@/lib/profiles/profile-records";
 import type { Fact, FactDocument } from "@/lib/profiles/states";
 
@@ -35,6 +36,8 @@ export interface ComposedContainer {
 }
 
 export interface BuildComposition {
+  /** The package's name, from its package.json, which an import map names it by. */
+  readonly packageName: string | null;
   readonly remotes: readonly ComposedRemote[];
   readonly imports: readonly ComposedImport[];
   readonly singleSpa: { readonly rootConfig: boolean; readonly application: boolean };
@@ -43,18 +46,24 @@ export interface BuildComposition {
   readonly saltProvider: boolean;
 }
 
-export const NO_COMPOSITION: BuildComposition = { remotes: [], imports: [], singleSpa: { rootConfig: false, application: false }, containers: [], saltProvider: false };
+export const NO_COMPOSITION: BuildComposition = { packageName: null, remotes: [], imports: [], singleSpa: { rootConfig: false, application: false }, containers: [], saltProvider: false };
 
-/** The fact document of the Profile that decided the build +preview+, by its public ID, or null when it has none. */
-export function buildFactDocument(db: Executor, preview: string): FactDocument | null {
-  const row = db
-    .select({ surveyId: previewPreparations.surveyId })
-    .from(previewBuilds)
-    .innerJoin(previewPreparations, eq(previewPreparations.id, previewBuilds.preparationId))
-    .where(eq(previewBuilds.publicId, preview))
-    .get();
-  if (!row?.surveyId) return null;
-  const profile = profileOfSurvey(db, row.surveyId);
+/** The Profile that decided the build +preview+, by its public ID: its own ID, which never changes, and its survey's. */
+function decidingProfile(db: Executor, preview: string): { publicId: string; surveyId: number } | null {
+  return (
+    db
+      .select({ publicId: repositoryProfiles.publicId, surveyId: repositoryProfiles.surveyId })
+      .from(previewBuilds)
+      .innerJoin(previewPreparations, eq(previewPreparations.id, previewBuilds.preparationId))
+      .innerJoin(repositoryProfiles, eq(repositoryProfiles.surveyId, previewPreparations.surveyId))
+      .where(eq(previewBuilds.publicId, preview))
+      .get() ?? null
+  );
+}
+
+/** The fact document of the Profile survey +surveyId+ wrote, or null when it has none. */
+function surveyFactDocument(db: Executor, surveyId: number): FactDocument | null {
+  const profile = profileOfSurvey(db, surveyId);
   const document = profile ? profileDocument(profile).fact_document : null;
   return isJsonObject(document as JsonValue) ? (document as unknown as FactDocument) : null;
 }
@@ -90,9 +99,25 @@ function remoteOf(value: JsonValue): ComposedRemote | null {
   return alias ? { alias, container, entry: literal(value.entry) } : null;
 }
 
-/** What the Profile of the build +preview+ says its package, in +packageDir+, is composed of. */
+/** Compositions already read, by the deciding Profile and the package: a Profile never changes. */
+const cache = new Map<string, BuildComposition>();
+const CACHE_LIMIT = 1000;
+
+/**
+ * What the Profile of the build +preview+ says its package, in +packageDir+,
+ * is composed of. Each Profile is read once per process, so the candidates
+ * of a fleet's microfrontends don't each read every Profile again.
+ */
 export function buildComposition(db: Executor, preview: string, packageDir: string): BuildComposition {
-  return compositionOf(buildFactDocument(db, preview), packageDir);
+  const profile = decidingProfile(db, preview);
+  if (!profile) return NO_COMPOSITION;
+  const key = `${profile.publicId}:${packageDir}`;
+  const cached = cache.get(key);
+  if (cached) return cached;
+  const composition = compositionOf(surveyFactDocument(db, profile.surveyId), packageDir);
+  cache.set(key, composition);
+  if (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value!);
+  return composition;
 }
 
 /** What the Profile +document+ says the package in +packageDir+ is composed of. */
@@ -121,5 +146,5 @@ export function compositionOf(document: FactDocument | null, packageDir = "."): 
     }
   }
   const saltProvider = factsOf(document, "design_systems", packageDir).some((fact) => fact.key === "salt" && (fact.value as JsonObject).provider === true);
-  return { remotes, imports, singleSpa: { rootConfig, application }, containers, saltProvider };
+  return { packageName: new ProfiledRepository(document).packageName(packageDir), remotes, imports, singleSpa: { rootConfig, application }, containers, saltProvider };
 }
