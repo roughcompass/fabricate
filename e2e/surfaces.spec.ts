@@ -3,7 +3,11 @@ import { addBitbucketToken } from "../src/lib/admin/bitbucket-tokens";
 import { storeEntry } from "../src/lib/catalog/entries";
 import { saltEntry } from "../test/support/catalog";
 import { buildRepository } from "../test/support/builders";
-import { expect, expectNoNestedBorders, test } from "./support/fixtures";
+import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, test } from "./support/fixtures";
+import { framedRun } from "./support/fixture-app";
+import { buildQuotes } from "./support/quotes-fixtures";
+import { application, waitForPage } from "./support/running-app";
+import { expectToolbarOnTop, openTool } from "./support/toolbar";
 import { seedResults } from "./support/results";
 import { limitViolations } from "./support/page-limits";
 import { type Surface, applicationSurfaces, seedOperatorSurfaces } from "./support/surfaces";
@@ -96,6 +100,44 @@ async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sources
     ["14-docs-not-found", "/docs/get-started/nowhere"],
   ];
 }
+
+// restore-toolbar-tools-and-branch-previews, task 12.1: the restored panels and overlays keep the toolbar's surface rules in both themes.
+test("Microfrontends with regions, Session, Settings, and hot spots: no nested bordered containers, no horizontal overflow, and the toolbar on top, in both themes", async ({ page, db, baseURL }) => {
+  test.setTimeout(300_000);
+  const { desk } = await buildQuotes(db, { saved: false });
+  for (const theme of ["light", "dark"] as const) {
+    await useTheme(page.context(), theme, baseURL!);
+    await page.goto(framedRun(desk, "/"));
+    await waitForPage(page, "Quotes desk");
+    for (const [id, dialog] of [
+      ["microfrontends", "Microfrontends"],
+      ["session", "Session"],
+      ["settings", "Settings"],
+    ] as const) {
+      await openTool(page, id);
+      await expect(page.getByRole("dialog", { name: dialog })).toBeVisible();
+      if (id === "microfrontends") {
+        await page.getByRole("dialog", { name: dialog }).getByLabel("Show regions").check();
+        await expect(page.locator('[data-region-outline="@fixtures/quotes-panel"]')).toBeVisible();
+      }
+      await test.step(`${dialog}, ${theme}`, async () => {
+        await expectNoNestedBorders(page, "[data-tool-panel]");
+        await expectNoHorizontalOverflow(page);
+        await expectToolbarOnTop(page);
+      });
+      await page.keyboard.press("Escape");
+    }
+    // Hot spots of the desk's own interactions: a quick one is never outlined.
+    await application(page).getByRole("button", { name: "ACME" }).first().click();
+    await openTool(page, "timing");
+    await page.getByRole("dialog", { name: "Timing" }).getByLabel("Show hot spots").check();
+    await test.step(`Timing with hot spots, ${theme}`, async () => {
+      await expectNoNestedBorders(page, "[data-tool-panel]");
+      await expectToolbarOnTop(page);
+    });
+    await page.keyboard.press("Escape");
+  }
+});
 
 test("every operator page has exactly one h1, in its page header, and none in the shell header", async ({ page, db, sourcesDir }) => {
   test.setTimeout(300_000);

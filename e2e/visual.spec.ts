@@ -9,6 +9,10 @@ import { applicationSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
 import { useTheme } from "./support/shell";
 import { storeEntry } from "../src/lib/catalog/entries";
+import { createPreset } from "../src/lib/workspaces/presets";
+import { setDisplayName } from "../src/lib/workspaces/workspaces";
+import { buildQuotes } from "./support/quotes-fixtures";
+import { workspaceOf } from "./support/running-app";
 import { buildRepository } from "../test/support/builders";
 import { saltEntry } from "../test/support/catalog";
 import { manifest } from "../test/support/profiles";
@@ -29,6 +33,8 @@ const VIEWPORTS = [
 const THEMES = ["light", "dark"] as const;
 
 test.skip(!process.env.CAPTURE_SCREENSHOTS, "Set CAPTURE_SCREENSHOTS=1 (npm run test:visual) to capture screenshots.");
+// Tracing dispatches an event of its own on each page, which Settings' event bus would log in its captures.
+test.use({ trace: "off" });
 
 /**
  * Waits until React has hydrated the page's title. A screenshot hides the
@@ -233,6 +239,9 @@ test("captures each toolbar tool over a running application, in both operator th
     ["timing", "Timing"],
     ["share", "Share"],
     ["comments", "Comments"],
+    ["microfrontends", "Microfrontends"],
+    ["session", "Session"],
+    ["settings", "Settings"],
   ];
   await page.setViewportSize({ width: 1280, height: 900 });
   const running = await runOrdersPortal(page, db);
@@ -262,8 +271,89 @@ test("captures each toolbar tool over a running application, in both operator th
       await page.screenshot({ path: path.join(output, `orders-portal-${name}-${theme}.jpg`), type: "jpeg", quality: 75 });
     }
     await page.keyboard.press("Escape");
+
+    // Timing's hot spots: the planted slow button, outlined and ranked.
+    await application(page).getByRole("button", { name: "Recalculate totals" }).click();
+    await expect(application(page).getByText("Total balance $38,575")).toBeVisible();
+    await openTool(page, "timing");
+    const timing = page.getByRole("dialog", { name: "Timing" });
+    await expect(timing.locator("[data-hot-spot]")).toHaveCount(1);
+    await timing.getByLabel("Show hot spots").check();
+    await expect(page.locator("[data-hot-spot-outline]")).toHaveCount(1);
+    await settled(page);
+    await page.screenshot({ path: path.join(output, `orders-portal-hot-spots-${theme}.jpg`), type: "jpeg", quality: 75 });
+    await page.keyboard.press("Escape");
   }
-  expect(fs.readdirSync(output)).toHaveLength(tools.length * THEMES.length);
+  expect(fs.readdirSync(output)).toHaveLength((tools.length + 1) * THEMES.length);
+});
+
+/**
+ * Captures the restored tools where a real build gives them something to
+ * show (restore-toolbar-tools-and-branch-previews, task 12.1): Quotes desk's
+ * Microfrontends with its single-spa region outlined, a remote's Version
+ * choice, Session with a preset and its form, and Settings with the Salt
+ * theme and the event bus, in both operator themes.
+ */
+test("captures Microfrontends with regions, Session, and Settings over Quotes desk, in both operator themes", async ({ page, context, db, baseURL }) => {
+  test.setTimeout(300_000);
+  const output = path.join(OUTPUT, "toolbar-quotes");
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const { desk } = await buildQuotes(db);
+  await page.goto(framedRun(desk, "/"));
+  await waitForPage(page, "Quotes desk");
+  const presenter = await workspaceOf(context, db);
+  setDisplayName(db, presenter.id, "Sam Rivera");
+  const deskId = (db.$client.prepare("select id from applications where slug = ?").get(desk.application.slug) as { id: number }).id;
+  createPreset(db, deskId, { name: "Admin user", entries: [{ store: "local", name: "desk:user", value: '{"role":"admin"}' }, { store: "cookie", name: "desk-region", value: "london" }, { store: "query", name: "desk", value: "fx" }] }, "Sam Rivera");
+  let count = 0;
+  const capture = async (name: string, theme: string) => {
+    await settled(page);
+    await page.screenshot({ path: path.join(output, `quotes-desk-${name}-${theme}.jpg`), type: "jpeg", quality: 75 });
+    count++;
+  };
+  for (const theme of THEMES) {
+    await useTheme(context, theme, baseURL!);
+    await page.goto(framedRun(desk, "/"));
+    await waitForPage(page, "Quotes desk");
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+
+    await openTool(page, "microfrontends");
+    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
+    await expect(microfrontends.locator('[data-member="quotesPanel"]')).toBeVisible();
+    await microfrontends.getByLabel("Show regions").check();
+    await expect(page.locator('[data-region-outline="@fixtures/quotes-panel"]')).toBeVisible();
+    await capture("microfrontends-regions", theme);
+    await microfrontends.locator('[data-member="quotesPanel"]').click();
+    await expect(microfrontends.getByRole("group", { name: "Version" })).toBeVisible();
+    await capture("microfrontends-version", theme);
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+
+    await openTool(page, "session");
+    const session = page.getByRole("dialog", { name: "Session" });
+    await expect(session.getByRole("group", { name: "Start with" }).getByLabel("Admin user")).toBeVisible();
+    await capture("session", theme);
+    await session.getByRole("button", { name: "New preset" }).click();
+    await capture("session-new-preset", theme);
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+
+    await openTool(page, "settings");
+    const settings = page.getByRole("dialog", { name: "Settings" });
+    await expect(settings.getByRole("group", { name: "Mode" })).toBeVisible();
+    // One event in the log: a test event the page handles.
+    const send = settings.locator("form").filter({ has: page.getByRole("heading", { name: "Send an event" }) });
+    await send.getByLabel("Event name").fill("quotes:selected");
+    await send.getByLabel("Detail").fill('{"symbol":"ACME"}');
+    await send.getByRole("button", { name: "Send event" }).click();
+    await expect(application(page).getByText("Selected: ACME")).toBeVisible();
+    await capture("settings", theme);
+    await page.keyboard.press("Escape");
+  }
+  expect(fs.readdirSync(output)).toHaveLength(count);
+  expect(count).toBe(5 * THEMES.length);
 });
 
 /**
@@ -281,6 +371,9 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
     ["share", "Share"],
     ["accessibility", "Accessibility"],
     ["timing", "Timing"],
+    ["microfrontends", "Microfrontends"],
+    ["session", "Session"],
+    ["settings", "Settings"],
     ["shortcuts", "Preferences / Keyboard shortcuts"],
   ];
   const menu = page.getByRole("dialog", { name: "Toolbar", exact: true });

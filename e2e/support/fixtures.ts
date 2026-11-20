@@ -199,12 +199,12 @@ export async function expectNoOverlappingContent(page: Page): Promise<void> {
 
 /**
  * Fails when a bordered container sits inside another (design system: panels
- * never nest). A container is a block element with all four borders that holds
+ * never nest), in the page's main landmark or the element +root+ selects. A container is a block element with all four borders that holds
  * other elements; controls, labels, chips (even wrapped onto two lines), and
  * small decorative circles are not containers.
  */
-export async function expectNoNestedBorders(page: Page): Promise<void> {
-  const nested = await page.evaluate(() => {
+export async function expectNoNestedBorders(page: Page, root = "main"): Promise<void> {
+  const nested = await page.evaluate((root) => {
     const container = (element: Element) => {
       if (element.childElementCount === 0 || element.matches("input, select, textarea, button, a, label, dialog, code, kbd, img, svg, svg *, [popover]")) return false;
       const style = getComputedStyle(element);
@@ -213,11 +213,11 @@ export async function expectNoNestedBorders(page: Page): Promise<void> {
       const rect = element.getBoundingClientRect();
       return bordered && rect.width >= 64 && rect.height >= 32;
     };
-    const boxes = [...(document.querySelector("main")?.querySelectorAll("*") ?? [])].filter(container);
+    const boxes = [...(document.querySelector(root)?.querySelectorAll("*") ?? [])].filter(container);
     return boxes
       .filter((box) => boxes.some((other) => other !== box && other.contains(box)))
       .slice(0, 5)
       .map((box) => `${box.tagName.toLowerCase()}.${String(box.className).split(" ")[0]} in ${String(boxes.find((other) => other !== box && other.contains(box))!.className).split(" ")[0]}`);
-  });
+  }, root);
   expect(nested, "bordered containers nest").toEqual([]);
 }
