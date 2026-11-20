@@ -215,13 +215,15 @@ Keys work anywhere on the page, the application included, except while you type 
 
 In comment mode, the element under the pointer or keyboard focus is outlined. Click it, or press Enter, to open **New comment**; the application doesn't receive that click. Write the comment, up to 2,000 characters, and choose **Post comment**, or press Command or Control and Enter. The first time, you also give your name, up to 60 characters, which is shown with your comments. Comments can use `**bold**`, `*italic*`, `~~strikethrough~~`, and `` `code` ``; anything else, HTML included, is shown as written.
 
-A thread is bound to its element, the route it's on, and the commit of the build shown: the element by its position in the page, its tag, and the start of its text. Open threads on the current route show as numbered pins on their elements. Select a pin to read the thread, **Reply**, or **Resolve thread**.
+A thread is bound to its element, the route it's on, the commit of the build shown, and the preview it was placed on: the tracked branch, or one of the application's [saved previews](#saved-previews). The element is found by its position in the page, its tag, and the start of its text. Open threads on the current route of the preview shown show as numbered pins on their elements. A thread placed on `main` never pins onto a look-alike element of a feature branch's build. Select a pin to read the thread, **Reply**, or **Resolve thread**.
 
 **Comments** lists the view's threads under **Open** and **Resolved**, each with its route, its element, and its commit. **Go to comment** opens a thread on another route; an open thread whose element isn't on the page, because the page changed, is listed as **Not visible in this view** rather than pinned to the wrong element. A resolved thread can be reopened. Nothing marks a thread made on an earlier commit, apart from the commit it lists.
 
+A thread placed on another preview is listed as **Not visible in this view**, with the branch or tag it was placed on, such as "On feature/new-nav". Its **Go to comment** opens that preview's running address at the thread's route. A thread whose saved preview was removed stays listed, as "On fix/totals, a saved preview since removed", with no **Go to comment**.
+
 ### Share
 
-**Share** creates a link to the view: the application, the commit of the build shown, the route with its query, and your comments on it. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. See [Share links](#share-links).
+**Share** creates a link to the view: the application, the saved preview shown, if any, the commit of the build shown, the route with its query, and your comments on it. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. See [Share links](#share-links).
 
 ### Accessibility
 
@@ -236,9 +238,11 @@ A thread is bound to its element, the route it's on, and the commit of the build
 
 ## Share links
 
-A share link, `/s/<token>`, opens the application at the captured route, on the captured commit's build, with the sharer's comment threads on that application. Anyone with the link can read those threads, reply, resolve and reopen them, and add their own, under their own name; their comments are kept in the sharer's workspace. The token is long and random, and the Frontend Registry stores only its digest.
+A share link, `/s/<token>`, opens the application at the captured route, on the captured commit's build, with the sharer's comment threads on that application. A link made on a saved preview opens that preview at its own address, `/run/<slug>@<key>/<route>`. Anyone with the link can read those threads, reply, resolve and reopen them, and add their own, under their own name; their comments are kept in the sharer's workspace. The token is long and random, and the Frontend Registry stores only its digest.
 
-When the captured commit's build no longer exists, because it was pruned, the link opens the current build at the captured route, with a notice: "The shared commit … is no longer available, so this is the current build."
+When what the link captured is gone, it opens the nearest build, with a notice:
+- **The captured build was pruned:** the current build opens at the captured route, the saved preview's for a link to one. The notice reads "The shared commit … is no longer available, so this is the current build.", or for a saved preview, "…, so this is feature/new-nav's current build."
+- **The saved preview was removed:** the application's current build opens at its own address, with "The shared preview of fix/totals was removed, so this is the application's current build."
 
 A link has no expiry date and can't be revoked on its own. It stops working when:
 - the sharer resets their workspace;

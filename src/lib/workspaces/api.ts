@@ -2,7 +2,7 @@ import { applicationsUnavailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { errorsFrom } from "@/lib/web/form-data";
-import { type ApplicationView, resolveApplicationView, viewedApplication } from "./access";
+import { type ApplicationView, type ViewedApplication, type ViewedPreview, resolveApplicationView, viewedApplication, viewedPreview } from "./access";
 import { currentWorkspace, writableWorkspace } from "./request";
 import { WorkspaceLimitError, type Workspace } from "./workspaces";
 
@@ -10,8 +10,10 @@ import { WorkspaceLimitError, type Workspace } from "./workspaces";
  * Shared plumbing for the workspace's JSON route handlers on running
  * applications (src/app/api/workspace): availability, view authorization
  * (the visitor's own view of the application the request's `application`
- * query names, or a share link's, from its `share` query), and bounded JSON
- * bodies. Each answers not found while applications aren't offered.
+ * query names, or a share link's, from its `share` query, showing the saved
+ * preview its `preview` query names by its key, if any), and bounded JSON
+ * bodies. Each answers not found while applications aren't offered, and for
+ * a saved preview the application doesn't have.
  */
 
 const BODY_LIMIT = 16 * 1024;
@@ -22,10 +24,16 @@ function invalid(error: ValidationError): Response {
   return Response.json({ errors: errorsFrom(error) }, { status: 400 });
 }
 
-/** The application slug and share link token a request names. */
-function viewQuery(request: Request): { slug: string; share: string | null } {
+/** The application slug, saved preview key, and share link token a request names. */
+function viewQuery(request: Request): { slug: string; preview: string | null; share: string | null } {
   const query = new URL(request.url).searchParams;
-  return { slug: query.get("application") ?? "", share: query.get("share") };
+  return { slug: query.get("application") ?? "", preview: query.get("preview"), share: query.get("share") };
+}
+
+/** The saved preview +key+ names, null for none, or undefined when the application has no such preview. */
+function previewOf(application: ViewedApplication, key: string | null): ViewedPreview | null | undefined {
+  if (key === null) return null;
+  return viewedPreview(getDb(), application, key) ?? undefined;
 }
 
 /** The view a request may read, or a response that refuses it. */
@@ -33,11 +41,12 @@ export async function readableView(request: Request): Promise<{ view: Applicatio
   const unavailable = applicationsUnavailable();
   if (unavailable) return unavailable;
   const db = getDb();
-  const { slug, share } = viewQuery(request);
+  const { slug, preview: key, share } = viewQuery(request);
   const application = viewedApplication(db, slug);
-  if (!application) return notFound();
+  const preview = application && previewOf(application, key);
+  if (!application || preview === undefined) return notFound();
   const workspace = await currentWorkspace();
-  return { view: resolveApplicationView(db, application, workspace, share), workspace };
+  return { view: resolveApplicationView(db, application, workspace, share, preview), workspace };
 }
 
 /** The view a request may write to, creating the visitor's workspace on first use. */
@@ -45,11 +54,12 @@ export async function writableView(request: Request): Promise<{ view: Applicatio
   const unavailable = applicationsUnavailable();
   if (unavailable) return unavailable;
   const db = getDb();
-  const { slug, share } = viewQuery(request);
+  const { slug, preview: key, share } = viewQuery(request);
   const application = viewedApplication(db, slug);
-  if (!application) return notFound();
+  const preview = application && previewOf(application, key);
+  if (!application || preview === undefined) return notFound();
   const workspace = await writableWorkspace();
-  const view = resolveApplicationView(db, application, workspace, share);
+  const view = resolveApplicationView(db, application, workspace, share, preview);
   if (view.viewWorkspaceId === null) return notFound();
   return { view: view as ApplicationView & { viewWorkspaceId: number }, workspace };
 }

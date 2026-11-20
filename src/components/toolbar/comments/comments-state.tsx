@@ -10,7 +10,21 @@ import type { FieldErrors, NewThread, PlacedThread, StoreResult, ThreadStore } f
 
 export type Outcome = { ok: true; id?: string } | { ok: false; errors: FieldErrors };
 
+/** The view the comments are shown in: the application, the saved preview shown or null for the tracked branch, the tracked branch's name, and the share link that opened it. */
+export interface CommentScope {
+  readonly slug: string;
+  readonly preview: string | null;
+  readonly tracked: string;
+  readonly share: string | null;
+}
+
+/** Whether +thread+ was placed on the preview the view shows: the same saved preview, or the tracked branch for both. */
+export function onThisPreview(thread: Pick<PlacedThread, "preview">, scope: Pick<CommentScope, "preview">): boolean {
+  return scope.preview === null ? thread.preview === null : thread.preview?.key === scope.preview;
+}
+
 export interface Comments {
+  readonly scope: CommentScope;
   readonly threads: readonly PlacedThread[];
   readonly displayName: string | null;
   readonly loaded: boolean;
@@ -30,7 +44,7 @@ export function useComments(): Comments {
   return comments;
 }
 
-export function CommentsProvider({ store, children }: { store: ThreadStore; children: React.ReactNode }) {
+export function CommentsProvider({ store, scope, children }: { store: ThreadStore; scope: CommentScope; children: React.ReactNode }) {
   const [threads, setThreads] = useState<readonly PlacedThread[]>([]);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -64,6 +78,7 @@ export function CommentsProvider({ store, children }: { store: ThreadStore; chil
   const attempt = (write: () => Promise<StoreResult>) => write().then(apply, () => failed);
 
   const comments: Comments = {
+    scope,
     threads,
     displayName,
     loaded,

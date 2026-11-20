@@ -4,9 +4,10 @@ import type { ElementAnchor } from "./element-anchor";
  * Where a running application's comment threads are kept: the visitor's
  * workspace, through the workspace's thread endpoints (src/app/api/
  * workspace/threads). Each thread records the route and the build's commit it
- * was placed on, and the element by its anchor (add-applications, design
- * decision 7, and the toolbar spec's "Comments stay bound to their element,
- * route, and commit"). Threads are private to the workspace until it shares
+ * was placed on, the saved preview if it was placed on one, and the element
+ * by its anchor (add-applications, design decision 7, and the toolbar spec's
+ * "Comments stay bound to their element, route, and commit" and "Comments
+ * record the preview they were placed on"). Threads are private to the workspace until it shares
  * a view; a view opened through a share link reads and writes the sharer's
  * threads.
  */
@@ -24,6 +25,8 @@ export interface PlacedThread {
   readonly route: string;
   /** The commit of the build it was placed on. */
   readonly commit: string;
+  /** The saved preview it was placed on: its key while it's saved, null once removed, and its ref; null for the tracked branch. */
+  readonly preview: { readonly key: string | null; readonly ref: string } | null;
   readonly anchor: ElementAnchor;
   /** Where on the element, as fractions of its width and height. */
   readonly offsetX: number;

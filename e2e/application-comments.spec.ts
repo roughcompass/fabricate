@@ -7,7 +7,9 @@ import type { Page } from "@playwright/test";
 import { expectToolbarOnTop, openTool, startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
-import { commitToOrdersPortal, rebuildOrdersPortal } from "./support/fixture-app";
+import { removeSavedPreview } from "../src/lib/applications/saved-previews";
+import { commitToOrdersPortal, rebuildOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
+import { paths } from "./support/paths";
 import { application, openBuild, runOrdersPortal, waitForPage, workspaceOf } from "./support/running-app";
 import { useTheme } from "./support/shell";
 
@@ -128,6 +130,49 @@ test("keeps a pin on a newer build that still renders its element, and lists one
   // It's on this route, so there's nowhere to go.
   await expect(gone.getByRole("button")).toHaveCount(0);
   await expect(panel(page).locator("[data-thread]").filter({ hasText: "Too slow" })).toHaveAttribute("data-visible", "true");
+});
+
+test.describe("comments on saved previews (restore-toolbar-tools-and-branch-previews, task 4.3)", () => {
+  test("pins a comment only on the saved preview it was placed on, lists it elsewhere as not visible naming the branch, and goes to it (Comment on a saved preview)", async ({ page, db }) => {
+    const { application: orders } = await runOrdersPortal(page, db);
+    const feature = await saveOrdersPortalPreview(db, "refs/heads/feature/new-nav");
+    await page.goto(paths.runningApplication(orders.slug, "/accounts", undefined, feature.key));
+    await waitForPage(page, "Accounts");
+    await comment(page, exportOrders(page), "Is this still primary on the new navigation?", "Sam Rivera");
+    await expect(pin(page, 1)).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // On the tracked branch, the same element has no pin, and the list names the preview.
+    await page.goto(paths.runningApplication(orders.slug, "/accounts"));
+    await waitForPage(page, "Accounts");
+    await expect(pin(page, 1)).toHaveCount(0);
+    await openTool(page, "comments");
+    const item = panel(page).locator("[data-thread]").first();
+    await expect(item).toContainText("Not visible in this view · On feature/new-nav · /accounts");
+    await item.getByRole("button", { name: "Go to comment" }).click();
+    await expect(page).toHaveURL(paths.runningApplication(orders.slug, "/accounts", undefined, feature.key));
+    await waitForPage(page, "Accounts");
+    await expect(pin(page, 1)).toBeVisible();
+  });
+
+  test("keeps a removed preview's comments listed, saying the preview was removed (Comment on a removed preview)", async ({ page, db }) => {
+    const { application: orders } = await runOrdersPortal(page, db);
+    const feature = await saveOrdersPortalPreview(db, "refs/heads/feature/new-nav");
+    await page.goto(paths.runningApplication(orders.slug, "/accounts", undefined, feature.key));
+    await waitForPage(page, "Accounts");
+    await comment(page, exportOrders(page), "Before merging", "Sam Rivera");
+    await page.keyboard.press("Escape");
+    removeSavedPreview(db, orders.publicId, feature.key);
+
+    await page.goto(paths.runningApplication(orders.slug, "/accounts"));
+    await waitForPage(page, "Accounts");
+    await expect(pin(page, 1)).toHaveCount(0);
+    await openTool(page, "comments");
+    const item = panel(page).locator("[data-thread]").first();
+    await expect(item).toContainText("Before merging");
+    await expect(item).toContainText("Not visible in this view · On feature/new-nav, a saved preview since removed · /accounts");
+    await expect(item.getByRole("button", { name: "Go to comment" })).toHaveCount(0);
+  });
 });
 
 test("refuses a thread past the workspace's limit, saying how to make room (Thread limit)", async ({ page, context, db }) => {

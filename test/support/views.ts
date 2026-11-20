@@ -25,3 +25,12 @@ export const commitOf = (digit: string) => digit.repeat(40);
 
 /** An anchor on the Export orders button. */
 export const EXPORT_ORDERS = { path: "#content > div > button:nth-of-type(2)", tag: "button", fingerprint: "Export orders" } as const;
+
+/** A saved preview of +ref+ for +application+, still building its first commit, as a view names it. */
+export function savedPreviewIn(db: Db, application: ViewedApplication, ref = "refs/heads/feature/new-nav", key = ref.replace(/^refs\/(heads|tags)\//, "").replace(/[^a-z0-9.]+/g, "-")): { id: number; key: string; ref: string } {
+  const row = db.$client.prepare("select latest_commit_sha as commit_sha from applications where id = ?").get(application.id) as { commit_sha: string };
+  const inserted = db.$client
+    .prepare("insert into application_previews (public_id, application_id, key, ref, latest_commit_sha, latest_requested_at, created_at, updated_at) values (?, ?, ?, ?, ?, 0, 0, 0)")
+    .run(`apv_${Math.random().toString(36).slice(2).padEnd(16, "0").slice(0, 16)}`, application.id, key, ref, row.commit_sha);
+  return { id: Number(inserted.lastInsertRowid), key, ref };
+}

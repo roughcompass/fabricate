@@ -4,9 +4,11 @@ import { deletePreview } from "../src/lib/previews/lifecycle";
 import { openTool, startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
-import { commitToOrdersPortal, rebuildOrdersPortal } from "./support/fixture-app";
+import { removeSavedPreview } from "../src/lib/applications/saved-previews";
+import { ORDERS_PORTAL_BRANDS, commitToOrdersPortal, rebuildOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
 import { paths } from "./support/paths";
-import { serverConfig } from "./support/results";
+import { runJobs, serverConfig } from "./support/results";
+import { buildSavedPreview } from "../src/lib/applications/pipeline";
 import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage } from "./support/running-app";
 
 /*
@@ -117,6 +119,71 @@ test("opens the captured commit's build, or the current build with a notice once
   await notice.getByRole("button", { name: "Dismiss" }).click();
   await expect(notice).toHaveCount(0);
   await colleague.close();
+});
+
+test.describe("a saved preview's share link (restore-toolbar-tools-and-branch-previews, task 4.2)", () => {
+  test("shares a saved preview: the link opens it at its own address, at the captured route, with the comment (Sharing a saved preview)", async ({ page, browser, db, baseURL }) => {
+    const { application: orders } = await runOrdersPortal(page, db, "/");
+    const feature = await saveOrdersPortalPreview(db, "refs/heads/feature/new-nav");
+    await page.goto(paths.runningApplication(orders.slug, "/accounts/42", undefined, feature.key));
+    await waitForPage(page, "Accounts");
+    await comment(page, "Check the new navigation", "Sam Rivera");
+    await page.keyboard.press("Escape");
+    await openTool(page, "share");
+    await expect(page.getByRole("dialog", { name: "Share" }).locator("[data-share-view]")).toHaveText(`The link opens Orders portal (feature/new-nav) at /accounts/42, built from commit ${feature.current!.commitSha.slice(0, 12)}, with this view's comments.`);
+    const link = await page.getByRole("dialog", { name: "Share" }).getByLabel("Link to this view").inputValue();
+
+    const colleague = await visitorContext(browser, db, baseURL!);
+    const recipient = await colleague.newPage();
+    await recipient.goto(link);
+    await expect(recipient).toHaveURL(new RegExp(`/run/${orders.slug}@feature-new-nav/accounts/42\\?share=[A-Za-z0-9_-]{43}$`));
+    await waitForPage(recipient, "Accounts");
+    await expect(application(recipient).getByText(ORDERS_PORTAL_BRANDS.feature, { exact: true })).toBeVisible();
+    await expect(pin(recipient, 1)).toBeVisible();
+    await expect(recipient.locator("[data-run-notice]")).toHaveCount(0);
+    await colleague.close();
+  });
+
+  test("falls back to the preview's current build once the captured one is gone (Shared saved preview moved on)", async ({ page, browser, db, baseURL }) => {
+    const { application: orders } = await runOrdersPortal(page, db, "/");
+    const feature = await saveOrdersPortalPreview(db, "refs/heads/feature/new-nav");
+    await page.goto(paths.runningApplication(orders.slug, "/accounts", undefined, feature.key));
+    await waitForPage(page, "Accounts");
+    const link = await shareLink(page);
+
+    // The branch moves, its new build becomes current, and the captured build is deleted.
+    commitToOrdersPortal({ "src/accounts.jsx": (source) => source.replace("Every account the orders team serves", "Every account on the new navigation") }, { branch: "feature/new-nav", message: "New lead" });
+    await buildSavedPreview(db, feature.publicId, { config: serverConfig() });
+    await runJobs(db);
+    expect(await deletePreview(db, feature.current!.preview, serverConfig())).toBe(true);
+
+    const colleague = await visitorContext(browser, db, baseURL!);
+    const recipient = await colleague.newPage();
+    await recipient.goto(link);
+    await waitForPage(recipient, "Accounts");
+    await expect(application(recipient).getByText("Every account on the new navigation")).toBeVisible();
+    await expect(recipient.locator("[data-run-notice]")).toContainText(`The shared commit ${feature.current!.commitSha.slice(0, 12)} is no longer available, so this is feature/new-nav's current build.`);
+    await colleague.close();
+  });
+
+  test("falls back to the application's current build after the preview was removed, saying so (Shared saved preview removed)", async ({ page, browser, db, baseURL }) => {
+    const { application: orders, base } = await runOrdersPortal(page, db, "/");
+    const feature = await saveOrdersPortalPreview(db, "refs/heads/feature/new-nav");
+    await page.goto(paths.runningApplication(orders.slug, "/accounts", undefined, feature.key));
+    await waitForPage(page, "Accounts");
+    const link = await shareLink(page);
+    removeSavedPreview(db, orders.publicId, feature.key);
+
+    const colleague = await visitorContext(browser, db, baseURL!);
+    const recipient = await colleague.newPage();
+    await recipient.goto(link);
+    await expect(recipient).toHaveURL(new RegExp(`/run/${orders.slug}/accounts\\?share=[A-Za-z0-9_-]{43}$`));
+    await waitForPage(recipient, "Accounts");
+    await expect(recipient.locator("[data-target-frame]")).toHaveAttribute("src", `${base}accounts`);
+    await expect(application(recipient).getByText(ORDERS_PORTAL_BRANDS.main, { exact: true })).toBeVisible();
+    await expect(recipient.locator("[data-run-notice]")).toContainText("The shared preview of feature/new-nav was removed, so this is the application's current build.");
+    await colleague.close();
+  });
 });
 
 test("stops working when the sharer resets their workspace or the application is deleted, leading back to Applications", async ({ page, db }) => {

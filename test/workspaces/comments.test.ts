@@ -10,7 +10,8 @@ import { createShare } from "@/lib/workspaces/shares";
 import { WORKSPACE_COOKIE, newWorkspaceKey } from "@/lib/workspaces/workspace-key";
 import { THREAD_LIMIT, type Workspace, ensureWorkspace, findWorkspace } from "@/lib/workspaces/workspaces";
 import { createTestDb } from "../support/db";
-import { EXPORT_ORDERS, commitOf, viewedApplicationIn } from "../support/views";
+import { EXPORT_ORDERS, commitOf, savedPreviewIn, viewedApplicationIn } from "../support/views";
+import { findShare } from "@/lib/workspaces/shares";
 
 /*
  * Comment threads on a running application (template-demo/toolbar spec,
@@ -100,6 +101,22 @@ describe("comment threads", () => {
     expect(() => setThreadStatus(db, ownView(), rows[0]!.publicId, "open")).not.toThrow();
   });
 
+  it("records the saved preview a thread was placed on, with its ref, and keeps the ref once the preview is removed (Comment on a saved preview, Comment on a removed preview)", () => {
+    const feature = savedPreviewIn(db, orders);
+    const onFeature = resolveApplicationView(db, orders, owner, null, feature) as WritableView;
+    const tracked = createThread(db, ownView(), author(), INPUT);
+    const placed = createThread(db, onFeature, author(), { ...INPUT, route: "/settings" });
+    // Every thread of the view is listed from either preview; the toolbar pins only the preview's own.
+    for (const view of [ownView(), onFeature]) {
+      expect(listThreads(db, view).map((thread) => [thread.id, thread.preview])).toEqual([
+        [tracked, null],
+        [placed, { key: "feature-new-nav", ref: "refs/heads/feature/new-nav" }],
+      ]);
+    }
+    db.$client.prepare("delete from application_previews where id = ?").run(feature.id);
+    expect(listThreads(db, ownView())[1]).toMatchObject({ id: placed, preview: { key: null, ref: "refs/heads/feature/new-nav" } });
+  });
+
   it("goes with its application", () => {
     createThread(db, ownView(), author(), INPUT);
     db.delete(applications).where(eq(applications.id, orders.id)).run();
@@ -151,6 +168,22 @@ describe("comment threads", () => {
       expect((await post({ ...INPUT, authorName: " Sam  Rivera " })).status).toBe(201);
       expect(findWorkspace(db, ownerKey)!.displayName).toBe("Sam Rivera");
       expect((await post(INPUT)).status).toBe(201);
+    });
+
+    it("places a thread on the saved preview the request names, shares it with that preview, and refuses an unknown one", async () => {
+      savedPreviewIn(db, orders);
+      cookieJar.set(WORKSPACE_COOKIE, ownerKey);
+      expect((await post({ ...INPUT, authorName: "Sam" }, { preview: "feature-new-nav" })).status).toBe(201);
+      expect(listThreads(db, ownView())[0]!.preview).toEqual({ key: "feature-new-nav", ref: "refs/heads/feature/new-nav" });
+      expect((await post({ ...INPUT, authorName: "Sam" }, { preview: "nowhere" })).status).toBe(404);
+      const { GET } = await import("@/app/api/workspace/threads/route");
+      expect((await GET(new Request(url("", { preview: "nowhere" })))).status).toBe(404);
+
+      const shares = await import("@/app/api/workspace/shares/route");
+      const created = await shares.POST(new Request(url("", { preview: "feature-new-nav" }), { method: "POST", body: JSON.stringify({ commit: commitOf("a"), route: "/accounts", view: { theme: { mode: "dark" } } }) }));
+      expect(created.status).toBe(201);
+      const token = ((await created.json()) as { path: string }).path.slice("/s/".length);
+      expect(findShare(db, token)).toMatchObject({ preview: { ref: "refs/heads/feature/new-nav" }, view: { theme: { mode: "dark" } } });
     });
 
     it("refuses a malformed thread, an overlong comment, and an unknown application", async () => {
