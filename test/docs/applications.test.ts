@@ -5,11 +5,13 @@ import { REF_LIMITS } from "@/lib/applications/preview-mode";
 import { PAGE_SIZE } from "@/lib/applications/records";
 import { loadConfig } from "@/lib/config";
 import { DEVICES } from "@/lib/web/device-preview";
+import { COMMENT_LIMIT, THREAD_LIMIT } from "@/lib/workspaces/workspaces";
+import { TOOLBAR_ITEMS } from "@/components/toolbar/toolbar-context";
 
 /*
- * docs/applications.md (add-applications task 10.6, a draft until the
- * toolbar's sections are written): every link and anchor resolves, and the
- * limits it states are the ones the pages keep.
+ * docs/applications.md (add-applications task 10.6): every link and anchor
+ * resolves, the limits it states are the ones the pages and workspaces keep,
+ * and it lists every toolbar tool with its key.
  */
 
 const FILE = "docs/applications.md";
@@ -45,5 +47,11 @@ describe("docs/applications.md", () => {
     expect(doc).toContain(`up to ${REF_LIMITS.matches} matches`);
     expect(doc).toContain(`ordered by name, ${PAGE_SIZE} to a page`);
     for (const device of Object.values(DEVICES)) expect(doc).toContain(`**${device.label}** (${device.width} by ${device.height})`);
+    expect(doc).toContain(`up to ${COMMENT_LIMIT.toLocaleString("en-US")} characters`);
+    expect(doc).toContain(`a workspace up to ${THREAD_LIMIT} open threads`);
+  });
+
+  it("lists every toolbar tool with its key", () => {
+    for (const item of TOOLBAR_ITEMS) expect(doc, item.name).toContain(item.key ? `| **${item.name}** | ${item.key.toUpperCase()} |` : `| **${item.name}** | |`);
   });
 });

@@ -1,10 +1,8 @@
 # Applications
 
-An application is a frontend that the Frontend Registry keeps built from one branch of a Repository. It is a single-page application, or a microfrontend whose build emits a page of its own. Each time the branch moves, the Frontend Registry builds it again and captures a screenshot of the result. You can then run it at a device's size in preview mode.
+An application is a frontend that the Frontend Registry keeps built from one branch of a Repository. It is a single-page application, or a microfrontend whose build emits a page of its own. Each time the branch moves, the Frontend Registry builds it again and captures a screenshot of the result. You can run it at a device's size in preview mode, or full screen under the toolbar, where you can comment on it, share a view of it, and check its accessibility and timing.
 
 Applications are built by the same pipeline as [repository previews](previews.md). They exist only while previews are on (`previews.enabled`; see [Turn previews on](previews.md#turn-previews-on)). While previews are off, the Applications menu item is gone, and every application page answers not found. Turning previews off deletes nothing, so the applications come back when previews are turned on again.
-
-> **Status:** a draft for add-applications task 10.6. It describes onboarding, builds, screenshots, and preview mode as they're built. Running an application full screen under the toolbar, share links, and workspaces are described after the toolbar work is merged. Until then, `docs/template-demo.md` stays.
 
 ## Onboarding
 
@@ -59,7 +57,7 @@ Every card and application page shows the application's status in words, with an
 The page's header has the status and four actions:
 - **Preview application** opens [preview mode](#preview-mode).
 - **Settings** edits the name, description, and tracked branch, and deletes the application.
-- **Open full screen**.
+- **Open full screen** opens the application [under the toolbar](#running-an-application), in a new tab.
 - **Rebuild**.
 
 Preview application and Open full screen are unavailable until a build has succeeded, and Rebuild while a build is under way.
@@ -112,7 +110,7 @@ The application's page shows the full screenshot, and its card a copy 720 pixels
 
 ### The Preview tab
 
-The Preview tab runs the current build in a browser window, at the size of the device you choose: **Mobile** (390 by 844), **Tablet** (820 by 1180), or **Desktop** (1440 by 900). **Landscape** turns the device, and a frame larger than the page is scaled down to fit. **Open full screen** opens the frame's route in a new tab: another branch or tag's build at its preview's own address, and the current build at `/run/<slug>`, which arrives with the toolbar.
+The Preview tab runs the current build in a browser window, at the size of the device you choose: **Mobile** (390 by 844), **Tablet** (820 by 1180), or **Desktop** (1440 by 900). **Landscape** turns the device, and a frame larger than the page is scaled down to fit. **Open full screen** opens the frame's route in a new tab: the current build [under the toolbar](#running-an-application), at `/run/<slug>/<route>`, and another branch or tag's build at its preview's own address, without the toolbar.
 
 **Branch or tag** chooses what the frame shows. It lists the tracked branch first, then:
 - the remote's other branches by name, up to 50;
@@ -127,3 +125,75 @@ Preview mode keeps each remote's branches and tags for a minute (`previews.refCa
 ### The Code tab
 
 The Code tab lists the package's committed files at the commit shown, up to 2,000 of them, and says how many more there are. It opens on the package's `package.json`, and shows any file you choose from the tree. The files are read through the same snapshot reader that surveys use, so a file that commonly holds credentials, such as `.npmrc`, is listed but never read, and a file over the size limit is listed with the reason it isn't shown.
+
+## Running an application
+
+`/run/<slug>` runs an application's current build full screen, with the toolbar over it. Open it from the application's page with **Open full screen**, from preview mode, or from a [share link](#share-links). The page has no Frontend Registry navigation; the application fills the window, and the toolbar is a pill docked at the middle of its right edge.
+
+The address follows the application's own routes: `/run/<slug>/accounts/42` opens the build at `/accounts/42`, and as you navigate inside the application, the address bar, Reload, and Back follow it. The application's own query string and fragment aren't carried into the address, and a query on `/run/…` isn't passed to the application, except for a share link's `share`.
+
+An application that doesn't exist, or has no successful build yet, answers **Application not available**, with a link back to Applications, and so does every `/run` address while previews are off.
+
+## The toolbar
+
+The toolbar works on the running application's page, which the Frontend Registry serves from its own origin. Select the pill's menu button, or use a tool's key, to open the menu. The menu's search, **What do you need?**, finds a tool by its name or by words such as "a11y", "web vitals", or "link"; the arrow keys move, Enter opens, and Esc closes. With no search, the menu also names the application, its branch, and the commit shown; selecting that line opens the application's page in the Frontend Registry, in a new tab.
+
+| Tool | Key | What it does |
+|---|---|---|
+| **Comment** | C | Turns comment mode on: choose any element on the page to start a thread on it. |
+| **Comments** | | Lists this view's threads, open and resolved. |
+| **Share** | L | Creates a link to this view. |
+| **Accessibility** | A | Audits the page for WCAG 2 A and AA problems. |
+| **Timing** | T | Shows the page's Web Vitals, its load order, and how long each interaction took. |
+| **Keyboard shortcuts** | ? | Lists the keys, and turns single-key shortcuts and guided hints on or off. |
+| **Hide toolbar** | . | Shrinks the toolbar to a **Show toolbar** tab at the right edge; press **.** again to bring it back. |
+
+Keys work anywhere on the page, the application included, except while you type in a field, and not with Command, Control, or Alt held. Esc closes the open tooltip, menu, mode, or panel, in that order. If the keys conflict with your browser or assistive technology, clear **Use single-key shortcuts** under **Keyboard shortcuts**; Esc always works. Whether the toolbar is hidden, and whether single-key shortcuts are on, are kept in your browser for every application. While a tool's panel is open, or comment mode is on, its button sits on the pill, and selecting it closes the tool.
+
+### Comments
+
+In comment mode, the element under the pointer or keyboard focus is outlined. Click it, or press Enter, to open **New comment**; the application doesn't receive that click. Write the comment, up to 2,000 characters, and choose **Post comment**, or press Command or Control and Enter. The first time, you also give your name, up to 60 characters, which is shown with your comments. Comments can use `**bold**`, `*italic*`, `~~strikethrough~~`, and `` `code` ``; anything else, HTML included, is shown as written.
+
+A thread is bound to its element, the route it's on, and the commit of the build shown: the element by its position in the page, its tag, and the start of its text. Open threads on the current route show as numbered pins on their elements. Select a pin to read the thread, **Reply**, or **Resolve thread**.
+
+**Comments** lists the view's threads under **Open** and **Resolved**, each with its route, its element, and its commit. **Go to comment** opens a thread on another route; an open thread whose element isn't on the page, because the page changed, is listed as **Not visible in this view** rather than pinned to the wrong element. A resolved thread can be reopened. Nothing marks a thread made on an earlier commit, apart from the commit it lists.
+
+### Share
+
+**Share** creates a link to the view: the application, the commit of the build shown, the route, and your comments on it. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. See [Share links](#share-links).
+
+### Accessibility
+
+**Run audit** runs axe-core in the application's page, never on the toolbar, against axe-core's WCAG 2 A and AA rules (its `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` tags), and lists the violations by rule, with their totals by impact, Critical, Serious, Moderate, and Minor. Each result names its elements, the route they're on, and how to fix it. **Show outlines on the page** outlines each affected element with its result's number. Frames inside the application aren't audited. When the page changes after an audit, the results say they may be out of date, and **Run audit again** refreshes them.
+
+### Timing
+
+**Timing** shows, for the page as it loaded:
+- **Web Vitals:** LCP, CLS, FCP, and TTFB, measured with Google's web-vitals library, and INP, from your interactions with the application, each rated Good, Needs improvement, or Poor at the usual thresholds, such as 2.5 and 4 seconds for LCP.
+- **Load order:** the scripts, stylesheets, and Module Federation remote entries the page loaded, in the order they started, with the slowest marked.
+- **Interactions:** each click, tap, or key press in the application and how long the page took to respond, the latest 50, with the slowest so far. **Clear interactions** empties the list. A browser without the Event Timing API shows approximate times, marked ≈. The toolbar's own controls are never timed.
+
+## Share links
+
+A share link, `/s/<token>`, opens the application at the captured route, on the captured commit's build, with the sharer's comment threads on that application. Anyone with the link can read those threads, reply, resolve and reopen them, and add their own, under their own name; their comments are kept in the sharer's workspace. The token is long and random, and the Frontend Registry stores only its digest.
+
+When the captured commit's build no longer exists, because it was pruned, the link opens the current build at the captured route, with a notice: "The shared commit … is no longer available, so this is the current build."
+
+A link has no expiry date and can't be revoked on its own. It stops working when:
+- the sharer resets their workspace;
+- the sharer's workspace is deleted after 30 days without use (opening the link doesn't count as the sharer's use);
+- the application is deleted;
+- or previews are turned off.
+
+A link that stops working opens **Application not available**, without saying why.
+
+## Workspaces
+
+Each browser that opens Applications, a running application, or a share link gets an anonymous workspace, with no sign-in. The workspace holds that browser's comment threads, share links, display name, and guided hints. It's tied to the browser by an `HttpOnly` cookie, which scripts can't read, and the Frontend Registry stores only the cookie's digest. Applications are shared by every workspace, but no one sees another workspace's comments except through a share link.
+
+- **Limits:** a comment can have up to 2,000 characters, and a workspace up to 500 open threads, across every application. At the limit, the composer asks you to resolve threads, or to reset the workspace, before starting another.
+- **Idle workspaces:** a workspace that hasn't been used for 30 days is deleted, with its threads and share links.
+- **Reset workspace**, the last section of the Applications page, deletes your workspace's threads, including those others started or replied to through your links, and your share links, so they stop working. It also forgets your display name, and shows the guided hints again. It asks for confirmation first. Applications, other workspaces, and comments you added through someone else's link aren't affected, and the toolbar's preferences in your browser stay.
+
+**Guided hints** are three short tips the first time you run an application: auditing accessibility, seeing what's slow, and commenting on anything. **Dismiss hints** or **Finish hints** puts them away for the workspace. Under **Keyboard shortcuts**, **Show guided hints** turns them on or off, and **Replay hints** shows them again.
+
