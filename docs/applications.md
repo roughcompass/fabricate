@@ -228,7 +228,7 @@ A thread placed on another preview is listed as **Not visible in this view**, wi
 
 ### Share
 
-**Share** creates a link to the view: the application, the saved preview shown, if any, the commit of the build shown, the route with its query, and your comments on it. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. See [Share links](#share-links).
+**Share** creates a link to the view: the application, the saved preview shown, if any, the commit of the build shown, the route with its query, and your comments on it. It also captures the Salt theme chosen in Settings, the Microfrontends routing, and the name of the session preset the view starts with, never the preset's entries. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. Whenever the view has routing, a theme, or a preset, the panel says what opening the link does in the recipient's browser: it applies your routing, which registers the routing service worker there, it applies your theme, and it starts with the preset, whose values aren't in the link. See [Share links](#share-links).
 
 ### Microfrontends
 
@@ -308,9 +308,18 @@ The toolbar runs its frame agent in each new document the frame loads as soon as
 
 A share link, `/s/<token>`, opens the application at the captured route, on the captured commit's build, with the sharer's comment threads on that application. A link made on a saved preview opens that preview at its own address, `/run/<slug>@<key>/<route>`. Anyone with the link can read those threads, reply, resolve and reopen them, and add their own, under their own name; their comments are kept in the sharer's workspace. The token is long and random, and the Frontend Registry stores only its digest.
 
+Opening a link also applies, in the recipient's browser and for that view only, what the sharer had set:
+- **Their Microfrontends routing,** which registers the routing service worker for the routed build there (see [Microfrontends](#microfrontends)). It isn't kept for the recipient's own view.
+- **Their Salt theme,** which Settings shows chosen for that view. It isn't kept for the recipient's own view.
+- **Their session preset,** with its entries as the preset holds them now, read from the application's presets. The recipient's own choice stays as it was, and the Session panel says the shared view starts with the preset. The captured route leaves out the query parameters the preset adds, and opening the link adds them again.
+
 When what the link captured is gone, it opens the nearest build, with a notice:
 - **The captured build was pruned:** the current build opens at the captured route, the saved preview's for a link to one. The notice reads "The shared commit … is no longer available, so this is the current build.", or for a saved preview, "…, so this is feature/new-nav's current build."
 - **The saved preview was removed:** the application's current build opens at its own address, with "The shared preview of fix/totals was removed, so this is the application's current build."
+- **A routed build is gone:** that microfrontend loads as built, with "The shared routing of quotesPanel was dropped, because the build it named is gone."
+- **The preset was deleted:** the view starts with the recipient's own choice, with "The shared preset "Admin user" no longer exists, so this view starts with your own choice."
+
+When several apply, the notice says each of them.
 
 A link has no expiry date and can't be revoked on its own. It stops working when:
 - the sharer resets their workspace;

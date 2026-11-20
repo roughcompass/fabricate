@@ -46,6 +46,7 @@ export function SessionPanel() {
       <p className={styles.note} data-session-note="">
         {NOTE}
       </p>
+      {session.shared && <p className={styles.muted} data-shared-preset="">{`This shared view starts with the preset "${session.shared.name}". Your own choice below is what ${view.name} starts with when you open it yourself.`}</p>}
       <ChoiceGroup
         key={`start-${session.chosen ?? OWN}-${session.presets.map((preset) => `${preset.publicId}:${preset.lockVersion}`).join("|")}`}
         id="session-start"

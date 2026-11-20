@@ -3,7 +3,9 @@ import { eq } from "drizzle-orm";
 import { type Db } from "@/lib/db/client";
 import { NotFoundError, ValidationError } from "@/lib/db/errors";
 import { applications, sessionPresetChoices, workspaces } from "@/lib/db/schema";
-import { PRESET_LIMIT, StalePresetError, checkPreset, choosePreset, chosenPreset, createPreset, deletePreset, editPreset, listPresets } from "@/lib/workspaces/presets";
+import { PRESET_LIMIT, StalePresetError, checkPreset, choosePreset, chosenPreset, createPreset, deletePreset, editPreset, listPresets, routeWithoutPreset } from "@/lib/workspaces/presets";
+import { openView } from "@/lib/workspaces/shared-view";
+import { getConfig } from "@/lib/config";
 import { newWorkspaceKey } from "@/lib/workspaces/workspace-key";
 import { ensureWorkspace, purgeIdleWorkspaces, resetWorkspace } from "@/lib/workspaces/workspaces";
 import { createTestDb } from "../support/db";
@@ -136,5 +138,32 @@ describe("session presets", () => {
     expect(refusal(() => checkPreset({ name: "Many", entries: Array.from({ length: 51 }, (_, index) => ({ store: "local", name: `n${index}`, value: "" })) }))).toEqual({ entries: ["A preset can have up to 50 entries"] });
     // A query parameter may start with the Frontend Registry's name: it's the application's.
     expect(checkPreset({ name: "Ok", entries: [{ store: "query", name: "frontend-registry", value: "1" }] }).entries).toHaveLength(1);
+  });
+});
+
+describe("session presets in share links", () => {
+  let db: Db;
+  let desk: ReturnType<typeof viewedApplicationIn>;
+
+  beforeEach(() => {
+    db = createTestDb();
+    desk = viewedApplicationIn(db, "Quotes desk");
+  });
+
+  it("capture the route without the query parameters the preset adds", () => {
+    const preset = { entries: ADMIN.entries.map((entry) => ({ ...entry, store: entry.store as "local" | "cookie" | "query" })) };
+    expect(routeWithoutPreset("/blotter?desk=fx&view=compact", preset)).toBe("/blotter?view=compact");
+    expect(routeWithoutPreset("/blotter?desk=fx", preset)).toBe("/blotter");
+    expect(routeWithoutPreset("/blotter", preset)).toBe("/blotter");
+    expect(routeWithoutPreset("/blotter?view=compact", { entries: [] })).toBe("/blotter?view=compact");
+  });
+
+  it("open with the named preset's current entries, or skip it with a notice once it's deleted", () => {
+    const created = createPreset(db, desk.id, ADMIN, null);
+    editPreset(db, desk.id, created.publicId, created.lockVersion, { ...ADMIN, entries: [{ store: "cookie", name: "desk-region", value: "new-york" }] }, null);
+    const view = { session: { preset: created.publicId, name: "Admin user" } };
+    expect(openView(db, getConfig(), desk.id, view)).toMatchObject({ session: { name: "Admin user", entries: [{ store: "cookie", name: "desk-region", value: "new-york" }] }, notices: [] });
+    deletePreset(db, desk.id, created.publicId);
+    expect(openView(db, getConfig(), desk.id, view)).toMatchObject({ session: null, notices: ['The shared preset "Admin user" no longer exists, so this view starts with your own choice.'] });
   });
 });

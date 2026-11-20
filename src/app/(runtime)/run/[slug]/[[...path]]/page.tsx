@@ -63,8 +63,8 @@ export default async function RunRoute({ params, searchParams }: PageProps<"/run
   const serialized = (preset: SessionPreset) => ({ ...preset, createdAt: preset.createdAt.toISOString(), updatedAt: preset.updatedAt.toISOString() });
   const presets = listPresets(db, viewed.id).map(serialized);
   const chosen = chosenPreset(db, workspace?.id ?? null, viewed.id)?.publicId ?? null;
-  // A share link's theme and routing apply to the view it opened (design decision 5).
-  const applied = view.share ? openView(db, getConfig(), view.share.view) : null;
+  // A share link's theme, routing, and session preset apply to the view it opened (design decision 5).
+  const applied = view.share ? openView(db, getConfig(), viewed.id, view.share.view) : null;
   const notice = [opened.notice, ...(applied?.notices ?? [])].filter(Boolean).join(" ") || null;
   return (
     <RunningApplication
@@ -80,7 +80,7 @@ export default async function RunRoute({ params, searchParams }: PageProps<"/run
       notice={notice}
       hints={workspace?.hints ?? {}}
       composition={buildComposition(db, build.preview, application.packageDir)}
-      session={{ presets, chosen, shared: null }}
+      session={{ presets, chosen, shared: applied?.session ? serialized(applied.session) : null }}
       shared={applied ? { theme: applied.theme ? parseThemeChoice(applied.theme) : null, routing: applied.routing } : null}
     />
   );

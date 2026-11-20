@@ -101,6 +101,22 @@ export function listPresets(db: Executor, applicationId: number): SessionPreset[
   return db.select().from(sessionPresets).where(eq(sessionPresets.applicationId, applicationId)).orderBy(asc(sessionPresets.nameKey), asc(sessionPresets.id)).all().map(toPreset);
 }
 
+/** The application's preset +publicId+, as it stands now, or undefined. */
+export function findPreset(db: Executor, applicationId: number, publicId: string): SessionPreset | undefined {
+  const row = db.select().from(sessionPresets).where(and(eq(sessionPresets.applicationId, applicationId), eq(sessionPresets.publicId, publicId))).get();
+  return row ? toPreset(row) : undefined;
+}
+
+/** +route+, a route with its query, without the query parameters +preset+ adds: a share link captures the application's own query, never the preset's. */
+export function routeWithoutPreset(route: string, preset: Pick<SessionPreset, "entries">): string {
+  const names = preset.entries.filter((entry) => entry.store === "query").map((entry) => entry.name);
+  const mark = route.indexOf("?");
+  if (!names.length || mark === -1) return route;
+  const query = new URLSearchParams(route.slice(mark + 1));
+  for (const name of names) query.delete(name);
+  return `${route.slice(0, mark)}${query.size ? `?${query}` : ""}`;
+}
+
 /**
  * Creates a preset of the application +applicationId+, recording
  * +updatedByName+ as the workspace that made it. Throws ValidationError for

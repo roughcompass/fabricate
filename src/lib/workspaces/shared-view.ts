@@ -6,15 +6,17 @@ import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { previewBuilds } from "@/lib/db/schema";
 import { openPreview } from "@/lib/previews/access";
+import { type SessionPreset, findPreset } from "./presets";
 import type { ShareView } from "./shares";
 
 /*
  * What a share link applies besides its build and route
  * (restore-toolbar-tools-and-branch-previews, design decision 5): the
- * sharer's Salt theme, and their Microfrontends routing, which registers
- * the routing worker in the recipient's browser. A routing target that's
- * gone is dropped, with a notice. The session preset a link names is
- * resolved with the presets' records (task 10.5).
+ * sharer's Salt theme, their Microfrontends routing, which registers the
+ * routing worker in the recipient's browser, and the session preset they
+ * chose, applied with its current entries for the shared view only, so the
+ * recipient's own choice stays as it is. A routing target that's gone is
+ * dropped, and a preset that was deleted is skipped, each with a notice.
  */
 
 /** A microfrontend the link routes, with the build it's routed to, as Microfrontends shows it. */
@@ -31,6 +33,8 @@ export interface SharedRoute {
 export interface OpenedView {
   readonly theme: ShareView["theme"] | null;
   readonly routing: readonly SharedRoute[];
+  /** The named preset, with its entries as they stand now. */
+  readonly session: SessionPreset | null;
   /** Why some of what the link captured doesn't apply. */
   readonly notices: readonly string[];
 }
@@ -45,8 +49,8 @@ function servedCommit(db: Executor, config: FrontendRegistryConfig, build: strin
   return row && openPreview(db, config, build) ? row.commitSha : null;
 }
 
-/** What the view +view+, captured by a share link, applies as it's opened now. */
-export function openView(db: Executor, config: FrontendRegistryConfig, view: ShareView): OpenedView {
+/** What the view +view+, captured by a share link of the application +applicationId+, applies as it's opened now. */
+export function openView(db: Executor, config: FrontendRegistryConfig, applicationId: number, view: ShareView): OpenedView {
   const notices: string[] = [];
   const routing: SharedRoute[] = [];
   for (const route of view.routing ?? []) {
@@ -67,5 +71,10 @@ export function openView(db: Executor, config: FrontendRegistryConfig, view: Sha
       target: { application: application.name, slug: application.slug, preview: saved?.key ?? null, label: saved?.label ?? application.trackedBranch, commit, build: route.target.build },
     });
   }
-  return { theme: view.theme ?? null, routing, notices };
+  let session: SessionPreset | null = null;
+  if (view.session) {
+    session = findPreset(db, applicationId, view.session.preset) ?? null;
+    if (!session) notices.push(`The shared preset "${view.session.name}" no longer exists, so this view starts with your own choice.`);
+  }
+  return { theme: view.theme ?? null, routing, session, notices };
 }

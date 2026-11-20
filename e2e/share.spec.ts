@@ -5,11 +5,13 @@ import { openTool, startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { removeSavedPreview } from "../src/lib/applications/saved-previews";
-import { ORDERS_PORTAL_BRANDS, commitToOrdersPortal, rebuildOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
+import { ORDERS_PORTAL_BRANDS, commitToOrdersPortal, commitToRemote, framedRun, rebuildOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
+import { QUOTES_DESK_REMOTE, buildQuotes } from "./support/quotes-fixtures";
+import { choosePreset, chosenPreset, createPreset, deletePreset } from "../src/lib/workspaces/presets";
 import { paths } from "./support/paths";
 import { runJobs, serverConfig } from "./support/results";
 import { buildSavedPreview } from "../src/lib/applications/pipeline";
-import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage } from "./support/running-app";
+import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage, workspaceOf } from "./support/running-app";
 
 /*
  * Sharing a view of a running application (template-demo/toolbar spec,
@@ -218,4 +220,169 @@ test("refuses an unknown share link with a way back that opens a page", async ({
   await expect(page.getByRole("heading", { level: 1, name: "Application not available" })).toBeVisible();
   const back = page.getByRole("link", { name: /^Go to / });
   expect((await page.request.get((await back.getAttribute("href"))!)).status()).toBe(200);
+});
+
+test.describe("what a share link applies (restore-toolbar-tools-and-branch-previews, tasks 9.5, 10.5, and 11.4)", () => {
+  test.setTimeout(180_000);
+
+  const shareDialog = (page: Page) => page.getByRole("dialog", { name: "Share" });
+  const applies = (page: Page) => shareDialog(page).locator("[data-share-applies]");
+  const deskId = (db: Parameters<typeof buildQuotes>[0]) => (db.$client.prepare("select id from applications where slug = 'quotes-desk'").get() as { id: number }).id;
+  const ADMIN = { name: "Admin user", entries: [{ store: "local", name: "desk:user", value: '{"role":"admin"}' }, { store: "cookie", name: "desk-region", value: "london" }, { store: "query", name: "desk", value: "fx" }] };
+
+  test("shares routing: another browser registers the routing worker and loads quotesPanel from feature/blue-quotes, and drops it once that build is gone (Routing in a shared link, Routing to a build that's gone)", async ({ page, browser, db, baseURL }) => {
+    const { desk, panel, blueQuotes } = await buildQuotes(db);
+    await page.goto(framedRun(desk));
+    await waitForPage(page, "Quotes desk");
+    await openTool(page, "microfrontends");
+    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
+    await microfrontends.locator('[data-member="quotesPanel"]').click();
+    await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
+    await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
+    await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    const link = await shareLink(page);
+
+    const colleague = await visitorContext(browser, db, baseURL!);
+    const recipient = await colleague.newPage();
+    await recipient.goto(link);
+    await waitForPage(recipient, "Quotes desk");
+    await expect(application(recipient).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    expect(await recipient.evaluate(async (scope) => (await navigator.serviceWorker.getRegistration(scope))?.active?.scriptURL ?? null, desk.base)).toMatch(/\/toolbar\/routing-worker\.js$/);
+    await openTool(recipient, "microfrontends");
+    await expect(recipient.getByRole("dialog", { name: "Microfrontends" }).locator('[data-member="quotesPanel"]')).toContainText(`Routed to Quotes panel · feature/blue-quotes · ${blueQuotes!.current!.commitSha.slice(0, 12)}`);
+    // The recipient's own view isn't routed by the link.
+    expect(await recipient.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("frontend-registry:routing:")))).toEqual([]);
+
+    removeSavedPreview(db, panel.application.publicId, blueQuotes!.key);
+    const later = await colleague.newPage();
+    await later.goto(link);
+    await waitForPage(later, "Quotes desk");
+    await expect(later.locator("[data-run-notice]")).toContainText("The shared routing of quotesPanel was dropped, because the build it named is gone.");
+    await expect(application(later).getByText("Quotes unavailable")).toBeVisible();
+    await colleague.close();
+  });
+
+  test("the dialog says the link registers a service worker, applies the theme, and starts with the preset, whose values aren't in the link, and says nothing for a plain view (A routed, dark view with a preset, A plain view)", async ({ page, db, context }) => {
+    const { desk } = await buildQuotes(db);
+    await page.goto(framedRun(desk));
+    await waitForPage(page, "Quotes desk");
+    await shareLink(page);
+    await expect(applies(page)).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    const admin = createPreset(db, deskId(db), ADMIN, null);
+    choosePreset(db, (await workspaceOf(context, db)).id, deskId(db), admin.publicId);
+    await page.reload();
+    await waitForPage(page, "Quotes desk");
+    await openTool(page, "microfrontends");
+    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
+    await microfrontends.locator('[data-member="quotesPanel"]').click();
+    await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
+    await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
+    await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    await openTool(page, "settings");
+    await page.getByRole("dialog", { name: "Settings" }).getByRole("group", { name: "Mode" }).getByLabel("Dark").check();
+    await shareLink(page);
+    await expect(applies(page)).toHaveText(
+      "Opening the link applies your Microfrontends routing, which registers a service worker in the recipient's browser for the routed build. It applies your Salt theme: dark mode. It starts with the session preset \"Admin user\", whose values aren't in the link.",
+    );
+  });
+
+  test("shares the dark theme: another browser renders it dark, and Settings shows Dark chosen for that view (Theme in a shared link)", async ({ page, browser, db, baseURL }) => {
+    const { desk } = await buildQuotes(db, { saved: false });
+    await page.goto(framedRun(desk));
+    await waitForPage(page, "Quotes desk");
+    await openTool(page, "settings");
+    await page.getByRole("dialog", { name: "Settings" }).getByRole("group", { name: "Mode" }).getByLabel("Dark").check();
+    await expect(application(page).locator(":root")).toHaveAttribute("data-mode", "dark");
+    const link = await shareLink(page);
+    await expect(applies(page)).toHaveText("It applies your Salt theme: dark mode.");
+
+    const colleague = await visitorContext(browser, db, baseURL!);
+    const recipient = await colleague.newPage();
+    await recipient.goto(link);
+    await waitForPage(recipient, "Quotes desk");
+    await expect(application(recipient).locator(":root")).toHaveAttribute("data-mode", "dark");
+    await openTool(recipient, "settings");
+    await expect(recipient.getByRole("dialog", { name: "Settings" }).getByRole("group", { name: "Mode" }).getByLabel("Dark")).toBeChecked();
+    // The recipient's own view keeps its own theme.
+    expect(await recipient.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("frontend-registry:theme:")))).toEqual([]);
+    await colleague.close();
+  });
+
+  test("names the preset but carries no values, starts the shared view with the named preset leaving the recipient's choice unchanged, and says when it was deleted (Sharing with a preset chosen, Opening the link, The preset was deleted)", async ({ page, browser, db, baseURL, context }) => {
+    const { desk } = await buildQuotes(db, { saved: false });
+    const id = deskId(db);
+    const admin = createPreset(db, id, ADMIN, null);
+    await page.goto(framedRun(desk, "/blotter?view=compact"));
+    await waitForPage(page, "Blotter");
+    choosePreset(db, (await workspaceOf(context, db)).id, id, admin.publicId);
+    await page.reload();
+    await waitForPage(page, "Blotter");
+    await expect(page).toHaveURL(/\/run\/quotes-desk\/blotter\?view=compact&desk=fx$/);
+    const link = await shareLink(page);
+    await expect(applies(page)).toHaveText('It starts with the session preset "Admin user", whose values aren\'t in the link.');
+
+    // The stored link names the preset, holds none of its entries, and leaves its query parameter out of the route.
+    const stored = db.$client.prepare("select route, view from demo_shares order by id desc limit 1").get() as { route: string; view: string };
+    expect(stored.route).toBe("/blotter?view=compact");
+    expect(JSON.parse(stored.view)).toEqual({ session: { preset: admin.publicId, name: "Admin user" } });
+    for (const value of ["desk:user", "admin", "london", "desk-region", "fx"]) expect(stored.view).not.toContain(value);
+
+    const colleague = await visitorContext(browser, db, baseURL!);
+    const recipient = await colleague.newPage();
+    await recipient.goto(link);
+    await waitForPage(recipient, "Blotter");
+    expect(await application(recipient).locator(":root").evaluate(() => `${location.pathname.replace(/^\/previews\/[^/]+/, "")}${location.search}`)).toBe("/blotter?view=compact&desk=fx");
+    expect(await recipient.evaluate(() => localStorage.getItem("desk:user"))).toBe('{"role":"admin"}');
+    await recipient.keyboard.press("p");
+    await expect(recipient.getByRole("dialog", { name: "Session" }).locator("[data-shared-preset]")).toContainText('This shared view starts with the preset "Admin user".');
+    await expect(recipient.getByRole("dialog", { name: "Session" }).getByRole("group", { name: "Start with" }).getByLabel("The application's own storage")).toBeChecked();
+    // Afterward, the recipient's own view of Quotes desk starts with their own storage.
+    expect(chosenPreset(db, (await workspaceOf(colleague, db)).id, id)).toBeNull();
+    await recipient.goto(framedRun(desk));
+    await waitForPage(recipient, "Quotes desk");
+    await expect(application(recipient).locator("[data-startup-user]")).toHaveText("none");
+
+    deletePreset(db, id, admin.publicId);
+    await recipient.goto(link);
+    await waitForPage(recipient, "Blotter");
+    await expect(recipient.locator("[data-run-notice]")).toContainText('The shared preset "Admin user" no longer exists, so this view starts with your own choice.');
+    expect(await recipient.evaluate(() => localStorage.getItem("desk:user"))).toBeNull();
+    await colleague.close();
+  });
+
+  test("shows every notice that applies at once: the shared commit gone, the routed build gone, and the preset deleted", async ({ page, browser, db, baseURL, context }) => {
+    const { desk, panel, blueQuotes } = await buildQuotes(db);
+    const id = deskId(db);
+    const admin = createPreset(db, id, ADMIN, null);
+    choosePreset(db, (await workspaceOf(context, db)).id, id, admin.publicId);
+    await page.goto(framedRun(desk));
+    await waitForPage(page, "Quotes desk");
+    await openTool(page, "microfrontends");
+    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
+    await microfrontends.locator('[data-member="quotesPanel"]').click();
+    await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
+    await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
+    await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    const link = await shareLink(page);
+
+    // Quotes desk moves on and its shared build is deleted, the routed preview is removed, and the preset is deleted.
+    commitToRemote(QUOTES_DESK_REMOTE, { "src/app.jsx": (source) => source.replace("<h1>Quotes desk</h1>", "<h1>Quotes desk</h1><p>New build</p>") }, { message: "New build" });
+    await rebuildOrdersPortal(db, desk.application);
+    expect(await deletePreview(db, desk.preview.publicId, serverConfig())).toBe(true);
+    removeSavedPreview(db, panel.application.publicId, blueQuotes!.key);
+    deletePreset(db, id, admin.publicId);
+
+    const colleague = await visitorContext(browser, db, baseURL!);
+    const recipient = await colleague.newPage();
+    await recipient.goto(link);
+    await waitForPage(recipient, "Quotes desk");
+    const notice = recipient.locator("[data-run-notice]");
+    await expect(notice).toContainText(`The shared commit ${desk.preview.commitSha.slice(0, 12)} is no longer available, so this is the current build.`);
+    await expect(notice).toContainText("The shared routing of quotesPanel was dropped, because the build it named is gone.");
+    await expect(notice).toContainText('The shared preset "Admin user" no longer exists, so this view starts with your own choice.');
+    await expect(application(recipient).getByText("New build")).toBeVisible();
+    await colleague.close();
+  });
 });
