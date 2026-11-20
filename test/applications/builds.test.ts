@@ -8,6 +8,7 @@ import { type FrontendRegistryConfig, withOverrides } from "@/lib/config";
 import { jobs, previewBuilds, previewPreparations } from "@/lib/db/schema";
 import { requestPreparation } from "@/lib/previews/preparation";
 import { BUILD_PREVIEW, type PreviewBuild, type PreviewPreparation, failAttempt, failPreparation, findPreview, rebuildPreview, startPreview } from "@/lib/previews/records";
+import { NO_PAGE_REASON } from "@/lib/previews/output";
 import { CAPTURE_SCREENSHOT, findScreenshot } from "@/lib/previews/screenshots";
 import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { decide, qualifyingVerdict, refusedVerdict } from "../support/applications";
@@ -110,6 +111,29 @@ describe("application builds", () => {
       current: { preview: first.publicId },
     });
     expect(buildJobs()).toBe(before);
+  });
+
+  it("records a build that ran but emitted no page as not previewable for its page, keeping the current build (Commit stops qualifying)", async () => {
+    await onboarded();
+    const first = publish(latestPreview());
+    push("bundle only");
+    await buildApplication(world.db, shown().publicId, { config });
+    decide(world.db, repository, latestPreparation());
+    failAttempt(world.db, latestPreview().publicId, { attempt: 1 }, NO_PAGE_REASON, { detail: ["webpack 5.90.0 compiled successfully"] });
+
+    expect(shown()).toMatchObject({ status: "latest_not_previewable", latest: { outcome: "not_previewable", reasons: [{ text: NO_PAGE_REASON, condition: "page" }] }, current: { preview: first.publicId } });
+    expect(applicationHistory(world.db, row().id)[0]).toMatchObject({ outcome: "not_previewable", reasons: [{ text: NO_PAGE_REASON, condition: "page" }] });
+    // The build itself succeeded, so the page's reason carries none of its log.
+    expect(shown().latest.reasons[0]).not.toHaveProperty("log");
+  });
+
+  it("keeps the last lines of a failed build's log beside its reason, in its latest outcome and its history", async () => {
+    await onboarded();
+    const reason = "The build failed: npm run build exited with code 1.";
+    const detail = ["error during build:", 'Could not resolve "./totals" from "src/Billing.tsx"'];
+    failAttempt(world.db, latestPreview().publicId, { attempt: 1 }, reason, { detail });
+    expect(shown()).toMatchObject({ status: "build_failed", latest: { outcome: "failed", reasons: [{ text: reason, log: detail }] } });
+    expect(applicationHistory(world.db, row().id)[0]!.reasons).toEqual([{ text: reason, log: detail }]);
   });
 
   it("names the package's absence when the commit no longer has it", async () => {

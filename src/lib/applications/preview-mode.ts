@@ -6,8 +6,9 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { previewBuilds, previewPreparations } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
 import { assertEnrolled } from "@/lib/previews/access";
+import { cachedRemoteRefs, forgetRemoteRefs } from "@/lib/previews/ref-cache";
 import { type PreviewBuild, type PreviewPreparation, openPreparation, preparationPackages, rebuildPreview, startPreview } from "@/lib/previews/records";
-import { type RefListing, type RemoteRef, listRemoteRefs, pinCommit, previewPinRef } from "@/lib/previews/refs";
+import { type RefListing, type RemoteRef, pinCommit, previewPinRef } from "@/lib/previews/refs";
 import { getRepository } from "@/lib/repositories/repository-records";
 import { SnapshotReader } from "@/lib/snapshot/reader";
 import type { Application } from "./records";
@@ -40,9 +41,57 @@ export type RefPreview =
   /** Its build published, possibly while a newer attempt runs. */
   | { readonly kind: "ready"; readonly commitSha: string; readonly preview: PreviewBuild };
 
-/** The branches and tags preview mode offers: the tracked branch first, then the remote's other branches and tags. */
-export function refChoices(application: Pick<Application, "trackedRef">, listing: RefListing): { tracked: string; others: readonly RemoteRef[] } {
-  return { tracked: application.trackedRef, others: listing.refs.filter((ref) => ref.name !== application.trackedRef) };
+/**
+ * How many of the remote's other branches, and tags, the choice lists without a search, and how many matches a search lists.
+ * @public Its tests read the limits.
+ */
+export const REF_LIMITS = { branches: 50, tags: 20, matches: 50 } as const;
+/** Orders tags by the numbers in their names, highest first, so v2.10.0 comes before v2.9.0: the remote doesn't say when a tag was made. */
+const byVersion = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+
+/** The branches and tags preview mode offers to choose from, and how many more the remote has. */
+export interface RefChoices {
+  /** The tracked branch, always first. */
+  readonly tracked: string;
+  /** The other branches listed, by name. */
+  readonly branches: readonly RemoteRef[];
+  /** The tags listed, the highest-numbered first. */
+  readonly tags: readonly RemoteRef[];
+  /** How many other branches and tags the remote has in all. */
+  readonly total: { readonly branches: number; readonly tags: number };
+  /** The search, when the choice lists what matches it, and how many branches and tags match it in all. */
+  readonly find: { readonly text: string; readonly matched: number } | null;
+}
+
+/**
+ * The branches and tags preview mode offers (template-preview spec,
+ * "Preview mode can show another branch or tag"): the tracked branch first,
+ * then the remote's other branches by name, up to REF_LIMITS.branches, and
+ * its tags, highest-numbered first, up to REF_LIMITS.tags. With +find+, the
+ * branches and tags whose name contains it, branches first, up to
+ * REF_LIMITS.matches. +selected+, the ref shown, is always listed.
+ */
+export function refChoices(application: Pick<Application, "trackedRef">, listing: RefListing, options: { find?: string | null; selected?: string | null } = {}): RefChoices {
+  const others = listing.refs.filter((ref) => ref.name !== application.trackedRef);
+  const branches = others.filter((ref) => ref.kind === "branch");
+  const tags = others.filter((ref) => ref.kind === "tag").sort((a, b) => byVersion.compare(b.label, a.label));
+  const text = options.find?.trim() ?? "";
+  let listed: { branches: RemoteRef[]; tags: RemoteRef[] };
+  let find: RefChoices["find"] = null;
+  if (text) {
+    const needle = text.toLowerCase();
+    const matching = (refs: RemoteRef[]) => refs.filter((ref) => ref.label.toLowerCase().includes(needle));
+    const [foundBranches, foundTags] = [matching(branches), matching(tags)];
+    const shownBranches = foundBranches.slice(0, REF_LIMITS.matches);
+    listed = { branches: shownBranches, tags: foundTags.slice(0, REF_LIMITS.matches - shownBranches.length) };
+    find = { text, matched: foundBranches.length + foundTags.length };
+  } else {
+    listed = { branches: branches.slice(0, REF_LIMITS.branches), tags: tags.slice(0, REF_LIMITS.tags) };
+  }
+  // The ref shown stays choosable, wherever it falls in the order.
+  const selected = options.selected ? others.find((ref) => ref.name === options.selected) : undefined;
+  if (selected && ![...listed.branches, ...listed.tags].includes(selected)) listed[selected.kind === "branch" ? "branches" : "tags"].unshift(selected);
+  return { tracked: application.trackedRef, ...listed, total: { branches: branches.length, tags: tags.length }, find };
 }
 
 /** What preview mode shows for +ref+, a qualified branch or tag of the application's remote, from +listing+. */
@@ -79,6 +128,8 @@ export async function buildRef(db: Executor, application: Pick<Application, "rep
   const repository = getRepository(db, application.repository.publicId);
   assertEnrolled(db, config, repository);
   const pinned = await pinCommit(db, repository, { kind: "ref", name: ref }, { config });
+  // The remote was just read: the refs preview mode lists next are read again, so they agree with what was built.
+  forgetRemoteRefs(repository);
   immediate(db, (tx) => {
     const { preparation } = openPreparation(tx, repository, pinned);
     startRefBuild(tx, preparation, application.packageDir);
@@ -92,9 +143,9 @@ function startRefBuild(db: Executor, preparation: PreviewPreparation, packageDir
   if (!created && preview.attemptState === "failed" && !preview.artifact) rebuildPreview(db, preview.publicId);
 }
 
-/** The remote's refs for preview mode, read live. */
+/** The remote's refs for preview mode, read in the last `previews.refCacheSeconds` or now (ref-cache.ts). */
 export function remoteRefs(application: Pick<Application, "repository">, db: Executor, config: FrontendRegistryConfig = getConfig()): Promise<RefListing> {
-  return listRemoteRefs(getRepository(db, application.repository.publicId), { config });
+  return cachedRemoteRefs(getRepository(db, application.repository.publicId), { config });
 }
 
 /** A file of the package in the Code tab: its path in the package, and why it isn't shown when it's skipped. */

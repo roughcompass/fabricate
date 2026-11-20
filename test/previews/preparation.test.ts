@@ -20,7 +20,7 @@ import { type Survey, currentRecipe, moveSurvey, pinSurvey, recordConfiguredReso
 import { RUN_SURVEY, finishSurvey } from "@/lib/surveys/run";
 import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { type BareRepo, type Repo, git } from "../support/git-fixture";
-import { FEDERATED_WORKSPACE, NEXT_APP, NPM_WORKSPACE, SCALA_SERVICE, type Tree, VITE_REACT_APP, collidingCommits, offlineViteLibrary } from "../support/preview-trees";
+import { FEDERATED_WORKSPACE, NEXT_APP, NPM_WORKSPACE, SCALA_SERVICE, type Tree, VITE_REACT_APP, collidingCommits, offlineSingleSpaBundle, offlineViteLibrary } from "../support/preview-trees";
 import { memoryProfile } from "../support/profiles";
 
 /*
@@ -313,6 +313,24 @@ describe("preview preparation", () => {
       ]);
       expect(builds()).toEqual([]);
       expect(buildJobs()).toEqual([]);
+    });
+
+    it("refuses a webpack single-spa bundle whose configuration adds no page, reading the commit, without a build row (spa-reports)", async () => {
+      const { repository } = enrolledRepository(offlineSingleSpaBundle(), "spa-reports");
+      const decided = await prepared(repository);
+
+      expect(decided.state).toBe("refused");
+      expect(preparationRefusal(decided)!.conditions.filter((condition) => condition.package === ".").map((condition) => condition.condition)).toEqual(["page"]);
+      expect(builds()).toEqual([]);
+      expect(buildJobs()).toEqual([]);
+    });
+
+    it("builds a webpack single-spa bundle that commits an HTML file its build could copy", async () => {
+      const { repository } = enrolledRepository({ ...offlineSingleSpaBundle(), "public/index.html": "<!doctype html><div id=root></div>\n" }, "spa-reports");
+      const decided = await prepared(repository);
+
+      expect(decided.state).toBe("ready");
+      expect(builds()).toHaveLength(1);
     });
 
     it("finds a Vite app's page in the root its configuration names, reading the commit, and builds it", async () => {

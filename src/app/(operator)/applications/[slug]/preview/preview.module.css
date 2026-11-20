@@ -6,6 +6,9 @@
   .end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-left: auto; min-width: 0; }
   .refForm { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
   .refForm select { max-width: var(--size-label); }
+  /* Below the control row, only for a remote with more refs than the choice lists. */
+  .finder { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2) var(--space-4); min-width: 0; }
+  .findForm { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 
   /* The frame area while there's no build to run: the build state, as a card or the application page shows it. */
   .state { position: relative; display: grid; aspect-ratio: 16 / 10; margin: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-muted); }

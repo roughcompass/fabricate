@@ -17,7 +17,7 @@ const shared: Settings = {
   profiling: { checkMinutes: 60 },
   catalog: { registry: "https://registry.npmjs.org/" },
   adoption: { snapshotDays: 7, rarelyUsedPercentile: 25 },
-  previews: { enabled: false, browser: null, trustedSources: [], nodeVersions: {}, storage: "storage/previews", concurrency: 1, timeoutMinutes: 15, maxOutputBytes: 209_715_200, maxStorageBytes: 5_368_709_120 },
+  previews: { enabled: false, browser: null, trustedSources: [], nodeVersions: {}, storage: "storage/previews", concurrency: 1, timeoutMinutes: 15, maxOutputBytes: 209_715_200, maxStorageBytes: 5_368_709_120, refCacheSeconds: 60 },
 };
 
 describe("configuration", () => {
@@ -234,6 +234,7 @@ describe("configuration", () => {
           timeoutMinutes: 15,
           maxOutputBytes: 200 * 1024 * 1024,
           maxStorageBytes: 5 * 1024 * 1024 * 1024,
+          refCacheSeconds: 60,
         });
       }
     });
@@ -270,6 +271,7 @@ describe("configuration", () => {
         FRONTEND_REGISTRY_PREVIEWS_TIMEOUT_MINUTES: "30",
         FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES: "1000",
         FRONTEND_REGISTRY_PREVIEWS_MAX_STORAGE_BYTES: "5000",
+        FRONTEND_REGISTRY_PREVIEWS_REF_CACHE_SECONDS: "0",
       });
 
       expect(config.previews).toEqual({
@@ -282,6 +284,7 @@ describe("configuration", () => {
         timeoutMinutes: 30,
         maxOutputBytes: 1000,
         maxStorageBytes: 5000,
+        refCacheSeconds: 0,
       });
       expect(load({ shared }, { FRONTEND_REGISTRY_PREVIEWS: "0" }).previews.enabled).toBe(false);
       expect(load({ shared }, { FRONTEND_REGISTRY_PREVIEWS: " " }).previews.enabled).toBe(false);
@@ -335,6 +338,6 @@ describe("npm run config", () => {
     expect(output).toContain("Preview sources:    https://git.example.com/acme/orders");
     expect(output).toContain("Preview Node:       22.11.0=/opt/node-22/bin");
     expect(output).toMatch(/Preview storage: {4}\/.+\/storage\/previews\n/);
-    expect(output).toContain("Preview limits:     concurrency=1, timeoutMinutes=15, maxOutputBytes=209715200, maxStorageBytes=5368709120");
+    expect(output).toContain("Preview limits:     concurrency=1, timeoutMinutes=15, maxOutputBytes=209715200, maxStorageBytes=5368709120, refCacheSeconds=60");
   }, 30_000);
 });

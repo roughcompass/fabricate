@@ -4,7 +4,7 @@ import { repositories } from "../src/lib/db/schema";
 import { insertRepository } from "../src/lib/repositories/repository-records";
 import { decidedPreparation, qualifyingVerdict, refusedVerdict } from "../test/support/applications";
 import { git } from "../test/support/git-fixture";
-import { SCALA_SERVICE, offlineViteApp } from "../test/support/preview-trees";
+import { SCALA_SERVICE, offlineSingleSpaBundle, offlineViteApp } from "../test/support/preview-trees";
 import { manifest } from "../test/support/profiles";
 import { registered, seeded } from "./support/applications";
 import { E2E_PREVIEWS } from "./support/env";
@@ -160,6 +160,19 @@ test("A repository in another language: each failed condition is named, and no C
   expect(reason!.width).toBeGreaterThan(table!.width * 0.6);
   await expect(page.getByRole("button", { name: "Create application" })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Name" })).toHaveCount(0);
+});
+
+test("A single-spa bundle that emits no page: onboarding names the Page condition, and no Create action appears (spa-reports)", async ({ page, db, sourcesDir }) => {
+  const repository = registered(db, path.join(sourcesDir, "reports"), offlineSingleSpaBundle());
+  await page.goto(paths.newApplication({ repository: repository.publicId }));
+  await page.getByRole("button", { name: "Check eligibility" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Checking…" })).toBeVisible();
+  await runJobs(db);
+  await expect(page.getByText("reports can't become an application")).toBeVisible();
+  const conditions = page.getByRole("table", { name: "Why the branch can't become an application" });
+  await expect(conditions).toContainText("Page");
+  await expect(conditions).toContainText("Its webpack build emits no page: it's a single-spa application");
+  await expect(page.getByRole("button", { name: "Create application" })).toHaveCount(0);
 });
 
 test("A workspace: several packages to choose from, one that's already an application shown as taken with a link, and a duplicate name refused (Shell and remotes)", async ({ page, db }) => {

@@ -33,7 +33,8 @@
       "concurrency": 1,
       "timeoutMinutes": 15,
       "maxOutputBytes": 209715200,
-      "maxStorageBytes": 5368709120
+      "maxStorageBytes": 5368709120,
+      "refCacheSeconds": 60
     }
   },
   "development": {

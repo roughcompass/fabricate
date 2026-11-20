@@ -33,7 +33,7 @@ The fleet has no plain Vite single-page app, so the walkthrough used the reposit
 | A Module Federation remote with its own page | `mf-admin` | Rspack's `ModuleFederationPluginV1` exposes `./Admin`, and `HtmlRspackPlugin` emits `index.html` from `src/index.html`, which bootstraps the remote on its own. pnpm 11.21.0, Node 22. |
 | A bundle-only single-spa app | `spa-orders` | Vite builds only `src/lifecycles.tsx`, in SystemJS format with React external. There's no `index.html`. |
 
-`spa-reports` is the fleet's other bundle-only single-spa app, built by webpack. It isn't refused at onboarding (see step 9).
+`spa-reports` is the fleet's other bundle-only single-spa app, built by webpack. At the time of this run it wasn't refused at onboarding (see step 9); it is now (see [Rechecked after the follow-up fixes](#rechecked-after-the-follow-up-fixes)).
 
 ### Leaving the fleet as it was
 
@@ -110,7 +110,7 @@ On Applications, Billing's card reads "Latest build failed" over its old screens
 
 ### 9. A webpack single-spa bundle is accepted, and its build fails
 
-`spa-reports` builds only `spa-reports.js`, a SystemJS library, with webpack. It passes eligibility as React · webpack · npm (`09-spa-reports-search` to `09-spa-reports-details`), since webpack's page is checked only after its build. Created as "Reports" (`09-spa-reports-created`), its first build failed in 3.6 seconds with "The output has no index.html. Previews need a page that loads the application on its own." The card and page say Build failed, with no successful build (`09-reports-build-failed`). This is as `docs/previews.md` describes, but it means onboarding can create an application that can never build; see [Scale](#scale).
+`spa-reports` builds only `spa-reports.js`, a SystemJS library, with webpack. It passes eligibility as React · webpack · npm (`09-spa-reports-search` to `09-spa-reports-details`), since webpack's page is checked only after its build. Created as "Reports" (`09-spa-reports-created`), its first build failed in 3.6 seconds with "The output has no index.html. Previews need a page that loads the application on its own." The card and page say Build failed, with no successful build (`09-reports-build-failed`). This was as `docs/previews.md` then described, but it meant onboarding could create an application that can never build. Onboarding now refuses it; see [Rechecked after the follow-up fixes](#rechecked-after-the-follow-up-fixes).
 
 ### 10. The fix rebuilds and recovers
 
@@ -126,6 +126,17 @@ The final Applications page shows two Ready applications and Reports, Build fail
 
 - **Open full screen** links to `/run/billing`, which answers 404 until the toolbar's `/run` (task 8.1) is merged.
 - **Settings, rename, branch switch, and delete** weren't exercised on the fleet; the e2e suite covers them.
+
+## Rechecked after the follow-up fixes
+
+After this run, four follow-ups were made, and the first three were rechecked on the fleet on 2026-11-19 at 16:48. That recheck used a fresh data directory, `tmp/apps-verify-2/`, with the same settings and a new production build.
+
+- **A single-spa bundle that can't emit a page is refused at eligibility.** `spa-reports` now stops at Eligibility with "spa-reports can't become an application" (`13-recheck-spa-reports-eligibility`). Its one failed condition is **Page**: "Its webpack build emits no page: it's a single-spa application, webpack.config.cjs adds no HTML plugin, none is among its dependencies, and no HTML file is committed in the repository root. Previews need a page that loads the application on its own." The evidence is its lifecycles in `src/lifecycles.js` and its build tools' facts.
+  - The neighbors are unaffected. `spa-root`, a root configuration with `html-webpack-plugin`, and `mf-admin`, a Module Federation remote using Rspack's built-in `HtmlRspackPlugin`, still reach Details (`13-recheck-spa-root-eligibility`). `spa-orders` is still refused for its Vite page.
+  - A bundle whose configuration preparation can't read is still left to its build. When that build emits no page, the application is now "Can't be previewed", or "Latest commit can't be previewed", for its page, rather than Build failed. The e2e suite covers this, since no fleet repository has that shape.
+- **A failed build shows the last lines of its log.** Billing was onboarded on a scratch branch, `broken`, at `dc002ae`. Its first build failed, and its page shows the exit status with the failing step's last lines, both in "Why the build of dc002ae failed" and in its build's row (`14-recheck-billing-failure`). The lines include `Could not resolve "./totals" from "src/Billing.tsx"` and `file: src/Billing.tsx`, with the staging directory left out of the path.
+- **Preview mode keeps a remote's branches and tags for a minute**, by `previews.refCacheSeconds`. It also lists the tracked branch, then up to 50 branches and the 20 highest-numbered tags, with a search for the rest that works without JavaScript. The fleet has no tags, so the e2e suite covers this, on a remote with 31 tags.
+- **`docs/applications.md`** has a draft of its onboarding, builds, screenshots, and preview mode sections.
 
 ## Defects found
 
@@ -174,6 +185,6 @@ The fleet suite runs 200 to 500 Repositories, of which only a few become applica
 - **Builds run one at a time** (`previews.concurrency` is 1, across workers). When many tracked branches move together, as after a shared dependency bump, their builds queue behind each other. At real build times of minutes, the last application waits a long time. Captures also run one at a time, but at about 1 second each they don't matter.
 - **Package caches grow quickly.** Three installs, one each with npm, pnpm, and Yarn, left 831 MB in `previews.storage/.cache`. Caches are pruned at half of `previews.maxStorageBytes` (2.5 GiB by default), so with many applications, pruning will be frequent and installs colder.
 - **Onboarding search reads every Repository**, through `listRepositories`, and filters in memory for each search. That's fine at 500, but it could be a SQL `LIKE` with a limit.
-- **Preview mode reads the remote's refs on every page view**, including the Code tab and each device or orientation change. It also lists every branch and tag in its select. A remote with thousands of tags makes each view slower, and the select long.
-- **Bundle-only webpack and Rspack apps pass onboarding.** Their missing page is found only by the first build, as with `spa-reports`. In a fleet with many single-spa applications, operators will create applications that can never build. Refusing at onboarding when the profile shows no HTML plugin, or warning there, would avoid it.
-- **A failed build's reason is the package manager's exit status** ("corepack yarn@1.22.22 run build … exited with code 1"). The cause is one click away, in the log. Showing the log's first error line would save the click on every failure.
+- **Preview mode read the remote's refs on every page view**, including the Code tab and each device or orientation change, and listed every branch and tag in its select. It now keeps them for `previews.refCacheSeconds` and lists a limited number, with a search for the rest.
+- **Bundle-only webpack and Rspack apps passed onboarding.** Their missing page was found only by the first build, as with `spa-reports`. That's now fixed; see [Rechecked after the follow-up fixes](#rechecked-after-the-follow-up-fixes).
+- **A failed build's reason was only the package manager's exit status** ("corepack yarn@1.22.22 run build … exited with code 1"). The page now shows the failing step's last meaningful lines beside it.

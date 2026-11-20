@@ -6,6 +6,9 @@
   .dangerRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); }
   .dangerTitle { font-weight: var(--font-weight-semibold); }
   .traits { color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+  /* A failed build's last log lines under its reason: wrapped rather than scrolled, since they're few and short. */
+  .excerpt { margin: var(--space-2) 0 0; }
+  .excerpt pre { margin: 0; font-family: var(--font-family-mono); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
 
   /* An application's page: the large image beside its overview; the overview first on narrow screens. */
   .detail { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); grid-template-areas: "image overview"; gap: var(--space-8); align-items: start; }

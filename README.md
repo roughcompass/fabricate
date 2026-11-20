@@ -110,6 +110,7 @@ Environment variables override the file:
 | `previews.timeoutMinutes` | `FRONTEND_REGISTRY_PREVIEWS_TIMEOUT_MINUTES` | 15 |
 | `previews.maxOutputBytes` | `FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES` | 209715200 (200 MiB); the largest output one build can publish |
 | `previews.maxStorageBytes` | `FRONTEND_REGISTRY_PREVIEWS_MAX_STORAGE_BYTES` | 5368709120 (5 GiB); the published output and latest logs of every preview together, kept under it by deleting the least recently used; the package caches are pruned past half of it |
+| `previews.refCacheSeconds` | `FRONTEND_REGISTRY_PREVIEWS_REF_CACHE_SECONDS` | 60; how long preview mode reuses a remote's branches and tags before reading them again, 0 to read them on every view |
 
 List variables use the platform path separator, which is `:` on macOS and Linux. `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` separates clone URLs with spaces or newlines instead, and `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` lists `version=directory` pairs, such as `22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin`. `FRONTEND_REGISTRY_PREVIEWS` accepts `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
 

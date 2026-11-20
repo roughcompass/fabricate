@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { JsonObject } from "@repo-facts/contract";
-import { type Condition, type ConditionId, type EligibilityInput, type ManifestRead, evaluateEligibility, installRootManifests, vitePackages } from "@/lib/previews/eligibility";
-import { type PageRead, readPage } from "@/lib/previews/pages";
+import { type Condition, type ConditionId, type EligibilityInput, type ManifestRead, bundlePackages, evaluateEligibility, installRootManifests, vitePackages } from "@/lib/previews/eligibility";
+import { type BundlePageRead, type PageRead, readBundlePage, readPage } from "@/lib/previews/pages";
 import type { FactDocument } from "@/lib/profiles/states";
 import { analyzedFacts } from "../support/fact-documents";
 import { FEDERATED_WORKSPACE, NEXT_APP, NPM_WORKSPACE, SCALA_SERVICE, TWO_LOCKFILES, type Tree, VITE_REACT_APP, offlineFederatedRemote, offlineSingleSpaBundle, offlineViteLibrary } from "../support/preview-trees";
@@ -30,9 +30,25 @@ function pagesOf(document: FactDocument, tree: Tree): Map<string, PageRead> {
   return new Map(vitePackages(document).map((directory) => [directory, readPage(directory, { has: (file) => Object.hasOwn(tree, file), text: (file) => tree[file] ?? null })]));
 }
 
+/** Each single-spa bundle's page in +tree+, as preparation reads its configuration and HTML files through the snapshot reader. */
+function bundlesOf(document: FactDocument, tree: Tree): Map<string, BundlePageRead> {
+  const html = Object.keys(tree).filter((file) => file.endsWith(".html") && !file.includes("node_modules/"));
+  return new Map(
+    bundlePackages(document).map(({ directory, bundler }) => [
+      directory,
+      readBundlePage(directory, bundler, { has: (file) => Object.hasOwn(tree, file), text: (file) => tree[file] ?? null, html: html.filter((file) => directory === "." || file.startsWith(`${directory}/`)) }),
+    ]),
+  );
+}
+
+/** What preparation reads from +tree+ besides its fact document. */
+function inputsOf(document: FactDocument, tree: Tree) {
+  return { manifests: manifestsOf(document, tree), nodeVersions: NODE, pages: pagesOf(document, tree), bundles: bundlesOf(document, tree) };
+}
+
 async function decide(tree: Tree, options: Partial<EligibilityInput> = {}) {
   const document = await analyzedFacts(tree);
-  return evaluateEligibility({ document, manifests: manifestsOf(document, tree), nodeVersions: NODE, pages: pagesOf(document, tree), ...options });
+  return evaluateEligibility({ document, ...inputsOf(document, tree), ...options });
 }
 
 /** The page that makes the workspace's nested inspector tool a Vite app when a test gives it a build. */
@@ -205,7 +221,7 @@ describe("preview eligibility", () => {
       const document = await analyzedFacts(VITE_REACT_APP);
       const runtime = document.categories.runtime_requirements!;
       const blind: FactDocument = { ...document, categories: { ...document.categories, runtime_requirements: { ...runtime, state: "unknown", facts: [], search: { ...runtime.search, skipped: [".nvmrc"] } } } };
-      const { refusal } = evaluateEligibility({ document: blind, manifests: manifestsOf(document, VITE_REACT_APP), nodeVersions: NODE, pages: pagesOf(document, VITE_REACT_APP) });
+      const { refusal } = evaluateEligibility({ document: blind, ...inputsOf(document, VITE_REACT_APP) });
       expect(condition(refusal!.conditions, "node").reason).toBe("Its Node requirement couldn't be decided: .nvmrc could not be read or understood.");
     });
   });
@@ -283,10 +299,12 @@ describe("preview eligibility", () => {
       expect(admin!.plan!.composition).toMatchObject({ mechanism: "module-federation", name: { kind: "literal", value: "fixtureAdmin" }, exposes: ["./Footer", "./Header"] });
       expect(condition(admin!.conditions, "page")).toMatchObject({ passed: true, reason: "Its build must emit index.html, which is checked once it has run" });
 
-      const bundle = await decide(offlineSingleSpaBundle());
+      // A single-spa bundle whose configuration the tool doesn't load by default can't be read, so its build decides.
+      const bundle = await decide(offlineSingleSpaBundle({ configAt: "config/webpack.config.js" }));
       const [orders] = bundle.packages.filter((verdict) => verdict.qualifies);
       expect(bundle.packages.filter((verdict) => verdict.qualifies)).toHaveLength(1);
       expect(orders!.plan).toMatchObject({ buildTool: "webpack", layout: "single_spa", composition: { mechanism: "single-spa", role: "application" } });
+      expect(condition(orders!.conditions, "page")).toMatchObject({ passed: true, reason: "Its build must emit index.html, which is checked once it has run" });
     });
 
     it("keeps only the package's own evidence of a tool reported for the whole repository", async () => {
@@ -338,7 +356,7 @@ describe("preview eligibility", () => {
       const tree = { ...VITE_REACT_APP, "services/ledger/go.mod": "module example.com/ledger\n\ngo 1.22\n", "tools/pyproject.toml": '[project]\nname = "tools"\n' };
       const document = await analyzedFacts(tree);
       expect(document.categories.runtime_requirements!.search.skipped).toEqual(expect.arrayContaining(["services/ledger/go.mod"]));
-      expect(evaluateEligibility({ document, manifests: manifestsOf(document, tree), nodeVersions: NODE, pages: pagesOf(document, tree) }).packages[0]!.qualifies).toBe(true);
+      expect(evaluateEligibility({ document, ...inputsOf(document, tree) }).packages[0]!.qualifies).toBe(true);
     });
 
     it("reads only the install roots' manifests", async () => {
@@ -357,6 +375,45 @@ describe("preview eligibility", () => {
       const page = condition(refusal!.conditions, "page");
       expect(page.reason).toBe("No index.html is committed at index.html, the page Vite builds from. Previews need a page that loads the application on its own.");
       expect(locations(page)).toEqual(expect.arrayContaining(["package.json /devDependencies/vite", "vite.config.js"]));
+    });
+
+    it("refuses a webpack single-spa bundle that can't emit a page before building, naming the page and the facts behind it (spa-reports)", async () => {
+      const { packages, refusal } = await decide(offlineSingleSpaBundle());
+      const [orders] = packages;
+      expect(orders!.qualifies).toBe(false);
+      expect(orders!.conditions.filter((found) => !found.passed).map((found) => found.condition)).toEqual(["page"]);
+      const page = condition(refusal!.conditions, "page");
+      expect(page.reason).toBe(
+        "Its webpack build emits no page: it's a single-spa application, webpack.config.js adds no HTML plugin, none is among its dependencies, and no HTML file is committed in the repository root. Previews need a page that loads the application on its own.",
+      );
+      expect(locations(page)).toEqual(expect.arrayContaining(["src/lifecycles.js:6–8", "webpack.config.js", "package.json /devDependencies/webpack"]));
+    });
+
+    it.each([
+      ["an HTML plugin among its dependencies", (tree: Tree) => ({ ...tree, "package.json": tree["package.json"]!.replace('"webpack": "file:vendor/webpack"', '"webpack": "file:vendor/webpack",\n    "html-webpack-plugin": "^5.6.0"') })],
+      ["an HTML plugin in its configuration", (tree: Tree) => ({ ...tree, "webpack.config.js": `const HtmlWebpackPlugin = require("html-webpack-plugin");\n${tree["webpack.config.js"]}` })],
+      ["an HTML file it commits", (tree: Tree) => ({ ...tree, "public/index.html": "<!doctype html><div id=root></div>\n" })],
+      ["no configuration where webpack looks by default", () => offlineSingleSpaBundle({ configAt: "config/webpack.config.js" })],
+    ])("leaves a webpack single-spa bundle with %s to its build", async (_label, change) => {
+      const [orders] = (await decide(change(offlineSingleSpaBundle()))).packages;
+      expect(condition(orders!.conditions, "page")).toMatchObject({ passed: true, reason: "Its build must emit index.html, which is checked once it has run" });
+    });
+
+    it("doesn't read a page for a root configuration, a remote, or an app that isn't single-spa", async () => {
+      const remote = await analyzedFacts(offlineFederatedRemote());
+      expect(bundlePackages(remote)).toEqual([]);
+      expect(bundlePackages(await analyzedFacts(FEDERATED_WORKSPACE))).toEqual([]);
+      const lifecycles = await analyzedFacts(offlineSingleSpaBundle());
+      expect(bundlePackages(lifecycles)).toEqual([{ directory: ".", bundler: "webpack" }]);
+    });
+
+    it("reads a bundle's page from an HTML file, an HTML plugin, or the configuration the bundler loads first", () => {
+      const files = (tree: Record<string, string | null>, html: string[] = []) => ({ has: (file: string) => Object.hasOwn(tree, file), text: (file: string) => tree[file] ?? null, html });
+      expect(readBundlePage("apps/orders", "webpack", files({}, ["apps/orders/public/index.html"]))).toEqual({ state: "found", source: "apps/orders/public/index.html" });
+      expect(readBundlePage(".", "rspack", files({ "rspack.config.cjs": "new rspack.HtmlRspackPlugin({ template })" }))).toEqual({ state: "found", source: "rspack.config.cjs" });
+      expect(readBundlePage(".", "webpack", files({ "webpack.config.js": "module.exports = { entry: './src/x.js' };", "webpack.config.ts": "plugins: [new HtmlWebpackPlugin()]" }))).toEqual({ state: "missing", config: "webpack.config.js" });
+      expect(readBundlePage("web", "webpack", files({}))).toEqual({ state: "undecided", reason: "no webpack configuration is committed in web" });
+      expect(readBundlePage(".", "webpack", files({ "webpack.config.js": null }))).toEqual({ state: "undecided", reason: "webpack.config.js couldn't be read" });
     });
 
     it("qualifies a Vite app whose page is committed, in its own directory or a workspace member's", async () => {

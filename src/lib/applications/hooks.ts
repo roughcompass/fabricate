@@ -2,10 +2,11 @@ import { and, eq } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
 import { applications } from "@/lib/db/schema";
 import type { PreviewBuild, PreviewPreparation } from "@/lib/previews/records";
+import { NO_PAGE_REASON } from "@/lib/previews/output";
 import { requestScreenshot } from "@/lib/previews/screenshots";
 import { failPreparationHistory, settleBuildHistory, startRebuildHistory } from "./history";
 import { startPackageBuild } from "./pipeline";
-import { settleApplications, waitingOnPreparation } from "./records";
+import { type ApplicationReason, settleApplications, waitingOnPreparation } from "./records";
 
 /**
  * How an application follows its builds through the preview pipeline
@@ -20,7 +21,9 @@ import { settleApplications, waitingOnPreparation } from "./records";
  *   applications it's the latest attempt of, and their screenshot is
  *   requested;
  * - an attempt that fails fails the applications it's the latest attempt
- *   of, leaving their current build as it was;
+ *   of, leaving their current build as it was, with the last lines of its
+ *   log; one whose build ran but emitted no page makes its commit not
+ *   previewable, for its page, as a commit refused for its page is;
  * - a rebuild of an application's latest build shows it building again.
  */
 
@@ -45,11 +48,13 @@ export function afterAttemptPublished(db: Executor, preview: PreviewBuild): void
   if (current) requestScreenshot(db, preview);
 }
 
-/** An attempt failed: each application it's the latest attempt of failed, keeping its current build. */
-export function afterAttemptFailed(db: Executor, preview: PreviewBuild): void {
-  const reasons = [{ text: preview.attemptReason ?? "The build failed." }];
-  settleApplications(db, and(eq(applications.latestPreviewId, preview.id), eq(applications.latestOutcome, "building")), { outcome: "failed", reasons });
-  settleBuildHistory(db, preview, "failed", reasons);
+/** An attempt failed: each application it's the latest attempt of failed, or can't be previewed when its build emitted no page, keeping its current build. */
+export function afterAttemptFailed(db: Executor, preview: PreviewBuild, detail: readonly string[] = []): void {
+  const noPage = preview.attemptReason === NO_PAGE_REASON;
+  const outcome = noPage ? "not_previewable" : "failed";
+  const reasons: ApplicationReason[] = noPage ? [{ text: NO_PAGE_REASON, condition: "page" }] : [{ text: preview.attemptReason ?? "The build failed.", ...(detail.length > 0 && { log: [...detail] }) }];
+  settleApplications(db, and(eq(applications.latestPreviewId, preview.id), eq(applications.latestOutcome, "building")), { outcome, reasons });
+  settleBuildHistory(db, preview, outcome, reasons);
 }
 
 /** An attempt was queued for a preview that's an application's latest attempt: it's building again. */

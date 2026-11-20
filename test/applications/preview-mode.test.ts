@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createApplication, prepareBranch } from "@/lib/applications/pipeline";
-import { buildRef, packageCode, refChoices, refPreview, remoteRefs } from "@/lib/applications/preview-mode";
+import { REF_LIMITS, buildRef, packageCode, refChoices, refPreview, remoteRefs } from "@/lib/applications/preview-mode";
+import { cachedRemoteRefs, forgetRemoteRefs } from "@/lib/previews/ref-cache";
+import type { RemoteRef } from "@/lib/previews/refs";
 import { getApplication } from "@/lib/applications/records";
 import { type FrontendRegistryConfig, withOverrides } from "@/lib/config";
 import { failAttempt } from "@/lib/previews/records";
@@ -41,7 +43,7 @@ describe("preview mode", () => {
     const { repository, feature } = await ordersPortal();
     const application = getApplication(world.db, "orders-portal");
     let listing = await remoteRefs(application, world.db, config);
-    expect(refChoices(application, listing)).toMatchObject({ tracked: "refs/heads/main", others: [{ name: "refs/heads/feature/new-nav", commit: feature }] });
+    expect(refChoices(application, listing)).toMatchObject({ tracked: "refs/heads/main", branches: [{ name: "refs/heads/feature/new-nav", commit: feature }], tags: [], total: { branches: 1, tags: 0 }, find: null });
     expect(refPreview(world.db, application, "refs/heads/feature/new-nav", listing)).toEqual({ kind: "unbuilt", commitSha: feature });
     expect(refPreview(world.db, application, "refs/heads/nowhere", listing)).toMatchObject({ kind: "unknown", reason: "The remote has no nowhere." });
 
@@ -76,6 +78,56 @@ describe("preview mode", () => {
     if (checking.kind !== "checking") throw new Error(checking.kind);
     decide(world.db, repository, checking.preparation, [refusedVerdict(".")]);
     expect(refPreview(world.db, application, "refs/heads/feature/new-nav", listing)).toMatchObject({ kind: "refused", reasons: ["No supported build tool applies to this package. Previews support Vite, webpack, Rspack, and Rsbuild."] });
+  });
+
+  it("lists branches first and the highest-numbered tags up to their limits, finds the rest by name, and keeps the ref shown (thousands of tags)", () => {
+    const ref = (name: string): RemoteRef => ({ name, label: name.replace(/^refs\/(heads|tags)\//, ""), kind: name.startsWith("refs/heads/") ? "branch" : "tag", commit: "a".repeat(40), configured: name === "refs/heads/main" });
+    const tags = Array.from({ length: 3_000 }, (_, index) => ref(`refs/tags/v1.${Math.floor(index / 100)}.${index % 100}`));
+    const branches = ["main", ...Array.from({ length: 60 }, (_, index) => `feature/${String(index).padStart(2, "0")}`)].map((name) => ref(`refs/heads/${name}`));
+    const listing = { configured: { label: "main", request: { kind: "ref" as const, name: "main" } }, refs: [...branches, ...tags], unavailable: null };
+    const application = { trackedRef: "refs/heads/main" };
+
+    const plain = refChoices(application, listing);
+    expect(plain.branches).toHaveLength(REF_LIMITS.branches);
+    expect(plain.branches[0]!.label).toBe("feature/00");
+    expect(plain.tags.map((tag) => tag.label).slice(0, 3)).toEqual(["v1.29.99", "v1.29.98", "v1.29.97"]);
+    expect(plain.tags).toHaveLength(REF_LIMITS.tags);
+    expect(plain.total).toEqual({ branches: 60, tags: 3_000 });
+
+    const found = refChoices(application, listing, { find: " V1.3.4 " });
+    expect(found.find).toEqual({ text: "V1.3.4", matched: 11 });
+    expect(found.tags.map((tag) => tag.label)).toEqual(["v1.3.49", "v1.3.48", "v1.3.47", "v1.3.46", "v1.3.45", "v1.3.44", "v1.3.43", "v1.3.42", "v1.3.41", "v1.3.40", "v1.3.4"]);
+    const many = refChoices(application, listing, { find: "v1" });
+    expect(many.find!.matched).toBe(3_000);
+    expect(many.branches.length + many.tags.length).toBe(REF_LIMITS.matches);
+
+    // A ref shown from a search stays listed once the search is gone.
+    expect(refChoices(application, listing, { selected: "refs/tags/v1.0.7" }).tags[0]!.label).toBe("v1.0.7");
+    expect(refChoices(application, listing, { selected: "refs/heads/feature/59" }).branches[0]!.label).toBe("feature/59");
+  });
+
+  it("reads a remote's refs once a minute, shares a read under way, and reads again after Show", async () => {
+    const repository = { cloneUrl: "https://git.example.com/acme/orders.git", gitRef: null };
+    let reads = 0;
+    const read = async () => {
+      reads += 1;
+      return { configured: { label: "Default branch", request: { kind: "ref" as const, name: null } }, refs: [], unavailable: null };
+    };
+    const cached = withOverrides(world.config, { previews: { refCacheSeconds: 60 } });
+    forgetRemoteRefs(repository);
+    await Promise.all([cachedRemoteRefs(repository, { config: cached, read, now: 0 }), cachedRemoteRefs(repository, { config: cached, read, now: 10 })]);
+    await cachedRemoteRefs(repository, { config: cached, read, now: 59_999 });
+    expect(reads).toBe(1);
+    await cachedRemoteRefs(repository, { config: cached, read, now: 60_000 });
+    expect(reads).toBe(2);
+    forgetRemoteRefs(repository);
+    await cachedRemoteRefs(repository, { config: cached, read, now: 60_001 });
+    expect(reads).toBe(3);
+    // 0 reads the remote on every view.
+    const uncached = withOverrides(world.config, { previews: { refCacheSeconds: 0 } });
+    await cachedRemoteRefs(repository, { config: uncached, read, now: 60_002 });
+    await cachedRemoteRefs(repository, { config: uncached, read, now: 60_003 });
+    expect(reads).toBe(5);
   });
 
   it("lists the package's committed files with the manifest chosen first, and a sensitive .npmrc unread (Reading the manifest, Sensitive file)", async () => {

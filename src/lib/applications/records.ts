@@ -22,8 +22,10 @@ export type ApplicationRow = typeof applications.$inferSelect;
 export interface ApplicationReason {
   /** The reason as a sentence. */
   readonly text: string;
-  /** The eligibility condition that failed, when the commit was refused. */
+  /** The eligibility condition that failed, when the commit was refused, or its build emitted no page. */
   readonly condition?: string;
+  /** The last meaningful lines of a failed build's log, redacted, when it ran far enough to write any. */
+  readonly log?: readonly string[];
 }
 
 /** What the package is built with, from its latest decided verdict. */

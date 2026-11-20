@@ -193,7 +193,7 @@ describe("preview records", () => {
 
       // The superseded attempt can no longer publish over it.
       expect(publishAttempt(db, preview.publicId, { attempt: 1 }, artifact("out-late"))).toBe(false);
-      expect(failAttempt(db, preview.publicId, { attempt: 2 }, "vite build exited with code 1", "attempts/2/build.log")).toBe(true);
+      expect(failAttempt(db, preview.publicId, { attempt: 2 }, "vite build exited with code 1", { log: "attempts/2/build.log" })).toBe(true);
       expect(findPreview(db, preview.publicId)).toMatchObject({ attempt: 2, attemptState: "failed", attemptReason: "vite build exited with code 1", attemptLog: "attempts/2/build.log", artifact: "out-1", artifactAttempt: 1 });
 
       rebuildPreview(db, preview.publicId);

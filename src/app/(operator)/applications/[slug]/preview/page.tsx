@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Form from "next/form";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProgressPoller } from "@/components/progress-poller";
 import { DeviceControls } from "@/components/preview/device-controls";
@@ -7,13 +9,14 @@ import { FileTree } from "@/components/preview/file-tree";
 import { EditorTemplate } from "@/components/templates/editor-template";
 import { Alert } from "@/components/ui/alert";
 import { CodeBlock } from "@/components/ui/code-block";
-import { Select } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { HiddenFields, Select, TextInput } from "@/components/ui/form";
 import { MediaImage } from "@/components/ui/media-card";
 import { diagnosticReason } from "@/components/ui/status";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { TabLink, Tabs } from "@/components/ui/tabs";
 import { requireApplications } from "@/lib/applications/availability";
-import { type PackageCode, type RefPreview, packageCode, refChoices, refPreview, remoteRefs } from "@/lib/applications/preview-mode";
+import { type PackageCode, type RefChoices, type RefPreview, packageCode, refChoices, refPreview, remoteRefs } from "@/lib/applications/preview-mode";
 import { type Application, branchLabel, findApplication } from "@/lib/applications/records";
 import { getDb } from "@/lib/db/client";
 import { previewBasePath } from "@/lib/previews/toolchain";
@@ -29,26 +32,29 @@ export async function generateMetadata({ params }: PageProps<"/applications/[slu
   return { title: application ? `Preview ${application.name}` : "Application not found" };
 }
 
-/** Preview mode's choices, all in the address: the tab, the ref unless it's the tracked branch, the device, its orientation, and the Code tab's file. */
+/** Preview mode's choices, all in the address: the tab, the ref unless it's the tracked branch, the search among refs, the device, its orientation, and the Code tab's file. */
 interface PreviewState extends DeviceState {
   readonly view: "preview" | "code";
   readonly ref: string | null;
+  readonly find: string | null;
   readonly file: string | null;
 }
 
 function parseState(params: SearchParams, application: Application): PreviewState {
   const ref = param(params, "ref");
   const file = param(params, "file");
+  const find = param(params, "find")?.trim().slice(0, 100);
   return {
     view: param(params, "view") === "code" ? "code" : "preview",
     ref: ref && /^refs\/(heads|tags)\/./.test(ref) && ref.length <= 266 && ref !== application.trackedRef ? ref : null,
+    find: find || null,
     ...parseDeviceState(params),
     file: file && file.length <= 1_024 ? file : null,
   };
 }
 
 function hrefOf(slug: string, state: PreviewState): string {
-  return routes.applicationPreview(slug, { ...(state.view === "code" && { view: "code" }), ...(state.ref && { ref: state.ref }), ...deviceQuery(state), ...(state.view === "code" && state.file && { file: state.file }) });
+  return routes.applicationPreview(slug, { ...(state.view === "code" && { view: "code" }), ...(state.ref && { ref: state.ref }), ...(state.view === "preview" && state.find && { find: state.find }), ...deviceQuery(state), ...(state.view === "code" && state.file && { file: state.file }) });
 }
 
 /**
@@ -71,7 +77,9 @@ export default async function ApplicationPreviewPage({ params, searchParams }: P
   const other = state.ref ? refPreview(getDb(), application, state.ref, listing) : null;
   const preview = other ? (other.kind === "ready" ? other.preview.publicId : null) : (application.current?.preview ?? null);
   const commitSha = other ? ("commitSha" in other ? other.commitSha : null) : (application.current?.commitSha ?? null);
-  const { tracked, others } = refChoices(application, listing);
+  const choices = refChoices(application, listing, { find: state.find, selected: state.ref });
+  const { tracked } = choices;
+  const keep = { ...(state.ref && { ref: state.ref }), ...(state.find && { find: state.find }) };
   const size = frameSize(state.device, state.orientation);
   const shownRef = branchLabel(state.ref ?? tracked).replace(/^refs\/tags\//, "");
 
@@ -107,8 +115,8 @@ export default async function ApplicationPreviewPage({ params, searchParams }: P
                     defaultValue={state.ref ?? tracked}
                     options={[
                       { value: tracked, label: `${branchLabel(tracked)} (tracked)` },
-                      { label: "Branches", options: others.filter((ref) => ref.kind === "branch").map((ref) => ({ value: ref.name, label: ref.label })) },
-                      { label: "Tags", options: others.filter((ref) => ref.kind === "tag").map((ref) => ({ value: ref.name, label: ref.label })) },
+                      { label: "Branches", options: choices.branches.map((ref) => ({ value: ref.name, label: ref.label })) },
+                      { label: "Tags", options: choices.tags.map((ref) => ({ value: ref.name, label: ref.label })) },
                     ].filter((option) => !("options" in option) || (option.options?.length ?? 0) > 0)}
                   />
                   <SubmitButton variant="secondary" size="sm" pendingLabel="Showing">
@@ -119,15 +127,16 @@ export default async function ApplicationPreviewPage({ params, searchParams }: P
                   <DeviceControls
                     action={routes.applicationPreview(slug)}
                     state={state}
-                    keep={state.ref ? { ref: state.ref } : {}}
+                    keep={keep}
                     fullScreen={state.ref ? { href: previewBasePath(preview), prefix: previewBasePath(preview).replace(/\/$/, ""), withQuery: true } : { href: routes.runningApplication(slug), prefix: previewBasePath(preview).replace(/\/$/, ""), withQuery: true, to: routes.runningApplication(slug) }}
                   />
                 ) : (
-                  <DeviceControls action={routes.applicationPreview(slug)} state={state} keep={state.ref ? { ref: state.ref } : {}} />
+                  <DeviceControls action={routes.applicationPreview(slug)} state={state} keep={keep} />
                 )}
               </div>
             )}
           </div>
+          {state.view === "preview" && <RefFinder slug={slug} state={state} choices={choices} />}
 
           {state.view === "preview" ? (
             preview ? (
@@ -148,6 +157,37 @@ export default async function ApplicationPreviewPage({ params, searchParams }: P
         </PreviewScale>
       </div>
     </EditorTemplate>
+  );
+}
+
+/**
+ * Finding a branch or tag the choice doesn't list (a remote can have
+ * thousands of tags): shown once the choice leaves some out, or while it
+ * lists a search's matches. A plain GET form, so it works without
+ * JavaScript, keeping the ref shown and the device.
+ */
+function RefFinder({ slug, state, choices }: { slug: string; state: PreviewState; choices: RefChoices }) {
+  const listed = choices.branches.length + choices.tags.length;
+  const leftOut = choices.total.branches > choices.branches.length || choices.total.tags > choices.tags.length;
+  if (!choices.find && !leftOut) return null;
+  const count = (shown: number, total: number, [one, many]: [string, string], order: string) => (shown >= total ? `every ${one}` : `${order}${shown} of ${total} ${many}`);
+  const summary = choices.find
+    ? `${choices.find.matched === 1 ? "1 branch or tag matches" : `${choices.find.matched} branches and tags match`} “${choices.find.text}”${choices.find.matched > listed ? `; the first ${listed} are listed. Find more of the name to narrow them.` : "."}`
+    : `The list has ${count(choices.branches.length, choices.total.branches, ["branch", "branches"], "")} and ${count(choices.tags.length, choices.total.tags, ["tag", "tags"], "the highest-numbered ")}. Find a branch or tag by name to choose another.`;
+  return (
+    <div className={styles.finder}>
+      <Form action={routes.applicationPreview(slug)} className={styles.findForm} role="search" aria-label="Find a branch or tag">
+        <HiddenFields values={{ ref: state.ref, ...deviceQuery(state) }} />
+        <TextInput id="preview-find" name="find" type="search" label="Find a branch or tag" hideLabel size="sm" placeholder="Find a branch or tag" defaultValue={state.find ?? ""} />
+        <Button type="submit" size="sm">
+          Find
+        </Button>
+        {choices.find && <Link href={routes.applicationPreview(slug, { ...(state.ref && { ref: state.ref }), ...deviceQuery(state) })}>Clear</Link>}
+      </Form>
+      <p className={styles.muted} role="status">
+        {summary}
+      </p>
+    </div>
   );
 }
 

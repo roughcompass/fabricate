@@ -6,7 +6,7 @@ import { GET } from "@/app/api/previews/[preview]/log/route";
 import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { deletePreview } from "@/lib/previews/lifecycle";
-import { LOG_TAIL_BYTES, cleanLog, readLogChunk } from "@/lib/previews/log";
+import { LOG_TAIL_BYTES, cleanLog, logExcerpt, readLogChunk, readLogTail } from "@/lib/previews/log";
 import { type PreviewBuild, claimAttempt, failAttempt, findPreview, rebuildPreview } from "@/lib/previews/records";
 import { previewDirectory } from "@/lib/previews/storage";
 import { buildRepository } from "../support/builders";
@@ -117,6 +117,81 @@ describe("preview logs", () => {
     expect(cleanLog("\u001b[32m✓\u001b[39m built in \u001b[1m12ms\u001b[22m\n")).toBe("✓ built in 12ms\n");
     expect(cleanLog("progress 10%\rprogress 50%\rprogress 100%\r\nnext line\r\n")).toBe("progress 100%\nnext line\n");
     expect(cleanLog("\u001b]8;;https://example.com\u0007link\u001b]8;;\u0007\n")).toBe("link\n");
+  });
+
+  describe("a failed build's excerpt", () => {
+    const STAGING = "/srv/previews/pvw_x/staging/1-abc123";
+    const WORK = `${STAGING}/work`;
+    const log = (output: string[]) =>
+      [
+        "==> extract: git archive 0123",
+        "==> install: yarn install --frozen-lockfile in the repository root, with yarn.lock",
+        "[1/4] Resolving packages...",
+        "warning An unexpected error-looking warning during install",
+        "==> build: corepack yarn@1.22.22 run build --base=/previews/pvw_x/ in the repository root",
+        ...output,
+        "==> failed: The build failed: corepack yarn@1.22.22 run build exited with code 1.",
+        "",
+      ].join("\n");
+
+    it("shows the failing step's error, without stack frames, pointers to other logs, or the build's own directories (fleet/mf-billing)", () => {
+      const vite = [
+        "yarn run v1.22.22",
+        "$ vite build --base=/previews/pvw_x/",
+        "\u001b[36mvite v5.4.21 \u001b[32mbuilding for production...\u001b[39m",
+        "transforming...",
+        "✓ 3 modules transformed.",
+        "x Build failed in 64ms",
+        "error during build:",
+        'Could not resolve "./totals" from "src/Billing.tsx"',
+        `file: ${WORK}/src/Billing.tsx`,
+        `    at error (file://${WORK}/node_modules/rollup/dist/es/shared/parseAst.js:315:42)`,
+        "    at Object.error (file:///x.js:1:1)",
+        "error Command failed with exit code 1.",
+        "info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.",
+      ];
+      expect(logExcerpt(log(vite), { strip: [WORK, STAGING] })).toEqual([
+        "vite v5.4.21 building for production...",
+        "transforming...",
+        "✓ 3 modules transformed.",
+        "x Build failed in 64ms",
+        "error during build:",
+        'Could not resolve "./totals" from "src/Billing.tsx"',
+        "file: src/Billing.tsx",
+        "error Command failed with exit code 1.",
+      ]);
+    });
+
+    it("starts at the first problem a long output names, and leaves out npm's restatement of the command", () => {
+      const errors = Array.from({ length: 40 }, (_, index) => `src/file${index}.ts(1,1): error TS2304: Cannot find name 'x${index}'.`);
+      const excerpt = logExcerpt(log(["> tsc --noEmit && vite build", ...errors, "npm error Lifecycle script `build` failed with error:", "npm error code 2", `npm error path ${WORK}`, "npm error command failed"]));
+      expect(excerpt).toHaveLength(8);
+      expect(excerpt[0]).toBe("> tsc --noEmit && vite build");
+      expect(excerpt[1]).toBe("src/file0.ts(1,1): error TS2304: Cannot find name 'x0'.");
+      expect(excerpt.join("\n")).not.toContain("npm error code");
+    });
+
+    it("shows the last lines when none names a problem, caps each line, and is empty when the step wrote nothing", () => {
+      const lines = Array.from({ length: 12 }, (_, index) => `step ${index}`);
+      expect(logExcerpt(log(lines))).toEqual(lines.slice(-8));
+      expect(logExcerpt(log([`error ${"x".repeat(400)}`]))[0]).toHaveLength(240);
+      expect(logExcerpt(log([]))).toEqual([]);
+      // A build that stopped before its first step wrote anything.
+      expect(logExcerpt("==> extract: git archive 0123\n==> failed: The commit couldn't be extracted\n")).toEqual([]);
+    });
+
+    it("redacts what looks like a credential, as failure reasons are", () => {
+      const excerpt = logExcerpt(log(["error fetching https://deploy:hunter2@git.example.com/acme/lib.git", "error 401 with token=abc123def and ghp_0123456789abcdefABCDEF"]));
+      expect(excerpt.join("\n")).not.toMatch(/hunter2|abc123def|ghp_0123456789abcdefABCDEF/);
+      expect(excerpt[0]).toBe("error fetching https://[REDACTED]@git.example.com/acme/lib.git");
+    });
+
+    it("reads a log's tail from a line's start", async () => {
+      const file = path.join(storage, "tail.log");
+      fs.writeFileSync(file, `${"x".repeat(LOG_TAIL_BYTES)}\nlast line\n`);
+      expect(await readLogTail(file)).toBe("last line\n");
+      expect(await readLogTail(path.join(storage, "missing.log"))).toBe("");
+    });
   });
 
   describe("the log endpoint", () => {

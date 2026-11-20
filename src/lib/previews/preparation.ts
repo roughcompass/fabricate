@@ -14,8 +14,8 @@ import { type Survey, currentRecipe, recordConfiguredResolution, requestSurvey, 
 import { queueSurvey } from "@/lib/surveys/run";
 import { SnapshotReader } from "@/lib/snapshot/reader";
 import { assertEnrolled, isEnrolled } from "./access";
-import { type ManifestRead, evaluateEligibility, installRootManifests, manifestPath, vitePackages } from "./eligibility";
-import { type PageRead, readPage, viteConfig } from "./pages";
+import { type ManifestRead, bundlePackages, evaluateEligibility, installRootManifests, manifestPath, vitePackages } from "./eligibility";
+import { type BundlePageRead, type Bundler, type PageRead, bundlerConfig, readBundlePage, readPage, viteConfig } from "./pages";
 import { type PreviewPreparation, decidePreparation, failPreparation, findPreparation, linkPreparationSurvey, openPreparation, startPreview } from "./records";
 import { type RefOptions, type RefRequest, pinCommit, previewPinRef } from "./refs";
 
@@ -84,7 +84,8 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
     const reader = await open();
     const manifests = await readManifests(reader, installRootManifests(facts));
     const pages = await readPages(reader, vitePackages(facts));
-    const eligibility = evaluateEligibility({ document: facts, manifests, nodeVersions: Object.keys(config.previews.nodeVersions), pages });
+    const bundles = await readBundlePages(reader, bundlePackages(facts));
+    const eligibility = evaluateEligibility({ document: facts, manifests, nodeVersions: Object.keys(config.previews.nodeVersions), pages, bundles });
     return immediate(db, (tx) => {
       const decided = decidePreparation(tx, job.preparation, job.requested, profile, eligibility);
       // With exactly one qualifying package there's nothing to choose; it's built only for an enrolled remote.
@@ -154,4 +155,23 @@ async function readPages(reader: SnapshotReader, directories: readonly string[])
     return result?.ok ? result.content.text : null;
   };
   return new Map(directories.map((directory) => [directory, readPage(directory, { has, text })]));
+}
+
+/**
+ * Whether each of +packages+, single-spa applications that webpack or
+ * Rspack builds, can emit a page, through +reader+: an HTML file committed in
+ * the package, or an HTML plugin in the configuration the tool loads.
+ */
+async function readBundlePages(reader: SnapshotReader, packages: readonly { directory: string; bundler: Bundler }[]): Promise<Map<string, BundlePageRead>> {
+  if (packages.length === 0) return new Map();
+  const has = (file: string) => reader.entry(file) !== undefined;
+  const configs = await reader.readMany(packages.flatMap(({ directory, bundler }) => bundlerConfig(directory, bundler, { has }) ?? []));
+  const text = (file: string) => {
+    const result = configs.get(file);
+    return result?.ok ? result.content.text : null;
+  };
+  // Every committed file counts, whether or not the reader would read it, such as an HTML file over its size limit.
+  const committed = [...reader.files().map((entry) => entry.path), ...reader.diagnostics().map((diagnostic) => diagnostic.path)].filter((file) => file.endsWith(".html") && !file.split("/").includes("node_modules"));
+  const inside = (directory: string, file: string) => directory === "." || file.startsWith(`${directory}/`);
+  return new Map(packages.map(({ directory, bundler }) => [directory, readBundlePage(directory, bundler, { has, text, html: committed.filter((file) => inside(directory, file)) })]));
 }

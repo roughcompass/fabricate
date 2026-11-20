@@ -17,6 +17,7 @@ import { OutputError, findOutputDirectory, formatBytes, validateOutput } from ".
 import { type CommandResult, type CommandSpec, extractCommit, runCommand } from "./process";
 import { type AttemptIdentity, type PreviewBuild, type PublishedArtifact, claimAttempt, failAttempt, findPreview, publishAttempt, settleAbandonedAttempts } from "./records";
 import { previewPinRef } from "./refs";
+import { logExcerpt, readLogTail } from "./log";
 import { type ClaimFiles, cacheDirectory, claimFiles, previewDirectory, publishedDirectory } from "./storage";
 import { type Invocation, baseAdapter, buildArguments, buildEnvironment, cacheCleanArguments, inheritedConfigFiles, installArguments, managerCommand, previewBasePath, shimCommand, usesCorepack } from "./toolchain";
 import { countLabel } from "@/components/ui/count";
@@ -126,7 +127,9 @@ export async function runPreviewBuild(db: Executor, job: BuildJob, options: Buil
     const reason = error instanceof BuildFailure ? error.message : `The build stopped unexpectedly: ${failureText(error)}`;
     log.step("failed", reason);
     await log.close();
-    return failAttempt(db, claimed.publicId, identity, reason) ? "failed" : "superseded";
+    // The failing step's last meaningful lines, shown beside the reason, with the build's own directories left out of paths.
+    const detail = logExcerpt(await readLogTail(files.log), { strip: [files.work, files.staging] });
+    return failAttempt(db, claimed.publicId, identity, reason, { detail }) ? "failed" : "superseded";
   } finally {
     await log.close();
     await fsp.rm(files.staging, { recursive: true, force: true });
