@@ -4,7 +4,7 @@ A repository preview builds one client-rendered single-page application, or a mi
 
 Previews are the one place the Frontend Registry builds repository code. Assessments and Profiles stay strictly static, and a preview never adds facts to a Profile.
 
-> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications' builds, automatic rebuilds, and screenshots are in place below the pages that show them, which add-applications builds next.
+> **Status:** commit selection, preparation, eligibility, the build runner, serving under `/previews/`, the Repository page's Previews and the preview page, microfrontends through their own page, deletion, pruning, and `npm run previews:doctor` are in place, and were checked against the seeded fleet on 2026-11-19; see [Tested repositories](#tested-repositories). Applications, with their pages, onboarding, builds, automatic rebuilds, screenshots, and preview mode, are in place, and were checked against the fleet on 2026-11-19 ([verification/applications-walkthrough.md](../verification/applications-walkthrough.md)); running an application full screen comes with the toolbar.
 
 ## Turn previews on
 
