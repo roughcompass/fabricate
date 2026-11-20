@@ -1,20 +1,19 @@
 "use client";
 
-import { createContext, use, useEffect, useState } from "react";
+import { createContext, use, useState } from "react";
 import { interactionToNextPaint } from "@/components/toolbar/timing/timing";
-import { INSPECTOR_SCRIPT, type InspectedInteraction, type MeasuredVital, type Rating, isInspectorMessage } from "../inspector/protocol";
-import { routeOf, useTargetDocument } from "../target-document";
+import type { InspectedInteraction, InspectorMessage, MeasuredVital, Rating } from "../inspector/protocol";
+import { routeOf, useAgentMessages, useTargetDocument } from "../target-document";
 import { type PageLoad, addLoads, pageLoad } from "./load-order";
 
 /**
  * Timing for a running application (add-applications, design decision 6).
- * On each load of the application's page, the toolbar adds the timing
- * inspector to it (inspector/inspector.ts), which measures the page in its own
- * realm and reports Web Vitals, the scripts and stylesheets it loaded, and
- * every interaction except the toolbar's own. This keeps what it reported for
- * the page now in the frame: a new page starts over. INP is computed here,
- * from the application's interactions since the page loaded, so clearing the
- * list keeps it.
+ * The frame agent (inspector/inspector.ts) measures the application's page
+ * in its own realm and reports Web Vitals, the scripts and stylesheets it
+ * loaded, and every interaction except the toolbar's own. This keeps what it
+ * reported for the page now in the frame: a new page starts over. INP is
+ * computed here, from the application's interactions since the page loaded,
+ * so clearing the list keeps it.
  */
 
 export interface RouteInteraction extends InspectedInteraction {
@@ -34,7 +33,7 @@ interface TimingState {
   readonly inpMs: number | null;
   readonly vitals: Readonly<Partial<Record<MeasuredVital, MeasuredValue>>>;
   readonly loads: readonly PageLoad[];
-  /** Whether the inspector is reporting from the page. */
+  /** Whether the agent is reporting from the page. */
   readonly inspecting: boolean;
   readonly eventTiming: boolean;
   clear(): void;
@@ -53,8 +52,8 @@ const LIMIT = 50;
 const HISTORY_LIMIT = 1000;
 
 interface Page {
-  /** The page these measurements are of. */
-  readonly document: Document | null;
+  /** The agent's id for the page these measurements are of. */
+  readonly page: string | null;
   readonly inspecting: boolean;
   readonly eventTiming: boolean;
   readonly vitals: TimingState["vitals"];
@@ -64,54 +63,39 @@ interface Page {
   readonly clearedThrough: number;
 }
 
-const fresh = (document: Document | null): Page => ({ document, inspecting: false, eventTiming: true, vitals: {}, loads: [], history: [], clearedThrough: 0 });
+const fresh = (page: string | null): Page => ({ page, inspecting: false, eventTiming: true, vitals: {}, loads: [], history: [], clearedThrough: 0 });
 
-/** Adds the inspector to +document+, once per page. */
-function inject(document: Document): void {
-  if (document.querySelector("script[data-frontend-registry-inspector]")) return;
-  const script = document.createElement("script");
-  script.src = INSPECTOR_SCRIPT;
-  script.dataset.frontendRegistryInspector = "";
-  (document.head ?? document.documentElement).append(script);
+/** +current+ with what +message+ reports, for a build served at +base+. */
+function reduce(current: Page, message: InspectorMessage, base: string): Page {
+  switch (message.kind) {
+    case "ready":
+      return { ...current, inspecting: true, eventTiming: message.eventTiming };
+    case "vital":
+      return { ...current, vitals: { ...current.vitals, [message.name]: { value: message.value, rating: message.rating } } };
+    case "loads":
+      return { ...current, loads: addLoads(current.loads, message.loads.map((load) => pageLoad(load, base, window.location.origin))) };
+    case "interaction": {
+      const interaction: RouteInteraction = { ...message.interaction, route: routeOf(message.interaction.pathname, base) };
+      const index = current.history.findIndex((entry) => entry.id === interaction.id);
+      const history = index === -1 ? [...current.history, interaction].slice(-HISTORY_LIMIT) : current.history.with(index, interaction);
+      return { ...current, history };
+    }
+    default:
+      return current;
+  }
 }
 
 export function TimingProvider({ children }: { children: React.ReactNode }) {
-  const target = useTargetDocument();
-  const { window: view, document, base } = target;
-  const [page, setPage] = useState<Page>(() => fresh(document));
+  const { base, page: shown } = useTargetDocument();
+  const [page, setPage] = useState<Page>(() => fresh(shown));
   // Another page in the frame starts over.
-  if (page.document !== document) setPage(fresh(document));
+  if (page.page !== shown) setPage(fresh(shown));
 
-  useEffect(() => {
-    if (!view || !document) return;
-    const onMessage = (event: MessageEvent) => {
-      if (event.source !== view || event.origin !== window.location.origin || !isInspectorMessage(event.data)) return;
-      const message = event.data;
-      setPage((current) => {
-        switch (message.kind) {
-          case "ready":
-            return { ...current, inspecting: true, eventTiming: message.eventTiming };
-          case "vital":
-            return { ...current, vitals: { ...current.vitals, [message.name]: { value: message.value, rating: message.rating } } };
-          case "loads":
-            return { ...current, loads: addLoads(current.loads, message.loads.map((load) => pageLoad(load, base, window.location.origin))) };
-          case "interaction": {
-            const interaction: RouteInteraction = { ...message.interaction, route: routeOf(message.interaction.pathname, base) };
-            const index = current.history.findIndex((entry) => entry.id === interaction.id);
-            const history = index === -1 ? [...current.history, interaction].slice(-HISTORY_LIMIT) : current.history.with(index, interaction);
-            return { ...current, history };
-          }
-        }
-      });
-    };
-    window.addEventListener("message", onMessage);
-    inject(document);
-    return () => window.removeEventListener("message", onMessage);
-  }, [view, document, base]);
+  useAgentMessages((message) => setPage((current) => (current.page === message.page ? reduce(current, message, base) : current)));
 
-  const interactions = page.history.filter((interaction) => interaction.id > page.clearedThrough).slice(-LIMIT);
+  const since = page.history.filter((interaction) => interaction.id > page.clearedThrough);
   const state: TimingState = {
-    interactions,
+    interactions: since.slice(-LIMIT),
     inpMs: interactionToNextPaint(page.history),
     vitals: page.vitals,
     loads: page.loads,
