@@ -2,10 +2,10 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import { Readable } from "node:stream";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, getDb } from "@/lib/db/client";
-import { applications, previewBuilds, previewScreenshots } from "@/lib/db/schema";
+import { applicationPreviews, applications, previewBuilds, previewScreenshots } from "@/lib/db/schema";
 import { type ScreenshotSize, screenshotFile } from "@/lib/previews/screenshots";
 import { applicationsAvailable } from "./availability";
 import type { Application } from "./records";
@@ -19,6 +19,8 @@ import type { Application } from "./records";
  * previews are off, answers the same plain 404. Images revalidate every
  * time, so a new build's screenshot replaces the old one; pages add the
  * screenshot's version to the address, so a card that changes loads anew.
+ * `?preview=<key>` serves one of the application's saved previews' images
+ * the same way (restore-toolbar-tools-and-branch-previews, task 2.3).
  */
 
 /**
@@ -37,21 +39,34 @@ export function screenshotSize(value: string | null): ScreenshotSize {
 export interface ImageOptions {
   db?: Executor;
   config?: FrontendRegistryConfig;
+  /** The key of the saved preview whose image is asked for, rather than the application's. */
+  key?: string | null;
 }
 
-/** Answers a GET or HEAD for the +size+ image of the application at +slug+. */
+const imageColumns = { preview: previewBuilds.publicId, deletedAt: previewBuilds.deletedAt, state: previewScreenshots.state, directory: previewScreenshots.directory, capturedAt: previewScreenshots.capturedAt };
+
+/** Answers a GET or HEAD for the +size+ image of the application at +slug+, or of its saved preview +options.key+. */
 export async function serveScreenshot(request: Request, slug: string, size: ScreenshotSize, options: ImageOptions = {}): Promise<Response> {
   const db = options.db ?? getDb();
   const config = options.config ?? getConfig();
   const head = request.method === "HEAD";
   if (!applicationsAvailable(config)) return notFound(head);
-  const row = db
-    .select({ preview: previewBuilds.publicId, deletedAt: previewBuilds.deletedAt, state: previewScreenshots.state, directory: previewScreenshots.directory, capturedAt: previewScreenshots.capturedAt })
-    .from(applications)
-    .innerJoin(previewBuilds, eq(previewBuilds.id, applications.currentPreviewId))
-    .innerJoin(previewScreenshots, eq(previewScreenshots.previewId, previewBuilds.id))
-    .where(eq(applications.slug, slug))
-    .get();
+  const row = options.key
+    ? db
+        .select(imageColumns)
+        .from(applicationPreviews)
+        .innerJoin(applications, eq(applications.id, applicationPreviews.applicationId))
+        .innerJoin(previewBuilds, eq(previewBuilds.id, applicationPreviews.currentPreviewId))
+        .innerJoin(previewScreenshots, eq(previewScreenshots.previewId, previewBuilds.id))
+        .where(and(eq(applications.slug, slug), eq(applicationPreviews.key, options.key)))
+        .get()
+    : db
+        .select(imageColumns)
+        .from(applications)
+        .innerJoin(previewBuilds, eq(previewBuilds.id, applications.currentPreviewId))
+        .innerJoin(previewScreenshots, eq(previewScreenshots.previewId, previewBuilds.id))
+        .where(eq(applications.slug, slug))
+        .get();
   if (!row || row.deletedAt !== null) return notFound(head);
   const file = screenshotFile(config, row.preview, row, size);
   if (!file) return notFound(head);

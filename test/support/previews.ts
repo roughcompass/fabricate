@@ -6,10 +6,9 @@ import type { Db } from "@/lib/db/client";
 import type { ArtifactLayout } from "@/lib/db/schema";
 import type { PackageVerdict } from "@/lib/previews/eligibility";
 import type { ArtifactEntry } from "@/lib/previews/output";
-import { PREPARE_PREVIEW, type PreviewBuild, decidePreparation, findPreview, openPreparation, publishAttempt, startPreview } from "@/lib/previews/records";
+import { type PreviewBuild, findPreview, openPreparation, publishAttempt, startPreview } from "@/lib/previews/records";
 import { previewDirectory } from "@/lib/previews/storage";
-import { rawRun } from "./db";
-import { requestSurvey } from "@/lib/surveys/records";
+import { type DecideOptions, decide } from "./applications";
 
 /*
  * Previews with published artifacts written straight into preview storage,
@@ -18,8 +17,8 @@ import { requestSurvey } from "@/lib/surveys/records";
 
 let commits = 0;
 
-/** A queued preview of a new commit of +repository+, of a package of kind +layout+. */
-export function queuedPreview(db: Db, repository: Repository, layout: ArtifactLayout = "standalone"): PreviewBuild {
+/** A queued preview of a new commit of +repository+, of a package of kind +layout+; +options.hooks+ false decides its commit without the applications' hooks, for a schema older than the code. */
+export function queuedPreview(db: Db, repository: Repository, layout: ArtifactLayout = "standalone", options: DecideOptions = {}): PreviewBuild {
   const commitSha = (++commits).toString(16).padStart(40, "0");
   const { preparation } = openPreparation(db, repository, { commitSha, refName: "refs/heads/main", refKind: "branch" });
   const verdict: PackageVerdict = {
@@ -30,11 +29,8 @@ export function queuedPreview(db: Db, repository: Repository, layout: ArtifactLa
     conditions: [],
     plan: { installRoot: ".", packageManager: { name: "npm", version: null, lockfile: "package-lock.json" }, buildTool: "vite", buildScript: "vite build", node: { version: "22.11.0", ranges: [] }, layout, composition: null },
   };
-  // A survey of the commit to decide from; the decision is recorded here, so it never runs.
-  const { survey } = requestSurvey(db, { repositoryId: repository.id, commitSha, reference: "refs/heads/main", fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
-  decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), { surveyId: survey.id, digest: "f".repeat(64) }, { packages: [verdict], refusal: null });
   // Decided here, so its job has nothing left to do; only the build job is queued.
-  rawRun(db, "delete from jobs where kind = ?", PREPARE_PREVIEW);
+  decide(db, repository, preparation, [verdict], options);
   return startPreview(db, preparation.publicId, ".").preview;
 }
 

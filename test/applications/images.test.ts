@@ -6,17 +6,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, HEAD } from "@/app/(operator)/applications/[slug]/screenshot/route";
 import { applicationsAvailable, applicationsUnavailable, requireApplications } from "@/lib/applications/availability";
 import { screenshotAlt } from "@/lib/applications/images";
-import { getApplication, listApplications } from "@/lib/applications/records";
+import { getApplication, getApplicationRow, listApplications } from "@/lib/applications/records";
+import { findSavedPreview, savedPreviewAlt } from "@/lib/applications/saved-previews";
 import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { previewBuilds } from "@/lib/db/schema";
-import { type PreviewBuild, failAttempt } from "@/lib/previews/records";
+import { type PreviewBuild, failAttempt, rebuildPreview } from "@/lib/previews/records";
 import { completeScreenshot, findScreenshot } from "@/lib/previews/screenshots";
 import { previewDirectory } from "@/lib/previews/storage";
 import { routes } from "@/lib/web/routes";
 import { buildRepository } from "../support/builders";
 import { onboard } from "../support/applications";
-import { publishFiles } from "../support/previews";
+import { publishFiles, queuedPreview } from "../support/previews";
+import { rawRun } from "../support/db";
 import { redirectOf, useAppDb } from "../support/next";
 
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
@@ -58,14 +60,17 @@ describe("application images", () => {
   function readyApplication(captured = true): PreviewBuild {
     const created = onboard(app.db, config, repository);
     const preview = publishFiles(app.db, config, app.db.select().from(previewBuilds).where(eq(previewBuilds.id, created.latestPreviewId!)).get()!, { "index.html": "<h1>Orders</h1>" });
-    if (captured) {
-      const directory = path.join(previewDirectory(config, preview.publicId), "screenshots", "1-test");
-      fs.mkdirSync(directory, { recursive: true });
-      fs.writeFileSync(path.join(directory, "screenshot.webp"), FULL);
-      fs.writeFileSync(path.join(directory, "card.webp"), CARD);
-      completeScreenshot(app.db, preview.id, findScreenshot(app.db, preview.id)!.requestedAt.getTime(), "screenshots/1-test");
-    }
+    if (captured) captureImages(preview, FULL, CARD);
     return preview;
+  }
+
+  /** Writes +full+ and +card+ as +preview+'s captured screenshot. */
+  function captureImages(preview: PreviewBuild, full: Buffer, card: Buffer): void {
+    const directory = path.join(previewDirectory(config, preview.publicId), "screenshots", "1-test");
+    fs.mkdirSync(directory, { recursive: true });
+    fs.writeFileSync(path.join(directory, "screenshot.webp"), full);
+    fs.writeFileSync(path.join(directory, "card.webp"), card);
+    completeScreenshot(app.db, preview.id, findScreenshot(app.db, preview.id)!.requestedAt.getTime(), "screenshots/1-test");
   }
 
   const request = (slug: string, query = "", method: "GET" | "HEAD" = "GET", headers: Record<string, string> = {}) => {
@@ -109,6 +114,42 @@ describe("application images", () => {
     failAttempt(app.db, app.db.select().from(previewBuilds).where(eq(previewBuilds.id, admin.latestPreviewId!)).get()!.publicId, { attempt: 1 }, "The build failed");
     expect((await request("admin")).status).toBe(404);
     expect(screenshotAlt(getApplication(app.db, "admin"))).toBe("Screenshot of Admin");
+  });
+
+  it("serves a saved preview's images by its key, names the branch in the text alternative, and answers not found for an unknown key (Screenshot of a saved preview)", async () => {
+    readyApplication();
+    const feature = queuedPreview(app.db, repository);
+    rawRun(
+      app.db,
+      "insert into application_previews (public_id, application_id, key, ref, latest_preview_id, latest_preparation_id, latest_commit_sha, latest_requested_at, created_at, updated_at) values ('apv_0000000000000001', ?, 'feature-new-nav', 'refs/heads/feature/new-nav', ?, ?, ?, 0, 0, 0)",
+      getApplicationRow(app.db, getApplication(app.db, "orders-portal").publicId).id,
+      feature.id,
+      feature.preparationId,
+      feature.commitSha,
+    );
+    // Before its first build publishes, there's nothing to serve.
+    expect((await request("orders-portal", "?preview=feature-new-nav")).status).toBe(404);
+    const published = publishFiles(app.db, config, feature, { "index.html": "<h1>New nav</h1>" });
+    expect(findScreenshot(app.db, published.id)).toMatchObject({ state: "pending" });
+    captureImages(published, Buffer.from("RIFF....WEBPnav"), Buffer.from("RIFF....WEBPnavcard"));
+
+    expect(Buffer.from(await (await request("orders-portal", "?preview=feature-new-nav")).arrayBuffer()).toString()).toBe("RIFF....WEBPnav");
+    expect(Buffer.from(await (await request("orders-portal", "?preview=feature-new-nav&size=card")).arrayBuffer()).toString()).toBe("RIFF....WEBPnavcard");
+    // The application's own image is unchanged.
+    expect(Buffer.from(await (await request("orders-portal")).arrayBuffer()).equals(FULL)).toBe(true);
+    expect((await request("orders-portal", "?preview=nowhere")).status).toBe(404);
+    expect((await request("orders-portal", "?preview=feature-new-nav", "HEAD")).status).toBe(200);
+
+    const saved = findSavedPreview(app.db, getApplication(app.db, "orders-portal").publicId, "feature-new-nav")!;
+    expect(saved).toMatchObject({ status: "ready", image: "screenshot" });
+    expect(savedPreviewAlt(getApplication(app.db, "orders-portal"), saved)).toBe(`Screenshot of Orders portal, feature/new-nav, at commit ${published.commitSha.slice(0, 7)}`);
+    expect(routes.applicationScreenshot("orders-portal", saved.screenshot!.version, "card", "feature-new-nav")).toBe(`/applications/orders-portal/screenshot?preview=feature-new-nav&size=card&v=${saved.screenshot!.version}`);
+
+    // A later build keeps the last good screenshot meanwhile.
+    rebuildPreview(app.db, published.publicId);
+    expect(findSavedPreview(app.db, getApplication(app.db, "orders-portal").publicId, "feature-new-nav")).toMatchObject({ status: "building", image: "screenshot" });
+    configure({ enabled: false });
+    expect((await request("orders-portal", "?preview=feature-new-nav")).status).toBe(404);
   });
 
   describe("availability", () => {

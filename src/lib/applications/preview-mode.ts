@@ -12,7 +12,9 @@ import { type PreviewBuild, type PreviewPreparation, openPreparation, preparatio
 import { type RefListing, type RemoteRef, pinCommit, previewPinRef } from "@/lib/previews/refs";
 import { getRepository } from "@/lib/repositories/repository-records";
 import { SnapshotReader } from "@/lib/snapshot/reader";
-import type { Application } from "./records";
+import type { Application, ApplicationBuild, ApplicationReason } from "./records";
+import type { ApplicationStatus } from "./status";
+import { type SavedPreview, findSavedPreview, savedPreviewOfRef } from "./saved-previews";
 
 /**
  * Preview mode's other refs and its Code tab (template-preview spec, "Preview
@@ -27,6 +29,8 @@ import type { Application } from "./records";
 
 /** What another ref's frame area shows. */
 export type RefPreview =
+  /** The ref is one of the application's saved previews: preview mode opens it by its key (template-preview spec, "Preview choices live in the address"). */
+  | { readonly kind: "saved"; readonly key: string }
   /** The remote has no such branch or tag, or couldn't be read. */
   | { readonly kind: "unknown"; readonly reason: string }
   /** Its commit hasn't been prepared or built for the application's package yet. */
@@ -54,6 +58,8 @@ const byVersion = new Intl.Collator("en", { numeric: true, sensitivity: "base" }
 export interface RefChoices {
   /** The tracked branch, always first. */
   readonly tracked: string;
+  /** The application's saved previews, after the tracked branch, by name. */
+  readonly saved: readonly Pick<SavedPreview, "key" | "ref" | "label" | "kind">[];
   /** The other branches listed, by name. */
   readonly branches: readonly RemoteRef[];
   /** The tags listed, the highest-numbered first. */
@@ -67,13 +73,20 @@ export interface RefChoices {
 /**
  * The branches and tags preview mode offers (template-preview spec,
  * "Preview mode can show another branch or tag"): the tracked branch first,
- * then the remote's other branches by name, up to REF_LIMITS.branches, and
- * its tags, highest-numbered first, up to REF_LIMITS.tags. With +find+, the
- * branches and tags whose name contains it, branches first, up to
- * REF_LIMITS.matches. +selected+, the ref shown, is always listed.
+ * then the application's +saved+ previews, then the remote's other branches
+ * by name, up to REF_LIMITS.branches, and its tags, highest-numbered first,
+ * up to REF_LIMITS.tags. With +find+, the branches and tags whose name
+ * contains it, branches first, up to REF_LIMITS.matches. +selected+, the ref
+ * shown, is always listed.
  */
-export function refChoices(application: Pick<Application, "trackedRef">, listing: RefListing, options: { find?: string | null; selected?: string | null } = {}): RefChoices {
-  const others = listing.refs.filter((ref) => ref.name !== application.trackedRef);
+export function refChoices(
+  application: Pick<Application, "trackedRef">,
+  listing: RefListing,
+  options: { find?: string | null; selected?: string | null; saved?: readonly Pick<SavedPreview, "key" | "ref" | "label" | "kind">[] } = {},
+): RefChoices {
+  const saved = options.saved ?? [];
+  const savedRefs = new Set(saved.map((preview) => preview.ref));
+  const others = listing.refs.filter((ref) => ref.name !== application.trackedRef && !savedRefs.has(ref.name));
   const branches = others.filter((ref) => ref.kind === "branch");
   const tags = others.filter((ref) => ref.kind === "tag").sort((a, b) => byVersion.compare(b.label, a.label));
   const text = options.find?.trim() ?? "";
@@ -92,11 +105,13 @@ export function refChoices(application: Pick<Application, "trackedRef">, listing
   // The ref shown stays choosable, wherever it falls in the order.
   const selected = options.selected ? others.find((ref) => ref.name === options.selected) : undefined;
   if (selected && ![...listed.branches, ...listed.tags].includes(selected)) listed[selected.kind === "branch" ? "branches" : "tags"].unshift(selected);
-  return { tracked: application.trackedRef, ...listed, total: { branches: branches.length, tags: tags.length }, find };
+  return { tracked: application.trackedRef, saved, ...listed, total: { branches: branches.length, tags: tags.length }, find };
 }
 
-/** What preview mode shows for +ref+, a qualified branch or tag of the application's remote, from +listing+. */
-export function refPreview(db: Executor, application: Pick<Application, "repository" | "packageDir">, ref: string, listing: RefListing): RefPreview {
+/** What preview mode shows for +ref+, a qualified branch or tag of the application's remote, from +listing+: by its key when it's saved. */
+export function refPreview(db: Executor, application: Pick<Application, "publicId" | "repository" | "packageDir">, ref: string, listing: RefListing): RefPreview {
+  const saved = savedPreviewOfRef(db, application.publicId, ref);
+  if (saved) return { kind: "saved", key: saved.key };
   const remote = listing.refs.find((candidate) => candidate.name === ref);
   if (!remote) return { kind: "unknown", reason: listing.unavailable ? `The remote's branches and tags couldn't be listed: ${listing.unavailable}` : `The remote has no ${ref.replace(/^refs\/(heads|tags)\//, "")}.` };
   const repository = getRepository(db, application.repository.publicId);
@@ -117,6 +132,30 @@ export function refPreview(db: Executor, application: Pick<Application, "reposit
   if (!verdict) return { kind: "refused", commitSha, preparation, reasons: ["This commit has no such package."] };
   if (!verdict.qualifies) return { kind: "refused", commitSha, preparation, reasons: verdict.conditions.filter((condition) => !condition.passed).map((condition) => condition.reason) };
   return { kind: "unbuilt", commitSha };
+}
+
+/**
+ * What preview mode shows for a saved preview (template-preview spec, "A
+ * previewed ref shows its build state in the frame"): its current build when
+ * it has one, with a later build that's running, failed, or couldn't be
+ * previewed stated in the control row; otherwise the building placeholder
+ * while its first build runs, or the failure indicator with the reasons.
+ */
+export type SavedPreviewFrame =
+  | { readonly kind: "ready"; readonly build: ApplicationBuild; readonly later: "building" | "failed" | "not_previewable" | null }
+  | { readonly kind: "building" }
+  | { readonly kind: "failed"; readonly status: ApplicationStatus; readonly reasons: readonly ApplicationReason[] };
+
+/**
+ * The application's saved preview with +key+, with its status, image, and reasons (status.ts), and what preview mode's frame shows for it; null for an unknown key.
+ * @public Preview mode's `?preview=<key>` uses it (task 3.3).
+ */
+export function savedPreviewState(db: Executor, application: Pick<Application, "publicId">, key: string): { readonly saved: SavedPreview; readonly frame: SavedPreviewFrame } | null {
+  const saved = findSavedPreview(db, application.publicId, key);
+  if (!saved) return null;
+  const { outcome } = saved.latest;
+  if (saved.current) return { saved, frame: { kind: "ready", build: saved.current, later: outcome === "ready" ? null : outcome } };
+  return { saved, frame: outcome === "building" ? { kind: "building" } : { kind: "failed", status: saved.status, reasons: saved.latest.reasons } };
 }
 
 /**

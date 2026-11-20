@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { JsonObject } from "@repo-facts/contract";
 import { createdAt, id, lockVersion, publicId, sqlList, timestamp, updatedAt } from "./columns";
 import { previewBuilds, previewPreparations } from "./previews";
@@ -88,6 +88,73 @@ export const applications = sqliteTable(
     check("applications_latest_facts", sql`${t.latestFacts} IS NULL OR (json_valid(${t.latestFacts}) AND json_type(${t.latestFacts}) = 'object')`),
     // A ready outcome has a current build, the latest one.
     check("applications_ready", sql`${t.latestOutcome} <> 'ready' OR (${t.currentPreviewId} IS NOT NULL AND ${t.currentPreviewId} = ${t.latestPreviewId})`),
+  ],
+);
+
+/*
+ * Saved previews (restore-toolbar-tools-and-branch-previews, design decision
+ * 1): a branch or tag of an application's remote that an operator keeps built
+ * beside the tracked branch. Like an application, a saved preview is a row
+ * that points at repository previews, its current build and its latest
+ * attempt, with the latest attempt's outcome kept here. Its key names it in
+ * addresses, `/run/<slug>@<key>`, and never changes. Deleting the
+ * application deletes its saved previews.
+ */
+
+/** A saved preview's ref, qualified: refs/heads/… or refs/tags/…. */
+export const savedRefCheck = (column: AnySQLiteColumn) => sql`(${column} GLOB 'refs/heads/?*' OR ${column} GLOB 'refs/tags/?*') AND length(${column}) <= 266`;
+
+export const applicationPreviews = sqliteTable(
+  "application_previews",
+  {
+    id: id(),
+    publicId: publicId(),
+    applicationId: integer("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
+    /** Its address segment, from the ref's short name when it's saved: lowercase letters, digits, dots, and single hyphens. */
+    key: text("key").notNull(),
+    /** The branch or tag, qualified: refs/heads/feature/new-nav or refs/tags/v1.1.0. */
+    ref: text("ref").notNull(),
+    /** Its current build: the last successful build of its ref. */
+    currentPreviewId: integer("current_preview_id").references(() => previewBuilds.id, { onDelete: "restrict" }),
+    /** Its latest attempt's build, once the commit's preparation started one for the application's package. */
+    latestPreviewId: integer("latest_preview_id").references(() => previewBuilds.id, { onDelete: "restrict" }),
+    latestPreparationId: integer("latest_preparation_id").references(() => previewPreparations.id, { onDelete: "restrict" }),
+    /** The commit the latest attempt is for; the automatic check compares a saved branch's head with it. */
+    latestCommitSha: text("latest_commit_sha").notNull(),
+    latestOutcome: text("latest_outcome", { enum: APPLICATION_OUTCOMES }).notNull().default("building"),
+    latestReasons: text("latest_reasons", { mode: "json" }).$type<JsonObject[]>(),
+    latestFacts: text("latest_facts", { mode: "json" }).$type<JsonObject>(),
+    latestRequestedAt: timestamp("latest_requested_at").notNull(),
+    /** When the automatic check last found the ref missing from a readable remote; cleared when it returns. */
+    remoteMissingAt: timestamp("remote_missing_at"),
+    lockVersion: lockVersion(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("application_previews_key").on(t.applicationId, t.key),
+    uniqueIndex("application_previews_ref").on(t.applicationId, t.ref),
+    index("application_previews_current_preview").on(t.currentPreviewId),
+    index("application_previews_latest_preview").on(t.latestPreviewId),
+    index("application_previews_latest_preparation").on(t.latestPreparationId),
+    check("application_previews_public_id", sql`${t.publicId} GLOB 'apv_*'`),
+    // Never `@` or `/`, so `/run/<slug>@<key>` splits at the first `@` and the key is one path segment.
+    check(
+      "application_previews_key",
+      sql`length(${t.key}) BETWEEN 1 AND 60 AND ${t.key} NOT GLOB '*[^a-z0-9.-]*' AND ${t.key} NOT GLOB '-*' AND ${t.key} NOT GLOB '*-' AND ${t.key} NOT GLOB '*--*'`,
+    ),
+    check("application_previews_ref", savedRefCheck(t.ref)),
+    check("application_previews_latest_commit", sql`length(${t.latestCommitSha}) = 40 AND ${t.latestCommitSha} NOT GLOB '*[^0-9a-f]*'`),
+    check("application_previews_latest_outcome", sql.raw(`latest_outcome IN (${sqlList(APPLICATION_OUTCOMES)})`)),
+    check(
+      "application_previews_latest_reasons",
+      sql`(${t.latestOutcome} IN ('failed', 'not_previewable')) = (${t.latestReasons} IS NOT NULL) AND (${t.latestReasons} IS NULL OR (json_valid(${t.latestReasons}) AND json_type(${t.latestReasons}) = 'array' AND json_array_length(${t.latestReasons}) > 0))`,
+    ),
+    check("application_previews_latest_facts", sql`${t.latestFacts} IS NULL OR (json_valid(${t.latestFacts}) AND json_type(${t.latestFacts}) = 'object')`),
+    // A ready outcome has a current build, the latest one.
+    check("application_previews_ready", sql`${t.latestOutcome} <> 'ready' OR (${t.currentPreviewId} IS NOT NULL AND ${t.currentPreviewId} = ${t.latestPreviewId})`),
   ],
 );
 

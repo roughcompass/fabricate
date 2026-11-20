@@ -4,7 +4,7 @@ import { mirrorPath } from "@/lib/acquisition/mirror";
 import { type Repository, getRepository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
-import { JOB_PRIORITIES, repositories } from "@/lib/db/schema";
+import { repositories } from "@/lib/db/schema";
 import { readDocument } from "@/lib/documents/digested";
 import { failureText } from "@/lib/git/redact";
 import { GitRunner } from "@/lib/git/runner";
@@ -16,7 +16,7 @@ import { SnapshotReader } from "@/lib/snapshot/reader";
 import { assertEnrolled, isEnrolled } from "./access";
 import { type ManifestRead, bundlePackages, evaluateEligibility, installRootManifests, manifestPath, vitePackages } from "./eligibility";
 import { type BundlePageRead, type Bundler, type PageRead, bundlerConfig, readBundlePage, readPage, viteConfig } from "./pages";
-import { type PreviewPreparation, decidePreparation, failPreparation, findPreparation, linkPreparationSurvey, openPreparation, startPreview } from "./records";
+import { type PreviewPreparation, decidePreparation, failPreparation, findPreparation, linkPreparationSurvey, openPreparation, preparationPriority, startPreview } from "./records";
 import { type RefOptions, type RefRequest, pinCommit, previewPinRef } from "./refs";
 
 /**
@@ -90,7 +90,7 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
       const decided = decidePreparation(tx, job.preparation, job.requested, profile, eligibility);
       // With exactly one qualifying package there's nothing to choose; it's built only for an enrolled remote.
       const qualifying = eligibility.packages.filter((verdict) => verdict.qualifies);
-      if (decided?.state === "ready" && qualifying.length === 1 && isEnrolled(tx, config, repository)) startPreview(tx, decided.publicId, qualifying[0]!.directory);
+      if (decided?.state === "ready" && qualifying.length === 1 && isEnrolled(tx, config, repository)) startPreview(tx, decided.publicId, qualifying[0]!.directory, { priority: preparationPriority(tx, decided) });
       return decided;
     });
   } catch (error) {
@@ -102,9 +102,10 @@ export async function runPreparation(db: Executor, job: PreparationJob, options:
 /**
  * The survey to decide from (unify-surveys, design decision 6): the commit's
  * survey under the current recipe, started with the trigger `preview` when
- * there's none, at the priority of work a person waits on. It's among the
- * Repository's versions, and becomes current only when the commit came from
- * the configured reference.
+ * there's none, at the preparation's own priority: that of work a person
+ * waits on, or background for a saved preview's automatic rebuild. It's
+ * among the Repository's versions, and becomes current only when the commit
+ * came from the configured reference.
  */
 function previewSurvey(db: Executor, repository: Repository, preparation: PreviewPreparation, config: FrontendRegistryConfig): Survey {
   return immediate(db, (tx) => {
@@ -117,7 +118,7 @@ function previewSurvey(db: Executor, repository: Repository, preparation: Previe
       trigger: "preview",
       ...currentRecipe(config),
     });
-    if (survey.state === "queued") queueSurvey(tx, survey, JOB_PRIORITIES.normal);
+    if (survey.state === "queued") queueSurvey(tx, survey, preparationPriority(tx, preparation));
     linkPreparationSurvey(tx, preparation.id, survey.id);
     return survey;
   });

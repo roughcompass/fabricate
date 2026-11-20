@@ -46,7 +46,7 @@ describe("comments and shares for applications migration", () => {
   });
 
   it("keeps a thread's commit, route, and anchor well formed, and deletes threads and shares with their application", () => {
-    const orders = viewedApplicationIn(db);
+    const orders = viewedApplicationIn(db, undefined, { hooks: false });
     const thread = (route: string, commit: string, anchor: string) => run("insert into demo_threads (public_id, application_id, view_workspace_id, route, commit_sha, anchor, offset_x, offset_y, created_at) values (?, ?, 1, ?, ?, ?, 0.5, 0.5, ?)", `thr_${Math.random().toString(36).slice(2, 18)}`, orders.id, route, commit, anchor, T0);
     thread("/accounts", commitOf("a"), JSON.stringify(EXPORT_ORDERS));
     expect(() => thread("accounts", commitOf("a"), JSON.stringify(EXPORT_ORDERS))).toThrow(/demo_threads_route/);

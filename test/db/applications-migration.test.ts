@@ -39,7 +39,7 @@ describe("applications migration", () => {
   const insert = (values: { name?: string; nameKey?: string; slug?: string; repository?: Repository; packageDir?: string; trackedRef?: string; preparation?: number; commit?: string; current?: number | null; latest?: number | null; outcome?: string; reasons?: string | null }) => {
     applications++;
     const owner = values.repository ?? repository;
-    const prepared = values.preparation === undefined ? decidedPreparation(db, owner, [qualifyingVerdict(values.packageDir ?? ".")]) : null;
+    const prepared = values.preparation === undefined ? decidedPreparation(db, owner, [qualifyingVerdict(values.packageDir ?? ".")], undefined, undefined, { hooks: false }) : null;
     const name = values.name ?? `Application ${applications}`;
     run(
       `insert into applications (public_id, slug, name, name_key, repository_source_id, package_dir, tracked_ref, current_preview_id, latest_preview_id, latest_preparation_id, latest_commit_sha, latest_outcome, latest_reasons, latest_requested_at, created_at, updated_at)
@@ -106,9 +106,9 @@ describe("applications migration", () => {
   });
 
   it("points only at previews and preparations of its own Repository and package, and the latest at its latest commit", () => {
-    const preview = queuedPreview(db, repository);
+    const preview = queuedPreview(db, repository, "standalone", { hooks: false });
     const previewId = id("preview_builds", preview.publicId);
-    const elsewhere = queuedPreview(db, other);
+    const elsewhere = queuedPreview(db, other, "standalone", { hooks: false });
     const preparation = (db.$client.prepare("select id, commit_sha from preview_preparations where id = (select preparation_id from preview_builds where public_id = ?)").get(preview.publicId) as { id: number; commit_sha: string });
 
     // Building its latest commit's preview: allowed.
@@ -124,7 +124,7 @@ describe("applications migration", () => {
   });
 
   it("keeps a preview an application uses from being removed, and one screenshot per preview", () => {
-    const preview = queuedPreview(db, repository);
+    const preview = queuedPreview(db, repository, "standalone", { hooks: false });
     const previewId = id("preview_builds", preview.publicId);
     run("insert into preview_screenshots (preview_id, artifact, requested_at, created_at, updated_at) values (?, 'out/1-a', ?, ?, ?)", previewId, T0, T0, T0);
     expect(() => run("insert into preview_screenshots (preview_id, artifact, requested_at, created_at, updated_at) values (?, 'out/1-b', ?, ?, ?)", previewId, T0, T0, T0)).toThrow(/UNIQUE constraint failed: preview_screenshots.preview_id/);

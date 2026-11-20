@@ -3,7 +3,7 @@ import type { Repository } from "@/lib/repositories/repository-records";
 import { type Executor, immediate } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { type ArtifactLayout, type PreviewRefKind, jobs, previewBuilds, previewPreparations, surveys } from "@/lib/db/schema";
+import { type ArtifactLayout, JOB_PRIORITIES, type PreviewRefKind, jobs, previewBuilds, previewPreparations, surveys } from "@/lib/db/schema";
 import { type JsonObject } from "@repo-facts/contract";
 import { enqueue } from "@/lib/jobs/queue";
 import type { Eligibility, PackageVerdict, Refusal } from "./eligibility";
@@ -51,15 +51,22 @@ export class PreviewRequestError extends Error {
 
 // -- Preparations -----------------------------------------------------------------
 
+/** The priority work is queued at: JOB_PRIORITIES.normal, or background for a saved preview's automatic rebuild (restore-toolbar-tools-and-branch-previews, design decision 3). */
+export interface QueueOptions {
+  readonly priority?: number;
+}
+
 /**
  * The preparation of +pinned+ for +repository+: a new one profiling, or the one
  * that exists for that commit. One still profiling or Ready is returned as it
- * is, unless its job was abandoned. A Refused or Failed one is prepared
- * again, so it's decided under the current settings, such as newly
+ * is, unless its job was abandoned; a profiling one asked for at a higher
+ * +options.priority+ has its job raised to it. A Refused or Failed one is
+ * prepared again, so it's decided under the current settings, such as newly
  * configured Node versions; the Profile it already has is kept for the job to
  * reuse.
  */
-export function openPreparation(db: Executor, repository: Pick<Repository, "id">, pinned: PinnedCommit): { preparation: PreviewPreparation; started: boolean } {
+export function openPreparation(db: Executor, repository: Pick<Repository, "id">, pinned: PinnedCommit, options: QueueOptions = {}): { preparation: PreviewPreparation; started: boolean } {
+  const priority = options.priority ?? JOB_PRIORITIES.normal;
   return immediate(db, (tx) => {
     // A preparation whose job was abandoned is Failed, so it's prepared again rather than left profiling.
     settleAbandonedPreparations(tx);
@@ -69,7 +76,10 @@ export function openPreparation(db: Executor, repository: Pick<Repository, "id">
       .from(previewPreparations)
       .where(and(eq(previewPreparations.repositoryId, repository.id), eq(previewPreparations.commitSha, pinned.commitSha)))
       .get();
-    if (existing && (existing.state === "profiling" || existing.state === "ready")) return { preparation: existing, started: false };
+    if (existing && (existing.state === "profiling" || existing.state === "ready")) {
+      if (existing.state === "profiling") enqueue(tx, { ...preparationEnqueue(existing), priority, raisePriority: true });
+      return { preparation: existing, started: false };
+    }
 
     // Each request is later than the last, so its job's idempotency key is new.
     const requestedAt = existing ? new Date(Math.max(now.getTime(), existing.requestedAt.getTime() + 1)) : now;
@@ -85,9 +95,23 @@ export function openPreparation(db: Executor, repository: Pick<Repository, "id">
           .values({ publicId: generatePublicId("ppr"), repositoryId: repository.id, commitSha: pinned.commitSha, refName: pinned.refName, refKind: pinned.refKind, requestedAt: now, createdAt: now, updatedAt: now })
           .returning()
           .get();
-    enqueue(tx, { kind: PREPARE_PREVIEW, payload: preparationJob(preparation), idempotencyKey: `${PREPARE_PREVIEW}:${preparation.publicId}:${preparation.requestedAt.getTime()}` });
+    enqueue(tx, { ...preparationEnqueue(preparation), priority });
     return { preparation, started: true };
   });
+}
+
+/** The job that prepares +preparation+ as it was last requested. */
+function preparationEnqueue(preparation: Pick<PreviewPreparation, "publicId" | "requestedAt">) {
+  return { kind: PREPARE_PREVIEW, payload: preparationJob(preparation), idempotencyKey: `${PREPARE_PREVIEW}:${preparation.publicId}:${preparation.requestedAt.getTime()}` };
+}
+
+/**
+ * The priority +preparation+'s latest request was queued at, so the survey
+ * and build it leads to wait as long as it did: background for a saved
+ * preview's automatic rebuild, normal otherwise.
+ */
+export function preparationPriority(db: Executor, preparation: Pick<PreviewPreparation, "publicId" | "requestedAt">): number {
+  return db.select({ priority: jobs.priority }).from(jobs).where(eq(jobs.idempotencyKey, preparationEnqueue(preparation).idempotencyKey)).get()?.priority ?? JOB_PRIORITIES.normal;
 }
 
 /** The job payload that prepares +preparation+ as it was last requested. */
@@ -115,7 +139,7 @@ export function continuePreparations(db: Executor, survey: { id: number; state: 
   if (survey.state !== "succeeded" && survey.state !== "failed") return;
   const waiting = db.select().from(previewPreparations).where(and(eq(previewPreparations.surveyId, survey.id), eq(previewPreparations.state, "profiling"))).all();
   for (const preparation of waiting) {
-    enqueue(db, { kind: PREPARE_PREVIEW, payload: { ...preparationJob(preparation), afterSurvey: true }, idempotencyKey: `${PREPARE_PREVIEW}:${preparation.publicId}:${preparation.requestedAt.getTime()}:survey` });
+    enqueue(db, { kind: PREPARE_PREVIEW, payload: { ...preparationJob(preparation), afterSurvey: true }, idempotencyKey: `${PREPARE_PREVIEW}:${preparation.publicId}:${preparation.requestedAt.getTime()}:survey`, priority: preparationPriority(db, preparation) });
   }
 }
 
@@ -182,9 +206,10 @@ export function preparationRefusal(preparation: PreviewPreparation): Refusal | n
  * Starts the preview of the qualifying package +packageDir+ of a ready
  * preparation, at the preparation's commit, never resolving its ref again.
  * When the Repository, commit, and package already have a preview, it's
- * opened instead, and no second build starts.
+ * opened instead, and no second build starts; a queued attempt of it asked
+ * for at a higher +options.priority+ is raised to it.
  */
-export function startPreview(db: Executor, preparationPublicId: string, packageDir: string): { preview: PreviewBuild; created: boolean } {
+export function startPreview(db: Executor, preparationPublicId: string, packageDir: string, options: QueueOptions = {}): { preview: PreviewBuild; created: boolean } {
   return immediate(db, (tx) => {
     const preparation = findPreparation(tx, preparationPublicId);
     if (!preparation) throw new NotFoundError(`Preview preparation ${preparationPublicId} does not exist`);
@@ -197,7 +222,10 @@ export function startPreview(db: Executor, preparationPublicId: string, packageD
       .from(previewBuilds)
       .where(and(eq(previewBuilds.repositoryId, preparation.repositoryId), eq(previewBuilds.commitSha, preparation.commitSha), eq(previewBuilds.packageDir, packageDir), isNull(previewBuilds.deletedAt)))
       .get();
-    if (existing) return { preview: existing, created: false };
+    if (existing) {
+      if (existing.attemptState === "queued" && options.priority !== undefined) enqueueAttempt(tx, existing, options.priority);
+      return { preview: existing, created: false };
+    }
 
     const now = new Date();
     const preview = tx
@@ -217,7 +245,7 @@ export function startPreview(db: Executor, preparationPublicId: string, packageD
       })
       .returning()
       .get();
-    enqueueAttempt(tx, preview);
+    enqueueAttempt(tx, preview, options.priority);
     return { preview, created: true };
   });
 }
@@ -237,12 +265,15 @@ export function findPreview(db: Executor, publicId: string): PreviewBuild | unde
  * still queued or building is returned as it is, unless its build job was
  * abandoned, which fails the attempt first so it can be rebuilt.
  */
-export function rebuildPreview(db: Executor, publicId: string): PreviewBuild {
+export function rebuildPreview(db: Executor, publicId: string, options: QueueOptions = {}): PreviewBuild {
   return immediate(db, (tx) => {
     settleAbandonedAttempts(tx, { publicId });
     const preview = findPreview(tx, publicId);
     if (!preview) throw new NotFoundError(`Preview ${publicId} does not exist`);
-    if (preview.attemptState === "queued" || preview.attemptState === "building") return preview;
+    if (preview.attemptState === "queued" || preview.attemptState === "building") {
+      if (preview.attemptState === "queued" && options.priority !== undefined) enqueueAttempt(tx, preview, options.priority);
+      return preview;
+    }
     const now = new Date();
     const next = tx
       .update(previewBuilds)
@@ -250,7 +281,7 @@ export function rebuildPreview(db: Executor, publicId: string): PreviewBuild {
       .where(eq(previewBuilds.id, preview.id))
       .returning()
       .get();
-    enqueueAttempt(tx, next);
+    enqueueAttempt(tx, next, options.priority);
     // An application whose latest attempt this preview is shows it building again.
     afterRebuildQueued(tx, next);
     return next;
@@ -434,6 +465,7 @@ function currentAttempt(publicId: string, identity: AttemptIdentity) {
   );
 }
 
-function enqueueAttempt(db: Executor, preview: PreviewBuild): void {
-  enqueue(db, { kind: BUILD_PREVIEW, payload: { preview: preview.publicId, attempt: preview.attempt }, idempotencyKey: `${BUILD_PREVIEW}:${preview.publicId}:${preview.attempt}` });
+/** Queues +preview+'s current attempt at +priority+, or raises its queued job to it. */
+function enqueueAttempt(db: Executor, preview: PreviewBuild, priority: number = JOB_PRIORITIES.normal): void {
+  enqueue(db, { kind: BUILD_PREVIEW, payload: { preview: preview.publicId, attempt: preview.attempt }, idempotencyKey: `${BUILD_PREVIEW}:${preview.publicId}:${preview.attempt}`, priority, raisePriority: true });
 }

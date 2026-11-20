@@ -7,6 +7,7 @@ import { deleteRepository } from "@/lib/repositories/registration";
 import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
 import { deleteApplication, findApplication } from "@/lib/applications/records";
+import { removeSavedPreview } from "@/lib/applications/saved-previews";
 import { jobs, previewBuilds } from "@/lib/db/schema";
 import { claimNext } from "@/lib/jobs/queue";
 import { type PruneCandidate, cacheBytes, choosePrunable, deletePreview, prunePreviews, requestPreview, requestRebuild } from "@/lib/previews/lifecycle";
@@ -121,6 +122,21 @@ describe("preview lifecycle", () => {
   const serve = (preview: PreviewBuild) => servePreview(new Request(`http://localhost/previews/${preview.publicId}/`, { headers: { "sec-fetch-dest": "document" } }), preview.publicId, [], { db: app.db, config });
   const exists = (preview: PreviewBuild) => fs.existsSync(previewDirectory(config, preview.publicId));
   const findPreviewById = (id: number) => app.db.select().from(previewBuilds).where(eq(previewBuilds.id, id)).get()!;
+  /** Saves a preview of +ref+ for the application +applicationId+, ready on +current+, and trying +latest+ when given. */
+  const saveOn = (applicationId: number, key: string, ref: string, current: PreviewBuild, latest: PreviewBuild = current) =>
+    rawRun(
+      app.db,
+      "insert into application_previews (public_id, application_id, key, ref, current_preview_id, latest_preview_id, latest_preparation_id, latest_commit_sha, latest_outcome, latest_requested_at, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)",
+      `apv_${key.replace(/[^a-z0-9]/g, "").padEnd(16, "0").slice(0, 16)}`,
+      applicationId,
+      key,
+      ref,
+      current.id,
+      latest.id,
+      latest.preparationId,
+      latest.commitSha,
+      latest === current ? "ready" : "building",
+    );
   const buildJob = (preview: PreviewBuild, attempt = 1) => app.db.select().from(jobs).where(eq(jobs.idempotencyKey, `${BUILD_PREVIEW}:${preview.publicId}:${attempt}`)).get()!;
 
   describe("pruning", () => {
@@ -195,6 +211,27 @@ describe("preview lifecycle", () => {
       deleteApplication(app.db, orders.publicId);
       expect((await prunePreviews(app.db, config)).deleted).toEqual([current.publicId]);
       expect(findPreview(app.db, latest.publicId)).toBeDefined();
+    });
+
+    it("never deletes a saved preview's current build or latest attempt, and prunes them like any other once it's removed (A saved preview's build, A removed preview's build)", async () => {
+      const orders = onboard(app.db, config, repository, { name: "Orders portal" });
+      const current = publishFiles(app.db, config, findPreviewById(orders.latestPreviewId!), { "index.html": "x".repeat(400) });
+      markOpened(app.db, current.publicId, at(5));
+      // feature/new-nav's current build is the least recently opened of all, and fix/totals is still trying a newer commit.
+      const feature = ready(400, 1);
+      saveOn(orders.id, "feature-new-nav", "refs/heads/feature/new-nav", feature);
+      const totals = ready(400, 2);
+      const attempt = ready(400, 3);
+      saveOn(orders.id, "fix-totals", "refs/heads/fix/totals", totals, attempt);
+      const other = ready(400, 4);
+      configure({ maxStorageBytes: 100 });
+
+      expect((await prunePreviews(app.db, config)).deleted).toEqual([other.publicId]);
+      for (const kept of [current, feature, totals, attempt]) expect(findPreview(app.db, kept.publicId)).toBeDefined();
+
+      expect(removeSavedPreview(app.db, orders.publicId, "feature-new-nav")).toBe("refs/heads/feature/new-nav");
+      expect((await prunePreviews(app.db, config)).deleted).toEqual([feature.publicId]);
+      expect(findPreview(app.db, totals.publicId)).toBeDefined();
     });
 
     it("sweeps files no undeleted preview owns, and leaves the package caches", async () => {
@@ -303,6 +340,15 @@ describe("preview lifecycle", () => {
       expect((await serve(current)).status).toBe(200);
       deleteApplication(app.db, orders.publicId);
       expect(await deletePreview(app.db, current.publicId, config)).toBe(true);
+    });
+
+    it("refuses to delete a saved preview's build, naming the application and the branch, until the preview is removed (Deleting a saved preview's build)", async () => {
+      const orders = onboard(app.db, config, repository, { name: "Orders portal" });
+      const feature = ready(10);
+      saveOn(orders.id, "feature-new-nav", "refs/heads/feature/new-nav", feature);
+      await expect(deletePreview(app.db, feature.publicId, config)).rejects.toThrow("Orders portal (feature/new-nav) builds from this preview. Remove the saved preview or delete the application, or let it build another commit, first.");
+      removeSavedPreview(app.db, orders.publicId, "feature-new-nav");
+      expect(await deletePreview(app.db, feature.publicId, config)).toBe(true);
     });
 
     it("deletes every preview of a deleted Repository, moving its files aside at once", async () => {

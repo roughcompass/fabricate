@@ -94,10 +94,17 @@ const SLUG_LIMIT = 60;
 
 // -- Reading ----------------------------------------------------------------------
 
-const currentBuild = alias(previewBuilds, "current_build");
-const latestBuild = alias(previewBuilds, "latest_build");
+/*
+ * An application and a saved preview are both build targets (restore-toolbar-
+ * tools-and-branch-previews, design decision 2): rows that point at a current
+ * build and a latest attempt, with the latest attempt's outcome. They're read
+ * with the same joins and shown with the same status and image.
+ */
 
-const buildColumns = <T extends typeof currentBuild | typeof latestBuild>(table: T) => ({
+export const currentBuild = alias(previewBuilds, "current_build");
+export const latestBuild = alias(previewBuilds, "latest_build");
+
+export const buildColumns = <T extends typeof currentBuild | typeof latestBuild>(table: T) => ({
   preview: table.publicId,
   commitSha: table.commitSha,
   attempt: table.attempt,
@@ -107,6 +114,33 @@ const buildColumns = <T extends typeof currentBuild | typeof latestBuild>(table:
   packageManager: table.packageManager,
 });
 
+export const screenshotColumns = { state: previewScreenshots.state, capturedAt: previewScreenshots.capturedAt };
+
+type SelectedBuild = { [K in keyof ReturnType<typeof buildColumns>]: ApplicationBuild[K] | null } | null;
+
+/** The latest-attempt columns an application and a saved preview share. */
+type TargetColumns = Pick<ApplicationRow, "latestOutcome" | "currentPreviewId" | "latestCommitSha" | "latestRequestedAt" | "latestReasons" | "latestFacts">;
+
+/** What an application and a saved preview show alike: status, image, latest attempt, current build, and screenshot. */
+export type TargetState = Pick<Application, "status" | "image" | "settling" | "latest" | "current" | "screenshot" | "facts">;
+
+export function targetState(row: TargetColumns, current: SelectedBuild, latest: SelectedBuild, screenshot: { state: string | null; capturedAt: Date | null } | null): TargetState {
+  // A left join with no row gives null.
+  const build = (value: SelectedBuild): ApplicationBuild | null => (value === null || value.preview === null ? null : (value as ApplicationBuild));
+  const screenshotState = (screenshot?.state ?? null) as ScreenshotState | null;
+  const input = { latestOutcome: row.latestOutcome, hasCurrent: row.currentPreviewId !== null, screenshot: screenshotState };
+  const facts = (row.latestFacts ?? {}) as Partial<ApplicationFacts>;
+  return {
+    status: applicationStatus(input),
+    image: applicationImage(input),
+    settling: isSettling(input),
+    latest: { outcome: row.latestOutcome, commitSha: row.latestCommitSha, requestedAt: row.latestRequestedAt, reasons: shownReasons(row.latestReasons), build: build(latest) },
+    current: build(current),
+    screenshot: screenshotState === "ready" && screenshot?.capturedAt ? { version: screenshot.capturedAt.getTime().toString(36), capturedAt: screenshot.capturedAt } : null,
+    facts: { frameworks: facts.frameworks ?? [], buildTool: facts.buildTool ?? null, packageManager: facts.packageManager ?? null },
+  };
+}
+
 function selectApplications(db: Executor) {
   return db
     .select({
@@ -114,7 +148,7 @@ function selectApplications(db: Executor) {
       repository: { publicId: repositories.publicId, name: repositories.name },
       current: buildColumns(currentBuild),
       latest: buildColumns(latestBuild),
-      screenshot: { state: previewScreenshots.state, capturedAt: previewScreenshots.capturedAt },
+      screenshot: screenshotColumns,
     })
     .from(applications)
     .innerJoin(repositories, eq(repositories.id, applications.repositoryId))
@@ -126,11 +160,6 @@ function selectApplications(db: Executor) {
 type Selected = Awaited<ReturnType<ReturnType<typeof selectApplications>["all"]>>[number];
 
 function toApplication({ row, repository, current, latest, screenshot }: Selected): Application {
-  // A left join with no row gives null.
-  const build = (value: Selected["current"] | Selected["latest"]): ApplicationBuild | null => (value === null || value.preview === null ? null : (value as ApplicationBuild));
-  const screenshotState = (screenshot?.state ?? null) as ScreenshotState | null;
-  const input = { latestOutcome: row.latestOutcome, hasCurrent: row.currentPreviewId !== null, screenshot: screenshotState };
-  const facts = (row.latestFacts ?? {}) as Partial<ApplicationFacts>;
   return {
     publicId: row.publicId,
     slug: row.slug,
@@ -140,13 +169,7 @@ function toApplication({ row, repository, current, latest, screenshot }: Selecte
     packageDir: row.packageDir,
     trackedRef: row.trackedRef,
     trackedBranch: branchLabel(row.trackedRef),
-    status: applicationStatus(input),
-    image: applicationImage(input),
-    settling: isSettling(input),
-    latest: { outcome: row.latestOutcome, commitSha: row.latestCommitSha, requestedAt: row.latestRequestedAt, reasons: shownReasons(row.latestReasons), build: build(latest) },
-    current: build(current),
-    screenshot: screenshotState === "ready" && screenshot?.capturedAt ? { version: screenshot.capturedAt.getTime().toString(36), capturedAt: screenshot.capturedAt } : null,
-    facts: { frameworks: facts.frameworks ?? [], buildTool: facts.buildTool ?? null, packageManager: facts.packageManager ?? null },
+    ...targetState(row, current, latest, screenshot),
     lockVersion: row.lockVersion,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -434,21 +457,30 @@ export function deleteRepositoryApplications(db: Executor, repositoryId: number)
   return db.delete(applications).where(eq(applications.repositoryId, repositoryId)).run().changes;
 }
 
+/** How a build target's latest attempt settles: its outcome, why, and the builds it points at now. */
+export interface SettleValues {
+  readonly outcome: ApplicationOutcome;
+  readonly reasons?: readonly ApplicationReason[] | null;
+  readonly current?: number;
+  readonly latestPreview?: number;
+  readonly facts?: ApplicationFacts;
+}
+
+/** The columns +values+ sets on an application or a saved preview, which name them alike. */
+export function settledColumns(values: SettleValues) {
+  return {
+    latestOutcome: values.outcome,
+    latestReasons: values.reasons && values.reasons.length > 0 ? (values.reasons as unknown as JsonObject[]) : null,
+    ...(values.current !== undefined && { currentPreviewId: values.current }),
+    ...(values.latestPreview !== undefined && { latestPreviewId: values.latestPreview }),
+    ...(values.facts !== undefined && { latestFacts: values.facts as unknown as JsonObject }),
+    updatedAt: new Date(),
+  };
+}
+
 /** Updates the latest attempt's outcome of the applications +where+ selects. */
-export function settleApplications(db: Executor, where: ReturnType<typeof and>, values: { outcome: ApplicationOutcome; reasons?: readonly ApplicationReason[] | null; current?: number; latestPreview?: number; facts?: ApplicationFacts }): number {
-  const now = new Date();
-  return db
-    .update(applications)
-    .set({
-      latestOutcome: values.outcome,
-      latestReasons: values.reasons && values.reasons.length > 0 ? (values.reasons as unknown as JsonObject[]) : null,
-      ...(values.current !== undefined && { currentPreviewId: values.current }),
-      ...(values.latestPreview !== undefined && { latestPreviewId: values.latestPreview }),
-      ...(values.facts !== undefined && { latestFacts: values.facts as unknown as JsonObject }),
-      updatedAt: now,
-    })
-    .where(where)
-    .run().changes;
+export function settleApplications(db: Executor, where: ReturnType<typeof and>, values: SettleValues): number {
+  return db.update(applications).set(settledColumns(values)).where(where).run().changes;
 }
 
 /** Applications whose latest attempt is waiting on the preparation with row id +preparationId+ to start a build. */
@@ -463,6 +495,6 @@ export function branchLabel(ref: string): string {
   return ref.startsWith("refs/heads/") ? ref.slice("refs/heads/".length) : ref;
 }
 
-function compareNames(a: string, b: string): number {
+export function compareNames(a: string, b: string): number {
   return a.localeCompare(b, "en", { sensitivity: "base" }) || (a < b ? -1 : a > b ? 1 : 0);
 }

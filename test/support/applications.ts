@@ -4,7 +4,7 @@ import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import type { ArtifactLayout } from "@/lib/db/schema";
 import type { PackageVerdict } from "@/lib/previews/eligibility";
-import { PREPARE_PREVIEW, type PreviewPreparation, decidePreparation, openPreparation } from "@/lib/previews/records";
+import { PREPARE_PREVIEW, type PreviewPreparation, decidePreparation, findPreparation, openPreparation } from "@/lib/previews/records";
 import { requestSurvey } from "@/lib/surveys/records";
 import { rawRun } from "./db";
 
@@ -53,25 +53,49 @@ export function refusedVerdict(directory = "."): PackageVerdict {
   };
 }
 
+/** How a test decides a preparation: as its job would, or, for a migration test on a schema older than the code, written straight in without the hooks that follow it. */
+export interface DecideOptions {
+  /** False to record the decision without running the applications' hooks, which read tables a schema older than the code lacks. */
+  readonly hooks?: boolean;
+}
+
 /**
  * The preparation of +commitSha+ of +repository+, decided with +packages+:
  * Ready when one qualifies, else Refused. Its job is removed, so only what
  * it starts is queued.
  */
-export function decidedPreparation(db: Db, repository: Repository, packages: PackageVerdict[] = [qualifyingVerdict()], commitSha = nextCommit(), refName = "refs/heads/main"): PreviewPreparation {
+export function decidedPreparation(db: Db, repository: Repository, packages: PackageVerdict[] = [qualifyingVerdict()], commitSha = nextCommit(), refName = "refs/heads/main", options: DecideOptions = {}): PreviewPreparation {
   const { preparation } = openPreparation(db, repository, { commitSha, refName, refKind: "branch" });
-  return decide(db, repository, preparation, packages);
+  return decide(db, repository, preparation, packages, options);
 }
 
 /** The preparation +preparation+, still profiling, decided with +packages+, as its job would. */
-export function decide(db: Db, repository: Repository, preparation: PreviewPreparation, packages: PackageVerdict[] = [qualifyingVerdict()]): PreviewPreparation {
+export function decide(db: Db, repository: Repository, preparation: PreviewPreparation, packages: PackageVerdict[] = [qualifyingVerdict()], options: DecideOptions = {}): PreviewPreparation {
   const { survey } = requestSurvey(db, { repositoryId: repository.id, commitSha: preparation.commitSha, reference: preparation.refName ?? preparation.commitSha, fromConfiguredReference: false, trigger: "preview", surveyorRelease: "0.0.0", configurationDigest: "f".repeat(64), profileSchemaVersion: 2 });
   const qualifies = packages.some((verdict) => verdict.qualifies);
   const refusal = qualifies ? null : { reason: "No package qualifies for a preview", conditions: packages.flatMap((verdict) => verdict.conditions.filter((condition) => !condition.passed).map((condition) => ({ ...condition, package: verdict.directory }))) };
-  const decided = decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), { surveyId: survey.id, digest: "f".repeat(64) }, { packages, refusal });
+  const decided = options.hooks === false ? writeDecision(db, preparation, survey.id, packages, refusal) : decidePreparation(db, preparation.publicId, preparation.requestedAt.getTime(), { surveyId: survey.id, digest: "f".repeat(64) }, { packages, refusal });
   rawRun(db, "delete from jobs where kind = ?", PREPARE_PREVIEW);
   if (!decided) throw new Error(`${preparation.publicId} was no longer profiling`);
   return decided;
+}
+
+/** Records a decision of +preparation+ straight into its row, as decidePreparation would, without the hooks that follow it. */
+function writeDecision(db: Db, preparation: PreviewPreparation, surveyId: number, packages: PackageVerdict[], refusal: object | null): PreviewPreparation | undefined {
+  const now = Date.now();
+  rawRun(
+    db,
+    "update preview_preparations set state = ?, survey_id = ?, profile_digest = ?, packages = ?, refusal = ?, updated_at = ?, finished_at = ? where id = ? and state = 'profiling'",
+    refusal ? "refused" : "ready",
+    surveyId,
+    "f".repeat(64),
+    JSON.stringify(packages),
+    refusal ? JSON.stringify(refusal) : null,
+    now,
+    now,
+    preparation.id,
+  );
+  return findPreparation(db, preparation.publicId);
 }
 
 /** An application of +repository+'s package +packageDir+, created from a decided preparation of a new commit on +branch+. */

@@ -23,7 +23,9 @@ export type PublicIdPrefix =
   | "bbt" // Bitbucket token
   | "ppr" // preview preparation
   | "pvw" // preview build
-  | "app"; // application
+  | "app" // application
+  | "apv" // saved preview of an application
+  | "ses"; // session preset
 
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const LENGTH = 16;
