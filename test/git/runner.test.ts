@@ -156,6 +156,77 @@ describe("GitRunner", () => {
     });
   });
 
+  describe("saved tokens", () => {
+    // A token in no shape redaction recognizes, so only its own value can find it.
+    const TOKEN = "plain7Q2mZx9Kw4Vb8";
+    const URL = "https://git.example.com/bitbucket/scm/acme/orders.git";
+    const HTTPS = [...BASE, "-c", "protocol.https.allow=always"];
+    let looked: string[];
+    const credentialed = (body?: string, token: string | null = TOKEN) => {
+      looked = [];
+      return runner(body).withCredentials((url) => {
+        looked.push(url);
+        return token;
+      });
+    };
+
+    it("sends the matched token only in the HTTPS command's environment, with no credential helper and no redirects", async () => {
+      await credentialed().lsRemote(URL, "https");
+      await credentialed().fetch(gitDir, URL, ["+refs/heads/main:refs/fabricate/incoming/x"], "https", { shallow: true });
+
+      expect(looked).toEqual([URL]);
+      expect(fake.argv()).toEqual([
+        ...HTTPS,
+        "-c", "http.followRedirects=false",
+        `--git-dir=${gitDir}`,
+        "fetch", "--no-tags", "--no-recurse-submodules", "--no-write-fetch-head", "--no-auto-gc", "--no-auto-maintenance", "--quiet", "--force", "--depth=1",
+        "--end-of-options", URL, "+refs/heads/main:refs/fabricate/incoming/x",
+      ]);
+      expect(fake.argv().join(" ")).not.toContain(TOKEN);
+      expect(fake.argv()).not.toContain("credential.helper=osxkeychain");
+      expect(fake.env()).toMatchObject({ GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "http.extraHeader", GIT_CONFIG_VALUE_0: `Authorization: Bearer ${TOKEN}`, GIT_ALLOW_PROTOCOL: "https" });
+      expect(JSON.stringify(process.env)).not.toContain(TOKEN);
+    });
+
+    it("keeps an unmatched HTTPS command's credential helper, and never looks a token up for SSH, file, or local commands", async () => {
+      await credentialed(undefined, null).lsRemote(URL, "https");
+      expect(looked).toEqual([URL]);
+      expect(fake.argv()).toEqual([...HTTPS, "-c", "credential.helper=osxkeychain", "ls-remote", "--symref", "--end-of-options", URL, "HEAD", "refs/heads/*", "refs/tags/*"]);
+      expect(fake.env()).not.toHaveProperty("GIT_CONFIG_COUNT");
+
+      const git = credentialed();
+      await git.lsRemote("ssh://git@git.example.com/acme/orders.git", "ssh");
+      expect(fake.env()).not.toHaveProperty("GIT_CONFIG_COUNT");
+      await git.fetch(gitDir, "file:///srv/fleet/orders", ["HEAD"], "file");
+      await git.revParse(gitDir, "HEAD");
+      await git.catFileBatch(gitDir, ["a".repeat(40)]);
+      expect(looked).toEqual([]);
+      expect(fake.argv()).not.toContain("http.followRedirects=false");
+    });
+
+    it("looks a token up only after the invocation passes validation", async () => {
+      const git = credentialed();
+      await expect(git.run({ subcommand: "ls-remote", positionals: ["https://GIT.example.com/a"], protocol: "https" })).rejects.toMatchObject({ code: "command_rejected" });
+      await expect(git.run({ subcommand: "fetch", options: ["--upload-pack=touch pwned"], positionals: [URL], gitDir, protocol: "https" })).rejects.toMatchObject({ code: "command_rejected" });
+      expect(looked).toEqual([]);
+    });
+
+    it("removes the token from a failing command's diagnostics, whatever its shape", async () => {
+      const error = (await credentialed(`echo "fatal: unable to access '${URL}/': the server rejected ${TOKEN} (status 401)" >&2; exit 128`)
+        .lsRemote(URL, "https")
+        .catch((caught: unknown) => caught)) as GitError;
+
+      expect(error).toMatchObject({ code: "command_failed", exitCode: 128 });
+      expect(error.message).toContain("the server rejected [REDACTED] (status 401)");
+      expect(`${error.message}${error.stderr}`).not.toContain(TOKEN);
+    });
+
+    it("refuses to send a saved token that can't be a header value, without starting Git", async () => {
+      await expect(credentialed(undefined, "two words\r\nX-Injected: 1").lsRemote(URL, "https")).rejects.toMatchObject({ code: "command_rejected", message: expect.not.stringContaining("Injected") });
+      expect(fs.existsSync(path.join(path.dirname(fake.executable), "argv"))).toBe(false);
+    });
+  });
+
   describe("execution", () => {
     it("terminates a command that exceeds the timeout", async () => {
       const git = runner("sleep 30", { timeoutMs: 1_000 });

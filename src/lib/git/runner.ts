@@ -4,7 +4,7 @@ import path from "node:path";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/repositories/clone-url";
 import { type FrontendRegistryConfig, getConfig, isInside } from "@/lib/config";
 import { GitError } from "./errors";
-import { redact } from "./redact";
+import { redact, redactKnown } from "./redact";
 
 /**
  * The only path from the Frontend Registry to the Git executable. Besides the preview
@@ -24,6 +24,14 @@ import { redact } from "./redact";
  * any upload-pack Git spawns inside a local source repository, because Git
  * passes command-line configuration to child processes, and command-line
  * configuration outranks the repository's own.
+ *
+ * An ls-remote or fetch of an HTTPS URL can carry the Bitbucket token saved
+ * for the URL's server (use-saved-git-tokens, design decision 3). It's looked
+ * up after the invocation passes validation and reaches only that Git
+ * process, as a bearer header in environment-backed configuration: never in
+ * argv, the URL, a file, or this process's environment. Such a command uses
+ * no credential helper and follows no redirect, and its diagnostics are
+ * redacted of the token, whatever its shape.
  */
 
 const PROTOCOLS = ["file", "https", "ssh"] as const;
@@ -68,6 +76,9 @@ const PASSTHROUGH_ENV: Readonly<Record<Protocol, readonly string[]>> = {
   ssh: ["SSH_AUTH_SOCK"],
 };
 
+/** A value Git can send in a header: visible ASCII, without spaces. */
+const HEADER_VALUE = /^[\x21-\x7e]+$/;
+
 const DEFAULT_OUTPUT_LIMIT = 8 * 1024 * 1024;
 const TREE_OUTPUT_LIMIT = 256 * 1024 * 1024;
 const STDERR_LIMIT = 64 * 1024;
@@ -78,11 +89,19 @@ export interface GitResult {
   stderr: string;
 }
 
+/**
+ * The saved token Git sends to a canonical https:// clone URL, or null to
+ * authenticate as it would without one. Called for each ls-remote and fetch.
+ */
+export type GitCredentials = (url: string) => string | null;
+
 export interface GitRunnerOptions {
   executable?: string;
   timeoutMs?: number;
   home?: string;
   config?: FrontendRegistryConfig;
+  /** Saved tokens for HTTPS remotes; without them, HTTPS authenticates only through the configured credential helper. */
+  credentials?: GitCredentials;
 }
 
 export interface Invocation {
@@ -106,14 +125,23 @@ export class GitRunner {
   readonly home: string;
   readonly storage: string;
   readonly credentialHelper: string | null;
+  private readonly options: GitRunnerOptions & { config: FrontendRegistryConfig };
+  private readonly credentials: GitCredentials | null;
 
   constructor(options: GitRunnerOptions = {}) {
     const config = options.config ?? getConfig();
+    this.options = { ...options, config };
     this.executable = options.executable ?? "git";
     this.timeoutMs = options.timeoutMs ?? config.gitTimeoutSeconds * 1_000;
     this.storage = config.repositoryStorage;
     this.home = options.home ?? path.join(config.repositoryStorage, ".git-home");
     this.credentialHelper = config.gitCredentialHelper;
+    this.credentials = options.credentials ?? null;
+  }
+
+  /** The same runner, sending the token +credentials+ selects to a matching HTTPS remote. */
+  withCredentials(credentials: GitCredentials): GitRunner {
+    return new GitRunner({ ...this.options, credentials });
   }
 
   // -- Named operations ------------------------------------------------------
@@ -200,12 +228,14 @@ export class GitRunner {
   // -- Allowlisted execution ---------------------------------------------------
 
   async run(invocation: Invocation): Promise<GitResult> {
-    const argv = this.argv(invocation);
-    return this.execute(invocation.subcommand, argv, this.environment(invocation.protocol), invocation);
+    this.validate(invocation);
+    // Only now, for the canonical URL of a validated ls-remote or fetch, is a saved token looked up.
+    const token = this.savedToken(invocation);
+    return this.execute(invocation.subcommand, this.argv(invocation, token !== null), this.environment(invocation.protocol, token), invocation, token);
   }
 
-  /** Validates an invocation and builds its argv. Throws command_rejected on any deviation. */
-  argv(invocation: Invocation): string[] {
+  /** Throws command_rejected on any deviation from the allowlist. */
+  private validate(invocation: Invocation): void {
     const { subcommand, options = [], positionals = [], gitDir, protocol } = invocation;
     const permitted = COMMANDS[subcommand];
     if (!permitted) throw rejected(`git ${subcommand} is not an allowed operation`);
@@ -225,9 +255,13 @@ export class GitRunner {
     if (needsRepository && !gitDir) throw rejected(`git ${subcommand} requires a managed repository`);
     if (!needsRepository && gitDir) throw rejected(`git ${subcommand} does not accept a repository`);
     if (gitDir) this.assertManaged(gitDir);
+  }
 
+  /** A validated invocation's argv; +authenticated+ when it carries a saved token. */
+  private argv(invocation: Invocation, authenticated: boolean): string[] {
+    const { subcommand, options = [], positionals = [], gitDir, protocol } = invocation;
     return [
-      ...this.configArguments(protocol),
+      ...this.configArguments(protocol, authenticated),
       ...(gitDir ? [`--git-dir=${gitDir}`] : []),
       subcommand,
       ...options,
@@ -235,7 +269,19 @@ export class GitRunner {
     ];
   }
 
-  environment(protocol?: Protocol): Record<string, string> {
+  /**
+   * The token saved for a validated ls-remote or fetch of an HTTPS URL, or
+   * null. Git sends it alone: a rejected token fails the command, and no other
+   * credential is tried.
+   */
+  private savedToken({ subcommand, positionals = [], protocol }: Invocation): string | null {
+    if (!this.credentials || protocol !== "https" || !URL_COMMANDS.has(subcommand)) return null;
+    const token = this.credentials(positionals[0]!);
+    if (token !== null && !HEADER_VALUE.test(token)) throw rejected("The token saved for this server can't be sent in a header; delete it and save it again");
+    return token;
+  }
+
+  private environment(protocol: Protocol | undefined, token: string | null): Record<string, string> {
     const env: Record<string, string> = {
       PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
       HOME: this.home,
@@ -258,13 +304,17 @@ export class GitRunner {
       const value = process.env[key];
       if (value !== undefined) env[key] = value;
     }
+    // Command-scope configuration Git and git-remote-https read from their own environment; no -c entry sets http.extraHeader, so none overrides it.
+    if (token !== null) Object.assign(env, { GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "http.extraHeader", GIT_CONFIG_VALUE_0: `Authorization: Bearer ${token}` });
     return env;
   }
 
-  private configArguments(protocol?: Protocol): string[] {
+  private configArguments(protocol: Protocol | undefined, authenticated: boolean): string[] {
     const config = [...BASE_CONFIG];
     if (protocol) config.push(`protocol.${protocol}.allow=always`);
-    if (protocol === "https" && this.credentialHelper) config.push(`credential.helper=${this.credentialHelper}`);
+    // A command with a saved token keeps BASE_CONFIG's empty credential helper, so an unrelated helper can't mask a rejection, and treats a redirect as an error, so the token reaches only the URL's server.
+    if (authenticated) config.push("http.followRedirects=false");
+    else if (protocol === "https" && this.credentialHelper) config.push(`credential.helper=${this.credentialHelper}`);
     return config.flatMap((entry) => ["-c", entry]);
   }
 
@@ -286,7 +336,7 @@ export class GitRunner {
     if (url.protocol !== protocol || url.toString() !== value) throw rejected("the clone URL must be canonical and match the allowed protocol");
   }
 
-  private execute(subcommand: string, argv: string[], env: Record<string, string>, invocation: Invocation): Promise<GitResult> {
+  private execute(subcommand: string, argv: string[], env: Record<string, string>, invocation: Invocation, token: string | null): Promise<GitResult> {
     const outputLimit = invocation.outputLimit ?? DEFAULT_OUTPUT_LIMIT;
     fs.mkdirSync(this.home, { recursive: true });
 
@@ -348,7 +398,7 @@ export class GitRunner {
 
       child.on("close", (code, signal) => {
         finish(() => {
-          const safeStderr = redact(stderr);
+          const safeStderr = token === null ? redact(stderr) : redactKnown(stderr, [token]);
           if (failure) return reject(failure);
           if (code !== 0) {
             return reject(new GitError("command_failed", `git ${subcommand} failed (${code === null ? `signal ${signal}` : `exit ${code}`}): ${safeStderr.trim()}`, code, safeStderr));

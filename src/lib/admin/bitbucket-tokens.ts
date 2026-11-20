@@ -4,10 +4,12 @@ import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
 import { bitbucketTokens } from "@/lib/db/schema";
+import { CloneUrl, InvalidCloneUrl } from "@/lib/repositories/clone-url";
 
 /**
- * Bitbucket Server access tokens an operator saves under Admin. A saved
- * token never leaves this module: lists and pages get a summary with its
+ * Bitbucket Server access tokens an operator saves under Admin, one per
+ * server. A saved token leaves this module only through bitbucketTokenFor,
+ * for Git to send to its server; lists and pages get a summary with its
  * last four characters, so it can't be shown, logged, or sent back to a
  * browser by mistake.
  */
@@ -33,6 +35,13 @@ const NAME_LIMIT = 100;
 const TOKEN_MIN = 8;
 const TOKEN_LIMIT = 4_096;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+/**
+ * A path segment Git, a proxy, and Bitbucket all read as it's written: RFC
+ * 3986 path characters, without %-escapes, which a server decodes before it
+ * matches a context path, or the ";" that starts a path parameter, which a
+ * servlet container drops.
+ */
+const PLAIN_SEGMENT = /^[A-Za-z0-9._~!$&'()*+,=:@-]+$/;
 
 const summary = {
   publicId: bitbucketTokens.publicId,
@@ -122,6 +131,54 @@ export function supersededBitbucketTokens(db: Executor): BitbucketTokenSummary[]
     .where(exists(db.select({ id: newer.id }).from(newer).where(and(eq(newer.serverUrl, bitbucketTokens.serverUrl), supersedes))))
     .orderBy(asc(bitbucketTokens.serverUrl), asc(bitbucketTokens.id))
     .all();
+}
+
+/**
+ * The saved token Git sends to +gitUrl+, a canonical https:// clone URL as
+ * GitRunner hands it to Git, and nothing else about it: the token of the
+ * server whose origin, port included, is the URL's, and whose context path
+ * is the URL's path or contains it at a slash, the longest such path when
+ * several match. Null for any other URL: another transport, another origin,
+ * a path outside every context path, or a path, the URL's or a saved
+ * server's on its origin, whose encoding could make Bitbucket match it
+ * differently than it's compared here. Read at each call, so a save or a
+ * deletion applies to the next Git command.
+ */
+export function bitbucketTokenFor(db: Executor, gitUrl: string): string | null {
+  const remote = httpsRemote(gitUrl);
+  if (!remote) return null;
+  let selected: { id: number; path: string } | null = null;
+  for (const server of db.select({ id: bitbucketTokens.id, serverUrl: bitbucketTokens.serverUrl }).from(bitbucketTokens).all()) {
+    const base = new URL(server.serverUrl);
+    if (base.origin !== remote.origin) continue;
+    const path = base.pathname.replace(/\/+$/, "");
+    if (!isPlainPath(path)) return null;
+    if (remote.path !== path && !remote.path.startsWith(`${path}/`)) continue;
+    if (!selected || path.length > selected.path.length) selected = { id: server.id, path };
+  }
+  return selected && (tokenById(db, selected.id) ?? null);
+}
+
+function tokenById(db: Executor, id: number): string | undefined {
+  return db.select({ token: bitbucketTokens.token }).from(bitbucketTokens).where(eq(bitbucketTokens.id, id)).get()?.token;
+}
+
+/** The origin and decoded path of a canonical https:// clone URL whose path is plain, or null. */
+function httpsRemote(gitUrl: string): { origin: string; path: string } | null {
+  let url: CloneUrl;
+  try {
+    url = CloneUrl.parse(gitUrl);
+  } catch (error) {
+    if (error instanceof InvalidCloneUrl) return null;
+    throw error;
+  }
+  if (url.protocol !== "https" || url.toString() !== gitUrl || !isPlainPath(url.path)) return null;
+  return { origin: new URL(gitUrl).origin, path: url.path };
+}
+
+/** Whether +path+, empty or a slash before each segment, has only plain segments, so it reads the same encoded or decoded. */
+function isPlainPath(path: string): boolean {
+  return path === "" || path.slice(1).split("/").every((segment) => PLAIN_SEGMENT.test(segment) && segment !== "." && segment !== "..");
 }
 
 /** Removes a saved token for good, returning what it was so the page can say so. */

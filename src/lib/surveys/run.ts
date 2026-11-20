@@ -1,5 +1,5 @@
 import { withRepositoryLock } from "@/lib/acquisition/repository-lease";
-import { gitSource, normalizeAcquisitionError } from "@/lib/acquisition/acquire";
+import { credentialedRunner, gitSource, normalizeAcquisitionError } from "@/lib/acquisition/acquire";
 import { Mirror, surveyRefFor } from "@/lib/acquisition/mirror";
 import { continueWaitingTargets } from "@/lib/runs/waiting";
 import { continuePreparations } from "@/lib/previews/records";
@@ -25,6 +25,7 @@ import { type Survey, getSurvey, moveSurvey, pinSurvey, surveyById, updateCurren
 /*
  * The survey job (unify-surveys, design decisions 1 to 4): pin the survey's
  * commit in the Repository's mirror, fetching only when the mirror lacks it,
+ * with the Bitbucket token saved for its server (use-saved-git-tokens), then
  * run Surveyor on it with every current Reference Catalog entry, and store
  * the Profile. Finishing is one transaction: the Profile and its projection,
  * the survey's state and the Catalog part of its recipe, the Repository's
@@ -57,7 +58,8 @@ export async function runSurvey(db: Executor, publicId: string, options: RunSurv
   const repository = repositoryById(db, survey.repositoryId);
   let phase: "pin" | "analysis" = "pin";
   try {
-    survey = await pinSurveyCommit(db, survey, repository, { config, runner, boundary: options.boundary ?? new SourceBoundary(config), ...(options.signal && { signal: options.signal }) });
+    // Only the fetch reads the saved token; analysis reads the pinned commit with the plain runner.
+    survey = await pinSurveyCommit(db, survey, repository, { config, runner: credentialedRunner(db, config, runner), boundary: options.boundary ?? new SourceBoundary(config), ...(options.signal && { signal: options.signal }) });
     phase = "analysis";
     const supplied = suppliedEntries(db, config);
     const document = await surveyDocument({ survey, repository, config, runner, entries: supplied.entries, ...(options.signal && { signal: options.signal }) });

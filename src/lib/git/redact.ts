@@ -29,6 +29,17 @@ export function redact(text: string): string {
   return redacted.length > MAX_LENGTH ? `${redacted.slice(0, MAX_LENGTH)}…` : redacted;
 }
 
+/**
+ * +text+ with each of +secrets+ replaced by [REDACTED] wherever it appears,
+ * whatever its shape, then redacted as `redact` does: for the diagnostics of
+ * a command that was handed those secrets.
+ */
+export function redactKnown(text: string, secrets: readonly string[]): string {
+  let known = text;
+  for (const secret of secrets) if (secret) known = known.replaceAll(secret, "[REDACTED]");
+  return redact(known);
+}
+
 /** +text+ with everything that looks like a credential replaced by [REDACTED], at its full length, for a build log as it's written and as it's read. */
 export function redactSecrets(text: string): string {
   let redacted = text.toWellFormed();

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { resolveReference } from "@/lib/acquisition/acquire";
+import { credentialedRunner, resolveReference } from "@/lib/acquisition/acquire";
 import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
@@ -40,10 +40,11 @@ export interface SurveyRepositoryOptions {
   signal?: AbortSignal;
 }
 
-/** Resolves +repository+'s configured reference and requests its survey under the current recipe, at background priority. */
+/** Resolves +repository+'s configured reference, with the token saved for its server, and requests its survey under the current recipe, at background priority. */
 export async function surveyRepository(db: Executor, repository: Repository, trigger: BackgroundTrigger, options: SurveyRepositoryOptions = {}): Promise<BackgroundResult> {
   const config = options.config ?? getConfig();
-  const resolution = await resolveReference({ repositoryPublicId: repository.publicId, cloneUrl: repository.cloneUrl, gitRef: repository.gitRef }, { config, ...(options.runner && { runner: options.runner }), ...(options.signal && { signal: options.signal }) });
+  const runner = credentialedRunner(db, config, options.runner);
+  const resolution = await resolveReference({ repositoryPublicId: repository.publicId, cloneUrl: repository.cloneUrl, gitRef: repository.gitRef }, { config, runner, ...(options.signal && { signal: options.signal }) });
   const recipe = currentRecipe(config);
   return immediate(db, (tx) => {
     const { survey, queued } = requestSurvey(tx, {

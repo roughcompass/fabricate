@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { failureText, redact, redactSecrets } from "@/lib/git/redact";
+import { failureText, redact, redactKnown, redactSecrets } from "@/lib/git/redact";
 import { PLANTED } from "../support/credentials";
 
 /*
@@ -29,6 +29,14 @@ describe("redaction", () => {
     for (const text of ["Basic usage: run the build", "Bearer of good news", "tokens: 5, passwords: none", "error TS2304: Cannot find name 'password'.", "vite v5.4.21 building for production...", "https://registry.npmjs.org/react/-/react-18.3.1.tgz"]) {
       expect(redactSecrets(text)).toBe(text);
     }
+  });
+
+  it("removes a secret a command was handed wherever it appears, in any shape, and then what looks like a credential", () => {
+    const secret = "plain7Q2mZx9Kw4Vb8";
+    expect(redactSecrets(`rejected ${secret}`)).toBe(`rejected ${secret}`);
+    expect(redactKnown(`rejected ${secret}; again:${secret}! token=abc123`, [secret])).toBe("rejected [REDACTED]; again:[REDACTED]! token=[REDACTED]");
+    expect(redactKnown(`${"x".repeat(2_100)}${secret}`, [secret])).toHaveLength(2_001);
+    expect(redactKnown("nothing to remove", [""])).toBe("nothing to remove");
   });
 
   it("keeps a log's whole length, while a reason is cut to its limit", () => {

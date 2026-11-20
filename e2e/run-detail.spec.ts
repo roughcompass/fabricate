@@ -104,13 +104,13 @@ test("records a cancellation request for an active Assessment and keeps its scop
 });
 
 // page-patterns spec, content standard "Failures".
-test("Failed Run: the alert says to add a Bitbucket token in Admin, without repeating its title or showing the code", async ({ page, db }) => {
+test("Failed Run: the alert says to save a Bitbucket token in Admin, without repeating its title or showing the code", async ({ page, db }) => {
   const repositories = [buildRepository(db, { name: "orders" }), buildRepository(db, { name: "billing" })];
   const assessment = buildAssessment(db, { name: "Checkout platform migration", repositories });
   const run = driveRun(db, buildRun(db, { assessment, repositories }).run, "failed", { failedTargets: 2 });
   await page.goto(paths.run(run.publicId));
   const alert = page.locator("#page-alerts").getByText("No repository could be assessed").locator("xpath=ancestor::*[contains(@class, 'alert')][1]");
-  await expect(alert).toContainText("Add a Bitbucket token for its server in Admin");
+  await expect(alert).toContainText("In Admin, save a Bitbucket token for its server with read access, or delete and replace the one it refused");
   await expect(alert).not.toContainText("authentication_failed");
   expect((await alert.textContent())!.match(/No repository could be assessed/g)).toHaveLength(1);
   // Each repository's row leads with the same sentence; its code waits in the row's details.

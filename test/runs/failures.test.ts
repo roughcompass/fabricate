@@ -10,7 +10,7 @@ describe("failure sentences", () => {
   });
 
   it("tells a Run that Bitbucket refused to add a Bitbucket token in Admin (Failed Run)", () => {
-    expect(failureSentence("authentication_failed", "Could not read the repository")).toContain("Add a Bitbucket token for its server in Admin");
+    expect(failureSentence("authentication_failed", "Could not read the repository")).toContain("In Admin, save a Bitbucket token for its server with read access, or delete and replace the one it refused");
   });
 
   it("reads a survey that needs a newer Surveyor release as a mismatch, naming both releases and no public ID (Version that failed on a Surveyor release mismatch)", () => {

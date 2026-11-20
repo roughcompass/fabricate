@@ -1,3 +1,4 @@
+import { bitbucketTokenFor } from "@/lib/admin/bitbucket-tokens";
 import { type RunTarget, getTarget } from "@/lib/runs/run-records";
 import { transitionTarget } from "@/lib/runs/transitions";
 import { CloneUrl, InvalidCloneUrl } from "@/lib/repositories/clone-url";
@@ -19,6 +20,10 @@ import { Mirror, type Resolution } from "./mirror";
  * Local sources are re-checked against the source boundary each time,
  * because a path or symbolic link can change after registration. Every
  * failure is normalized to a stable code with a redacted message.
+ *
+ * Run targets, background requests, and the survey job read an HTTPS remote
+ * with the Bitbucket token saved for its server (use-saved-git-tokens),
+ * through a runner from credentialedRunner.
  */
 
 export interface ResolveOptions {
@@ -43,13 +48,24 @@ export async function resolveReference(source: { repositoryPublicId: string; clo
 export type ResolutionOutcome = { ok: true; resolution: Resolution } | { ok: false; error: AcquisitionError; target: RunTarget };
 
 /**
- * Resolves a Run target's reference. A failure is the target's own (design
- * decision 2): it moves only this target to failed, or canceled, with a stable
- * code and a redacted message, and creates no survey.
+ * +runner+, or a new one, that sends the Bitbucket token saved for an HTTPS
+ * remote's server with each ls-remote and fetch (use-saved-git-tokens,
+ * design decision 2). Git looks it up as it runs, so the job's input never
+ * holds it and a save or deletion applies to the next command.
+ */
+export function credentialedRunner(db: Executor, config: FrontendRegistryConfig, runner?: GitRunner): GitRunner {
+  return (runner ?? new GitRunner({ config })).withCredentials((url) => bitbucketTokenFor(db, url));
+}
+
+/**
+ * Resolves a Run target's reference, with the token saved for its server. A
+ * failure is the target's own (design decision 2): it moves only this target
+ * to failed, or canceled, with a stable code and a redacted message, and
+ * creates no survey.
  */
 export async function resolveTarget(db: Executor, target: RunTarget, options: ResolveOptions = {}): Promise<ResolutionOutcome> {
   try {
-    return { ok: true, resolution: await resolveReference(target, options) };
+    return { ok: true, resolution: await resolveReference(target, { ...options, runner: credentialedRunner(db, options.config ?? getConfig(), options.runner) }) };
   } catch (caught) {
     const error = normalizeAcquisitionError(caught);
     const current = getTarget(db, target.publicId);
@@ -72,6 +88,8 @@ export function gitSource(target: Pick<RunTarget, "cloneUrl">, boundary: SourceB
 const AUTHENTICATION = /authentication failed|permission denied \(publickey|could not read username|terminal prompts disabled|http\/\d(?:\.\d)? 40[13]|returned error: 40[13]|access denied|invalid credentials/i;
 const UNAVAILABLE = /could not resolve host|connection (?:refused|timed out|reset)|network is unreachable|no route to host|does not appear to be a git repository|repository not found|not found|unable to access|no such file or directory|could not read from remote repository|host key verification failed/i;
 const MISSING_REF = /not our ref|couldn't find remote ref|no such ref|unknown revision/i;
+/** A redirect Git didn't follow: a command with a saved token follows none (use-saved-git-tokens, design decision 3). */
+const REDIRECTED = /returned error: 30[12378]\b/i;
 const UNSUPPORTED = /object format|unsupported repository format|repository format version|unknown repository extension/i;
 
 export function normalizeAcquisitionError(error: unknown): AcquisitionError {
@@ -94,6 +112,7 @@ export function normalizeAcquisitionError(error: unknown): AcquisitionError {
       case "command_failed": {
         const detail = error.stderr || error.message;
         if (AUTHENTICATION.test(detail)) return new AcquisitionError("authentication_failed", `The source refused access: ${firstLine(detail)}`);
+        if (REDIRECTED.test(detail)) return new AcquisitionError("source_unavailable", `The source redirected Git, which doesn't follow a redirect with a saved Bitbucket token; register the repository's canonical clone URL: ${firstLine(detail)}`);
         if (MISSING_REF.test(detail)) return new AcquisitionError("invalid_ref", `The configured reference could not be fetched: ${firstLine(detail)}`);
         if (UNSUPPORTED.test(detail)) return new AcquisitionError("unsupported_repository", `The source repository format is not supported: ${firstLine(detail)}`);
         if (UNAVAILABLE.test(detail)) return new AcquisitionError("source_unavailable", `The source could not be reached: ${firstLine(detail)}`);

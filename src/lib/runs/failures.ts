@@ -14,7 +14,7 @@ import type { TargetFailureCode } from "./transitions";
 export type FailureKind = TargetFailureCode | "surveyor_mismatch";
 
 export const FAILURE_SENTENCES: Readonly<Record<FailureKind, string>> = {
-  authentication_failed: "The Git server refused the credentials it was given. Add a Bitbucket token for its server in Admin, then try again.",
+  authentication_failed: "The Git server refused the credentials it was given. In Admin, save a Bitbucket token for its server with read access, or delete and replace the one it refused, then try again.",
   source_unavailable: "The repository couldn't be reached. Check its clone URL in its Settings and that its server is up, then try again.",
   boundary_violation: "Its clone URL is outside the sources the Frontend Registry may read. Use a clone URL inside an allowed source root.",
   invalid_ref: "Its reference doesn't name a branch, tag, or commit. Correct the reference in its Settings.",

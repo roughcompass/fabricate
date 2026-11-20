@@ -3,5 +3,6 @@
   "entry": ["src/worker/main.ts", "scripts/*.{mjs,ts}", "src/components/toolbar/inspector/inspector.ts"],
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{mjs,ts}", "test/**/*.ts", "e2e/**/*.ts"],
   "ignoreExportsUsedInFile": true,
-  "ignoreUnresolved": ["worker=src/worker/main.ts"]
+  "ignoreUnresolved": ["worker=src/worker/main.ts"],
+  "ignoreBinaries": ["openssl"]
 }
