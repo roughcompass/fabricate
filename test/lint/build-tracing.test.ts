@@ -9,7 +9,9 @@ import { describe, expect, it } from "vitest";
  * file in the project that could match: "Dynamic filesystem access causes
  * tracing of the whole project". The add-applications walkthrough found one
  * in the screenshot lookup. Paths into the stored previews are runtime data,
- * so each such join says `turbopackIgnore`, as configuration.ts does.
+ * so each such join says `turbopackIgnore`, as configuration.ts does. The
+ * comment works only leading a call's argument: after `??` inside it, as
+ * configuration.ts once had it, Turbopack still traced the whole project.
  */
 
 const ROOTS = ["src/lib/previews", "src/lib/applications", "src/app"];
@@ -39,12 +41,26 @@ function sources(root: string): string[] {
   return fs.readdirSync(root, { recursive: true, encoding: "utf8" }).filter((file) => /\.tsx?$/.test(file)).map((file) => path.join(root, file));
 }
 
+/** Every `turbopackIgnore` comment in the web server's and worker's sources, with the text just before it. */
+function ignores(): { file: string; before: string }[] {
+  return sources("src").flatMap((file) => {
+    const source = fs.readFileSync(file, "utf8");
+    return [...source.matchAll(/\/\*turbopackIgnore: true\*\//g)].map((match) => ({ file, before: source.slice(Math.max(0, match.index - 40), match.index) }));
+  });
+}
+
 describe("build tracing", () => {
   it("recognizes the join the walkthrough found", () => {
     const before = 'const file = path.join(previewDirectory(config, id), ...screenshot.directory.split("/"), SCREENSHOT_FILES[size]);';
     expect(joins(before).filter(endsInFileName)).toHaveLength(1);
     expect(joins('path.join(root, "screenshot.webp")').filter(endsInFileName)).toHaveLength(1);
     expect(joins('path.join(root, ".trash")').filter(endsInFileName)).toHaveLength(0);
+  });
+
+  it("puts each ignore where Turbopack reads it, leading a call's argument, never inside an expression (configuration.ts's app root)", () => {
+    const found = ignores();
+    expect(found.length).toBeGreaterThan(10);
+    expect(found.filter(({ before }) => !/\(\s*$/.test(before)).map(({ file, before }) => `${file}: …${before.trim()}`)).toEqual([]);
   });
 
   it("leaves paths to stored files out of the web server's build", () => {

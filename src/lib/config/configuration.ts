@@ -206,7 +206,8 @@ export function currentEnvironment(env: Readonly<Record<string, string | undefin
 export function loadConfig(options: LoadOptions = {}): FrontendRegistryConfig {
   // Not traced: the image copies config/ and drizzle/ itself, and tracing from the
   // working directory would ship the whole project, tests included, in the server output.
-  const appRoot = path.resolve(options.appRoot ?? /*turbopackIgnore: true*/ process.cwd());
+  // The ignore leads the call's argument, where Turbopack reads it; inside the expression it has no effect.
+  const appRoot = path.resolve(/*turbopackIgnore: true*/ options.appRoot ?? process.cwd());
   const warn = options.warn ?? ((message: string) => console.warn(`[config] ${message}`));
   warnRetired(options.env ?? process.env, warn);
   const env = withLegacyNames(options.env ?? process.env, warn);
