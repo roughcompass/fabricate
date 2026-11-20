@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { desc, eq } from "drizzle-orm";
 import type { Db } from "../../src/lib/db/client";
-import { buildApplication, createApplication } from "../../src/lib/applications/pipeline";
+import { buildApplication, createApplication, prepareBranch } from "../../src/lib/applications/pipeline";
 import { type Application, getApplication } from "../../src/lib/applications/records";
 import { previewBuilds } from "../../src/lib/db/schema";
 import { requestPreparation } from "../../src/lib/previews/preparation";
@@ -154,17 +154,18 @@ function readyApplication(db: Db, slug: string): FixtureApplication {
 
 /**
  * Onboards the remote's main branch as the application Orders portal, as
- * onboarding does: prepares the branch's commit, which decides it can be
- * previewed, then creates the application from that preparation with the
- * operator's trust confirmed, which enrolls the remote and starts the first
- * build. Settles every job, so it returns the application Ready, with its
- * current build and its screenshot. Call `ordersPortalRemote` first.
+ * onboarding's pages do: checks the branch's commit (prepareBranch), which
+ * decides it can be previewed, then creates the application from that
+ * preparation with the operator's trust confirmed, which enrolls the remote
+ * and starts the first build. Settles every job, so it returns the
+ * application Ready, with its current build and its screenshot. Call
+ * `ordersPortalRemote` first.
  */
 export async function buildOrdersPortal(db: Db, options: { name?: string } = {}): Promise<FixtureApplication> {
   const config = serverConfig();
   const repository = ordersPortalRepository(db);
   linkKeptPackageCache();
-  const preparation = await requestPreparation(db, repository.publicId, { kind: "ref", name: "main" }, { config });
+  const preparation = await prepareBranch(db, repository.publicId, "main", { config });
   await settle(db);
   const created = createApplication(db, { repository: repository.publicId, branch: "main", packageDir: ".", preparation: preparation.publicId, name: options.name ?? ORDERS_PORTAL_NAME, description: "Accounts, orders, and settings for the orders team.", trusted: true }, config);
   await settle(db);
