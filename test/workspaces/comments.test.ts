@@ -91,6 +91,13 @@ describe("comment threads", () => {
     expect(() => createThread(db, resolveApplicationView(db, viewedApplicationIn(db), owner) as WritableView, author(), INPUT)).toThrow(/500 open comment threads/);
     setThreadStatus(db, ownView(), rows[0]!.publicId, "resolved");
     expect(() => createThread(db, ownView(), author(), INPUT)).not.toThrow();
+    // Reopening counts as starting one: with the workspace full again, the resolved thread stays resolved.
+    expect(() => setThreadStatus(db, ownView(), rows[0]!.publicId, "open")).toThrow("This workspace has 500 open comment threads, the most it can hold. Resolve some threads, or reset the workspace from Applications, to start another.");
+    expect(db.select({ status: commentThreads.status }).from(commentThreads).where(eq(commentThreads.publicId, rows[0]!.publicId)).get()).toEqual({ status: "resolved" });
+    // Resolving an open thread, or reopening one that's open, always works.
+    expect(() => setThreadStatus(db, ownView(), rows[1]!.publicId, "open")).not.toThrow();
+    setThreadStatus(db, ownView(), rows[1]!.publicId, "resolved");
+    expect(() => setThreadStatus(db, ownView(), rows[0]!.publicId, "open")).not.toThrow();
   });
 
   it("goes with its application", () => {

@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import { eq } from "drizzle-orm";
 import { generatePublicId } from "../src/lib/db/ids";
-import { applications, commentThreads } from "../src/lib/db/schema";
+import { applications, commentThreads, threadComments } from "../src/lib/db/schema";
 import { THREAD_LIMIT } from "../src/lib/workspaces/workspaces";
 import type { Page } from "@playwright/test";
 import { expectToolbarOnTop, openTool, startComment } from "./support/toolbar";
@@ -145,6 +145,31 @@ test("refuses a thread past the workspace's limit, saying how to make room (Thre
   await composer(page).getByRole("button", { name: "Post comment" }).click();
   await expect(composer(page)).toContainText("This workspace has 500 open comment threads, the most it can hold. Resolve some threads, or reset the workspace from Applications, to start another.");
   await expect(pin(page, 501)).toHaveCount(0);
+  await composer(page).getByRole("button", { name: "Cancel" }).click();
+
+  // Reopening a resolved thread is starting one again: refused at the limit, with the same message.
+  db.update(commentThreads).set({ status: "resolved", resolvedAt: now }).where(eq(commentThreads.route, "/settings")).run();
+  const applicationId = db.select({ id: applications.id }).from(applications).where(eq(applications.publicId, orders.publicId)).get()!.id;
+  const opened = db
+    .insert(commentThreads)
+    .values(Array.from({ length: THREAD_LIMIT - 1 }, () => ({ publicId: generatePublicId("thr"), applicationId, viewWorkspaceId: workspace.id, route: "/orders", commitSha: preview.commitSha, anchor: { path: "body", tag: "body", fingerprint: "" }, offsetX: 0.5, offsetY: 0.5, createdAt: now })))
+    .returning({ id: commentThreads.id })
+    .all();
+  // Every thread has its first comment, as one started in the toolbar does.
+  const commentless = db.select({ id: commentThreads.id }).from(commentThreads).all().filter((thread) => !db.select().from(threadComments).where(eq(threadComments.threadId, thread.id)).get());
+  db.insert(threadComments)
+    .values(commentless.map((thread) => ({ publicId: generatePublicId("cmt"), threadId: thread.id, authorWorkspaceId: workspace.id, authorName: "Sam Rivera", body: "Seeded", createdAt: now })))
+    .run();
+  expect(opened).toHaveLength(THREAD_LIMIT - 1);
+  await page.reload();
+  await waitForPage(page, "Accounts");
+  await openTool(page, "comments");
+  await expect(panel(page)).toContainText("500 open · 499 resolved");
+  await panel(page).getByRole("button", { name: "Resolved (499)" }).click();
+  const resolved = panel(page).locator("[data-thread]").first();
+  await resolved.getByRole("button", { name: "Reopen thread" }).click();
+  await expect(resolved.getByRole("alert")).toHaveText("This workspace has 500 open comment threads, the most it can hold. Resolve some threads, or reset the workspace from Applications, to start another.");
+  await expect(resolved.getByRole("button", { name: "Reopen thread" })).toBeVisible();
 });
 
 test("replies, resolves, and reopens a thread", async ({ page, db }) => {

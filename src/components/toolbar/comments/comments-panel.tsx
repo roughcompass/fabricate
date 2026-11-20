@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { formStyles } from "@/components/ui/form";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { CommentBody } from "@/components/toolbar/comments/comment-body";
 import styles from "@/components/toolbar/comments/comments.module.css";
@@ -27,6 +28,11 @@ export function CommentsPanel() {
   const target = useTargetDocument();
   const { setMode, closeTool } = useToolbar();
   const [show, setShow] = useState<"open" | "resolved">("open");
+  // Why the thread last reopened couldn't be, such as the workspace's open-thread limit.
+  const [refused, setRefused] = useState<{ id: string; message: string } | null>(null);
+
+  const reopen = (thread: PlacedThread) =>
+    void comments.setStatus(thread.id, "open").then((outcome) => setRefused(outcome.ok ? null : { id: thread.id, message: Object.values(outcome.errors).flat().join(" ") || "The thread could not be reopened. Try again." }));
   const numbered = comments.threads.map((thread, index) => ({ thread, number: index + 1 }));
   const listed = numbered.filter(({ thread }) => thread.status === show);
   const openCount = numbered.filter(({ thread }) => thread.status === "open").length;
@@ -97,7 +103,7 @@ export function CommentsPanel() {
                 <p className={styles.location}>{here || thread.status === "resolved" ? location : `Not visible in this view · ${location}`}</p>
                 <div className={styles.popoverActions}>
                   {thread.status === "resolved" ? (
-                    <Button size="sm" onClick={() => void comments.setStatus(thread.id, "open")}>
+                    <Button size="sm" onClick={() => reopen(thread)}>
                       Reopen thread
                     </Button>
                   ) : here ? (
@@ -110,6 +116,11 @@ export function CommentsPanel() {
                     </Button>
                   ) : null}
                 </div>
+                {refused?.id === thread.id && (
+                  <p className={formStyles.error} role="alert">
+                    {refused.message}
+                  </p>
+                )}
               </li>
             );
           })}

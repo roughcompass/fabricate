@@ -120,8 +120,7 @@ export function listThreads(db: Executor, view: ApplicationView): ThreadRecord[]
 export function createThread(db: Executor, view: WritableView, author: Author, input: ThreadInput, now = new Date()): string {
   const body = normalizeBody(input.body);
   return immediate(db, (tx) => {
-    const open = tx.select({ n: count() }).from(commentThreads).where(and(eq(commentThreads.viewWorkspaceId, view.viewWorkspaceId), eq(commentThreads.status, "open"))).get()!.n;
-    if (open >= THREAD_LIMIT) throw new WorkspaceLimitError(`This workspace has ${formatNumber(THREAD_LIMIT)} open comment threads, the most it can hold. Resolve some threads, or reset the workspace from Applications, to start another.`);
+    assertRoomForThread(tx, view.viewWorkspaceId);
     const thread = tx
       .insert(commentThreads)
       .values({
@@ -154,10 +153,20 @@ export function addComment(db: Executor, view: WritableView, threadId: string, a
   db.insert(threadComments).values({ publicId: generatePublicId("cmt"), threadId: thread.id, authorWorkspaceId: author.workspaceId, authorName: author.name, body, createdAt: now }).run();
 }
 
+/** Throws WorkspaceLimitError when the workspace +viewWorkspaceId+ already holds THREAD_LIMIT open threads, so no other can open. */
+function assertRoomForThread(db: Executor, viewWorkspaceId: number): void {
+  const open = db.select({ n: count() }).from(commentThreads).where(and(eq(commentThreads.viewWorkspaceId, viewWorkspaceId), eq(commentThreads.status, "open"))).get()!.n;
+  if (open >= THREAD_LIMIT) throw new WorkspaceLimitError(`This workspace has ${formatNumber(THREAD_LIMIT)} open comment threads, the most it can hold. Resolve some threads, or reset the workspace from Applications, to start another.`);
+}
+
+/** Resolves or reopens a thread; reopening one counts against THREAD_LIMIT, as starting one does. */
 export function setThreadStatus(db: Executor, view: WritableView, threadId: string, status: ThreadStatus, now = new Date()): void {
-  const thread = threadInView(db, view, threadId);
-  db.update(commentThreads)
-    .set({ status, resolvedAt: status === "resolved" ? now : null })
-    .where(eq(commentThreads.id, thread.id))
-    .run();
+  immediate(db, (tx) => {
+    const thread = threadInView(tx, view, threadId);
+    if (status === "open" && thread.status !== "open") assertRoomForThread(tx, view.viewWorkspaceId);
+    tx.update(commentThreads)
+      .set({ status, resolvedAt: status === "resolved" ? now : null })
+      .where(eq(commentThreads.id, thread.id))
+      .run();
+  });
 }
