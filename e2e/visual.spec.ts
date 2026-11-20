@@ -51,9 +51,16 @@ const settled = (page: Page) =>
     for (let frame = 0; frame < 3; frame++) await new Promise(requestAnimationFrame);
   });
 
-/** Loads every image now, the lazy ones below the fold too, which a full-page capture never scrolls to. */
-const loadImages = (page: Page) =>
-  page.evaluate(async () => {
+/**
+ * Loads every image now, the lazy ones below the fold too, which a full-page
+ * capture never scrolls to. It waits until React has hydrated every image
+ * first: the title can hydrate before a later part of the page, and an
+ * image's loading attribute changed before its part hydrates no longer
+ * matches the server's HTML.
+ */
+const loadImages = async (page: Page) => {
+  await page.waitForFunction(() => [...document.images].every((image) => Object.keys(image).some((key) => key.startsWith("__reactFiber$"))));
+  await page.evaluate(async () => {
     const images = [...document.images];
     for (const image of images) image.loading = "eager";
     const settled = (image: HTMLImageElement) =>
@@ -63,6 +70,7 @@ const loadImages = (page: Page) =>
       });
     await Promise.all(images.map((image) => (image.complete ? null : settled(image))));
   });
+};
 
 /** The tallest image the JPEG encoder takes, in pixels; a taller page is captured in parts of PART pixels. */
 const JPEG_MAX_HEIGHT = 65_535;

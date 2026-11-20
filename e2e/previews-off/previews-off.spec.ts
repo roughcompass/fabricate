@@ -5,12 +5,14 @@ import { onboard } from "../../test/support/applications";
 import { expect, test } from "../support/fixtures";
 import { paths } from "../support/paths";
 import { serverConfig } from "../support/results";
+import { seedOperatorSurfaces } from "../support/surfaces";
 
 // applications/onboarding spec, "Applications are available while previews
 // are", with previews off (npm run test:previews-off): the menu has no
 // Applications item, and applications' pages, running applications, share
 // links, and workspace endpoints answer not found. An application created
-// while previews were on is kept, and shows nowhere.
+// while previews were on is kept, and shows nowhere. Repositories,
+// Assessments, Standards, and every other operator page work as before.
 
 const primary = (page: Page) => page.getByRole("navigation", { name: "Primary" });
 
@@ -57,4 +59,15 @@ test("Previews off: a Repository offers no Create application, and the marketing
   const benefits = page.getByRole("region", { name: "Register once, and everyone who depends on your app gets an answer" });
   await expect(benefits.locator("dt")).toHaveText(["App owners", "Product managers", "Design-system teams", "Platform teams"]);
   await expect(page.getByText("Reviewers", { exact: true })).toHaveCount(0);
+});
+
+test("Previews off: Repositories, Assessments, Standards, and every other operator page work as before", async ({ page, db, sourcesDir }) => {
+  const surfaces = (await seedOperatorSurfaces(db, sourcesDir)).filter(([name]) => name !== "09-not-found");
+  expect(surfaces.map(([name]) => name)).toEqual(expect.arrayContaining(["03-repositories", "03-repository", "01-assessments", "02-assessment", "04-standards", "04-standard", "08-evaluation"]));
+  for (const [name, url] of surfaces) {
+    const response = await page.goto(url);
+    expect(response?.status(), name).toBe(200);
+    await expect(page.getByRole("heading", { level: 1 }).first(), name).toBeAttached();
+    await expect(primary(page).getByRole("link", { name: "Applications", exact: true }), name).toHaveCount(0);
+  }
 });
