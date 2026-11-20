@@ -3,7 +3,7 @@ import type { Repository } from "@/lib/repositories/repository-records";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { buildRepository } from "../support/builders";
-import { onboard } from "../support/applications";
+import { decidedPreparation, onboard } from "../support/applications";
 import { createTestDb, migrateUpTo } from "../support/db";
 import { migrationFolderAt } from "../support/migrations";
 import { queuedPreview } from "../support/previews";
@@ -36,10 +36,10 @@ describe("enrollments and build history migration", () => {
   });
 
   it("keeps an application's history of its own builds, and deletes it with the application", () => {
-    const created = onboard(db, withOverrides(getConfig(), { previews: { enabled: true } }), repository);
+    const created = onboard(db, withOverrides(getConfig(), { previews: { enabled: true } }), repository, { preparation: decidedPreparation(db, repository, undefined, undefined, undefined, { hooks: false }) });
     expect(count("application_builds")).toBe(1);
     expect(count("preview_enrollments")).toBe(1);
-    const other = queuedPreview(db, buildRepository(db, { name: "spa-admin" }));
+    const other = queuedPreview(db, buildRepository(db, { name: "spa-admin" }), "standalone", { hooks: false });
     const otherId = (db.$client.prepare("select id from preview_builds where public_id = ?").get(other.publicId) as { id: number }).id;
     expect(() => run("update application_builds set preview_id = ?, attempt = 1", otherId)).toThrow(/a build is a preview of the application's Repository and package at its commit/);
     expect(() => run("update application_builds set outcome = 'ready'")).toThrow(/application_builds_finished/);

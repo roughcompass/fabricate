@@ -3,7 +3,7 @@ import path from "node:path";
 import { and, eq, sql } from "drizzle-orm";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
-import { jobs, previewScreenshots } from "@/lib/db/schema";
+import { JOB_PRIORITIES, jobs, previewScreenshots } from "@/lib/db/schema";
 import { failureText } from "@/lib/git/redact";
 import { enqueue } from "@/lib/jobs/queue";
 import type { PreviewBuild } from "./records";
@@ -36,12 +36,18 @@ export function findScreenshot(db: Executor, previewId: number): PreviewScreensh
  * Asks for a screenshot of +preview+'s published artifact, unless one of
  * that artifact is already captured or on its way. A screenshot of an
  * earlier artifact, or one that couldn't be captured, is taken again. The
- * job is queued in the caller's transaction.
+ * job is queued in the caller's transaction, at +priority+: normal for an
+ * application's current build, background for a saved preview's
+ * (restore-toolbar-tools-and-branch-previews, design decision 3). One on its
+ * way at a lower priority is raised.
  */
-export function requestScreenshot(db: Executor, preview: Pick<PreviewBuild, "id" | "publicId" | "artifact">): PreviewScreenshot | null {
+export function requestScreenshot(db: Executor, preview: Pick<PreviewBuild, "id" | "publicId" | "artifact">, priority: number = JOB_PRIORITIES.normal): PreviewScreenshot | null {
   if (preview.artifact === null) return null;
   const existing = findScreenshot(db, preview.id);
-  if (existing && existing.artifact === preview.artifact && existing.state !== "unavailable") return existing;
+  if (existing && existing.artifact === preview.artifact && existing.state !== "unavailable") {
+    if (existing.state === "pending") enqueue(db, { kind: CAPTURE_SCREENSHOT, payload: screenshotJob(preview.publicId, existing), idempotencyKey: screenshotJobKey(preview.publicId, existing), priority, raisePriority: true });
+    return existing;
+  }
   const now = new Date();
   // Each request is later than the last, so its job's idempotency key is new.
   const requestedAt = existing ? new Date(Math.max(now.getTime(), existing.requestedAt.getTime() + 1)) : now;
@@ -53,7 +59,7 @@ export function requestScreenshot(db: Executor, preview: Pick<PreviewBuild, "id"
         .values({ ...values, previewId: preview.id, createdAt: now })
         .returning()
         .get();
-  enqueue(db, { kind: CAPTURE_SCREENSHOT, payload: screenshotJob(preview.publicId, screenshot), idempotencyKey: screenshotJobKey(preview.publicId, screenshot) });
+  enqueue(db, { kind: CAPTURE_SCREENSHOT, payload: screenshotJob(preview.publicId, screenshot), idempotencyKey: screenshotJobKey(preview.publicId, screenshot), priority });
   return screenshot;
 }
 

@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { createApplication, prepareBranch } from "@/lib/applications/pipeline";
-import { REF_LIMITS, buildRef, packageCode, refChoices, refPreview, remoteRefs } from "@/lib/applications/preview-mode";
+import { createApplication, createSavedPreview, prepareBranch } from "@/lib/applications/pipeline";
+import { REF_LIMITS, buildRef, packageCode, refChoices, refPreview, remoteRefs, savedPreviewState } from "@/lib/applications/preview-mode";
+import { removeSavedPreview } from "@/lib/applications/saved-previews";
 import { cachedRemoteRefs, forgetRemoteRefs } from "@/lib/previews/ref-cache";
 import type { RemoteRef } from "@/lib/previews/refs";
 import { getApplication } from "@/lib/applications/records";
 import { type FrontendRegistryConfig, withOverrides } from "@/lib/config";
-import { failAttempt } from "@/lib/previews/records";
+import { eq } from "drizzle-orm";
+import { previewPreparations } from "@/lib/db/schema";
+import { failAttempt, findPreview, rebuildPreview } from "@/lib/previews/records";
 import { decide, refusedVerdict } from "../support/applications";
 import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
 import { publishFiles } from "../support/previews";
@@ -67,6 +70,42 @@ describe("preview mode", () => {
     publishFiles(world.db, config, rebuilt.preview, { "index.html": "<h1>New nav</h1>" });
     expect(refPreview(world.db, application, "refs/heads/feature/new-nav", listing)).toMatchObject({ kind: "ready" });
     expect(getApplication(world.db, "orders-portal")).toMatchObject({ trackedBranch: "main", latest: { commitSha: application.latest.commitSha } });
+  });
+
+  it("lists saved previews after the tracked branch, opens a saved ref by its key, and states a saved preview's builds (Saved previews listed first, A ref that has since been saved)", async () => {
+    const { repository, feature } = await ordersPortal();
+    const application = getApplication(world.db, "orders-portal");
+    const { saved } = await createSavedPreview(world.db, application.publicId, { ref: "refs/heads/feature/new-nav" }, { config });
+    const listing = await remoteRefs(application, world.db, config);
+    const choices = refChoices(application, listing, { saved: [saved] });
+    expect(choices.saved).toMatchObject([{ key: "feature-new-nav", label: "feature/new-nav" }]);
+    expect(choices.branches).toEqual([]);
+    expect(refPreview(world.db, application, "refs/heads/feature/new-nav", listing)).toEqual({ kind: "saved", key: "feature-new-nav" });
+
+    expect(savedPreviewState(world.db, application, "feature-new-nav")).toMatchObject({ saved: { status: "building" }, frame: { kind: "building" } });
+    decide(world.db, repository, world.db.select().from(previewPreparations).where(eq(previewPreparations.commitSha, feature)).get()!);
+    const building = savedPreviewState(world.db, application, "feature-new-nav")!;
+    failAttempt(world.db, building.saved.latest.build!.preview, { attempt: 1 }, "vite build exited with code 1");
+    expect(savedPreviewState(world.db, application, "feature-new-nav")).toMatchObject({ saved: { status: "build_failed" }, frame: { kind: "failed", status: "build_failed", reasons: [{ text: "vite build exited with code 1" }] } });
+    expect(savedPreviewState(world.db, application, "nowhere")).toBeNull();
+
+    // Once removed, the ref is an ordinary unsaved ref again.
+    removeSavedPreview(world.db, application.publicId, "feature-new-nav");
+    expect(refPreview(world.db, application, "refs/heads/feature/new-nav", listing)).toMatchObject({ kind: "failed" });
+  });
+
+  it("shows a saved preview's current build, with a later build stated (A saved preview's later build failed)", async () => {
+    const { repository } = await ordersPortal();
+    const application = getApplication(world.db, "orders-portal");
+    await createSavedPreview(world.db, application.publicId, { ref: "refs/heads/feature/new-nav" }, { config });
+    const pending = savedPreviewState(world.db, application, "feature-new-nav")!;
+    decide(world.db, repository, world.db.select().from(previewPreparations).where(eq(previewPreparations.commitSha, pending.saved.latest.commitSha)).get()!);
+    const published = publishFiles(world.db, config, findPreview(world.db, savedPreviewState(world.db, application, "feature-new-nav")!.saved.latest.build!.preview)!, { "index.html": "<h1>New nav</h1>" });
+    expect(savedPreviewState(world.db, application, "feature-new-nav")).toMatchObject({ frame: { kind: "ready", build: { preview: published.publicId }, later: null } });
+    rebuildPreview(world.db, published.publicId);
+    expect(savedPreviewState(world.db, application, "feature-new-nav")).toMatchObject({ saved: { status: "building" }, frame: { kind: "ready", build: { preview: published.publicId }, later: "building" } });
+    failAttempt(world.db, published.publicId, { attempt: 2 }, "vite build exited with code 1");
+    expect(savedPreviewState(world.db, application, "feature-new-nav")).toMatchObject({ saved: { status: "latest_build_failed" }, frame: { kind: "ready", later: "failed" } });
   });
 
   it("shows a refused ref's failed conditions", async () => {

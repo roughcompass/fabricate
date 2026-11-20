@@ -34,7 +34,8 @@ describe("saved previews and session presets migration", () => {
   /** Inserts an application of +owner+'s root package, a new Repository's by default, as onboarding leaves it, and returns its row id. */
   const application = (owner: Repository = buildRepository(db)) => {
     applications++;
-    const preparation = decidedPreparation(db, owner, [qualifyingVerdict(".")]);
+    // Before the migration the applications' hooks would read tables that don't exist yet.
+    const preparation = decidedPreparation(db, owner, [qualifyingVerdict(".")], undefined, undefined, { hooks: false });
     run(
       `insert into applications (public_id, slug, name, name_key, repository_source_id, package_dir, tracked_ref, latest_preparation_id, latest_commit_sha, latest_requested_at, created_at, updated_at)
        values (?, ?, ?, ?, ?, '.', 'refs/heads/main', ?, ?, ?, ?, ?)`,
