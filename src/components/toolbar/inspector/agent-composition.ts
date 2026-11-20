@@ -70,6 +70,12 @@ function regions(): string[] {
   return [...document.querySelectorAll(`[id^='${SINGLE_SPA_PREFIX}']`)].map((element) => element.id.slice(SINGLE_SPA_PREFIX.length));
 }
 
+/** The address a failed import() names in its error, as Chrome and Firefox word it, or null for any other reason. */
+export function dynamicImportFailure(reason: unknown): string | null {
+  const message = reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "";
+  return /dynamically imported module:?\s+(\S+)/i.exec(message)?.[1] ?? null;
+}
+
 export function reportComposition(post: Post): void {
   const requests: InspectedRequest[] = [];
   const failed = new Set<string>();
@@ -97,6 +103,14 @@ export function reportComposition(post: Post): void {
       changed();
     }).observe({ type: "resource", buffered: true });
   }
+  // A remote entry loaded with import() has no element, and its failed request looks like a script tag's
+  // successful one (status 0), so the import's own rejection says it failed, when the page leaves it unhandled.
+  window.addEventListener("unhandledrejection", (event) => {
+    const address = dynamicImportFailure(event.reason);
+    if (address === null) return;
+    failed.add(address);
+    changed();
+  });
   // A script or stylesheet that fails to load says so on its element; the event doesn't bubble, but the window sees it first.
   window.addEventListener(
     "error",
