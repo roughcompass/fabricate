@@ -10,7 +10,8 @@ import { useTargetDocument } from "../target-document";
 import { ToolPanel } from "../tool-panel";
 import { useToolbar } from "../toolbar-context";
 import { describeAnchor, findAnchored } from "./element-anchor";
-import { useComments } from "./comments-state";
+import { routes } from "@/lib/web/routes";
+import { onThisPreview, useComments } from "./comments-state";
 import type { PlacedThread } from "./thread-store";
 
 /** A commit as the interface shows it. */
@@ -21,7 +22,10 @@ const short = (commit: string) => commit.slice(0, 12);
  * excerpt, and location, which is the route and the commit each was placed
  * on. A thread whose element isn't in the current view is listed as not
  * visible in this view; when it belongs to another route, Go to comment opens
- * that route, where its pin shows if the element is there.
+ * that route, where its pin shows if the element is there. A thread placed on
+ * another preview, the tracked branch or a saved preview, names its branch or
+ * tag, and Go to comment opens that preview at the thread's route; a thread
+ * whose saved preview was removed says so.
  */
 export function CommentsPanel() {
   const comments = useComments();
@@ -38,7 +42,15 @@ export function CommentsPanel() {
   const openCount = numbered.filter(({ thread }) => thread.status === "open").length;
   const resolvedCount = comments.threads.length - openCount;
 
-  const elementOf = (thread: PlacedThread) => (thread.route === target.route && target.document ? findAnchored(target.document, thread.anchor) : null);
+  const { scope } = comments;
+  const elementOf = (thread: PlacedThread) => (onThisPreview(thread, scope) && thread.route === target.route && target.document ? findAnchored(target.document, thread.anchor) : null);
+  /** Where a thread on another preview was placed, as the list names it; null for one on the preview shown. */
+  const elsewhere = (thread: PlacedThread) => {
+    if (onThisPreview(thread, scope)) return null;
+    if (!thread.preview) return `On ${scope.tracked}`;
+    const label = thread.preview.ref.replace(/^refs\/(heads|tags)\//, "");
+    return thread.preview.key === null ? `On ${label}, a saved preview since removed` : `On ${label}`;
+  };
 
   const reveal = (thread: PlacedThread) => {
     closeTool();
@@ -50,6 +62,11 @@ export function CommentsPanel() {
 
   const goTo = (thread: PlacedThread) => {
     closeTool();
+    // Another preview runs at its own address: the tracked branch's, or the saved preview's.
+    if (!onThisPreview(thread, scope)) {
+      window.location.assign(routes.runningApplication(scope.slug, thread.route, { share: scope.share }, thread.preview?.key ?? null));
+      return;
+    }
     comments.setOpenThread(thread.id);
     target.navigate(thread.route);
   };
@@ -89,7 +106,9 @@ export function CommentsPanel() {
           {listed.map(({ thread, number }) => {
             const first = thread.comments[0]!;
             const here = elementOf(thread) !== null;
-            const location = `${thread.route} · ${describeAnchor(thread.anchor)} · Commit ${short(thread.commit)}`;
+            const placed = elsewhere(thread);
+            const removed = thread.preview !== null && thread.preview.key === null;
+            const location = `${placed ? `${placed} · ` : ""}${thread.route} · ${describeAnchor(thread.anchor)} · Commit ${short(thread.commit)}`;
             return (
               <li key={thread.id} className={styles.threadItem} data-thread={thread.id} data-visible={here || undefined}>
                 <p className={styles.commentMeta}>
@@ -110,7 +129,7 @@ export function CommentsPanel() {
                     <Button size="sm" onClick={() => reveal(thread)}>
                       Show comment
                     </Button>
-                  ) : thread.route !== target.route ? (
+                  ) : !removed && (placed || thread.route !== target.route) ? (
                     <Button size="sm" onClick={() => goTo(thread)}>
                       Go to comment
                     </Button>

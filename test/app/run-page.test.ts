@@ -138,4 +138,37 @@ describe("the running application page", () => {
     // The tracked branch's own address is unchanged.
     expect((await render(created.slug)).props).toMatchObject({ preview: null, context: { branch: "main" } });
   });
+
+  it("opens a share link of a saved preview: the captured build, else the preview's current build, else the application's once the preview was removed (Shared saved preview moved on, Shared saved preview removed)", async () => {
+    const created = onboard(app.db, config, repository);
+    const current = published({ id: created.latestPreviewId! });
+    const orders = viewedApplication(app.db, created.slug)!;
+    const sharer = ensureWorkspace(app.db, visitorKey());
+    const applicationId = getApplicationRow(app.db, created.publicId).id;
+    // feature/new-nav's current build, and an earlier build of it that a link captured.
+    const earlier = published(queuedPreview(app.db, repository));
+    const feature = published(queuedPreview(app.db, repository));
+    rawRun(
+      app.db,
+      "insert into application_previews (public_id, application_id, key, ref, current_preview_id, latest_preview_id, latest_preparation_id, latest_commit_sha, latest_outcome, latest_requested_at, created_at, updated_at) values ('apv_0000000000000001', ?, 'feature-new-nav', 'refs/heads/feature/new-nav', ?, ?, ?, ?, 'ready', 0, 0, 0)",
+      applicationId,
+      feature.id,
+      feature.id,
+      feature.preparationId,
+      feature.commitSha,
+    );
+    const preview = { id: (app.db.$client.prepare("select id from application_previews").get() as { id: number }).id, ref: "refs/heads/feature/new-nav" };
+    const link = (commit: string) => createShare(app.db, orders.id, sharer.id, { commit, route: "/accounts" }, undefined, { preview });
+
+    const atEarlier = link(earlier.commitSha);
+    expect((await render(`${created.slug}@feature-new-nav`, ["accounts"], { share: atEarlier })).props).toMatchObject({ preview: "feature-new-nav", base: `/previews/${earlier.publicId}/`, notice: null, context: { branch: "feature/new-nav" } });
+
+    const gone = nextCommit();
+    const atGone = link(gone);
+    expect((await render(`${created.slug}@feature-new-nav`, [], { share: atGone })).props).toMatchObject({ preview: "feature-new-nav", base: `/previews/${feature.publicId}/`, notice: `The shared commit ${gone.slice(0, 12)} is no longer available, so this is feature/new-nav's current build.` });
+
+    app.db.$client.prepare("delete from application_previews").run();
+    // The link now opens the application's own address, which says the preview was removed.
+    expect((await render(created.slug, [], { share: atEarlier })).props).toMatchObject({ preview: null, base: `/previews/${current.publicId}/`, notice: "The shared preview of feature/new-nav was removed, so this is the application's current build.", context: { branch: "main" } });
+  });
 });

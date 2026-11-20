@@ -11,7 +11,7 @@ import type { SessionStart } from "./session/session-state";
 import { workspaceThreadStore } from "./comments/thread-store";
 import { TargetFrame, useTargetDocument } from "./target-document";
 import type { MenuContext } from "./toolbar-menu";
-import { viewKey } from "./view-context";
+import { type SharedStart, viewKey } from "./view-context";
 import styles from "./running-application.module.css";
 
 /**
@@ -26,20 +26,20 @@ import styles from "./running-application.module.css";
  * such as that the shared commit's build is gone, shows above the
  * application until it's dismissed. +hints+ is the workspace's guided-hint
  * state. +preview+ is the key of the saved preview shown, which the address
- * keeps as `/run/<slug>@<key>`, or null for the tracked branch.
- * +composition+ is what the Profile of the build's commit says it's
- * composed of, and +session+ the application's session presets with the one
- * the visitor starts it with.
+ * keeps as `/run/<slug>@<key>`, or null for the tracked branch, which
+ * +trackedBranch+ names. +composition+ is what the Profile of the build's
+ * commit says it's composed of, and +session+ the application's session
+ * presets with the one the visitor starts it with.
  */
-export function RunningApplication(props: { slug: string; preview: string | null; src: string; base: string; commit: string; title: string; context: MenuContext; share: string | null; notice: string | null; hints: HintState; composition: BuildComposition; session: SessionStart }) {
-  const { slug, preview, src, base, commit, title, context, share, notice, hints, composition, session } = props;
+export function RunningApplication(props: { slug: string; preview: string | null; trackedBranch: string; src: string; base: string; commit: string; title: string; context: MenuContext; share: string | null; notice: string | null; hints: HintState; composition: BuildComposition; session: SessionStart; shared: SharedStart | null }) {
+  const { slug, preview, trackedBranch, src, base, commit, title, context, share, notice, hints, composition, session, shared } = props;
   const [store] = useState(() => workspaceThreadStore(slug, share, preview));
-  const [view] = useState(() => ({ slug, name: context.name, preview, key: viewKey(slug, preview), composition }));
+  const [view] = useState(() => ({ slug, name: context.name, preview, key: viewKey(slug, preview), composition, shared }));
   return (
     <TargetFrame src={src} base={base} commit={commit} title={title} className={styles.frame}>
       <FollowRoute slug={slug} preview={preview} />
       {notice && <Notice text={notice} />}
-      <ApplicationToolbar slug={slug} preview={preview} share={share} context={context} store={store} hints={hints} view={view} session={session} />
+      <ApplicationToolbar slug={slug} preview={preview} trackedBranch={trackedBranch} share={share} context={context} store={store} hints={hints} view={view} session={session} />
     </TargetFrame>
   );
 }

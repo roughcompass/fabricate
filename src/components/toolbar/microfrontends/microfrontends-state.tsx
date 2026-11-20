@@ -71,7 +71,12 @@ export function MicrofrontendsProvider({ children }: { children: React.ReactNode
   const [profiled, setProfiled] = useState<ProfiledMicrofrontend[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [runtime, setRuntime] = useState<{ page: string | null; composition: InspectedComposition | null }>({ page: target.page, composition: null });
-  const [applied, setApplied] = useState<AppliedRouting & { kept?: readonly string[] }>(() => (typeof window === "undefined" ? { scope, routes: [] } : readRouting(view.key, scope)));
+  const [applied, setApplied] = useState<AppliedRouting & { kept?: readonly string[] }>(() => {
+    if (typeof window === "undefined") return { scope, routes: [] };
+    // A share link's routing applies to the view it opened, without replacing what this browser keeps for its own.
+    if (view.shared?.routing.length) return { scope, routes: view.shared.routing.map((route) => ({ ...route, to: new URL(route.to, window.location.origin).href })) };
+    return readRouting(view.key, scope);
+  });
   const [pending, setPending] = useState<ReadonlyMap<string, Candidate | null>>(new Map());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);

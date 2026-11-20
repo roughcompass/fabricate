@@ -28,7 +28,8 @@ describe("share links", () => {
     const orders = viewedApplicationIn(db);
     const token = createShare(db, orders.id, workspace, { commit: commitOf("a"), route: "/accounts/42" });
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(findShare(db, token)).toEqual({ applicationId: orders.id, viewWorkspaceId: workspace, commit: commitOf("a"), route: "/accounts/42" });
+    // The tracked branch's view: no saved preview, and nothing else to apply.
+    expect(findShare(db, token)).toEqual({ applicationId: orders.id, viewWorkspaceId: workspace, commit: commitOf("a"), route: "/accounts/42", preview: null, view: {} });
     const row = db.select().from(shareLinks).get()!;
     expect(row.tokenDigest).toBe(keyDigest(token));
     expect(JSON.stringify(row)).not.toContain(token);

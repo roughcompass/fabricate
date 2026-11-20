@@ -6,7 +6,7 @@ import { newWorkspaceKey } from "@/lib/workspaces/workspace-key";
 import { ensureWorkspace, resetWorkspace } from "@/lib/workspaces/workspaces";
 import { deleteApplication } from "@/lib/applications/records";
 import { createTestDb } from "../support/db";
-import { commitOf, viewedApplicationIn } from "../support/views";
+import { commitOf, savedPreviewIn, viewedApplicationIn } from "../support/views";
 
 /*
  * Opening a share link (template-demo/toolbar spec, "Shared links open the
@@ -39,6 +39,15 @@ describe("share link route", () => {
     const response = await open(token);
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(`/run/${orders.slug}/accounts/42?share=${token}`);
+  });
+
+  it("opens a saved preview's link at its own running address, and the application's once the preview was removed", async () => {
+    const orders = viewedApplicationIn(db, "Orders portal");
+    const feature = savedPreviewIn(db, orders);
+    const token = createShare(db, orders.id, ensureWorkspace(db, newWorkspaceKey()).id, { commit: commitOf("a"), route: "/accounts/42" }, undefined, { preview: feature });
+    expect((await open(token)).headers.get("location")).toBe(`/run/${orders.slug}@feature-new-nav/accounts/42?share=${token}`);
+    db.$client.prepare("delete from application_previews").run();
+    expect((await open(token)).headers.get("location")).toBe(`/run/${orders.slug}/accounts/42?share=${token}`);
   });
 
   it("sends an unknown token, a reset workspace's link, and a deleted application's link to the not-found page", async () => {

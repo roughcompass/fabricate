@@ -30,16 +30,21 @@ export interface PresetDraft {
 
 export type Errors = Record<string, string[]>;
 
-/** What the server knows of a view's session when the page opens: the presets, and the visitor's choice. */
+/** What the server knows of a view's session when the page opens: the presets, the visitor's choice, and a share link's preset, which this view starts with instead. */
 export interface SessionStart {
   readonly presets: readonly Preset[];
   readonly chosen: string | null;
+  readonly shared: Preset | null;
 }
 
 interface SessionState {
   readonly presets: readonly Preset[];
   /** The preset the visitor's workspace starts the application with, by its public ID. */
   readonly chosen: string | null;
+  /** The preset a share link started this view with, instead of the visitor's choice, which it leaves as it is. */
+  readonly shared: Preset | null;
+  /** The preset this view starts with now: the share link's, or the visitor's choice. */
+  readonly applied: Preset | null;
   /** Chooses what the application starts with, and reloads the frame with it. */
   choose(publicId: string | null): Promise<string | null>;
   /** Creates a preset, or saves +editing+; returns what's wrong, and the preset as it stands when someone else changed it first. */
@@ -85,8 +90,10 @@ export function SessionProvider({ start, children }: { start: SessionStart; chil
   const view = useToolbarView();
   const [presets, setPresets] = useState(start.presets);
   const [chosen, setChosen] = useState(start.chosen);
+  // A share link's preset applies to the view it opened until the visitor chooses one themselves.
+  const [shared, setShared] = useState(start.shared);
   // What the next load applies, set before a reload asks for it.
-  const applying = useRef<Preset | null>(start.presets.find((preset) => preset.publicId === start.chosen) ?? null);
+  const applying = useRef<Preset | null>(start.shared ?? start.presets.find((preset) => preset.publicId === start.chosen) ?? null);
   const endpoint = (query = "") => `/api/applications/${encodeURIComponent(view.slug)}/presets${query}`;
 
   usePreload((address) => {
@@ -106,6 +113,7 @@ export function SessionProvider({ start, children }: { start: SessionStart; chil
 
   /** Applies +publicId+'s preset, or none, from the next load on, and reloads the frame. */
   const reloadWith = (publicId: string | null, list: readonly Preset[]) => {
+    setShared(null);
     applying.current = list.find((preset) => preset.publicId === publicId) ?? null;
     target.reload();
   };
@@ -119,6 +127,8 @@ export function SessionProvider({ start, children }: { start: SessionStart; chil
   const state: SessionState = {
     presets,
     chosen,
+    shared,
+    applied: shared ?? presets.find((preset) => preset.publicId === chosen) ?? null,
     async choose(publicId) {
       try {
         const { response, data } = await send("PUT", "", { preset: publicId });

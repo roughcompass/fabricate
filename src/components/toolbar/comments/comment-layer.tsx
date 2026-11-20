@@ -14,7 +14,7 @@ import { markToolbarEvent } from "../inspector/protocol";
 import { useTargetDocument, useTargetRects } from "../target-document";
 import { useToolbar } from "../toolbar-context";
 import { type ElementAnchor, anchorFor, commentTarget, describeAnchor, findAnchored } from "./element-anchor";
-import { useComments } from "./comments-state";
+import { onThisPreview, useComments } from "./comments-state";
 import type { FieldErrors, PlacedThread } from "./thread-store";
 
 /** Matches --space-3: the gap between a point and the popover beside it. */
@@ -55,8 +55,8 @@ interface Draft {
 /**
  * Comments on the running application's own page: comment mode (outline the
  * element under the pointer or focus in the frame, choose one to comment on
- * it), the composer, a numbered pin for each open thread whose element is in
- * this view, and the open thread. Pins and outlines are drawn over the frame,
+ * it), the composer, a numbered pin for each open thread placed on the
+ * preview shown whose element is in this view, and the open thread. Pins and outlines are drawn over the frame,
  * at the frame's elements' positions.
  */
 export function CommentLayer() {
@@ -68,9 +68,9 @@ export function CommentLayer() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const { document } = target;
 
-  // Open threads placed on this route, numbered by age across every route.
+  // Open threads placed on this route of the preview shown, numbered by age across every route and preview.
   const numbered = comments.threads.map((thread, index) => ({ thread, number: index + 1 }));
-  const shown = numbered.filter(({ thread }) => thread.status === "open" && thread.route === target.route);
+  const shown = numbered.filter(({ thread }) => thread.status === "open" && thread.route === target.route && onThisPreview(thread, comments.scope));
   const rects = useTargetRects(
     (frameDocument) => {
       const elements = new Map<string, Element>();

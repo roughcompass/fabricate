@@ -139,7 +139,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const target = useTargetDocument();
   const view = useToolbarView();
   const salt = view.composition.saltProvider;
-  const [theme, setTheme] = useStoredTheme(view.key);
+  const [stored, store] = useStoredTheme(view.key);
+  // A share link's theme applies to the view it opened, until the visitor chooses one, which this browser keeps.
+  const [shared, setShared] = useState<ThemeChoice | null>(view.shared?.theme ?? null);
+  const theme = shared ?? stored;
+  const setTheme = (choice: ThemeChoice) => {
+    setShared(null);
+    store(choice);
+  };
   useThemeSwitch(target.document, salt, theme);
   const [bus, clearBus] = useBus();
 

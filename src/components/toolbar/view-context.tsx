@@ -2,6 +2,14 @@
 
 import { createContext, use } from "react";
 import type { BuildComposition } from "@/lib/applications/composition";
+import type { SharedRoute } from "@/lib/workspaces/shared-view";
+import type { ThemeChoice } from "./settings/theme";
+
+/** What the share link that opened the view applies to it: the sharer's theme and routing. */
+export interface SharedStart {
+  readonly theme: ThemeChoice | null;
+  readonly routing: readonly SharedRoute[];
+}
 
 /**
  * The view a running application's toolbar is over: the application, the
@@ -17,6 +25,8 @@ export interface ToolbarView {
   /** The view's key among those the browser keeps: `<slug>`, or `<slug>@<key>` for a saved preview. */
   readonly key: string;
   readonly composition: BuildComposition;
+  /** What the share link that opened this view applies to it, or null for the visitor's own view. */
+  readonly shared: SharedStart | null;
 }
 
 export const ToolbarViewContext = createContext<ToolbarView | null>(null);

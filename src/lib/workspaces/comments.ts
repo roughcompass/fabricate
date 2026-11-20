@@ -4,7 +4,7 @@ import { formatNumber } from "@/components/ui/count";
 import { type Executor, immediate } from "@/lib/db/client";
 import { ValidationError } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
-import { type ThreadStatus, threadComments, commentThreads } from "@/lib/db/schema";
+import { type ThreadStatus, applicationPreviews, threadComments, commentThreads } from "@/lib/db/schema";
 import type { ApplicationView } from "./access";
 import { commitSchema, routeSchema } from "./shares";
 import { COMMENT_LIMIT, WorkspaceLimitError, THREAD_LIMIT, normalizeDisplayName } from "./workspaces";
@@ -16,9 +16,11 @@ import { COMMENT_LIMIT, WorkspaceLimitError, THREAD_LIMIT, normalizeDisplayName 
  * view: an application as seen from one workspace, so a visitor never reads
  * or changes another view's threads. A thread records the route and the
  * commit of the build it was placed on, and the element by its anchor: a CSS
- * path, its tag, and a fingerprint of its text. Bodies are stored as
- * written, Markdown markers included; comment-format.ts styles them only for
- * display.
+ * path, its tag, and a fingerprint of its text. It also records the saved
+ * preview it was placed on, with that preview's ref, or none for the tracked
+ * branch (restore-toolbar-tools-and-branch-previews, design decision 5), so
+ * the toolbar pins it only on that preview. Bodies are stored as written,
+ * Markdown markers included; comment-format.ts styles them only for display.
  */
 
 interface CommentRecord {
@@ -36,11 +38,22 @@ export const anchorSchema = z.strictObject({
 
 export type Anchor = z.infer<typeof anchorSchema>;
 
+/**
+ * The saved preview a thread was placed on: its key while it's saved, null once it was removed, and its ref,
+ * qualified, as it was. A thread on the tracked branch has none.
+ */
+export interface ThreadPreview {
+  readonly key: string | null;
+  readonly ref: string;
+}
+
 /** A thread as the toolbar shows it (src/components/toolbar/comments/thread-store.ts). */
 export interface ThreadRecord {
   readonly id: string;
   readonly route: string;
   readonly commit: string;
+  /** The saved preview it was placed on, or null for the tracked branch. */
+  readonly preview: ThreadPreview | null;
   readonly anchor: Anchor;
   readonly offsetX: number;
   readonly offsetY: number;
@@ -89,8 +102,16 @@ function viewCondition(view: WritableView) {
 /** Every thread in a view, oldest first, with its comments. */
 export function listThreads(db: Executor, view: ApplicationView): ThreadRecord[] {
   if (view.viewWorkspaceId === null) return [];
-  const threads = db.select().from(commentThreads).where(viewCondition(view as WritableView)).orderBy(asc(commentThreads.createdAt), asc(commentThreads.id)).all();
-  if (!threads.length) return [];
+  const rows = db
+    .select({ thread: commentThreads, key: applicationPreviews.key })
+    .from(commentThreads)
+    .leftJoin(applicationPreviews, eq(applicationPreviews.id, commentThreads.applicationPreviewId))
+    .where(viewCondition(view as WritableView))
+    .orderBy(asc(commentThreads.createdAt), asc(commentThreads.id))
+    .all();
+  if (!rows.length) return [];
+  const threads = rows.map((row) => row.thread);
+  const keys = new Map(rows.map((row) => [row.thread.id, row.key]));
   const comments = db
     .select()
     .from(threadComments)
@@ -101,6 +122,7 @@ export function listThreads(db: Executor, view: ApplicationView): ThreadRecord[]
     id: thread.publicId,
     route: thread.route,
     commit: thread.commitSha,
+    preview: thread.previewRef ? { key: keys.get(thread.id) ?? null, ref: thread.previewRef } : null,
     anchor: thread.anchor as Anchor,
     offsetX: thread.offsetX,
     offsetY: thread.offsetY,
@@ -129,6 +151,8 @@ export function createThread(db: Executor, view: WritableView, author: Author, i
         viewWorkspaceId: view.viewWorkspaceId,
         route: input.route,
         commitSha: input.commit,
+        applicationPreviewId: view.preview?.id ?? null,
+        previewRef: view.preview?.ref ?? null,
         anchor: input.anchor,
         offsetX: input.offsetX,
         offsetY: input.offsetY,
