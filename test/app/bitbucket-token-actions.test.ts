@@ -27,6 +27,16 @@ describe("Bitbucket token Server Actions", () => {
     expect(listBitbucketTokens(app.db)).toEqual([]);
   });
 
+  it("refuses another owner's token for a server that has one, on the server field, keeping the saved token", async () => {
+    await redirectOf(addToken(blank, formData({ name: "Platform team", serverUrl: "https://bitbucket.example.com/bitbucket", token: TOKEN })));
+    const state = await addToken(blank, formData({ name: "Web team", serverUrl: "https://BITBUCKET.example.com:443/bitbucket/", token: "BBDC-another-token-0000" }));
+
+    expect(state.values).toEqual({ name: "Web team", serverUrl: "https://BITBUCKET.example.com:443/bitbucket/" });
+    expect(state.errors).toEqual({ serverUrl: ["This server already has a token, saved for Platform team; delete it to save a new one"] });
+    expect(JSON.stringify(state)).not.toContain("BBDC-another-token-0000");
+    expect(listBitbucketTokens(app.db)).toEqual([expect.objectContaining({ name: "Platform team", tokenHint: TOKEN.slice(-4) })]);
+  });
+
   it("deletes a token and names it in the notice", async () => {
     await redirectOf(addToken(blank, formData({ name: "Platform team", serverUrl: "https://bitbucket.example.com/", token: TOKEN })));
     const [saved] = listBitbucketTokens(app.db);

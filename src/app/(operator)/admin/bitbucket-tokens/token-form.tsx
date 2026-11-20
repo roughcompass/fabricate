@@ -8,9 +8,9 @@ import type { TokenFormState } from "./form-state";
 import { BITBUCKET_TOKENS_HREF } from "./paths";
 
 /**
- * The Add token form: the token's owner first, then its server, and the
- * token in a password field the browser won't offer to remember. A refused
- * submission keeps the owner and server, never the token.
+ * The Add token form: the token's owner first, then its server, which has
+ * one token, and the token in a password field the browser won't offer to
+ * remember. A refused submission keeps the owner and server, never the token.
  */
 export function TokenForm({ action }: { action: (previous: TokenFormState, formData: FormData) => Promise<TokenFormState> }) {
   return (
@@ -26,7 +26,7 @@ export function TokenForm({ action }: { action: (previous: TokenFormState, formD
         >
           <div className={formStyles.form}>
             {state.errors.base && <FormAlert id="token-form-alert">{state.errors.base.join(" ")}</FormAlert>}
-            <TextInput id="token-owner" name="name" label="Owner" defaultValue={state.values.name} errors={state.errors.name} description="Who the token belongs to, such as a person or a team. An owner has one token per server." required maxLength={100} />
+            <TextInput id="token-owner" name="name" label="Owner" defaultValue={state.values.name} errors={state.errors.name} description="Who the token belongs to, such as a person or a team." required maxLength={100} />
             <TextInput
               id="token-server-url"
               name="serverUrl"
@@ -36,7 +36,7 @@ export function TokenForm({ action }: { action: (previous: TokenFormState, formD
               placeholder="https://bitbucket.example.com"
               defaultValue={state.values.serverUrl}
               errors={state.errors.serverUrl}
-              description="The Bitbucket Server or Data Center address, with its context path if it has one."
+              description="The Bitbucket Server or Data Center address, with its context path if it has one. A server has one token."
               required
             />
             <TextInput

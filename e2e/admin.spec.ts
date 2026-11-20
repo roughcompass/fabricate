@@ -51,6 +51,36 @@ test("saves a Bitbucket Server token, shows only its last four characters, and d
   await expect(page.getByText("No Bitbucket tokens yet")).toBeVisible();
 });
 
+// repository-git-credentials spec, "Another owner submits a token for the same server" and "A removed token can be replaced".
+test("refuses a second token for a server, whoever owns it, until the server's token is deleted", async ({ page, db: _db }) => {
+  const add = async (owner: string, server: string, token: string) => {
+    await page.goto("/admin/bitbucket-tokens/new");
+    await page.getByLabel("Owner").fill(owner);
+    await page.getByLabel("Server").fill(server);
+    await page.getByLabel("Token").fill(token);
+    await page.getByRole("button", { name: "Add token" }).click();
+  };
+  await add("Platform team", "https://bitbucket.example.com/bitbucket", TOKEN);
+  await expect(toasts(page).getByText("Platform team was saved.")).toBeVisible();
+
+  await add("Web team", "https://BITBUCKET.example.com:443/bitbucket/", "BBDC-another-token-0001");
+  const server = page.getByLabel("Server");
+  await expect(server).toHaveAccessibleDescription("This server already has a token, saved for Platform team; delete it to save a new one");
+  await expect(server).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Token")).toHaveValue("");
+
+  await page.goto("/admin/bitbucket-tokens");
+  await expect(page.getByRole("row").filter({ hasText: "bitbucket.example.com" })).toHaveCount(1);
+  await page.getByRole("row").filter({ hasText: "Platform team" }).getByRole("button", { name: "Actions for Platform team" }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("dialog", { name: "Delete Platform team?" }).getByRole("button", { name: "Delete token" }).click();
+  await expect(toasts(page).getByText("Platform team was deleted.")).toBeVisible();
+
+  await add("Web team", "https://BITBUCKET.example.com:443/bitbucket/", "BBDC-another-token-0001");
+  await expect(toasts(page).getByText("Web team was saved.")).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "Web team" })).toContainText("https://bitbucket.example.com/bitbucket");
+});
+
 // page-patterns spec, "Empty list".
 test("Empty list: the empty state offers Add token as the page's only primary action, and the page header doesn't repeat it", async ({ page, db: _db }) => {
   await page.goto("/admin/bitbucket-tokens");

@@ -1,4 +1,5 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, exists, gt, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, ValidationError, isUniqueViolation } from "@/lib/db/errors";
 import { generatePublicId } from "@/lib/db/ids";
@@ -68,7 +69,7 @@ export function findBitbucketToken(db: Executor, publicId: string): BitbucketTok
   return db.select(summary).from(bitbucketTokens).where(eq(bitbucketTokens.publicId, publicId)).get();
 }
 
-/** Saves a token after checking every field, reporting each problem; an owner has one token per server, in any case. */
+/** Saves a token after checking every field, reporting each problem; a server has one token, whoever owns it. */
 export function addBitbucketToken(db: Executor, form: BitbucketTokenForm): BitbucketTokenSummary {
   return immediate(db, (tx) => {
     const issues = new IssueCollector();
@@ -84,21 +85,43 @@ export function addBitbucketToken(db: Executor, form: BitbucketTokenForm): Bitbu
     issues.throwIfAny();
 
     const serverUrl = (server as { url: string }).url;
-    const taken = tx
-      .select({ id: bitbucketTokens.id })
-      .from(bitbucketTokens)
-      .where(sql`${bitbucketTokens.serverUrl} = ${serverUrl} AND lower(${bitbucketTokens.name}) = lower(${name})`)
-      .get();
-    if (taken) throw new ValidationError([{ field: "name", message: `${name} already has a token saved for this server` }]);
+    const taken = tx.select({ name: bitbucketTokens.name }).from(bitbucketTokens).where(eq(bitbucketTokens.serverUrl, serverUrl)).get();
+    if (taken) throw serverTaken(taken.name);
 
     const now = new Date();
     try {
       return tx.insert(bitbucketTokens).values({ publicId: generatePublicId("bbt"), name, serverUrl, token, tokenHint: token.slice(-4), createdAt: now, updatedAt: now }).returning(summary).get();
     } catch (error) {
-      if (isUniqueViolation(error)) throw new ValidationError([{ field: "name", message: `${name} already has a token saved for this server` }]);
+      // The unique index holds the rule for a save the check above didn't see.
+      if (isUniqueViolation(error)) throw serverTaken();
       throw error;
     }
   });
+}
+
+/** The error a save gets for a server that has a token: deleting that one frees the server for a replacement. */
+function serverTaken(owner?: string): ValidationError {
+  return new ValidationError([{ field: "serverUrl", message: `This server already has a token${owner ? `, saved for ${owner}` : ""}; delete it to save a new one` }]);
+}
+
+/**
+ * Tokens a newer token for the same server supersedes: every token but the
+ * newest for its server, saved last or, on a tie, with the larger id. They
+ * can exist only before migration 0057, which deletes them, so the migration
+ * command reads them first to list what it deleted. Empty before the table
+ * exists.
+ */
+export function supersededBitbucketTokens(db: Executor): BitbucketTokenSummary[] {
+  const table = db.get<{ found: number }>(sql`select count(*) as found from sqlite_master where type = 'table' and name = 'bitbucket_tokens'`);
+  if (!table?.found) return [];
+  const newer = alias(bitbucketTokens, "newer");
+  const supersedes = or(gt(newer.createdAt, bitbucketTokens.createdAt), and(eq(newer.createdAt, bitbucketTokens.createdAt), gt(newer.id, bitbucketTokens.id)));
+  return db
+    .select(summary)
+    .from(bitbucketTokens)
+    .where(exists(db.select({ id: newer.id }).from(newer).where(and(eq(newer.serverUrl, bitbucketTokens.serverUrl), supersedes))))
+    .orderBy(asc(bitbucketTokens.serverUrl), asc(bitbucketTokens.id))
+    .all();
 }
 
 /** Removes a saved token for good, returning what it was so the page can say so. */
