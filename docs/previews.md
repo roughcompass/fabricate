@@ -96,7 +96,7 @@ Turn previews on only in deployments where everyone who can enroll a remote, pus
 
 ## Choosing a commit
 
-A Repository's page lists the branches and tags on its remote, read live with `git ls-remote`, with the configured reference first. When the remote can't be reached, the page still offers the configured reference and commit entry, and says the remote's other refs couldn't be listed. Remote access follows the same protocol and credential rules as assessments.
+A Repository's page lists the branches and tags on its remote, read live with `git ls-remote`, with the configured reference first. When the remote can't be reached, the page still offers the configured reference and commit entry, and says the remote's other refs couldn't be listed. Remote access follows the same protocol rules and credential helper as assessments, but sends no saved Bitbucket token, so for a repository only its server's saved token can read, the page lists none of the remote's refs.
 
 - **A branch or tag** is fetched shallowly and checked against the commit the remote advertised for it. An annotated tag resolves to the commit it points to. If the ref moved in between, nothing is queued and the operator is asked to try again, so a preview never builds a commit nobody chose.
 - **A full commit SHA** uses a commit the Repository's clone already holds, or a branch or tag that names it. Otherwise the Frontend Registry asks the remote for that exact commit. Many servers refuse to serve a commit that no ref names, so when the remote doesn't supply it, the page says so without claiming the commit doesn't exist.

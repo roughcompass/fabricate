@@ -32,4 +32,4 @@ The marketing copy in `src/content/about.ts`, including its hero headline ("Ever
 
 The interface text of applications, onboarding, preview mode, the toolbar, share links, and workspaces, and `docs/applications.md`, were approved for release by Martin on 2026-11-19.
 
-Not yet approved: the interface text `use-saved-git-tokens` adds or changes (the Add token form's Owner and Server descriptions, the duplicate-save error on Server, and the `authentication_failed` failure sentence), and its changes to `docs/site/` (`reference/configuration.md`, `reference/failure-reasons.md`, `concepts/repositories.md`, `operate/deploy-and-configure.md`, and `get-started/add-your-repository.md`).
+Not yet approved: the interface text `use-saved-git-tokens` adds or changes (the Add token form's Owner and Server descriptions, the duplicate-save error on Server, and the `authentication_failed` failure sentence), and its changes to `docs/site/` (`reference/configuration.md`, `reference/failure-reasons.md`, `concepts/repositories.md`, `operate/deploy-and-configure.md`, and `get-started/add-your-repository.md`) and to `docs/previews.md`.
