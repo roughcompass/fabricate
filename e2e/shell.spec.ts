@@ -36,14 +36,14 @@ test.describe("on a wide viewport", () => {
     await expectCurrent(page, "All Assessments");
   });
 
-  test("Full menu: Home; Registry with Applications; Assessments; Templates; Insights; and Admin, under headings and dividers", async ({ page, db: _db }) => {
+  test("Full menu: Home; Registry with Applications; Assessments; Insights; and Admin, under headings and dividers", async ({ page, db: _db }) => {
     await page.goto(paths.home);
     const nav = primary(page);
-    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "Applications", "All Assessments", "Standards", "Salt Patterns", "Adoption", "System", "Bitbucket tokens"]);
-    await expect(nav.locator("hr")).toHaveCount(5);
+    await expect(nav.getByRole("link")).toHaveText(["Home", "Repositories", "Applications", "All Assessments", "Standards", "Adoption", "System", "Bitbucket tokens"]);
+    await expect(nav.locator("hr")).toHaveCount(4);
     await expect(nav.getByRole("list", { name: "Registry" }).getByRole("link")).toHaveText(["Repositories", "Applications"]);
     await expect(nav.getByRole("list", { name: "Assessments" }).getByRole("link")).toHaveText(["All Assessments", "Standards"]);
-    await expect(nav.getByRole("list", { name: "Templates" }).getByRole("link")).toHaveText(["Salt Patterns"]);
+    await expect(nav.getByRole("list", { name: "Templates" })).toHaveCount(0);
     await expect(nav.getByRole("list", { name: "Insights" }).getByRole("link")).toHaveText(["Adoption"]);
     await expect(nav.getByRole("list", { name: "Admin" }).getByRole("link")).toHaveText(["System", "Bitbucket tokens"]);
     // Every item has one icon.
@@ -107,8 +107,8 @@ test.describe("on a wide viewport", () => {
     await expect(pageTitle(page)).toHaveText("Home");
   });
 
-  test("Items open their pages: Salt Patterns and Standards keep the primary menu, marked current", async ({ page, db: _db }) => {
-    for (const [item, url, title] of [["Salt Patterns", /\/templates$/, "Salt Patterns"], ["Standards", /\/standards$/, "Standards"]] as const) {
+  test("Items open their pages: Applications and Standards keep the primary menu, marked current", async ({ page, db: _db }) => {
+    for (const [item, url, title] of [["Applications", /\/applications$/, "Applications"], ["Standards", /\/standards$/, "Standards"]] as const) {
       await page.goto("/design-system");
       await primary(page).getByRole("link", { name: item, exact: true }).click();
       await expect(page).toHaveURL(url);
@@ -117,9 +117,10 @@ test.describe("on a wide viewport", () => {
     }
   });
 
-  test("Templates section on a deep page: a template detail page marks Salt Patterns", async ({ page, db: _db }) => {
-    await page.goto("/templates/market-watch");
-    await expectCurrent(page, "Salt Patterns");
+  test("An old template address opens Applications, marked current", async ({ page, db: _db }) => {
+    await page.goto("/templates/market-watch/preview");
+    await expect(page).toHaveURL(/\/applications$/);
+    await expectCurrent(page, "Applications");
   });
 });
 
@@ -339,7 +340,7 @@ test.describe("a wide sidebar on a laptop", () => {
       ["Profile", surfaces.get("06-profile")!],
       ["Relationship Map", surfaces.get("07-map")!],
       ["Repositories list", paths.repositories],
-      ["Templates gallery", "/templates"],
+      ["Applications", paths.applications],
       ["Standard draft editor", surfaces.get("04-draft")!],
     ];
     for (const [name, url] of pages) {

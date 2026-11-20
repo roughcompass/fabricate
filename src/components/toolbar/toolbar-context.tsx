@@ -4,13 +4,13 @@ import { createContext, use } from "react";
 import type { IconName } from "@/components/ui/icon";
 
 /** The tools that open a panel. Comment is a mode, and Hide toolbar a command; neither has a panel. */
-export const TOOLS = ["comments", "share", "microfrontends", "accessibility", "timing", "session", "settings", "shortcuts"] as const;
+export const TOOLS = ["comments", "share", "accessibility", "timing", "shortcuts"] as const;
 export type ToolId = (typeof TOOLS)[number];
 
 /** A mode that changes what pointer and keyboard do on the page. */
-export type ToolbarMode = "none" | "comment" | "select";
+export type ToolbarMode = "none" | "comment";
 
-export const ITEM_GROUPS = ["Collaboration", "Inspect", "Runtime", "More"] as const;
+export const ITEM_GROUPS = ["Collaboration", "Inspect", "More"] as const;
 type ItemGroup = (typeof ITEM_GROUPS)[number];
 
 type ItemAction = { readonly kind: "tool"; readonly tool: ToolId } | { readonly kind: "mode"; readonly mode: "comment" } | { readonly kind: "command"; readonly command: "hide" };
@@ -38,12 +38,9 @@ export const TOOLBAR_ITEMS: readonly ToolbarItem[] = [
   { id: "comment", name: "Comment", icon: "message", group: "Collaboration", key: "c", aliases: ["annotate", "feedback", "pin", "note"], action: { kind: "mode", mode: "comment" }, shortcutRow: true },
   { id: "comments", name: "Comments", icon: "inbox", group: "Collaboration", aliases: ["threads", "inbox", "discussion", "replies"], action: { kind: "tool", tool: "comments" }, shortcutRow: false },
   { id: "share", name: "Share", icon: "link", group: "Collaboration", key: "l", aliases: ["link", "invite", "copy", "send"], action: { kind: "tool", tool: "share" }, shortcutRow: true },
-  { id: "microfrontends", name: "Microfrontends", icon: "layers", group: "Inspect", key: "m", aliases: ["mfe", "zones", "versions", "routing", "override"], action: { kind: "tool", tool: "microfrontends" }, shortcutRow: true },
   { id: "accessibility", name: "Accessibility", icon: "accessibility", group: "Inspect", key: "a", aliases: ["a11y", "audit", "axe", "wcag"], action: { kind: "tool", tool: "accessibility" }, shortcutRow: true },
-  { id: "timing", name: "Timing", icon: "clock", group: "Inspect", key: "t", aliases: ["performance", "web vitals", "core web vitals", "lcp", "inp", "cls", "hot spots", "waterfall", "speed"], action: { kind: "tool", tool: "timing" }, shortcutRow: true },
-  { id: "session", name: "Session", icon: "user", group: "Runtime", key: "p", aliases: ["persona", "profile", "role", "user", "sign in"], action: { kind: "tool", tool: "session" }, shortcutRow: true },
-  { id: "settings", name: "Settings", icon: "settings", group: "Runtime", key: "s", aliases: ["theme", "dark", "bus", "events", "publish"], action: { kind: "tool", tool: "settings" }, shortcutRow: true },
-  { id: "shortcuts", name: "Keyboard shortcuts", icon: "keyboard", group: "More", key: "?", aliases: ["keys", "hotkeys", "preferences"], action: { kind: "tool", tool: "shortcuts" }, shortcutRow: false },
+  { id: "timing", name: "Timing", icon: "clock", group: "Inspect", key: "t", aliases: ["performance", "web vitals", "core web vitals", "lcp", "inp", "cls", "waterfall", "load order", "speed"], action: { kind: "tool", tool: "timing" }, shortcutRow: true },
+  { id: "shortcuts", name: "Keyboard shortcuts", icon: "keyboard", group: "More", key: "?", aliases: ["keys", "hotkeys", "preferences", "hints"], action: { kind: "tool", tool: "shortcuts" }, shortcutRow: false },
   { id: "hide", name: "Hide toolbar", icon: "eyeOff", group: "More", key: ".", aliases: ["collapse", "minimize", "close"], action: { kind: "command", command: "hide" }, shortcutRow: false },
 ];
 
@@ -72,7 +69,6 @@ export function keyLabel(key: string): string {
 /** The item the pill shows while a tool's panel is open or a mode is active. */
 export function activeItemFor(tool: ToolId | null, mode: ToolbarMode): ToolbarItem | null {
   if (mode === "comment") return itemById("comment")!;
-  if (mode === "select") return itemById("microfrontends")!;
   return tool ? (TOOLBAR_ITEMS.find((item) => item.action.kind === "tool" && item.action.tool === tool) ?? null) : null;
 }
 
@@ -100,20 +96,9 @@ export interface ToolbarApi {
 
 export const ToolbarContext = createContext<ToolbarApi | null>(null);
 
-// Key presses the toolbar acted on, such as its shortcuts, so the Timing tool leaves them out of the application's interactions.
-const handledKeys = new WeakSet<Event>();
-
-export function markToolbarKey(event: Event): void {
-  handledKeys.add(event);
-}
-
-export function isToolbarKey(event: Event): boolean {
-  return handledKeys.has(event);
-}
-
 export function useToolbar(): ToolbarApi {
   const toolbar = use(ToolbarContext);
-  if (!toolbar) throw new Error("useToolbar must be used inside the demo toolbar");
+  if (!toolbar) throw new Error("useToolbar must be used inside the toolbar");
   return toolbar;
 }
 

@@ -14,8 +14,8 @@ import { paths } from "./paths";
 
 /**
  * Every product surface, seeded with data that exercises it: the operator
- * pages, and the template demo's operator pages. The visual capture and the
- * shell's one-heading check both visit these.
+ * pages, Applications' among them. The visual capture and the shell's
+ * one-heading check both visit these.
  */
 
 export type Surface = [name: string, url: string];
@@ -88,19 +88,5 @@ export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
     ["15-application-new", paths.newApplication()],
     ["15-application-new-search", paths.newApplication({ q: "orders" })],
     ["15-application-new-branch", paths.newApplication({ repository: repository.publicId, from: "repository" })],
-  ];
-}
-
-/** The template demo's operator surfaces, which need no seeding. */
-export function demoSurfaces(): Surface[] {
-  const previews = (["mobile", "tablet", "desktop"] as const).flatMap((device) =>
-    (["portrait", "landscape"] as const).map((orientation): Surface => [`13-preview-${device}-${orientation}`, `/templates/market-watch/preview?device=${device}&orientation=${orientation}`]),
-  );
-  return [
-    ["11-gallery", "/templates"],
-    ["11-gallery-filtered", "/templates?brand=payments&brand=markets&provider=de-web"],
-    ["12-template", "/templates/payments-workspace"],
-    ...previews,
-    ["13-preview-code", "/templates/payments-workspace/preview?view=code&file=microfrontends.json"],
   ];
 }

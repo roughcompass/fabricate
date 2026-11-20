@@ -9,9 +9,9 @@ import { HOME, NO_OPTIONAL_AREAS, type NavFlags, locate, visibleGroups } from "@
 const OPERATOR = path.resolve("src/app/(operator)");
 
 const BASE = NO_OPTIONAL_AREAS;
-const ALL: NavFlags = { demo: true, applications: true };
-/** Previews enabled without the template demo: the menu add-applications ends with. */
-const PREVIEWS: NavFlags = { demo: false, applications: true };
+/** Previews enabled: every area. */
+const ALL: NavFlags = { applications: true };
+const PREVIEWS = ALL;
 
 /** Every operator page, as its route template ("/standards/[standardId]/draft"). */
 function routes(directory = OPERATOR): string[] {
@@ -59,9 +59,6 @@ const EXPECTED: Record<string, string | null> = {
   "/applications/[slug]": "applications",
   "/applications/[slug]/settings": "applications",
   "/applications/[slug]/preview": "applications",
-  "/templates": "salt-patterns",
-  "/templates/[templateSlug]": "salt-patterns",
-  "/templates/[templateSlug]/preview": "salt-patterns",
   "/admin": "system",
   "/admin/system": "system",
   "/admin/bitbucket-tokens": "bitbucket-tokens",
@@ -106,21 +103,12 @@ describe("primary menu", () => {
       ["Insights", ["Adoption"]],
       ["Admin", ["System", "Bitbucket tokens"]],
     ]);
-    // Until the template demo is removed, it keeps its own group while it's enabled.
-    expect(shape(ALL)).toEqual([
-      [null, ["Home"]],
-      ["Registry", ["Repositories", "Applications"]],
-      ["Assessments", ["All Assessments", "Standards"]],
-      ["Templates", ["Salt Patterns"]],
-      ["Insights", ["Adoption"]],
-      ["Admin", ["System", "Bitbucket tokens"]],
-    ]);
     expect(visibleGroups(ALL)[0]!.items[0]).toBe(HOME);
     for (const item of visibleGroups(ALL).flatMap((group) => group.items)) expect(item.icon, item.id).toBeTruthy();
   });
 
   it("has no Applications item while applications aren't offered, and leaves their pages outside the menu (Previews disabled)", () => {
-    const off: NavFlags = { demo: true, applications: false };
+    const off: NavFlags = { applications: false };
     expect(shape(off)[1]).toEqual(["Registry", ["Repositories"]]);
     for (const route of ["/applications", "/applications/new", "/applications/orders-portal", "/applications/orders-portal/preview"]) expect(locate(route, off), route).toBeNull();
   });
@@ -130,7 +118,7 @@ describe("primary menu", () => {
     expect(locate("/applications/orders-portal", PREVIEWS)?.group.id).toBe("registry");
   });
 
-  it("has no Templates group while the demo is disabled, and leaves its pages outside the menu (Demo disabled)", () => {
+  it("has no Templates group, and leaves the old template addresses outside the menu (Previews disabled)", () => {
     expect(shape(BASE)).toEqual([
       [null, ["Home"]],
       ["Registry", ["Repositories"]],
@@ -138,7 +126,7 @@ describe("primary menu", () => {
       ["Insights", ["Adoption"]],
       ["Admin", ["System", "Bitbucket tokens"]],
     ]);
-    for (const route of ["/templates", "/templates/payments-hub/preview"]) expect(locate(route, BASE), route).toBeNull();
+    for (const route of ["/templates", "/templates/payments-hub/preview"]) for (const flags of [BASE, ALL]) expect(locate(route, flags), route).toBeNull();
   });
 
   it("marks each create or import page as its list's item (Create page)", () => {

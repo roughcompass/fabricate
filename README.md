@@ -30,7 +30,7 @@ Both processes validate the configuration and check the Git version at startup. 
 
 Neither process applies migrations, so run `npm run db:migrate` after pulling changes. When a change adds or alters the [assessment projection](docs/projection.md), also run `npm run projection:rebuild`, which recreates it from every stored Profile and Relationship Map.
 
-Some migrations delete data, so copy `storage/fabricate.sqlite3` before migrating a database you want to keep. Migration 0043 deletes ownership: claims, SEAL IDs, teams, Lines of Business, portals, and DE Console reads, with every Assessment created for a claim and its Runs. Migration 0044 deletes the Salt Patterns Assessment and its Runs, with their template targets and stored files. Neither touches a Repository or an Assessment you created.
+Some migrations delete data, so copy `storage/fabricate.sqlite3` before migrating a database you want to keep. Migration 0043 deletes ownership: claims, SEAL IDs, teams, Lines of Business, portals, and DE Console reads, with every Assessment created for a claim and its Runs. Migration 0044 deletes the Salt Patterns Assessment and its Runs, with their template targets and stored files. Neither touches a Repository or an Assessment you created. Migration 0056 deletes the template demo's comment threads, comments, and share links, and drops its session profiles, so workspaces start empty on applications.
 
 Migration 0049 turns every Repository Profile into a survey: one per repository, commit, and Surveyor recipe, numbered as the Repository's versions. It deletes the hidden Repository profiling Assessment with its Runs and their one-repository maps, keeps their Profiles, and renumbers versions, so earlier version addresses change. It rewrites the Profiles table, which holds most of the database: migrating a 7.8 GB database took 39 seconds and peaked at 22 GB with its write-ahead log, so with the backup, have free space of about three times the size of `storage/fabricate.sqlite3`. Upgrade in this order, with the web server and worker stopped:
 
@@ -52,7 +52,7 @@ Surveyor 0.7.0 knows no design system on its own: surveys compare repositories w
 npm run check       # every gate a change must pass, described below
 npm test            # unit and integration tests (Vitest)
 npm run test:e2e    # browser tests (Playwright), against a dev server on port 3100
-npm run test:demo-off # the browser tests' fixtures against a server with the template demo off
+npm run test:previews-off # the browser tests' fixtures against a server with previews, and so applications, off
 npm run test:visual # screenshots of every product surface, for design review
 npm run test:fleet  # the synthetic fleet, assessed and evaluated through the product
 npm run typecheck
@@ -62,6 +62,10 @@ npm run build       # Next.js standalone server, dist/worker.cjs, dist/migrate.c
 
 `npm run test:visual` seeds a representative Assessment, checks each product surface for horizontal overflow and overlapping content at 1280 and 375 pixels wide, and writes full-page screenshots to `verification/screenshots/`. The committed screenshots are the output of the last design review.
 
+Browser tests of a running application use `test/fixtures/apps/orders-portal`, a small Vite and React application, onboarded through the real application records and preview pipeline (`e2e/support/fixture-app.ts`) and run under the toolbar at `/run/<application>`. Its packages come from the public npm registry on the first run, which needs network access, and from the package cache in `tmp/e2e/package-cache/` after that, which the tests' reset leaves in place. Keep that directory between CI runs.
+
+The toolbar's timing inspector runs inside the application's own page, so it's bundled on its own, into the committed `public/toolbar/inspector.js`. After changing `src/components/toolbar/inspector/`, or upgrading web-vitals or esbuild, run `npm run build:inspector` and commit the bundle; a unit test fails until it matches.
+
 `npm run test:fleet` needs the harness `fleet/` repositories next to this directory, or `FLEET_ROOT` set to their location. It starts its own server on port 3200 with `fleet/` as the only allowed root and a throwaway database and repository store in `tmp/fleet-run/`. It then adds the fleet's repositories in bulk, runs a baseline Assessment, authors two Standards in the editor, and runs an Evaluation. It never reads `fleet-kit/`.
 
 The lint rules forbid `eval`, the `Function` constructor, the `vm` module, computed `import()`, `require()`, and regular expressions built from data. Only `src/lib/git/runner.ts` and `src/lib/previews/process.ts`, which runs [preview builds](docs/previews.md) for enrolled remotes, may import `child_process`. A test in `test/lint/` keeps these rules in force.
@@ -69,7 +73,7 @@ The lint rules forbid `eval`, the `Function` constructor, the `vm` module, compu
 `npm run check` runs the type check, lint, knip, the duplication check, and the unit tests:
 
 - **knip** runs twice: over everything, and in production mode (`knip.production.json`), where only the app's routes, the worker, the command-line tools, and scripts are entries, so code that only tests reach fails. A hook the test suites need carries a `@public` tag that says why.
-- **Duplication.** `npm run duplication` runs jscpd over `src`, `test`, `e2e`, and `scripts`, leaving out `src/demo`, and fails when clones of 8 lines and 70 tokens or more pass 0.5% of the code.
+- **Duplication.** `npm run duplication` runs jscpd over `src`, `test`, `e2e`, and `scripts`, and fails when clones of 8 lines and 70 tokens or more pass 0.5% of the code.
 - **Lint** allows no warnings, and its rules keep the shared helpers in use: record links come from `src/lib/web/routes.ts`; dates and numbers are formatted only in `time.ts` and `count.ts`; only `ActionForm` calls `useActionState`; pages and components import Drizzle and the schema for types only; tests open and migrate databases only through `test/support`; specs set the theme and find the page header only through `e2e/support/shell.ts`. A function over 150 lines and a source file over 600 lines fail it.
 - **A unit test** checks that the active-state lists derive from `src/lib/db/state-machines.ts`.
 
@@ -93,12 +97,11 @@ Environment variables override the file:
 | `analysis.maxLockfileBytes` | `FRONTEND_REGISTRY_MAX_LOCKFILE_BYTES` | 33554432 |
 | `analysis.maxFiles` | `FRONTEND_REGISTRY_MAX_FILES` | 4000 |
 | `analysis.maxTotalBytes` | `FRONTEND_REGISTRY_MAX_TOTAL_BYTES` | 67108864 |
-| `demo.enabled` | `FRONTEND_REGISTRY_DEMO` | `false`; `true` in development and test |
 | `profiling.checkMinutes` | `FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES` | 60; how often the worker checks every Repository for new commits and a new Surveyor release, see [docs/profiling.md](docs/profiling.md) |
 | `catalog.registry` | `FRONTEND_REGISTRY_CATALOG_REGISTRY` | `https://registry.npmjs.org/`; the npm registry Catalog builds download published packages from, such as CIB's internal mirror, see [docs/profiling.md](docs/profiling.md#the-reference-catalog). The things the Reference Catalog describes are in `config/catalog.yaml`, and the team's rules in `config/catalog-rules/` |
 | `adoption.snapshotDays` | `FRONTEND_REGISTRY_ADOPTION_SNAPSHOT_DAYS` | 7; days between adoption snapshots |
 | `adoption.rarelyUsedPercentile` | `FRONTEND_REGISTRY_ADOPTION_RARELY_USED_PERCENTILE` | 25; the share of used components, by fewest usages, that Adoption Analytics calls rarely used |
-| `previews.enabled` | `FRONTEND_REGISTRY_PREVIEWS` | `false`; whether Repository previews exist, see [docs/previews.md](docs/previews.md) |
+| `previews.enabled` | `FRONTEND_REGISTRY_PREVIEWS` | `false`; whether Repository previews and applications exist, see [docs/previews.md](docs/previews.md) and [Applications](#applications) |
 | `previews.trustedSources` | `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` | none; the clone URLs of the remotes enrolled for previews |
 | `previews.browser` | `FRONTEND_REGISTRY_PREVIEWS_BROWSER` | none, for Playwright's Chromium, installed with `npx playwright install chromium`; the headless browser that captures applications' screenshots, as a Playwright channel such as `chrome` or `msedge`, or a browser's absolute path |
 | `previews.nodeVersions` | `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` | none; each Node version a preview build may use, mapped to its binary directory |
@@ -109,9 +112,11 @@ Environment variables override the file:
 | `previews.maxStorageBytes` | `FRONTEND_REGISTRY_PREVIEWS_MAX_STORAGE_BYTES` | 5368709120 (5 GiB); the published output and latest logs of every preview together, kept under it by deleting the least recently used; the package caches are pruned past half of it |
 | `previews.refCacheSeconds` | `FRONTEND_REGISTRY_PREVIEWS_REF_CACHE_SECONDS` | 60; how long preview mode reuses a remote's branches and tags before reading them again, 0 to read them on every view |
 
-List variables use the platform path separator, which is `:` on macOS and Linux. `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` separates clone URLs with spaces or newlines instead, and `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` lists `version=directory` pairs, such as `22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin`. `FRONTEND_REGISTRY_DEMO` and `FRONTEND_REGISTRY_PREVIEWS` accept `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
+List variables use the platform path separator, which is `:` on macOS and Linux. `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` separates clone URLs with spaces or newlines instead, and `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` lists `version=directory` pairs, such as `22.11.0=$HOME/.local/share/mise/installs/node/22.11.0/bin`. `FRONTEND_REGISTRY_PREVIEWS` accepts `true`, `false`, `1`, or `0`. Run `npm run config` to print the effective settings.
 
-The settings had other names before the product took its name. Until the next release, each old name is still read when its new one is missing, and prints a deprecation warning: `FABRICATE_*` variables for `FRONTEND_REGISTRY_*`, and `config/fabricate.json` for `config/frontend-registry.json`. `npm run release` and `scripts/verify-release.mjs` likewise still read `REPO_FACTS_NPM_REGISTRY` and `REPO_FACTS_NPM_TOKEN` for `SURVEYOR_NPM_REGISTRY` and `SURVEYOR_NPM_TOKEN`; the committed `.npmrc` reads only the new name. Preference cookies and the template demo's local storage move to their new names on the next visit; the demo workspace and share-view cookies keep theirs.
+The template demo's `demo.enabled` setting is gone, with `FRONTEND_REGISTRY_DEMO` and its old name `FABRICATE_DEMO`. Applications replaced the demo, and exist while `previews.enabled` is on, so set `FRONTEND_REGISTRY_PREVIEWS` where you set `FRONTEND_REGISTRY_DEMO`. Neither old variable is read; the processes and `npm run config` print a warning while one is set. A `demo` section left in `config/frontend-registry.json` stops startup with a configuration error.
+
+The settings had other names before the product took its name. Until the next release, each old name is still read when its new one is missing, and prints a deprecation warning: `FABRICATE_*` variables for `FRONTEND_REGISTRY_*`, and `config/fabricate.json` for `config/frontend-registry.json`. `npm run release` and `scripts/verify-release.mjs` likewise still read `REPO_FACTS_NPM_REGISTRY` and `REPO_FACTS_NPM_TOKEN` for `SURVEYOR_NPM_REGISTRY` and `SURVEYOR_NPM_TOKEN`; the committed `.npmrc` reads only the new name. Preference cookies and the toolbar's local storage move to their new names on the next visit; the workspace cookie keeps its name.
 
 ### Preview toolchain
 
@@ -130,19 +135,11 @@ npx playwright install chromium
 
 The doctor checks that each configured directory's `node` reports its version and that its corepack runs pnpm and Yarn, that `git` and `tar` are where the worker finds them, and that the screenshot browser launches. It prints a line for each check, names anything missing or wrong, and exits non-zero if any check fails. In a release, run `node dist/previews-doctor.cjs` from the release directory, with the worker's settings. See [docs/previews.md](docs/previews.md#the-workers-toolchain).
 
-### Template demo
+### Applications
 
-The template demo is an interactive demonstration of starting an application from a template, inside the Frontend Registry. Its deployments are simulated: each template has one reference deployment that runs inside the Frontend Registry, and the demo never builds or deploys code, runs a repository's commands, or contacts Bitbucket or any other service. When `demo.enabled` is on, the sidebar adds Salt Patterns under a Templates heading. When it is off, every demo page, running application, share link, and demo endpoint answers not found, and no other part of the Frontend Registry changes.
+An application is a frontend built from a branch of an enrolled repository, rebuilt as the branch moves, and run inside the Frontend Registry under the toolbar at `/run/<application>`. Applications exist while `previews.enabled` is on: the sidebar then shows Applications. While previews are off, Applications, onboarding, application pages, running applications, and share links answer not found, and turning previews on again shows every application with its last state. See [docs/applications.md](docs/applications.md) for onboarding, builds, screenshots, and preview mode, and [docs/previews.md](docs/previews.md) for the build pipeline and the worker's toolchain.
 
-To run the demo locally, start the web server with the switch on, then open Salt Patterns:
-
-```sh
-FRONTEND_REGISTRY_DEMO=true npm run dev
-```
-
-For a hosted demo that self-serve visitors can reach, start the release's web server with `FRONTEND_REGISTRY_DEMO=true` (see [Run in production](#run-in-production)). To turn the demo off again, restart without the override.
-
-Each visitor gets an anonymous workspace, which is tied to their browser by an httpOnly cookie and needs no sign-in. A workspace holds the visitor's comments, share links, and session profiles, and other visitors cannot see it except through a share link. The Frontend Registry stores only a digest of the cookie. A workspace can hold 20 custom session profiles, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted, together with their comments, share links, and session profiles. The demo's tables are separate from Repository, Assessment, Run, Evaluation, and Standard data. See [docs/template-demo.md](docs/template-demo.md) for the presenter script.
+Each visitor gets an anonymous workspace, which is tied to their browser by an httpOnly cookie and needs no sign-in. A workspace holds the visitor's comments and share links on applications, and other visitors cannot see it except through a share link. The Frontend Registry stores only a digest of the cookie. A workspace can hold 500 open comment threads, and each comment can be up to 2,000 characters. Workspaces idle for 30 days are deleted, together with their comments and share links, and Reset workspace, at the end of the Applications page, deletes them at once. Workspace tables are separate from Repository, Assessment, Run, Evaluation, and Standard data.
 
 ### Source roots
 

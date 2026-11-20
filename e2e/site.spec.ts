@@ -6,6 +6,7 @@ import { loadDocsSite } from "../src/lib/docs/site";
 import { buildRepository } from "../test/support/builders";
 import { saltEntry } from "../test/support/catalog";
 import { seedSurvey } from "../test/support/scenarios";
+import { E2E_PREVIEWS } from "./support/env";
 import { expect, expectNoHorizontalOverflow, expectNoOverlappingContent, test } from "./support/fixtures";
 import { sentences, sharedLinkTexts } from "./support/page-rules";
 import { paths } from "./support/paths";
@@ -164,7 +165,8 @@ test.describe("the marketing page", () => {
     await expect(how.locator("dd")).toHaveCount(4);
     await expect(how.getByRole("listitem")).toHaveCount(4);
     await expect(how).toContainText("never runs it");
-    await expect(section(page, SECTIONS[4]!).locator("dt")).toHaveText(["App owners", "Product managers", "Design-system teams", "Platform teams"]);
+    // Applications' benefit shows while previews are on, as they are unless E2E_PREVIEWS=0; the previews-off suite checks it's gone.
+    await expect(section(page, SECTIONS[4]!).locator("dt")).toHaveText(["App owners", "Product managers", "Design-system teams", "Platform teams", ...(E2E_PREVIEWS ? ["Reviewers"] : [])]);
     await expect(section(page, SECTIONS[4]!)).toContainText("Every CIB frontend repository must be registered in the Frontend Registry.");
   });
 

@@ -14,7 +14,6 @@ const shared: Settings = {
   repositoryStorage: "storage/repositories",
   gitCredentialHelper: null,
   analysis: { maxBlobBytes: 1024, maxLockfileBytes: 2048, maxFiles: 10, maxTotalBytes: 4096 },
-  demo: { enabled: false },
   profiling: { checkMinutes: 60 },
   catalog: { registry: "https://registry.npmjs.org/" },
   adoption: { snapshotDays: 7, rarelyUsedPercentile: 25 },
@@ -191,50 +190,32 @@ describe("configuration", () => {
     });
   });
 
-  describe("template demo switch", () => {
-    it("is on in development and test, and off in production, by default", () => {
-      const committed = (environment: "development" | "test" | "production") => loadConfig({ appRoot: process.cwd(), environment, env: {} }).demoEnabled;
+  describe("the removed template demo setting", () => {
+    const warnings: string[] = [];
+    const warn = (message: string) => warnings.push(message);
+    const reason = "the template demo was removed, and applications are available while FRONTEND_REGISTRY_PREVIEWS is on";
 
-      expect(committed("development")).toBe(true);
-      expect(committed("test")).toBe(true);
-      expect(committed("production")).toBe(false);
+    beforeEach(() => {
+      warnings.length = 0;
     });
 
-    it.each([
-      ["true", true],
-      ["TRUE", true],
-      ["1", true],
-      ["false", false],
-      ["0", false],
-    ])("accepts FRONTEND_REGISTRY_DEMO=%s", (value, expected) => {
-      expect(load({ shared }, { FRONTEND_REGISTRY_DEMO: value }).demoEnabled).toBe(expected);
-      expect(load({ shared: { ...shared, demo: { enabled: true } } }, { FRONTEND_REGISTRY_DEMO: value }).demoEnabled).toBe(expected);
+    it("isn't read from FRONTEND_REGISTRY_DEMO or FABRICATE_DEMO, and each one that's set gets a warning", () => {
+      const config = loadConfig({ appRoot, environment: "test", env: { FRONTEND_REGISTRY_DEMO: "true", FABRICATE_DEMO: "1" }, file: { shared }, warn });
+
+      expect(config).not.toHaveProperty("demoEnabled");
+      expect(config.previews.enabled).toBe(false);
+      expect(warnings).toEqual([`FRONTEND_REGISTRY_DEMO is no longer read: ${reason}. Remove FRONTEND_REGISTRY_DEMO.`, `FABRICATE_DEMO is no longer read: ${reason}. Remove FABRICATE_DEMO.`]);
     });
 
-    it("lets the override enable the demo in production", () => {
-      const config = loadConfig({ appRoot: process.cwd(), environment: "production", env: { FRONTEND_REGISTRY_DEMO: "true" } });
-      expect(config.demoEnabled).toBe(true);
+    it("warns about a value the old switch would have refused, rather than refusing to start", () => {
+      expect(() => loadConfig({ appRoot, environment: "test", env: { FRONTEND_REGISTRY_DEMO: "yes" }, file: { shared }, warn })).not.toThrow();
+      expect(warnings).toEqual([`FRONTEND_REGISTRY_DEMO is no longer read: ${reason}. Remove FRONTEND_REGISTRY_DEMO.`]);
     });
 
-    it("ignores a blank override", () => {
-      expect(load({ shared }, { FRONTEND_REGISTRY_DEMO: " " }).demoEnabled).toBe(false);
-    });
-
-    it.each([["yes"], ["on"], ["2"]])("rejects FRONTEND_REGISTRY_DEMO=%s", (value) => {
-      expect(() => load({ shared }, { FRONTEND_REGISTRY_DEMO: value })).toThrow(/FRONTEND_REGISTRY_DEMO must be true, false, 1, or 0/);
-    });
-
-    it("rejects a missing, non-boolean, or extended demo setting", () => {
-      const { demo: _omitted, ...missing } = shared;
-      expect(() => load({ shared: missing })).toThrow(ConfigurationError);
-      expect(() => load({ shared: { ...shared, demo: { enabled: "yes" } } })).toThrow(ConfigurationError);
-      expect(() => load({ shared: { ...shared, demo: { enabled: true, extra: 1 } } })).toThrow(ConfigurationError);
-    });
-
-    it("survives overrides of other settings", () => {
-      const enabled = load({ shared: { ...shared, demo: { enabled: true } } });
-      expect(withOverrides(enabled, { workerConcurrency: 1 }).demoEnabled).toBe(true);
-      expect(withOverrides(enabled, { demo: { enabled: false } }).demoEnabled).toBe(false);
+    it("is gone from the committed file, and refused in a file that still has it", () => {
+      const committed = JSON.parse(fs.readFileSync(path.resolve("config/frontend-registry.json"), "utf8")) as Record<string, object>;
+      for (const section of Object.values(committed)) expect(section).not.toHaveProperty("demo");
+      expect(() => load({ shared: { ...shared, demo: { enabled: true } } })).toThrow(ConfigurationError);
     });
   });
 

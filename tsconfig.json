@@ -33,9 +33,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@deweb/portal": [
-        "./src/demo/runtime/portal"
       ]
     }
   },
@@ -59,8 +56,8 @@
     ".next-e2e-b/dev/types/**/*.ts",
     ".next-e2e-aps/types/**/*.ts",
     ".next-e2e-aps/dev/types/**/*.ts",
-    ".next-e2e-demo-off/types/**/*.ts",
-    ".next-e2e-demo-off/dev/types/**/*.ts",
+    ".next-e2e-previews-off/types/**/*.ts",
+    ".next-e2e-previews-off/dev/types/**/*.ts",
     ".next-verify/types/**/*.ts",
     ".next-verify/dev/types/**/*.ts"
   ],

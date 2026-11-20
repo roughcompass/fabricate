@@ -11,7 +11,7 @@ export * from "./projection";
 export * from "./surveys";
 export * from "./jobs";
 export * from "./relations";
-export * from "./demo";
+export * from "./workspaces";
 export * from "./admin";
 export * from "./previews";
 export * from "./applications";

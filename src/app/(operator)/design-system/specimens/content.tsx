@@ -175,7 +175,7 @@ export function ContentSpecimens() {
             <MediaCard
               title="Market watch"
               description="Follow instruments on a watchlist, chart prices, place orders, and track trades in J.P. Morgan Markets."
-              image={{ src: "/demo/previews/placeholder-markets.svg", alt: "Preview of a markets portal" }}
+              image={{ src: "/specimens/placeholder-markets.svg", alt: "Preview of a markets portal" }}
               href={`/design-system?card=${theme}#media-card`}
               footer={
                 <>
@@ -187,7 +187,7 @@ export function ContentSpecimens() {
             <MediaCard
               title="Unavailable card with a much longer title that wraps"
               description="Shown when a record cannot be opened. The description stays at two lines even when the text is long enough to need three or more lines to show in full."
-              image={{ src: "/demo/previews/placeholder-other.svg", alt: "Preview of a workplace portal" }}
+              image={{ src: "/specimens/placeholder-other.svg", alt: "Preview of a workplace portal" }}
             />
           </div>
         )}

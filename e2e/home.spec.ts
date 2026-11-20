@@ -99,7 +99,7 @@ test("Same page for everyone: a visitor's cookies don't change Home", async ({ p
   expect(await page.getByRole("main").innerText()).toBe(first);
 });
 
-test("Demo enabled: Home shows no templates or reference deployments", async ({ page, db: _db }) => {
+test("Home shows no templates or reference deployments", async ({ page, db: _db }) => {
   await page.goto(paths.home);
   const main = page.getByRole("main");
   await expect(main).not.toContainText("Salt Patterns");

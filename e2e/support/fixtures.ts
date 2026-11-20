@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { test as base, expect, type Page } from "@playwright/test";
 import { type Db, openDatabase } from "../../src/lib/db/client";
-import { WORKSPACE_COOKIE, newWorkspaceKey } from "../../src/lib/demo/workspace-key";
-import { ensureWorkspace, setHints } from "../../src/lib/demo/workspaces";
+import { WORKSPACE_COOKIE, newWorkspaceKey } from "../../src/lib/workspaces/workspace-key";
+import { ensureWorkspace, setHints } from "../../src/lib/workspaces/workspaces";
 import { git } from "../../test/support/git-fixture";
 import { E2E_DATABASE, E2E_SOURCES } from "./env";
 
@@ -23,9 +23,9 @@ interface Options {
   /** Page and console errors a test provokes on purpose. */
   expectedErrors: RegExp[];
   /**
-   * Whether the template demo's guided hints show. They are off unless a test
-   * turns them on, so that hints never cover what other tests use: the browser
-   * starts with a demo workspace whose hints are turned off.
+   * Whether running applications' guided hints show. They are off unless a
+   * test turns them on, so that hints never cover what other tests use: the
+   * browser starts with a workspace whose hints are turned off.
    */
   guidedHints: boolean;
 }

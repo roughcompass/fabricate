@@ -19,7 +19,7 @@ test.use({ javaScriptEnabled: false, viewport: { width: 1440, height: 900 } });
 
 // The component gallery exists only in development and test builds (design-system spec).
 // The product site's two sections, the marketing page and the docs, are crawled with the operator pages.
-const START = [paths.home, paths.assessments, "/templates", "/about", "/docs", ...(process.env.E2E_PRODUCTION ? [] : ["/design-system"])];
+const START = [paths.home, paths.assessments, paths.applications, "/about", "/docs", ...(process.env.E2E_PRODUCTION ? [] : ["/design-system"])];
 /** Model terms the interface never shows as record names (content standard, "Vocabulary"). */
 const MODEL_TERMS = [/\bInitiatives?\b/, /\bSources?\b/, /\bAssessment #\d/];
 /** Old product names the interface never shows, in any case (content standard, "Product names"). Code elements are exempt. */
@@ -28,11 +28,11 @@ const VOCABULARY = [...MODEL_TERMS, ...OLD_PRODUCT_NAMES];
 /** Pages per route shape; records of the same kind share one shape. */
 const PER_SHAPE = 2;
 
-/** A route's shape: IDs and template slugs become placeholders. */
+/** A route's shape: IDs and application slugs become placeholders. */
 function shape(url: string): string {
   const [pathname] = url.split("?");
   const segments = pathname!.split("/").map((segment) => (/^[a-z]{2,4}_[a-z0-9]{6,}$/.test(segment) ? ":id" : segment));
-  if (segments[1] === "templates" && segments[2]) segments[2] = ":slug";
+  if (segments[1] === "applications" && segments[2] && segments[2] !== "new") segments[2] = ":slug";
   return segments.join("/");
 }
 

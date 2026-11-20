@@ -5,13 +5,12 @@ import { describe, expect, it } from "vitest";
 /*
  * Visual rules that live in one place, so they can't drift: a component
  * stylesheet uses the shared token or component instead of restating it.
- * The template demo's runtime has its own theme and is left out.
  */
 
 const files = (directory: string): string[] =>
   fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(directory, entry.name);
-    if (entry.isDirectory()) return full.includes(`${path.sep}runtime`) ? [] : files(full);
+    if (entry.isDirectory()) return files(full);
     return entry.name.endsWith(".module.css") ? [full] : [];
   });
 const stylesheets = files(path.resolve("src")).map((file) => ({ file: path.relative(process.cwd(), file), css: fs.readFileSync(file, "utf8") }));

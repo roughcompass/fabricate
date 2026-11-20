@@ -12,7 +12,6 @@ console.log(`Repository storage: ${config.repositoryStorage}`);
 console.log(`Git timeout:        ${config.gitTimeoutSeconds}s (lock wait ${config.gitLockTimeoutSeconds}s)`);
 console.log(`Credential helper:  ${config.gitCredentialHelper ?? "(none)"}`);
 console.log(`Worker concurrency: ${config.workerConcurrency}`);
-console.log(`Template demo:      ${config.demoEnabled ? "enabled" : "disabled"}`);
 console.log(`Profiling check:    every ${config.profiling.checkMinutes} minutes`);
 console.log(`Catalog registry:   ${config.catalog.registry}`);
 console.log(`Adoption:           snapshot every ${config.adoption.snapshotDays} days, rarely used at the ${config.adoption.rarelyUsedPercentile}th percentile`);

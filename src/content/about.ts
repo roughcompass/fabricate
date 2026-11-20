@@ -6,7 +6,8 @@ import { PRODUCT } from "@/lib/product";
  * run in a fixed order, and each heading states its point, so the headings
  * alone tell the story. Every claim about what the Frontend Registry does
  * names the route that shows it, and test/content/about-claims.test.ts fails
- * when a claimed route doesn't exist in the running configuration. Changes
+ * when a claimed route doesn't exist in the running configuration, so the
+ * Applications benefit shows only while previews are on. Changes
  * to this copy need DE product and design's approval before they ship
  * (task 10.11).
  */
@@ -99,6 +100,11 @@ export const ABOUT = {
       { audience: "Design-system teams", benefit: { text: "See your design system's adoption across the fleet: which components are used, rarely used, or unused, the props passed to each, the raw HTML your components could replace, and the versions in use.", route: "/adoption/design-systems/:id" } },
       { audience: "Platform teams", benefit: { text: "Write Standards as Controls, and assess repositories against them, with a Finding for each one.", route: "/assessments/new" } },
     ] satisfies readonly { audience: string; benefit: Claim }[],
+    // Applications exist only while previews are on (applications/onboarding spec), and so does this benefit.
+    applications: {
+      audience: "Reviewers",
+      benefit: { text: "Open an application running, built from its branch and rebuilt as the branch moves, then comment on what you see or share a link to it.", route: "/applications" },
+    } satisfies { audience: string; benefit: Claim },
   },
 
   trust: {
@@ -143,16 +149,21 @@ export const ABOUT = {
   },
 } as const;
 
+/** The benefits by audience the page shows: Applications' only while applications are available. */
+export function aboutBenefits(applications: boolean): readonly { audience: string; benefit: Claim }[] {
+  return applications ? [...ABOUT.benefits.audiences, ABOUT.benefits.applications] : ABOUT.benefits.audiences;
+}
+
 /**
- * Every claim the page makes, with the route that shows it.
+ * Every claim the page makes, with the route that shows it, while applications are or aren't available.
  * @public The claims test checks each route exists in the running configuration.
  */
-export function aboutClaims(): Claim[] {
+export function aboutClaims(applications: boolean): Claim[] {
   return [
     ...ABOUT.agents.rows.map((row) => row.registry),
     ...ABOUT.howItWorks.parts.map((part) => part.job),
     ...ABOUT.howItWorks.steps,
-    ...ABOUT.benefits.audiences.map((item) => item.benefit),
+    ...aboutBenefits(applications).map((item) => item.benefit),
     ...ABOUT.trust.claims,
     ...ABOUT.useWithAgent.claims,
     ...ABOUT.questions.items.map((item) => item.answer),

@@ -29,6 +29,20 @@ describe("redirects from recently retired addresses", () => {
   });
 });
 
+describe("the template demo's addresses (add-applications, task 6.6)", () => {
+  it.each([
+    ["the Salt Patterns gallery", "/templates"],
+    ["a template", "/templates/market-watch"],
+    ["a template's preview mode", "/templates/market-watch/preview"],
+  ])("sends %s to Applications", (_label, address) => {
+    expect(redirectOf(address)).toBe("/applications");
+  });
+
+  it("leaves addresses that only begin with templates alone", () => {
+    expect(redirectOf("/templatesx")).toBeNull();
+  });
+});
+
 describe("addresses retired more than 30 days ago (Retired address)", () => {
   it.each(["/initiatives/new", "/initiatives/ini_aaaaaaaaaaaaaaaa/edit", "/assessments/asm_bbbbbbbbbbbbbbbb/map", "/sources/new"])("leaves %s to the not-found page", (address) => {
     expect(redirectOf(address)).toBeNull();
@@ -36,7 +50,11 @@ describe("addresses retired more than 30 days ago (Retired address)", () => {
 });
 
 describe("addresses of removed pages", () => {
-  it.each(["/onboarding", "/onboarding/portals", "/navigation", "/applications", "/applications/new", "/portals", "/portals/ptl_0123456789abcdef/editor/frame-zones", "/runtime-configuration"])("leaves %s to the not-found page", (address) => {
+  it.each(["/onboarding", "/onboarding/portals", "/navigation", "/portals", "/portals/ptl_0123456789abcdef/editor/frame-zones", "/runtime-configuration"])("leaves %s to the not-found page", (address) => {
+    expect(redirectOf(address)).toBeNull();
+  });
+
+  it.each(["/applications", "/applications/new", "/applications/orders-portal"])("leaves %s, an Applications page again, alone", (address) => {
     expect(redirectOf(address)).toBeNull();
   });
 

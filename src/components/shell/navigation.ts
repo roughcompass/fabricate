@@ -49,31 +49,25 @@ const ADMIN_ITEMS: readonly NavItem[] = [
 /** Insights: Adoption Analytics, how the fleet uses the design systems and packages the Reference Catalog describes. */
 const INSIGHTS_ITEMS: readonly NavItem[] = [{ id: "adoption", label: "Adoption", href: "/adoption", icon: "grid", match: [/^\/adoption(\/.*)?$/] }];
 
-export const SALT_PATTERNS = { id: "salt-patterns", label: "Salt Patterns", href: "/templates", icon: "sparkle", match: [/^\/templates(\/.*)?$/] } as const satisfies NavItem;
-
 /** Which optional areas exist in this configuration. Pages read it from the configuration; client error pages, which can't, use NO_OPTIONAL_AREAS. */
 export interface NavFlags {
-  /** The template demo: Salt Patterns. */
-  readonly demo: boolean;
   /** Applications, which are offered while previews are enabled (applications/onboarding spec). */
   readonly applications: boolean;
 }
 
-export const NO_OPTIONAL_AREAS: NavFlags = { demo: false, applications: false };
+export const NO_OPTIONAL_AREAS: NavFlags = { applications: false };
 
 /**
  * The primary menu's groups (page-patterns spec, "The primary menu leads
  * with the Registry and its Applications"): Home; the Registry, with
  * Repositories, and Applications while applications are offered;
- * Assessments; Salt Patterns, under Templates, while the demo is enabled;
- * Insights; and Admin last.
+ * Assessments; Insights; and Admin last.
  */
 export function visibleGroups(flags: NavFlags): readonly MenuGroup[] {
   return [
     { id: "main", items: [HOME] },
     { id: "registry", heading: "Registry", items: flags.applications ? [REPOSITORIES, APPLICATIONS] : [REPOSITORIES] },
     { id: "assessments", heading: "Assessments", items: ASSESSMENT_ITEMS },
-    ...(flags.demo ? [{ id: "build", heading: "Templates", items: [SALT_PATTERNS] } as const] : []),
     { id: "insights", heading: "Insights", items: INSIGHTS_ITEMS },
     { id: "admin", heading: "Admin", items: ADMIN_ITEMS },
   ];

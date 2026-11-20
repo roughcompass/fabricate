@@ -71,9 +71,9 @@ const actionState = {
 
 const config = [
   {
-    // src/demo/runtime/generated/ is the heroes' committed generated code, checked by test/lint/generated-heroes.test.ts.
+    // public/toolbar/inspector.js is the timing inspector's committed bundle, checked by test/lint/inspector-bundle.test.ts.
     // public/prototype-runtime/ is local output the removed Prototypes left behind, until the operator deletes it; .gitignore keeps it out of Git.
-    ignores: ["src/demo/runtime/generated/**", ".next/**", ".next-*/**", "dist/**", "public/prototype-runtime/**", ".swc/**", ".vercel/**", "node_modules/**", "storage/**", "tmp/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
+    ignores: ["public/toolbar/inspector.js", ".next/**", ".next-*/**", "dist/**", "public/prototype-runtime/**", ".swc/**", ".vercel/**", "node_modules/**", "storage/**", "tmp/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
   },
   ...nextVitals,
   ...nextTypeScript,
@@ -108,8 +108,7 @@ const config = [
     },
   },
   {
-    // The template demo goes with add-applications; it formats its own timings.
-    files: ["src/components/ui/time.ts", "src/components/ui/count.ts", "src/demo/**/*.{ts,tsx}"],
+    files: ["src/components/ui/time.ts", "src/components/ui/count.ts"],
     rules: {
       "no-restricted-syntax": ["error", ...restrictedSyntax, recordLinks, actionState],
     },
@@ -176,9 +175,8 @@ const config = [
     },
   },
   {
-    // Design decision 8. The template demo and its toolbar go with add-applications.
+    // Design decision 8.
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/demo/**", "src/components/toolbar/**"],
     rules: {
       "max-lines-per-function": ["warn", { max: 150 }],
       "max-lines": ["error", { max: 600 }],

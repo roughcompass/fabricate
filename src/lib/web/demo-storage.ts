@@ -1,6 +1,6 @@
 import { LEGACY_NAMES } from "@/lib/legacy-names";
 
-/** The prefix of every local storage key the template demo writes. */
+/** The prefix of every local storage key the toolbar writes, named when it belonged to the template demo and kept so visitors keep their preferences. */
 export const DEMO_STORAGE_PREFIX = "frontend-registry-demo";
 
 /**

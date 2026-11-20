@@ -6,13 +6,14 @@ import { HOME } from "./navigation";
 /**
  * A record that does not exist, on the System template, with a link to the
  * list of its section. `sentenceNoun` is the noun mid-sentence, for nouns
- * that are not capitalized domain terms. A demo page passes `demo`, the demo
- * setting: while the demo is disabled the whole area is unavailable, so the
- * page names no record and links to Home, never back to a page that is itself
- * not found (page-patterns spec, not-found states).
+ * that are not capitalized domain terms. An area that can be turned off, such
+ * as Applications while previews are off, passes `available`: while it's
+ * false the whole area is unavailable, so the page names no record and links
+ * to Home, never back to a page that is itself not found (page-patterns spec,
+ * not-found states).
  */
-export function NotFoundPage({ noun, listHref, listLabel, sentenceNoun, demo = true }: { noun: string; listHref: string; listLabel: string; sentenceNoun?: string; demo?: boolean }) {
-  if (!demo) {
+export function NotFoundPage({ noun, listHref, listLabel, sentenceNoun, available = true }: { noun: string; listHref: string; listLabel: string; sentenceNoun?: string; available?: boolean }) {
+  if (!available) {
     return <NotFoundPage noun="Page" listHref={HOME.href} listLabel={HOME.label} />;
   }
   return (

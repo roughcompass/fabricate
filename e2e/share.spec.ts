@@ -1,102 +1,147 @@
-import { WORKSPACE_COOKIE } from "../src/lib/demo/workspace-key";
-import { createProfile } from "../src/lib/demo/profiles";
-import { ensureWorkspace } from "../src/lib/demo/workspaces";
-import { openTool, setView, waitForRegions } from "./support/demo";
+import type { Page } from "@playwright/test";
+import { deleteApplication } from "../src/lib/applications/records";
+import { deletePreview } from "../src/lib/previews/lifecycle";
+import { openTool, startComment } from "./support/toolbar";
+import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
+import { commitToOrdersPortal, rebuildOrdersPortal } from "./support/fixture-app";
+import { paths } from "./support/paths";
+import { serverConfig } from "./support/results";
+import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage } from "./support/running-app";
 
-/** Sharing a view of a running reference deployment (template-demo/toolbar spec). */
+/*
+ * Sharing a view of a running application (template-demo/toolbar spec,
+ * "Visitors can share an application view" and "Shared links open the
+ * captured view"; add-applications, task 8.6): a link captures the
+ * application, the commit of the build shown, and the route, and opens them
+ * anywhere with the view's comments, or the current build with a notice once
+ * the shared build is gone.
+ */
 
-test("opens a shared view elsewhere with its versions, theme, and comments, and takes replies", async ({ page, browser, db: _db }) => {
-  await page.goto("/run/ref-payments-workspace");
-  await waitForRegions(page);
-  await setView(page, { theme: "dark", overrides: { "payee-list": { version: "2.0.0", environment: "production" } } });
-  await page.keyboard.press("c");
-  await page.locator('[data-demo-anchor="pay-lumen"]').click();
+test.skip(!E2E_PREVIEWS, "Previews are off (E2E_PREVIEWS=0)");
+test.setTimeout(120_000);
+
+const pin = (page: Page, number: number) => page.locator(`[data-comment-pin="${number}"]`);
+
+/** Comments on Export orders as +name+ the first time. */
+async function comment(page: Page, text: string, name?: string) {
+  await startComment(page);
+  await application(page).getByRole("button", { name: "Export orders" }).click();
   const composer = page.getByRole("dialog", { name: "New comment" });
-  await composer.getByLabel("Your name").fill("Sam Rivera");
-  await composer.getByLabel("Comment", { exact: true }).fill("Ship version 2");
+  if (name) await composer.getByLabel("Your name").fill(name);
+  await composer.getByLabel("Comment", { exact: true }).fill(text);
   await composer.getByRole("button", { name: "Post comment" }).click();
-  await expect(page.locator('[data-comment-pin="1"]')).toBeVisible();
+  await expect(composer).toBeHidden();
+}
+
+/** Opens Share and returns the link it made. */
+async function shareLink(page: Page): Promise<string> {
+  await openTool(page, "share");
+  const share = page.getByRole("dialog", { name: "Share" });
+  await expect(share.getByLabel("Link to this view")).toHaveValue(/\/s\/[A-Za-z0-9_-]{43}$/);
+  return share.getByLabel("Link to this view").inputValue();
+}
+
+test("captures the application, commit, and route, opens them elsewhere with the comment pinned, and takes replies (Creating a link, Opening a shared link elsewhere, Reply through a share link)", async ({ page, browser, db }) => {
+  const { application: orders, preview } = await runOrdersPortal(page, db, "/accounts/42");
+  await comment(page, "Ship this account view", "Sam Rivera");
+  await expect(pin(page, 1)).toBeVisible();
+  await page.keyboard.press("Escape");
 
   await openTool(page, "share");
   const share = page.getByRole("dialog", { name: "Share" });
   await expect(share).toContainText("Anyone with the link can view this application and its comments, and add comments.");
+  await expect(share.locator("[data-share-view]")).toHaveText(`The link opens Orders portal at /accounts/42, built from commit ${preview.commitSha.slice(0, 12)}, with this view's comments.`);
+  await expect(share.getByRole("button", { name: "Copy link" })).toBeVisible();
   const link = await share.getByLabel("Link to this view").inputValue();
   expect(link).toMatch(/\/s\/[A-Za-z0-9_-]{43}$/);
-  await expect(share.getByRole("button", { name: "Copy link" })).toBeVisible();
 
   // A private window: another browser with no workspace of its own.
   const other = await browser.newContext();
   const recipient = await other.newPage();
   await recipient.goto(link);
-  await expect(recipient).toHaveURL(/\/run\/ref-payments-workspace\/payees$/);
-  await waitForRegions(recipient);
+  await expect(recipient).toHaveURL(new RegExp(`/run/${orders.slug}/accounts/42\\?share=[A-Za-z0-9_-]{43}$`));
   // A first-time visitor gets the guided hints, which open the toolbar menu; this one dismisses them.
   await recipient.locator("[data-hint]").getByRole("button", { name: "Dismiss hints" }).click();
-  await expect(recipient.getByRole("dialog", { name: "Toolbar", exact: true })).toBeHidden();
-  await expect(recipient.locator('[data-demo-mfe="payee-list"]')).toHaveAttribute("data-demo-version", "2.0.0");
-  await expect(recipient.locator("[data-demo-portal]")).toHaveAttribute("data-theme", "dark");
-  await expect(recipient.locator('[data-comment-pin="1"]')).toBeVisible();
+  await waitForPage(recipient, "Accounts");
+  await expect(application(recipient).getByRole("heading", { name: "Northwind Traders", level: 2 })).toBeVisible();
+  await expect(pin(recipient, 1)).toBeVisible();
+  await expect(recipient.locator("[data-run-notice]")).toHaveCount(0);
 
-  await recipient.locator('[data-comment-pin="1"]').click();
+  await pin(recipient, 1).click();
   const thread = recipient.getByRole("dialog", { name: "Comment 1" });
-  await expect(thread).toContainText("Ship version 2");
+  await expect(thread).toContainText("Ship this account view");
   await thread.getByLabel("Your name").fill("Robin");
   await thread.getByLabel("Reply").fill("Looks good to me");
   await thread.getByRole("button", { name: "Post reply" }).click();
   await expect(thread).toContainText("Looks good to me");
 
-  // The recipient's own changes stay in their browser.
-  await setView(recipient, { theme: "light" });
-  await expect(recipient.locator("[data-demo-portal]")).toHaveAttribute("data-theme", "light");
-
+  // The presenter sees the reply after reloading.
   await page.reload();
-  await waitForRegions(page);
-  await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-theme", "dark");
-  await page.locator('[data-comment-pin="1"]').click();
+  await waitForPage(page, "Accounts");
+  await pin(page, 1).click();
   await expect(page.getByRole("dialog", { name: "Comment 1" })).toContainText("Robin");
   await expect(page.getByRole("dialog", { name: "Comment 1" })).toContainText("Looks good to me");
   await other.close();
 });
 
-test("shares a custom profile as a snapshot that never joins the recipient's profiles", async ({ page, context, browser, db }) => {
-  await page.goto("/run/ref-payments-workspace");
-  await waitForRegions(page);
-  const key = (await context.cookies()).find((cookie) => cookie.name === WORKSPACE_COOKIE)!.value;
-  const priya = createProfile(db, ensureWorkspace(db, key).id, { name: "Priya Shah", persona: "Approver", region: "Mumbai" });
-  await setView(page, { profileId: priya.id });
-  await expect(page.locator('[data-demo-anchor="portal-session"]')).toContainText("Priya Shah");
+test("opens the captured commit's build, or the current build with a notice once the shared build is gone (Shared build pruned)", async ({ page, browser, db, baseURL }) => {
+  const first = await runOrdersPortal(page, db, "/accounts");
+  await comment(page, "On the first build", "Sam Rivera");
+  await page.keyboard.press("Escape");
+  const link = await shareLink(page);
 
-  await openTool(page, "share");
-  const share = page.getByRole("dialog", { name: "Share" });
-  await expect(share).toContainText("Priya Shah signed in");
-  const link = await share.getByLabel("Link to this view").inputValue();
-
-  const other = await browser.newContext();
-  const recipient = await other.newPage();
+  // A newer build becomes current; the link still opens the build it captured.
+  commitToOrdersPortal({ "src/accounts.jsx": (source) => source.replace("Every account the orders team serves", "Every account we serve") }, { message: "Shorter lead" });
+  const second = await rebuildOrdersPortal(db, first.application);
+  const colleague = await visitorContext(browser, db, baseURL!);
+  const recipient = await colleague.newPage();
   await recipient.goto(link);
-  await waitForRegions(recipient);
-  await expect(recipient.locator('[data-demo-anchor="portal-session"]')).toContainText("Priya Shah");
-  await expect(recipient.locator('[data-demo-anchor="portal-session"]')).toContainText("Approver · Mumbai");
-  await expect(recipient.locator('[data-demo-mfe="payment-activity"]').getByRole("button", { name: /^Approve / }).first()).toBeVisible();
+  await waitForPage(recipient, "Accounts");
+  await expect(recipient.locator("[data-target-frame]")).toHaveAttribute("src", `${first.base}accounts`);
+  await expect(application(recipient).getByText("Every account the orders team serves")).toBeVisible();
+  await expect(recipient.locator("[data-run-notice]")).toHaveCount(0);
 
-  // The snapshot comes first in Session, read-only and marked, and is not one of the recipient's own profiles.
-  await openTool(recipient, "session");
-  const session = recipient.getByRole("dialog", { name: "Session" });
-  const first = session.getByRole("radio").first();
-  await expect(first).toBeChecked();
-  expect(await first.evaluate((input) => input.closest("label")?.textContent)).toBe("Priya ShahApprover · Mumbai · From share link");
-  await expect(session.getByRole("button", { name: /^(Edit|Delete) Priya Shah/ })).toHaveCount(0);
-  await expect(session.getByRole("list", { name: "Your profiles" })).toHaveCount(0);
-  expect(await (await recipient.request.get("/api/demo/profiles")).json()).toEqual({ profiles: [] });
+  // Once that build is deleted, the current one opens at the captured route, saying so.
+  expect(await deletePreview(db, first.preview.publicId, serverConfig())).toBe(true);
+  await recipient.goto(link);
+  await waitForPage(recipient, "Accounts");
+  await expect(recipient.locator("[data-target-frame]")).toHaveAttribute("src", `${second.base}accounts`);
+  await expect(application(recipient).getByText("Every account we serve")).toBeVisible();
+  const notice = recipient.locator("[data-run-notice]");
+  await expect(notice).toContainText(`The shared commit ${first.preview.commitSha.slice(0, 12)} is no longer available, so this is the current build.`);
+  // The shared view's comment is listed, placed on the commit that's gone.
+  await openTool(recipient, "comments");
+  await expect(recipient.getByRole("dialog", { name: "Comments" })).toContainText(`Commit ${first.preview.commitSha.slice(0, 12)}`);
+  await recipient.keyboard.press("Escape");
+  await notice.getByRole("button", { name: "Dismiss" }).click();
+  await expect(notice).toHaveCount(0);
+  await colleague.close();
+});
 
-  // Choosing another profile there leaves the sharer signed in as Priya Shah.
-  await session.getByRole("radio", { name: /^Sam Rivera/ }).check();
-  await expect(recipient.locator('[data-demo-anchor="portal-session"]')).toContainText("Sam Rivera");
-  await page.reload();
-  await waitForRegions(page);
-  await expect(page.locator('[data-demo-anchor="portal-session"]')).toContainText("Priya Shah");
-  await other.close();
+test("stops working when the sharer resets their workspace or the application is deleted, leading back to Applications", async ({ page, db }) => {
+  const { application: orders } = await runOrdersPortal(page, db);
+  await comment(page, "Ship it", "Sam Rivera");
+  await page.keyboard.press("Escape");
+  const before = await shareLink(page);
+  await page.keyboard.press("Escape");
+
+  await resetFromApplications(page);
+  const response = await page.goto(before);
+  expect(response!.status()).toBe(404);
+  await expect(page).toHaveURL(/\/run\/unavailable$/);
+  await expect(page.getByRole("heading", { name: "Application not available", level: 1 })).toBeVisible();
+  await expect(page.getByText("This link no longer opens an application.")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Go to Applications" })).toHaveAttribute("href", paths.applications);
+  expect((await page.request.get(paths.applications)).status()).toBe(200);
+
+  await page.goto(paths.runningApplication(orders.slug));
+  await waitForPage(page, "Accounts");
+  const after = await shareLink(page);
+  deleteApplication(db, orders.publicId);
+  expect((await page.goto(after))!.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "Application not available", level: 1 })).toBeVisible();
 });
 
 test("refuses an unknown share link with a way back that opens a page", async ({ page, db: _db }) => {
@@ -104,34 +149,6 @@ test("refuses an unknown share link with a way back that opens a page", async ({
   expect(response?.status()).toBe(404);
   await expect(page).toHaveURL(/\/run\/unavailable$/);
   await expect(page.getByRole("heading", { level: 1, name: "Application not available" })).toBeVisible();
-  await expect(page.getByText("This link no longer opens an application.")).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
   const back = page.getByRole("link", { name: /^Go to / });
-  const href = (await back.getAttribute("href"))!;
-  expect((await page.request.get(href)).status(), href).toBe(200);
-});
-
-test("shares a reference deployment view, including its otherwise private comments", async ({ page, browser, db: _db }) => {
-  await page.goto("/run/ref-market-watch");
-  await waitForRegions(page);
-  await page.keyboard.press("c");
-  await page.locator('[data-demo-anchor="order-symbol"]').click();
-  const composer = page.getByRole("dialog", { name: "New comment" });
-  await composer.getByLabel("Your name").fill("Sam");
-  await composer.getByLabel("Comment", { exact: true }).fill("Private until shared");
-  await composer.getByRole("button", { name: "Post comment" }).click();
-  await expect(page.locator('[data-comment-pin="1"]')).toBeVisible();
-
-  const other = await browser.newContext();
-  const stranger = await other.newPage();
-  await stranger.goto("/run/ref-market-watch");
-  await waitForRegions(stranger);
-  await expect(stranger.locator("[data-comment-pin]")).toHaveCount(0);
-
-  await openTool(page, "share");
-  const link = await page.getByRole("dialog", { name: "Share" }).getByLabel("Link to this view").inputValue();
-  await stranger.goto(link);
-  await waitForRegions(stranger);
-  await expect(stranger.locator('[data-comment-pin="1"]')).toBeVisible();
-  await other.close();
+  expect((await page.request.get((await back.getAttribute("href"))!)).status()).toBe(200);
 });

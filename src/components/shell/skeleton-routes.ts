@@ -23,23 +23,18 @@ const RULES: [pattern: RegExp, kind: SkeletonKind][] = [
   // A Repository's page and each version show its Profile's views.
   [/^\/repositories\/src_[^/]+(\/versions\/[^/]+)?\/?$/, "details-tabs"],
   [/^\/profiles\/[^/]+\/?$/, "details-tabs"],
-  // A repository preview is a focused page, like template preview.
+  // A repository preview is a focused page, like an application's preview mode.
   [/^\/repositories\/src_[^/]+\/previews\/[^/]+\/?$/, "focused"],
   [/^\/runs\/[^/]+\/map(\/.*)?$/, "analysis"],
   [/^\/standards\/[^/]+\/draft\/?$/, "editor"],
   [/^\/(assessments|runs|evaluations|profiles|standards)\/[^/]+(\/.*)?$/, "details"],
-  // Applications: the gallery's cards, an application's page and settings, and preview mode, a focused page.
+  // Applications: the gallery's cards, an application's page and settings, and preview mode, a focused page; running applications have no skeleton.
   [/^\/applications\/?$/, "cards"],
   // Onboarding is a focused flow: its skeleton hides the sidebar as soon as the navigation starts.
   [/^\/applications\/new\/?$/, "focused-flow"],
   [/^\/applications\/[^/]+\/settings\/?$/, "settings"],
   [/^\/applications\/[^/]+\/preview\/?$/, "focused"],
   [/^\/applications\/(?!new\/?$)[^/]+\/?$/, "details"],
-  // The template demo's operator pages; running applications have no skeleton.
-  // Preview mode is a focused page: its skeleton hides the sidebar as soon as the navigation starts.
-  [/^\/templates\/[^/]+\/preview\/?$/, "focused"],
-  [/^\/templates\/?$/, "cards"],
-  [/^\/templates\/[^/]+\/?$/, "details"],
   // The docs, on the Content template; the product page has no skeleton.
   [/^\/docs(\/.*)?$/, "content"],
 ];

@@ -1,10 +1,21 @@
 import type { Page } from "@playwright/test";
 import { createRequire } from "node:module";
-import { expectToolbarOnTop, openTool, openToolbarMenu, startComment, waitForRegions } from "./support/demo";
+import { expectToolbarOnTop, openTool, openToolbarMenu, startComment } from "./support/toolbar";
+import { E2E_PREVIEWS } from "./support/env";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
+import { paths } from "./support/paths";
+import type { FixtureApplication } from "./support/fixture-app";
+import { application, runOrdersPortal, waitForPage } from "./support/running-app";
 import { useTheme } from "./support/shell";
 
-/** The toolbar over every running application (template-demo/toolbar spec). */
+/*
+ * The toolbar over a running application (template-demo/toolbar spec;
+ * add-applications, task 8.5): Comment, Comments, Share, Accessibility, and
+ * Timing, over the fixture application in its frame.
+ */
+
+test.skip(!E2E_PREVIEWS, "Previews are off (E2E_PREVIEWS=0)");
+test.setTimeout(90_000);
 
 const require = createRequire(import.meta.url);
 const toolbar = (page: Page) => page.getByRole("complementary", { name: "Toolbar", exact: true });
@@ -16,14 +27,15 @@ async function auditToolbar(page: Page) {
   if (!(await page.evaluate(() => "axe" in window))) await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
   return page.evaluate(async () => {
     const axe = (window as unknown as { axe: { run: (context: unknown, options: unknown) => Promise<{ violations: { id: string }[] }> } }).axe;
-    const result = await axe.run({ include: [['[data-demo-toolbar="controls"]']] }, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] }, resultTypes: ["violations"] });
+    const result = await axe.run({ include: [['[data-toolbar="controls"]']] }, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] }, resultTypes: ["violations"], iframes: false });
     return result.violations.map((violation) => violation.id);
   });
 }
 
-test.beforeEach(async ({ page, db: _db }) => {
-  await page.goto("/run/ref-payments-workspace");
-  await waitForRegions(page);
+let running: FixtureApplication;
+
+test.beforeEach(async ({ page, db }) => {
+  running = await runOrdersPortal(page, db);
 });
 
 test.describe("the pill", () => {
@@ -31,7 +43,7 @@ test.describe("the pill", () => {
     const pill = toolbar(page);
     await expect(pill).toBeVisible();
     await expect(pill).not.toContainText(/demo/i);
-    await expect(pill).toHaveAccessibleDescription("Builds and deployments are simulated.");
+    await expect(pill).not.toHaveAccessibleDescription(/simulated/i);
     await expect(pill.getByRole("button")).toHaveCount(1);
     await expect(menuButton(page)).toBeVisible();
 
@@ -112,13 +124,11 @@ test.describe("the menu", () => {
     await expect(menu(page)).toBeVisible();
     await expect(menu(page).getByRole("combobox", { name: "What do you need?" })).toBeFocused();
     await expect(menu(page).getByRole("combobox")).toHaveAttribute("placeholder", "What do you need?");
-    await expect(menu(page).locator("[data-menu-context]")).toContainText("Payments workspace");
-    await expect(menu(page).locator("[data-menu-context]")).toContainText("Production");
-    await expect(menu(page).locator("[data-menu-context]")).not.toContainText(/Ready|Building/);
     const shortcuts = menu(page).getByRole("group", { name: "Shortcuts" }).getByRole("button");
-    await expect(shortcuts).toHaveCount(7);
-    for (const group of ["Collaboration", "Inspect", "Runtime", "More"]) await expect(menu(page).getByRole("group", { name: group })).toBeVisible();
-    await expect(menu(page).getByRole("option")).toHaveCount(10);
+    expect(await shortcuts.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")))).toEqual(["Comment", "Share", "Accessibility", "Timing"]);
+    for (const group of ["Collaboration", "Inspect", "More"]) await expect(menu(page).getByRole("group", { name: group })).toBeVisible();
+    await expect(menu(page).getByRole("group", { name: "Runtime" })).toHaveCount(0);
+    expect(await menu(page).getByRole("option").evaluateAll((options) => options.map((option) => option.getAttribute("data-toolbar-item")))).toEqual(["comment", "comments", "share", "accessibility", "timing", "shortcuts", "hide"]);
     const [menuBox, pillBox] = [(await menu(page).boundingBox())!, (await toolbar(page).boundingBox())!];
     expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(pillBox.x);
 
@@ -127,12 +137,12 @@ test.describe("the menu", () => {
     await expect(menuButton(page)).toBeFocused();
   });
 
-  test("filters to a tool by name and opens it with Enter", async ({ page }) => {
+  test("filters to a tool by name and opens it with Enter (Filtering to a tool)", async ({ page }) => {
     await openToolbarMenu(page);
-    await page.keyboard.type("micro");
+    await page.keyboard.type("tim");
     const options = menu(page).getByRole("option");
     await expect(options).toHaveCount(1);
-    await expect(options.first()).toHaveAccessibleName("Microfrontends");
+    await expect(options.first()).toHaveAccessibleName("Timing");
     await expect(options.first()).toHaveAttribute("aria-selected", "true");
     await expect(menu(page).getByRole("group", { name: "Inspect" })).toBeVisible();
     await expect(menu(page).getByRole("group", { name: "Collaboration" })).toHaveCount(0);
@@ -140,7 +150,7 @@ test.describe("the menu", () => {
     await expect(menu(page).getByRole("group", { name: "Shortcuts" })).toHaveCount(0);
     await page.keyboard.press("Enter");
     await expect(menu(page)).toBeHidden();
-    await expect(page.getByRole("dialog", { name: "Microfrontends" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Timing" })).toBeVisible();
   });
 
   test("moves through the items with the arrow keys, and matches aliases", async ({ page }) => {
@@ -157,20 +167,26 @@ test.describe("the menu", () => {
     await expect(menu(page).getByRole("option", { name: "Hide toolbar" })).toHaveAttribute("aria-selected", "true");
   });
 
-  test("says when nothing matches", async ({ page }) => {
+  test("says when nothing matches, and the removed tools aren't found (No match)", async ({ page }) => {
     await openToolbarMenu(page);
-    await page.keyboard.type("zzz");
-    await expect(menu(page).getByText("No matching tools")).toBeVisible();
-    await expect(menu(page).getByRole("option")).toHaveCount(0);
+    for (const query of ["zzz", "micro", "session", "settings"]) {
+      await menu(page).getByRole("combobox").fill(query);
+      await expect(menu(page).getByText("No matching tools")).toBeVisible();
+      await expect(menu(page).getByRole("option")).toHaveCount(0);
+    }
   });
 
-  test("links the context row to the template's page, in a new tab", async ({ page, context }) => {
+  test("names the application, its branch and short commit, and its status, and opens its page in a new tab (Context row)", async ({ page, context }) => {
     await openToolbarMenu(page);
     const row = menu(page).locator("[data-menu-context]");
-    await expect(row).toContainText("Payments workspace");
+    await expect(row).toContainText("Orders portal");
+    await expect(row).toContainText("main");
+    await expect(row).toContainText(running.preview.commitSha.slice(0, 12));
+    await expect(row).toContainText("Ready");
+    await expect(row).toHaveAttribute("target", "_blank");
     const [opened] = await Promise.all([context.waitForEvent("page"), row.click()]);
     await opened.waitForLoadState("domcontentloaded");
-    expect(new URL(opened.url()).pathname).toBe("/templates/payments-workspace");
+    expect(new URL(opened.url()).pathname).toBe(paths.application(running.application.slug));
     await opened.close();
   });
 
@@ -178,11 +194,11 @@ test.describe("the menu", () => {
     test(`has no accessibility violations with the menu open in the ${theme} operator theme`, async ({ page, context, baseURL }) => {
       await useTheme(context, theme, baseURL!);
       await page.reload();
-      await waitForRegions(page);
+      await waitForPage(page, "Accounts");
       expect(await auditToolbar(page)).toEqual([]);
       await openToolbarMenu(page);
       expect(await auditToolbar(page)).toEqual([]);
-      await page.keyboard.type("set");
+      await page.keyboard.type("tim");
       expect(await auditToolbar(page)).toEqual([]);
       await page.keyboard.press("Escape");
       await openToolbarMenu(page);
@@ -193,7 +209,7 @@ test.describe("the menu", () => {
 });
 
 test.describe("panels", () => {
-  test("open to the left of the pill, which stays fully visible", async ({ page }) => {
+  test("open to the left of the pill, which stays fully visible (Panel beside the toolbar)", async ({ page }) => {
     await openTool(page, "accessibility");
     const panel = page.getByRole("dialog", { name: "Accessibility" });
     await expect(panel).toBeVisible();
@@ -211,15 +227,15 @@ test.describe("panels", () => {
 
   test("fit a 375px viewport beside the pill without overflowing", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await openTool(page, "microfrontends");
-    const panel = page.getByRole("dialog", { name: "Microfrontends" });
+    await openTool(page, "timing");
+    const panel = page.getByRole("dialog", { name: "Timing" });
     const [panelBox, pillBox] = [(await panel.boundingBox())!, (await toolbar(page).boundingBox())!];
     expect(panelBox.x).toBeGreaterThanOrEqual(8);
     expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(pillBox.x);
     await expectNoHorizontalOverflow(page);
   });
 
-  test("open by shortcut with focus inside, close with Escape, and return focus", async ({ page }) => {
+  test("open by shortcut with focus inside, close with Escape, and return focus (Panel focus)", async ({ page }) => {
     await page.keyboard.press("a");
     const panel = page.getByRole("dialog", { name: "Accessibility" });
     await expect(panel).toBeVisible();
@@ -227,8 +243,8 @@ test.describe("panels", () => {
     await page.keyboard.press("Escape");
     await expect(panel).toBeHidden();
 
-    await page.keyboard.press("p");
-    await expect(page.getByRole("dialog", { name: "Session" })).toBeVisible();
+    await page.keyboard.press("l");
+    await expect(page.getByRole("dialog", { name: "Share" })).toBeVisible();
     await page.keyboard.press("Escape");
 
     // Opened from the menu, a panel returns focus to the menu button.
@@ -240,22 +256,20 @@ test.describe("panels", () => {
 });
 
 test.describe("keyboard shortcuts", () => {
-  test("lists every action with its icon and key under Preferences, and offers the switch", async ({ page }) => {
+  test("lists every action with its icon and key under Preferences, and offers the switch (Shortcuts reference)", async ({ page }) => {
     await openTool(page, "shortcuts");
     const reference = page.getByRole("dialog", { name: "Preferences / Keyboard shortcuts" });
     await expect(reference).toBeVisible();
     const rows = reference.getByRole("list", { name: "Keyboard shortcuts" }).getByRole("listitem");
-    await expect(rows).toHaveCount(10);
+    await expect(rows).toHaveCount(7);
     for (const [name, key] of [
       ["Start or stop comment mode", "C"],
-      ["Microfrontends", "M"],
+      ["Share", "L"],
       ["Accessibility", "A"],
       ["Timing", "T"],
-      ["Session", "P"],
-      ["Settings", "S"],
-      ["Share", "L"],
       ["Keyboard shortcuts", "?"],
       ["Hide or show the toolbar", "."],
+      ["Close the menu or panel, or leave the current mode", "Esc"],
     ] as const) {
       const row = rows.filter({ hasText: name }).first();
       await expect(row.locator("kbd")).toHaveText(key);
@@ -267,11 +281,11 @@ test.describe("keyboard shortcuts", () => {
     await expect(reference).toBeVisible();
   });
 
-  test("ignores a shortcut letter typed into a field", async ({ page }) => {
-    const amount = page.locator('[data-demo-mfe="transfer-form"]').getByLabel("Amount (USD)");
-    await amount.click();
-    await page.keyboard.type("cps");
-    await expect(amount).toHaveValue("cps");
+  test("ignores a shortcut letter typed into a field (Typing in the application)", async ({ page }) => {
+    const field = application(page).getByRole("searchbox");
+    await field.click();
+    await page.keyboard.type("cal");
+    await expect(field).toHaveValue("cal");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(toolbar(page).getByRole("button", { name: "Comment", exact: true })).toHaveCount(0);
   });
@@ -281,52 +295,25 @@ test.describe("keyboard shortcuts", () => {
     await page.getByLabel("Use single-key shortcuts").uncheck();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    for (const key of ["s", "p", "a", "c", "."]) {
+    // Wherever focus is: in the toolbar's page or the application's.
+    for (const key of ["a", "t", "l", "c", "."]) {
       await page.keyboard.press(key);
       await expect(page.getByRole("dialog")).toHaveCount(0);
     }
+    await application(page).getByRole("button", { name: "Export orders" }).focus();
+    await page.keyboard.press("t");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(toolbar(page)).toBeVisible();
     await page.reload();
-    await page.keyboard.press("s");
-    await expect(page.getByRole("dialog", { name: "Settings" })).toBeHidden();
+    await waitForPage(page, "Accounts");
+    await page.keyboard.press("a");
+    await expect(page.getByRole("dialog", { name: "Accessibility" })).toBeHidden();
   });
 });
 
-test("keeps its controls on top of debug labels and audit outlines", async ({ page }) => {
-  await openTool(page, "microfrontends");
-  await page.getByRole("dialog", { name: "Microfrontends" }).getByLabel("Enable debug mode").check();
-  await openTool(page, "accessibility");
-  await page.getByRole("dialog", { name: "Accessibility" }).getByRole("button", { name: "Run audit" }).click();
-  await expect(page.locator("[data-audit-outline]").first()).toBeVisible();
-  await expectToolbarOnTop(page);
-  await page.keyboard.press("Escape");
-  await expectToolbarOnTop(page);
-  await menuButton(page).click();
-  await expect(menu(page)).toBeVisible();
-});
-
 test.describe("nothing overlays the toolbar", () => {
-  const setPrefs = async (page: Page, prefs: Record<string, boolean>) => {
-    await page.evaluate((value) => localStorage.setItem("frontend-registry-demo:toolbar", JSON.stringify(value)), prefs);
-    await page.reload();
-    await waitForRegions(page);
-  };
   /** Each overlay, turned on by itself. */
   const OVERLAYS: [name: string, turnOn: (page: Page) => Promise<void>][] = [
-    [
-      "debug mode",
-      async (page) => {
-        await setPrefs(page, { debug: true });
-        await expect(page.locator("[data-debug-label]").first()).toBeVisible();
-      },
-    ],
-    [
-      "the zone indicator",
-      async (page) => {
-        await setPrefs(page, { zoneIndicator: true });
-        await expect(page.getByRole("status", { name: "Zone indicator" })).toBeVisible();
-      },
-    ],
     [
       "an audit",
       async (page) => {
@@ -336,27 +323,10 @@ test.describe("nothing overlays the toolbar", () => {
       },
     ],
     [
-      "hot spots",
-      async (page) => {
-        await openTool(page, "timing");
-        await page.getByRole("dialog", { name: "Timing" }).getByRole("checkbox", { name: "Hot spots" }).check();
-        await expect(page.locator("[data-hot-spot-tint]").first()).toBeVisible();
-      },
-    ],
-    [
-      "Select mode",
-      async (page) => {
-        await openTool(page, "microfrontends");
-        await page.getByRole("dialog", { name: "Microfrontends" }).getByRole("button", { name: "Select on page" }).click();
-        await page.locator('[data-demo-mfe="payee-list"]').hover();
-        await expect(page.locator("[data-select-outline]")).toBeVisible();
-      },
-    ],
-    [
       "a comment draft",
       async (page) => {
         await startComment(page);
-        await page.locator('[data-demo-anchor="send-payment"]').click();
+        await application(page).getByRole("button", { name: "Export orders" }).click();
         await expect(page.getByRole("dialog", { name: "New comment" })).toBeVisible();
       },
     ],
@@ -376,9 +346,9 @@ test.describe("nothing overlays the toolbar", () => {
     }
   }
 
-  test("passes an audit outline beneath the pill, whose buttons still respond", async ({ page }) => {
-    // Dock the payee list, which has the planted defects, under the pill.
-    await page.addStyleTag({ content: '[data-demo-mfe="payee-list"] { position: fixed !important; top: calc(50% - 120px) !important; right: 0 !important; width: 320px !important; }' });
+  test("passes an audit outline beneath the pill, whose buttons still respond (Audit outline beneath the toolbar)", async ({ page }) => {
+    // Dock the field with no label under the pill.
+    await application(page).locator("head").evaluate((head) => head.insertAdjacentHTML("beforeend", "<style>input[type=search] { position: fixed !important; top: calc(50% - 20px) !important; right: 0 !important; width: 200px !important; z-index: 2147483647 !important; }</style>"));
     await openTool(page, "accessibility");
     await page.getByRole("dialog", { name: "Accessibility" }).getByRole("button", { name: "Run audit" }).click();
     await expect(page.locator("[data-audit-outline]").first()).toBeVisible();
@@ -397,12 +367,11 @@ test.describe("nothing overlays the toolbar", () => {
     await expect(menu(page)).toBeVisible();
   });
 
-  test("stays above application content fixed at the right edge at the highest stacking order", async ({ page }) => {
-    await page.evaluate(() => {
+  test("stays above application content fixed at the right edge at the highest stacking order (Application content at the edge)", async ({ page }) => {
+    await application(page).locator("body").evaluate((body) => {
       const cover = document.createElement("div");
-      cover.dataset.testCover = "";
       cover.style.cssText = "position: fixed; top: 0; right: 0; bottom: 0; width: 160px; z-index: 2147483647; background: rgb(200 0 0 / 0.5);";
-      document.querySelector("[data-demo-portal]")!.append(cover);
+      body.append(cover);
     });
     await expectToolbarOnTop(page);
     await menuButton(page).click();
@@ -422,8 +391,8 @@ test.describe("nothing overlays the toolbar, with guided hints", () => {
     test(`keeps the controls on top, and the hint clear of them, at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
       await page.reload();
-      await waitForRegions(page);
-      for (const name of ["Hint 1 of 3: Audit accessibility", "Hint 2 of 3: Swap microfrontend versions", "Hint 3 of 3: Comment on anything"]) {
+      await waitForPage(page, "Accounts");
+      for (const name of ["Hint 1 of 3: Audit accessibility", "Hint 2 of 3: See what's slow", "Hint 3 of 3: Comment on anything"]) {
         const hint = page.getByRole("dialog", { name });
         await expect(hint).toBeVisible();
         await expect(menu(page)).toBeVisible();

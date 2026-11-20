@@ -1,18 +1,20 @@
 import Link from "next/link";
 import { buttonProps } from "@/components/ui/button-content";
 import { Icon } from "@/components/ui/icon";
-import { demoEnabled } from "@/lib/demo/guard";
+import { applicationsAvailable } from "@/lib/applications/availability";
+import { routes } from "@/lib/web/routes";
 import styles from "./not-found.module.css";
 
 /**
- * A running application that is no longer available: an unknown template, or
- * a share link that no longer resolves. It renders
- * full screen, without the operator shell, and offers a way back
- * (page-patterns spec, "Every link opens the page it names"). While the demo
- * is disabled, the way back is the Assessments list; otherwise, Salt Patterns.
+ * A running application that isn't available: an unknown or deleted
+ * application, one with no successful build yet, or a share link that no
+ * longer resolves (page-patterns spec, "Share links that no longer resolve
+ * lead back to Applications"). It renders full screen, without the operator
+ * shell, with one way back: Applications while previews are on, and Home
+ * otherwise.
  */
 export default function RunNotFound() {
-  const demo = demoEnabled();
+  const available = applicationsAvailable();
   return (
     <main className={styles.page}>
       <div className={styles.message}>
@@ -20,9 +22,9 @@ export default function RunNotFound() {
           <Icon name="help" size={20} />
         </span>
         <h1 className={styles.title}>Application not available</h1>
-        <p className={styles.text}>This link no longer opens an application. Its template may have been removed, or the demo may have been reset.</p>
-        <Link href={demo ? "/templates" : "/assessments"} {...buttonProps("primary")}>
-          {demo ? "Go to Salt Patterns" : "Go to Assessments"}
+        <p className={styles.text}>This link no longer opens an application. The application may have been deleted, it may have no successful build yet, or the link may have been reset.</p>
+        <Link href={available ? routes.applications : routes.home} {...buttonProps("primary")}>
+          {available ? "Go to Applications" : "Go to Home"}
         </Link>
       </div>
     </main>

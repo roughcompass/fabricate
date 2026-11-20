@@ -1,13 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { WORKSPACE_COOKIE, WORKSPACE_COOKIE_MAX_AGE, isWorkspaceKey, newWorkspaceKey } from "@/lib/demo/workspace-key";
+import { WORKSPACE_COOKIE, WORKSPACE_COOKIE_MAX_AGE, isWorkspaceKey, newWorkspaceKey } from "@/lib/workspaces/workspace-key";
 import { preferenceCookieRenames } from "@/lib/web/preference-cookies";
 
 /**
- * Gives each template-demo visitor an anonymous workspace credential on their
- * first demo request (design.md, decision 3). It only issues the cookie: the
- * workspace row is created on the first write, and every demo page and
- * endpoint checks the demo switch itself, so a cookie issued while the demo is
- * disabled has no effect.
+ * Gives each visitor an anonymous workspace credential on their first request
+ * to Applications, a running application, a share link, or the workspace's
+ * endpoints (template-demo/demo-mode spec, "Each visitor works in an
+ * anonymous workspace"). It only issues the cookie: the workspace row is
+ * created on the first write, and every page and endpoint checks its own
+ * availability, so a cookie issued while previews are off has no effect.
  *
  * It also moves preference cookies a browser still keeps under their names
  * from before the rename to their new names (lib/web/preference-cookies.ts).
@@ -21,7 +22,7 @@ import { preferenceCookieRenames } from "@/lib/web/preference-cookies";
  */
 
 /** Where a workspace credential is issued. */
-const WORKSPACE_PATHS = /^\/(templates|run|s|api\/demo)(\/|$)/;
+const WORKSPACE_PATHS = /^\/(applications|run|s|api\/workspace)(\/|$)/;
 
 export function proxy(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;
@@ -57,6 +58,6 @@ export function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Every request except Next's assets, the public files, and repository previews.
-  matcher: ["/((?!_next/static|_next/image|demo/|previews/|icon\\.svg|favicon\\.ico).*)"],
+  // Every request except Next's assets, the public files, the scripts the toolbar adds to a running application, and repository previews.
+  matcher: ["/((?!_next/static|_next/image|specimens/|toolbar/|previews/|icon\\.svg|favicon\\.ico).*)"],
 };

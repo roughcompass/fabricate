@@ -43,11 +43,6 @@ const settingsSchema = z.strictObject({
     maxFiles: positiveInteger,
     maxTotalBytes: positiveInteger,
   }),
-  // The template demo: off by default, on in development and test, and
-  // turned on elsewhere with FRONTEND_REGISTRY_DEMO=true.
-  demo: z.strictObject({
-    enabled: z.boolean(),
-  }),
   // How often the worker checks every repository's reference for a new
   // commit, and its current survey for an older recipe, to survey it again.
   profiling: z.strictObject({
@@ -125,7 +120,6 @@ export const ENV_KEYS = {
   maxLockfileBytes: "FRONTEND_REGISTRY_MAX_LOCKFILE_BYTES",
   maxFiles: "FRONTEND_REGISTRY_MAX_FILES",
   maxTotalBytes: "FRONTEND_REGISTRY_MAX_TOTAL_BYTES",
-  demoEnabled: "FRONTEND_REGISTRY_DEMO",
   profilingCheckMinutes: "FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES",
   catalogRegistry: "FRONTEND_REGISTRY_CATALOG_REGISTRY",
   adoptionSnapshotDays: "FRONTEND_REGISTRY_ADOPTION_SNAPSHOT_DAYS",
@@ -183,8 +177,6 @@ export interface FrontendRegistryConfig {
   readonly repositoryStorage: string;
   readonly gitCredentialHelper: string | null;
   readonly analysis: AnalysisBudgets;
-  /** Whether the template demo's pages, running applications, and endpoints exist. */
-  readonly demoEnabled: boolean;
   readonly profiling: { readonly checkMinutes: number };
   /** The Reference Catalog: the npm registry Catalog builds read from, ending in a slash. */
   readonly catalog: { readonly registry: string };
@@ -216,6 +208,7 @@ export function loadConfig(options: LoadOptions = {}): FrontendRegistryConfig {
   // working directory would ship the whole project, tests included, in the server output.
   const appRoot = path.resolve(options.appRoot ?? /*turbopackIgnore: true*/ process.cwd());
   const warn = options.warn ?? ((message: string) => console.warn(`[config] ${message}`));
+  warnRetired(options.env ?? process.env, warn);
   const env = withLegacyNames(options.env ?? process.env, warn);
   const environment = options.environment ?? currentEnvironment(env);
   const { value, label } = options.file === undefined ? readConfigFile(appRoot, warn) : { value: options.file, label: `config/${CONFIG_FILE}` };
@@ -244,7 +237,6 @@ export function withOverrides(
     ...config.settings,
     ...overrides,
     analysis: { ...config.settings.analysis, ...overrides.analysis },
-    demo: { ...config.settings.demo, ...overrides.demo },
     profiling: { ...config.settings.profiling, ...overrides.profiling },
     catalog: { ...config.settings.catalog, ...overrides.catalog },
     adoption: { ...config.settings.adoption, ...overrides.adoption },
@@ -300,7 +292,6 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
     repositoryStorage: resolve(settings.repositoryStorage),
     gitCredentialHelper: settings.gitCredentialHelper,
     analysis: { ...settings.analysis },
-    demoEnabled: settings.demo.enabled,
     profiling: { checkMinutes: settings.profiling.checkMinutes },
     catalog: { registry: settings.catalog.registry.endsWith("/") ? settings.catalog.registry : `${settings.catalog.registry}/` },
     adoption: { ...settings.adoption },
@@ -364,7 +355,6 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     if (value === "false" || value === "0") return false;
     throw new ConfigurationError(`${key} must be true, false, 1, or 0 (got ${JSON.stringify(env[key])})`);
   };
-  const demo: Record<string, unknown> = { ...(settings.demo as Record<string, unknown>) };
   const profiling: Record<string, unknown> = { ...(settings.profiling as Record<string, unknown>) };
   const catalog: Record<string, unknown> = { ...(settings.catalog as Record<string, unknown>) };
   const adoption: Record<string, unknown> = { ...(settings.adoption as Record<string, unknown>) };
@@ -397,7 +387,6 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [analysis, "maxLockfileBytes", integer(ENV_KEYS.maxLockfileBytes)],
     [analysis, "maxFiles", integer(ENV_KEYS.maxFiles)],
     [analysis, "maxTotalBytes", integer(ENV_KEYS.maxTotalBytes)],
-    [demo, "enabled", boolean(ENV_KEYS.demoEnabled)],
     [profiling, "checkMinutes", integer(ENV_KEYS.profilingCheckMinutes)],
     [catalog, "registry", text(ENV_KEYS.catalogRegistry)],
     [adoption, "snapshotDays", integer(ENV_KEYS.adoptionSnapshotDays)],
@@ -415,7 +404,6 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
   ];
   for (const [target, key, value] of assignments) if (value !== undefined) target[key] = value;
   result.analysis = analysis;
-  if (Object.keys(demo).length > 0) result.demo = demo;
   if (Object.keys(profiling).length > 0) result.profiling = profiling;
   if (Object.keys(catalog).length > 0) result.catalog = catalog;
   if (Object.keys(adoption).length > 0) result.adoption = adoption;
@@ -444,6 +432,20 @@ function withLegacyNames(env: Readonly<Record<string, string | undefined>>, warn
     }
   }
   return result;
+}
+
+/** Settings that were removed, by their old suffix, with what to do instead. */
+const RETIRED_SETTINGS: Readonly<Record<string, string>> = {
+  DEMO: `the template demo was removed, and applications are available while ${ENV_PREFIX}PREVIEWS is on`,
+};
+
+/** Warns about each retired variable that's set, under its current or its old name, since nothing reads it now. */
+function warnRetired(env: Readonly<Record<string, string | undefined>>, warn: (message: string) => void): void {
+  for (const [suffix, reason] of Object.entries(RETIRED_SETTINGS)) {
+    for (const name of [`${ENV_PREFIX}${suffix}`, `${LEGACY_NAMES.envPrefix}${suffix}`]) {
+      if (env[name] !== undefined) warn(`${name} is no longer read: ${reason}. Remove ${name}.`);
+    }
+  }
 }
 
 /** config/frontend-registry.json, or for one release the file under its old name when it's the only one. */
