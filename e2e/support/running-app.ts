@@ -55,3 +55,14 @@ export async function workspaceOf(context: BrowserContext, db: Db): Promise<Work
   if (!workspace) throw new Error("This browser has no workspace yet");
   return workspace;
 }
+
+/** Resets the workspace of +page+'s browser from the Applications page, confirming, as a presenter would. */
+export async function resetFromApplications(page: Page): Promise<void> {
+  await page.goto("/applications");
+  const section = page.getByRole("region", { name: "Reset workspace" });
+  await section.getByRole("button", { name: "Reset workspace" }).click();
+  const dialog = page.getByRole("dialog", { name: "Reset your workspace?" });
+  await expect(dialog).toContainText("Your comments and share links are removed, and links you shared stop working.");
+  await dialog.getByRole("button", { name: "Reset workspace" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" }).getByText("Your workspace was reset.")).toBeVisible();
+}

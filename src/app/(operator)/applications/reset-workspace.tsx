@@ -33,7 +33,6 @@ export async function resetWorkspaceAction(): Promise<void> {
  * confirms first, and Cancel changes nothing. It redirects to Applications
  * with the notice `workspace-reset`, which `workspaceOutcome` turns into a
  * toast.
- * @public The Applications page places it at its end (add-applications, task 8.7).
  */
 export function ResetWorkspaceSection() {
   return (
@@ -49,7 +48,6 @@ export function ResetWorkspaceSection() {
 
 /**
  * The toast for Reset workspace's notice, or undefined for any other code.
- * @public The Applications page shows it beside its own outcomes (add-applications, task 8.7).
  */
 export function workspaceOutcome(code: string | undefined): Outcome | undefined {
   return code === RESET ? { id: RESET, tone: "success", title: "Your workspace was reset.", description: "Your comments and share links were removed, and links you shared no longer open." } : undefined;

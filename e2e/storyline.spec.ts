@@ -1,20 +1,18 @@
-import { resetWorkspace } from "../src/lib/demo/workspaces";
 import { openTool } from "./support/demo";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { buildOrdersPortal, ordersPortalRemote } from "./support/fixture-app";
 import { paths } from "./support/paths";
 import { pageHeader } from "./support/shell";
-import { application, visitorContext, waitForPage, workspaceOf } from "./support/running-app";
+import { application, resetFromApplications, visitorContext, waitForPage } from "./support/running-app";
 
 /*
  * The presenter storyline in one flow, ported from the template demo's to an
  * application (add-applications, task 9.2): from Applications to the
  * application's page, preview mode, and the running application, its
  * toolbar's audit, Timing, a comment, and a share link a colleague replies
- * through, then a reset. Run it three times in a row (`--repeat-each=3`) to
- * rehearse. Reset workspace's section is placed on the Applications page
- * when it's merged; until then the reset runs as its action does.
+ * through, then Reset workspace from Applications. Run it three times in a
+ * row (`--repeat-each=3`) to rehearse.
  */
 
 test.skip(!E2E_PREVIEWS, "Previews are off (E2E_PREVIEWS=0)");
@@ -93,8 +91,9 @@ test("runs the presenter storyline from Applications to a reset", async ({ page,
   await app.locator('[data-comment-pin="1"]').click();
   await expect(app.getByRole("dialog", { name: "Comment 1" })).toContainText("Agreed, ship it");
 
-  // Reset: the comments and the share link are gone, and the application is unchanged.
-  resetWorkspace(db, (await workspaceOf(context, db)).id);
+  // Reset from Applications: the comments and the share link are gone, and the application is unchanged.
+  await resetFromApplications(page);
+  await expect(card).toContainText("Ready");
   expect((await recipient.request.get(link)).status()).toBe(404);
   await app.reload();
   await waitForPage(app, "Accounts");

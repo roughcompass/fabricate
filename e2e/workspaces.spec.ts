@@ -1,19 +1,17 @@
 import type { Page } from "@playwright/test";
-import { resetWorkspace } from "../src/lib/demo/workspaces";
 import { startComment } from "./support/demo";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { framedRun } from "./support/fixture-app";
-import { application, runOrdersPortal, visitorContext, waitForPage, workspaceOf } from "./support/running-app";
+import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage } from "./support/running-app";
 
 /*
  * Anonymous workspaces on running applications (template-demo/demo-mode
  * spec, "Each visitor works in an anonymous workspace" and "Visitors can
  * reset their workspace's comments and share links"; add-applications, task
  * 8.7): every visitor sees the same application and only their own comments,
- * a returning browser finds them again, and a reset clears one workspace
- * alone. Reset workspace's section is placed on the Applications page when
- * it's merged; until then the reset runs as its action does.
+ * a returning browser finds them again, and Reset workspace, at the end of
+ * the Applications page, clears one workspace alone.
  */
 
 test.skip(!E2E_PREVIEWS, "Previews are off (E2E_PREVIEWS=0)");
@@ -32,7 +30,7 @@ async function comment(page: Page, button: string, text: string, name: string) {
   await page.keyboard.press("Escape");
 }
 
-test("keeps two visitors' comments on the same application apart, and resets one without the other (Two visitors, Private until shared, Reset between presentations)", async ({ page, context, browser, baseURL, db }) => {
+test("keeps two visitors' comments on the same application apart, and resets one without the other (Two visitors, Private until shared, Reset between presentations)", async ({ page, browser, baseURL, db }) => {
   const running = await runOrdersPortal(page, db);
   const visitor = await visitorContext(browser, db, baseURL!);
   const second = await visitor.newPage();
@@ -53,8 +51,9 @@ test("keeps two visitors' comments on the same application apart, and resets one
   }
 
   // The presenter resets; the visitor keeps their comment, and the application is unchanged.
-  resetWorkspace(db, (await workspaceOf(context, db)).id);
-  await page.reload();
+  await resetFromApplications(page);
+  await expect(page.getByRole("article").filter({ hasText: "Orders portal" })).toContainText("Ready");
+  await page.goto(framedRun(running, "/accounts"));
   await waitForPage(page, "Accounts");
   await page.waitForLoadState("networkidle");
   await expect(pins(page)).toHaveCount(0);
@@ -66,6 +65,19 @@ test("keeps two visitors' comments on the same application apart, and resets one
   await application(page).getByRole("button", { name: "Export orders" }).click();
   await expect(page.getByRole("dialog", { name: "New comment" }).getByLabel("Your name")).toBeVisible();
   await visitor.close();
+});
+
+test("changes nothing when the reset is canceled (Reset cancels a pending choice)", async ({ page, db }) => {
+  const running = await runOrdersPortal(page, db);
+  await comment(page, "Export orders", "Keep me", "Alex");
+  await page.goto("/applications");
+  await page.getByRole("region", { name: "Reset workspace" }).getByRole("button", { name: "Reset workspace" }).click();
+  const dialog = page.getByRole("dialog", { name: "Reset your workspace?" });
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toBeHidden();
+  await page.goto(framedRun(running, "/accounts"));
+  await waitForPage(page, "Accounts");
+  await expect(pins(page)).toHaveCount(1);
 });
 
 test("finds a returning visitor's workspace and comments in the same browser profile (Returning visitor)", async ({ page, context, browser, baseURL, db }) => {

@@ -19,6 +19,7 @@ import { param } from "@/lib/web/query";
 import { routes } from "@/lib/web/routes";
 import { ApplicationsPoller } from "./applications-poller";
 import { applicationOutcome } from "./outcomes";
+import { ResetWorkspaceSection, workspaceOutcome } from "./reset-workspace";
 import { ApplicationStatusLabel, applicationImage, traitsLabel } from "./views";
 import styles from "./applications.module.css";
 import { APPLICATION_STATUS_LABELS, STATUS_FILTER_LABELS } from "@/lib/applications/status";
@@ -59,7 +60,7 @@ export default async function ApplicationsPage({ searchParams }: PageProps<"/app
   return (
     <IndexTemplate
       header={{ title: "Applications", description: "Frontend applications built from a branch of a repository, kept up to date as the branch moves.", primaryAction: newApplication }}
-      alerts={<OutcomeToast outcome={applicationOutcome(param(params, "notice"), created(params))} strip={["notice", "application"]} />}
+      alerts={<OutcomeToast outcome={applicationOutcome(param(params, "notice"), created(params)) ?? workspaceOutcome(param(params, "notice"))} strip={["notice", "application"]} />}
       empty={
         listing.total === 0
           ? { title: "No applications yet", icon: "frame", children: "Applications are built from repositories: choose a repository, the branch to track, and its package, and the Frontend Registry builds it.", action: newApplication }
@@ -150,11 +151,8 @@ export default async function ApplicationsPage({ searchParams }: PageProps<"/app
           shown={listing.items.map((application) => ({ id: application.publicId, name: application.name, label: APPLICATION_STATUS_LABELS[application.status], settling: application.settling }))}
         />
       </section>
-      {/*
-        Reset workspace (add-applications task 8.7): its section goes here, last on the page, never in the
-        header, since page headers hold no destructive actions. The workspace component that resets comments
-        and share links comes with the toolbar's workspace work.
-      */}
+      {/* Resetting removes work, so it isn't a header action: it has its own section, last (add-applications task 8.7). */}
+      <ResetWorkspaceSection />
     </IndexTemplate>
   );
 }

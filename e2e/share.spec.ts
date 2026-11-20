@@ -1,14 +1,13 @@
 import type { Page } from "@playwright/test";
 import { deleteApplication } from "../src/lib/applications/records";
 import { deletePreview } from "../src/lib/previews/lifecycle";
-import { resetWorkspace } from "../src/lib/demo/workspaces";
 import { openTool, startComment } from "./support/demo";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { commitToOrdersPortal, rebuildOrdersPortal } from "./support/fixture-app";
 import { paths } from "./support/paths";
 import { serverConfig } from "./support/results";
-import { application, runOrdersPortal, visitorContext, waitForPage, workspaceOf } from "./support/running-app";
+import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage } from "./support/running-app";
 
 /*
  * Sharing a view of a running application (template-demo/toolbar spec,
@@ -120,14 +119,14 @@ test("opens the captured commit's build, or the current build with a notice once
   await colleague.close();
 });
 
-test("stops working when the sharer resets their workspace or the application is deleted, leading back to Applications", async ({ page, context, db }) => {
+test("stops working when the sharer resets their workspace or the application is deleted, leading back to Applications", async ({ page, db }) => {
   const { application: orders } = await runOrdersPortal(page, db);
   await comment(page, "Ship it", "Sam Rivera");
   await page.keyboard.press("Escape");
   const before = await shareLink(page);
   await page.keyboard.press("Escape");
 
-  resetWorkspace(db, (await workspaceOf(context, db)).id);
+  await resetFromApplications(page);
   const response = await page.goto(before);
   expect(response!.status()).toBe(404);
   await expect(page).toHaveURL(/\/run\/unavailable$/);

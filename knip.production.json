@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/worker/main.ts!", "src/lib/db/migrate-cli.ts!", "src/lib/db/vacuum-cli.ts!", "src/lib/projection/rebuild-cli.ts!", "src/lib/config/print-cli.ts!", "src/lib/previews/doctor-cli.ts!", "next.config.ts!", "src/lib/web/redirects.ts!", "src/lib/web/rewrites.ts!", "scripts/*.{mjs,ts}!", "src/components/toolbar/inspector/inspector.ts!"],
   "project": ["src/**/*.{ts,tsx}!", "scripts/**/*.{mjs,ts}!"],
-  "ignore": ["src/demo/runtime/generated/**", "src/app/(operator)/applications/reset-workspace.tsx"],
+  "ignore": ["src/demo/runtime/generated/**"],
   "ignoreExportsUsedInFile": true,
   "ignoreUnresolved": ["worker=src/worker/main.ts"]
 }
