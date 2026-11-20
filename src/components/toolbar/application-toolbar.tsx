@@ -12,6 +12,7 @@ import type { ThreadStore } from "./comments/thread-store";
 import { GuidedHints, HintsContext, RUNTIME_HINTS, useHintControls } from "./guided-hints";
 import { SharePanel } from "./share-panel";
 import { useTargetDocument } from "./target-document";
+import { HotSpotsOverlay } from "./timing/hot-spots-overlay";
 import { TimingPanel } from "./timing/timing-panel";
 import { TimingProvider } from "./timing/timing-state";
 import { Toolbar } from "./toolbar";
@@ -60,6 +61,7 @@ function Tools({ context, hints: initial, share }: { context: MenuContext; hints
         overlays={
           <>
             <AuditOverlay />
+            <HotSpotsOverlay />
             <CommentLayer />
             <GuidedHints sequence="runtime" hints={RUNTIME_HINTS} controls={hints} />
           </>

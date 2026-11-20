@@ -4,6 +4,7 @@ import { createContext, use, useState } from "react";
 import { interactionToNextPaint } from "@/components/toolbar/timing/timing";
 import type { InspectedInteraction, InspectorMessage, MeasuredVital, Rating } from "../inspector/protocol";
 import { routeOf, useAgentMessages, useTargetDocument } from "../target-document";
+import { type HotSpot, hotSpots } from "./hot-spots";
 import { type PageLoad, addLoads, pageLoad } from "./load-order";
 
 /**
@@ -14,6 +15,11 @@ import { type PageLoad, addLoads, pageLoad } from "./load-order";
  * reported for the page now in the frame: a new page starts over. INP is
  * computed here, from the application's interactions since the page loaded,
  * so clearing the list keeps it.
+ *
+ * Hot spots (restore-toolbar-tools-and-branch-previews, design decision 10)
+ * are the elements behind the listed interactions that needed improvement or
+ * were poor; whether they're outlined, and which one is selected, are kept
+ * here, so the outlines stay while the panel is closed.
  */
 
 export interface RouteInteraction extends InspectedInteraction {
@@ -37,6 +43,13 @@ interface TimingState {
   readonly inspecting: boolean;
   readonly eventTiming: boolean;
   clear(): void;
+  /** The hot spots of every interaction since the list was last cleared, slowest first. */
+  readonly hotSpots: readonly HotSpot[];
+  readonly showHotSpots: boolean;
+  setShowHotSpots(show: boolean): void;
+  /** The hot spot selected in the list, by its key. */
+  readonly selectedHotSpot: string | null;
+  selectHotSpot(key: string | null): void;
 }
 
 const TimingContext = createContext<TimingState | null>(null);
@@ -88,8 +101,13 @@ function reduce(current: Page, message: InspectorMessage, base: string): Page {
 export function TimingProvider({ children }: { children: React.ReactNode }) {
   const { base, page: shown } = useTargetDocument();
   const [page, setPage] = useState<Page>(() => fresh(shown));
+  const [showHotSpots, setShowHotSpots] = useState(false);
+  const [selectedHotSpot, selectHotSpot] = useState<string | null>(null);
   // Another page in the frame starts over.
-  if (page.page !== shown) setPage(fresh(shown));
+  if (page.page !== shown) {
+    setPage(fresh(shown));
+    selectHotSpot(null);
+  }
 
   useAgentMessages((message) => setPage((current) => (current.page === message.page ? reduce(current, message, base) : current)));
 
@@ -101,7 +119,15 @@ export function TimingProvider({ children }: { children: React.ReactNode }) {
     loads: page.loads,
     inspecting: page.inspecting,
     eventTiming: page.eventTiming,
-    clear: () => setPage((current) => ({ ...current, clearedThrough: current.history.at(-1)?.id ?? current.clearedThrough })),
+    clear: () => {
+      setPage((current) => ({ ...current, clearedThrough: current.history.at(-1)?.id ?? current.clearedThrough }));
+      selectHotSpot(null);
+    },
+    hotSpots: hotSpots(since),
+    showHotSpots,
+    setShowHotSpots,
+    selectedHotSpot,
+    selectHotSpot,
   };
   return <TimingContext value={state}>{children}</TimingContext>;
 }
