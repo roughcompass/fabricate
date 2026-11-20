@@ -5,7 +5,7 @@ import { buildApplication } from "../src/lib/applications/pipeline";
 import { getApplication } from "../src/lib/applications/records";
 import { git } from "../test/support/git-fixture";
 import { offlineSingleSpaBundle, offlineViteApp } from "../test/support/preview-trees";
-import { onboarded, registered, seeded } from "./support/applications";
+import { onboarded, registered, seeded, seededPreview } from "./support/applications";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect as baseExpect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { runJobs, serverConfig } from "./support/results";
@@ -174,6 +174,26 @@ test.describe("the Applications page", () => {
     await search.press("Enter");
     await expect(page).toHaveURL(/\?q=App\+1$/);
     await expect(page.getByText("Showing 10 of 30 applications")).toBeVisible();
+  });
+});
+
+test.describe("storage", () => {
+  test("Protected builds over the limit: a warning alert with what they hold, the limit, and what to do (restore-toolbar-tools-and-branch-previews, task 3.5)", async ({ page, db }) => {
+    const orders = seeded(db, "Orders portal");
+    const feature = seededPreview(db, orders, "refs/heads/feature/new-nav");
+    const limit = serverConfig().previews.maxStorageBytes;
+    await page.goto(paths.applications);
+    await expect(page.getByText("Builds in use are over the storage limit")).toHaveCount(0);
+
+    // The saved preview's build alone passes the configured limit.
+    db.$client.prepare("update preview_builds set output_bytes = ? where public_id = ?").run(limit + 1024 ** 3, feature.current!.preview);
+    await page.reload();
+    const alert = page.locator("[data-tone='warning']").filter({ hasText: "Builds in use are over the storage limit" });
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText(`hold ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format((limit + 1024 ** 3 + 64) / 1024 ** 3)} GB, more than the ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(limit / 1024 ** 3)} GB that previews.maxStorageBytes allows`);
+    await expect(alert).toContainText("remove saved previews you no longer need, or raise previews.maxStorageBytes");
+    // The page header keeps New application as its only action.
+    await expect(pageHeader(page).getByRole("link")).toHaveText(["New application"]);
   });
 });
 

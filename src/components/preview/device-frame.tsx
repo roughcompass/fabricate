@@ -81,9 +81,9 @@ export function DeviceFrame({ src, width, height, title, address }: { src: strin
  * route opens under +to+ in place of +prefix+, as an application's build
  * opens running under the toolbar. An icon button, named and with a tooltip.
  */
-export function FullScreenLink({ href, prefix, withQuery = false, to }: { href: string; prefix: string; withQuery?: boolean; to?: string }) {
+export function FullScreenLink({ href, prefix, withQuery = false, to, tooltip = "Open full screen" }: { href: string; prefix: string; withQuery?: boolean; to?: string; tooltip?: string }) {
   return (
-    <Tooltip content="Open full screen">
+    <Tooltip content={tooltip}>
       <a
         href={href}
         target="_blank"

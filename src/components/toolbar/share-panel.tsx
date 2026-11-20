@@ -15,7 +15,7 @@ import styles from "./share.module.css";
  * comments. Opening the panel creates a link; Create new link makes another
  * for the route shown now.
  */
-export function SharePanel({ slug, name, share }: { slug: string; name: string; share: string | null }) {
+export function SharePanel({ slug, preview, name, share }: { slug: string; preview: string | null; name: string; share: string | null }) {
   const target = useTargetDocument();
   const [link, setLink] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -24,7 +24,7 @@ export function SharePanel({ slug, name, share }: { slug: string; name: string; 
   const create = () => {
     setCreating(true);
     setFailed(false);
-    const query = new URLSearchParams({ application: slug, ...(share ? { share } : {}) });
+    const query = new URLSearchParams({ application: slug, ...(preview ? { preview } : {}), ...(share ? { share } : {}) });
     fetch(`/api/workspace/shares?${query}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ commit: target.commit, route: `${target.route}${target.search}` }) })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
       .then((data: { path: string }) => setLink(`${window.location.origin}${data.path}`))

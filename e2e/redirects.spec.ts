@@ -1,4 +1,6 @@
 import { buildAssessment, buildRepository } from "../test/support/builders";
+import { seeded, seededPreview } from "./support/applications";
+import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { pageTitle } from "./support/shell";
@@ -51,4 +53,13 @@ test("Root address: opens Home without redirecting to the Assessments list", asy
   await expect(page).toHaveURL(/\/$/);
   await expect(page).toHaveTitle("Home · Frontend Registry");
   await expect(pageTitle(page)).toHaveText("Home");
+});
+
+test("A preview mode address naming a ref that has since been saved redirects to that saved preview by its key (A ref that has since been saved)", async ({ request, db }) => {
+  test.skip(!E2E_PREVIEWS, "Applications exist only while previews are on (E2E_PREVIEWS=0)");
+  const orders = seeded(db, "Orders portal");
+  seededPreview(db, orders, "refs/heads/feature/new-nav");
+  const response = await request.get(paths.applicationPreview(orders.slug, { ref: "refs/heads/feature/new-nav", device: "tablet" }), { maxRedirects: 0 });
+  expect(response.status()).toBe(307);
+  expect(target(response.headers().location)).toBe(paths.applicationPreview(orders.slug, { device: "tablet", preview: "feature-new-nav" }));
 });

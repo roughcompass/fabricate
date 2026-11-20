@@ -61,9 +61,9 @@ export interface ThreadStore {
   setStatus(threadId: string, status: PlacedThread["status"]): Promise<StoreResult>;
 }
 
-/** The workspace's endpoint at +path+ for the application +slug+, in the shared view +share+ when there is one. */
-function endpoint(path: string, slug: string, share: string | null): string {
-  const query = new URLSearchParams({ application: slug, ...(share ? { share } : {}) });
+/** The workspace's endpoint at +path+ for the application +slug+, or its saved preview +preview+, in the shared view +share+ when there is one. */
+function endpoint(path: string, slug: string, share: string | null, preview: string | null): string {
+  const query = new URLSearchParams({ application: slug, ...(preview ? { preview } : {}), ...(share ? { share } : {}) });
   return `/api/workspace/threads${path}?${query}`;
 }
 
@@ -74,16 +74,17 @@ async function send(url: string, body: unknown): Promise<StoreResult> {
   return { ok: true, threads: data.threads ?? [], displayName: data.displayName ?? null, ...(data.id ? { id: data.id } : {}) };
 }
 
-/** The threads of the application +slug+ in the visitor's workspace, or in the view the share link +share+ opened. */
-export function workspaceThreadStore(slug: string, share: string | null): ThreadStore {
+/** The threads of the application +slug+ in the visitor's workspace, or in the view the share link +share+ opened; new ones are placed on its saved preview +preview+, or the tracked branch. */
+export function workspaceThreadStore(slug: string, share: string | null, preview: string | null = null): ThreadStore {
+  const at = (path: string) => endpoint(path, slug, share, preview);
   return {
     async load() {
-      const response = await fetch(endpoint("", slug, share));
+      const response = await fetch(at(""));
       if (!response.ok) return { threads: [], displayName: null };
       return (await response.json()) as ThreadsView;
     },
-    create: (thread) => send(endpoint("", slug, share), thread),
-    reply: (threadId, body, authorName) => send(endpoint(`/${encodeURIComponent(threadId)}/comments`, slug, share), { body, ...(authorName ? { authorName } : {}) }),
-    setStatus: (threadId, status) => send(endpoint(`/${encodeURIComponent(threadId)}/status`, slug, share), { status }),
+    create: (thread) => send(at(""), thread),
+    reply: (threadId, body, authorName) => send(at(`/${encodeURIComponent(threadId)}/comments`), { body, ...(authorName ? { authorName } : {}) }),
+    setStatus: (threadId, status) => send(at(`/${encodeURIComponent(threadId)}/status`), { status }),
   };
 }

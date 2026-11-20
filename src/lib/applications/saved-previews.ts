@@ -122,6 +122,29 @@ export function savedPreviewOfRef(db: Executor, applicationPublicId: string, ref
   return selected && toSavedPreview(selected);
 }
 
+/** The saved previews with these public IDs, each named for its application and ref, for the status endpoint; unknown IDs are left out. */
+export function savedPreviewsByPublicId(db: Executor, publicIds: readonly string[]): (SavedPreview & { readonly name: string })[] {
+  if (publicIds.length === 0) return [];
+  return db
+    .select({ row: applicationPreviews, current: buildColumns(currentBuild), latest: buildColumns(latestBuild), screenshot: screenshotColumns, application: applications.name })
+    .from(applicationPreviews)
+    .innerJoin(applications, eq(applications.id, applicationPreviews.applicationId))
+    .leftJoin(currentBuild, eq(currentBuild.id, applicationPreviews.currentPreviewId))
+    .leftJoin(latestBuild, eq(latestBuild.id, applicationPreviews.latestPreviewId))
+    .leftJoin(previewScreenshots, eq(previewScreenshots.previewId, applicationPreviews.currentPreviewId))
+    .where(inArray(applicationPreviews.publicId, [...publicIds]))
+    .all()
+    .map(({ application, ...selected }) => {
+      const saved = toSavedPreview(selected);
+      return { ...saved, name: savedPreviewName(application, saved) };
+    });
+}
+
+/** A saved preview as messages and announcements name it: "Orders portal (feature/new-nav)". */
+export function savedPreviewName(applicationName: string, saved: Pick<SavedPreview, "label">): string {
+  return `${applicationName} (${saved.label})`;
+}
+
 export function getSavedPreviewRow(db: Executor, publicId: string): SavedPreviewRow {
   const row = db.select().from(applicationPreviews).where(eq(applicationPreviews.publicId, publicId)).get();
   if (!row) throw new NotFoundError(`Unknown saved preview ${publicId}`);

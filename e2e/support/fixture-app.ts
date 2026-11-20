@@ -2,8 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { desc, eq } from "drizzle-orm";
 import type { Db } from "../../src/lib/db/client";
-import { buildApplication, createApplication, prepareBranch } from "../../src/lib/applications/pipeline";
+import { buildApplication, createApplication, createSavedPreview, prepareBranch } from "../../src/lib/applications/pipeline";
 import { type Application, getApplication } from "../../src/lib/applications/records";
+import { type SavedPreview, findSavedPreview } from "../../src/lib/applications/saved-previews";
 import { previewBuilds } from "../../src/lib/db/schema";
 import { requestPreparation } from "../../src/lib/previews/preparation";
 import type { PreviewBuild } from "../../src/lib/previews/records";
@@ -29,7 +30,10 @@ import { runJobs, serverConfig } from "./results";
  * onboards it as the application Orders portal through the application
  * records and pipeline (src/lib/applications): preparation, its survey, the
  * eligibility check, then `npm ci` and `vite build`, served under /previews/,
- * and a screenshot of the current build. Packages come from the public npm
+ * and a screenshot of the current build. The remote also has a
+ * `feature/new-nav` branch, which changes the navigation's text, and a
+ * `v1.1.0` tag on a release commit of its own, for saved previews
+ * (restore-toolbar-tools-and-branch-previews, task 3.7). Packages come from the public npm
  * registry the first time and from the package cache kept under the e2e
  * storage directory after that, so later runs install offline. Onboarding's
  * pages (tasks 5.x) aren't involved: `buildOrdersPortal` calls what their
@@ -68,13 +72,24 @@ function applyChange(directory: string, change: FixtureChange): void {
   }
 }
 
-/** Replaces the remote with the fixture's sources committed on main, and returns its head commit. */
+/** The navigation's brand text on main, and on `feature/new-nav` and `v1.1.0`. */
+export const ORDERS_PORTAL_BRANDS = { main: "Orders portal", feature: "Orders portal · New navigation", release: "Orders portal 1.1" } as const;
+
+/**
+ * Replaces the remote with the fixture's sources committed on main, with
+ * `feature/new-nav` changing the navigation's text and the tag `v1.1.0` on a
+ * release commit of its own, and returns main's head commit.
+ */
 export function ordersPortalRemote(): string {
   fs.rmSync(ORDERS_PORTAL_REMOTE, { recursive: true, force: true });
   copySources(SOURCE, ORDERS_PORTAL_REMOTE);
   git(ORDERS_PORTAL_REMOTE, ["init", "--quiet", "-b", "main"]);
   git(ORDERS_PORTAL_REMOTE, ["add", "--all"]);
   git(ORDERS_PORTAL_REMOTE, ["commit", "--quiet", "-m", "Orders portal"]);
+  const brand = (text: string) => (app: string) => app.replace(`<p className="brand">${ORDERS_PORTAL_BRANDS.main}</p>`, `<p className="brand">${text}</p>`);
+  commitToOrdersPortal({ "src/app.jsx": brand(ORDERS_PORTAL_BRANDS.feature) }, { branch: "feature/new-nav", message: "New navigation" });
+  const release = commitToOrdersPortal({ "src/app.jsx": brand(ORDERS_PORTAL_BRANDS.release) }, { branch: "release/1.1", message: "Release 1.1" });
+  git(ORDERS_PORTAL_REMOTE, ["tag", "v1.1.0", release]);
   return git(ORDERS_PORTAL_REMOTE, ["rev-parse", "HEAD"]).trim();
 }
 
@@ -182,6 +197,22 @@ export async function rebuildOrdersPortal(db: Db, application: Pick<Application,
   await buildApplication(db, application.publicId, { config: serverConfig() });
   await settle(db);
   return readyApplication(db, application.slug);
+}
+
+/**
+ * Saves a preview of the Orders portal's +ref+, such as `refs/heads/feature/new-nav`,
+ * as New preview's Create preview does, and settles every job, so it returns
+ * the saved preview Ready, with its screenshot. Build the application first.
+ */
+export async function saveOrdersPortalPreview(db: Db, ref: string, options: { slug?: string } = {}): Promise<SavedPreview> {
+  const application = getApplication(db, options.slug ?? "orders-portal");
+  linkKeptPackageCache();
+  const { saved } = await createSavedPreview(db, application.publicId, { ref }, { config: serverConfig() });
+  await settle(db);
+  const ready = findSavedPreview(db, application.publicId, saved.key)!;
+  if (ready.status !== "ready" || !ready.current) throw new Error(`${ready.label} isn't Ready: ${ready.status}, ${ready.latest.reasons.map((reason) => reason.text).join(" ")}`);
+  if (!ready.screenshot) throw new Error(`${ready.label} has no screenshot of its current build`);
+  return ready;
 }
 
 /** The application's running address at +route+: its current build under the toolbar. */

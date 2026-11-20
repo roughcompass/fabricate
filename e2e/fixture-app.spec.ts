@@ -3,7 +3,7 @@ import path from "node:path";
 import { previewDirectory } from "../src/lib/previews/storage";
 import { E2E_PACKAGE_CACHE, E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
-import { buildOrdersPortal, commitToOrdersPortal, ordersPortalRemote, previewOrdersPortal } from "./support/fixture-app";
+import { ORDERS_PORTAL_BRANDS, buildOrdersPortal, commitToOrdersPortal, ordersPortalRemote, previewOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
 import { paths } from "./support/paths";
 import { serverConfig } from "./support/results";
 
@@ -64,4 +64,23 @@ test("installs from the kept package cache with no registry to reach", async ({ 
   const preview = await previewOrdersPortal(db, { ref: "offline" });
   expect(preview.attemptState).toBe("ready");
   expect(log(preview)).toContain("==> ready");
+});
+
+test("saves previews of feature/new-nav and v1.1.0, each built and captured, served under its own preview path (restore-toolbar-tools-and-branch-previews, task 3.7)", async ({ page, db, request }) => {
+  ordersPortalRemote();
+  const { application } = await buildOrdersPortal(db);
+  const feature = await saveOrdersPortalPreview(db, "refs/heads/feature/new-nav");
+  const tag = await saveOrdersPortalPreview(db, "refs/tags/v1.1.0");
+  expect([feature.key, feature.kind, tag.key, tag.kind]).toEqual(["feature-new-nav", "branch", "v1.1.0", "tag"]);
+  expect(new Set([application.current!.preview, feature.current!.preview, tag.current!.preview]).size).toBe(3);
+
+  for (const [saved, brand] of [
+    [feature, ORDERS_PORTAL_BRANDS.feature],
+    [tag, ORDERS_PORTAL_BRANDS.release],
+  ] as const) {
+    const screenshot = await request.get(paths.applicationScreenshot(application.slug, saved.screenshot!.version, "card", saved.key));
+    expect([screenshot.status(), screenshot.headers()["content-type"]], saved.label).toEqual([200, "image/webp"]);
+    await page.goto(`/previews/${saved.current!.preview}/accounts`);
+    await expect(page.getByText(brand, { exact: true })).toBeVisible();
+  }
 });

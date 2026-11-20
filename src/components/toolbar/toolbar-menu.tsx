@@ -9,7 +9,7 @@ import styles from "./toolbar.module.css";
 /** The running application the menu's context row names. */
 export interface MenuContext {
   readonly name: string;
-  /** The branch it tracks, as it's shown: main. */
+  /** The branch it tracks, or the saved preview's branch or tag, as it's shown: main, feature/new-nav. */
   readonly branch: string;
   /** The commit of the build it runs, in full; the row shows it short. */
   readonly commit: string;

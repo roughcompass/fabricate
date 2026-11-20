@@ -1,15 +1,17 @@
 import type { Outcome } from "@/components/ui/outcome-toast";
 import type { Application } from "@/lib/applications/records";
+import type { SavedPreview } from "@/lib/applications/saved-previews";
 
 /**
  * Messages for the outcome codes application actions redirect with. The URL
  * carries only a code; the text is built from the record, so a crafted link
  * cannot inject text. An unknown code shows nothing.
  */
-export function applicationOutcome(code: string | undefined, application?: Application): Outcome | undefined {
+export function applicationOutcome(code: string | undefined, application?: Application, saved?: SavedPreview): Outcome | undefined {
   if (!code) return undefined;
   if (code === "deleted") return { id: "deleted", tone: "success", title: "The application was deleted.", description: "Its builds stay with its Repository's previews until they're pruned." };
   if (!application) return undefined;
+  if (code.startsWith("preview-")) return savedPreviewOutcome(code, application, saved);
   const id = `${code}:${application.publicId}:${application.latest.requestedAt.getTime()}`;
   switch (code) {
     case "created":
@@ -24,6 +26,23 @@ export function applicationOutcome(code: string | undefined, application?: Appli
       return { id, tone: "success", title: `${application.name} was updated.` };
     case "branch":
       return { id, tone: "success", title: `${application.name} now tracks ${application.trackedBranch}.`, description: "A build of its current commit is queued; the current build stays in use until it's ready." };
+    default:
+      return undefined;
+  }
+}
+
+/** Messages for a saved preview's actions, built from the preview the address names by its key; a removed one names no ref. */
+function savedPreviewOutcome(code: string, application: Application, saved: SavedPreview | undefined): Outcome | undefined {
+  if (code === "preview-removed") return { id: `${code}:${application.publicId}`, tone: "success", title: "The saved preview was removed.", description: "Its builds are pruned like any other preview once nothing else uses them. Comments placed on it stay." };
+  if (!saved) return undefined;
+  const id = `${code}:${saved.publicId}:${saved.latest.requestedAt.getTime()}`;
+  switch (code) {
+    case "preview-rebuilt":
+      return { id, tone: "success", title: `A build of ${saved.label} is queued.`, description: saved.current ? "Its current build stays in use until the new one is ready." : undefined };
+    case "preview-building":
+      return { id, tone: "info", title: `${saved.label} is already building.`, description: "It can be rebuilt once this build finishes." };
+    case "preview-unreachable":
+      return { id, tone: "error", title: `${saved.label} couldn't be read.`, description: "Nothing was queued. Check that the remote is reachable and the branch or tag exists, then try again." };
     default:
       return undefined;
   }

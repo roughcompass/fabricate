@@ -58,6 +58,8 @@ export const routes = {
   application: (slug: string, query?: Query) => withQuery(`/applications/${slug}`, query),
   applicationSettings: (slug: string, query?: Query) => withQuery(`/applications/${slug}/settings`, query),
   applicationPreview: (slug: string, query?: Query) => withQuery(`/applications/${slug}/preview`, query),
+  /** New preview: saves a preview of one of the application's branches or tags (restore-toolbar-tools-and-branch-previews, task 3.2). */
+  newApplicationPreview: (slug: string, query?: Query) => withQuery(`/applications/${slug}/previews/new`, query),
   /** The status of the applications a page shows, which it polls while one is building. */
   applicationsStatus: (publicIds: readonly string[]) => withQuery("/api/applications/status", { ids: publicIds.join(",") }),
   /**
@@ -75,6 +77,24 @@ export const routes = {
   /** A package's versions across the fleet; a scoped name keeps its @ and slash, as /adoption/packages/@salt-ds/core. */
   adoptionPackage: (name: string, query?: Query) => withQuery(`/adoption/packages/${name.split("/").map((part) => encodeURIComponent(part).replace(/^%40/, "@")).join("/")}`, query),
 };
+
+/**
+ * The application and saved preview a `/run/<segment>` address names
+ * (restore-toolbar-tools-and-branch-previews, design decision 4): the
+ * segment split at its first `@`, which a slug can't hold, so
+ * `orders-portal@feature-new-nav` is the saved preview `feature-new-nav` of
+ * `orders-portal`. An encoded `@` is read as one.
+ */
+export function parseRunSegment(segment: string): { slug: string; key: string | null } {
+  let decoded = segment;
+  try {
+    decoded = decodeURIComponent(segment);
+  } catch {
+    // A malformed escape names no application.
+  }
+  const at = decoded.indexOf("@");
+  return at === -1 ? { slug: decoded, key: null } : { slug: decoded.slice(0, at), key: decoded.slice(at + 1) };
+}
 
 /**
  * A running application's address for +route+, an application route that

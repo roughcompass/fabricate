@@ -1,9 +1,11 @@
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
-import { ordersPortalRemote } from "./support/fixture-app";
+import { ORDERS_PORTAL_BRANDS, ordersPortalRemote, saveOrdersPortalPreview } from "./support/fixture-app";
+import { removeSavedPreview } from "../src/lib/applications/saved-previews";
 import { paths } from "./support/paths";
 import { openTool } from "./support/toolbar";
 import { application, runOrdersPortal, visitorContext, waitForPage } from "./support/running-app";
+import { openToolbarMenu } from "./support/toolbar";
 
 /*
  * A running application at /run/<slug>/<route> (add-applications, task 8.1;
@@ -71,6 +73,32 @@ test("forwards the application's own query to its page, keeps it as the page cha
   await expect(visitor).toHaveURL(new RegExp(`/run/${orders.slug}/accounts\\?tab=orders&sort=balance&share=[A-Za-z0-9_-]{43}$`));
   await waitForPage(visitor, "Accounts");
   expect(await search(visitor)).toBe("?tab=orders&sort=balance");
+});
+
+test("runs a saved preview at its own address, with the address following its routes and the menu naming its branch (Running a saved preview)", async ({ page, db }) => {
+  const { application: orders } = await runOrdersPortal(page, db, "/");
+  const feature = await saveOrdersPortalPreview(db, "refs/heads/feature/new-nav");
+  await page.goto(paths.runningApplication(orders.slug, "/accounts", undefined, feature.key));
+  await waitForPage(page, "Accounts");
+  await expect(application(page).getByText(ORDERS_PORTAL_BRANDS.feature, { exact: true })).toBeVisible();
+  await expect(page.locator("[data-target-frame]")).toHaveAttribute("src", `/previews/${feature.current!.preview}/accounts`);
+  await expect(page).toHaveTitle(/^Orders portal \(feature\/new-nav\)/);
+
+  await application(page).getByRole("link", { name: "Northwind Traders" }).click();
+  await expect(page).toHaveURL(paths.runningApplication(orders.slug, "/accounts/42", undefined, feature.key));
+  await openToolbarMenu(page);
+  await expect(page.locator("[data-menu-context]")).toContainText("feature/new-nav");
+  await expect(page.locator("[data-menu-context]")).toContainText(feature.current!.commitSha.slice(0, 7));
+});
+
+test("answers not available for a removed preview (Removing a preview)", async ({ page, db }) => {
+  const { application: orders } = await runOrdersPortal(page, db, "/");
+  const feature = await saveOrdersPortalPreview(db, "refs/heads/feature/new-nav");
+  removeSavedPreview(db, orders.publicId, feature.key);
+  const response = await page.goto(paths.runningApplication(orders.slug, "/accounts", undefined, feature.key));
+  expect(response!.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "Application not available", level: 1 })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Go to Applications" })).toHaveAttribute("href", paths.applications);
 });
 
 test("answers not found for an application that doesn't exist, with a way back to Applications", async ({ page, db }) => {

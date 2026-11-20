@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { JsonObject } from "@repo-facts/contract";
 import { type Executor, immediate } from "@/lib/db/client";
@@ -213,9 +213,13 @@ export function applicationsByPublicId(db: Executor, publicIds: readonly string[
  * What a page that shows +shown+ polls for: a version that changes whenever
  * one's status, image, or screenshot does, and each one's state, so a page
  * can refresh and announce a finished build (catalog spec, "Applications
- * update while builds run").
+ * update while builds run"). The application page includes its saved
+ * previews (saved-previews spec, "Saved previews update while they build").
  */
-export function statusSnapshot(shown: readonly Application[]): { version: string; settling: boolean; applications: { id: string; name: string; status: ApplicationStatus; image: ApplicationImage; settling: boolean }[] } {
+/** What the status endpoint reports about an application, or a saved preview named for its application and ref. */
+export type StatusItem = Pick<Application, "publicId" | "name" | "status" | "image" | "settling" | "screenshot" | "latest">;
+
+export function statusSnapshot(shown: readonly StatusItem[]): { version: string; settling: boolean; applications: { id: string; name: string; status: ApplicationStatus; image: ApplicationImage; settling: boolean }[] } {
   const items = shown.map((application) => ({ id: application.publicId, name: application.name, status: application.status, image: application.image, settling: application.settling }));
   const version = shown.map((application) => `${application.publicId}:${application.status}:${application.image}:${application.screenshot?.version ?? ""}:${application.latest.build?.attempt ?? 0}`).join("|");
   return { version, settling: items.some((item) => item.settling), applications: items };
@@ -360,6 +364,29 @@ function matchesSearch(application: Application, search: string): boolean {
   if (!search) return true;
   const term = search.toLowerCase();
   return [application.name, application.description, application.repository.name, application.trackedBranch].some((text) => text.toLowerCase().includes(term));
+}
+
+// -- Storage ----------------------------------------------------------------------
+
+/**
+ * What the builds applications and saved previews use hold together: the
+ * published output of each current build and latest attempt, counted once
+ * (saved-previews spec, "Storage over its limit is reported"). Pruning never
+ * deletes them, so they can pass `previews.maxStorageBytes` on their own.
+ */
+export function storageInUse(db: Executor): number {
+  const used = sql`SELECT current_preview_id FROM applications UNION SELECT latest_preview_id FROM applications UNION SELECT current_preview_id FROM application_previews UNION SELECT latest_preview_id FROM application_previews`;
+  return db.get<{ bytes: number | null }>(sql`SELECT sum(output_bytes) AS bytes FROM preview_builds WHERE deleted_at IS NULL AND id IN (${used})`)?.bytes ?? 0;
+}
+
+/**
+ * The Applications page's storage alert, when the builds in use pass +limit+
+ * (`previews.maxStorageBytes`): what they hold and the limit; null otherwise.
+ * @public The Applications page shows it (task 3.5).
+ */
+export function storageOverLimit(db: Executor, limit: number): { readonly bytes: number; readonly limit: number } | null {
+  const bytes = storageInUse(db);
+  return bytes > limit ? { bytes, limit } : null;
 }
 
 // -- Names ------------------------------------------------------------------------
