@@ -318,7 +318,8 @@ test.describe("microfrontends", () => {
   });
 
   test("fails a single-spa bundle whose build emits no page, publishing nothing", async ({ page, db, request }) => {
-    const repository = enrolled(db, ORDERS, offlineSingleSpaBundle());
+    // Its configuration isn't where webpack looks by default, so preparation can't tell and its build decides.
+    const repository = enrolled(db, ORDERS, offlineSingleSpaBundle({ configAt: "config/webpack.config.js" }));
     const preview = await built(db, repository);
     const reason = "The output has no index.html. Previews need a page that loads the application on its own.";
     expect(preview).toMatchObject({ attemptState: "failed", attemptReason: reason, artifact: null, artifactLayout: null, artifactEntry: null });
@@ -330,6 +331,20 @@ test.describe("microfrontends", () => {
     await expect(page.getByRole("figure", { name: "Attempt 1 log" })).toContainText(`==> failed: ${reason}`);
     await expect(page.getByText("Nothing to preview")).toBeVisible();
     await expect(page.locator("[data-preview-frame]")).toHaveCount(0);
+  });
+
+  test("refuses a webpack single-spa bundle whose configuration adds no page before building, naming the page (spa-reports)", async ({ page, db }) => {
+    const repository = enrolled(db, ORDERS, offlineSingleSpaBundle());
+    await page.goto(`/repositories/${repository.publicId}`);
+    await section(page).getByRole("button", { name: "Prepare preview" }).click();
+    await expect(page).toHaveURL(/preparation=ppr_/);
+    await runJobs(db);
+
+    const prepared = section(page).getByRole("region", { name: /^main at / });
+    await expect(prepared.getByRole("status")).toContainText("Not previewable");
+    const row = prepared.getByRole("table", { name: "Why the commit can't be previewed" }).getByRole("row").filter({ hasText: "orders-spa" }).filter({ hasText: "Page" });
+    await expect(row).toContainText("Its webpack build emits no page: it's a single-spa application, webpack.config.js adds no HTML plugin");
+    await expect(row).toContainText("src/lifecycles.js");
   });
 
   test("refuses a Vite single-spa library with no committed page before building, naming the page", async ({ page, db }) => {

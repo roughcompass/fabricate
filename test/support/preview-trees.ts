@@ -267,21 +267,25 @@ console.log("dist/orders.js");
 `;
 
 /**
- * A single-spa application, like fleet/spa-orders but built with webpack,
- * that installs and builds offline like offlineViteApp, its webpack
- * FAKE_WEBPACK. Its build succeeds but emits only a lifecycle bundle, no
- * page, so nothing can be published.
+ * A single-spa application, like fleet/spa-reports, built with webpack, that
+ * installs and builds offline like offlineViteApp, its webpack FAKE_WEBPACK.
+ * Its configuration adds no HTML plugin, so preparation refuses it for its
+ * page. With +configAt+ elsewhere than where webpack looks by default, which
+ * its build script names, preparation can't tell, so it builds: the build
+ * succeeds but emits only a lifecycle bundle, no page, so nothing can be
+ * published.
  */
-export function offlineSingleSpaBundle(): Tree {
+export function offlineSingleSpaBundle(options: { configAt?: string } = {}): Tree {
   const dependencies = { react: "file:vendor/react" };
   const devDependencies = { webpack: "file:vendor/webpack" };
+  const configAt = options.configAt ?? "webpack.config.js";
   return {
-    "package.json": manifest({ name: "orders-spa", version: "1.0.0", private: true, scripts: { build: "webpack" }, dependencies, devDependencies }),
+    "package.json": manifest({ name: "orders-spa", version: "1.0.0", private: true, scripts: { build: configAt === "webpack.config.js" ? "webpack" : `webpack --config ${configAt}` }, dependencies, devDependencies }),
     "package-lock.json": linkedLock("orders-spa", dependencies, devDependencies, {
       "vendor/react": { name: "react", version: "18.3.1" },
       "vendor/webpack": { name: "webpack", version: "5.90.0", dev: true, bin: { webpack: "bin/webpack.js" } },
     }),
-    "webpack.config.js": 'const path = require("node:path");\nmodule.exports = {\n  entry: "./src/lifecycles.js",\n  output: { path: path.resolve(__dirname, "dist"), filename: "orders.js", libraryTarget: "system" },\n  externals: ["react", "react-dom", "react-dom/client"],\n};\n',
+    [configAt]: 'const path = require("node:path");\nmodule.exports = {\n  entry: "./src/lifecycles.js",\n  output: { path: path.resolve(__dirname, "dist"), filename: "orders.js", libraryTarget: "system" },\n  externals: ["react", "react-dom", "react-dom/client"],\n};\n',
     "src/lifecycles.js": LIFECYCLES,
     "vendor/react/package.json": manifest({ name: "react", version: "18.3.1", main: "index.js" }),
     "vendor/react/index.js": "export const version = '18.3.1';\n",

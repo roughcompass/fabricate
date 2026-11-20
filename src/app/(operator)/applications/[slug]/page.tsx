@@ -25,7 +25,7 @@ import { routes } from "@/lib/web/routes";
 import { rebuildAction } from "../actions";
 import { ApplicationsPoller } from "../applications-poller";
 import { applicationOutcome } from "../outcomes";
-import { ApplicationStatusLabel, applicationImage, traitsLabel } from "../views";
+import { ApplicationStatusLabel, LogExcerpt, applicationImage, traitsLabel } from "../views";
 import styles from "../applications.module.css";
 
 /** The application at +slug+, while applications are offered. */
@@ -184,11 +184,17 @@ function LatestFailure({ application, history }: { application: Application; his
   return (
     <Alert tone="error" title={application.latest.outcome === "failed" ? `Why the build of ${application.latest.commitSha.slice(0, 7)} failed` : `Why ${application.latest.commitSha.slice(0, 7)} can't be previewed`} actions={log && <Link href={log}>View the build log</Link>}>
       {application.latest.reasons.length === 1 ? (
-        application.latest.reasons[0]!.text
+        <>
+          {application.latest.reasons[0]!.text}
+          <LogExcerpt lines={application.latest.reasons[0]!.log} />
+        </>
       ) : (
         <ul>
           {application.latest.reasons.map((reason, index) => (
-            <li key={index}>{reason.text}</li>
+            <li key={index}>
+              {reason.text}
+              <LogExcerpt lines={reason.log} />
+            </li>
           ))}
         </ul>
       )}
@@ -211,7 +217,12 @@ function BuildRow({ entry }: { entry: ApplicationBuildEntry }) {
       </Td>
       <Td label="State">
         <Status state={OUTCOME_STATES[entry.outcome]} label={entry.outcome === "failed" ? "Failed" : entry.outcome === "not_previewable" ? "Can't be previewed" : undefined} />
-        {entry.reasons[0] && <Secondary>{entry.reasons[0].text}</Secondary>}
+        {entry.reasons[0] && (
+          <Secondary>
+            {entry.reasons[0].text}
+            <LogExcerpt lines={entry.reasons[0].log} />
+          </Secondary>
+        )}
       </Td>
       <Td label="Duration" align="numeric">
         {entry.durationMs === null ? "Running" : formatDuration(entry.durationMs)}

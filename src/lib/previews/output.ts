@@ -23,6 +23,8 @@ export class OutputError extends Error {
 
 /** The page every published artifact serves at its root, and falls back to for navigation. */
 export const PAGE = "index.html";
+/** Why output without its page isn't published: the build ran, but nothing could be previewed. */
+export const NO_PAGE_REASON = `The output has no ${PAGE}. Previews need a page that loads the application on its own.`;
 
 /** The entry metadata stored with a published artifact (preview_builds.artifact_entry), for serving. */
 export type ArtifactEntry = {
@@ -73,7 +75,7 @@ export async function validateOutput(root: string, options: { base: string; maxB
   const stat = await fs.lstat(root);
   if (stat.isSymbolicLink() || !stat.isDirectory()) throw new OutputError("The output directory is a symbolic link or not a directory. Previews publish only regular files.");
   const { files, bytes } = await inventory(root, options.maxBytes);
-  if (!files.includes(PAGE)) throw new OutputError(`The output has no ${PAGE}. Previews need a page that loads the application on its own.`);
+  if (!files.includes(PAGE)) throw new OutputError(NO_PAGE_REASON);
   const rebase = rootRelative(await fs.readFile(path.join(root, PAGE), "utf8"), options.base);
   return { files: files.length, bytes, entry: { file: PAGE, rebase } };
 }

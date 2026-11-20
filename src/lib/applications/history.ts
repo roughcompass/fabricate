@@ -41,7 +41,7 @@ export function settleNewestHistory(db: Executor, applicationId: number, values:
 }
 
 /** Settles every attempt that is +preview+'s attempt +attempt+ and still building. */
-export function settleBuildHistory(db: Executor, preview: { id: number; attempt: number }, outcome: "ready" | "failed", reasons: readonly ApplicationReason[] | null, now = new Date()): void {
+export function settleBuildHistory(db: Executor, preview: { id: number; attempt: number }, outcome: "ready" | "failed" | "not_previewable", reasons: readonly ApplicationReason[] | null, now = new Date()): void {
   db.update(applicationBuilds)
     .set(settled(outcome, reasons, now))
     .where(and(eq(applicationBuilds.previewId, preview.id), eq(applicationBuilds.attempt, preview.attempt), eq(applicationBuilds.outcome, "building")))

@@ -2,12 +2,15 @@ import path from "node:path";
 import semver from "semver";
 import type { JsonObject, JsonValue } from "@repo-facts/contract";
 import type { ArtifactLayout } from "@/lib/db/schema";
-import { type EvidenceLocation, evidenceLocations } from "@/lib/profiles/evidence-locations";
 // Types only: the profile view module pulls in UI components the worker must not bundle.
-import type { Category, Fact, FactDocument } from "@/lib/profiles/states";
-import { PAGE_FILE, type PageRead } from "./pages";
+import type { Fact, FactDocument } from "@/lib/profiles/states";
+import { type BundlePageRead, type Bundler, PAGE_FILE, type PageRead } from "./pages";
+import { type DecidingFact, type Membership, ProfiledRepository, categoryOf, manifestOfFact, manifestPath, objectValue, paths, place } from "./profiled-repository";
 import { list } from "./wording";
 import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
+
+export type { DecidingFact } from "./profiled-repository";
+export { manifestPath } from "./profiled-repository";
 
 /**
  * Which packages of one commit can be previewed (design decision 3), decided
@@ -24,8 +27,12 @@ import { SURVEYOR_RELEASE_LABEL } from "@/lib/product";
  *
  * A Vite package also needs its page, `index.html`, committed at the root its
  * build reads, since Vite builds no page without one; preparation reads that
- * through the snapshot reader (pages.ts). Other tools are checked after the
- * build, when their output must contain `index.html` (output.ts).
+ * through the snapshot reader (pages.ts). A single-spa application that
+ * webpack or Rspack builds needs an HTML plugin in its configuration or its
+ * dependencies, or an HTML file it commits, since its build otherwise emits
+ * only its bundle; preparation reads its configuration the same way. Other
+ * builds are checked after they run, when their output must contain
+ * `index.html` (output.ts).
  */
 
 export const CONDITIONS = ["framework", "build_tool", "package_manager", "node", "build_script", "page"] as const;
@@ -47,7 +54,6 @@ type PackageManager = (typeof PACKAGE_MANAGERS)[number];
  * such as go.mod or a .csproj; those can't declare a JavaScript package's
  * workspace, lockfile, build tool, or Node version.
  */
-const WORKSPACE_INPUTS = new Set(["package.json", "pnpm-workspace.yaml"]);
 const LOCKFILE_INPUTS = new Set(["package.json", "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb", "deno.lock"]);
 const TOOL_CONFIG = /^(?:package\.json|(?:vite|webpack|rspack|rsbuild)\.config\.[cm]?[jt]s)$/;
 const NODE_INPUTS = new Set(["package.json", ".nvmrc", ".node-version", ".tool-versions", "Dockerfile", "Jenkinsfile", ".gitlab-ci.yml", "mise.toml", ".mise.toml", ".prototools"]);
@@ -55,18 +61,6 @@ const declaresNode = (input: string) => {
   const name = path.posix.basename(input);
   return NODE_INPUTS.has(name) || name.endsWith(".Dockerfile") || input.startsWith(".github/workflows/");
 };
-/** How many paths a reason names before counting the rest. */
-const NAMED = 3;
-
-/** A fact behind a condition, with the evidence it cites. A null key is the category as a whole. */
-export interface DecidingFact {
-  category: string;
-  key: string | null;
-  state: string;
-  value: JsonValue;
-  evidence: EvidenceLocation[];
-  candidates?: { value: JsonValue; evidence: EvidenceLocation[] }[];
-}
 
 export interface Condition {
   condition: ConditionId;
@@ -126,6 +120,8 @@ export interface EligibilityInput {
   nodeVersions: readonly string[];
   /** Each Vite package's page as the commit has it, by directory (see vitePackages and readPage). */
   pages: ReadonlyMap<string, PageRead>;
+  /** Whether each single-spa bundle can emit a page, by directory (see bundlePackages and readBundlePage). */
+  bundles: ReadonlyMap<string, BundlePageRead>;
 }
 
 /** Decides every package of the commit, and the refusal when none qualifies. */
@@ -172,10 +168,6 @@ export function installRootManifests(document: FactDocument): string[] {
   return [...new Set(repository.packages.map((directory) => repository.membership(directory).root ?? directory))].sort();
 }
 
-export function manifestPath(directory: string): string {
-  return directory === "." ? "package.json" : `${directory}/package.json`;
-}
-
 function evaluatePackage(repository: ProfiledRepository, directory: string, input: EligibilityInput): PackageVerdict {
   const membership = repository.membership(directory);
   const installRoot = membership.root ?? directory;
@@ -184,7 +176,7 @@ function evaluatePackage(repository: ProfiledRepository, directory: string, inpu
   const manager = packageManagerCondition(repository, directory, membership, input.manifests);
   const node = nodeCondition(repository, directory, installRoot, input.nodeVersions);
   const script = buildScriptCondition(repository, directory);
-  const page = pageCondition(directory, tool, input.pages);
+  const page = pageCondition(repository, directory, tool, input);
   const conditions = [framework.condition, tool.condition, manager.condition, node.condition, script.condition, page];
   const qualifies = conditions.every((condition) => condition.passed);
   const plan =
@@ -361,19 +353,53 @@ function buildScriptCondition(repository: ProfiledRepository, directory: string)
 
 /**
  * Whether the package has a page to build: for Vite, `index.html` committed
- * at the root its build reads. Other tools are checked once the build has
- * run, when the output must contain `index.html`.
+ * at the root its build reads; for a single-spa application that webpack or
+ * Rspack builds as a bundle, an HTML plugin or an HTML file it commits.
+ * Anything else, and whatever preparation couldn't read, is checked once the
+ * build has run, when the output must contain `index.html`.
  */
-function pageCondition(directory: string, tool: { condition: Condition; tool: BuildTool | null }, pages: ReadonlyMap<string, PageRead>): Condition {
-  if (tool.tool !== "vite") return { condition: "page", passed: true, reason: tool.tool ? `Its build must emit ${PAGE_FILE}, which is checked once it has run` : "Depends on its build tool", facts: [] };
+function pageCondition(repository: ProfiledRepository, directory: string, tool: { condition: Condition; tool: BuildTool | null }, input: Pick<EligibilityInput, "pages" | "bundles">): Condition {
+  if (tool.tool !== "vite") {
+    const bundle = input.bundles.get(directory);
+    const application = singleSpaApplication(repository, directory);
+    if (bundle?.state === "missing" && application && tool.tool) {
+      const owned = (input: string) => repository.owner(input) === directory;
+      const reason = `Its ${BUILD_TOOL_LABELS[tool.tool]} build emits no page: it's a single-spa application, ${bundle.config} adds no HTML plugin, none is among its dependencies, and no HTML file is committed in ${place(directory)}. Previews need a page that loads the application on its own.`;
+      return { condition: "page", passed: false, reason, facts: [repository.decidingFact("composition", application, owned), ...tool.condition.facts] };
+    }
+    return { condition: "page", passed: true, reason: tool.tool ? `Its build must emit ${PAGE_FILE}, which is checked once it has run` : "Depends on its build tool", facts: [] };
+  }
   const facts = tool.condition.facts;
-  const read = pages.get(directory);
+  const read = input.pages.get(directory);
   const fail = (reason: string) => ({ condition: "page" as const, passed: false, reason, facts });
   if (!read) return fail(`Whether it has a page couldn't be decided: its ${PAGE_FILE} wasn't looked for.`);
   if (read.state === "undecided") return fail(`Whether it has a page couldn't be decided: ${read.reason}.`);
   const root = read.config ? `, in the root ${read.config} sets` : "";
   if (read.state === "missing") return fail(`No ${PAGE_FILE} is committed at ${read.page}, the page Vite builds from${root}. Previews need a page that loads the application on its own.`);
   return { condition: "page", passed: true, reason: `Vite builds its page from ${read.page}${root}`, facts };
+}
+
+/** Packages that emit a page, as a dependency names them. */
+const HTML_PLUGIN_PACKAGES = new Set(["html-webpack-plugin", "html-rspack-plugin", "@rspack/plugin-html"]);
+/** The single-spa roles of a bundle a root configuration loads, which has no page of its own unless its build adds one. */
+const BUNDLE_ROLES = new Set(["application", "parcel"]);
+
+/** The single-spa application fact the package owns, unless it's also a root configuration, which has a page. */
+function singleSpaApplication(repository: ProfiledRepository, directory: string): Fact | null {
+  const owned = repository.facts("composition").filter((fact) => fact.state !== "conflicting" && objectValue(fact)?.mechanism === "single-spa" && fact.evidence.some((id) => repository.owner(repository.evidencePath(id)) === directory));
+  if (owned.some((fact) => objectValue(fact)?.role === "root-config")) return null;
+  return owned.find((fact) => BUNDLE_ROLES.has(String(objectValue(fact)?.role))) ?? null;
+}
+
+/**
+ * Whether the package's dependencies, or those of the workspace root it
+ * installs from, include an HTML plugin; null when the profile couldn't read
+ * them, so it can't tell.
+ */
+function declaresHtmlPlugin(repository: ProfiledRepository, directory: string): boolean | null {
+  const manifests = new Set([manifestPath(directory), manifestPath(repository.membership(directory).root ?? directory)]);
+  if (repository.unknownReason("dependencies", (input) => manifests.has(input))) return null;
+  return repository.facts("dependencies").some((fact) => manifests.has(manifestOfFact(fact)) && HTML_PLUGIN_PACKAGES.has(String(objectValue(fact)?.name ?? "")));
 }
 
 /** The commit-level refusal when no package manifest exists, as in a Scala, Go, or Java repository. */
@@ -404,154 +430,21 @@ export function vitePackages(document: FactDocument): string[] {
   return repository.packages.filter((directory) => buildToolCondition(repository, directory).tool === "vite");
 }
 
-// -- The repository as the fact document describes it --------------------------
-
-interface Membership {
-  /** The workspace root the package installs from, or null when it isn't a member of one. */
-  root: string | null;
-  unknown: string | null;
-  facts: DecidingFact[];
-}
-
-class ProfiledRepository {
-  /** Every package directory, from its package.json manifest, in path order. */
-  readonly packages: string[];
-  private readonly owners = new Map<string, string | null>();
-  private readonly memberships = new Map<string, Membership>();
-
-  constructor(readonly document: FactDocument) {
-    const manifests = new Set<string>();
-    for (const fact of this.facts("package_identity")) manifests.add(manifestOfFact(fact));
-    for (const fact of [...this.facts("frameworks"), ...this.facts("scripts")]) manifests.add(manifestOfFact(fact));
-    this.packages = [...manifests]
-      .filter((manifest) => path.posix.basename(manifest) === "package.json")
-      .map((manifest) => (manifest === "package.json" ? "." : path.posix.dirname(manifest)))
-      .sort();
-  }
-
-  facts(category: string): Fact[] {
-    return categoryOf(this.document, category)?.facts ?? [];
-  }
-
-  packageName(directory: string): string | null {
-    const fact = this.facts("package_identity").find((candidate) => manifestOfFact(candidate) === manifestPath(directory));
-    const name = fact ? objectValue(fact)?.name : null;
-    return typeof name === "string" ? name : null;
-  }
-
-  /** The deepest package directory containing +input+, or null when it's outside every package. */
-  owner(input: string): string | null {
-    const known = this.owners.get(input);
-    if (known !== undefined) return known;
-    let owner: string | null = null;
-    for (const directory of this.packages) if (contains(directory, input) && (owner === null || owner === "." || directory.length > owner.length)) owner = directory;
-    this.owners.set(input, owner);
-    return owner;
-  }
-
-  evidencePath(id: string): string {
-    const record = this.document.evidence[id] as JsonObject | undefined;
-    return typeof record?.path === "string" ? record.path : "";
-  }
-
-  evidenceRule(id: string): string | null {
-    const record = this.document.evidence[id] as JsonObject | undefined;
-    return typeof record?.rule === "string" ? record.rule : null;
-  }
-
-  /**
-   * +fact+ with its evidence, or only the evidence at paths +keep+ selects
-   * for a fact reported once for the whole repository; `elsewhere` counts
-   * the rest, so a verdict never copies every package's evidence.
-   */
-  decidingFact(category: string, fact: Fact, keep?: (input: string) => boolean): DecidingFact {
-    let elsewhere = 0;
-    const locate = (ids: readonly string[]) => {
-      const kept = keep ? ids.filter((id) => keep(this.evidencePath(id))) : ids;
-      elsewhere += ids.length - kept.length;
-      return evidenceLocations(kept, this.document.evidence);
-    };
-    const evidence = locate(fact.evidence);
-    const candidates = fact.candidates?.map((candidate) => ({ value: candidate.value, evidence: locate(candidate.evidence) }));
-    return { category, key: fact.key, state: fact.state, value: fact.value, evidence, ...(candidates && { candidates }), ...(elsewhere > 0 && { elsewhere }) };
-  }
-
-  /** A category as a whole, when no fact of it decides: its state and the skipped inputs +relevant+ selects. */
-  categoryFact(id: string, relevant: (input: string) => boolean = () => true): DecidingFact {
-    const category = categoryOf(this.document, id);
-    if (!category) return { category: id, key: null, state: "not_covered", value: null, evidence: [] };
-    const skipped = category.search.skipped.filter(relevant);
-    return { category: id, key: null, state: category.state, value: { complete: category.search.complete, skipped: skipped.slice(0, 20), skippedCount: skipped.length }, evidence: [] };
-  }
-
-  /** Why +category+ can't be trusted for the inputs +relevant+ selects, or null when its search covered them. */
-  unknownReason(id: string, relevant: (input: string) => boolean): string | null {
-    const category: Category | undefined = categoryOf(this.document, id);
-    if (!category) return `${SURVEYOR_RELEASE_LABEL} ${this.document.detector_release} doesn't report it`;
-    const skipped = category.search.skipped.filter(relevant);
-    if (skipped.length) return `${paths(skipped)} could not be read or understood`;
-    if (!category.search.complete) return "its search was incomplete";
-    return null;
-  }
-
-  /** Whether +directory+ is a member of a workspace, and which root declares it. */
-  membership(directory: string): Membership {
-    let membership = this.memberships.get(directory);
-    if (!membership) this.memberships.set(directory, (membership = this.decideMembership(directory)));
-    return membership;
-  }
-
-  private decideMembership(directory: string): Membership {
-    const category = categoryOf(this.document, "workspaces");
-    if (!category) return { root: null, unknown: `${SURVEYOR_RELEASE_LABEL} ${this.document.detector_release} doesn't report workspaces`, facts: [this.categoryFact("workspaces")] };
-    const fact = category.facts.find((candidate) => candidate.key === directory);
-    if (!fact) {
-      // A workspace declaration in an enclosing directory that couldn't be read might include it.
-      const declaring = (input: string) => WORKSPACE_INPUTS.has(path.posix.basename(input)) && contains(path.posix.dirname(input), directory) && path.posix.dirname(input) !== directory;
-      const skipped = category.search.skipped.filter(declaring);
-      if (skipped.length) return { root: null, unknown: `${paths(skipped)} could not be read or understood`, facts: [this.categoryFact("workspaces", declaring)] };
-      if (!category.search.complete) return { root: null, unknown: "its search was incomplete", facts: [this.categoryFact("workspaces")] };
-      return { root: null, unknown: null, facts: [] };
-    }
-    const facts = [this.decidingFact("workspaces", fact)];
-    if (fact.state === "conflicting" || fact.state === "unknown") return { root: null, unknown: `its workspace membership is ${fact.state}`, facts };
-    const own = manifestPath(directory);
-    const roots = [...new Set(fact.evidence.map((id) => this.evidencePath(id)).filter((input) => input !== own).map((input) => path.posix.dirname(input)))];
-    if (roots.length !== 1 || !contains(roots[0]!, directory)) return { root: null, unknown: roots.length ? `${paths(roots.map(place))} each declare it` : "no workspace declaration names it", facts };
-    return { root: roots[0]!, unknown: null, facts };
-  }
-
-  /**
-   * The packages whose Node declarations apply to building +directory+ from
-   * +installRoot+: its enclosing packages and, for a workspace install, every
-   * member the install includes.
-   */
-  nodeScope(directory: string, installRoot: string): Set<string> {
-    const scope = new Set(this.packages.filter((candidate) => contains(candidate, directory)));
-    scope.add(installRoot);
-    for (const member of this.packages) if (this.membership(member).root === installRoot) scope.add(member);
-    return scope;
-  }
+/**
+ * The single-spa applications that webpack or Rspack builds with no HTML
+ * plugin among their dependencies, whose configuration and HTML files
+ * preparation reads to decide whether their build can emit a page.
+ */
+export function bundlePackages(document: FactDocument): { directory: string; bundler: Bundler }[] {
+  const repository = new ProfiledRepository(document);
+  return repository.packages.flatMap((directory) => {
+    const { tool } = buildToolCondition(repository, directory);
+    if ((tool !== "webpack" && tool !== "rspack") || !singleSpaApplication(repository, directory) || declaresHtmlPlugin(repository, directory) !== false) return [];
+    return [{ directory, bundler: tool }];
+  });
 }
 
 // -- Helpers ----------------------------------------------------------------------
-
-function categoryOf(document: FactDocument, id: string): Category | undefined {
-  return Object.hasOwn(document.categories, id) ? document.categories[id] : undefined;
-}
-
-function contains(directory: string, input: string): boolean {
-  return directory === "." || input === directory || input.startsWith(`${directory}/`);
-}
-
-function objectValue(fact: Fact): JsonObject | null {
-  return fact.value && typeof fact.value === "object" && !Array.isArray(fact.value) ? (fact.value as JsonObject) : null;
-}
-
-function manifestOfFact(fact: Fact): string {
-  const manifest = objectValue(fact)?.manifest;
-  return typeof manifest === "string" ? manifest : fact.key.split("#")[0]!;
-}
 
 function frameworkId(fact: Fact): string {
   return String(objectValue(fact)?.id ?? fact.key.split("#")[1] ?? "");
@@ -567,17 +460,4 @@ function toolId(fact: Fact): string {
 
 function toolLabel(fact: Fact): string {
   return String(objectValue(fact)?.label ?? toolId(fact));
-}
-
-/** A directory as a sentence names it. */
-function place(directory: string): string {
-  return directory === "." ? "the repository root" : directory;
-}
-
-/** Paths as a sentence names them: the first few, then how many more. */
-function paths(items: readonly string[], separator?: ", "): string {
-  const named = items.slice(0, NAMED);
-  const rest = items.length - named.length;
-  if (separator) return rest > 0 ? `${named.join(separator)}, and ${rest} more` : named.join(separator);
-  return rest > 0 ? `${named.join(", ")}, and ${rest} more` : list(named);
 }

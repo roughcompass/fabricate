@@ -4,7 +4,7 @@ import type { Page } from "@playwright/test";
 import { buildApplication } from "../src/lib/applications/pipeline";
 import { getApplication } from "../src/lib/applications/records";
 import { git } from "../test/support/git-fixture";
-import { offlineViteApp } from "../test/support/preview-trees";
+import { offlineSingleSpaBundle, offlineViteApp } from "../test/support/preview-trees";
 import { onboarded, registered, seeded } from "./support/applications";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect as baseExpect, expectNoHorizontalOverflow, test } from "./support/fixtures";
@@ -261,17 +261,36 @@ test.describe("an application's page", () => {
     await page.reload();
     await expect(pageHeader(page)).toContainText("Latest build failed");
     await expect(page.locator("#page-alerts")).toContainText("The build failed");
+    // Beside the exit status, the last lines of the build's log say why.
+    await expect(page.locator("#page-alerts").locator("pre")).toContainText("[vite:build] src/main.js (1:7): Unexpected token");
+    await expect(page.locator("#page-alerts").locator("pre")).toContainText("error during build: SyntaxError: Unexpected token");
     await expect(page.locator("#page-alerts").getByRole("link", { name: "View the build log" })).toHaveAttribute("href", /\/repositories\/src_[a-z0-9]+\/previews\/pvw_[a-z0-9]+#log$/);
     await expect(page.getByRole("figure").getByRole("img", { name: /^Screenshot of Orders portal/ })).toBeVisible();
     const rows = page.getByRole("table", { name: "Builds of Orders portal" }).getByRole("row");
     await expect(rows).toHaveCount(4);
     await expect(rows.nth(1)).toContainText("New commit · main");
     await expect(rows.nth(1)).toContainText("Failed");
+    await expect(rows.nth(1).locator("pre")).toContainText("error during build: SyntaxError: Unexpected token");
     await expect(rows.nth(1).getByRole("link", { name: /^Log of [0-9a-f]{7}$/ })).toBeVisible();
     await expect(rows.nth(2)).toContainText("Rebuild · main");
     await expect(rows.nth(2)).toContainText("Ready");
     await expect(rows.nth(3)).toContainText("First build · main");
     await expect(rows.nth(3)).toContainText("No longer kept");
+  });
+
+  test("A build that emits no page: the application can't be previewed, for its page, and isn't shown as a failed build (spa-reports)", async ({ page, db, sourcesDir }) => {
+    // Its webpack configuration isn't where webpack looks by default, so only its build can tell.
+    await onboarded(db, [registered(db, path.join(sourcesDir, "orders-bundle"), offlineSingleSpaBundle({ configAt: "config/webpack.config.js" })), "Orders bundle"]);
+    await runJobs(db);
+    await page.goto(paths.application("orders-bundle"));
+    await expect(pageHeader(page)).toContainText("Can't be previewed");
+    const alert = page.locator("#page-alerts");
+    await expect(alert).toContainText(/Why [0-9a-f]{7} can't be previewed/);
+    await expect(alert).toContainText("The output has no index.html. Previews need a page that loads the application on its own.");
+    await expect(alert.locator("pre")).toHaveCount(0);
+    await expect(page.getByRole("table", { name: "Builds of Orders bundle" }).getByRole("row").nth(1)).toContainText("Can't be previewed");
+    await page.goto(paths.applications);
+    await expect(page.getByRole("listitem").filter({ hasText: "Orders bundle" })).toContainText("Can't be previewed");
   });
 
   test("Renaming keeps the address; switching branch queues a build that keeps the current one in use; Delete removes the card", async ({ page, db, sourcesDir }) => {

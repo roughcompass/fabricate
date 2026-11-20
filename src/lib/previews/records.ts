@@ -328,8 +328,15 @@ export function publishAttempt(db: Executor, publicId: string, identity: Attempt
   });
 }
 
-/** Marks the current attempt Failed with +reason+, keeping the published artifact. Returns false if it's no longer current. */
-export function failAttempt(db: Executor, publicId: string, identity: AttemptIdentity, reason: string, log?: string): boolean {
+/**
+ * Marks the current attempt Failed with +reason+, keeping the published
+ * artifact. +options.log+ names the attempt's log, and +options.detail+ is
+ * the last meaningful lines of its output, redacted (logExcerpt), which the
+ * applications it's the latest attempt of show beside the reason. Returns
+ * false if it's no longer current.
+ */
+export function failAttempt(db: Executor, publicId: string, identity: AttemptIdentity, reason: string, options: { log?: string; detail?: readonly string[] } = {}): boolean {
+  const { log, detail } = options;
   const now = new Date();
   return immediate(db, (tx) => {
     const failed = tx
@@ -339,7 +346,7 @@ export function failAttempt(db: Executor, publicId: string, identity: AttemptIde
       .returning()
       .get();
     // The applications it's the latest attempt of keep their current build.
-    if (failed) afterAttemptFailed(tx, failed);
+    if (failed) afterAttemptFailed(tx, failed, detail);
     return failed !== undefined;
   });
 }

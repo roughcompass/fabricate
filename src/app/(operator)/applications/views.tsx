@@ -4,6 +4,7 @@ import { screenshotAlt } from "@/lib/applications/images";
 import type { Application } from "@/lib/applications/records";
 import { APPLICATION_STATUS_LABELS, type ApplicationStatus } from "@/lib/applications/status";
 import { routes } from "@/lib/web/routes";
+import styles from "./applications.module.css";
 
 /**
  * How applications show on their pages (applications/catalog spec): the
@@ -46,4 +47,15 @@ export function traitsLabel(application: Pick<Application, "facts">, packageMana
   const { frameworks, buildTool } = application.facts;
   const parts = [...frameworks, ...(buildTool ? [buildTool] : []), ...(packageManager && application.facts.packageManager ? [application.facts.packageManager] : [])];
   return parts.length ? parts.join(" · ") : null;
+}
+
+/** The last lines of a failed build's log, as its reason shows them: redacted, a few lines in the monospace face, with the whole log a link away. */
+export function LogExcerpt({ lines }: { lines: readonly string[] | undefined }) {
+  if (!lines?.length) return null;
+  return (
+    <figure className={styles.excerpt}>
+      <figcaption className="visually-hidden">The last lines of its build log</figcaption>
+      <pre>{lines.join("\n")}</pre>
+    </figure>
+  );
 }
