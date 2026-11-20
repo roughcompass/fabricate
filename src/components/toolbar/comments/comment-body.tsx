@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { type CommentNode, formatComment } from "@/lib/demo/comment-format";
+import { type CommentNode, formatComment } from "@/lib/workspaces/comment-format";
 import styles from "./comments.module.css";
 
 function render(nodes: readonly CommentNode[]): React.ReactNode[] {

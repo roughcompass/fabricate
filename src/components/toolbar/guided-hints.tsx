@@ -2,7 +2,7 @@
 
 import { createContext, use, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { type HintAction, type HintSequence, type HintState, hintsShown, nextHints } from "@/lib/demo/hints";
+import { type HintAction, type HintSequence, type HintState, hintsShown, nextHints } from "@/lib/workspaces/hints";
 import { PLACEMENT_MARGIN, type Rect, type Size, placeOutside } from "./placement";
 import { ToolbarContext } from "./toolbar-context";
 import { useToolbarBounds } from "./toolbar-bounds";

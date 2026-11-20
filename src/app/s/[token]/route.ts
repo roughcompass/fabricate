@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { applicationsAvailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
-import { sharedApplication } from "@/lib/demo/access";
-import { findShare } from "@/lib/demo/shares";
+import { sharedApplication } from "@/lib/workspaces/access";
+import { findShare } from "@/lib/workspaces/shares";
 import { routes } from "@/lib/web/routes";
 
 /**

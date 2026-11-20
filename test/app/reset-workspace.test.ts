@@ -3,9 +3,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ResetWorkspaceSection, resetWorkspaceAction, workspaceOutcome } from "@/app/(operator)/applications/reset-workspace";
 import { getConfig, setConfig, withOverrides } from "@/lib/config";
-import { WORKSPACE_COOKIE, newWorkspaceKey } from "@/lib/demo/workspace-key";
-import { createShare, findShare } from "@/lib/demo/shares";
-import { ensureWorkspace, findWorkspace, setDisplayName, setHints } from "@/lib/demo/workspaces";
+import { WORKSPACE_COOKIE, newWorkspaceKey } from "@/lib/workspaces/workspace-key";
+import { createShare, findShare } from "@/lib/workspaces/shares";
+import { ensureWorkspace, findWorkspace, setDisplayName, setHints } from "@/lib/workspaces/workspaces";
 import { redirectOf, useAppDb } from "../support/next";
 import { commitOf, viewedApplicationIn } from "../support/views";
 

@@ -1,7 +1,7 @@
 import { applicationsUnavailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
-import { jsonBody, writableView } from "@/lib/demo/api";
-import { createShare, shareInputSchema } from "@/lib/demo/shares";
+import { jsonBody, writableView } from "@/lib/workspaces/api";
+import { createShare, shareInputSchema } from "@/lib/workspaces/shares";
 
 /**
  * Creates a share link to the view of a running application the visitor has

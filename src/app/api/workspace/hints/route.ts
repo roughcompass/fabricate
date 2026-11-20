@@ -1,9 +1,9 @@
 import { applicationsUnavailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
-import { jsonBody, stringField } from "@/lib/demo/api";
-import { writableWorkspace } from "@/lib/demo/request";
-import { isHintAction, isHintSequence, nextHints } from "@/lib/demo/hints";
-import { setHints } from "@/lib/demo/workspaces";
+import { jsonBody, stringField } from "@/lib/workspaces/api";
+import { writableWorkspace } from "@/lib/workspaces/request";
+import { isHintAction, isHintSequence, nextHints } from "@/lib/workspaces/hints";
+import { setHints } from "@/lib/workspaces/workspaces";
 
 /**
  * Updates the visitor's guided-hint state (template-demo/demo-mode spec):

@@ -47,11 +47,6 @@ describe("navigation skeletons", () => {
     ["/applications/orders-portal", "details"],
     ["/applications/orders-portal/settings", "settings"],
     ["/applications/orders-portal/preview", "focused"],
-    ["/templates", "cards"],
-    ["/templates/market-watch", "details"],
-    ["/templates/market-watch/preview", "focused"],
-    ["/templates/payments-workspace/preview", "focused"],
-    ["/templates/payments-workspace", "details"],
     ["/docs", "content"],
     ["/docs/get-started/add-your-repository", "content"],
   ])("shows the %s page's skeleton as %s", (pathname, kind) => {
@@ -61,7 +56,9 @@ describe("navigation skeletons", () => {
   it("shows no skeleton for pages outside the product", () => {
     expect(skeletonFor("/design-system")).toBeNull();
     expect(skeletonFor("/api/health")).toBeNull();
-    expect(skeletonFor("/run/ref-market-watch/watch")).toBeNull();
+    expect(skeletonFor("/run/orders-portal/accounts")).toBeNull();
+    // Old template addresses redirect to Applications before anything renders.
+    expect(skeletonFor("/templates/market-watch/preview")).toBeNull();
     expect(skeletonFor("/s/token")).toBeNull();
     expect(skeletonFor("/portals/ptl_abc")).toBeNull();
     expect(skeletonFor("/about")).toBeNull();
@@ -69,7 +66,7 @@ describe("navigation skeletons", () => {
 
   it("has a not-found page for each section", () => {
     expect(fs.existsSync(path.resolve("src/app/not-found.tsx")), "root").toBe(true);
-    for (const section of ["adoption", "applications", "assessments", "runs", "evaluations", "profiles", "repositories", "standards", "templates"]) {
+    for (const section of ["adoption", "applications", "assessments", "runs", "evaluations", "profiles", "repositories", "standards"]) {
       expect(fs.existsSync(path.resolve("src/app/(operator)", section, "not-found.tsx")), section).toBe(true);
     }
   });

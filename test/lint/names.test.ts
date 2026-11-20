@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
  */
 
 const ROOTS = ["src", "scripts", "e2e", "test", "config"];
-const ROOT_FILES = [".npmrc", "package.json", "next.config.ts", "eslint.config.mjs", "playwright.base.ts", "playwright.config.ts", "playwright.demo-off.config.ts", "playwright.fleet.config.ts", "vitest.config.ts", "drizzle.config.ts", "knip.json", "knip.production.json", "tsconfig.json"];
+const ROOT_FILES = [".npmrc", "package.json", "next.config.ts", "eslint.config.mjs", "playwright.base.ts", "playwright.config.ts", "playwright.previews-off.config.ts", "playwright.fleet.config.ts", "vitest.config.ts", "drizzle.config.ts", "knip.json", "knip.production.json", "tsconfig.json"];
 const SCANNED = /\.(ts|tsx|mts|mjs|js|json|css|yaml|yml|md)$|^\.npmrc$/;
 const CODE = /\.(ts|tsx|mts|mjs|js)$/;
 const SELF = "test/lint/names.test.ts";
@@ -37,7 +37,7 @@ const KEPT: readonly RegExp[] = [
   /refs\\?\/fabricate\\?\//g,
   // The default database file in deployments' storage directories.
   /\bstorage\/fabricate\.sqlite3\b/g,
-  // The demo workspace and share-view cookies, which visitors' browsers hold.
+  // The workspace and share-view cookies, which visitors' browsers hold, named when they belonged to the template demo.
   /\bfabricate_demo_(?:workspace|view_)/g,
 ];
 

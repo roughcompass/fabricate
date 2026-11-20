@@ -34,14 +34,13 @@ function created(params: Record<string, string | string[] | undefined>) {
 
 /**
  * The Applications page (applications/catalog spec), on the Index template
- * with a card grid and a filter rail, as the Salt Patterns gallery was: a
- * full-width search, the "Filter applications" rail with Framework and
+ * with a card grid and a filter rail: a full-width search, the "Filter applications" rail with Framework and
  * Status, the count, a card per application with its status and its
  * current build's screenshot, and pages of 24. Every choice lives in the
  * address and works without JavaScript. While a shown application is
  * building, the page refreshes its cards and announces finished builds.
- * Reset workspace's section belongs at the end, since page headers hold no
- * destructive actions; its slot is marked below.
+ * Reset workspace's section comes last, since page headers hold no
+ * destructive actions.
  */
 export default async function ApplicationsPage({ searchParams }: PageProps<"/applications">) {
   requireApplications();
@@ -151,7 +150,6 @@ export default async function ApplicationsPage({ searchParams }: PageProps<"/app
           shown={listing.items.map((application) => ({ id: application.publicId, name: application.name, label: APPLICATION_STATUS_LABELS[application.status], settling: application.settling }))}
         />
       </section>
-      {/* Resetting removes work, so it isn't a header action: it has its own section, last (add-applications task 8.7). */}
       <ResetWorkspaceSection />
     </IndexTemplate>
   );

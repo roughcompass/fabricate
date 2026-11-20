@@ -5,10 +5,8 @@ import { findApplication } from "@/lib/applications/records";
 import { APPLICATION_STATUS_LABELS } from "@/lib/applications/status";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
-import { resolveApplicationView, sharedBuild, viewedApplication } from "@/lib/demo/access";
-import { referenceTemplate, routeByPath } from "@/lib/demo/catalog";
-import { demoEnabled } from "@/lib/demo/guard";
-import { currentWorkspace } from "@/lib/demo/request";
+import { resolveApplicationView, sharedBuild, viewedApplication } from "@/lib/workspaces/access";
+import { currentWorkspace } from "@/lib/workspaces/request";
 import { param } from "@/lib/web/query";
 import { routes } from "@/lib/web/routes";
 
@@ -23,19 +21,9 @@ import { routes } from "@/lib/web/routes";
  * sharer's comments. When that build is gone, the current one opens with a
  * notice saying so (template-demo/toolbar spec, "Shared links open the
  * captured view").
- *
- * A template's reference deployment renders from the layout instead, until
- * the template demo is removed; for it this page only rejects routes it
- * doesn't have.
  */
 export default async function RunRoute({ params, searchParams }: PageProps<"/run/[slug]/[[...path]]">) {
   const { slug, path = [] } = await params;
-  const template = demoEnabled() ? referenceTemplate(slug) : undefined;
-  if (template) {
-    if (path.length > 1 || (path.length === 1 && !routeByPath(template.app, path[0]!))) notFound();
-    return null;
-  }
-
   requireApplications();
   const db = getDb();
   const application = findApplication(db, slug);

@@ -1,8 +1,8 @@
 import { applicationsUnavailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
-import { attempt, jsonBody, readableView, stringField, writableView } from "@/lib/demo/api";
-import { authorName, createThread, listThreads, threadInputSchema } from "@/lib/demo/comments";
-import { setDisplayName } from "@/lib/demo/workspaces";
+import { attempt, jsonBody, readableView, stringField, writableView } from "@/lib/workspaces/api";
+import { authorName, createThread, listThreads, threadInputSchema } from "@/lib/workspaces/comments";
+import { setDisplayName } from "@/lib/workspaces/workspaces";
 
 /**
  * The comment threads of the view of a running application the visitor may

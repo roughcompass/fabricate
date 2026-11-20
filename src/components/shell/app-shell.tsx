@@ -27,8 +27,8 @@ const DEFAULT_SIDEBAR: SidebarPreferences = { width: SIDEBAR_WIDTH.default, hidd
  * a drawer instead. A focused page passes its own `header`, with a back
  * button in place of the sidebar controls. The sidebar's width and hidden
  * state come from the operator's cookies, so the first paint already has
- * them. Salt Patterns appears in the navigation only while the template demo
- * is enabled. The product mark opens Home, or wherever links to Home lead in
+ * them. Applications appears in the navigation only while previews are on.
+ * The product mark opens Home, or wherever links to Home lead in
  * this configuration.
  */
 export function AppShell({ theme, nav = NO_OPTIONAL_AREAS, sidebar = DEFAULT_SIDEBAR, header = <ShellHeader />, children }: { theme: Theme; nav?: NavFlags; sidebar?: SidebarPreferences; header?: React.ReactNode; children: React.ReactNode }) {

@@ -48,7 +48,7 @@ export function useTargetDocument(): TargetDocument {
   return target;
 }
 
-/** The target document, when the toolbar runs over a frame; null over the demo runtime, which inspects its own page. */
+/** The target document, when the toolbar runs over a frame; null otherwise. */
 export function useOptionalTargetDocument(): TargetDocument | null {
   return use(TargetDocumentContext);
 }

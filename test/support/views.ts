@@ -1,4 +1,4 @@
-import type { ViewedApplication } from "@/lib/demo/access";
+import type { ViewedApplication } from "@/lib/workspaces/access";
 import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { buildRepository } from "./builders";

@@ -9,6 +9,7 @@ The Digital Enablement team runs it, and every CIB team registers its frontend r
 - **A Profile of every repository.** Frameworks, dependencies and the versions resolved, how it fits into the web runtime, which design system it uses and how, the services it calls, and how it's built and tested. Each fact names the file and line it came from.
 - **Facts you can rely on.** Surveyor reads each repository without running any of its code, and the same commit, Surveyor release, and inputs always give the same facts. See [Facts and their states](../concepts/facts-and-states.md).
 - **The whole fleet in one place.** Product managers see every repository, design-system teams see adoption across all of them, and platform teams compare repositories against Standards.
+- **Applications you can open.** Where the Digital Enablement team turns previews on, an application is built from a branch of a repository and rebuilt as the branch moves. Open it running from [Applications](/applications), then comment on what you see or share a link to it.
 
 ## Start here
 

@@ -24,28 +24,27 @@ const shellOf = (tree: ReactNode) => elements(tree).find((element) => "data-side
 // operator-interface/page-patterns spec: the application shell, and the
 // sidebar that can be resized and hidden.
 describe("application shell", () => {
-  it("shows Home, the Registry, Assessments, Insights, and Admin groups when the demo is disabled (Demo disabled)", () => {
+  it("shows Home, the Registry, Assessments, Insights, and Admin groups", () => {
     const nav = elements(AppShell({ theme: "system", children: null })).find((element) => element.type === SidebarNav)!;
     const flags = nav.props.nav as NavFlags;
     expect(visibleGroups(flags).flatMap((group) => group.items).map((entry) => entry.label)).toEqual(["Home", "Repositories", "All Assessments", "Standards", "Adoption", "System", "Bitbucket tokens"]);
   });
 
-  it("adds Salt Patterns in its own group when the demo is enabled, opening its list", () => {
-    const nav = elements(AppShell({ theme: "system", nav: { ...NO_OPTIONAL_AREAS, demo: true }, children: null })).find((element) => element.type === SidebarNav)!;
+  it("adds Applications to the Registry while previews are enabled, opening its list", () => {
+    const nav = elements(AppShell({ theme: "system", nav: { ...NO_OPTIONAL_AREAS, applications: true }, children: null })).find((element) => element.type === SidebarNav)!;
     const groups = visibleGroups(nav.props.nav as NavFlags);
-    expect(groups.map((group) => [group.heading ?? null, group.items[0]!.href])).toEqual([
-      [null, "/"],
-      ["Registry", "/repositories"],
-      ["Assessments", "/assessments"],
-      ["Templates", "/templates"],
-      ["Insights", "/adoption"],
-      ["Admin", "/admin/system"],
+    expect(groups.map((group) => [group.heading ?? null, group.items.map((item) => item.href)])).toEqual([
+      [null, ["/"]],
+      ["Registry", ["/repositories", "/applications"]],
+      ["Assessments", ["/assessments", "/standards"]],
+      ["Insights", ["/adoption"]],
+      ["Admin", ["/admin/system", "/admin/bitbucket-tokens"]],
     ]);
   });
 
   it("names the product Frontend Registry and links its mark to Home (Product mark opens Home)", () => {
-    for (const demo of [false, true]) {
-      const brand = elements(AppShell({ theme: "system", nav: { ...NO_OPTIONAL_AREAS, demo }, children: null })).find((element) => element.props["aria-label"] === "Frontend Registry home")!;
+    for (const applications of [false, true]) {
+      const brand = elements(AppShell({ theme: "system", nav: { ...NO_OPTIONAL_AREAS, applications }, children: null })).find((element) => element.props["aria-label"] === "Frontend Registry home")!;
       expect(brand.props.href).toBe("/");
     }
   });

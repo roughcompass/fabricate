@@ -108,42 +108,8 @@ export function Toolbar({ panels, overlays, commentCount = 0, context }: { panel
     else runItem(item, document.activeElement as HTMLElement | null);
   };
 
-  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
-    const prevented = event.defaultPrevented;
-    handleKey(event);
-    // Key presses the toolbar acted on, such as its shortcuts, are left out of the application's interactions.
-    if (!prevented && event.defaultPrevented) markToolbarEvent(event);
-  });
-
-  useEffect(() => {
-    const listener = (event: KeyboardEvent) => onKeyDown(event);
-    document.addEventListener("keydown", listener);
-    return () => document.removeEventListener("keydown", listener);
-  }, []);
-
-  // Over a framed application, shortcuts also work while focus is in its page.
-  const framed = useOptionalTargetDocument()?.document ?? null;
-  useEffect(() => {
-    if (!framed) return;
-    const listener = (event: KeyboardEvent) => onKeyDown(event);
-    framed.addEventListener("keydown", listener);
-    return () => framed.removeEventListener("keydown", listener);
-  }, [framed]);
-
-  // The controls enter the top layer on mount, and go back on top whenever another top-layer element opens.
-  useEffect(() => {
-    const element = host.current;
-    if (!element || typeof element.showPopover !== "function") return;
-    if (!element.matches(":popover-open")) element.showPopover();
-    const onToggle = (event: Event) => {
-      const target = event.target as Element | null;
-      if (target === element || (event as ToggleEvent).newState !== "open") return;
-      element.hidePopover();
-      element.showPopover();
-    };
-    document.addEventListener("toggle", onToggle, true);
-    return () => document.removeEventListener("toggle", onToggle, true);
-  }, []);
+  useToolbarKeys(handleKey);
+  useTopLayer(host);
 
   useEffect(() => {
     remeasureToolbarBounds();
@@ -178,44 +144,103 @@ export function Toolbar({ panels, overlays, commentCount = 0, context }: { panel
             <Icon name="chevronLeft" size={14} />
           </button>
         ) : (
-          <aside ref={boundRef("pill")} className={styles.pill} aria-label="Toolbar">
-            {active && (
-              <button
-                type="button"
-                className={styles.pillButton}
-                aria-label={active.name}
-                aria-pressed="true"
-                aria-keyshortcuts={active.key ? keyLabel(active.key) : undefined}
-                data-active=""
-                data-toolbar-item={active.id}
-                onClick={() => (mode !== "none" ? setMode("none") : closeTool())}
-                {...tooltipFor(active.name, active.key)}
-              >
-                <Icon name={active.icon} size={16} />
-              </button>
-            )}
-            <button
-              ref={menuButton}
-              type="button"
-              className={styles.pillButton}
-              aria-label={commentCount > 0 ? `Open toolbar menu, ${commentCount} open ${commentCount === 1 ? "comment" : "comments"}` : "Open toolbar menu"}
-              aria-haspopup="dialog"
-              aria-expanded={menu !== null}
-              data-menu-button=""
-              onClick={() => (menu ? setMenu(null) : api.openMenu())}
-              {...tooltipFor("Menu")}
-            >
-              <Icon name="toolbar" size={16} />
-              {commentCount > 0 && (
-                <span className={styles.count} aria-hidden="true">
-                  {commentCount}
-                </span>
-              )}
-            </button>
-          </aside>
+          <ToolbarPill
+            active={active}
+            menuButton={menuButton}
+            menuOpen={menu !== null}
+            commentCount={commentCount}
+            onActive={() => (mode !== "none" ? setMode("none") : closeTool())}
+            onMenu={() => (menu ? setMenu(null) : api.openMenu())}
+          />
         )}
         <ToolbarTooltip tooltip={tooltip} />
       </div>
     </ToolbarContext>
   );
+}
+
+/** The expanded pill: the active tool or mode, which turns it off, and the menu button with the open comment count. */
+function ToolbarPill({ active, menuButton, menuOpen, commentCount, onActive, onMenu }: { active: ToolbarItem | null; menuButton: React.Ref<HTMLButtonElement>; menuOpen: boolean; commentCount: number; onActive: () => void; onMenu: () => void }) {
+  return (
+    <aside ref={boundRef("pill")} className={styles.pill} aria-label="Toolbar">
+      {active && (
+        <button
+          type="button"
+          className={styles.pillButton}
+          aria-label={active.name}
+          aria-pressed="true"
+          aria-keyshortcuts={active.key ? keyLabel(active.key) : undefined}
+          data-active=""
+          data-toolbar-item={active.id}
+          onClick={onActive}
+          {...tooltipFor(active.name, active.key)}
+        >
+          <Icon name={active.icon} size={16} />
+        </button>
+      )}
+      <button
+        ref={menuButton}
+        type="button"
+        className={styles.pillButton}
+        aria-label={commentCount > 0 ? `Open toolbar menu, ${commentCount} open ${commentCount === 1 ? "comment" : "comments"}` : "Open toolbar menu"}
+        aria-haspopup="dialog"
+        aria-expanded={menuOpen}
+        data-menu-button=""
+        onClick={onMenu}
+        {...tooltipFor("Menu")}
+      >
+        <Icon name="toolbar" size={16} />
+        {commentCount > 0 && (
+          <span className={styles.count} aria-hidden="true">
+            {commentCount}
+          </span>
+        )}
+      </button>
+    </aside>
+  );
+}
+
+/**
+ * Runs +handleKey+ for every key press on the page and, over a framed
+ * application, in its page too, so shortcuts work while focus is there. Key
+ * presses the toolbar acted on, such as its shortcuts, are left out of the
+ * application's interactions.
+ */
+function useToolbarKeys(handleKey: (event: KeyboardEvent) => void) {
+  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    const prevented = event.defaultPrevented;
+    handleKey(event);
+    if (!prevented && event.defaultPrevented) markToolbarEvent(event);
+  });
+
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => onKeyDown(event);
+    document.addEventListener("keydown", listener);
+    return () => document.removeEventListener("keydown", listener);
+  }, []);
+
+  const framed = useOptionalTargetDocument()?.document ?? null;
+  useEffect(() => {
+    if (!framed) return;
+    const listener = (event: KeyboardEvent) => onKeyDown(event);
+    framed.addEventListener("keydown", listener);
+    return () => framed.removeEventListener("keydown", listener);
+  }, [framed]);
+}
+
+/** Puts +host+ in the top layer on mount, and back on top whenever another top-layer element opens. */
+function useTopLayer(host: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const element = host.current;
+    if (!element || typeof element.showPopover !== "function") return;
+    if (!element.matches(":popover-open")) element.showPopover();
+    const onToggle = (event: Event) => {
+      const target = event.target as Element | null;
+      if (target === element || (event as ToggleEvent).newState !== "open") return;
+      element.hidePopover();
+      element.showPopover();
+    };
+    document.addEventListener("toggle", onToggle, true);
+    return () => document.removeEventListener("toggle", onToggle, true);
+  }, [host]);
 }

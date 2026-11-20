@@ -1,7 +1,7 @@
 import type { Browser, BrowserContext, FrameLocator, Page } from "@playwright/test";
 import type { Db } from "../../src/lib/db/client";
-import { WORKSPACE_COOKIE, newWorkspaceKey } from "../../src/lib/demo/workspace-key";
-import { type Workspace, ensureWorkspace, findWorkspace, setHints } from "../../src/lib/demo/workspaces";
+import { WORKSPACE_COOKIE, newWorkspaceKey } from "../../src/lib/workspaces/workspace-key";
+import { type Workspace, ensureWorkspace, findWorkspace, setHints } from "../../src/lib/workspaces/workspaces";
 import { expect } from "./fixtures";
 import { type FixtureApplication, buildOrdersPortal, framedRun, ordersPortalRemote } from "./fixture-app";
 

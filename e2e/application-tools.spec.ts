@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expectToolbarOnTop, openTool } from "./support/demo";
+import { expectToolbarOnTop, openTool } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { application, runOrdersPortal, waitForPage } from "./support/running-app";

@@ -1,7 +1,7 @@
 import { applicationsUnavailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
-import { attempt, jsonBody, stringField, writableView } from "@/lib/demo/api";
-import { listThreads, setThreadStatus } from "@/lib/demo/comments";
+import { attempt, jsonBody, stringField, writableView } from "@/lib/workspaces/api";
+import { listThreads, setThreadStatus } from "@/lib/workspaces/comments";
 
 /** Resolves or reopens a thread in the visitor's view of a running application, or the shared view they opened. */
 export async function POST(request: Request, { params }: { params: Promise<{ threadId: string }> }) {

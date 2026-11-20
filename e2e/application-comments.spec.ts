@@ -1,10 +1,10 @@
 import { createRequire } from "node:module";
 import { eq } from "drizzle-orm";
 import { generatePublicId } from "../src/lib/db/ids";
-import { applications, demoThreads } from "../src/lib/db/schema";
-import { THREAD_LIMIT } from "../src/lib/demo/workspaces";
+import { applications, commentThreads } from "../src/lib/db/schema";
+import { THREAD_LIMIT } from "../src/lib/workspaces/workspaces";
 import type { Page } from "@playwright/test";
-import { expectToolbarOnTop, openTool, startComment } from "./support/demo";
+import { expectToolbarOnTop, openTool, startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { commitToOrdersPortal, rebuildOrdersPortal } from "./support/fixture-app";
@@ -135,7 +135,7 @@ test("refuses a thread past the workspace's limit, saying how to make room (Thre
   await comment(page, exportOrders(page), "The first one", "Sam Rivera");
   const workspace = await workspaceOf(context, db);
   const now = new Date();
-  db.insert(demoThreads)
+  db.insert(commentThreads)
     .values(Array.from({ length: THREAD_LIMIT - 1 }, () => ({ publicId: generatePublicId("thr"), applicationId: db.select({ id: applications.id }).from(applications).where(eq(applications.publicId, orders.publicId)).get()!.id, viewWorkspaceId: workspace.id, route: "/settings", commitSha: preview.commitSha, anchor: { path: "body", tag: "body", fingerprint: "" }, offsetX: 0.5, offsetY: 0.5, createdAt: now })))
     .run();
   await page.keyboard.press("Escape");

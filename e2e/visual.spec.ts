@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOverlappingContent, test } from "./support/fixtures";
-import { openTool, setView, waitForRegions } from "./support/demo";
+import { openTool } from "./support/toolbar";
 import { framedRun } from "./support/fixture-app";
 import { application, runOrdersPortal, waitForPage } from "./support/running-app";
-import { demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
+import { applicationSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
 import { useTheme } from "./support/shell";
 import { storeEntry } from "../src/lib/catalog/entries";
@@ -57,6 +57,7 @@ test("captures every product surface at desktop and mobile width, in both themes
   storeEntry(db, saltEntry());
   const surfaces = [
     ...(await seedOperatorSurfaces(db, sourcesDir)),
+    ...applicationSurfaces(db, sourcesDir),
     ["10-system", "/admin/system"],
     ["10-bitbucket-tokens", "/admin/bitbucket-tokens"],
     ["10-adoption", "/adoption"],
@@ -77,6 +78,8 @@ test("captures every product surface at desktop and mobile width, in both themes
         await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await hydrated(page);
+        // Applications' cards and pages show screenshots, lazily below the fold.
+        await loadImages(page);
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         await expectNoHorizontalOverflow(page);
         await expectNoOverlappingContent(page);
@@ -112,7 +115,7 @@ test("captures the shell's sidebar states in both themes", async ({ page, db: _d
     await page.context().clearCookies({ name: "frontend-registry-sidebar" });
 
     await page.goto(paths.home);
-    await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Salt Patterns", exact: true })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Applications", exact: true })).toBeVisible();
     await capture("menu-desktop", theme);
 
     await page.setViewportSize(VIEWPORTS[1]!);
@@ -165,70 +168,6 @@ const HERO_APP = {
   "src/payments.css": ".link { padding: var(--salt-spacing-100); color: #0a6; }\n",
   "src/Payments.stories.tsx": 'import { Button } from "@salt-ds/core";\nexport const Approve = () => <Button appearance="solid">Approve</Button>;\n',
 };
-
-/**
- * Captures each portal shell of the template demo, with its hero application,
- * at desktop and mobile width in both runtime themes. Portals are application
- * content, so only overflow and overlap are checked, not the operator rules.
- */
-test("captures every portal shell at desktop and mobile width, in both runtime themes", async ({ page, db: _db }) => {
-  const output = path.join(OUTPUT, "portals");
-  fs.rmSync(output, { recursive: true, force: true });
-  fs.mkdirSync(output, { recursive: true });
-  const heroes = ["payments-workspace", "client-onboarding", "market-watch", "operations-console"];
-  for (const viewport of VIEWPORTS) {
-    await page.setViewportSize(viewport);
-    for (const slug of heroes) {
-      await page.goto(`/run/ref-${slug}`);
-      await waitForRegions(page);
-      for (const theme of THEMES) {
-        await setView(page, { theme });
-        await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
-        await expect(page.locator("[data-demo-portal]")).toHaveAttribute("data-theme", theme);
-        await expectNoHorizontalOverflow(page);
-        await expectNoOverlappingContent(page);
-        await page.screenshot({ path: path.join(output, `${slug}-${viewport.name}-${theme}.jpg`), fullPage: true, type: "jpeg", quality: 75 });
-      }
-    }
-  }
-  expect(fs.readdirSync(output)).toHaveLength(heroes.length * VIEWPORTS.length * THEMES.length);
-});
-
-/**
- * Captures the template demo's operator surfaces: the gallery, template
- * detail, and preview mode on every device and orientation and its Code tab.
- */
-test("captures every template demo surface at desktop and mobile width, in both themes", async ({ page, context, db: _db, baseURL }) => {
-  const output = path.join(OUTPUT, "demo");
-  fs.rmSync(output, { recursive: true, force: true });
-  fs.mkdirSync(output, { recursive: true });
-  const surfaces = demoSurfaces();
-
-  for (const theme of THEMES) {
-    await useTheme(context, theme, baseURL!);
-    for (const viewport of VIEWPORTS) {
-      await page.setViewportSize(viewport);
-      for (const [name, url] of surfaces) {
-        await page.goto(url);
-        await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
-        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        await hydrated(page);
-        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-        if (name.startsWith("13-preview-") && name !== "13-preview-code") {
-          const frame = (await (await page.locator("[data-preview-frame]").elementHandle())!.contentFrame())!;
-          await frame.waitForFunction(() => document.querySelector("[data-demo-mfe]") && !document.querySelector('[data-demo-mfe]:not([data-demo-state="ready"])'), null, { timeout: 15_000 });
-        }
-        await page.waitForLoadState("networkidle");
-        await loadImages(page);
-        await expectNoHorizontalOverflow(page);
-        await expectNoOverlappingContent(page);
-        await expectNoNestedBorders(page);
-        await page.screenshot({ path: path.join(output, `${name}-${viewport.name}-${theme}.jpg`), fullPage: true, type: "jpeg", quality: 75 });
-      }
-    }
-  }
-  expect(fs.readdirSync(output)).toHaveLength(surfaces.length * VIEWPORTS.length * THEMES.length);
-});
 
 /**
  * Captures the fixture application running with each toolbar tool open, with

@@ -1,8 +1,8 @@
 import { applicationsUnavailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
-import { attempt, jsonBody, stringField, writableView } from "@/lib/demo/api";
-import { addComment, authorName, listThreads } from "@/lib/demo/comments";
-import { setDisplayName } from "@/lib/demo/workspaces";
+import { attempt, jsonBody, stringField, writableView } from "@/lib/workspaces/api";
+import { addComment, authorName, listThreads } from "@/lib/workspaces/comments";
+import { setDisplayName } from "@/lib/workspaces/workspaces";
 
 /** Replies to a thread in the visitor's view of a running application, or the shared view they opened. */
 export async function POST(request: Request, { params }: { params: Promise<{ threadId: string }> }) {

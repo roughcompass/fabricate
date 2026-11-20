@@ -19,7 +19,7 @@ function elements(node: ReactNode, found: Element[] = []): Element[] {
   return found;
 }
 
-const BACK = { href: "/templates/payments-workspace", label: "Back to Payments workspace" };
+const BACK = { href: "/applications/orders-portal", label: "Back to Orders portal" };
 
 // operator-interface/page-patterns spec: the shell header holds navigation and
 // global controls, never a page's title; preview mode is a focused page.
@@ -28,7 +28,7 @@ describe("shell header", () => {
     const tree = elements(ShellHeader({ back: BACK }));
     expect(tree[0]!.props["data-shell-header"]).toBe("focused");
     const back = tree.find((element) => element.type === ButtonLink)!;
-    expect(back.props).toMatchObject({ href: "/templates/payments-workspace", label: "Back to Payments workspace", variant: "tertiary", size: "md", icon: "arrowLeft" });
+    expect(back.props).toMatchObject({ href: "/applications/orders-portal", label: "Back to Orders portal", variant: "tertiary", size: "md", icon: "arrowLeft" });
     expect(back.props.children).toBeUndefined();
     expect(tree.some((element) => element.type === SidebarToggle)).toBe(false);
     expect(tree.some((element) => element.props["aria-label"] === "Open navigation")).toBe(false);

@@ -6,7 +6,7 @@ import { buildRepository } from "../test/support/builders";
 import { expect, expectNoNestedBorders, test } from "./support/fixtures";
 import { seedResults } from "./support/results";
 import { limitViolations } from "./support/page-limits";
-import { type Surface, applicationSurfaces, demoSurfaces, seedOperatorSurfaces } from "./support/surfaces";
+import { type Surface, applicationSurfaces, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
 import { pageHeader, useTheme } from "./support/shell";
 
@@ -61,7 +61,7 @@ test("Dark theme: the canvas is darker than the surfaces and the header", async 
 
 test("No nested bordered containers on any surface", async ({ page, db, sourcesDir }) => {
   test.setTimeout(240_000);
-  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...applicationSurfaces(db, sourcesDir), ...demoSurfaces()];
+  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...applicationSurfaces(db, sourcesDir)];
   for (const [name, url] of surfaces) {
     await page.goto(url);
     await test.step(name, () => expectNoNestedBorders(page));
@@ -70,7 +70,7 @@ test("No nested bordered containers on any surface", async ({ page, db, sourcesD
 
 /** Every page: the captured operator surfaces, the routes they leave out, each seeded, and the product site's pages. */
 async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sourcesDir: string): Promise<Surface[]> {
-  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...applicationSurfaces(db, sourcesDir), ...demoSurfaces()];
+  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...applicationSurfaces(db, sourcesDir)];
   addBitbucketToken(db, { name: "Platform team", serverUrl: "https://bitbucket.example.com", token: "BBDC-surface-token-0000" });
   storeEntry(db, saltEntry());
   const url = (name: string) => surfaces.find(([candidate]) => candidate === name)![1];

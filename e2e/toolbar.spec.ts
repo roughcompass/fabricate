@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { createRequire } from "node:module";
-import { expectToolbarOnTop, openTool, openToolbarMenu, startComment } from "./support/demo";
+import { expectToolbarOnTop, openTool, openToolbarMenu, startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";

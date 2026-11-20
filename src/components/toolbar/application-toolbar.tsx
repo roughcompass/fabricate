@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert } from "@/components/ui/alert";
-import type { HintState } from "@/lib/demo/hints";
+import type { HintState } from "@/lib/workspaces/hints";
 import { AccessibilityPanel } from "./accessibility/accessibility-panel";
 import { AuditOverlay } from "./accessibility/audit-overlay";
 import { AuditProvider } from "./accessibility/audit-state";

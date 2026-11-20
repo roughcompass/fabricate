@@ -17,9 +17,9 @@ export type PublicIdPrefix =
   | "rel" // standard release
   | "evl" // evaluation
   | "fnd" // finding
-  | "thr" // demo thread
-  | "cmt" // demo comment
-  | "dpf" // demo profile
+  | "thr" // comment thread
+  | "cmt" // comment
+  | "dpf" // the template demo's session profile, dropped by migration 0056
   | "bbt" // Bitbucket token
   | "ppr" // preview preparation
   | "pvw" // preview build

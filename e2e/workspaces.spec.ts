@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { startComment } from "./support/demo";
+import { startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { framedRun } from "./support/fixture-app";

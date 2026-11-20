@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { deleteApplication } from "../src/lib/applications/records";
 import { deletePreview } from "../src/lib/previews/lifecycle";
-import { openTool, startComment } from "./support/demo";
+import { openTool, startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { commitToOrdersPortal, rebuildOrdersPortal } from "./support/fixture-app";

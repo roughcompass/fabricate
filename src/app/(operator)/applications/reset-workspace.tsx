@@ -4,8 +4,8 @@ import type { Outcome } from "@/components/ui/outcome-toast";
 import { Section } from "@/components/ui/section";
 import { requireApplications } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
-import { currentWorkspace } from "@/lib/demo/request";
-import { resetWorkspace } from "@/lib/demo/workspaces";
+import { currentWorkspace } from "@/lib/workspaces/request";
+import { resetWorkspace } from "@/lib/workspaces/workspaces";
 import { withQuery } from "@/lib/web/query";
 import { routes } from "@/lib/web/routes";
 

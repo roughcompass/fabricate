@@ -5,7 +5,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { formatNumber } from "@/components/ui/count";
 import { StatGroup } from "@/components/ui/stat-group";
 import { formatAbsolute } from "@/components/ui/time";
-import { ABOUT } from "@/content/about";
+import { ABOUT, aboutBenefits } from "@/content/about";
 import type { SiteFigures } from "@/lib/site/figures";
 import styles from "./about.module.css";
 
@@ -27,9 +27,10 @@ function Section({ id, heading, intro, children }: { id: string; heading: string
  * template's marketing variant: a hero, then nine sections in a fixed order,
  * from why to action. Its copy is src/content/about.ts; its figures are read
  * live, each hidden while its count is zero, and the whole section while no
- * Repository is registered.
+ * Repository is registered. Applications' benefit shows only while
+ * `applications` says they're available.
  */
-export function AboutView({ figures }: { figures: SiteFigures }) {
+export function AboutView({ figures, applications }: { figures: SiteFigures; applications: boolean }) {
   const { hero } = ABOUT;
   const stats = (
     [
@@ -124,7 +125,7 @@ export function AboutView({ figures }: { figures: SiteFigures }) {
 
       <Section id="benefits" heading={ABOUT.benefits.heading} intro={ABOUT.benefits.intro}>
         <dl className={styles.audiences}>
-          {ABOUT.benefits.audiences.map((item) => (
+          {aboutBenefits(applications).map((item) => (
             <div key={item.audience} className={styles.audience}>
               <dt className={styles.partName}>{item.audience}</dt>
               <dd>{item.benefit.text}</dd>

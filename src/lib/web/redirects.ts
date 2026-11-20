@@ -19,4 +19,7 @@ const permanent = (source: string, destination: string): Redirect => ({ source, 
 /** A Repository's Edit page became its Settings on 2026-11-17. */
 const SETTINGS_REDIRECTS: Redirect[] = [permanent("/repositories/:id(src_[a-z0-9]{16})/edit", "/repositories/:id/settings")];
 
-export const LEGACY_REDIRECTS: Redirect[] = [...SETTINGS_REDIRECTS];
+/** The Salt Patterns gallery, its templates, and their preview mode became Applications (add-applications, design decision 8). */
+const TEMPLATE_REDIRECTS: Redirect[] = [permanent("/templates", "/applications"), permanent("/templates/:path*", "/applications")];
+
+export const LEGACY_REDIRECTS: Redirect[] = [...SETTINGS_REDIRECTS, ...TEMPLATE_REDIRECTS];

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import type { HintState } from "@/lib/demo/hints";
+import type { HintState } from "@/lib/workspaces/hints";
 import { routes } from "@/lib/web/routes";
 import { ApplicationToolbar } from "./application-toolbar";
 import { workspaceThreadStore } from "./comments/thread-store";

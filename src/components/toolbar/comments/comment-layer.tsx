@@ -9,7 +9,7 @@ import { CommentBody } from "@/components/toolbar/comments/comment-body";
 import styles from "@/components/toolbar/comments/comments.module.css";
 import { Placed, type Preferred, bottomCenter } from "@/components/toolbar/placed";
 import type { Rect } from "@/components/toolbar/placement";
-import { FORMAT_MARKERS, commentText, toggleMarker } from "@/lib/demo/comment-format";
+import { FORMAT_MARKERS, commentText, toggleMarker } from "@/lib/workspaces/comment-format";
 import { markToolbarEvent } from "../inspector/protocol";
 import { useTargetDocument, useTargetRects } from "../target-document";
 import { useToolbar } from "../toolbar-context";

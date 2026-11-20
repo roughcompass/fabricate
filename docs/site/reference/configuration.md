@@ -20,12 +20,11 @@ Settings live in `config/frontend-registry.json`. Its `shared` section applies e
 | `analysis.maxLockfileBytes` | `FRONTEND_REGISTRY_MAX_LOCKFILE_BYTES` | 33554432; the largest lockfile |
 | `analysis.maxFiles` | `FRONTEND_REGISTRY_MAX_FILES` | 4000 |
 | `analysis.maxTotalBytes` | `FRONTEND_REGISTRY_MAX_TOTAL_BYTES` | 67108864 |
-| `demo.enabled` | `FRONTEND_REGISTRY_DEMO` | `false`; `true` in development and test |
 | `profiling.checkMinutes` | `FRONTEND_REGISTRY_PROFILING_CHECK_MINUTES` | 60; how often the worker checks every repository for a new commit or recipe |
 | `catalog.registry` | `FRONTEND_REGISTRY_CATALOG_REGISTRY` | `https://registry.npmjs.org/`; the npm registry Catalog builds read packages from, such as CIB's internal mirror |
 | `adoption.snapshotDays` | `FRONTEND_REGISTRY_ADOPTION_SNAPSHOT_DAYS` | 7; days between adoption snapshots |
 | `adoption.rarelyUsedPercentile` | `FRONTEND_REGISTRY_ADOPTION_RARELY_USED_PERCENTILE` | 25; the share of used components, by fewest usages, called rarely used |
-| `previews.enabled` | `FRONTEND_REGISTRY_PREVIEWS` | `false`; whether repository previews exist |
+| `previews.enabled` | `FRONTEND_REGISTRY_PREVIEWS` | `false`; whether repository previews and applications exist |
 | `previews.trustedSources` | `FRONTEND_REGISTRY_PREVIEWS_TRUSTED_SOURCES` | None; the clone URLs enrolled for previews |
 | `previews.browser` | `FRONTEND_REGISTRY_PREVIEWS_BROWSER` | None, for Playwright's Chromium; the browser that captures applications' screenshots, as a Playwright channel such as `chrome` or a browser's absolute path |
 | `previews.nodeVersions` | `FRONTEND_REGISTRY_PREVIEWS_NODE_VERSIONS` | None; each Node version a preview build may use, with its binary directory |
@@ -46,5 +45,7 @@ The things the Reference Catalog describes are listed in `config/catalog.yaml`: 
 The Frontend Registry never stores Git credentials, and refuses clone URLs that hold them. For HTTPS remotes, set `gitCredentialHelper`; the system and global Git configuration are ignored. For SSH remotes, load the key into an SSH agent the worker reaches through `SSH_AUTH_SOCK`.
 
 ## Names from before
+
+`FRONTEND_REGISTRY_DEMO`, and its old name `FABRICATE_DEMO`, turned on the template demo, which applications replaced. Neither is read now, and the processes and `npm run config` warn while one is set: set `FRONTEND_REGISTRY_PREVIEWS` instead.
 
 Until the next release, each variable's name from before the product was named, with the prefix `FABRICATE_` in place of `FRONTEND_REGISTRY_`, is still read when the new one is unset, with a deprecation warning, and so is `config/fabricate.json` when `config/frontend-registry.json` is missing.

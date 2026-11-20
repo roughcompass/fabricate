@@ -14,9 +14,6 @@
       "maxFiles": 4000,
       "maxTotalBytes": 67108864
     },
-    "demo": {
-      "enabled": false
-    },
     "profiling": {
       "checkMinutes": 60
     },
@@ -40,13 +37,11 @@
     }
   },
   "development": {
-    "allowedRoots": ["../fleet"],
-    "demo": { "enabled": true }
+    "allowedRoots": ["../fleet"]
   },
   "test": {
     "database": "tmp/test/frontend-registry.sqlite3",
-    "repositoryStorage": "tmp/test/repositories",
-    "demo": { "enabled": true }
+    "repositoryStorage": "tmp/test/repositories"
   },
   "production": {}
 }

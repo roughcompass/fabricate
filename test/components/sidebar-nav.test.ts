@@ -13,13 +13,13 @@ afterEach(() => {
   route.pathname = "/";
 });
 
-function render(pathname: string, flags: { demo?: boolean; applications?: boolean } = {}) {
+function render(pathname: string, flags: { applications?: boolean } = {}) {
   route.pathname = pathname;
-  return renderToStaticMarkup(createElement(SidebarNav, { nav: { demo: flags.demo ?? false, applications: flags.applications ?? false } }));
+  return renderToStaticMarkup(createElement(SidebarNav, { nav: { applications: flags.applications ?? false } }));
 }
 
 /** The primary menu's entries, in order: each one's label and whether it's current. */
-function primaryMenu(pathname: string, flags: { demo?: boolean; applications?: boolean } = {}) {
+function primaryMenu(pathname: string, flags: { applications?: boolean } = {}) {
   return [...render(pathname, flags).matchAll(/<a ([^>]*)>(.*?)<\/a>/g)].map(([, attributes, content]) => ({
     label: /<span[^>]*>([^<]*)<\/span>/.exec(content!)![1],
     current: /aria-current="(page|true)"/.exec(attributes!)?.[1] ?? null,
@@ -40,12 +40,12 @@ describe("primary menu", () => {
   });
 
   it("sets the groups apart with dividers and names each group's list by its heading (Full menu)", () => {
-    const html = render("/", { demo: true });
-    expect(html.match(/<hr/g)).toHaveLength(5);
+    const html = render("/", { applications: true });
+    expect(html.match(/<hr/g)).toHaveLength(4);
     expect(html).toContain('<p id="sidebar-group-assessments"');
     expect(html).toContain('aria-labelledby="sidebar-group-assessments"');
-    expect(html).toContain(">Templates</p>");
-    expect(html.indexOf(">Templates</p>")).toBeLessThan(html.indexOf(">Salt Patterns<"));
+    expect(html).not.toContain(">Templates</p>");
+    expect(html).not.toContain(">Salt Patterns<");
   });
 
   it("lists Applications after Repositories while applications are offered, and marks it current on their pages (Full menu, Application page)", () => {
@@ -66,9 +66,9 @@ describe("primary menu", () => {
 
   it.each([
     ["/repositories", "Repositories", "page"],
-    ["/templates/payments-workspace", "Salt Patterns", "true"],
+    ["/applications/orders-portal", "Applications", "true"],
   ])("marks %s's item current", (pathname, label, current) => {
-    expect(primaryMenu(pathname, { demo: true }).filter((entry) => entry.current)).toEqual([{ label, current }]);
+    expect(primaryMenu(pathname, { applications: true }).filter((entry) => entry.current)).toEqual([{ label, current }]);
   });
 
   it("links Home to the root address with its icon", () => {

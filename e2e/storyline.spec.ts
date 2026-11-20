@@ -1,4 +1,4 @@
-import { openTool } from "./support/demo";
+import { openTool } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { buildOrdersPortal, ordersPortalRemote } from "./support/fixture-app";
