@@ -28,6 +28,7 @@ export const workspaces = sqliteTable(
     /** Guided-hint progress and the hints-off setting, as a JSON object. */
     hints: text("hints").notNull().default("{}"),
     /** Incremented by every reset, so browser-held state from before it is ignored. */
+    // Retired: nothing reads or writes it now. It stays, at its default, so stored databases need no rebuild.
     resetEpoch: integer("reset_epoch").notNull().default(0),
     createdAt: createdAt(),
     lastSeenAt: timestamp("last_seen_at").notNull(),

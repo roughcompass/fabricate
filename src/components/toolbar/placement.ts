@@ -1,7 +1,7 @@
 /**
  * Placement for the toolbar's floating overlays (template-demo/toolbar spec:
- * nothing overlays the toolbar). Overlays such as the zone indicator, debug
- * labels, banners, hints, and the comment composer go where they prefer to,
+ * nothing overlays the toolbar). Overlays such as banners, hints, outlines'
+ * labels, and the comment composer go where they prefer to,
  * unless that would cover one of the toolbar's controls; then they move left
  * of the control, or above it, or below it. No React or browser dependencies.
  */

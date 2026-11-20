@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/lib/db/client";
 import { generatePublicId } from "@/lib/db/ids";
-import { shareLinks, commentThreads, workspaces } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { shareLinks, commentThreads, threadComments, workspaces } from "@/lib/db/schema";
 import { newWorkspaceKey } from "@/lib/workspaces/workspace-key";
 import {
   ensureWorkspace,
@@ -108,7 +109,7 @@ describe("workspaces", () => {
     expect(maybePurgeIdleWorkspaces(db, new Date(NOW.getTime() + 61 * 60 * 1000))).toBe(0);
   });
 
-  it("resets one workspace's comments, share links, display name, and hints, without touching another or the applications", () => {
+  it("resets one workspace's threads, share links, display name, and hints, without touching another, the replies it left there, or the applications", () => {
     const key = newWorkspaceKey();
     const presenter = ensureWorkspace(db, key, NOW);
     const visitor = ensureWorkspace(db, newWorkspaceKey(), NOW);
@@ -118,13 +119,18 @@ describe("workspaces", () => {
     db.insert(shareLinks).values({ tokenDigest: "b".repeat(64), applicationId: orders.id, viewWorkspaceId: presenter.id, commitSha: commitOf("a"), route: "/accounts", createdAt: NOW }).run();
     setHints(db, presenter.id, { off: true, runtime: "done" });
     setDisplayName(db, presenter.id, "Sam");
+    // A reply the presenter left in the view the visitor shared with them.
+    const visitorThread = db.select().from(commentThreads).all().find((thread) => thread.viewWorkspaceId === visitor.id)!;
+    db.insert(threadComments).values({ publicId: generatePublicId("cmt"), threadId: visitorThread.id, authorWorkspaceId: presenter.id, authorName: "Sam", body: "Agreed", createdAt: NOW }).run();
 
     const reset = resetWorkspace(db, presenter.id);
 
-    expect(reset.resetEpoch).toBe(presenter.resetEpoch + 1);
+    expect(reset).not.toHaveProperty("resetEpoch");
     expect(reset.hints).toEqual({});
     expect(reset.displayName).toBeNull();
     expect(db.select().from(commentThreads).all().map((thread) => thread.viewWorkspaceId)).toEqual([visitor.id]);
+    // The reply stays in the visitor's view, which is theirs.
+    expect(db.select({ body: threadComments.body }).from(threadComments).where(eq(threadComments.threadId, visitorThread.id)).all()).toEqual([{ body: "Agreed" }]);
     expect(rows(shareLinks)).toBe(0);
     expect(findWorkspace(db, key)!.id).toBe(presenter.id);
     expect(db.$client.prepare("select count(*) as n from applications").get()).toEqual({ n: 3 });

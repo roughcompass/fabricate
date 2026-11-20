@@ -30,16 +30,19 @@ export async function resetWorkspaceAction(): Promise<void> {
 /**
  * Reset workspace, the Applications page's last section (page-patterns spec,
  * "No destructive actions in the header"): a destructive action, so it
- * confirms first, and Cancel changes nothing. It redirects to Applications
+ * confirms first, and Cancel changes nothing. It deletes the workspace's own
+ * views' threads, share links, and display name (template-demo/demo-mode
+ * spec), and says that replies the visitor left in views others shared stay,
+ * since those belong to the sharers' workspaces. It redirects to Applications
  * with the notice `workspace-reset`, which `workspaceOutcome` turns into a
  * toast.
  */
 export function ResetWorkspaceSection() {
   return (
-    <Section title="Reset workspace" description="Removes your comments and share links, forgets your display name, and shows the guided hints again. Applications and other visitors' work aren't affected.">
+    <Section title="Reset workspace" description="Removes the comment threads in your views, your share links, and your display name, and shows the guided hints again. Replies you left in views others shared with you stay there.">
       <div>
         <ConfirmDialog action={resetWorkspaceAction} trigger={{ label: "Reset workspace", icon: "undo" }} title="Reset your workspace?" confirmLabel="Reset workspace" tone="danger">
-          {"Your comments and share links are removed, and links you shared stop working. Applications and other visitors' work aren't affected."}
+          {"Removes the comment threads in your views, your share links, and your display name, so links you shared stop working. Replies you left in views others shared with you stay there."}
         </ConfirmDialog>
       </div>
     </Section>
@@ -50,5 +53,5 @@ export function ResetWorkspaceSection() {
  * The toast for Reset workspace's notice, or undefined for any other code.
  */
 export function workspaceOutcome(code: string | undefined): Outcome | undefined {
-  return code === RESET ? { id: RESET, tone: "success", title: "Your workspace was reset.", description: "Your comments and share links were removed, and links you shared no longer open." } : undefined;
+  return code === RESET ? { id: RESET, tone: "success", title: "Your workspace was reset.", description: "The comment threads in your views and your share links were removed, and links you shared no longer open." } : undefined;
 }

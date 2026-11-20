@@ -28,7 +28,6 @@ export interface Workspace {
   readonly id: number;
   readonly displayName: string | null;
   readonly hints: HintState;
-  readonly resetEpoch: number;
 }
 
 /** Raised when a workspace limit would be exceeded; the message is shown to the visitor. */
@@ -110,8 +109,8 @@ export function setHints(db: Executor, workspaceId: number, hints: HintState): H
  * Clears a workspace (template-demo/demo-mode spec, "Visitors can reset
  * their workspace's comments and share links"): its comment threads, its
  * share links, which stop working, and its display name, and restores its
- * guidance state. Applications and other workspaces are untouched. The reset
- * epoch advances so state the browser kept from before is ignored.
+ * guidance state. Applications and other workspaces are untouched, and so
+ * are replies the visitor left in views others shared, which are theirs.
  */
 export function resetWorkspace(db: Executor, workspaceId: number): Workspace {
   return immediate(db, (tx) => {
@@ -122,7 +121,7 @@ export function resetWorkspace(db: Executor, workspaceId: number): Workspace {
     return toWorkspace(
       tx
         .update(workspaces)
-        .set({ displayName: null, hints: "{}", resetEpoch: current.resetEpoch + 1 })
+        .set({ displayName: null, hints: "{}" })
         .where(eq(workspaces.id, workspaceId))
         .returning()
         .get(),
@@ -131,6 +130,6 @@ export function resetWorkspace(db: Executor, workspaceId: number): Workspace {
 }
 
 function toWorkspace(row: typeof workspaces.$inferSelect): Workspace {
-  return { id: row.id, displayName: row.displayName, hints: parseHints(row.hints), resetEpoch: row.resetEpoch };
+  return { id: row.id, displayName: row.displayName, hints: parseHints(row.hints) };
 }
 

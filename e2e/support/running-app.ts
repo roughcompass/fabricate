@@ -62,7 +62,7 @@ export async function resetFromApplications(page: Page): Promise<void> {
   const section = page.getByRole("region", { name: "Reset workspace" });
   await section.getByRole("button", { name: "Reset workspace" }).click();
   const dialog = page.getByRole("dialog", { name: "Reset your workspace?" });
-  await expect(dialog).toContainText("Your comments and share links are removed, and links you shared stop working.");
+  await expect(dialog).toContainText("Removes the comment threads in your views, your share links, and your display name, so links you shared stop working. Replies you left in views others shared with you stay there.");
   await dialog.getByRole("button", { name: "Reset workspace" }).click();
   await expect(page.getByRole("region", { name: "Notifications" }).getByText("Your workspace was reset.")).toBeVisible();
 }
