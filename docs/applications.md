@@ -1,6 +1,6 @@
 # Applications
 
-An application is a frontend that the Frontend Registry keeps built from one branch of a Repository. It is a single-page application, or a microfrontend whose build emits a page of its own. Each time the branch moves, the Frontend Registry builds it again and captures a screenshot of the result. You can run it at a device's size in preview mode, or full screen under the toolbar, where you can comment on it, share a view of it, and check its accessibility and timing.
+An application is a frontend that the Frontend Registry keeps built from one branch of a Repository. It is a single-page application, or a microfrontend whose build emits a page of its own. Each time the branch moves, the Frontend Registry builds it again and captures a screenshot of the result. You can run it at a device's size in preview mode, or full screen under the toolbar, where you can comment on it, share a view of it, check its accessibility and timing, see what it's composed of, start it with a session preset, and switch its theme.
 
 Applications are built by the same pipeline as [repository previews](previews.md). They exist only while previews are on (`previews.enabled`; see [Turn previews on](previews.md#turn-previews-on)). While previews are off, the Applications menu item is gone, and every application page answers not found. Turning previews off deletes nothing, so the applications come back when previews are turned on again.
 
@@ -136,17 +136,22 @@ An application that doesn't exist, or has no successful build yet, answers **App
 
 ## The toolbar
 
-The toolbar works on the running application's page, which the Frontend Registry serves from its own origin. Select the pill's menu button, or use a tool's key, to open the menu. The menu's search, **What do you need?**, finds a tool by its name or by words such as "a11y", "web vitals", or "link"; the arrow keys move, Enter opens, and Esc closes. With no search, the menu also names the application, its branch, and the commit shown; selecting that line opens the application's page in the Frontend Registry, in a new tab.
+The toolbar works on the running application's page, which the Frontend Registry serves from its own origin. Select the pill's menu button, or use a tool's key, to open the menu. The menu's search, **What do you need?**, finds a tool by its name or by words such as "a11y", "web vitals", "link", "mfe", "routing", "storage", "cookies", "dark", "density", or "events"; the arrow keys move, Enter opens, and Esc closes. With no search, the menu also names the application, its branch, and the commit shown; selecting that line opens the application's page in the Frontend Registry, in a new tab.
 
 | Tool | Key | What it does |
 |---|---|---|
 | **Comment** | C | Turns comment mode on: choose any element on the page to start a thread on it. |
 | **Comments** | | Lists this view's threads, open and resolved. |
 | **Share** | L | Creates a link to this view. |
+| **Microfrontends** | M | Lists what the application is composed of, and routes a remote or import-map entry to another build. |
 | **Accessibility** | A | Audits the page for WCAG 2 A and AA problems. |
-| **Timing** | T | Shows the page's Web Vitals, its load order, and how long each interaction took. |
+| **Timing** | T | Shows the page's Web Vitals, its load order, how long each interaction took, and its hot spots. |
+| **Session** | P | Chooses the session preset the application starts with, and edits the application's presets. |
+| **Settings** | S | Switches a Salt application's theme, and logs the page's event bus. |
 | **Keyboard shortcuts** | ? | Lists the keys, and turns single-key shortcuts and guided hints on or off. |
 | **Hide toolbar** | . | Shrinks the toolbar to a **Show toolbar** tab at the right edge; press **.** again to bring it back. |
+
+The menu groups them under **Collaboration** (Comment, Comments, and Share), **Inspect** (Microfrontends, Accessibility, and Timing), **Runtime** (Session and Settings), and **More**.
 
 Keys work anywhere on the page, the application included, except while you type in a field, and not with Command, Control, or Alt held. Esc closes the open tooltip, menu, mode, or panel, in that order. If the keys conflict with your browser or assistive technology, clear **Use single-key shortcuts** under **Keyboard shortcuts**; Esc always works. Whether the toolbar is hidden, and whether single-key shortcuts are on, are kept in your browser for every application. While a tool's panel is open, or comment mode is on, its button sits on the pill, and selecting it closes the tool.
 
