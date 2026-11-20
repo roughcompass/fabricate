@@ -1,6 +1,6 @@
 # Applications
 
-An application is a frontend that the Frontend Registry keeps built from one branch of a Repository. It is a single-page application, or a microfrontend whose build emits a page of its own. Each time the branch moves, the Frontend Registry builds it again and captures a screenshot of the result. You can run it at a device's size in preview mode, or full screen under the toolbar, where you can comment on it, share a view of it, check its accessibility and timing, see what it's composed of, start it with a session preset, and switch its theme.
+An application is a frontend that the Frontend Registry keeps built from one branch of a Repository. It is a single-page application, or a microfrontend whose build emits a page of its own. Each time the branch moves, the Frontend Registry builds it again and captures a screenshot of the result. It can also keep [saved previews](#saved-previews) of other branches and tags. You can run it at a device's size in preview mode, or full screen under the toolbar, where you can comment on it, share a view of it, check its accessibility and timing, see what it's composed of, start it with a session preset, and switch its theme.
 
 Applications are built by the same pipeline as [repository previews](previews.md). They exist only while previews are on (`previews.enabled`; see [Turn previews on](previews.md#turn-previews-on)). While previews are off, the Applications menu item is gone, and every application page answers not found. Turning previews off deletes nothing, so the applications come back when previews are turned on again.
 
@@ -82,9 +82,11 @@ When the latest attempt failed or was refused, an alert says why. For a failed b
 - how it ended, with the reason and the log's last lines for a failure;
 - a link to its log.
 
-Only a preview's latest attempt keeps its log, so an earlier attempt's row says **No longer kept**. Builds of other branches and tags that preview mode shows aren't listed.
+Only a preview's latest attempt keeps its log, so an earlier attempt's row says **No longer kept**. Builds of saved previews aren't listed here; the Previews section lists those. Builds of other branches and tags that preview mode's **Show** makes still aren't listed anywhere.
 
-Deleting an application, under **Settings**, asks for confirmation first. It doesn't delete its builds, which are pruned like any other preview once nothing uses them, and it doesn't end the remote's enrollment. While an application uses a build, as its current build or latest attempt, pruning never deletes it.
+Between the overview and **Builds**, the **Previews** section lists the application's [saved previews](#saved-previews).
+
+Deleting an application, under **Settings**, asks for confirmation first. It deletes the application's saved previews with it. It doesn't delete its builds, which are pruned like any other preview once nothing uses them, and it doesn't end the remote's enrollment. While an application uses a build, as its current build or latest attempt, pruning never deletes it.
 
 ### The Applications page
 
@@ -95,6 +97,55 @@ The Applications page shows applications as cards, ordered by name, 24 to a page
 - the current build's screenshot, or the build's state in its place.
 
 Search finds applications by name, description, repository, or branch. The **Framework** and **Status** filters narrow the list. The search, filters, and page are kept in the address. While an application on the page is building, the page checks every 3 seconds and updates in place. It announces each finished build once, in a polite live region.
+
+Pruning never deletes a build that an application or a saved preview uses, so those builds can hold more than `previews.maxStorageBytes` on their own. When they do, a warning alert on the Applications page says how much they hold and what the limit is. Removing saved previews you no longer need, or raising `previews.maxStorageBytes`, brings storage back under the limit.
+
+## Saved previews
+
+A saved preview keeps a branch or tag of an application's remote built beside its tracked branch, such as a feature branch under review or a released tag. Saved previews are shared by every workspace, as applications are. An application can keep up to 20 of them.
+
+### Saving a preview
+
+Save a preview in either of two ways. Both work without JavaScript.
+- **New preview**, in the Previews section of the application's page, opens a form with the same **Branch or tag** choice and search as [preview mode](#preview-mode). **Create preview** saves the branch or tag and opens preview mode on it.
+- **Save as preview**, in preview mode, saves the branch or tag that **Show** is showing, and uses the build Show made, so nothing is built twice.
+
+Saving never changes the tracked branch, the current build, or the **Builds** list. The tracked branch can't be saved, since it's already the application's own. A branch or tag that's already saved opens its preview instead. Once five or fewer previews remain, both forms say how many more can be saved. At 20, saving another is refused until you remove one.
+
+### Keys
+
+Each saved preview has a key that names it in its addresses and never changes. The key is the ref's short name in lowercase, with each run of characters other than letters, digits, and dots made one hyphen, at most 60 characters. `feature/New_Nav` becomes `feature-new-nav`, and `v1.1.0` stays `v1.1.0`. When the application already has a key, `-2`, `-3`, and so on are added.
+
+| What | Address |
+|---|---|
+| Preview mode on a saved preview | `/applications/<slug>/preview?preview=<key>` |
+| A saved preview running full screen | `/run/<slug>@<key>/<route>` |
+| Its screenshot | `/applications/<slug>/screenshot?preview=<key>` |
+| New preview | `/applications/<slug>/previews/new` |
+
+### The Previews section
+
+The application's page lists its saved previews by name, in a table. Each row shows:
+- the card image of its current build;
+- the branch or tag, which opens it in preview mode;
+- whether it's a branch or a tag;
+- its status, in the words an application's status uses (see [Status](#status));
+- its current build's commit, and when that build was made.
+
+A row's actions are in its overflow menu: **Open full screen**, once a build has succeeded; **Rebuild preview**, while no build is under way; and **Remove preview**. While a saved preview is building, the page checks every 3 seconds, updates the row in place, and announces the finished build once.
+
+### Builds of a saved preview
+
+A saved preview is built by the same pipeline as its application, and keeps a current build and a latest attempt of its own. Until its first build succeeds, its image is the building placeholder, or the failure state if that build failed or was refused. After that, a failed or running later build keeps the last good build in use, with its screenshot.
+- **A saved branch** is built again when it moves, on the automatic check's schedule. A failed commit isn't tried again until the branch moves or you rebuild it. Its builds wait behind the tracked branches' builds and anything an operator started. See [Automatic rebuilds](previews.md#automatic-rebuilds).
+- **A saved tag** is built once. **Rebuild preview** reads its commit from the remote again and builds it.
+- **A branch or tag the remote no longer has**, such as a branch deleted after merging, keeps its last build in use, and its row says it's no longer on the remote. It stays saved until you remove it, and is built again if it returns.
+
+### Removing a saved preview
+
+**Remove preview** asks for confirmation, naming the branch or tag. Removing it deletes the saved preview, and its builds are pruned like any other preview once nothing else uses them. Its preview mode address then opens the tracked branch with a notice, and its full-screen address answers **Application not available**. Comment threads placed on it stay.
+
+When you switch an application's tracked branch to a branch that has a saved preview, that saved preview is removed, since the branch is then built as the application's own.
 
 ## Screenshots
 
@@ -110,15 +161,23 @@ The application's page shows the full screenshot, and its card a copy 720 pixels
 
 ### The Preview tab
 
-The Preview tab runs the current build in a browser window, at the size of the device you choose: **Mobile** (390 by 844), **Tablet** (820 by 1180), or **Desktop** (1440 by 900). **Landscape** turns the device, and a frame larger than the page is scaled down to fit. **Open full screen** opens the frame's route in a new tab: the current build [under the toolbar](#running-an-application), at `/run/<slug>/<route>`, and another branch or tag's build at its preview's own address, without the toolbar.
+The Preview tab runs the current build in a browser window, at the size of the device you choose: **Mobile** (390 by 844), **Tablet** (820 by 1180), or **Desktop** (1440 by 900). **Landscape** turns the device, and a frame larger than the page is scaled down to fit. **Open full screen** opens the frame's route in a new tab:
+- the current build [under the toolbar](#running-an-application), at `/run/<slug>/<route>`;
+- a saved preview's build under the toolbar, at `/run/<slug>@<key>/<route>`;
+- an unsaved branch or tag's build at its preview's own address, without the toolbar. Its tooltip says that **Save as preview** runs it with the toolbar.
 
 **Branch or tag** chooses what the frame shows. It lists the tracked branch first, then:
+- the application's [saved previews](#saved-previews);
 - the remote's other branches by name, up to 50;
 - the 20 highest-numbered tags, since the remote doesn't say when a tag was made.
 
 When the remote has more branches or tags than that, a line under the controls says how many are listed. **Find a branch or tag** then lists those whose name contains your search, branches first, up to 50 matches. The search works without JavaScript, and the branch or tag shown always stays in the list.
 
-**Show** builds the application's package at that branch or tag's head, as an ordinary preview of the Repository. It never changes the tracked branch, the current build, or the builds list. While that commit is checked and built, the frame area shows the build's state and updates on its own. In a monorepo with several packages that can be previewed, choose **Show** again once the commit is checked. If the commit can't be previewed, the frame area names the failed condition, and if its build fails, the reason. Choosing the tracked branch returns to the current build.
+**Show** builds the application's package at that branch or tag's head, as an ordinary preview of the Repository, without saving it. It never changes the tracked branch, the current build, or the builds list, and such builds are pruned like any other preview once nothing uses them. While that commit is checked and built, the frame area shows the build's state and updates on its own. In a monorepo with several packages that can be previewed, choose **Show** again once the commit is checked. If the commit can't be previewed, the frame area names the failed condition, and if its build fails, the reason. Choosing the tracked branch returns to the current build.
+
+While an unsaved branch or tag is shown, **Save as preview** adds it to the application's saved previews, reusing the build Show made, and the address then names it by its key. Choosing a saved preview shows its current build. While a later build of it is running, failed, or couldn't be previewed, the control row says so beside the choice. Until its first build succeeds, the frame area shows the building placeholder, or the failure indicator with the reason and a link to the build's log.
+
+The address names a saved preview by its key, `?preview=<key>`, and any other branch or tag by its ref, `?ref=refs/heads/<branch>`. An address with a ref that has since been saved opens that saved preview by its key. An address with the key of a removed preview opens the tracked branch, with a notice.
 
 Preview mode keeps each remote's branches and tags for a minute (`previews.refCacheSeconds`, 60 by default), so changing the device or the tab doesn't read the remote again. **Show** reads it again, so what it builds is the branch or tag's head at that moment.
 
@@ -130,9 +189,11 @@ The Code tab lists the package's committed files at the commit shown, up to 2,00
 
 `/run/<slug>` runs an application's current build full screen, with the toolbar over it. Open it from the application's page with **Open full screen**, from preview mode, or from a [share link](#share-links). The page has no Frontend Registry navigation; the application fills the window, and the toolbar is a pill docked at the middle of its right edge.
 
+`/run/<slug>@<key>` runs a [saved preview](#saved-previews)'s current build the same way, at `/run/<slug>@<key>/<route>`, with the same tools. The toolbar menu's context line names the preview's branch or tag and its commit. A slug can't contain `@`, so the address splits at the first one.
+
 The address follows the application's own routes, with their query: `/run/<slug>/accounts?tab=billing` opens the build at `/accounts?tab=billing`, and as you navigate inside the application, or it changes its query, the address bar, Reload, and Back follow it. Every query parameter is the application's except `share`, which a share link adds. A route's fragment isn't carried into the address.
 
-An application that doesn't exist, or has no successful build yet, answers **Application not available**, with a link back to Applications, and so does every `/run` address while previews are off.
+An application that doesn't exist, or has no successful build yet, answers **Application not available**, with a link back to Applications. So does a saved preview's address with an unknown key, or for a preview with no successful build yet, and every `/run` address while previews are off.
 
 ## The toolbar
 

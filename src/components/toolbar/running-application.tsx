@@ -24,18 +24,20 @@ import styles from "./running-application.module.css";
  * token of the share link that opened this view, the sharer's. A +notice+,
  * such as that the shared commit's build is gone, shows above the
  * application until it's dismissed. +hints+ is the workspace's guided-hint
- * state. +composition+ is what the Profile of the build's commit says it's
+ * state. +preview+ is the key of the saved preview shown, which the address
+ * keeps as `/run/<slug>@<key>`, or null for the tracked branch.
+ * +composition+ is what the Profile of the build's commit says it's
  * composed of.
  */
-export function RunningApplication(props: { slug: string; src: string; base: string; commit: string; title: string; context: MenuContext; share: string | null; notice: string | null; hints: HintState; composition: BuildComposition }) {
-  const { slug, src, base, commit, title, context, share, notice, hints, composition } = props;
-  const [store] = useState(() => workspaceThreadStore(slug, share));
-  const [view] = useState(() => ({ slug, name: context.name, preview: null, key: viewKey(slug, null), composition }));
+export function RunningApplication(props: { slug: string; preview: string | null; src: string; base: string; commit: string; title: string; context: MenuContext; share: string | null; notice: string | null; hints: HintState; composition: BuildComposition }) {
+  const { slug, preview, src, base, commit, title, context, share, notice, hints, composition } = props;
+  const [store] = useState(() => workspaceThreadStore(slug, share, preview));
+  const [view] = useState(() => ({ slug, name: context.name, preview, key: viewKey(slug, preview), composition }));
   return (
     <TargetFrame src={src} base={base} commit={commit} title={title} className={styles.frame}>
-      <FollowRoute slug={slug} />
+      <FollowRoute slug={slug} preview={preview} />
       {notice && <Notice text={notice} />}
-      <ApplicationToolbar slug={slug} share={share} context={context} store={store} hints={hints} view={view} />
+      <ApplicationToolbar slug={slug} preview={preview} share={share} context={context} store={store} hints={hints} view={view} />
     </TargetFrame>
   );
 }
@@ -44,16 +46,16 @@ export function RunningApplication(props: { slug: string; src: string; base: str
  * Keeps the page's address in step with the route and query the frame shows,
  * replacing the history entry rather than adding one: the frame's own
  * history already has an entry for each of its navigations. A share link's
- * token stays.
+ * token stays, and so does a saved preview's `@<key>`.
  */
-function FollowRoute({ slug }: { slug: string }) {
+function FollowRoute({ slug, preview }: { slug: string; preview: string | null }) {
   const { route, search, state } = useTargetDocument();
   useEffect(() => {
     if (state !== "ready") return;
     const share = new URLSearchParams(window.location.search).get("share");
-    const address = routes.runningApplication(slug, `${route}${search}`, { share });
+    const address = routes.runningApplication(slug, `${route}${search}`, { share }, preview);
     if (`${window.location.pathname}${window.location.search}` !== address) window.history.replaceState(null, "", address);
-  }, [slug, route, search, state]);
+  }, [slug, preview, route, search, state]);
   return null;
 }
 

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApplication } from "@/lib/applications/pipeline";
-import { applicationsHref, deleteApplication, findApplication, getApplication, listApplications, parseApplicationQuery, slugFor, updateApplicationDetails } from "@/lib/applications/records";
+import { applicationsHref, deleteApplication, findApplication, getApplication, getApplicationRow, listApplications, parseApplicationQuery, slugFor, storageInUse, storageOverLimit, updateApplicationDetails } from "@/lib/applications/records";
 import { deleteRepository } from "@/lib/repositories/registration";
 import type { Repository } from "@/lib/repositories/repository-records";
 import { type FrontendRegistryConfig, getConfig, setConfig, withOverrides } from "@/lib/config";
@@ -11,7 +11,8 @@ import { PreviewAccessError, findEnrollment, isEnrolled } from "@/lib/previews/a
 import { BUILD_PREVIEW, failAttempt, findPreview } from "@/lib/previews/records";
 import { buildRepository } from "../support/builders";
 import { decidedPreparation, onboard, qualifyingVerdict, refusedVerdict } from "../support/applications";
-import { publishFiles } from "../support/previews";
+import { publishFiles, queuedPreview } from "../support/previews";
+import { rawRun } from "../support/db";
 import { useAppDb } from "../support/next";
 
 /*
@@ -233,6 +234,26 @@ describe("application records", () => {
       deleteRepository(app.db, repository.publicId, "spa-orders");
       expect(findApplication(app.db, created.slug)).toBeUndefined();
       expect(findPreview(app.db, app.db.select().from(previewBuilds).get()!.publicId)).toBeUndefined();
+    });
+  });
+
+  describe("storage in use (restore-toolbar-tools-and-branch-previews, task 3.5)", () => {
+    it("adds up the builds applications and saved previews use, each once, and reports them over the limit (Protected builds over the limit)", () => {
+      const created = onboard(app.db, config, repository);
+      const current = publishFiles(app.db, config, app.db.select().from(previewBuilds).where(eq(previewBuilds.id, created.latestPreviewId!)).get()!, { "index.html": "x".repeat(300) });
+      // An unused build doesn't count.
+      publishFiles(app.db, config, queuedPreview(app.db, repository), { "index.html": "y".repeat(5_000) });
+      expect(storageInUse(app.db)).toBe(300);
+
+      // A saved preview's current build and its latest attempt both count; the application's build, which it shares, counts once.
+      const feature = publishFiles(app.db, config, queuedPreview(app.db, repository), { "index.html": "z".repeat(700) });
+      const attempt = queuedPreview(app.db, repository);
+      const applicationId = getApplicationRow(app.db, created.publicId).id;
+      rawRun(app.db, "insert into application_previews (public_id, application_id, key, ref, current_preview_id, latest_preview_id, latest_preparation_id, latest_commit_sha, latest_requested_at, created_at, updated_at) values ('apv_0000000000000001', ?, 'feature-new-nav', 'refs/heads/feature/new-nav', ?, ?, ?, ?, 0, 0, 0)", applicationId, feature.id, attempt.id, attempt.preparationId, attempt.commitSha);
+      rawRun(app.db, "insert into application_previews (public_id, application_id, key, ref, current_preview_id, latest_preview_id, latest_preparation_id, latest_commit_sha, latest_outcome, latest_requested_at, created_at, updated_at) values ('apv_0000000000000002', ?, 'v1.1.0', 'refs/tags/v1.1.0', ?, ?, ?, ?, 'ready', 0, 0, 0)", applicationId, current.id, current.id, current.preparationId, current.commitSha);
+      expect(storageInUse(app.db)).toBe(1_000);
+      expect(storageOverLimit(app.db, 1_000)).toBeNull();
+      expect(storageOverLimit(app.db, 999)).toEqual({ bytes: 1_000, limit: 999 });
     });
   });
 });

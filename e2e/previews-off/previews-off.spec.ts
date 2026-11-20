@@ -27,7 +27,24 @@ test("Previews off: an application's pages, its running application, its share l
   const repository = insertRepository(db, { name: "spa-orders", cloneUrl: "https://git.example.com/acme/spa-orders.git", canonicalUrl: "https://git.example.com/acme/spa-orders", gitRef: null });
   const application = onboard(db, withOverrides(serverConfig(), { previews: { enabled: true } }), repository, { name: "Orders portal" });
 
-  for (const address of [paths.applications, paths.newApplication(), paths.application(application.slug), `${paths.application(application.slug)}/preview`, `${paths.application(application.slug)}/settings`, paths.runningApplication(application.slug, "/accounts"), "/templates", "/templates/market-watch/preview"]) {
+  // Saved previews' addresses too (restore-toolbar-tools-and-branch-previews, task 3.6).
+  db.$client
+    .prepare("insert into application_previews (public_id, application_id, key, ref, latest_commit_sha, latest_requested_at, created_at, updated_at) values ('apv_0000000000000001', ?, 'feature-new-nav', 'refs/heads/feature/new-nav', ?, 0, 0, 0)")
+    .run(application.id, application.latestCommitSha);
+  for (const address of [
+    paths.applications,
+    paths.newApplication(),
+    paths.application(application.slug),
+    `${paths.application(application.slug)}/preview`,
+    paths.applicationPreview(application.slug, { preview: "feature-new-nav" }),
+    `${paths.application(application.slug)}/settings`,
+    paths.newApplicationPreview(application.slug),
+    paths.runningApplication(application.slug, "/accounts"),
+    paths.runningApplication(application.slug, "/accounts", undefined, "feature-new-nav"),
+    paths.applicationScreenshot(application.slug, "v1", "full", "feature-new-nav"),
+    "/templates",
+    "/templates/market-watch/preview",
+  ]) {
     const response = await page.goto(address);
     expect(response?.status(), address).toBe(404);
   }
@@ -38,7 +55,7 @@ test("Previews off: an application's pages, its running application, its share l
 });
 
 test("Previews off: the workspace and application endpoints answer not found", async ({ request, db: _db }) => {
-  for (const address of ["/api/workspace/threads?application=orders-portal", "/api/applications/status?ids=app_x", "/api/applications/eligibility"]) {
+  for (const address of ["/api/workspace/threads?application=orders-portal", "/api/applications/status?ids=app_x", "/api/applications/status?ids=apv_0000000000000001", "/api/applications/eligibility"]) {
     const response = await request.get(address);
     expect(response.status(), `GET ${address}`).toBe(404);
   }

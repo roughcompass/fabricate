@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Form from "next/form";
 import { IndexTemplate } from "@/components/templates/index-template";
 import { ButtonLink } from "@/components/ui/button";
-import { countLabel, formatNumber } from "@/components/ui/count";
+import { Alert } from "@/components/ui/alert";
+import { countLabel, formatBytes, formatNumber } from "@/components/ui/count";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterRail } from "@/components/ui/filter-rail";
 import { HiddenFields } from "@/components/ui/form";
@@ -13,7 +14,8 @@ import { Panel } from "@/components/ui/panel";
 import { SearchField } from "@/components/ui/search-field";
 import { Tag } from "@/components/ui/tag";
 import { requireApplications } from "@/lib/applications/availability";
-import { EMPTY_QUERY, applicationsHref, findApplication, listApplications, parseApplicationQuery, statusSnapshot } from "@/lib/applications/records";
+import { EMPTY_QUERY, applicationsHref, findApplication, listApplications, parseApplicationQuery, statusSnapshot, storageOverLimit } from "@/lib/applications/records";
+import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
 import { param } from "@/lib/web/query";
 import { routes } from "@/lib/web/routes";
@@ -39,8 +41,10 @@ function created(params: Record<string, string | string[] | undefined>) {
  * current build's screenshot, and pages of 24. Every choice lives in the
  * address and works without JavaScript. While a shown application is
  * building, the page refreshes its cards and announces finished builds.
- * Reset workspace's section comes last, since page headers hold no
- * destructive actions.
+ * When the builds applications and saved previews use pass the storage
+ * limit, an alert says so (applications/saved-previews spec, "Storage over
+ * its limit is reported"). Reset workspace's section comes last, since page
+ * headers hold no destructive actions.
  */
 export default async function ApplicationsPage({ searchParams }: PageProps<"/applications">) {
   requireApplications();
@@ -59,7 +63,12 @@ export default async function ApplicationsPage({ searchParams }: PageProps<"/app
   return (
     <IndexTemplate
       header={{ title: "Applications", description: "Frontend applications built from a branch of a repository, kept up to date as the branch moves.", primaryAction: newApplication }}
-      alerts={<OutcomeToast outcome={applicationOutcome(param(params, "notice"), created(params)) ?? workspaceOutcome(param(params, "notice"))} strip={["notice", "application"]} />}
+      alerts={
+        <>
+          <OutcomeToast outcome={applicationOutcome(param(params, "notice"), created(params)) ?? workspaceOutcome(param(params, "notice"))} strip={["notice", "application"]} />
+          <StorageAlert />
+        </>
+      }
       empty={
         listing.total === 0
           ? { title: "No applications yet", icon: "frame", children: "Applications are built from repositories: choose a repository, the branch to track, and its package, and the Frontend Registry builds it.", action: newApplication }
@@ -152,5 +161,16 @@ export default async function ApplicationsPage({ searchParams }: PageProps<"/app
       </section>
       <ResetWorkspaceSection />
     </IndexTemplate>
+  );
+}
+
+/** Says when the builds in use pass `previews.maxStorageBytes`, which pruning can't fix, and what does. */
+function StorageAlert() {
+  const over = storageOverLimit(getDb(), getConfig().previews.maxStorageBytes);
+  if (!over) return null;
+  return (
+    <Alert tone="warning" title="Builds in use are over the storage limit">
+      {`The builds that applications and saved previews use hold ${formatBytes(over.bytes)}, more than the ${formatBytes(over.limit)} that previews.maxStorageBytes allows. Pruning never deletes them, so storage stays over the limit until you remove saved previews you no longer need, or raise previews.maxStorageBytes.`}
+    </Alert>
   );
 }

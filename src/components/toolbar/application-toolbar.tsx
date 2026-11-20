@@ -29,14 +29,15 @@ import styles from "./running-application.module.css";
  * The toolbar over a running application in a frame (add-applications,
  * design decisions 5 and 6), with the tools that inspect the frame's own
  * page: Comment and Comments, Accessibility, and Timing; Share, for the
- * application +slug+ in the view the share link +share+ opened, if any; and
- * the guided hints that point to them, from the workspace's +hints+ state.
- * Microfrontends (restore-toolbar-tools-and-branch-previews) lists what the
- * +view+ is composed of and routes its microfrontends, and Settings switches
- * its theme and logs the page's event bus. It needs to read the page, so
- * when the frame isn't same-origin it says so and doesn't start.
+ * application +slug+, or its saved preview +preview+, in the view the share
+ * link +share+ opened, if any; and the guided hints that point to them, from
+ * the workspace's +hints+ state. Microfrontends
+ * (restore-toolbar-tools-and-branch-previews) lists what the +view+ is
+ * composed of and routes its microfrontends, and Settings switches its theme
+ * and logs the page's event bus. It needs to read the page, so when the
+ * frame isn't same-origin it says so and doesn't start.
  */
-export function ApplicationToolbar({ slug, share, context, store, hints, view }: { slug: string; share: string | null; context: MenuContext; store: ThreadStore; hints: HintState; view: ToolbarView }) {
+export function ApplicationToolbar({ slug, preview, share, context, store, hints, view }: { slug: string; preview: string | null; share: string | null; context: MenuContext; store: ThreadStore; hints: HintState; view: ToolbarView }) {
   const target = useTargetDocument();
   if (target.state === "unreadable")
     return (
@@ -53,7 +54,7 @@ export function ApplicationToolbar({ slug, share, context, store, hints, view }:
           <TimingProvider>
             <SettingsProvider>
               <MicrofrontendsProvider>
-                <Tools context={context} hints={hints} share={<SharePanel slug={slug} name={context.name} share={share} />} />
+                <Tools context={context} hints={hints} share={<SharePanel slug={slug} preview={preview} name={context.name} share={share} />} />
               </MicrofrontendsProvider>
             </SettingsProvider>
           </TimingProvider>

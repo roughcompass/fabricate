@@ -1,13 +1,11 @@
 import path from "node:path";
 import type { Db } from "../../src/lib/db/client";
 import { type BuildComposition, buildComposition } from "../../src/lib/applications/composition";
-import { createSavedPreview } from "../../src/lib/applications/pipeline";
-import { type SavedPreview, findSavedPreview } from "../../src/lib/applications/saved-previews";
+import type { SavedPreview } from "../../src/lib/applications/saved-previews";
 import { storeEntry } from "../../src/lib/catalog/entries";
 import { saltEntry } from "../../test/support/catalog";
 import { E2E_PREVIEW_SOURCES } from "./env";
-import { type FixtureApplication, commitToRemote, fixtureRemote, fixtureRepository, onboardFixture, settle } from "./fixture-app";
-import { serverConfig } from "./results";
+import { type FixtureApplication, commitToRemote, fixtureRemote, fixtureRepository, onboardFixture, saveOrdersPortalPreview } from "./fixture-app";
 
 /*
  * The microfrontend fixtures (restore-toolbar-tools-and-branch-previews,
@@ -74,15 +72,6 @@ export interface QuotesApplications {
   readonly darkBlotter: SavedPreview | null;
 }
 
-/** Saves a preview of +branch+ of +build+'s application and settles its build, failing unless it's Ready. */
-async function savePreview(db: Db, build: FixtureApplication, branch: string): Promise<SavedPreview> {
-  const { saved } = await createSavedPreview(db, build.application.publicId, { ref: `refs/heads/${branch}` }, { config: serverConfig() });
-  await settle(db);
-  const ready = findSavedPreview(db, build.application.publicId, saved.key)!;
-  if (ready.status !== "ready" || !ready.current) throw new Error(`The saved preview of ${branch} isn't Ready: ${ready.status}`);
-  return ready;
-}
-
 /**
  * Fresh remotes for both fixtures, onboarded as the applications Quotes
  * panel and Quotes desk, each Ready with its current build of main and its
@@ -95,8 +84,8 @@ export async function buildQuotes(db: Db, options: { saved?: boolean } = {}): Pr
   const panel = await onboardFixture(db, fixtureRepository(db, QUOTES_PANEL_REMOTE, "quotes-panel"), { name: QUOTES_PANEL_NAME, description: "Live quotes, as a Module Federation remote and a single-spa ticker." });
   const desk = await onboardFixture(db, fixtureRepository(db, QUOTES_DESK_REMOTE, "quotes-desk"), { name: QUOTES_DESK_NAME, description: "A trading desk that composes the quotes panel and its ticker." });
   if (options.saved === false) return { desk, panel, commits, blueQuotes: null, darkBlotter: null };
-  const blueQuotes = await savePreview(db, panel, BLUE_QUOTES);
-  const darkBlotter = await savePreview(db, desk, DARK_BLOTTER);
+  const blueQuotes = await saveOrdersPortalPreview(db, `refs/heads/${BLUE_QUOTES}`, { slug: panel.application.slug });
+  const darkBlotter = await saveOrdersPortalPreview(db, `refs/heads/${DARK_BLOTTER}`, { slug: desk.application.slug });
   return { desk, panel, commits, blueQuotes, darkBlotter };
 }
 

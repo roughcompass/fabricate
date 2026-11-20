@@ -10,6 +10,11 @@
   .excerpt { margin: var(--space-2) 0 0; }
   .excerpt pre { margin: 0; font-family: var(--font-family-mono); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
 
+  /* A saved preview's card image in its row, 96 pixels wide, so every row keeps one height; on the muted background, without a border, since it sits in a panel. */
+  .thumb { position: relative; display: block; width: var(--size-thumbnail); aspect-ratio: 16 / 10; overflow: hidden; border-radius: var(--radius-md); background: var(--color-bg-muted); font-size: var(--font-size-caption); }
+  .thumb img { object-fit: cover; object-position: top center; }
+  .thumb [data-tone], .thumb [role="img"] { gap: var(--space-1); padding: var(--space-1); text-align: center; }
+
   /* An application's page: the large image beside its overview; the overview first on narrow screens. */
   .detail { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); grid-template-areas: "image overview"; gap: var(--space-8); align-items: start; }
   .overview { grid-area: overview; min-width: 0; }

@@ -2,6 +2,7 @@ import type { MediaCardImage } from "@/components/ui/media-card";
 import { Status } from "@/components/ui/status";
 import { screenshotAlt } from "@/lib/applications/images";
 import type { Application } from "@/lib/applications/records";
+import { type SavedPreview, savedPreviewAlt } from "@/lib/applications/saved-previews";
 import { APPLICATION_STATUS_LABELS, type ApplicationStatus } from "@/lib/applications/status";
 import { routes } from "@/lib/web/routes";
 import styles from "./applications.module.css";
@@ -29,9 +30,18 @@ export function ApplicationStatusLabel({ application, size }: { application: Pic
 
 /** What the image area shows: the current build's screenshot, or the card image, or the state in its place. */
 export function applicationImage(application: Application, size: "full" | "card"): MediaCardImage {
-  switch (application.image) {
-    case "screenshot":
-      return { src: routes.applicationScreenshot(application.slug, application.screenshot!.version, size), alt: screenshotAlt(application) };
+  if (application.image === "screenshot") return { src: routes.applicationScreenshot(application.slug, application.screenshot!.version, size), alt: screenshotAlt(application) };
+  return stateImage(application.image);
+}
+
+/** What a saved preview's image shows: its current build's card image or screenshot, or the state in its place (saved-previews spec, "Saved previews show their build state"). */
+export function savedPreviewImage(application: Pick<Application, "slug" | "name">, saved: SavedPreview, size: "full" | "card"): MediaCardImage {
+  if (saved.image === "screenshot") return { src: routes.applicationScreenshot(application.slug, saved.screenshot!.version, size, saved.key), alt: savedPreviewAlt(application, saved) };
+  return stateImage(saved.image);
+}
+
+function stateImage(image: Exclude<Application["image"], "screenshot">): MediaCardImage {
+  switch (image) {
     case "placeholder":
     case "capturing":
       return { state: "building" };

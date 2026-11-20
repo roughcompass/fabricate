@@ -7,7 +7,7 @@ import { reviseRelease } from "../../src/lib/standards/publish";
 import { standardById } from "../../src/lib/standards/standard-records";
 import { ORDERS, publishStandard, seedMapStates, selectReleases } from "../../test/support/scenarios";
 import { offlineViteApp } from "../../test/support/preview-trees";
-import { registered, seeded } from "./applications";
+import { registered, seeded, seededPreview } from "./applications";
 import { gitRepo } from "./fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate } from "./results";
 import { paths } from "./paths";
@@ -70,10 +70,17 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
   ];
 }
 
-/** Applications' pages: the gallery, a ready application's page and settings, one still building, and preview mode once it exists. */
+/**
+ * Applications' pages: the gallery, a ready application's page, with saved
+ * previews, and its settings, one still building, with none saved, preview
+ * mode, on the tracked branch and on a saved preview, and New preview.
+ */
 export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
   const repository = registered(db, path.join(sourcesDir, "orders-web"), offlineViteApp());
-  seeded(db, "Orders portal", { description: "Order tracking for partners", repository });
+  const orders = seeded(db, "Orders portal", { description: "Order tracking for partners", repository });
+  seededPreview(db, orders, "refs/heads/feature/new-nav");
+  seededPreview(db, orders, "refs/heads/fix/totals", { state: "failed" });
+  seededPreview(db, orders, "refs/tags/v1.1.0", { state: "latest_failed" });
   seeded(db, "Payments hub", { state: "building" });
   seeded(db, "Admin console", { state: "failed" });
   return [
@@ -85,6 +92,9 @@ export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
     ["15-application-preview", paths.applicationPreview("orders-portal")],
     ["15-application-preview-tablet", paths.applicationPreview("orders-portal", { device: "tablet" })],
     ["15-application-preview-code", paths.applicationPreview("orders-portal", { view: "code" })],
+    ["15-application-preview-saved", paths.applicationPreview("orders-portal", { preview: "feature-new-nav" })],
+    ["15-application-preview-saved-later", paths.applicationPreview("orders-portal", { preview: "v1.1.0" })],
+    ["15-application-preview-new", paths.newApplicationPreview("orders-portal")],
     ["15-application-new", paths.newApplication()],
     ["15-application-new-search", paths.newApplication({ q: "orders" })],
     ["15-application-new-branch", paths.newApplication({ repository: repository.publicId, from: "repository" })],

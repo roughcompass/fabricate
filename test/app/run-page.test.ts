@@ -15,7 +15,9 @@ import { ensureWorkspace } from "@/lib/workspaces/workspaces";
 import { startPreview } from "@/lib/previews/records";
 import { buildRepository } from "../support/builders";
 import { decidedPreparation, nextCommit, onboard, qualifyingVerdict } from "../support/applications";
-import { publishFiles } from "../support/previews";
+import { publishFiles, queuedPreview } from "../support/previews";
+import { rawRun } from "../support/db";
+import { getApplicationRow } from "@/lib/applications/records";
 import { redirectOf, useAppDb } from "../support/next";
 
 vi.mock("next/navigation", async () => (await import("../support/next")).navigationStub);
@@ -32,6 +34,8 @@ const visitorKey = () => newWorkspaceKey();
 
 interface RunningProps {
   slug: string;
+  preview: string | null;
+  context: { name: string; branch: string; commit: string; status: string };
   src: string;
   base: string;
   commit: string;
@@ -102,5 +106,36 @@ describe("the running application page", () => {
 
     // A token that isn't this application's opens the visitor's own view of the current build.
     expect((await render(created.slug, [], { share: "A".repeat(43) })).props).toMatchObject({ base: `/previews/${current.publicId}/`, share: null, notice: null });
+  });
+
+  it("runs a saved preview's current build at /run/<slug>@<key>, naming its branch, and is not found for an unknown key or one with no successful build (Running a saved preview, A preview still building)", async () => {
+    const created = onboard(app.db, config, repository);
+    published({ id: created.latestPreviewId! });
+    const applicationId = getApplicationRow(app.db, created.publicId).id;
+    const save = (key: string, ref: string, preview: { id: number; preparationId: number; commitSha: string }, ready: boolean) =>
+      rawRun(
+        app.db,
+        "insert into application_previews (public_id, application_id, key, ref, current_preview_id, latest_preview_id, latest_preparation_id, latest_commit_sha, latest_outcome, latest_requested_at, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)",
+        `apv_${key.replace(/[^a-z0-9]/g, "").padEnd(16, "0").slice(0, 16)}`,
+        applicationId,
+        key,
+        ref,
+        ready ? preview.id : null,
+        preview.id,
+        preview.preparationId,
+        preview.commitSha,
+        ready ? "ready" : "building",
+      );
+    const feature = published(queuedPreview(app.db, repository));
+    save("feature-new-nav", "refs/heads/feature/new-nav", feature, true);
+    save("fix-totals", "refs/heads/fix/totals", queuedPreview(app.db, repository), false);
+
+    const element = await render(`${created.slug}@feature-new-nav`, ["accounts"]);
+    expect(element.props).toMatchObject({ slug: created.slug, preview: "feature-new-nav", base: `/previews/${feature.publicId}/`, src: `/previews/${feature.publicId}/accounts`, context: { name: "Orders portal", branch: "feature/new-nav", commit: feature.commitSha, status: "Ready" } });
+    expect((await render(`${created.slug}%40feature-new-nav`)).props.preview).toBe("feature-new-nav");
+    expect(await redirectOf(render(`${created.slug}@fix-totals`))).toBe("not-found");
+    expect(await redirectOf(render(`${created.slug}@nowhere`))).toBe("not-found");
+    // The tracked branch's own address is unchanged.
+    expect((await render(created.slug)).props).toMatchObject({ preview: null, context: { branch: "main" } });
   });
 });

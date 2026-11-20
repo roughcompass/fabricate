@@ -18,6 +18,7 @@ import { formatDuration } from "@/components/ui/time";
 import { applicationsAvailable, requireApplications } from "@/lib/applications/availability";
 import { type ApplicationBuildEntry, applicationHistory } from "@/lib/applications/history";
 import { type Application, findApplication, getApplicationRow, statusSnapshot } from "@/lib/applications/records";
+import { findSavedPreview, savedPreviewName, savedPreviewsOf } from "@/lib/applications/saved-previews";
 import { APPLICATION_STATUS_LABELS } from "@/lib/applications/status";
 import { getDb } from "@/lib/db/client";
 import { param } from "@/lib/web/query";
@@ -26,6 +27,7 @@ import { rebuildAction } from "../actions";
 import { ApplicationsPoller } from "../applications-poller";
 import { applicationOutcome } from "../outcomes";
 import { ApplicationStatusLabel, LogExcerpt, applicationImage, traitsLabel } from "../views";
+import { PreviewsSection } from "./previews-section";
 import styles from "../applications.module.css";
 
 /** The application at +slug+, while applications are offered. */
@@ -47,8 +49,10 @@ const OUTCOME_STATES = { building: "building", ready: "ready", failed: "failed",
  * its screenshot, placeholder, or failure state beside its overview; why its
  * latest build failed, with a link to the log; and its builds, newest first.
  * Preview application and Open full screen are offered once a build has
- * succeeded, and Rebuild while no build is under way. The page refreshes
- * while a build or its screenshot is under way.
+ * succeeded, and Rebuild while no build is under way. Its saved previews are
+ * listed between the overview and Builds (applications/saved-previews spec).
+ * The page refreshes while a build or a screenshot, the application's or a
+ * saved preview's, is under way.
  */
 export default async function ApplicationPage({ params, searchParams }: PageProps<"/applications/[slug]">) {
   requireApplications();
@@ -56,8 +60,11 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
   const application = load(slug);
   if (!application) notFound();
   const history = applicationHistory(getDb(), getApplicationRow(getDb(), application.publicId).id);
-  const snapshot = statusSnapshot([application]);
+  const previews = savedPreviewsOf(getDb(), application.publicId);
+  const named = previews.map((saved) => ({ ...saved, name: savedPreviewName(application.name, saved) }));
+  const snapshot = statusSnapshot([application, ...named]);
   const building = application.latest.outcome === "building";
+  const notice = param(query, "notice");
 
   return (
     <DetailsTemplate
@@ -116,7 +123,7 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
       }}
       alerts={
         <>
-          <OutcomeToast outcome={applicationOutcome(param(query, "notice"), application)} />
+          <OutcomeToast outcome={applicationOutcome(notice, application, notice?.startsWith("preview-") ? findSavedPreview(getDb(), application.publicId, param(query, "preview") ?? "") : undefined)} />
           <LatestFailure application={application} history={history} />
         </>
       }
@@ -142,6 +149,8 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
         </figure>
       </div>
 
+      <PreviewsSection application={application} previews={previews} />
+
       <Section title="Builds" description="Each build the application started, newest first: its first build, new commits, rebuilds, and branch switches.">
         <Panel flush>
           <Table
@@ -162,7 +171,11 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
           </Table>
         </Panel>
       </Section>
-      <ApplicationsPoller url={routes.applicationsStatus([application.publicId])} version={snapshot.version} shown={[{ id: application.publicId, name: application.name, label: APPLICATION_STATUS_LABELS[application.status], settling: application.settling }]} />
+      <ApplicationsPoller
+        url={routes.applicationsStatus([application.publicId, ...previews.map((saved) => saved.publicId)])}
+        version={snapshot.version}
+        shown={[application, ...named].map((shown) => ({ id: shown.publicId, name: shown.name, label: APPLICATION_STATUS_LABELS[shown.status], settling: shown.settling }))}
+      />
     </DetailsTemplate>
   );
 }

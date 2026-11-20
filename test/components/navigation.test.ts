@@ -59,6 +59,7 @@ const EXPECTED: Record<string, string | null> = {
   "/applications/[slug]": "applications",
   "/applications/[slug]/settings": "applications",
   "/applications/[slug]/preview": "applications",
+  "/applications/[slug]/previews/new": "applications",
   "/admin": "system",
   "/admin/system": "system",
   "/admin/bitbucket-tokens": "bitbucket-tokens",

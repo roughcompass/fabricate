@@ -15,9 +15,9 @@ export function percentOf(part: number, whole: number): number {
   return whole > 0 ? Math.round((Math.min(part, whole) / whole) * 100) : 0;
 }
 
-/** A size in bytes, in the largest unit that keeps it at 1 or more: "356 B", "3.5 KB", "1.2 MB". */
+/** A size in bytes, in the largest unit that keeps it at 1 or more: "356 B", "3.5 KB", "1.2 MB", "6.2 GB". */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  const [value, unit] = bytes < 1024 * 1024 ? [bytes / 1024, "KB"] : [bytes / (1024 * 1024), "MB"];
+  const [value, unit] = bytes < 1024 ** 2 ? [bytes / 1024, "KB"] : bytes < 1024 ** 3 ? [bytes / 1024 ** 2, "MB"] : [bytes / 1024 ** 3, "GB"];
   return `${formatNumber(value, { maximumFractionDigits: 1 })} ${unit}`;
 }

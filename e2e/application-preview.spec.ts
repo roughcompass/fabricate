@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Frame, Page } from "@playwright/test";
-import { getApplication } from "../src/lib/applications/records";
+import { getApplication, getApplicationRow } from "../src/lib/applications/records";
+import { findSavedPreview, savedPreviewsOf } from "../src/lib/applications/saved-previews";
+import { BUILD_PREVIEW } from "../src/lib/previews/records";
 import type { Db } from "../src/lib/db/client";
 import { git } from "../test/support/git-fixture";
 import { SCALA_SERVICE, offlineViteApp } from "../test/support/preview-trees";
@@ -169,6 +171,77 @@ test("Previewing a feature branch: the frame shows its build once ready, the add
   await page.getByRole("combobox", { name: "Branch or tag" }).selectOption("refs/heads/main");
   await page.getByRole("button", { name: "Show" }).click();
   await expect(page).toHaveURL(/\/applications\/orders-portal\/preview$/);
+});
+
+test.describe("Show and Save as preview", () => {
+  const buildJobs = (db: Db) => (db.$client.prepare("select count(*) as n from jobs where kind = ?").get(BUILD_PREVIEW) as { n: number }).n;
+
+  test("Show still builds without saving: the branch shown isn't added to the saved previews, and its full screen opens without the toolbar (Showing an unsaved branch)", async ({ page, db, sourcesDir }) => {
+    const id = await ordersPortal(db, sourcesDir);
+    await page.goto(preview);
+    await page.getByRole("combobox", { name: "Branch or tag" }).selectOption("refs/heads/feature/new-nav");
+    await page.getByRole("button", { name: "Show" }).click();
+    await expect(page).toHaveURL(/ref=refs%2Fheads%2Ffeature%2Fnew-nav/);
+    await runJobs(db);
+    await framed(page);
+    expect(savedPreviewsOf(db, id)).toEqual([]);
+    const fullScreen = page.getByRole("link", { name: /Open full screen/ });
+    await expect(fullScreen).toHaveAttribute("href", /^\/previews\/pvw_[a-z0-9]{16}\/$/);
+    await fullScreen.focus();
+    await expect(page.getByRole("tooltip")).toHaveText("Open full screen without the toolbar. Save as preview runs it with the toolbar.");
+    await expect(page.getByRole("button", { name: "Save as preview" })).toBeVisible();
+  });
+
+  test("Save as preview reuses the shown build: no second build starts, and the address names it by its key (Saving the branch shown)", async ({ page, db, sourcesDir }) => {
+    const id = await ordersPortal(db, sourcesDir);
+    await page.goto(paths.applicationPreview("orders-portal", { ref: "refs/heads/feature/new-nav", device: "tablet" }));
+    await expect(page.locator('[data-ref-state="unbuilt"]')).toBeVisible();
+    await page.getByRole("button", { name: "Show" }).click();
+    await expect(page.locator('[data-ref-state="checking"]')).toBeVisible();
+    await runJobs(db);
+    await framed(page);
+    const builds = buildJobs(db);
+
+    await page.getByRole("button", { name: "Save as preview" }).click();
+    await expect(page).toHaveURL(/\?preview=feature-new-nav&device=tablet$/);
+    expect(findSavedPreview(db, id, "feature-new-nav")).toMatchObject({ status: "ready", ref: "refs/heads/feature/new-nav" });
+    expect(buildJobs(db)).toBe(builds);
+    await framed(page);
+    await expect(page.getByRole("button", { name: "Save as preview" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Open full screen/ })).toHaveAttribute("href", "/run/orders-portal@feature-new-nav");
+    // The choice lists it as a saved preview, after the tracked branch.
+    const choice = page.getByRole("combobox", { name: "Branch or tag" });
+    await expect(choice.locator("option").first()).toHaveText("main (tracked)");
+    await expect(choice.locator("optgroup[label='Saved previews'] option")).toHaveText(["feature/new-nav"]);
+    await expect(choice.locator("optgroup[label='Branches'] option")).toHaveCount(0);
+  });
+
+  test("Save as preview refuses the 21st preview, saving nothing (At the limit)", async ({ page, db, sourcesDir }) => {
+    const id = await ordersPortal(db, sourcesDir);
+    const applicationId = getApplicationRow(db, id).id;
+    for (let index = 0; index < 20; index++) {
+      db.$client
+        .prepare("insert into application_previews (public_id, application_id, key, ref, latest_commit_sha, latest_outcome, latest_reasons, latest_requested_at, created_at, updated_at) values (?, ?, ?, ?, ?, 'failed', '[{\"text\":\"no\"}]', 0, 0, 0)")
+        .run(`apv_${String(index).padStart(16, "0")}`, applicationId, `old-${index}`, `refs/heads/old/${index}`, "e".repeat(40));
+    }
+    await page.goto(paths.applicationPreview("orders-portal", { ref: "refs/heads/feature/new-nav" }));
+    await expect(page.locator("[data-remaining-previews]")).toHaveText("This application keeps 20 previews, the most it can. Remove a preview to save another.");
+    await page.getByRole("button", { name: "Save as preview" }).click();
+    await expect(page.getByText("An application can keep 20 previews", { exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/ref=refs%2Fheads%2Ffeature%2Fnew-nav/);
+    expect(findSavedPreview(db, id, "feature-new-nav")).toBeUndefined();
+  });
+
+  test("A ref that has since been saved opens that saved preview by its key", async ({ page, db, sourcesDir }) => {
+    const id = await ordersPortal(db, sourcesDir);
+    await page.goto(paths.applicationPreview("orders-portal", { ref: "refs/heads/feature/new-nav" }));
+    await page.getByRole("button", { name: "Save as preview" }).click();
+    await expect(page).toHaveURL(/\?preview=feature-new-nav$/);
+    const response = await page.request.get(paths.applicationPreview("orders-portal", { ref: "refs/heads/feature/new-nav", device: "mobile" }), { maxRedirects: 0 });
+    expect(response.status()).toBe(307);
+    expect(response.headers().location).toBe("/applications/orders-portal/preview?device=mobile&preview=feature-new-nav");
+    expect(savedPreviewsOf(db, id)).toHaveLength(1);
+  });
 });
 
 test("A tag that can't be previewed: the frame area shows the failure indicator naming the condition", async ({ page, db, sourcesDir }) => {

@@ -3,8 +3,9 @@
 import { notFound, redirect } from "next/navigation";
 import { AcquisitionError } from "@/lib/acquisition/errors";
 import { requireApplications } from "@/lib/applications/availability";
-import { ApplicationBuildError, editApplication, rebuildApplication } from "@/lib/applications/pipeline";
+import { ApplicationBuildError, editApplication, rebuildApplication, rebuildSavedPreview } from "@/lib/applications/pipeline";
 import { deleteApplication, findApplication } from "@/lib/applications/records";
+import { findSavedPreview, removeSavedPreview } from "@/lib/applications/saved-previews";
 import { getDb } from "@/lib/db/client";
 import { NotFoundError, StaleRecordError, ValidationError } from "@/lib/db/errors";
 import { PreviewAccessError } from "@/lib/previews/access";
@@ -16,8 +17,10 @@ import type { ApplicationFormState } from "./form-state";
 
 /*
  * Applications' Server Actions (applications/catalog spec): Rebuild, the
- * settings form, and Delete. Each checks that applications
- * are offered, as the pages do, and answers not found without them.
+ * settings form, and Delete; and a saved preview's Rebuild preview and
+ * Remove preview (applications/saved-previews spec). Each checks that
+ * applications are offered, as the pages do, and answers not found without
+ * them.
  */
 
 /** The application the form names, while it exists. */
@@ -31,16 +34,43 @@ function applicationFrom(formData: FormData) {
 /** Builds the tracked branch's current commit again (builds spec, "Operators can rebuild"). */
 export async function rebuildAction(formData: FormData): Promise<void> {
   const application = applicationFrom(formData);
-  let notice = "rebuilt";
-  try {
-    await rebuildApplication(getDb(), application.publicId);
-  } catch (error) {
-    if (error instanceof ApplicationBuildError) notice = "building";
-    else if (error instanceof RefResolutionError || error instanceof AcquisitionError) notice = "unreachable";
-    else if (error instanceof PreviewAccessError || error instanceof NotFoundError) notFound();
-    else throw error;
-  }
+  const notice = await rebuildNotice(() => rebuildApplication(getDb(), application.publicId));
   redirect(routes.application(application.slug, { notice }));
+}
+
+/** Starts a rebuild, and names its outcome: rebuilt, building when one is under way, or unreachable when the ref couldn't be read. */
+async function rebuildNotice(rebuild: () => Promise<unknown>): Promise<"rebuilt" | "building" | "unreachable"> {
+  try {
+    await rebuild();
+    return "rebuilt";
+  } catch (error) {
+    if (error instanceof ApplicationBuildError) return "building";
+    if (error instanceof RefResolutionError || error instanceof AcquisitionError) return "unreachable";
+    if (error instanceof PreviewAccessError || error instanceof NotFoundError) notFound();
+    throw error;
+  }
+}
+
+/** The application and saved preview the form names, while both exist. */
+function savedPreviewFrom(formData: FormData) {
+  const application = applicationFrom(formData);
+  const saved = findSavedPreview(getDb(), application.publicId, text(formData, "preview", 100));
+  if (!saved) notFound();
+  return { application, saved };
+}
+
+/** Builds a saved preview's branch head, or tag's commit, again (saved-previews spec, "Saved previews can be rebuilt"). */
+export async function rebuildPreviewAction(formData: FormData): Promise<void> {
+  const { application, saved } = savedPreviewFrom(formData);
+  const notice = await rebuildNotice(() => rebuildSavedPreview(getDb(), saved.publicId));
+  redirect(routes.application(application.slug, { notice: `preview-${notice}`, preview: saved.key }));
+}
+
+/** Removes a saved preview after the operator confirmed it (saved-previews spec, "Saved previews can be removed"). */
+export async function removePreviewAction(formData: FormData): Promise<void> {
+  const application = applicationFrom(formData);
+  removeSavedPreview(getDb(), application.publicId, text(formData, "preview", 100));
+  redirect(routes.application(application.slug, { notice: "preview-removed" }));
 }
 
 /** Saves the name, description, and tracked branch; a new branch is built, keeping the current build until it succeeds. */
