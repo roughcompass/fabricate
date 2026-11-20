@@ -23,6 +23,7 @@ import { getDb } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
 import { openPreview } from "@/lib/previews/access";
 import type { PackageVerdict } from "@/lib/previews/eligibility";
+import { redactSecrets } from "@/lib/git/redact";
 import { readLogChunk } from "@/lib/previews/log";
 import type { ArtifactEntry } from "@/lib/previews/output";
 import { type PreviewBuild, settleAbandonedAttempts } from "@/lib/previews/records";
@@ -182,7 +183,7 @@ function PreviewAlerts({ preview, entry, base }: { preview: PreviewBuild; entry:
     <>
       {preview.attemptState === "failed" && (
         <Alert tone="error" title={`Attempt ${preview.attempt} failed`}>
-          {`${preview.attemptReason ?? "The build failed."}${earlier ? ` The output of attempt ${earlier} is still shown.` : ""}`}
+          {`${redactSecrets(preview.attemptReason ?? "The build failed.")}${earlier ? ` The output of attempt ${earlier} is still shown.` : ""}`}
         </Alert>
       )}
       {(preview.attemptState === "queued" || preview.attemptState === "building") && earlier && (

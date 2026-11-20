@@ -11,6 +11,7 @@ import { Status } from "@/components/ui/status";
 import { Primary, Secondary, Table, Td, Th } from "@/components/ui/table";
 import { ShortValue, Tag } from "@/components/ui/tag";
 import { requireApplications } from "@/lib/applications/availability";
+import { redactSecrets } from "@/lib/git/redact";
 import { type OnboardingPackage, onboardingPackages, searchRepositories, suggestedDetails } from "@/lib/applications/onboarding";
 import { getDb } from "@/lib/db/client";
 import { isPublicId } from "@/lib/db/ids";
@@ -197,7 +198,7 @@ function EligibilityStep({ choices, packages, cancel }: { choices: Choices; pack
       )}
       {preparation.state === "failed" && (
         <Alert tone="error" title="The commit couldn't be checked">
-          {preparation.failure}
+          {redactSecrets(preparation.failure ?? "")}
         </Alert>
       )}
       {preparation.state === "refused" && (

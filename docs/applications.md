@@ -74,7 +74,7 @@ Below the header, the page shows the current build's screenshot, and an overview
 When the latest attempt failed or was refused, an alert says why. For a failed build, it gives the reason, such as "…exited with code 1", and the failing step's last meaningful lines of output:
 - at most 8 lines of 240 characters;
 - without stack frames or the build's own directories;
-- redacted as failure reasons are.
+- redacted, as every build log is (see [Logs and storage](previews.md#logs-and-storage)).
 
 **View the build log** opens the whole log, while the log is still kept.
 

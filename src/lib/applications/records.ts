@@ -3,6 +3,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import type { JsonObject } from "@repo-facts/contract";
 import { type Executor, immediate } from "@/lib/db/client";
 import { IssueCollector, NotFoundError, StaleRecordError, isUniqueViolation } from "@/lib/db/errors";
+import { redactSecrets } from "@/lib/git/redact";
 import { type ApplicationOutcome, type AttemptState, RESERVED_SLUGS, type ScreenshotState, applications, previewBuilds, previewScreenshots, repositories } from "@/lib/db/schema";
 import { updateLocked } from "@/lib/db/optimistic";
 import { pageQuery } from "@/lib/web/query";
@@ -26,6 +27,11 @@ export interface ApplicationReason {
   readonly condition?: string;
   /** The last meaningful lines of a failed build's log, redacted, when it ran far enough to write any. */
   readonly log?: readonly string[];
+}
+
+/** Stored reasons as pages show them: redacted again as they're read, so reasons recorded before a credential's form was recognized show none either. */
+export function shownReasons(stored: unknown): ApplicationReason[] {
+  return ((stored ?? []) as ApplicationReason[]).map((reason) => ({ ...reason, text: redactSecrets(reason.text), ...(reason.log && { log: reason.log.map(redactSecrets) }) }));
 }
 
 /** What the package is built with, from its latest decided verdict. */
@@ -137,7 +143,7 @@ function toApplication({ row, repository, current, latest, screenshot }: Selecte
     status: applicationStatus(input),
     image: applicationImage(input),
     settling: isSettling(input),
-    latest: { outcome: row.latestOutcome, commitSha: row.latestCommitSha, requestedAt: row.latestRequestedAt, reasons: (row.latestReasons ?? []) as unknown as ApplicationReason[], build: build(latest) },
+    latest: { outcome: row.latestOutcome, commitSha: row.latestCommitSha, requestedAt: row.latestRequestedAt, reasons: shownReasons(row.latestReasons), build: build(latest) },
     current: build(current),
     screenshot: screenshotState === "ready" && screenshot?.capturedAt ? { version: screenshot.capturedAt.getTime().toString(36), capturedAt: screenshot.capturedAt } : null,
     facts: { frameworks: facts.frameworks ?? [], buildTool: facts.buildTool ?? null, packageManager: facts.packageManager ?? null },

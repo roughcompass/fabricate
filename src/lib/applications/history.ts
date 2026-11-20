@@ -2,7 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import type { JsonObject } from "@repo-facts/contract";
 import type { Executor } from "@/lib/db/client";
 import { type ApplicationOutcome, type AttemptState, type BuildOutcome, type BuildTrigger, applicationBuilds, previewBuilds, repositories } from "@/lib/db/schema";
-import type { ApplicationReason, ApplicationRow } from "./records";
+import { type ApplicationReason, type ApplicationRow, shownReasons } from "./records";
 
 /**
  * An application's build history (catalog spec, "The application page lists
@@ -104,7 +104,7 @@ export function applicationHistory(db: Executor, applicationId: number, limit = 
       branch: row.trackedRef.replace(/^refs\/heads\//, ""),
       commitSha: row.commitSha,
       outcome: row.outcome,
-      reasons: (row.reasons ?? []) as unknown as ApplicationReason[],
+      reasons: shownReasons(row.reasons),
       startedAt: row.startedAt,
       finishedAt: row.finishedAt,
       durationMs: row.finishedAt ? Math.max(0, row.finishedAt.getTime() - row.startedAt.getTime()) : null,

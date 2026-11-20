@@ -10,6 +10,7 @@ import { LOG_TAIL_BYTES, cleanLog, logExcerpt, readLogChunk, readLogTail } from 
 import { type PreviewBuild, claimAttempt, failAttempt, findPreview, rebuildPreview } from "@/lib/previews/records";
 import { previewDirectory } from "@/lib/previews/storage";
 import { buildRepository } from "../support/builders";
+import { PLANTED } from "../support/credentials";
 import { queuedPreview } from "../support/previews";
 import { useAppDb } from "../support/next";
 
@@ -104,6 +105,13 @@ describe("preview logs", () => {
       let end = first.end;
       while (end < size) end = (await readLogChunk(config, preview, { from: end, log: tail.log! })).end;
       expect(end).toBe(size);
+    });
+
+    it("redacts every credential as it reads, so a log written before its build redacted its output shows none", async () => {
+      const preview = building(queuedPreview(app.db, repository), `==> build: npm run build\n${PLANTED.map((planted) => planted.line).join("\n")}\n`);
+      const tail = await readLogChunk(config, preview);
+      for (const { secret } of PLANTED) expect(tail.text).not.toContain(secret);
+      expect(tail.text.split("\n").filter((line) => line.includes("[REDACTED]"))).toHaveLength(PLANTED.length);
     });
 
     it("has no log before a worker starts the attempt", async () => {

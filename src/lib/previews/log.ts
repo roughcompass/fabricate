@@ -1,7 +1,7 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
 import type { FrontendRegistryConfig } from "@/lib/config";
-import { redact } from "@/lib/git/redact";
+import { redactSecrets } from "@/lib/git/redact";
 import type { PreviewBuild } from "./records";
 import { attemptLogFile } from "./storage";
 
@@ -74,7 +74,8 @@ export async function readLogChunk(config: FrontendRegistryConfig, preview: Pick
     const last = bytes.lastIndexOf(0x0a);
     const cut = last !== -1 ? last + 1 : finished || bytes.length === LOG_CHUNK_BYTES ? bytes.length : 0;
     const end = start + cut;
-    return { ...empty, start, end, text: cleanLog(bytes.subarray(0, cut).toString("utf8")), truncated: start > 0 && tail, reset, more: end < size };
+    // Redacted as it's read, so a log written before its build redacted its output shows no credential either.
+    return { ...empty, start, end, text: redactSecrets(cleanLog(bytes.subarray(0, cut).toString("utf8"))), truncated: start > 0 && tail, reset, more: end < size };
   } finally {
     await handle.close();
   }
@@ -134,7 +135,10 @@ export function logExcerpt(text: string, options: { strip?: readonly string[] } 
   const first = output.findIndex((line) => PROBLEM.test(line));
   const tail = Math.max(0, output.length - EXCERPT_LINES);
   const from = first === -1 ? tail : Math.max(0, Math.min(first - 1, tail));
-  return output.slice(from, from + EXCERPT_LINES).map((line) => redact(line.length > EXCERPT_WIDTH ? `${line.slice(0, EXCERPT_WIDTH - 1)}…` : line).trimEnd());
+  return output.slice(from, from + EXCERPT_LINES).map((line) => {
+    const redacted = redactSecrets(line);
+    return (redacted.length > EXCERPT_WIDTH ? `${redacted.slice(0, EXCERPT_WIDTH - 1)}…` : redacted).trimEnd();
+  });
 }
 
 /** The end of the log at +file+, at most LOG_TAIL_BYTES from a line's start, or an empty string when it can't be read. */

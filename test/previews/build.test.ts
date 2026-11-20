@@ -15,6 +15,7 @@ import { drainJobs } from "@/lib/jobs/worker";
 import { runPreviewBuild } from "@/lib/previews/build";
 import type { BuildPlan, PackageVerdict } from "@/lib/previews/eligibility";
 import { deletePreview } from "@/lib/previews/lifecycle";
+import { readLogChunk } from "@/lib/previews/log";
 import { extractCommit } from "@/lib/previews/process";
 import { BUILD_PREVIEW, PREPARE_PREVIEW, type PreviewBuild, decidePreparation, findPreview, markOpened, openPreparation, rebuildPreview, startPreview } from "@/lib/previews/records";
 import { pinCommit } from "@/lib/previews/refs";
@@ -22,6 +23,7 @@ import { servePreview } from "@/lib/previews/serving";
 import { attemptLogFile, cacheDirectory, previewDirectory, publishedDirectory } from "@/lib/previews/storage";
 import { requestSurvey } from "@/lib/surveys/records";
 import { registerLocalRepository, useAcquisitionWorld } from "../support/acquisition";
+import { PLANTED, leakingBuild } from "../support/credentials";
 import { rawRun } from "../support/db";
 import type { Tree } from "../support/preview-trees";
 import { publishFiles, queuedPreview } from "../support/previews";
@@ -225,6 +227,18 @@ describe.skipIf(!fs.existsSync(path.join(NODE_BIN, "npm")))("preview builds", ()
       // The working tree and the claim's scratch are gone; the output is kept.
       expect(listing(preview, "staging")).toEqual([]);
       expect(listing(preview, "out")).toEqual([done.artifact!.slice(4)]);
+    });
+
+    it("writes no credential the build prints into its log, a line at a time, and reads none back", async () => {
+      const preview = await previewOf(leakingBuild(app(STANDALONE)), plan({ buildScript: "node leak.mjs" }));
+      expect(await build(preview)).toBe("failed");
+
+      const written = logOf(preview);
+      for (const { secret } of PLANTED) expect(written).not.toContain(secret);
+      expect(written).toContain("npm verb config //registry.example.com/:_authToken=[REDACTED]");
+      expect(written).toContain("error: the build printed its credentials");
+      const read = await readLogChunk(config, current(preview));
+      for (const { secret } of PLANTED) expect(read.text).not.toContain(secret);
     });
 
     it("chooses Node again under the settings the build runs with, and fails before installing when none fits", async () => {

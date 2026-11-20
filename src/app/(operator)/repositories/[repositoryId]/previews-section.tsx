@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ProgressPoller } from "@/components/progress-poller";
+import { redactSecrets } from "@/lib/git/redact";
 import { ActionButton } from "@/components/ui/button";
 import { countLabel, formatBytes, formatNumber } from "@/components/ui/count";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -116,7 +117,7 @@ function PreparationPanel({ repository, preparation }: { repository: Repository;
     return <Panel level={3} title={title} description={<StatusLine state="profiling">Reading the commit&apos;s files to decide what can be previewed. Nothing from the repository runs yet.</StatusLine>} />;
   }
   if (preparation.state === "failed") {
-    return <Panel level={3} title={title} description={<StatusLine state="failed">{preparation.failure ?? "The commit couldn't be prepared."}</StatusLine>} />;
+    return <Panel level={3} title={title} description={<StatusLine state="failed">{redactSecrets(preparation.failure ?? "The commit couldn't be prepared.")}</StatusLine>} />;
   }
   const verdicts = preparationPackages(preparation);
   if (preparation.state === "refused") {

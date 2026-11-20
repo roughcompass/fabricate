@@ -2,13 +2,14 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { mirrorPath } from "@/lib/acquisition/mirror";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { previewBuilds, repositories } from "@/lib/db/schema";
 import { GitError } from "@/lib/git/errors";
-import { failureText } from "@/lib/git/redact";
+import { failureText, redactSecrets } from "@/lib/git/redact";
 import { GitRunner } from "@/lib/git/runner";
 import { isEnrolled } from "./access";
 import { type PackageVerdict, selectNode } from "./eligibility";
@@ -328,11 +329,22 @@ async function sweep(config: FrontendRegistryConfig, preview: PreviewBuild, file
   await remove("out", (name) => !earlier(name) || `out/${name}` === preview.artifact);
 }
 
-/** A claim's log: install and build output up to LOG_LIMIT, and the Frontend Registry's own lines, which are always kept. */
+/** How long a line of output waits for its end before it's written anyway, as a progress display that rewrites one line may. */
+const PENDING_LIMIT = 8 * 1024;
+
+/**
+ * A claim's log: install and build output up to LOG_LIMIT, and the Frontend
+ * Registry's own lines, which are always kept. Output is written a line at a
+ * time, redacted, so a credential a script prints never reaches the file; a
+ * line that doesn't end within PENDING_LIMIT is written as far as it goes.
+ * Logs are redacted again as they're read (log.ts).
+ */
 class AttemptLog {
   private written = 0;
   private truncated = false;
   private newline = true;
+  private pending = "";
+  private readonly decoder = new StringDecoder("utf8");
   private closed: Promise<void> | null = null;
 
   private constructor(private readonly stream: fs.WriteStream) {
@@ -354,17 +366,18 @@ class AttemptLog {
     const room = LOG_LIMIT - this.written;
     if (chunk.length > room) {
       this.truncated = true;
-      this.write(chunk.subarray(0, room));
+      this.take(chunk.subarray(0, room));
       this.line(`[The output is longer than ${LOG_LIMIT / 1024 / 1024} MiB; the rest is left out of this log.]`);
       return;
     }
     this.written += chunk.length;
-    this.write(chunk);
+    this.take(chunk);
   };
 
   line(text: string): void {
     if (this.closed) return;
-    this.write(`${this.newline ? "" : "\n"}${text}\n`);
+    this.flush();
+    this.write(`${this.newline ? "" : "\n"}${redactSecrets(text)}\n`);
   }
 
   step(name: string, detail: string): void {
@@ -372,13 +385,35 @@ class AttemptLog {
   }
 
   close(): Promise<void> {
+    if (!this.closed) {
+      this.pending += this.decoder.end();
+      this.flush();
+    }
     return (this.closed ??= new Promise<void>((resolve) => this.stream.end(() => resolve())));
   }
 
-  private write(data: Buffer | string): void {
+  /** Writes +chunk+'s whole lines, redacted, and keeps the rest of its last line until it ends. */
+  private take(chunk: Buffer): void {
+    this.pending += this.decoder.write(chunk);
+    const end = this.pending.lastIndexOf("\n");
+    if (end !== -1) {
+      this.write(redactSecrets(this.pending.slice(0, end + 1)));
+      this.pending = this.pending.slice(end + 1);
+    }
+    if (this.pending.length > PENDING_LIMIT) this.flush();
+  }
+
+  /** Writes the line kept so far, redacted. */
+  private flush(): void {
+    if (this.pending === "") return;
+    this.write(redactSecrets(this.pending));
+    this.pending = "";
+  }
+
+  private write(data: string): void {
     if (data.length === 0) return;
     this.stream.write(data);
-    this.newline = (typeof data === "string" ? data.at(-1) : String.fromCharCode(data[data.length - 1]!)) === "\n";
+    this.newline = data.at(-1) === "\n";
   }
 }
 

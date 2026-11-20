@@ -5,6 +5,7 @@ import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { previewBuilds, previewPreparations } from "@/lib/db/schema";
 import { GitRunner } from "@/lib/git/runner";
+import { redactSecrets } from "@/lib/git/redact";
 import { assertEnrolled } from "@/lib/previews/access";
 import { cachedRemoteRefs, forgetRemoteRefs } from "@/lib/previews/ref-cache";
 import { type PreviewBuild, type PreviewPreparation, openPreparation, preparationPackages, rebuildPreview, startPreview } from "@/lib/previews/records";
@@ -107,11 +108,11 @@ export function refPreview(db: Executor, application: Pick<Application, "reposit
     .where(and(eq(previewBuilds.repositoryId, repository.id), eq(previewBuilds.commitSha, commitSha), eq(previewBuilds.packageDir, application.packageDir), isNull(previewBuilds.deletedAt)))
     .get();
   if (preview?.artifact) return { kind: "ready", commitSha, preview };
-  if (preview?.attemptState === "failed") return { kind: "failed", commitSha, preview, reason: preview.attemptReason ?? "The build failed." };
+  if (preview?.attemptState === "failed") return { kind: "failed", commitSha, preview, reason: redactSecrets(preview.attemptReason ?? "The build failed.") };
   if (preview && preparation) return { kind: "building", commitSha, preview, preparation };
   if (!preparation) return { kind: "unbuilt", commitSha };
   if (preparation.state === "profiling") return { kind: "checking", commitSha, preparation };
-  if (preparation.state === "failed") return { kind: "refused", commitSha, preparation, reasons: [preparation.failure ?? "The commit couldn't be checked."] };
+  if (preparation.state === "failed") return { kind: "refused", commitSha, preparation, reasons: [redactSecrets(preparation.failure ?? "The commit couldn't be checked.")] };
   const verdict = preparationPackages(preparation).find((candidate) => candidate.directory === application.packageDir);
   if (!verdict) return { kind: "refused", commitSha, preparation, reasons: ["This commit has no such package."] };
   if (!verdict.qualifies) return { kind: "refused", commitSha, preparation, reasons: verdict.conditions.filter((condition) => !condition.passed).map((condition) => condition.reason) };

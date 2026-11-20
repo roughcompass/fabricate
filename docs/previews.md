@@ -218,6 +218,15 @@ Yarn also reads configuration from every directory above the one it installs in,
 
 Each attempt keeps a log of its install and build output, with every step marked by a line such as `==> install: npm ci in the repository root, with package-lock.json`, and ending with `==> ready`, `==> failed` and the reason, or `==> stopped`. Only the latest attempt's log is kept. Install and build output past 16 MiB is left out, but the Frontend Registry's own step lines are always written.
 
+Build output is redacted a line at a time as it's written, and again whenever a log is read, so a log written before a form was recognized shows none either. Redaction replaces with `[REDACTED]` what looks like a credential:
+- npm's `_authToken`, `_auth`, and `_password`, alone or scoped to a registry (`//registry.example.com/:_authToken=…`), and Yarn's `npmAuthToken` and `npmAuthIdent`;
+- `Authorization` headers, and `Bearer` and `Basic` credentials;
+- credentials in URLs (`https://user:token@host`);
+- npm, GitHub, GitLab, and Slack tokens by their shape;
+- and a token, password, secret, or API key assigned with `=`, such as `NPM_TOKEN=…`.
+
+The log on the preview page, its log route, an application's failure detail, and the reasons pages show all apply it. It's a safety net, not a guarantee: a credential in a form it doesn't recognize is shown as printed.
+
 Everything lives under `previews.storage`:
 
 | Path | What it holds |
@@ -245,7 +254,7 @@ An application (add-applications) is a Repository's package that the Frontend Re
 
 Onboarding (New application, or a Repository page's Create application) checks the chosen branch's head before anything is built: it prepares that commit as [Preparing a commit](#preparing-a-commit) describes, which reads it statically and needs no enrollment, and shows Checking… until it's decided. Creating the application then enrolls the remote, after the operator confirms trust, records the application, and queues its first build, in one step. In preview mode, choosing another branch or tag builds the application's package at its head as an ordinary preview of the Repository; it never changes the tracked branch or the current build, and isn't in the application's build history. Preview mode lists the remote's branches and tags from a read made in the last `previews.refCacheSeconds` (60 by default), kept in the web server's memory, and reads the remote again after Show. It lists the tracked branch, then up to 50 other branches by name and the 20 highest-numbered tags; a search field, shown when the remote has more, finds the rest by name, up to 50 matches, without JavaScript.
 
-When an application's build fails, its page shows the failing step's last meaningful lines of output beside the reason: from the line before the first that names a problem, or the last lines, at most 8 of 240 characters, without blank lines, stack frames, or the build's own directories, and redacted as failure reasons are. They're recorded with the attempt, so they stay after the log is gone. A build that succeeds but emits no `index.html` leaves the application Can't be previewed, or Latest commit can't be previewed, for its page, as a commit refused for its page does.
+When an application's build fails, its page shows the failing step's last meaningful lines of output beside the reason: from the line before the first that names a problem, or the last lines, at most 8 of 240 characters, without blank lines, stack frames, or the build's own directories, and redacted as the log is (see [Logs and storage](#logs-and-storage)). They're recorded with the attempt, so they stay after the log is gone. A build that succeeds but emits no `index.html` leaves the application Can't be previewed, or Latest commit can't be previewed, for its page, as a commit refused for its page does.
 
 ### Automatic rebuilds
 
