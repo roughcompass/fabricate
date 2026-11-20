@@ -61,7 +61,7 @@ export const routes = {
   /** The status of the applications a page shows, which it polls while one is building. */
   applicationsStatus: (publicIds: readonly string[]) => withQuery("/api/applications/status", { ids: publicIds.join(",") }),
   /** An application running full screen under the toolbar, at +path+ within it (add-applications task 8.1): `accounts/42` or `/accounts/42`, with +query+ such as a share link's token. */
-  runningApplication: (slug: string, path = "", query?: Query) => withQuery(`/run/${slug}${path.replace(/^\/+/, "") ? `/${path.replace(/^\/+/, "")}` : ""}`, query),
+  runningApplication: (slug: string, route = "", query?: Query) => runningAddress(slug, route, query),
   /** An application's current screenshot, or its card image, at +version+ (Application.screenshot.version) so a new one loads anew. */
   applicationScreenshot: (slug: string, version: string, size: "full" | "card" = "full") => withQuery(`/applications/${slug}/screenshot`, { ...(size === "card" && { size }), v: version }),
 
@@ -72,3 +72,19 @@ export const routes = {
   /** A package's versions across the fleet; a scoped name keeps its @ and slash, as /adoption/packages/@salt-ds/core. */
   adoptionPackage: (name: string, query?: Query) => withQuery(`/adoption/packages/${name.split("/").map((part) => encodeURIComponent(part).replace(/^%40/, "@")).join("/")}`, query),
 };
+
+/**
+ * A running application's address for +route+, an application route that
+ * may carry the application's own query, such as `/accounts?tab=billing`,
+ * which the address keeps, every parameter as it was. +query+, such as a
+ * share link's token, is added after it, and replaces a parameter of the
+ * same name.
+ */
+function runningAddress(slug: string, route: string, query: Query = {}): string {
+  const mark = route.indexOf("?");
+  const path = (mark === -1 ? route : route.slice(0, mark)).replace(/^\/+/, "");
+  const params = new URLSearchParams(mark === -1 ? "" : route.slice(mark + 1));
+  for (const [key, value] of Object.entries(query)) if (value !== null && value !== undefined && value !== "") params.set(key, String(value));
+  return `/run/${slug}${path ? `/${path}` : ""}${params.size ? `?${params}` : ""}`;
+}
+

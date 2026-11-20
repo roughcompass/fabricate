@@ -16,9 +16,11 @@ import { routes } from "@/lib/web/routes";
  * /previews/<build>/<route>, under the toolbar, outside the operator shell.
  * The address follows the frame's route, so a reload or a share captures it.
  *
- * The build is the current one, or, for a view a share link opened
- * (`?share=<token>`), the build of the commit the link captured, with the
- * sharer's comments. When that build is gone, the current one opens with a
+ * Every query parameter but `share` is the application's own, and goes to
+ * its page with the route: `/run/orders/accounts?tab=billing` opens
+ * `/accounts?tab=billing`. The build is the current one, or, for a view a
+ * share link opened (`?share=<token>`), the build of the commit the link
+ * captured, with the sharer's comments. When that build is gone, the current one opens with a
  * notice saying so (template-demo/toolbar spec, "Shared links open the
  * captured view").
  */
@@ -31,7 +33,10 @@ export default async function RunRoute({ params, searchParams }: PageProps<"/run
   // An application runs once a build of it has succeeded.
   if (!application?.current || !viewed) notFound();
   const workspace = await currentWorkspace();
-  const token = param(await searchParams, "share") ?? null;
+  const query = await searchParams;
+  const token = param(query, "share") ?? null;
+  const forwarded = new URLSearchParams();
+  for (const [name, value] of Object.entries(query)) if (name !== "share") for (const each of [value ?? []].flat()) forwarded.append(name, each);
   const view = resolveApplicationView(db, viewed, workspace, token);
   const shared = view.share && view.share.commit !== application.current.commitSha ? sharedBuild(db, getConfig(), viewed, view.share.commit) : null;
   const build = shared ?? application.current;
@@ -40,7 +45,7 @@ export default async function RunRoute({ params, searchParams }: PageProps<"/run
   return (
     <RunningApplication
       slug={application.slug}
-      src={`${base}${path.map(encodeURIComponent).join("/")}`}
+      src={`${base}${path.map(encodeURIComponent).join("/")}${forwarded.size ? `?${forwarded}` : ""}`}
       base={base}
       commit={build.commitSha}
       title={application.name}

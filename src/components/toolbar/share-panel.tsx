@@ -25,7 +25,7 @@ export function SharePanel({ slug, name, share }: { slug: string; name: string; 
     setCreating(true);
     setFailed(false);
     const query = new URLSearchParams({ application: slug, ...(share ? { share } : {}) });
-    fetch(`/api/workspace/shares?${query}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ commit: target.commit, route: target.route }) })
+    fetch(`/api/workspace/shares?${query}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ commit: target.commit, route: `${target.route}${target.search}` }) })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
       .then((data: { path: string }) => setLink(`${window.location.origin}${data.path}`))
       .catch(() => setFailed(true))
@@ -51,7 +51,7 @@ export function SharePanel({ slug, name, share }: { slug: string; name: string; 
           {failed ? "The link could not be created. Try again." : "Creating a link…"}
         </p>
       )}
-      <p className={styles.muted} data-share-view="">{`The link opens ${name} at ${target.route}, built from commit ${target.commit.slice(0, 12)}, with this view's comments.`}</p>
+      <p className={styles.muted} data-share-view="">{`The link opens ${name} at ${target.route}${target.search}, built from commit ${target.commit.slice(0, 12)}, with this view's comments.`}</p>
       <div className={styles.actions}>
         <Button onClick={() => create()} disabled={creating} icon="link">
           Create new link

@@ -130,7 +130,7 @@ The Code tab lists the package's committed files at the commit shown, up to 2,00
 
 `/run/<slug>` runs an application's current build full screen, with the toolbar over it. Open it from the application's page with **Open full screen**, from preview mode, or from a [share link](#share-links). The page has no Frontend Registry navigation; the application fills the window, and the toolbar is a pill docked at the middle of its right edge.
 
-The address follows the application's own routes: `/run/<slug>/accounts/42` opens the build at `/accounts/42`, and as you navigate inside the application, the address bar, Reload, and Back follow it. The application's own query string and fragment aren't carried into the address, and a query on `/run/…` isn't passed to the application, except for a share link's `share`.
+The address follows the application's own routes, with their query: `/run/<slug>/accounts?tab=billing` opens the build at `/accounts?tab=billing`, and as you navigate inside the application, or it changes its query, the address bar, Reload, and Back follow it. Every query parameter is the application's except `share`, which a share link adds. A route's fragment isn't carried into the address.
 
 An application that doesn't exist, or has no successful build yet, answers **Application not available**, with a link back to Applications, and so does every `/run` address while previews are off.
 
@@ -160,7 +160,7 @@ A thread is bound to its element, the route it's on, and the commit of the build
 
 ### Share
 
-**Share** creates a link to the view: the application, the commit of the build shown, the route, and your comments on it. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. See [Share links](#share-links).
+**Share** creates a link to the view: the application, the commit of the build shown, the route with its query, and your comments on it. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. See [Share links](#share-links).
 
 ### Accessibility
 
@@ -191,7 +191,7 @@ A link that stops working opens **Application not available**, without saying wh
 
 Each browser that opens Applications, a running application, or a share link gets an anonymous workspace, with no sign-in. The workspace holds that browser's comment threads, share links, display name, and guided hints. It's tied to the browser by an `HttpOnly` cookie, which scripts can't read, and the Frontend Registry stores only the cookie's digest. Applications are shared by every workspace, but no one sees another workspace's comments except through a share link.
 
-- **Limits:** a comment can have up to 2,000 characters, and a workspace up to 500 open threads, across every application. At the limit, the composer asks you to resolve threads, or to reset the workspace, before starting another.
+- **Limits:** a comment can have up to 2,000 characters, and a workspace up to 500 open threads, across every application. At the limit, starting a thread or reopening a resolved one is refused, asking you to resolve threads, or to reset the workspace, first.
 - **Idle workspaces:** a workspace that hasn't been used for 30 days is deleted, with its threads and share links.
 - **Reset workspace**, the last section of the Applications page, deletes your workspace's threads, including those others started or replied to through your links, and your share links, so they stop working. It also forgets your display name, and shows the guided hints again. It asks for confirmation first. Applications, other workspaces, and comments you added through someone else's link aren't affected, and the toolbar's preferences in your browser stay.
 

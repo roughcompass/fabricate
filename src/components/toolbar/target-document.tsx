@@ -30,6 +30,8 @@ export interface TargetDocument {
   readonly commit: string;
   /** The application route the frame shows, relative to the base: `/accounts/42`. */
   readonly route: string;
+  /** The query of the frame's page, with its `?`, such as `?tab=billing`, or empty. Comments bind to the route alone. */
+  readonly search: string;
   /** Counts every change of page: each load of a document in the frame, and each route change within one. */
   readonly changes: number;
   /** Opens +route+ in the frame, as a navigation of its own page. */
@@ -134,16 +136,19 @@ export function TargetFrame({ src, base, commit, title, className, children }: {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [state, setState] = useState<TargetState>("loading");
   const [route, setRoute] = useState(() => routeOf(new URL(src, "http://localhost").pathname, base));
+  const [search, setSearch] = useState(() => new URL(src, "http://localhost").search);
   const [changes, setChanges] = useState(0);
   // The frame's address is set once; React must not move it back when the page navigates.
   const [initialSrc] = useState(src);
-  const current = useRef(route);
+  const current = useRef(`${route}${search}`);
 
+  // A change of the query alone, such as a tab kept in it, is a change of page too.
   const follow = useEffectEvent((view: Window) => {
     const next = routeOf(view.location.pathname, base);
-    if (next === current.current) return;
-    current.current = next;
+    if (`${next}${view.location.search}` === current.current) return;
+    current.current = `${next}${view.location.search}`;
     setRoute(next);
+    setSearch(view.location.search);
     setChanges((count) => count + 1);
   });
 
@@ -159,8 +164,10 @@ export function TargetFrame({ src, base, commit, title, className, children }: {
         setState("unreadable");
         return;
       }
-      current.current = routeOf(view.location.pathname, base);
-      setRoute(current.current);
+      const loadedRoute = routeOf(view.location.pathname, base);
+      current.current = `${loadedRoute}${view.location.search}`;
+      setRoute(loadedRoute);
+      setSearch(view.location.search);
       setLoaded({ window: view, document: view.document });
       setState("ready");
       setChanges((count) => count + 1);
@@ -191,6 +198,7 @@ export function TargetFrame({ src, base, commit, title, className, children }: {
     base,
     commit,
     route,
+    search,
     changes,
     navigate(next) {
       loaded?.window.location.assign(addressOf(next, base));

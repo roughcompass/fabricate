@@ -2,7 +2,8 @@ import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { ordersPortalRemote } from "./support/fixture-app";
 import { paths } from "./support/paths";
-import { application, runOrdersPortal, waitForPage } from "./support/running-app";
+import { openTool } from "./support/toolbar";
+import { application, runOrdersPortal, visitorContext, waitForPage } from "./support/running-app";
 
 /*
  * A running application at /run/<slug>/<route> (add-applications, task 8.1;
@@ -42,6 +43,34 @@ test("keeps the address in step with the application's route, and a reload or a 
   await page.goto(paths.runningApplication(orders.slug, "/settings"));
   await waitForPage(page, "Settings");
   await expect(application(page).getByLabel("Display name")).toHaveValue("Orders team");
+});
+
+test("forwards the application's own query to its page, keeps it as the page changes it, and a reload and a share restore it", async ({ page, browser, db, baseURL }) => {
+  const { application: orders, base } = await runOrdersPortal(page, db, "/accounts?tab=billing");
+  const search = async (on = page) => (await (await on.locator("[data-target-frame]").elementHandle())!.contentFrame())!.evaluate(() => window.location.search);
+  await expect(page.locator("[data-target-frame]")).toHaveAttribute("src", `${base}accounts?tab=billing`);
+  expect(await search()).toBe("?tab=billing");
+  await expect(page).toHaveURL(paths.runningApplication(orders.slug, "/accounts?tab=billing"));
+
+  // The application keeps a tab in its query, as a page with tabs might.
+  const frame = (await (await page.locator("[data-target-frame]").elementHandle())!.contentFrame())!;
+  await frame.evaluate(() => window.history.replaceState(null, "", `${window.location.pathname}?tab=orders&sort=balance`));
+  await expect(page).toHaveURL(paths.runningApplication(orders.slug, "/accounts?tab=orders&sort=balance"));
+  await page.reload();
+  await waitForPage(page, "Accounts");
+  expect(await search()).toBe("?tab=orders&sort=balance");
+
+  // Share captures it with the route, and the link opens it.
+  await openTool(page, "share");
+  const share = page.getByRole("dialog", { name: "Share" });
+  await expect(share.locator("[data-share-view]")).toContainText("The link opens Orders portal at /accounts?tab=orders&sort=balance, built from commit");
+  await expect(share.getByLabel("Link to this view")).toHaveValue(/\/s\/[A-Za-z0-9_-]{43}$/);
+  const link = await share.getByLabel("Link to this view").inputValue();
+  const visitor = await (await visitorContext(browser, db, baseURL!)).newPage();
+  await visitor.goto(link);
+  await expect(visitor).toHaveURL(new RegExp(`/run/${orders.slug}/accounts\\?tab=orders&sort=balance&share=[A-Za-z0-9_-]{43}$`));
+  await waitForPage(visitor, "Accounts");
+  expect(await search(visitor)).toBe("?tab=orders&sort=balance");
 });
 
 test("answers not found for an application that doesn't exist, with a way back to Applications", async ({ page, db }) => {

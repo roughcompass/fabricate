@@ -37,18 +37,19 @@ export function RunningApplication(props: { slug: string; src: string; base: str
 }
 
 /**
- * Keeps the page's address in step with the route the frame shows, replacing
- * the history entry rather than adding one: the frame's own history already
- * has an entry for each of its navigations. The query, such as a share
- * link's token, stays.
+ * Keeps the page's address in step with the route and query the frame shows,
+ * replacing the history entry rather than adding one: the frame's own
+ * history already has an entry for each of its navigations. A share link's
+ * token stays.
  */
 function FollowRoute({ slug }: { slug: string }) {
-  const { route, state } = useTargetDocument();
+  const { route, search, state } = useTargetDocument();
   useEffect(() => {
     if (state !== "ready") return;
-    const address = `${routes.runningApplication(slug, route)}${window.location.search}`;
+    const share = new URLSearchParams(window.location.search).get("share");
+    const address = routes.runningApplication(slug, `${route}${search}`, { share });
     if (`${window.location.pathname}${window.location.search}` !== address) window.history.replaceState(null, "", address);
-  }, [slug, route, state]);
+  }, [slug, route, search, state]);
   return null;
 }
 
