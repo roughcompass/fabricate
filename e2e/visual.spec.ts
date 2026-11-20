@@ -38,6 +38,19 @@ test.skip(!process.env.CAPTURE_SCREENSHOTS, "Set CAPTURE_SCREENSHOTS=1 (npm run 
  */
 const hydrated = (page: Page) => page.waitForFunction(() => Object.keys(document.querySelector("h1") ?? {}).some((key) => key.startsWith("__reactFiber$")));
 
+/**
+ * Waits for every running transition and animation to finish. Reduced motion
+ * shortens them to almost nothing, but a capture taken in the same frame as a
+ * state change can still show a control between two states, such as a pill
+ * button already filled and its icon not yet recolored.
+ */
+const settled = (page: Page) =>
+  page.evaluate(async () => {
+    await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+    // An icon drawn in currentColor repaints a frame or two after its button's color settles.
+    for (let frame = 0; frame < 3; frame++) await new Promise(requestAnimationFrame);
+  });
+
 /** Loads every image now, the lazy ones below the fold too, which a full-page capture never scrolls to. */
 const loadImages = (page: Page) =>
   page.evaluate(async () => {
@@ -50,6 +63,29 @@ const loadImages = (page: Page) =>
       });
     await Promise.all(images.map((image) => (image.complete ? null : settled(image))));
   });
+
+/** The tallest image the JPEG encoder takes, in pixels; a taller page is captured in parts of PART pixels. */
+const JPEG_MAX_HEIGHT = 65_535;
+const PART = 32_000;
+
+/** Captures the whole page to +file+, or, when it's too tall for one JPEG, to +file+-part1.jpg, -part2.jpg, and so on. Returns the files written. */
+async function captureFullPage(page: Page, file: string): Promise<string[]> {
+  await settled(page);
+  const height = await page.evaluate(() => document.documentElement.scrollHeight);
+  if (height <= JPEG_MAX_HEIGHT) {
+    await page.screenshot({ path: file, fullPage: true, type: "jpeg", quality: 75 });
+    return [file];
+  }
+  const { width } = page.viewportSize()!;
+  const files: string[] = [];
+  for (let top = 0; top < height; top += PART) {
+    const part = file.replace(/\.jpg$/, `-part${files.length + 1}.jpg`);
+    await page.screenshot({ path: part, fullPage: true, clip: { x: 0, y: top, width, height: Math.min(PART, height - top) }, type: "jpeg", quality: 75 });
+    files.push(part);
+  }
+  return files;
+}
+
 test.setTimeout(600_000);
 
 test("captures every product surface at desktop and mobile width, in both themes", async ({ page, db, sourcesDir, baseURL }) => {
@@ -68,6 +104,8 @@ test("captures every product surface at desktop and mobile width, in both themes
 
   fs.rmSync(OUTPUT, { recursive: true, force: true });
   fs.mkdirSync(OUTPUT, { recursive: true });
+  const written: string[] = [];
+  let captured = 0;
   for (const theme of THEMES) {
     await useTheme(page.context(), theme, baseURL!);
     for (const viewport of VIEWPORTS) {
@@ -84,11 +122,13 @@ test("captures every product surface at desktop and mobile width, in both themes
         await expectNoHorizontalOverflow(page);
         await expectNoOverlappingContent(page);
         await expectNoNestedBorders(page);
-        await page.screenshot({ path: path.join(OUTPUT, `${name}-${viewport.name}-${theme}.jpg`), fullPage: true, type: "jpeg", quality: 75 });
+        written.push(...(await captureFullPage(page, path.join(OUTPUT, `${name}-${viewport.name}-${theme}.jpg`))));
+        captured += 1;
       }
     }
   }
-  expect(fs.readdirSync(OUTPUT)).toHaveLength(surfaces.length * VIEWPORTS.length * THEMES.length);
+  expect(captured).toBe(surfaces.length * VIEWPORTS.length * THEMES.length);
+  expect(fs.readdirSync(OUTPUT).sort()).toEqual(written.map((file) => path.basename(file)).sort());
 });
 
 /**
@@ -102,6 +142,7 @@ test("captures the shell's sidebar states in both themes", async ({ page, db: _d
   const capture = async (name: string, theme: string) => {
     await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
     await expectNoHorizontalOverflow(page);
+    await settled(page);
     await page.screenshot({ path: path.join(output, `${name}-${theme}.jpg`), type: "jpeg", quality: 75 });
   };
   for (const theme of THEMES) {
@@ -153,6 +194,7 @@ test("captures the marketing page's Profile picture in both themes", async ({ pa
     // The page's header and the design systems it uses, beside the evidence.
     await page.evaluate(() => window.scrollTo(0, 0));
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await settled(page);
     await page.screenshot({ path: path.join(output, `profile-${theme}.jpg`), type: "jpeg", quality: 80 });
     await page.context().clearCookies({ name: "frontend-registry-sidebar" });
   }
@@ -208,6 +250,7 @@ test("captures each toolbar tool over a running application, in both operator th
         await expect(panel.locator("[data-audit-result]").first()).toBeVisible();
       }
       if (name === "share") await expect(panel.getByLabel("Link to this view")).toBeVisible();
+      await settled(page);
       await page.screenshot({ path: path.join(output, `orders-portal-${name}-${theme}.jpg`), type: "jpeg", quality: 75 });
     }
     await page.keyboard.press("Escape");
@@ -236,6 +279,7 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
   let count = 0;
   const capture = async (name: string, theme: string, viewport: string) => {
     await expectNoHorizontalOverflow(page);
+    await settled(page);
     await page.screenshot({ path: path.join(output, `${name}-${viewport}-${theme}.jpg`), type: "jpeg", quality: 75 });
     count++;
   };
