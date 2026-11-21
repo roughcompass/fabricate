@@ -1,5 +1,8 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
+import { mockRefusalText } from "@/components/toolbar/data/mock-refusals";
+import { routingRefusalText } from "@/components/toolbar/routing/routing-client";
+import { ROUTING_WORKER_SCRIPT } from "@/components/toolbar/routing/table";
 import { loadConfig } from "@/lib/config";
 import { MOCK_IMPORTS_DIRECTORY, MOCK_SETS_DIRECTORY } from "@/lib/mocks/storage";
 
@@ -37,5 +40,13 @@ describe("docs/previews.md", () => {
     const { previews } = loadConfig({ appRoot: process.cwd(), environment: "production", env: {} });
     expect(previews.maxMockStorageBytes).toBe(5 * 1024 ** 3);
     expect(doc).toContain("| `previews.maxMockStorageBytes` (`FRONTEND_REGISTRY_PREVIEWS_MAX_MOCK_STORAGE_BYTES`) | 5 GiB |");
+  });
+
+  it("says in Security what the view worker serves, where, and the refusals routing and mock sets give, as the toolbar words them (add-mock-sets, task 8.5)", () => {
+    const start = doc.indexOf("\n## Security\n");
+    const security = doc.slice(start, doc.indexOf("\n## ", start + 5));
+    expect(security).toContain(`\`${ROUTING_WORKER_SCRIPT}\``);
+    for (const refusal of [routingRefusalText("insecure"), routingRefusalText("foreign"), mockRefusalText("insecure"), mockRefusalText("foreign")]) expect(security).toContain(`"${refusal}"`);
+    for (const fact of ["the application's or a saved preview's default set included", "opening a link that captured routing or a mock set registers it in the recipient's browser", "never a repository's preview page"]) expect(security).toContain(fact);
   });
 });

@@ -1,17 +1,20 @@
 import type { Page } from "@playwright/test";
 import { deleteApplication } from "../src/lib/applications/records";
 import { deletePreview } from "../src/lib/previews/lifecycle";
-import { openTool, startComment } from "./support/toolbar";
+import { openTool, routeQuotesPanelToBlue, startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { removeSavedPreview } from "../src/lib/applications/saved-previews";
-import { ORDERS_PORTAL_BRANDS, commitToOrdersPortal, commitToRemote, framedRun, rebuildOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
+import { ORDERS_PORTAL_BRANDS, buildOrdersPortal, commitToOrdersPortal, commitToRemote, framedRun, ordersPortalRemote, rebuildOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
 import { QUOTES_DESK_REMOTE, buildQuotes } from "./support/quotes-fixtures";
 import { choosePreset, chosenPreset, createPreset, deletePreset } from "../src/lib/workspaces/presets";
 import { paths } from "./support/paths";
 import { runJobs, serverConfig } from "./support/results";
 import { buildSavedPreview } from "../src/lib/applications/pipeline";
-import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage, workspaceOf } from "./support/running-app";
+import { application, openBuild, resetFromApplications, runOrdersPortal, visitorContext, waitForPage, workspaceOf } from "./support/running-app";
+import { chosenSet } from "../src/lib/mocks/active";
+import { deleteSet } from "../src/lib/mocks/records";
+import { ORDERS_HAPPY_PATH, mockApplicationId, seedMockSet } from "./support/mock-sets";
 
 /*
  * Sharing a view of a running application (template-demo/toolbar spec,
@@ -234,12 +237,7 @@ test.describe("what a share link applies (restore-toolbar-tools-and-branch-previ
     const { desk, panel, blueQuotes } = await buildQuotes(db);
     await page.goto(framedRun(desk));
     await waitForPage(page, "Quotes desk");
-    await openTool(page, "microfrontends");
-    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
-    await microfrontends.locator('[data-member="quotesPanel"]').click();
-    await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
-    await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
-    await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    await routeQuotesPanelToBlue(page);
     const link = await shareLink(page);
 
     const colleague = await visitorContext(browser, db, baseURL!);
@@ -274,12 +272,7 @@ test.describe("what a share link applies (restore-toolbar-tools-and-branch-previ
     choosePreset(db, (await workspaceOf(context, db)).id, deskId(db), admin.publicId);
     await page.reload();
     await waitForPage(page, "Quotes desk");
-    await openTool(page, "microfrontends");
-    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
-    await microfrontends.locator('[data-member="quotesPanel"]').click();
-    await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
-    await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
-    await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    await routeQuotesPanelToBlue(page);
     await openTool(page, "settings");
     await page.getByRole("dialog", { name: "Settings" }).getByRole("group", { name: "Mode" }).getByLabel("Dark").check();
     await shareLink(page);
@@ -359,12 +352,7 @@ test.describe("what a share link applies (restore-toolbar-tools-and-branch-previ
     choosePreset(db, (await workspaceOf(context, db)).id, id, admin.publicId);
     await page.goto(framedRun(desk));
     await waitForPage(page, "Quotes desk");
-    await openTool(page, "microfrontends");
-    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
-    await microfrontends.locator('[data-member="quotesPanel"]').click();
-    await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
-    await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
-    await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    await routeQuotesPanelToBlue(page);
     const link = await shareLink(page);
 
     // Quotes desk moves on and its shared build is deleted, the routed preview is removed, and the preset is deleted.
@@ -383,6 +371,80 @@ test.describe("what a share link applies (restore-toolbar-tools-and-branch-previ
     await expect(notice).toContainText("The shared routing of quotesPanel was dropped, because the build it named is gone.");
     await expect(notice).toContainText('The shared preset "Admin user" no longer exists, so this view starts with your own choice.');
     await expect(application(recipient).getByText("New build")).toBeVisible();
+    await colleague.close();
+  });
+});
+
+test.describe("a mock set in a share link (add-mock-sets, tasks 12.1 and 12.2)", () => {
+  const applies = (page: Page) => page.getByRole("dialog", { name: "Share" }).locator("[data-share-applies]");
+  const recentOrders = (page: Page) => application(page).getByRole("region", { name: "Recent orders" });
+  const ERRORS = [{ pattern: "/v1/orders", responses: [{ status: 500, json: { error: "Down" } }] }] as const;
+
+  /** Orders portal with "Happy path" as its default and "Errors", which the test's browser chose, running at Accounts. */
+  async function ordersWithErrors(page: Page, db: Parameters<typeof runOrdersPortal>[1], context: Parameters<typeof workspaceOf>[0]) {
+    ordersPortalRemote();
+    const running = await buildOrdersPortal(db);
+    const slug = running.application.slug;
+    seedMockSet(db, slug, ORDERS_HAPPY_PATH, { default: true });
+    const errors = seedMockSet(db, slug, [...ERRORS], { name: "Errors" });
+    await openBuild(page, running);
+    await expect(recentOrders(page).locator("[data-recent-orders] li").first()).toContainText("Order 1001");
+    await openTool(page, "data");
+    await page.getByRole("dialog", { name: "Data" }).getByRole("group", { name: "Mock set" }).getByRole("radio", { name: /^Errors/ }).check();
+    await expect(recentOrders(page)).toContainText("Recent orders unavailable");
+    await page.keyboard.press("Escape");
+    return { running, errors, sharer: await workspaceOf(context, db) };
+  }
+
+  test("names the set applied, and none of its rules, and says opening the link applies it through a service worker (Sharing with a mock set applied, A view with a mock set)", async ({ page, db, context }) => {
+    const { errors } = await ordersWithErrors(page, db, context);
+    await shareLink(page);
+    await expect(applies(page)).toHaveText('Opening the link applies the mock set "Errors", whose rules aren\'t in the link, through a service worker it registers in the recipient\'s browser.');
+    const stored = db.$client.prepare("select view from demo_shares order by id desc limit 1").get() as { view: string };
+    expect(JSON.parse(stored.view)).toEqual({ mocks: { set: errors.publicId, name: "Errors" } });
+    expect(stored.view).not.toContain("Down");
+    expect(stored.view).not.toContain("/v1/orders");
+  });
+
+  test("applies the set as it stands now in another browser, for the shared view only, leaving the recipient's choice (Opening a shared view, A mock set in a shared link)", async ({ page, browser, db, context, baseURL }) => {
+    const { running } = await ordersWithErrors(page, db, context);
+    const link = await shareLink(page);
+    const colleague = await visitorContext(browser, db, baseURL!);
+    const recipient = await colleague.newPage();
+    await recipient.goto(link);
+    await waitForPage(recipient, "Accounts");
+    await expect(recentOrders(recipient)).toContainText("Recent orders unavailable");
+    await expect.poll(() => recipient.evaluate(async (scope) => (await navigator.serviceWorker.getRegistration(scope))?.active?.scriptURL ?? null, running.base)).toMatch(/\/toolbar\/routing-worker\.js$/);
+    await openTool(recipient, "data");
+    await expect(recipient.getByRole("dialog", { name: "Data" }).locator("[data-mock-source]")).toHaveText("From the share link that opened this view. Choosing here applies your own choice instead.");
+    // The recipient's own view still applies the application's default.
+    expect(chosenSet(db, (await workspaceOf(colleague, db)).id, mockApplicationId(db, running.application.slug), null)).toBeUndefined();
+    await recipient.goto(paths.runningApplication(running.application.slug, "/accounts"));
+    await waitForPage(recipient, "Accounts");
+    await expect(recentOrders(recipient).locator("[data-recent-orders] li").first()).toContainText("Order 1001");
+    await colleague.close();
+  });
+
+  test("says when the shared set was deleted, using the recipient's own choice, in one notice with the others (The set was deleted, Several notices)", async ({ page, browser, db, context, baseURL }) => {
+    const { running, errors } = await ordersWithErrors(page, db, context);
+    const link = await shareLink(page);
+    deleteSet(db, mockApplicationId(db, running.application.slug), errors.publicId, serverConfig());
+    const colleague = await visitorContext(browser, db, baseURL!);
+    const recipient = await colleague.newPage();
+    await recipient.goto(link);
+    await waitForPage(recipient, "Accounts");
+    await expect(recipient.locator("[data-run-notice]")).toContainText('The shared mock set "Errors" no longer exists, so this view uses your own choice.');
+    await expect(recentOrders(recipient).locator("[data-recent-orders] li").first()).toContainText("Order 1001");
+
+    // With the shared build gone too, one notice says both.
+    commitToOrdersPortal({ "src/accounts.jsx": (source) => source.replace("Every account the orders team serves", "Every account we serve") }, { message: "Shorter lead" });
+    await rebuildOrdersPortal(db, running.application);
+    expect(await deletePreview(db, running.preview.publicId, serverConfig())).toBe(true);
+    await recipient.goto(link);
+    await waitForPage(recipient, "Accounts");
+    const notice = recipient.locator("[data-run-notice]");
+    await expect(notice).toContainText(`The shared commit ${running.preview.commitSha.slice(0, 12)} is no longer available, so this is the current build.`);
+    await expect(notice).toContainText('The shared mock set "Errors" no longer exists, so this view uses your own choice.');
     await colleague.close();
   });
 });

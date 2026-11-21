@@ -14,6 +14,8 @@
   .address { flex: 1 1 auto; min-width: 0; overflow: hidden; padding: 0 var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-caption); line-height: var(--line-height-secondary); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
   .device { position: relative; overflow: hidden; background: var(--color-bg); }
   .frame { position: absolute; top: 0; left: 0; border: 0; transform-origin: top left; }
+  /* A frame waiting to load gives way to its fallback where scripts don't run. */
+  @media (scripting: none) { .frame[data-waiting] { display: none; } }
 
   @container content (max-width: 767px) {
     .viewport { padding: var(--space-3); }

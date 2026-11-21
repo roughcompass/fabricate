@@ -1,0 +1,4 @@
+@layer components {
+  /* The line above the browser window that names preview mode's mock set: text, so assistive technology reads it. */
+  .line { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-secondary); line-height: var(--line-height-secondary); }
+}

@@ -9,6 +9,12 @@ import { useOptionalTargetDocument } from "./target-document";
 import { ToolPanel } from "./tool-panel";
 import { type MenuContext, ToolbarMenu } from "./toolbar-menu";
 import { type ToolId, type ToolbarApi, ToolbarContext, type ToolbarItem, type ToolbarMode, activeItemFor, isTyping, itemForKey, keyLabel } from "./toolbar-context";
+
+/** A tool the pill shows at rest, marked, because it applies something to the view now, such as Data's mock set; +name+ names it and what it applies. */
+export interface RestingItem {
+  readonly item: ToolbarItem;
+  readonly name: string;
+}
 import { setToolbarPrefs, useToolbarPrefs } from "./toolbar-prefs";
 import { ToolbarTooltip, tooltipFor, useTooltip } from "./toolbar-tooltip";
 import styles from "./toolbar.module.css";
@@ -25,7 +31,7 @@ import styles from "./toolbar.module.css";
  * (design.md, decision 1). The overlays it draws over the page sit in a
  * separate layer below.
  */
-export function Toolbar({ panels, overlays, commentCount = 0, context }: { panels?: Partial<Record<ToolId, React.ReactNode>>; overlays?: React.ReactNode; commentCount?: number; context: MenuContext }) {
+export function Toolbar({ panels, overlays, commentCount = 0, context, resting = null }: { panels?: Partial<Record<ToolId, React.ReactNode>>; overlays?: React.ReactNode; commentCount?: number; context: MenuContext; resting?: RestingItem | null }) {
   const prefs = useToolbarPrefs();
   const [tool, setTool] = useState<ToolId | null>(null);
   const [mode, setMode] = useState<ToolbarMode>("none");
@@ -146,6 +152,8 @@ export function Toolbar({ panels, overlays, commentCount = 0, context }: { panel
         ) : (
           <ToolbarPill
             active={active}
+            resting={resting}
+            onResting={(item, from) => runItem(item, from)}
             menuButton={menuButton}
             menuOpen={menu !== null}
             commentCount={commentCount}
@@ -159,23 +167,45 @@ export function Toolbar({ panels, overlays, commentCount = 0, context }: { panel
   );
 }
 
-/** The expanded pill: the active tool or mode, which turns it off, and the menu button with the open comment count. */
-function ToolbarPill({ active, menuButton, menuOpen, commentCount, onActive, onMenu }: { active: ToolbarItem | null; menuButton: React.Ref<HTMLButtonElement>; menuOpen: boolean; commentCount: number; onActive: () => void; onMenu: () => void }) {
+/**
+ * The expanded pill: a tool that applies something to the view, at rest
+ * and marked, which opens it; the active tool or mode, which turns it off;
+ * and the menu button with the open comment count.
+ */
+function ToolbarPill({ active, resting, onResting, menuButton, menuOpen, commentCount, onActive, onMenu }: { active: ToolbarItem | null; resting: RestingItem | null; onResting: (item: ToolbarItem, from: HTMLElement) => void; menuButton: React.Ref<HTMLButtonElement>; menuOpen: boolean; commentCount: number; onActive: () => void; onMenu: () => void }) {
+  const marked = resting && active?.id === resting.item.id ? resting : null;
   return (
     <aside ref={boundRef("pill")} className={styles.pill} aria-label="Toolbar">
+      {resting && !marked && (
+        <button
+          type="button"
+          className={styles.pillButton}
+          aria-label={resting.name}
+          aria-keyshortcuts={resting.item.key ? keyLabel(resting.item.key) : undefined}
+          data-resting=""
+          data-toolbar-item={resting.item.id}
+          onClick={(event) => onResting(resting.item, event.currentTarget)}
+          {...tooltipFor(resting.name, resting.item.key)}
+        >
+          <Icon name={resting.item.icon} size={16} />
+          <span className={styles.marker} aria-hidden="true" />
+        </button>
+      )}
       {active && (
         <button
           type="button"
           className={styles.pillButton}
-          aria-label={active.name}
+          aria-label={marked ? marked.name : active.name}
           aria-pressed="true"
           aria-keyshortcuts={active.key ? keyLabel(active.key) : undefined}
           data-active=""
+          data-resting={marked ? "" : undefined}
           data-toolbar-item={active.id}
           onClick={onActive}
-          {...tooltipFor(active.name, active.key)}
+          {...tooltipFor(marked ? marked.name : active.name, active.key)}
         >
           <Icon name={active.icon} size={16} />
+          {marked && <span className={styles.marker} aria-hidden="true" />}
         </button>
       )}
       <button

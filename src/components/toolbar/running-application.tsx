@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { HintState } from "@/lib/workspaces/hints";
 import { routes } from "@/lib/web/routes";
 import { ApplicationToolbar } from "./application-toolbar";
+import type { MocksStart } from "./data/data-state";
 import type { SessionStart } from "./session/session-state";
 import { workspaceThreadStore } from "./comments/thread-store";
 import { TargetFrame, useTargetDocument } from "./target-document";
@@ -29,17 +30,18 @@ import styles from "./running-application.module.css";
  * keeps as `/run/<slug>@<key>`, or null for the tracked branch, which
  * +trackedBranch+ names. +composition+ is what the Profile of the build's
  * commit says it's composed of, and +session+ the application's session
- * presets with the one the visitor starts it with.
+ * presets with the one the visitor starts it with, and +mocks+ its mock sets
+ * with the one the view applies (add-mock-sets, design decision 14).
  */
-export function RunningApplication(props: { slug: string; preview: string | null; trackedBranch: string; src: string; base: string; commit: string; title: string; context: MenuContext; share: string | null; notice: string | null; hints: HintState; composition: BuildComposition; session: SessionStart; shared: SharedStart | null }) {
-  const { slug, preview, trackedBranch, src, base, commit, title, context, share, notice, hints, composition, session, shared } = props;
+export function RunningApplication(props: { slug: string; preview: string | null; trackedBranch: string; src: string; base: string; commit: string; title: string; context: MenuContext; share: string | null; notice: string | null; hints: HintState; composition: BuildComposition; session: SessionStart; shared: SharedStart | null; mocks: MocksStart }) {
+  const { slug, preview, trackedBranch, src, base, commit, title, context, share, notice, hints, composition, session, shared, mocks } = props;
   const [store] = useState(() => workspaceThreadStore(slug, share, preview));
   const [view] = useState(() => ({ slug, name: context.name, preview, key: viewKey(slug, preview), composition, shared }));
   return (
     <TargetFrame src={src} base={base} commit={commit} title={title} className={styles.frame}>
       <FollowRoute slug={slug} preview={preview} />
       {notice && <Notice text={notice} />}
-      <ApplicationToolbar slug={slug} preview={preview} trackedBranch={trackedBranch} share={share} context={context} store={store} hints={hints} view={view} session={session} />
+      <ApplicationToolbar slug={slug} preview={preview} trackedBranch={trackedBranch} share={share} context={context} store={store} hints={hints} view={view} session={session} mocks={mocks} />
     </TargetFrame>
   );
 }

@@ -7,6 +7,11 @@ import { loadConfig } from "@/lib/config";
 import { DEVICES } from "@/lib/web/device-preview";
 import { COMMENT_LIMIT, THREAD_LIMIT } from "@/lib/workspaces/workspaces";
 import { DESCRIPTION_LIMIT, MB, NAME_LIMIT, RESPONSE_BODY_LIMIT, RESPONSE_LIMIT, RULE_LIMIT, SET_BODY_LIMIT, SET_LIMIT } from "@/lib/mocks/model";
+import { previewMockLine } from "@/components/preview/preview-mocks";
+import { appliesStatement } from "@/components/toolbar/share-panel";
+import { sharedSetGoneNotice } from "@/lib/mocks/active";
+import { REGISTERED_WHILE_VIEWING, SCREENSHOTS_STILL_APPLY, mockRefusalText } from "@/components/toolbar/data/mock-refusals";
+import { REQUEST_LIMIT } from "@/components/toolbar/data/request-log";
 import { HAR_ENTRY_LIMIT, HAR_UPLOAD_LIMIT, IMPORT_BODY_LIMIT } from "@/lib/mocks/har-import";
 import { CREDENTIAL_HEADER, CREDENTIAL_NAME, JWT_PLACEHOLDER, TRANSPORT_HEADERS } from "@/lib/mocks/sanitize";
 import { DRAFT_HOURS, REVIEW_PAGE_SIZE } from "@/lib/mocks/imports";
@@ -14,6 +19,7 @@ import { EXPORT_ORIGIN } from "@/lib/mocks/export";
 import { OPERATIONS_SHOWN, SERVICES_SHOWN } from "@/lib/mocks/profile-apis";
 import { FAILED_CALL_KINDS } from "@/lib/db/schema";
 import { TOOLBAR_ITEMS } from "@/components/toolbar/toolbar-context";
+import { RECORDED_LATENCY_LIMIT_MS, SLOW_LATENCY_MS } from "@/lib/mocks/engine";
 
 /*
  * docs/applications.md (add-applications task 10.6): every link and anchor
@@ -95,5 +101,33 @@ describe("docs/applications.md", () => {
 
   it("lists every toolbar tool with its key", () => {
     for (const item of TOOLBAR_ITEMS) expect(doc, item.name).toContain(item.key ? `| **${item.name}** | ${item.key.toUpperCase()} |` : `| **${item.name}** | |`);
+  });
+
+  it("says in Data what the panel says: its limits, its refusals, and the pill's tooltip (add-mock-sets, task 10.7)", () => {
+    const start = doc.indexOf("\n### Data\n");
+    const data = doc.slice(start, doc.indexOf("\n### ", start + 5));
+    expect(data).toContain(`up to ${RECORDED_LATENCY_LIMIT_MS / 1000} seconds, and **Slow** waits ${SLOW_LATENCY_MS / 1000} seconds`);
+    expect(data).toContain(`newest first, up to ${REQUEST_LIMIT}`);
+    for (const refusal of (["insecure", "unsupported", "foreign"] as const).map(mockRefusalText)) expect(data).toContain(`"${refusal}"`);
+    expect(data).toContain(`"${SCREENSHOTS_STILL_APPLY}"`);
+    expect(data).toContain(`"${REGISTERED_WHILE_VIEWING}"`);
+    expect(data).toContain('"Data · Mock set: Happy path"');
+    expect(doc).toContain("**Runtime** (Session, Data, and Settings)");
+  });
+
+  it("quotes preview mode's mock set line as the page writes it (add-mock-sets, task 11.2)", () => {
+    const start = doc.indexOf("\n### The Preview tab\n");
+    const tab = doc.slice(start, doc.indexOf("\n### ", start + 5));
+    expect(tab).toContain(`"${previewMockLine("Happy path", null)}"`);
+    expect(tab).toContain(`"${previewMockLine("Happy path", { refusal: "foreign", readiness: null })}"`);
+  });
+
+  it("quotes the share link's mock set notice as the link gives it, and says what the dialog says of it (add-mock-sets, task 12.3)", () => {
+    const start = doc.indexOf("\n## Share links\n");
+    const links = doc.slice(start, doc.indexOf("\n## ", start + 5));
+    expect(links).toContain(`"${sharedSetGoneNotice("Errors")}"`);
+    expect(links).toContain("its rules never leave the Frontend Registry");
+    expect(appliesStatement({ routed: false, theme: {}, preset: null, mockSet: "Errors" })).toEqual(["Opening the link applies the mock set \"Errors\", whose rules aren't in the link, through a service worker it registers in the recipient's browser."]);
+    expect(doc).toContain("and it applies the mock set, whose rules aren't in the link, through a service worker it registers there.");
   });
 });

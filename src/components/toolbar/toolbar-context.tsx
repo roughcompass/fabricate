@@ -4,7 +4,7 @@ import { createContext, use } from "react";
 import type { IconName } from "@/components/ui/icon";
 
 /** The tools that open a panel. Comment is a mode, and Hide toolbar a command; neither has a panel. */
-export const TOOLS = ["comments", "share", "microfrontends", "accessibility", "timing", "session", "settings", "shortcuts"] as const;
+export const TOOLS = ["comments", "share", "microfrontends", "accessibility", "timing", "session", "data", "settings", "shortcuts"] as const;
 export type ToolId = (typeof TOOLS)[number];
 
 /** A mode that changes what pointer and keyboard do on the page: comment mode, or Microfrontends' Select on page. */
@@ -42,6 +42,7 @@ export const TOOLBAR_ITEMS: readonly ToolbarItem[] = [
   { id: "accessibility", name: "Accessibility", icon: "accessibility", group: "Inspect", key: "a", aliases: ["a11y", "audit", "axe", "wcag"], action: { kind: "tool", tool: "accessibility" }, shortcutRow: true },
   { id: "timing", name: "Timing", icon: "clock", group: "Inspect", key: "t", aliases: ["performance", "web vitals", "core web vitals", "lcp", "inp", "cls", "waterfall", "load order", "speed"], action: { kind: "tool", tool: "timing" }, shortcutRow: true },
   { id: "session", name: "Session", icon: "user", group: "Runtime", key: "p", aliases: ["presets", "profile", "persona", "user", "role", "sign in", "storage", "local storage", "cookies", "query parameters"], action: { kind: "tool", tool: "session" }, shortcutRow: true },
+  { id: "data", name: "Data", icon: "network", group: "Runtime", key: "d", aliases: ["mock", "mocks", "mock set", "har", "api", "network", "requests", "fixtures", "stub", "latency"], action: { kind: "tool", tool: "data" }, shortcutRow: true },
   { id: "settings", name: "Settings", icon: "settings", group: "Runtime", key: "s", aliases: ["theme", "dark", "light", "density", "salt", "event bus", "events", "messages", "publish"], action: { kind: "tool", tool: "settings" }, shortcutRow: true },
   { id: "shortcuts", name: "Keyboard shortcuts", icon: "keyboard", group: "More", key: "?", aliases: ["keys", "hotkeys", "preferences", "hints"], action: { kind: "tool", tool: "shortcuts" }, shortcutRow: false },
   { id: "hide", name: "Hide toolbar", icon: "eyeOff", group: "More", key: ".", aliases: ["collapse", "minimize", "close"], action: { kind: "command", command: "hide" }, shortcutRow: false },
@@ -62,6 +63,17 @@ export function matchItems(query: string, items: readonly ToolbarItem[] = TOOLBA
   const needle = query.trim().toLowerCase();
   if (!needle) return [...items];
   return items.filter((item) => [item.name, ...item.aliases].some((text) => text.toLowerCase().includes(needle)));
+}
+
+/**
+ * The match the menu highlights for +query+: the first whose name or an
+ * alias is the query, then the first one starting with it, then the first
+ * match, so "har" highlights Data, not Share.
+ */
+export function bestMatch(query: string, matches: readonly ToolbarItem[]): ToolbarItem | undefined {
+  const needle = query.trim().toLowerCase();
+  const words = (item: ToolbarItem) => [item.name, ...item.aliases].map((text) => text.toLowerCase());
+  return matches.find((item) => words(item).includes(needle)) ?? matches.find((item) => words(item).some((text) => text.startsWith(needle))) ?? matches[0];
 }
 
 /** A key as the toolbar shows it on a key chip. */

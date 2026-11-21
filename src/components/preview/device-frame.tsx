@@ -37,8 +37,12 @@ export function FrameSize({ label }: { label: string }) {
  * than the space inside the gray container's padding, the window and the
  * frame scale down together to fit. The title bar keeps its height, and is
  * decoration only. `FrameSize` reports the scale.
+ *
+ * A frame that waits for something before it loads, such as preview mode's
+ * mock set (add-mock-sets, design decision 16), has no +src+ until then, and
+ * +noscript+ is what it loads where scripts don't run.
  */
-export function DeviceFrame({ src, width, height, title, address }: { src: string; width: number; height: number; title: string; address: string }) {
+export function DeviceFrame({ src, noscript, width, height, title, address }: { src: string | null; noscript?: string; width: number; height: number; title: string; address: string }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState<number | null>(null);
   const { setScale } = use(ScaleContext);
@@ -66,7 +70,12 @@ export function DeviceFrame({ src, width, height, title, address }: { src: strin
           <span className={styles.address}>{address}</span>
         </div>
         <div className={styles.device} style={{ width: width * scale, height: height * scale }} data-device-frame="">
-          <iframe src={src} title={title} className={styles.frame} style={{ width, height, transform: `scale(${scale})` }} data-preview-frame="" />
+          <iframe src={src ?? undefined} title={title} className={styles.frame} style={{ width, height, transform: `scale(${scale})` }} data-preview-frame="" data-waiting={src === null || undefined} />
+          {src === null && noscript && (
+            <noscript>
+              <iframe src={noscript} title={title} className={styles.frame} style={{ width, height }} />
+            </noscript>
+          )}
         </div>
       </div>
     </div>

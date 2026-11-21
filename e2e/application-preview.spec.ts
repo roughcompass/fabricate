@@ -9,6 +9,9 @@ import { git } from "../test/support/git-fixture";
 import { SCALA_SERVICE, offlineViteApp } from "../test/support/preview-trees";
 import { onboarded, registered } from "./support/applications";
 import { E2E_PREVIEWS } from "./support/env";
+import { buildOrdersPortal, ordersPortalRemote, settle } from "./support/fixture-app";
+import { ORDERS_HAPPY_PATH, seedMockSet } from "./support/mock-sets";
+import { buildQuotes } from "./support/quotes-fixtures";
 import { expect as baseExpect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { runJobs } from "./support/results";
@@ -311,5 +314,61 @@ test.describe("the controls and the browser window", () => {
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(375);
     }
+  });
+});
+
+test.describe("mock sets in preview mode (add-mock-sets, task 11.1)", () => {
+  const line = (page: Page) => page.locator("[data-mock-line]");
+  const shown = (page: Page) => page.frameLocator("[data-preview-frame]");
+  const recentOrders = (page: Page) => shown(page).getByRole("region", { name: "Recent orders" });
+
+  test("applies the application's default before the frame loads, naming it above the window (The default set in preview mode)", async ({ page, db }) => {
+    ordersPortalRemote();
+    const { application } = await buildOrdersPortal(db);
+    seedMockSet(db, application.slug, ORDERS_HAPPY_PATH, { default: true });
+    await page.goto(paths.applicationPreview(application.slug));
+    await expect(recentOrders(page).locator("[data-recent-orders] li").first()).toHaveText("Order 1001 · Northwind Traders · Open · $1,280");
+    await expect(line(page)).toHaveText("Mock set: Happy path. Change it with Data in full screen.");
+    // The line is text above the browser window, outside the control row.
+    expect(await line(page).evaluate((element) => Boolean(element.compareDocumentPosition(document.querySelector("[data-browser-window]")!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  });
+
+  test("shows no line, and every call goes to its own address, with no set (No set)", async ({ page, db }) => {
+    ordersPortalRemote();
+    const { application } = await buildOrdersPortal(db);
+    await page.goto(paths.applicationPreview(application.slug));
+    await expect(recentOrders(page)).toContainText("Recent orders unavailable");
+    await expect(line(page)).toHaveCount(0);
+  });
+
+  test("an unsaved branch applies the tracked branch's set", async ({ page, db }) => {
+    ordersPortalRemote();
+    const { application } = await buildOrdersPortal(db);
+    seedMockSet(db, application.slug, ORDERS_HAPPY_PATH, { default: true });
+    await page.goto(paths.applicationPreview(application.slug));
+    await expect(recentOrders(page).locator("[data-recent-orders] li")).toHaveCount(5);
+    await page.getByRole("combobox", { name: "Branch or tag" }).selectOption("refs/heads/feature/new-nav");
+    await page.getByRole("button", { name: "Show" }).click();
+    await expect(page).toHaveURL(/ref=refs%2Fheads%2Ffeature%2Fnew-nav/);
+    await settle(db);
+    await expect(shown(page).getByText("Orders portal · New navigation")).toBeVisible({ timeout: 30_000 });
+    await expect(recentOrders(page).locator("[data-recent-orders] li")).toHaveCount(5);
+    await expect(line(page)).toHaveText("Mock set: Happy path. Change it with Data in full screen.");
+  });
+
+  test("says the set can't apply beside the build's own service worker (The build's own service worker)", async ({ page, db }) => {
+    const { desk } = await buildQuotes(db, { saved: false });
+    seedMockSet(db, desk.application.slug, [{ pattern: "/v1/desk", responses: [{ json: { name: "FX desk" } }] }], { default: true });
+    await page.goto(paths.applicationPreview(desk.application.slug));
+    await expect(shown(page).locator("[data-desk-name]")).toHaveText("Desk: FX desk");
+    await shown(page)
+      .locator(":root")
+      .evaluate(async () => {
+        await navigator.serviceWorker.register("sw.js");
+        await navigator.serviceWorker.ready;
+      });
+    await page.reload();
+    await expect(line(page)).toHaveText("Mock set: Happy path. Mock sets can't apply beside the application's own service worker for its build's path.");
+    await expect(shown(page).locator("[data-desk-name]")).toHaveText("Desk name unavailable");
   });
 });

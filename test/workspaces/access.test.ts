@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getConfig } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
+import { chosenSet, resolveActiveSet } from "@/lib/mocks/active";
+import { createSet, deleteSet } from "@/lib/mocks/records";
+import { openView } from "@/lib/workspaces/shared-view";
 import { type ViewedApplication, resolveApplicationView, sharedApplication } from "@/lib/workspaces/access";
 import { createShare, findShare } from "@/lib/workspaces/shares";
 import { newWorkspaceKey } from "@/lib/workspaces/workspace-key";
@@ -80,6 +84,36 @@ describe("application views", () => {
       expect(viewedPreview(db, orders, "feature-new-nav")).toEqual(feature);
       expect(viewedPreview(db, viewedApplicationIn(db, "Billing"), "feature-new-nav")).toBeNull();
       expect(resolveApplicationView(db, orders, owner, null, feature)).toEqual({ application: orders, viewWorkspaceId: owner.id, access: "own", preview: feature });
+    });
+  });
+
+  describe("share links' mock sets (add-mock-sets, design decision 17, task 12.1)", () => {
+    it("records the set applied by its ID and name, or None, never a name or rules from the client", () => {
+      const errors = createSet(db, orders.id, { name: "Errors" }, null);
+      const token = createShare(db, orders.id, owner.id, { commit: commitOf("a"), route: "/", view: { mocks: { set: errors.publicId } } }, undefined, { mocks: { set: errors.publicId, name: "Errors" } });
+      expect(findShare(db, token)!.view).toEqual({ mocks: { set: errors.publicId, name: "Errors" } });
+      const none = createShare(db, orders.id, owner.id, { commit: commitOf("a"), route: "/", view: { mocks: { set: null } } }, undefined, { mocks: { set: null, name: null } });
+      expect(findShare(db, none)!.view).toEqual({ mocks: { set: null, name: null } });
+      // What the toolbar sends names the set by its ID alone: a name, rules, or anything else is refused.
+      for (const mocks of [{ set: errors.publicId, name: "Errors" }, { set: errors.publicId, rules: [] }, { set: "not-a-set" }]) expect(() => createShare(db, orders.id, owner.id, { commit: commitOf("a"), route: "/", view: { mocks } } as never)).toThrow();
+      // The ID the toolbar sent is never stored as it was sent: only what the server found is.
+      expect(findShare(db, createShare(db, orders.id, owner.id, { commit: commitOf("a"), route: "/", view: { mocks: { set: errors.publicId } } }))!.view).toEqual({});
+    });
+
+    it("applies the shared set to that view only, with the recipient's choice unchanged, and says when it was deleted", () => {
+      const errors = createSet(db, orders.id, { name: "Errors" }, null);
+      const shared = { set: errors.publicId, name: "Errors" };
+      expect(resolveActiveSet(db, { applicationId: orders.id, previewId: null, workspaceId: stranger.id, shared })).toEqual({ set: { publicId: errors.publicId, name: "Errors", revision: errors.revision }, source: "share" });
+      expect(chosenSet(db, stranger.id, orders.id, null)).toBeUndefined();
+      expect(openView(db, getConfig(), orders.id, { mocks: shared }).notices).toEqual([]);
+      expect(openView(db, getConfig(), orders.id, { mocks: { set: null, name: null } }).notices).toEqual([]);
+      deleteSet(db, orders.id, errors.publicId);
+      expect(openView(db, getConfig(), orders.id, { mocks: shared }).notices).toEqual(['The shared mock set "Errors" no longer exists, so this view uses your own choice.']);
+      expect(resolveActiveSet(db, { applicationId: orders.id, previewId: null, workspaceId: stranger.id, shared })).toMatchObject({ set: null, sharedSetGone: "Errors" });
+      // A set of another application is no set of this one.
+      const billing = viewedApplicationIn(db, "Billing");
+      const theirs = createSet(db, billing.id, { name: "Theirs" }, null);
+      expect(openView(db, getConfig(), orders.id, { mocks: { set: theirs.publicId, name: "Theirs" } }).notices).toEqual(['The shared mock set "Theirs" no longer exists, so this view uses your own choice.']);
     });
   });
 });
