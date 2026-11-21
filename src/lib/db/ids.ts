@@ -25,7 +25,10 @@ export type PublicIdPrefix =
   | "pvw" // preview build
   | "app" // application
   | "apv" // saved preview of an application
-  | "ses"; // session preset
+  | "ses" // session preset
+  | "mks" // mock set
+  | "mkr" // mock set rule
+  | "mki"; // HAR import draft of a mock set
 
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const LENGTH = 16;

@@ -4,10 +4,14 @@ import { eq } from "drizzle-orm";
 import { previewPreparations } from "../src/lib/db/schema";
 import { previewDirectory } from "../src/lib/previews/storage";
 import { profileDocument, profileOfSurvey } from "../src/lib/profiles/profile-records";
+import { compileSet } from "../src/lib/mocks/compile";
+import { resolveActiveSet } from "../src/lib/mocks/active";
+import { setDirectory } from "../src/lib/mocks/storage";
 import { E2E_PACKAGE_CACHE, E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { ORDERS_PORTAL_BRANDS, buildOrdersPortal, commitToOrdersPortal, ordersPortalRemote, previewOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
 import { paths } from "./support/paths";
+import { ORDERS_HAPPY_PATH, mockApplicationId, seedFailedCalls, seedMockSet, setDefault } from "./support/mock-sets";
 import { buildQuotes, quotesComposition } from "./support/quotes-fixtures";
 import { serverConfig } from "./support/results";
 
@@ -159,4 +163,28 @@ test("calls the orders API, which fails without a mock set, and its Profile repo
   await expect(page.getByText("Export unavailable")).toBeVisible();
   await page.getByRole("link", { name: "Northwind Traders" }).click();
   await expect(page.getByText("Account orders unavailable")).toBeVisible();
+});
+
+test("seeds a mock set, a default, and failed calls for both agents' specs (add-mock-sets, task 2.7)", async ({ db }) => {
+  ordersPortalRemote();
+  const { application } = await buildOrdersPortal(db);
+  const happy = seedMockSet(db, application.slug, ORDERS_HAPPY_PATH, { default: true, byName: "Presenter" });
+  const errors = seedMockSet(db, application.slug, [{ pattern: "/v1/orders", responses: [{ status: 503, json: { error: "Unavailable" } }] }], { name: "Errors", unmatched: "not_mocked" });
+  expect([happy.ruleCount, happy.createdByName, errors.ruleCount]).toEqual([ORDERS_HAPPY_PATH.length, "Presenter", 1]);
+  // Bodies sit in the server's preview storage, by digest.
+  expect(fs.readdirSync(setDirectory(serverConfig(), happy.publicId)).every((file) => /^[0-9a-f]{64}$/.test(file))).toBe(true);
+  const applicationId = mockApplicationId(db, application.slug);
+  expect(resolveActiveSet(db, { applicationId, previewId: null, workspaceId: null })).toMatchObject({ set: { name: "Happy path" }, source: "application" });
+  expect(compileSet(db, happy, serverConfig()).rules.map((rule) => rule.label)).toContain("GET /v1/exports/9");
+
+  setDefault(db, application.slug, errors.publicId);
+  expect(resolveActiveSet(db, { applicationId, previewId: null, workspaceId: null }).set?.name).toBe("Errors");
+  setDefault(db, application.slug, null);
+  expect(resolveActiveSet(db, { applicationId, previewId: null, workspaceId: null })).toEqual({ set: null, source: "none" });
+
+  seedFailedCalls(db, application.slug, [
+    { url: "https://api.orders.test/v1/orders?limit=5&_=1763650000000", kind: "connect", error: "net::ERR_NAME_NOT_RESOLVED" },
+    { url: "https://api.orders.test/v1/rates", kind: "status", status: 503 },
+  ]);
+  expect(db.$client.prepare("select failed_calls from preview_screenshots s join applications a on a.current_preview_id = s.preview_id where a.slug = ?").get(application.slug)).toEqual({ failed_calls: 2 });
 });

@@ -198,6 +198,15 @@ export const previewScreenshots = sqliteTable(
     /** When the capture was last requested, so a new request queues a job of its own. */
     requestedAt: timestamp("requested_at").notNull(),
     capturedAt: timestamp("captured_at"),
+    // The mock set it was captured with, as it was then (add-mock-sets, design decision 11). Plain
+    // columns with no reference, so the record outlives the set, and adding them rebuilds nothing.
+    mockSetPublicId: text("mock_set_public_id"),
+    mockSetName: text("mock_set_name"),
+    mockSetRevision: integer("mock_set_revision"),
+    /** How many distinct API calls failed when it was captured; screenshot_failed_calls keeps up to 50 of them. */
+    failedCalls: integer("failed_calls").notNull().default(0),
+    /** When an operator dismissed the failed-calls alert for this build. */
+    failuresDismissedAt: timestamp("failures_dismissed_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

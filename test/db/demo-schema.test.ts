@@ -7,12 +7,18 @@ import { createTestDb, migrateToLatest, rawRun } from "../support/db";
 import { EXPORT_ORDERS, commitOf, viewedApplicationIn } from "../support/views";
 
 const DEMO_TABLES = ["demo_comments", "demo_shares", "demo_threads", "demo_workspaces"];
-/** Every table a workspace owns: the demo_ tables, and each workspace's choice of session preset (restore-toolbar-tools-and-branch-previews, design decision 8). */
-const WORKSPACE_TABLES = [...DEMO_TABLES, "session_preset_choices"];
+/**
+ * Every table a workspace owns: the demo_ tables, each workspace's choice of session preset
+ * (restore-toolbar-tools-and-branch-previews, design decision 8), and its choices of mock sets and
+ * its HAR uploads' drafts (add-mock-sets, design decision 10).
+ */
+const WORKSPACE_TABLES = [...DEMO_TABLES, "mock_set_choices", "mock_set_imports", "session_preset_choices"];
 const DEMO_MIGRATIONS = ["0013_demo", "0014_demo_origin", "0015_demo_profiles", "0033_demo_imports_removed", "0037_demo_applications_removed", "0056_comments_and_shares_for_applications"];
 /** Migrations that change product tables and workspace tables together; their workspace statements are left out of the product schema. */
-const MIXED_MIGRATIONS = ["0058_saved_previews_and_session_presets"];
-const WORKSPACE_NAME = /demo_|session_preset_choices/;
+const MIXED_MIGRATIONS = ["0058_saved_previews_and_session_presets", "0059_mock_sets"];
+const WORKSPACE_NAME = /demo_|session_preset_choices|mock_set_choices|mock_set_imports/;
+/** A statement without its comment lines, which may name any table. */
+const sqlOf = (statement: string) => statement.replace(/^\s*--.*$/gm, "");
 const DIGEST = "a".repeat(64);
 
 function tables(db: Db): string[] {
@@ -71,14 +77,14 @@ describe("demo schema", () => {
       for (const tag of MIXED_MIGRATIONS) {
         const file = path.join(folder, `${tag}.sql`);
         const statements = fs.readFileSync(file, "utf8").split("--> statement-breakpoint");
-        fs.writeFileSync(file, statements.filter((statement) => !WORKSPACE_NAME.test(statement)).join("--> statement-breakpoint"));
+        fs.writeFileSync(file, statements.filter((statement) => !WORKSPACE_NAME.test(sqlOf(statement))).join("--> statement-breakpoint"));
       }
 
       const product = createTestDb(folder);
       const before = tables(product);
       const schemaOf = (handle: Db) =>
         handle.$client
-          .prepare("select name, sql from sqlite_master where name not like 'demo_%' and name not like 'session_preset_choices%' and name not like 'sqlite_%' and name <> '__drizzle_migrations' order by name")
+          .prepare("select name, sql from sqlite_master where name not like 'demo_%' and name not like 'session_preset_choices%' and name not like 'mock_set_choices%' and name not like 'mock_set_imports%' and name not like 'sqlite_%' and name <> '__drizzle_migrations' order by name")
           .all();
       const productSchema = schemaOf(product);
       product.$client.close();
@@ -90,11 +96,11 @@ describe("demo schema", () => {
     }
   });
 
-  it("refers only to workspaces, applications, saved previews, and session presets, and no product table refers to a workspace table", () => {
+  it("refers only to workspaces, applications, saved previews, session presets, and mock sets, and no product table refers to a workspace table", () => {
     for (const table of tables(db)) {
       const references = (db.$client.prepare(`pragma foreign_key_list(${table})`).all() as { table: string }[]).map((row) => row.table);
       for (const target of references) {
-        if (WORKSPACE_TABLES.includes(table)) expect(target.startsWith("demo_") || ["applications", "application_previews", "session_presets"].includes(target), `${table} -> ${target}`).toBe(true);
+        if (WORKSPACE_TABLES.includes(table)) expect(target.startsWith("demo_") || ["applications", "application_previews", "session_presets", "mock_sets"].includes(target), `${table} -> ${target}`).toBe(true);
         else expect(WORKSPACE_TABLES.includes(target), `${table} -> ${target}`).toBe(false);
       }
     }

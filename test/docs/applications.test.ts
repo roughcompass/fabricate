@@ -6,6 +6,7 @@ import { PAGE_SIZE } from "@/lib/applications/records";
 import { loadConfig } from "@/lib/config";
 import { DEVICES } from "@/lib/web/device-preview";
 import { COMMENT_LIMIT, THREAD_LIMIT } from "@/lib/workspaces/workspaces";
+import { DESCRIPTION_LIMIT, MB, NAME_LIMIT, RESPONSE_BODY_LIMIT, RESPONSE_LIMIT, RULE_LIMIT, SET_BODY_LIMIT, SET_LIMIT } from "@/lib/mocks/model";
 import { TOOLBAR_ITEMS } from "@/components/toolbar/toolbar-context";
 
 /*
@@ -49,6 +50,13 @@ describe("docs/applications.md", () => {
     for (const device of Object.values(DEVICES)) expect(doc).toContain(`**${device.label}** (${device.width} by ${device.height})`);
     expect(doc).toContain(`up to ${COMMENT_LIMIT.toLocaleString("en-US")} characters`);
     expect(doc).toContain(`a workspace up to ${THREAD_LIMIT} open threads`);
+  });
+
+  it("states the mock set limits the records keep (add-mock-sets)", () => {
+    expect(doc).toContain(`an application can have ${SET_LIMIT} mock sets;`);
+    expect(doc).toContain(`a set can have ${RULE_LIMIT} rules, and its responses can hold ${SET_BODY_LIMIT / MB} MB in all;`);
+    expect(doc).toContain(`a rule can have ${RESPONSE_LIMIT} responses, and a response's body up to ${RESPONSE_BODY_LIMIT / MB} MB;`);
+    expect(doc).toContain(`a name of up to ${NAME_LIMIT} characters, unique among the application's sets ignoring case, and an optional description of up to ${DESCRIPTION_LIMIT} characters`);
   });
 
   it("lists every toolbar tool with its key", () => {

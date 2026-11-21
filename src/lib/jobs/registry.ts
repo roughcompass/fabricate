@@ -18,6 +18,7 @@ import { type BackgroundTrigger, REQUEST_SURVEY, surveyRepository } from "@/lib/
 import { RUN_SURVEY, runSurvey } from "@/lib/surveys/run";
 import type { KindLimits } from "./queue";
 import type { HandlerRegistry } from "./worker";
+import { sweepMockStorage } from "@/lib/mocks/storage";
 
 /** Every job kind the worker runs, bound to +db+ and +config+. */
 export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConfig = getConfig()): HandlerRegistry {
@@ -34,6 +35,9 @@ export function jobHandlers(db: Executor = getDb(), config: FrontendRegistryConf
       runScheduledProfileCheck(db, config, { slot: String(payload.slot), log });
       const result = await checkApplications(db, config, { signal: context.signal, log });
       if (result.checked > 0) log(`applications check: ${result.checked} tracked and saved refs, ${result.started} builds started, ${result.unreadable} unreadable`);
+      // Mock set bodies no set owns any more, and HAR drafts past their expiry (add-mock-sets, design decision 9).
+      const swept = await sweepMockStorage(db, config).catch(() => 0);
+      if (swept > 0) log(`mock set storage: removed ${swept} directories no set or draft owns`);
     },
     [RUN_SURVEY]: async (payload, context) => void (await runSurvey(db, String(payload.survey), { config, signal: context.signal })),
     // A deleted Repository isn't surveyed; a reference that can't be read fails the job, which records why.

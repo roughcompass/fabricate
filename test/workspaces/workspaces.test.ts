@@ -16,6 +16,9 @@ import {
   setHints,
   touchWorkspace,
 } from "@/lib/workspaces/workspaces";
+import { chooseSet, resolveActiveSet } from "@/lib/mocks/active";
+import { setApplicationDefault } from "@/lib/mocks/defaults";
+import { createSet } from "@/lib/mocks/records";
 import { createTestDb } from "../support/db";
 import { EXPORT_ORDERS, commitOf, viewedApplicationIn } from "../support/views";
 
@@ -134,5 +137,36 @@ describe("workspaces", () => {
     expect(rows(shareLinks)).toBe(0);
     expect(findWorkspace(db, key)!.id).toBe(presenter.id);
     expect(db.$client.prepare("select count(*) as n from applications").get()).toEqual({ n: 3 });
+  });
+
+  it("Reset with a mock set chosen: clears the workspace's mock set choices, so the default applies again, and leaves the sets (add-mock-sets, task 2.6)", () => {
+    const presenter = ensureWorkspace(db, newWorkspaceKey(), NOW);
+    const visitor = ensureWorkspace(db, newWorkspaceKey(), NOW);
+    const orders = viewedApplicationIn(db, "Orders portal");
+    const happy = createSet(db, orders.id, { name: "Happy path" }, null);
+    const errors = createSet(db, orders.id, { name: "Errors" }, "Presenter");
+    setApplicationDefault(db, orders.id, happy.publicId);
+    chooseSet(db, presenter.id, orders.id, null, errors.publicId);
+    chooseSet(db, visitor.id, orders.id, null, errors.publicId);
+    const active = (workspaceId: number) => resolveActiveSet(db, { applicationId: orders.id, previewId: null, workspaceId }).set?.name;
+    expect(active(presenter.id)).toBe("Errors");
+
+    resetWorkspace(db, presenter.id);
+
+    expect(active(presenter.id)).toBe("Happy path");
+    expect(active(visitor.id)).toBe("Errors");
+    expect(db.$client.prepare("select name from mock_sets order by name").all()).toEqual([{ name: "Errors" }, { name: "Happy path" }]);
+  });
+
+  it("purges an idle workspace's mock set choices, and keeps the sets it created with their application", () => {
+    const idle = ensureWorkspace(db, newWorkspaceKey(), new Date(NOW.getTime() - 31 * DAY));
+    const orders = viewedApplicationIn(db, "Orders portal");
+    const errors = createSet(db, orders.id, { name: "Errors" }, "Presenter");
+    chooseSet(db, idle.id, orders.id, null, errors.publicId);
+
+    expect(purgeIdleWorkspaces(db, NOW)).toBe(1);
+
+    expect(db.$client.prepare("select count(*) as n from mock_set_choices").get()).toEqual({ n: 0 });
+    expect(db.$client.prepare("select name, created_by_name from mock_sets").all()).toEqual([{ name: "Errors", created_by_name: "Presenter" }]);
   });
 });

@@ -22,6 +22,7 @@ Previews are off by default. While `previews.enabled` is off, no Repository page
 | `previews.maxOutputBytes` | 200 MiB | The largest output one build can publish. |
 | `previews.maxStorageBytes` | 5 GiB | The published output and latest logs of every preview together. The least recently used previews are deleted to stay under it, and the package caches are pruned once they pass half of it. |
 | `previews.refCacheSeconds` (`FRONTEND_REGISTRY_PREVIEWS_REF_CACHE_SECONDS`) | 60 | How long preview mode reuses a remote's branches and tags before reading them again, so its views, device changes, and Code tab don't each read the remote. 0 reads them on every view. |
+| `previews.maxMockStorageBytes` (`FRONTEND_REGISTRY_PREVIEWS_MAX_MOCK_STORAGE_BYTES`) | 5 GiB | The stored bodies of every application's [mock sets](applications.md#mock-sets) together. A change that would pass it is refused, saying mock set storage is full. |
 
 Node versions must be full versions, such as `22.11.0`. With none configured, every commit is Not previewable, because no build could run. The Frontend Registry never falls back to the Node version the worker itself runs on. A build that installs with pnpm or Yarn, or with a declared npm version, runs the package manager through the configured Node's corepack, so that Node install must include it. The worker also needs `git`, which it uses for assessments too, and `tar` in `/usr/local/bin`, `/usr/bin`, or `/bin`.
 
@@ -239,13 +240,17 @@ Everything lives under `previews.storage`:
 | `<preview>/out/<attempt>-<claim>/` | The published artifact. |
 | `<preview>/screenshots/<attempt>-<claim>/` | The screenshot and card image of that artifact, for an application's current build. Never served under `/previews/`. |
 | `.cache/<manager>/` | Package caches every build shares, one for each package manager and one for corepack. |
-| `.trash/` | Directories of deleted previews, moved aside to be removed. |
+| `.mock-sets/<set>/<sha256>` | The response bodies of a [mock set](applications.md#mock-sets)'s rules, and the request bodies they compare, each stored once by its SHA-256 digest. Never served under `/previews/`. |
+| `.mock-imports/<import>/` | An uploaded HAR file's draft between upload and review: `calls.json`, its sanitized calls, with their bodies beside it. The upload itself is deleted as soon as it's read. |
+| `.trash/` | Directories of deleted previews and mock sets, moved aside to be removed. |
 
 ### Deleting and pruning
 
 Deleting a preview, or the Repository it belongs to, deletes it at once: its paths answer 404 and it leaves every list. Its directory is moved to `.trash/` in one step and then removed. A build still running for it can neither publish to it nor bring it back, and when that build stops, whatever it wrote since is removed too. Deleting doesn't need previews to be on or the remote to be enrolled, so storage can always be reclaimed.
 
 After each successful build, the Frontend Registry keeps the stored output of every preview, its published artifact and latest log, under `previews.maxStorageBytes`. It deletes Ready and Failed previews, least recently used first, until the rest fit. A preview was last used when it was last opened or, if later, when its latest attempt finished, so a build nobody has opened yet isn't the first to go. A queued or building preview, the one that build just published, and the current build or latest attempt of an [application](#applications) or one of its saved previews are never deleted; if they alone pass the limit, the total stays over it, and the Applications page says so (see [Saved previews](applications.md#saved-previews)). Once an application is deleted, or a saved preview is removed, or either moves on to another build, its earlier previews are pruned like any other. Deleting an application's or a saved preview's build from its preview page is refused, naming the application, and the branch or tag for a saved preview, such as "Orders portal (feature/new-nav)". Each prune also removes whatever no undeleted preview owns, such as the trash and the directories of deleted previews.
+
+Mock set bodies aren't pruned: a set's files are kept until the set, its application, or its Repository is deleted. Deleting a set moves its directory to `.trash/` and removes it. The worker's periodic check, beside the profiling check, removes set directories whose set is gone, such as those of a deleted application, and drafts more than 24 hours old. Every set's bodies together stay under `previews.maxMockStorageBytes`, apart from the build output `previews.maxStorageBytes` counts.
 
 The package caches are kept to half of `previews.maxStorageBytes`. When a build succeeds and the caches hold more, the build empties its own package manager's cache with that manager's command, at the build's Node and manager version, before it publishes: `npm cache clean --force`, `pnpm store prune`, or `yarn cache clean` (`--mirror` after Yarn 1). It skips this while another preview is building, whose install it could break, and a cache that fails to prune never fails the build. Another manager's cache is pruned when a build that uses that manager next succeeds, and corepack's cache of package manager releases isn't pruned.
 

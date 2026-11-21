@@ -147,6 +147,29 @@ A saved preview is built by the same pipeline as its application, and keeps a cu
 
 When you switch an application's tracked branch to a branch that has a saved preview, that saved preview is removed, since the branch is then built as the application's own.
 
+## Mock sets
+
+A static preview build has no backend, so its API calls often fail, and its previews, screenshots, and share links load empty. A **mock set** answers an application's API calls with recorded or written responses, in previews and screenshots, without changing what the build serves under `/previews/`.
+
+Mock sets belong to the application, and apply to its tracked branch and its saved previews alike. Every workspace sees the same ones, as it sees the application, and anyone who can open the application can create, edit, and delete them, as with session presets, since there's no sign-in and no owner. Each set and rule shows when it was created and last changed, and by whom when that workspace has a display name. An edit someone else saved first is refused, and the form shows their newer values to change again.
+
+A set has a name of up to 60 characters, unique among the application's sets ignoring case, and an optional description of up to 280 characters. It holds rules, not HAR files: each rule has a method, an address pattern, query matching, body matching, and up to 20 responses, each with a status, headers, a body, and a latency. Bodies are kept as files under preview storage, never in the database (see [Logs and storage](previews.md#logs-and-storage)).
+
+### Limits
+
+- an application can have 10 mock sets;
+- a set can have 500 rules, and its responses can hold 20 MB in all;
+- a rule can have 20 responses, and a response's body up to 5 MB;
+- every set's bodies together stay under `previews.maxMockStorageBytes`, 5 GiB by default.
+
+A change past a limit is refused, naming the limit and what to remove.
+
+### Deleting
+
+A set is kept until someone deletes it, or its application or Repository is deleted. Deleting a set removes its rules and their stored bodies for everyone, and every choice and default that names it: each view that chose it applies its default again, and each saved preview that chose it inherits the application's.
+
+Mock sets are stored unencrypted with their application. Everyone who can open the application can read them, and so can any build the browser runs on the Frontend Registry's origin.
+
 ## Screenshots
 
 After a build becomes an application's current build, the worker captures it in a headless browser at the Desktop size, 1440 by 900 pixels. It opens the page the build emitted, through the same serving checks as the web server. Then it waits for the load event and for 500 milliseconds without network requests, up to 20 seconds in all, and captures what's shown, even if the page is still loading. Captures run one at a time and take about a second each. See [Screenshots](previews.md#screenshots) for where they're stored and which browser takes them.
@@ -331,11 +354,11 @@ A link that stops working opens **Application not available**, without saying wh
 
 ## Workspaces
 
-Each browser that opens Applications, a running application, or a share link gets an anonymous workspace, with no sign-in. The workspace holds that browser's comment threads, share links, choices of session presets, display name, and guided hints. It's tied to the browser by an `HttpOnly` cookie, which scripts can't read, and the Frontend Registry stores only the cookie's digest. Applications, their saved previews, and their session presets are shared by every workspace, but no one sees another workspace's comments except through a share link.
+Each browser that opens Applications, a running application, or a share link gets an anonymous workspace, with no sign-in. The workspace holds that browser's comment threads, share links, choices of session presets and mock sets, display name, and guided hints. It's tied to the browser by an `HttpOnly` cookie, which scripts can't read, and the Frontend Registry stores only the cookie's digest. Applications, their saved previews, their session presets, and their mock sets are shared by every workspace, but no one sees another workspace's comments except through a share link.
 
 - **Limits:** a comment can have up to 2,000 characters, and a workspace up to 500 open threads, across every application. At the limit, starting a thread or reopening a resolved one is refused, asking you to resolve threads, or to reset the workspace, first.
-- **Idle workspaces:** a workspace that hasn't been used for 30 days is deleted, with its threads, share links, and preset choices. The session presets it created stay with their applications.
-- **Reset workspace**, the last section of the Applications page, deletes your workspace's threads, including those others started or replied to through your links, and your share links, so they stop working. It also clears your choices of session presets, so your applications start with their own storage, forgets your display name, and shows the guided hints again. It asks for confirmation first. Applications, their saved previews and session presets, other workspaces, and comments you added through someone else's link aren't affected, and the toolbar's preferences in your browser stay.
+- **Idle workspaces:** a workspace that hasn't been used for 30 days is deleted, with its threads, share links, preset choices, and mock set choices. The session presets and mock sets it created stay with their applications.
+- **Reset workspace**, the last section of the Applications page, deletes your workspace's threads, including those others started or replied to through your links, and your share links, so they stop working. It also clears your choices of session presets, so your applications start with their own storage, and your choices of mock sets, so each view applies its default set again. It forgets your display name, and shows the guided hints again. It asks for confirmation first. Applications, their saved previews, session presets, and mock sets, other workspaces, and comments you added through someone else's link aren't affected, and the toolbar's preferences in your browser stay.
 
 **Guided hints** are three short tips the first time you run an application: auditing accessibility, seeing what's slow, and commenting on anything. **Dismiss hints** or **Finish hints** puts them away for the workspace. Under **Keyboard shortcuts**, **Show guided hints** turns them on or off, and **Replay hints** shows them again.
 

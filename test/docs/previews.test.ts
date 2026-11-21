@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "@/lib/config";
+import { MOCK_IMPORTS_DIRECTORY, MOCK_SETS_DIRECTORY } from "@/lib/mocks/storage";
 
 /*
  * docs/previews.md's account of automatic rebuilds (add-applications, task
@@ -27,5 +28,14 @@ describe("docs/previews.md", () => {
   it("documents the screenshot's size, wait, limit, and files as the capture takes them", () => {
     const screenshots = section("Screenshots");
     for (const fact of ["1440 by 900 pixels", "500 milliseconds without network requests, up to 20 seconds", "`screenshot.webp` and a 720-pixel-wide `card.webp`", "`npx playwright install chromium`"]) expect(screenshots).toContain(fact);
+  });
+
+  it("documents mock set storage at the paths storage.ts uses, with its limit's setting, default, and variable (add-mock-sets, task 2.3)", () => {
+    const storage = section("Logs and storage");
+    expect(storage).toContain(`| \`${MOCK_SETS_DIRECTORY}/<set>/<sha256>\` |`);
+    expect(storage).toContain(`| \`${MOCK_IMPORTS_DIRECTORY}/<import>/\` |`);
+    const { previews } = loadConfig({ appRoot: process.cwd(), environment: "production", env: {} });
+    expect(previews.maxMockStorageBytes).toBe(5 * 1024 ** 3);
+    expect(doc).toContain("| `previews.maxMockStorageBytes` (`FRONTEND_REGISTRY_PREVIEWS_MAX_MOCK_STORAGE_BYTES`) | 5 GiB |");
   });
 });

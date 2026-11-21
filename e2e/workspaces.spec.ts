@@ -6,6 +6,9 @@ import { framedRun } from "./support/fixture-app";
 import { buildQuotes } from "./support/quotes-fixtures";
 import { application, resetFromApplications, runOrdersPortal, visitorContext, waitForPage, workspaceOf } from "./support/running-app";
 import { choosePreset, chosenPreset, createPreset, listPresets } from "../src/lib/workspaces/presets";
+import { chooseSet, resolveActiveSet } from "../src/lib/mocks/active";
+import { listSets } from "../src/lib/mocks/records";
+import { mockApplicationId, seedMockSet } from "./support/mock-sets";
 
 /*
  * Anonymous workspaces on running applications (template-demo/demo-mode
@@ -127,4 +130,20 @@ test("Reset workspace clears the visitor's preset choices and leaves the applica
   await waitForPage(page, "Quotes desk");
   await expect(application(page).locator("[data-startup-user]")).toHaveText("none");
   await visitor.close();
+});
+
+test("Reset with a mock set chosen: Orders portal applies its default set for the presenter again, and Errors stays for everyone (add-mock-sets, task 2.6)", async ({ page, context, db }) => {
+  const running = await runOrdersPortal(page, db);
+  const id = mockApplicationId(db, running.application.slug);
+  seedMockSet(db, running.application.slug, [{ pattern: "/v1/orders", responses: [{ json: { orders: [] } }] }], { default: true });
+  const errors = seedMockSet(db, running.application.slug, [{ pattern: "/v1/orders", responses: [{ status: 503, json: { error: "Unavailable" } }] }], { name: "Errors" });
+  const presenter = await workspaceOf(context, db);
+  chooseSet(db, presenter.id, id, null, errors.publicId);
+  const active = () => resolveActiveSet(db, { applicationId: id, previewId: null, workspaceId: presenter.id });
+  expect(active()).toMatchObject({ set: { name: "Errors" }, source: "choice" });
+
+  await resetFromApplications(page);
+
+  expect(active()).toMatchObject({ set: { name: "Happy path" }, source: "application" });
+  expect(listSets(db, id).map((set) => set.name)).toEqual(["Errors", "Happy path"]);
 });
