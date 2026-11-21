@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { deleteApplication } from "../src/lib/applications/records";
 import { deletePreview } from "../src/lib/previews/lifecycle";
-import { openTool, startComment } from "./support/toolbar";
+import { openTool, routeQuotesPanelToBlue, startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { removeSavedPreview } from "../src/lib/applications/saved-previews";
@@ -234,12 +234,7 @@ test.describe("what a share link applies (restore-toolbar-tools-and-branch-previ
     const { desk, panel, blueQuotes } = await buildQuotes(db);
     await page.goto(framedRun(desk));
     await waitForPage(page, "Quotes desk");
-    await openTool(page, "microfrontends");
-    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
-    await microfrontends.locator('[data-member="quotesPanel"]').click();
-    await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
-    await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
-    await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    await routeQuotesPanelToBlue(page);
     const link = await shareLink(page);
 
     const colleague = await visitorContext(browser, db, baseURL!);
@@ -274,12 +269,7 @@ test.describe("what a share link applies (restore-toolbar-tools-and-branch-previ
     choosePreset(db, (await workspaceOf(context, db)).id, deskId(db), admin.publicId);
     await page.reload();
     await waitForPage(page, "Quotes desk");
-    await openTool(page, "microfrontends");
-    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
-    await microfrontends.locator('[data-member="quotesPanel"]').click();
-    await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
-    await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
-    await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    await routeQuotesPanelToBlue(page);
     await openTool(page, "settings");
     await page.getByRole("dialog", { name: "Settings" }).getByRole("group", { name: "Mode" }).getByLabel("Dark").check();
     await shareLink(page);
@@ -359,12 +349,7 @@ test.describe("what a share link applies (restore-toolbar-tools-and-branch-previ
     choosePreset(db, (await workspaceOf(context, db)).id, id, admin.publicId);
     await page.goto(framedRun(desk));
     await waitForPage(page, "Quotes desk");
-    await openTool(page, "microfrontends");
-    const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
-    await microfrontends.locator('[data-member="quotesPanel"]').click();
-    await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
-    await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
-    await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
+    await routeQuotesPanelToBlue(page);
     const link = await shareLink(page);
 
     // Quotes desk moves on and its shared build is deleted, the routed preview is removed, and the preset is deleted.

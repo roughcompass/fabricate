@@ -57,3 +57,7 @@ export interface LoggedCall {
   readonly set: string;
   readonly revision: number;
 }
+
+export function isLoggedCall(data: unknown): data is LoggedCall {
+  return typeof data === "object" && data !== null && (data as { type?: unknown }).type === MOCKS_CHANNEL && typeof (data as { outcome?: unknown }).outcome === "string";
+}

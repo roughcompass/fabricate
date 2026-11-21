@@ -1,8 +1,22 @@
 import type { Page } from "@playwright/test";
+import { createRequire } from "node:module";
 import { itemById } from "../../src/components/toolbar/toolbar-context";
 import { expect } from "./fixtures";
+import { application } from "./running-app";
 
 /** Helpers for the toolbar over a running application. */
+
+const require = createRequire(import.meta.url);
+
+/** The toolbar's controls' WCAG 2 A and AA violations, by rule, as axe-core finds them in the page. */
+export async function auditToolbar(page: Page): Promise<string[]> {
+  if (!(await page.evaluate(() => "axe" in window))) await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
+  return page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: unknown, options: unknown) => Promise<{ violations: { id: string }[] }> } }).axe;
+    const result = await axe.run({ include: [['[data-toolbar="controls"]']] }, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] }, resultTypes: ["violations"], iframes: false });
+    return result.violations.map((violation) => violation.id);
+  });
+}
 
 const menuDialog = (page: Page) => page.getByRole("dialog", { name: "Toolbar", exact: true });
 
@@ -63,4 +77,14 @@ export async function expectToolbarOnTop(page: Page): Promise<void> {
     });
   });
   expect(covered, "toolbar controls covered").toEqual([]);
+}
+
+/** Routes Quotes desk's quotesPanel to Quotes panel's feature/blue-quotes in Microfrontends, and waits until the frame shows it. */
+export async function routeQuotesPanelToBlue(page: Page): Promise<void> {
+  await openTool(page, "microfrontends");
+  const microfrontends = page.getByRole("dialog", { name: "Microfrontends" });
+  await microfrontends.locator('[data-member="quotesPanel"]').click();
+  await microfrontends.getByRole("group", { name: "Version" }).getByRole("radio", { name: /feature\/blue-quotes/ }).check();
+  await microfrontends.getByRole("button", { name: "Reload application", exact: true }).click();
+  await expect(application(page).getByRole("heading", { name: "Blue quotes panel", level: 2 })).toBeVisible();
 }

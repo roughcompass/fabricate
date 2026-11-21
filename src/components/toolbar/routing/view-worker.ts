@@ -72,6 +72,18 @@ function writeRecord(storage: Storage | null, key: string, record: MocksRecord):
   }
 }
 
+const LATENCIES: readonly MockLatency[] = ["off", "recorded", "slow"];
+
+/** The latency a view keeps for mocked answers; Off unless chosen. */
+export function readLatency(storage: Storage | null, view: string): MockLatency {
+  const latency = readRecord(storage, mocksKey(view)).latency;
+  return latency && LATENCIES.includes(latency) ? latency : "off";
+}
+
+export function writeLatency(storage: Storage | null, view: string, latency: MockLatency): void {
+  writeRecord(storage, mocksKey(view), { ...readRecord(storage, mocksKey(view)), latency });
+}
+
 /** Whether a view other than those keeping +own+ keys routes the build at +scope+, or applies a set to it. */
 export function usedElsewhere(storage: Storage | null, scope: string, own: readonly string[]): boolean {
   if (!storage) return false;

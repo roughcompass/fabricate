@@ -234,7 +234,7 @@ function soleView(): string | null {
 /** Answers an API-like call from a client of +view+ from its set, when the set is ready. */
 function answeredBySet(event: FetchEventLike, view: string, table: ViewTable): boolean {
   if (!apiLike(event.request) || !appliesSet(view, table)) return false;
-  event.respondWith(answerCall(event.request, table, { view, page: pageOf(event.clientId), origin: self.location.origin }));
+  event.respondWith(answerCall(event.request, table, { view, page: () => pageOf(event.clientId), origin: self.location.origin }));
   return true;
 }
 
@@ -276,7 +276,7 @@ self.addEventListener("fetch", (event) => {
           // Its document is taken to be the view's latest.
           const document = latest.get(view);
           if (document) owners.set(event.clientId, document);
-          return answerCall(request, current, { view, page: pageOf(event.clientId), origin: self.location.origin });
+          return answerCall(request, current, { view, page: () => pageOf(event.clientId), origin: self.location.origin });
         }
         if (strangers.size > 1000) strangers.clear();
         strangers.add(event.clientId);

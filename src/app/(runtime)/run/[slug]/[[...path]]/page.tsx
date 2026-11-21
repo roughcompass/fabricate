@@ -5,6 +5,8 @@ import { requireApplications } from "@/lib/applications/availability";
 import { buildComposition } from "@/lib/applications/composition";
 import { findApplication } from "@/lib/applications/records";
 import { findSavedPreview } from "@/lib/applications/saved-previews";
+import { resolveActiveSet } from "@/lib/mocks/active";
+import { listSets } from "@/lib/mocks/records";
 import { APPLICATION_STATUS_LABELS } from "@/lib/applications/status";
 import { getConfig } from "@/lib/config";
 import { getDb } from "@/lib/db/client";
@@ -34,6 +36,9 @@ import { parseRunSegment, routes } from "@/lib/web/routes";
  * the same way, its current build in place of the application's
  * (applications/saved-previews spec, "A saved preview runs full screen at
  * its own address"), and the toolbar's context row names its branch or tag.
+ *
+ * The view's mock set, if any, applies before the build loads, through the
+ * view's service worker (add-mock-sets, design decision 14).
  */
 export default async function RunRoute({ params, searchParams }: PageProps<"/run/[slug]/[[...path]]">) {
   const { slug: segment, path = [] } = await params;
@@ -66,6 +71,9 @@ export default async function RunRoute({ params, searchParams }: PageProps<"/run
   // A share link's theme, routing, and session preset apply to the view it opened (design decision 5).
   const applied = view.share ? openView(db, getConfig(), viewed.id, view.share.view) : null;
   const notice = [opened.notice, ...(applied?.notices ?? [])].filter(Boolean).join(" ") || null;
+  // The application's mock sets, and the one this view applies, which the frame waits for (add-mock-sets, design decision 14).
+  const sets = listSets(db, viewed.id).map(({ publicId, name, ruleCount, revision, isDefault }) => ({ publicId, name, ruleCount, revision, isDefault }));
+  const active = resolveActiveSet(db, { applicationId: viewed.id, previewId: shown ? (viewedPreview(db, viewed, shown.key)?.id ?? null) : null, workspaceId: workspace?.id ?? null });
   return (
     <RunningApplication
       slug={application.slug}
@@ -82,6 +90,7 @@ export default async function RunRoute({ params, searchParams }: PageProps<"/run
       composition={buildComposition(db, build.preview, application.packageDir)}
       session={{ presets, chosen, shared: applied?.session ? serialized(applied.session) : null }}
       shared={applied ? { theme: applied.theme ? parseThemeChoice(applied.theme) : null, routing: applied.routing } : null}
+      mocks={{ sets, active: { set: active.set, source: active.source } }}
     />
   );
 }

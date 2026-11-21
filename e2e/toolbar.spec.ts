@@ -1,6 +1,5 @@
 import type { Page } from "@playwright/test";
-import { createRequire } from "node:module";
-import { expectToolbarOnTop, openTool, openToolbarMenu, startComment } from "./support/toolbar";
+import { auditToolbar, expectToolbarOnTop, openTool, openToolbarMenu, startComment } from "./support/toolbar";
 import { E2E_PREVIEWS } from "./support/env";
 import { expect, expectNoHorizontalOverflow, test } from "./support/fixtures";
 import { paths } from "./support/paths";
@@ -19,20 +18,10 @@ import { useTheme } from "./support/shell";
 test.skip(!E2E_PREVIEWS, "Previews are off (E2E_PREVIEWS=0)");
 test.setTimeout(90_000);
 
-const require = createRequire(import.meta.url);
 const toolbar = (page: Page) => page.getByRole("complementary", { name: "Toolbar", exact: true });
 const menu = (page: Page) => page.getByRole("dialog", { name: "Toolbar", exact: true });
 const menuButton = (page: Page) => page.getByRole("button", { name: /^Open toolbar menu/ });
 const tooltip = (page: Page) => page.getByRole("tooltip");
-
-async function auditToolbar(page: Page) {
-  if (!(await page.evaluate(() => "axe" in window))) await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
-  return page.evaluate(async () => {
-    const axe = (window as unknown as { axe: { run: (context: unknown, options: unknown) => Promise<{ violations: { id: string }[] }> } }).axe;
-    const result = await axe.run({ include: [['[data-toolbar="controls"]']] }, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] }, resultTypes: ["violations"], iframes: false });
-    return result.violations.map((violation) => violation.id);
-  });
-}
 
 let running: FixtureApplication;
 
@@ -127,11 +116,11 @@ test.describe("the menu", () => {
     await expect(menu(page).getByRole("combobox", { name: "What do you need?" })).toBeFocused();
     await expect(menu(page).getByRole("combobox")).toHaveAttribute("placeholder", "What do you need?");
     const shortcuts = menu(page).getByRole("group", { name: "Shortcuts" }).getByRole("button");
-    expect(await shortcuts.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")))).toEqual(["Comment", "Share", "Microfrontends", "Accessibility", "Timing", "Session", "Settings"]);
+    expect(await shortcuts.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")))).toEqual(["Comment", "Share", "Microfrontends", "Accessibility", "Timing", "Session", "Data", "Settings"]);
     for (const group of ["Collaboration", "Inspect", "Runtime", "More"]) await expect(menu(page).getByRole("group", { name: group })).toBeVisible();
     expect(await menu(page).getByRole("group", { name: "Inspect" }).getByRole("option").allInnerTexts()).toEqual(["Microfrontends\nM", "Accessibility\nA", "Timing\nT"]);
-    expect(await menu(page).getByRole("group", { name: "Runtime" }).getByRole("option").allInnerTexts()).toEqual(["Session\nP", "Settings\nS"]);
-    expect(await menu(page).getByRole("option").evaluateAll((options) => options.map((option) => option.getAttribute("data-toolbar-item")))).toEqual(["comment", "comments", "share", "microfrontends", "accessibility", "timing", "session", "settings", "shortcuts", "hide"]);
+    expect(await menu(page).getByRole("group", { name: "Runtime" }).getByRole("option").allInnerTexts()).toEqual(["Session\nP", "Data\nD", "Settings\nS"]);
+    expect(await menu(page).getByRole("option").evaluateAll((options) => options.map((option) => option.getAttribute("data-toolbar-item")))).toEqual(["comment", "comments", "share", "microfrontends", "accessibility", "timing", "session", "data", "settings", "shortcuts", "hide"]);
     const [menuBox, pillBox] = [(await menu(page).boundingBox())!, (await toolbar(page).boundingBox())!];
     expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(pillBox.x);
 
@@ -191,6 +180,10 @@ test.describe("the menu", () => {
       ["dark", "Settings", "Runtime"],
       ["density", "Settings", "Runtime"],
       ["events", "Settings", "Runtime"],
+      // Data (add-mock-sets, task 10.1): "har" is in Share's name too, but Data is the one highlighted.
+      ["har", "Data", "Runtime"],
+      ["mock", "Data", "Runtime"],
+      ["network", "Data", "Runtime"],
     ] as const) {
       await menu(page).getByRole("combobox").fill(query);
       const option = menu(page).getByRole("group", { name: group }).getByRole("option");
@@ -275,6 +268,7 @@ test.describe("panels", () => {
     for (const [key, name] of [
       ["m", "Microfrontends"],
       ["p", "Session"],
+      ["d", "Data"],
       ["s", "Settings"],
     ] as const) {
       await page.keyboard.press(key);
@@ -299,7 +293,7 @@ test.describe("keyboard shortcuts", () => {
     const reference = page.getByRole("dialog", { name: "Preferences / Keyboard shortcuts" });
     await expect(reference).toBeVisible();
     const rows = reference.getByRole("list", { name: "Keyboard shortcuts" }).getByRole("listitem");
-    await expect(rows).toHaveCount(10);
+    await expect(rows).toHaveCount(11);
     for (const [name, key] of [
       ["Start or stop comment mode", "C"],
       ["Share", "L"],
@@ -307,6 +301,7 @@ test.describe("keyboard shortcuts", () => {
       ["Accessibility", "A"],
       ["Timing", "T"],
       ["Session", "P"],
+      ["Data", "D"],
       ["Settings", "S"],
       ["Keyboard shortcuts", "?"],
       ["Hide or show the toolbar", "."],

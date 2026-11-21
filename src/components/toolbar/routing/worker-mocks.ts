@@ -203,7 +203,8 @@ function log(entry: Omit<LoggedCall, "type" | "id">): void {
 /** Where a call came from, for its log entry. */
 export interface CallSource {
   readonly view: string;
-  readonly page: string | null;
+  /** The page that made the call, once it's known: a page names itself to the worker as it starts, which can be after its first calls. */
+  readonly page: () => string | null;
   /** The Frontend Registry's origin, which relative calls use. */
   readonly origin: string;
 }
@@ -219,7 +220,7 @@ export async function answerCall(request: Request, table: ViewTable, source: Cal
   const routed = routeOf(request.url, prefixes(table));
   const method = request.method.toUpperCase();
   const record = (outcome: CallOutcome, details: { status?: number | null; error?: string | null; rule?: LoggedCall["rule"]; body?: string | null }) =>
-    log({ view: source.view, page: source.page, method, url: request.url, outcome, rule: details.rule ?? null, status: details.status ?? null, error: details.error ?? null, at: started, durationMs: Date.now() - started, body: details.body ?? null, set: set.compiled.set, revision: set.compiled.revision });
+    log({ view: source.view, page: source.page(), method, url: request.url, outcome, rule: details.rule ?? null, status: details.status ?? null, error: details.error ?? null, at: started, durationMs: Date.now() - started, body: details.body ?? null, set: set.compiled.set, revision: set.compiled.revision });
   /** A call answered at its own address, or one routing sent elsewhere: passed through, or failed with a status of 400 or more. */
   const passed = (response: Response, body: string | null) => {
     const failed = response.type !== "opaque" && response.status >= 400;

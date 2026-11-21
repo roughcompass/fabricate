@@ -220,7 +220,7 @@ An application that doesn't exist, or has no successful build yet, answers **App
 
 ## The toolbar
 
-The toolbar works on the running application's page, which the Frontend Registry serves from its own origin. Select the pill's menu button, or use a tool's key, to open the menu. The menu's search, **What do you need?**, finds a tool by its name or by words such as "a11y", "web vitals", "link", "mfe", "routing", "storage", "cookies", "dark", "density", or "events"; the arrow keys move, Enter opens, and Esc closes. With no search, the menu also names the application, its branch, and the commit shown; selecting that line opens the application's page in the Frontend Registry, in a new tab.
+The toolbar works on the running application's page, which the Frontend Registry serves from its own origin. Select the pill's menu button, or use a tool's key, to open the menu. The menu's search, **What do you need?**, finds a tool by its name or by words such as "a11y", "web vitals", "link", "mfe", "routing", "storage", "cookies", "mock", "HAR", "dark", "density", or "events"; the arrow keys move, Enter opens, and Esc closes. With no search, the menu also names the application, its branch, and the commit shown; selecting that line opens the application's page in the Frontend Registry, in a new tab.
 
 | Tool | Key | What it does |
 |---|---|---|
@@ -231,11 +231,12 @@ The toolbar works on the running application's page, which the Frontend Registry
 | **Accessibility** | A | Audits the page for WCAG 2 A and AA problems. |
 | **Timing** | T | Shows the page's Web Vitals, its load order, how long each interaction took, and its hot spots. |
 | **Session** | P | Chooses the session preset the application starts with, and edits the application's presets. |
+| **Data** | D | Chooses the mock set that answers the application's API calls in this view, and lists the calls with what answered each. |
 | **Settings** | S | Switches a Salt application's theme, and logs the page's event bus. |
 | **Keyboard shortcuts** | ? | Lists the keys, and turns single-key shortcuts and guided hints on or off. |
 | **Hide toolbar** | . | Shrinks the toolbar to a **Show toolbar** tab at the right edge; press **.** again to bring it back. |
 
-The menu groups them under **Collaboration** (Comment, Comments, and Share), **Inspect** (Microfrontends, Accessibility, and Timing), **Runtime** (Session and Settings), and **More**.
+The menu groups them under **Collaboration** (Comment, Comments, and Share), **Inspect** (Microfrontends, Accessibility, and Timing), **Runtime** (Session, Data, and Settings), and **More**.
 
 Keys work anywhere on the page, the application included, except while you type in a field, and not with Command, Control, or Alt held. Esc closes the open tooltip, menu, mode, or panel, in that order. If the keys conflict with your browser or assistive technology, clear **Use single-key shortcuts** under **Keyboard shortcuts**; Esc always works. Whether the toolbar is hidden, and whether single-key shortcuts are on, are kept in your browser for every application. While a tool's panel is open, or comment mode is on, its button sits on the pill, and selecting it closes the tool.
 
@@ -309,6 +310,28 @@ The limits:
 - local storage, session storage, and cookie names starting with `frontend-registry`, which are the Frontend Registry's own, are refused, as are cookie names that aren't valid and the query parameter `share`, which share links use.
 
 Presets are stored unencrypted with their application. Everyone who can open the application can read them, and so can any build the browser runs, and what a preset writes to storage is readable by every build on the Frontend Registry's origin. Never put real secrets in them; the panel and the form say so.
+
+### Data
+
+**Data** chooses which [mock set](#mock-sets), if any, answers the running application's API calls in your browser, and lists the calls the page makes with what answered each.
+
+- **Mock set** lists **None: the application's own network** first, then each of the application's sets by name, with its rule count and its **Default** mark. Choosing one reloads the frame at its route with it. The choice is kept for your workspace and the view, the tracked branch or one saved preview; another visitor's choice never changes yours. Below the choice, Data says where the set applying now came from. A view applies, in this order: the set a [share link](#share-links) names, for that view only; your choice for the view; the saved preview's own default, when it has one; the application's default; or none.
+- **Applying** happens before the build loads: the frame waits while the Frontend Registry's service worker fetches the set's current rules, so the build's first call is answered by them. When they can't be fetched, the frame loads without them, and Data says why. The worker is the one version routing uses, registered with the scope of the build shown, `/previews/<build>/`; see [Security](previews.md#security).
+- **What's answered:** fetch, XHR, and event-stream calls from the frame's documents and from the dedicated workers they start, calls to other origins included, such as `https://api.orders.test/v1/orders`. A mocked call never leaves the browser. A set never answers a document, script, stylesheet, image, font, or worker script, and a call under the build's own path gets the build's file whenever the build has one. Calls from Frontend Registry pages, other tabs, a repository's preview page, and other browsers aren't answered, except through a share link. A worker started from a `blob:` address is answered only while one view of its build is open in your browser. A call no rule matches goes to its own address, unless the set answers such calls as not mocked.
+- **Latency:** **Off** answers at once, **As recorded** waits as long as each response was recorded taking, up to 10 seconds, and **Slow** waits 2 seconds. It applies from the next call, never to calls that go to their own address, and is kept in your browser for the view, under `frontend-registry:mocks:<view>`, where the view also records the build it applies a set to.
+- **Requests** lists the page's API calls since its document loaded, newest first, up to 500, while a set applies. Each shows its method, address, status, time, and one outcome: **Mocked by rule** and the rule, **Passed through**, **Not matched**, or **Failed**. A call that went to its own address failed when it answered 400 or more, or couldn't connect or was blocked by CORS: the browser doesn't say which. The filters show each outcome with its count, and **Clear requests** empties the list. Select a call for its detail: a mocked call offers **Edit rule**, which opens its rule's form in a new tab, and a call that wasn't matched or that failed offers **Create rule**.
+- **Create rule** opens a form in the panel with the call's method, path, query, and body: the path after the build's own path for a call under it. Write the response's status, content type, and body, and **Create rule** adds the rule to the set applying, which answers from the next call without reloading, its responses starting over. Saved with no status and no body, the rule is added needing a response, and answers nothing until one is written on its page. With no set applying, **New mock set** creates an empty set, applies it, and reloads the frame.
+- **Changes saved elsewhere,** such as a rule edited on the set's page, apply when the frame next loads a document; until then, the view keeps the rules it loaded with.
+- **Manage mock sets** opens the application's [Mock sets](#mock-sets) section in a new tab.
+
+While a set applies, the pill shows the Data button at rest, marked, and its tooltip reads, for example, "Data · Mock set: Happy path". Selecting it opens Data.
+
+Mock sets can't apply, and Data says so, offering no choice, when:
+- the Frontend Registry isn't served over HTTPS or from localhost: "Mock sets need HTTPS. Browsers allow the service worker they use only on pages served over HTTPS or from localhost.";
+- the browser doesn't allow service workers: "This browser doesn't allow service workers here, so mock sets can't apply.";
+- the build has its own service worker for its path: "Mock sets can't apply beside the application's own service worker for its build's path."
+
+Each adds "Screenshots of the build still apply its default mock set.", since captures don't use the browser's worker. When the build registers its own service worker while a set applies, Data says "The application registered its own service worker, so mock sets stop applying at the next load." **WebSockets aren't mocked yet:** Requests lists each WebSocket connection the page opens, with its address and whether it opened or never did, never its messages.
 
 ### Settings
 

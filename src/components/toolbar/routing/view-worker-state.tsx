@@ -4,7 +4,7 @@ import { createContext, use, useEffect, useEffectEvent, useRef, useState } from 
 import { routes } from "@/lib/web/routes";
 import { usePreload, useTargetDocument } from "../target-document";
 import { useToolbarView } from "../view-context";
-import type { ArmedMocks } from "./table";
+import { type ArmedMocks, type ViewIdentity, viewId } from "./table";
 import { type RoutingPart, type ViewWorkerStatus, type WorkerRefusal, ViewWorker, browserWorkerEnvironment, mocksKey, routingKey, workerRefusal } from "./view-worker";
 
 /**
@@ -27,6 +27,10 @@ interface ViewWorkerState {
   readonly refusal: WorkerRefusal | null;
   /** What the last load applied, and what the worker answered; null before the first load. */
   readonly status: ViewWorkerStatus | null;
+  /** The view's key among those the worker holds (viewId), which its request log names; null until the page runs in the browser. */
+  readonly viewKey: string | null;
+  /** Arms the worker again at once with the parts as they are now, without loading the frame again, as a latency or a new rule needs. */
+  apply(): Promise<void>;
   /** Adds a part the coordinator reads before each load; returns a function that removes it. */
   contribute<K extends keyof Readers>(kind: K, read: NonNullable<Readers[K]>): () => void;
 }
@@ -74,6 +78,8 @@ export function ViewWorkerProvider({ share, children }: { share: string | null; 
   const [refusal, setRefusal] = useState<WorkerRefusal | null>(null);
   const [status, setStatus] = useState<ViewWorkerStatus | null>(null);
   const worker = useRef<ViewWorker | null>(null);
+  // The view is its address and the share token the page's address keeps, read in the browser.
+  const [identity] = useState<ViewIdentity | null>(() => (typeof window === "undefined" ? null : { view: routes.runningApplication(view.slug, "", undefined, view.preview), share: new URLSearchParams(window.location.search).get("share") }));
   const [contribute] = useState(() => <K extends keyof Readers>(kind: K, read: NonNullable<Readers[K]>) => {
     readers[kind] = read;
     return () => {
@@ -81,14 +87,8 @@ export function ViewWorkerProvider({ share, children }: { share: string | null; 
     };
   });
 
-  /** The view's worker, made in the browser on first use: the view is its address and the share token the page's address keeps. */
-  const viewWorker = () =>
-    (worker.current ??= new ViewWorker(
-      { view: routes.runningApplication(view.slug, "", undefined, view.preview), share: new URLSearchParams(window.location.search).get("share") },
-      scope,
-      share ? null : { routing: routingKey(view.key), mocks: mocksKey(view.key) },
-      browserWorkerEnvironment(),
-    ));
+  /** The view's worker, made in the browser on first use. */
+  const viewWorker = () => (worker.current ??= new ViewWorker(identity!, scope, share ? null : { routing: routingKey(view.key), mocks: mocksKey(view.key) }, browserWorkerEnvironment()));
 
   // Whether this browser and the build's path allow the worker at all, said before anyone chooses.
   useEffect(() => {
@@ -101,11 +101,16 @@ export function ViewWorkerProvider({ share, children }: { share: string | null; 
     };
   }, [scope]);
 
-  usePreload(async (address) => {
+  /** Composes the parts as they are now and arms the worker with them, or releases it. */
+  const prepare = async () => {
     const coordinator = viewWorker();
     coordinator.setRouting(readers.routing?.() ?? NO_ROUTING);
     coordinator.setMocks(readers.mocks?.() ?? null);
     setStatus(await coordinator.prepare(frameAddress(target.frame), target.page));
+  };
+
+  usePreload(async (address) => {
+    await prepare();
     return address;
   });
 
@@ -117,5 +122,5 @@ export function ViewWorkerProvider({ share, children }: { share: string | null; 
     return () => window.clearInterval(timer);
   }, [applies, status]);
 
-  return <ViewWorkerContext value={{ refusal, status, contribute }}>{children}</ViewWorkerContext>;
+  return <ViewWorkerContext value={{ refusal, status, contribute, viewKey: identity ? viewId(identity) : null, apply: prepare }}>{children}</ViewWorkerContext>;
 }

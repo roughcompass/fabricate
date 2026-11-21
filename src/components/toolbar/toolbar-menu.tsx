@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { ITEM_GROUPS, TOOLBAR_ITEMS, type ToolbarItem, keyLabel, matchItems, useToolbar } from "./toolbar-context";
+import { ITEM_GROUPS, TOOLBAR_ITEMS, type ToolbarItem, bestMatch, keyLabel, matchItems, useToolbar } from "./toolbar-context";
 import { tooltipFor } from "./toolbar-tooltip";
 import styles from "./toolbar.module.css";
 
@@ -37,7 +37,7 @@ export function ToolbarMenu({ context, commentCount, highlight, onClose }: { con
 
   const matches = matchItems(query);
   const filtering = query.trim() !== "";
-  const current = matches.find((item) => item.id === highlighted) ?? (filtering ? matches[0] : undefined);
+  const current = matches.find((item) => item.id === highlighted) ?? (filtering ? bestMatch(query, matches) : undefined);
 
   useEffect(() => {
     search.current?.focus();
