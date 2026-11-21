@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db/client";
 import { chosenSet, resolveActiveSet } from "@/lib/mocks/active";
 import { NO_STORE, jsonObject, mockApplication, mockChange, requestedView, setInputFrom, shownSet } from "@/lib/mocks/api";
+import { recaptureApplication } from "@/lib/mocks/recapture";
 import { createSet, editSet, listSets } from "@/lib/mocks/records";
 import { currentWorkspace } from "@/lib/workspaces/request";
 
@@ -54,5 +55,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/applicatio
   const body = await jsonObject(request);
   if (body instanceof Response) return body;
   const set = new URL(request.url).searchParams.get("set") ?? "";
-  return mockChange(request, (workspace) => Response.json({ set: shownSet(editSet(getDb(), application.id, set, Number(body.lockVersion), setInputFrom(body), workspace.displayName)) }, { headers: NO_STORE }));
+  return mockChange(request, (workspace) => {
+    const edited = editSet(getDb(), application.id, set, Number(body.lockVersion), setInputFrom(body), workspace.displayName);
+    // A change to the default set captures its builds again (add-mock-sets, design decision 11).
+    recaptureApplication(getDb(), application.id);
+    return Response.json({ set: shownSet(edited) }, { headers: NO_STORE });
+  });
 }

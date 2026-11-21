@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db/client";
 import { NO_STORE, jsonObject, mockChange, mockSetOf, ruleInputFrom, shownRule } from "@/lib/mocks/api";
+import { recaptureApplication } from "@/lib/mocks/recapture";
 import { createRule, editRule } from "@/lib/mocks/records";
 
 /*
@@ -28,6 +29,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/application
   if (body instanceof Response) return body;
   return mockChange(request, (workspace) => {
     const { rule, set } = createRule(getDb(), found.application.id, found.set.publicId, ruleInputFrom(body), workspace.displayName);
+    // A change to the default set captures its builds again (add-mock-sets, design decision 11).
+    recaptureApplication(getDb(), found.application.id);
     return Response.json({ rule: shownRule(rule), set: { publicId: set.publicId, revision: set.revision, ruleCount: set.ruleCount } }, { status: 201, headers: NO_STORE });
   });
 }
@@ -41,6 +44,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/applicatio
   const ruleId = new URL(request.url).searchParams.get("rule") ?? "";
   return mockChange(request, (workspace) => {
     const { rule, set } = editRule(getDb(), found.application.id, found.set.publicId, ruleId, Number(body.lockVersion), ruleInputFrom(body), workspace.displayName);
+    recaptureApplication(getDb(), found.application.id);
     return Response.json({ rule: shownRule(rule), set: { publicId: set.publicId, revision: set.revision, ruleCount: set.ruleCount } }, { headers: NO_STORE });
   });
 }

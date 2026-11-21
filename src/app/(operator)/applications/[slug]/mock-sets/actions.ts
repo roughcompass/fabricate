@@ -61,7 +61,7 @@ export async function setDefaultAction(formData: FormData): Promise<void> {
   const set = text(formData, "set", 40);
   found(() => setApplicationDefault(getDb(), application.id, set));
   recaptureApplication(getDb(), application.id);
-  redirect(routes.application(application.slug, { notice: "mock-default-set", set }));
+  redirect(routes.application(application.slug, { notice: "mock-default-set" }));
 }
 
 /** Stop using as default: views no one chose a set for use the application's own network. */
@@ -205,17 +205,16 @@ export async function saveRuleAction(slug: string, set: string, rule: string | n
   const version = Number(formData.get("lockVersion")) || 0;
   if (text(formData, "intent", 20) === "add-response") return { values: { ...values, responses: [...values.responses, { status: "200", contentType: "application/json", headers: "", body: "", keep: "", keepSize: 0, latencyMs: "0" }] }, errors: {}, lockVersion: version };
   const name = await byName();
-  let saved: string;
   try {
     const input = ruleInputOf(values);
-    saved = found(() => (rule ? editRule(getDb(), application.id, set, rule, lockVersion(formData), input, name) : createRule(getDb(), application.id, set, input, name))).rule.publicId;
+    found(() => (rule ? editRule(getDb(), application.id, set, rule, lockVersion(formData), input, name) : createRule(getDb(), application.id, set, input, name)));
   } catch (error) {
     if (error instanceof ValidationError) return { values, errors: errorsFrom(error), lockVersion: version };
     if (error instanceof StaleMockRuleError) return { values: ruleFields(getConfig(), { publicId: set }, error.current), errors: { base: [error.message] }, lockVersion: error.current.lockVersion };
     throw error;
   }
   recaptureApplication(getDb(), application.id);
-  redirect(routes.mockSet(slug, set, { notice: rule ? "rule-updated" : "rule-created", rule: saved }));
+  redirect(routes.mockSet(slug, set, { notice: rule ? "rule-updated" : "rule-created" }));
 }
 
 /** Runs a row action on the rule the form names, then opens the page of rules it came from. */
