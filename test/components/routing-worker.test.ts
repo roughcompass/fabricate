@@ -198,16 +198,11 @@ describe("the routing worker", () => {
     expect(fetched.at(-1)).toBe(`${PANEL}remoteEntry.js`);
   });
 
-  it("handles a dedicated worker a routed document starts, from its script's request (add-mock-sets, task 8.2)", async () => {
+  it("leaves a dedicated worker a routed document starts alone without a set, as routing always has (add-mock-sets, task 8.2)", async () => {
     await arm();
     await navigation(`${ORIGIN}/previews/pvw_desk/`, `${ORIGIN}/run/quotes-desk`);
-    // The worker's script itself is left to the browser, as any file of the build.
     expect(await request(`${ORIGIN}/previews/pvw_desk/rates-worker.js`, { clientId: "frame-1", destination: "worker", resultingClientId: "worker-1" })).toBeNull();
-    await request("http://127.0.0.1:9311/remoteEntry.js", { clientId: "worker-1" });
-    expect(fetched.at(-1)).toBe(`${PANEL}remoteEntry.js`);
-    // A worker that an unhandled page starts isn't handled.
-    await request(`${ORIGIN}/previews/pvw_desk/rates-worker.js`, { clientId: "a-tab", destination: "worker", resultingClientId: "worker-2" });
-    expect(await request("http://127.0.0.1:9311/remoteEntry.js", { clientId: "worker-2" })).toBeNull();
+    expect(await request("http://127.0.0.1:9311/remoteEntry.js", { clientId: "worker-1" })).toBeNull();
   });
 
   it("stops routing once the view is disarmed", async () => {
@@ -264,11 +259,16 @@ describe("the view's worker with a mock set", () => {
     expect(fetched.filter((each) => each.includes("api.orders.test"))).toEqual([]);
   });
 
-  it("answers the calls of a dedicated worker the frame's document starts (A worker's call)", async () => {
-    await arm();
+  it("answers the calls of a dedicated worker the frame's document starts, and routes its files (A worker's call)", async () => {
+    await arm({ ...ORDERS, routes: [{ name: "quotesPanel", mechanism: "module-federation", from: "http://127.0.0.1:9311/remoteEntry.js", to: `${ORIGIN}/previews/pvw_panel/remoteEntry.js` }] });
     await open();
     expect(await file(`${ORIGIN}${DESK}assets/rates-worker.js`, "worker", "frame-1", "rates-worker")).toBeNull();
     expect(await (await call(`${ORDERS_API}/v1/orders`, "rates-worker"))!.json()).toEqual({ orders: [1, 2, 3] });
+    await file("http://127.0.0.1:9311/chunk.js", "script", "rates-worker");
+    expect(fetched.at(-1)).toBe(`GET ${ORIGIN}/previews/pvw_panel/chunk.js`);
+    // A worker another page starts isn't the view's.
+    await file(`${ORIGIN}${DESK}assets/rates-worker.js`, "worker", "a-tab", "other-worker");
+    expect(await file("http://127.0.0.1:9311/chunk.js", "script", "other-worker")).toBeNull();
   });
 
   it("answers a worker started from a blob: address only while one view of the build is armed, and never another page of the scope", async () => {

@@ -203,13 +203,14 @@ async function routedJson(response: Response, table: ViewTable): Promise<Respons
 }
 
 /**
- * A dedicated worker's script, requested by a handled client: the worker
- * it creates is handled under the same view, so its own calls are answered
- * too. The browser names the worker's client in `resultingClientId`, where
- * it gives one.
+ * A dedicated worker's script, requested by a handled client of a view
+ * that applies a set: the worker it creates is handled under the same view,
+ * so its own calls are answered too. The browser names the worker's client
+ * in `resultingClientId`, where it gives one. Without a set, workers are
+ * left alone, as routing always left them.
  */
-function adoptWorker(event: FetchEventLike, handled: Handled): void {
-  if (event.request.destination !== "worker" || !event.resultingClientId || routed.has(event.resultingClientId)) return;
+function adoptWorker(event: FetchEventLike, handled: Handled, table: ViewTable): void {
+  if (!table.mocks || event.request.destination !== "worker" || !event.resultingClientId || routed.has(event.resultingClientId)) return;
   routed.set(event.resultingClientId, { view: handled.view, url: event.request.url });
   owners.set(event.resultingClientId, event.clientId);
 }
@@ -285,7 +286,7 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
-  adoptWorker(event, handled);
+  adoptWorker(event, handled, table);
   if (answeredBySet(event, handled.view, table)) return;
   if (request.method !== "GET") return;
   const target = routeUrl(request.url, prefixes(table));
