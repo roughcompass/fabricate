@@ -1,5 +1,7 @@
+import fs from "node:fs";
 import type { Page } from "@playwright/test";
 import type { Db } from "../src/lib/db/client";
+import { createDraft, saveDraft } from "../src/lib/mocks/imports";
 import { allRules, editRule } from "../src/lib/mocks/records";
 import { E2E_PREVIEWS } from "./support/env";
 import { buildOrdersPortal, framedRun, ordersPortalRemote, saveOrdersPortalPreview } from "./support/fixture-app";
@@ -7,7 +9,7 @@ import { expect, test } from "./support/fixtures";
 import { ORDERS_HAPPY_PATH, type SeedRule, mockApplicationId, seedMockSet, setDefault } from "./support/mock-sets";
 import { buildQuotes } from "./support/quotes-fixtures";
 import { serverConfig } from "./support/results";
-import { application, visitorContext, waitForPage } from "./support/running-app";
+import { application, visitorContext, waitForPage, workspaceOf } from "./support/running-app";
 import { useTheme } from "./support/shell";
 import { auditToolbar, openTool, routeQuotesPanelToBlue } from "./support/toolbar";
 
@@ -249,9 +251,12 @@ test.describe("where a set can't apply", () => {
 });
 
 test.describe("routing and a mock set together", () => {
-  test("loads the routed panel from feature/blue-quotes, and the desk's name from the rule (Quotes desk routed and mocked)", async ({ page, db }) => {
+  test("loads the routed panel from feature/blue-quotes, and the desk's name from the rule imported from quotes-desk.har (Quotes desk routed and mocked)", async ({ page, db, context }) => {
     const { desk } = await buildQuotes(db);
-    seedMockSet(db, desk.application.slug, [{ pattern: "/v1/desk", responses: [{ json: { name: "FX desk" } }] }], { default: true });
+    // Imported as Upload HAR and Review HAR do: the first set of an application becomes its default.
+    const workspace = await workspaceOf(context, db);
+    const draft = createDraft(db, { applicationId: mockApplicationId(db, desk.application.slug), workspaceId: workspace.id, fileName: "quotes-desk.har", target: null, setName: "Happy path", fromOnboarding: false }, fs.readFileSync("test/fixtures/har/quotes-desk.har", "utf8"), serverConfig());
+    saveDraft(db, draft, null, serverConfig());
     await page.goto(framedRun(desk));
     await waitForPage(page, "Quotes desk");
     await routeQuotesPanelToBlue(page);
