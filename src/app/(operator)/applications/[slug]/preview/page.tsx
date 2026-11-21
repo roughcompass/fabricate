@@ -5,6 +5,7 @@ import { ProgressPoller } from "@/components/progress-poller";
 import { DeviceControls } from "@/components/preview/device-controls";
 import { DeviceFrame, PreviewScale } from "@/components/preview/device-frame";
 import { FileTree } from "@/components/preview/file-tree";
+import { MockedDeviceFrame, PreviewMocksRelease } from "@/components/preview/preview-mocks";
 import { EditorTemplate } from "@/components/templates/editor-template";
 import { Alert } from "@/components/ui/alert";
 import { CodeBlock } from "@/components/ui/code-block";
@@ -19,10 +20,13 @@ import { type Application, branchLabel, findApplication, statusSnapshot } from "
 import { type SavedPreview, SAVED_PREVIEW_LIMIT, savedPreviewName, savedPreviewOfRef, savedPreviewsOf } from "@/lib/applications/saved-previews";
 import { APPLICATION_STATUS_LABELS } from "@/lib/applications/status";
 import { getDb } from "@/lib/db/client";
+import { resolveActiveSet } from "@/lib/mocks/active";
 import { previewBasePath } from "@/lib/previews/toolchain";
 import { DEVICES, type DeviceState, ORIENTATION_LABELS, deviceQuery, frameSize, parseDeviceState } from "@/lib/web/device-preview";
 import { type SearchParams, param } from "@/lib/web/query";
 import { routes } from "@/lib/web/routes";
+import { viewedApplication, viewedPreview } from "@/lib/workspaces/access";
+import { currentWorkspace } from "@/lib/workspaces/request";
 import { ApplicationsPoller } from "../../applications-poller";
 import { ApplicationStatusLabel, LogExcerpt, applicationImage, savedPreviewImage } from "../../views";
 import { RefFinder, refOptions, remainingPreviews } from "../ref-choice";
@@ -84,6 +88,11 @@ function hrefOf(slug: string, state: PreviewState): string {
  * since been saved opens that saved preview by its key, and a removed key
  * opens the tracked branch with a notice. The Code tab shows the package's
  * committed files at the commit shown. Every choice lives in the address.
+ *
+ * The frame applies the same mock set as the running application of the
+ * build shown, an unsaved branch or tag the tracked branch's, before it
+ * loads, and a line above the window names it (add-mock-sets, design
+ * decision 16).
  */
 export default async function ApplicationPreviewPage({ params, searchParams }: PageProps<"/applications/[slug]/preview">) {
   requireApplications();
@@ -114,6 +123,9 @@ export default async function ApplicationPreviewPage({ params, searchParams }: P
   const remaining = unsaved ? remainingPreviews(savedPreviews.length) : null;
   const notice = param(query, "notice");
   const base = preview ? previewBasePath(preview) : null;
+  // The mock set the build shown applies, by the running application's rules; an unsaved ref takes the tracked branch's.
+  const viewed = base ? viewedApplication(getDb(), slug) : null;
+  const active = viewed ? resolveActiveSet(getDb(), { applicationId: viewed.id, previewId: saved ? (viewedPreview(getDb(), viewed, saved.saved.key)?.id ?? null) : null, workspaceId: (await currentWorkspace())?.id ?? null }) : null;
   const running = routes.runningApplication(slug, "", undefined, state.preview);
   const fullScreen = base
     ? unsaved
@@ -187,13 +199,15 @@ export default async function ApplicationPreviewPage({ params, searchParams }: P
 
           {state.view === "preview" ? (
             preview ? (
-              <DeviceFrame
+              <PreviewFrame
                 key={`${state.device}-${state.orientation}-${preview}`}
-                src={previewBasePath(preview)}
+                slug={slug}
+                saved={saved ? saved.saved.key : null}
+                mocks={active?.set ?? null}
+                base={previewBasePath(preview)}
                 width={size.width}
                 height={size.height}
                 title={`${application.name}, ${shownRef}, on ${DEVICES[state.device].label}, ${ORIENTATION_LABELS[state.orientation]}`}
-                address={previewBasePath(preview)}
               />
             ) : saved && saved.frame.kind !== "ready" ? (
               <SavedFrameState application={application} saved={saved.saved} frame={saved.frame} />
@@ -213,6 +227,21 @@ export default async function ApplicationPreviewPage({ params, searchParams }: P
         </PreviewScale>
       </div>
     </EditorTemplate>
+  );
+}
+
+/**
+ * The build shown, running in the device frame at +base+: once the mock set
+ * +mocks+ applies to it, when the view has one, under the line that names
+ * it; otherwise at once, releasing a worker preview mode armed before.
+ */
+function PreviewFrame({ slug, saved, mocks, base, ...frame }: { slug: string; saved: string | null; mocks: { publicId: string; name: string; revision: number } | null; base: string; width: number; height: number; title: string }) {
+  if (mocks) return <MockedDeviceFrame mocks={{ application: slug, set: mocks.publicId, name: mocks.name, revision: mocks.revision, preview: saved }} base={base} address={base} {...frame} />;
+  return (
+    <>
+      <PreviewMocksRelease slug={slug} preview={saved} base={base} />
+      <DeviceFrame src={base} address={base} {...frame} />
+    </>
   );
 }
 

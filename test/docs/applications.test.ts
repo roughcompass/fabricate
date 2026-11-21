@@ -7,6 +7,7 @@ import { loadConfig } from "@/lib/config";
 import { DEVICES } from "@/lib/web/device-preview";
 import { COMMENT_LIMIT, THREAD_LIMIT } from "@/lib/workspaces/workspaces";
 import { DESCRIPTION_LIMIT, MB, NAME_LIMIT, RESPONSE_BODY_LIMIT, RESPONSE_LIMIT, RULE_LIMIT, SET_BODY_LIMIT, SET_LIMIT } from "@/lib/mocks/model";
+import { previewMockLine } from "@/components/preview/preview-mocks";
 import { REGISTERED_WHILE_VIEWING, SCREENSHOTS_STILL_APPLY, mockRefusalText } from "@/components/toolbar/data/mock-refusals";
 import { REQUEST_LIMIT } from "@/components/toolbar/data/request-log";
 import { TOOLBAR_ITEMS } from "@/components/toolbar/toolbar-context";
@@ -76,5 +77,12 @@ describe("docs/applications.md", () => {
     expect(data).toContain(`"${REGISTERED_WHILE_VIEWING}"`);
     expect(data).toContain('"Data · Mock set: Happy path"');
     expect(doc).toContain("**Runtime** (Session, Data, and Settings)");
+  });
+
+  it("quotes preview mode's mock set line as the page writes it (add-mock-sets, task 11.2)", () => {
+    const start = doc.indexOf("\n### The Preview tab\n");
+    const tab = doc.slice(start, doc.indexOf("\n### ", start + 5));
+    expect(tab).toContain(`"${previewMockLine("Happy path", null)}"`);
+    expect(tab).toContain(`"${previewMockLine("Happy path", { refusal: "foreign", readiness: null })}"`);
   });
 });
