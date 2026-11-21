@@ -37,12 +37,28 @@ interface Failure {
   readonly error: string | null;
 }
 
+/**
+ * A call's address as the failed-calls alert shows it, and as a rule made
+ * from it matches it. A call to the capture's own static server, whose
+ * origin and port are the capture's alone, is the path a mock set matches it
+ * by: the part after the build's base for a call under it, or the path for a
+ * root-relative one, with the query either way.
+ */
+export function recordedAddress(url: string, origin: string, base: string): string {
+  if (!url.startsWith(`${origin}/`)) return url;
+  const parsed = new URL(url);
+  const path = parsed.pathname.startsWith(base) ? `/${parsed.pathname.slice(base.length)}` : parsed.pathname;
+  return `${path}${parsed.search}`;
+}
+
 /** The calls that failed during one capture, distinct by method and redacted address, in the order they first failed. */
 class FailureRecorder {
   private readonly failures = new Map<string, Failure & { occurrences: number }>();
 
+  constructor(private readonly server: { origin: string; base: string }) {}
+
   add(failure: Failure): void {
-    const url = redact(failure.url).slice(0, URL_LIMIT);
+    const url = redact(recordedAddress(failure.url, this.server.origin, this.server.base)).slice(0, URL_LIMIT);
     const key = `${failure.method} ${url}`;
     const known = this.failures.get(key);
     if (known) known.occurrences++;
@@ -69,7 +85,7 @@ export interface CaptureMocks {
  * record.
  */
 export async function applyMocks(context: BrowserContext, page: Page, session: CDPSession, options: { origin: string; base: string; mocks: CaptureMocks }): Promise<() => CaptureRecord["failures"]> {
-  const recorder = new FailureRecorder();
+  const recorder = new FailureRecorder(options);
   const answered = new WeakSet<Request>();
   const { set, directory } = options.mocks;
   const sequences: Sequences = new Map();

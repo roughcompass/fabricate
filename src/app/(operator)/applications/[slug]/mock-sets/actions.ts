@@ -93,7 +93,7 @@ export async function addFailedCallsAction(formData: FormData): Promise<void> {
   const application = applicationOf(text(formData, "application", 100));
   const set = text(formData, "set", 40);
   const failed = failedCallsOf(getDb(), currentBuildId(getDb(), application.id));
-  const calls = (failed?.calls ?? []).filter((call) => call.kind !== "websocket" && /^https?:/.test(call.url));
+  const calls = (failed?.calls ?? []).filter((call) => call.kind !== "websocket" && /^(https?:|\/)/.test(call.url));
   const name = await byName();
   try {
     found(() => addRulesFromCalls(getDb(), application.id, set, calls, name));

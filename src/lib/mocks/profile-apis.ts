@@ -19,6 +19,8 @@ export const OPERATIONS_SHOWN = 5;
 export interface ProfileService {
   /** Where it's called: an origin such as `https://api.orders.test`, a configured key, or the same origin. */
   readonly endpoint: string;
+  /** Whether the endpoint is an address or key as the code has it, shown as code, rather than words saying where the call goes. */
+  readonly literal: boolean;
   readonly client: string;
   /** Its operations, such as `GET /v1/orders`, up to five. */
   readonly operations: readonly string[];
@@ -38,13 +40,17 @@ const CLIENTS: Record<string, string> = { fetch: "fetch", axios: "axios", event_
 
 const isObject = (value: unknown): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** What the Data step says of a call to the application's own origin, and of one whose address the code works out. */
+const SAME_ORIGIN = "The application's own origin";
+const WORKED_OUT = "An address the code works out as it runs";
+
 function endpointText(service: JsonObject): string {
   const endpoint = isObject(service.endpoint) ? service.endpoint : {};
   const value = isObject(endpoint.value) ? endpoint.value : {};
   if (typeof value.origin === "string") return value.origin;
   if (value.derivation === "configured" && typeof value.key === "string") return `${String(value.source ?? "configuration")}.${value.key}`;
-  if (value.derivation === "relative") return "The application's own origin";
-  return "An address the code works out as it runs";
+  if (value.derivation === "relative") return SAME_ORIGIN;
+  return WORKED_OUT;
 }
 
 function operationsOf(service: JsonObject): string[] {
@@ -82,7 +88,8 @@ export function profileApis(db: Executor, surveyId: number | null): ProfileApis 
   const services = (Array.isArray(document.service_dependencies) ? document.service_dependencies : []).filter(isObject).map((service): ProfileService => {
     const operations = operationsOf(service);
     const client = isObject(service.client) && typeof service.client.kind === "string" ? (CLIENTS[service.client.kind] ?? service.client.kind) : "Unknown client";
-    return { endpoint: endpointText(service), client, operations: operations.slice(0, OPERATIONS_SHOWN), more: Math.max(0, operations.length - OPERATIONS_SHOWN) };
+    const endpoint = endpointText(service);
+    return { endpoint, literal: endpoint !== SAME_ORIGIN && endpoint !== WORKED_OUT, client, operations: operations.slice(0, OPERATIONS_SHOWN), more: Math.max(0, operations.length - OPERATIONS_SHOWN) };
   });
   const categories = isObject(document.categories) ? document.categories : {};
   const category = isObject(categories.test_substitutes) ? categories.test_substitutes : {};

@@ -259,7 +259,7 @@ Captures: `16-onboarding-data-*`, for a Profile that reports calls to `https://a
 | `{application}'s code calls APIs that a static preview can't reach, so its pages may load empty. A mock set answers those calls in previews and screenshots. This step is optional.` | The step's first paragraph | Awaiting approval |
 | `The APIs the code calls` / `From the Profile of the commit that was checked.` | The section's heading and description; `APIs the code calls` is the list's accessible name | Awaiting approval |
 | `{endpoint} · {client}` | Each API | Awaiting approval |
-| `The application's own origin`, `An address the code works out as it runs` | An API's endpoint, besides an origin or `{source}.{key}` | Awaiting approval |
+| `The application's own origin`, `An address the code works out as it runs` | An API's endpoint, besides an origin or `{source}.{key}`. These two are set as text; an origin or `{source}.{key}` is set as code | Awaiting approval |
 | `fetch`, `axios`, `EventSource`, `WebSocket`, `GraphQL`, `A generated client`, `A packaged client`, `Unknown client` | An API's client | Awaiting approval |
 | `{method} {path}`, `Event stream {path}`, `WebSocket {path}` | Each operation | Awaiting approval |
 | `and {n} more` | After the operations, and after the APIs | Awaiting approval |

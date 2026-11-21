@@ -21,7 +21,7 @@ export default async function NewMockSetPage({ params, searchParams }: PageProps
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const application = pageApplication(slug);
   const failed = param(query, "from") === "failed-calls" ? failedCallsOf(getDb(), currentBuildId(getDb(), application.id)) : null;
-  const calls = failed?.calls.map((call) => ({ position: call.position, text: `${call.method} ${call.url}`, failure: FAILURE_LABELS[call.kind](call.status), unsupported: call.kind === "websocket" || !/^https?:/.test(call.url) }));
+  const calls = failed?.calls.map((call) => ({ position: call.position, text: `${call.method} ${call.url}`, failure: FAILURE_LABELS[call.kind](call.status), unsupported: call.kind === "websocket" || !/^(https?:|\/)/.test(call.url) }));
   return (
     <FormTemplate
       header={{

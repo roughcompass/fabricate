@@ -16,7 +16,7 @@ import { createRule, createSet, findSet } from "@/lib/mocks/records";
 import { setDirectory } from "@/lib/mocks/storage";
 import { launchBrowser } from "@/lib/previews/browser";
 import { runScreenshot } from "@/lib/previews/capture";
-import { applyMocks } from "@/lib/previews/capture-mocks";
+import { applyMocks, recordedAddress } from "@/lib/previews/capture-mocks";
 import type { PreviewBuild } from "@/lib/previews/records";
 import { findScreenshot } from "@/lib/previews/screenshots";
 import { startPreviewServer } from "@/lib/previews/static-server";
@@ -56,6 +56,17 @@ for (let index = 0; index < ${many}; index++) fetch("https://api.orders.test/v1/
 
 const json = (value: unknown, status = 200) => ({ status, headers: [] as [string, string][], contentType: "application/json", body: new TextEncoder().encode(JSON.stringify(value)), latencyMs: 0 });
 const rule = (pattern: string, response: ReturnType<typeof json>): RuleInput => ({ method: "GET", pattern, queryMode: "ignore_all", query: [], queryIgnored: [], bodyMode: "ignore", responses: [response] });
+
+describe("a failed call's address", () => {
+  it("is the path a mock set matches it by, for a call to the capture's own server, and the address as called otherwise", () => {
+    const origin = "http://127.0.0.1:64818";
+    expect(recordedAddress(`${origin}/__analytics`, origin, "/previews/pvw_orders/")).toBe("/__analytics");
+    expect(recordedAddress(`${origin}/previews/pvw_orders/api/accounts?page=2`, origin, "/previews/pvw_orders/")).toBe("/api/accounts?page=2");
+    expect(recordedAddress("https://api.orders.test/v1/rates", origin, "/previews/pvw_orders/")).toBe("https://api.orders.test/v1/rates");
+    // Another port on the same host is another server.
+    expect(recordedAddress("http://127.0.0.1:9311/remoteEntry.js", origin, "/previews/pvw_orders/")).toBe("http://127.0.0.1:9311/remoteEntry.js");
+  });
+});
 
 describe("screenshots with mock sets", () => {
   const original = getConfig();

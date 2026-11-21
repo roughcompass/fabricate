@@ -51,7 +51,7 @@ describe("onboarding's Data step", () => {
       "src/api.js": 'const API = "https://api.orders.test/v1";\nexport const orders = () => fetch(`${API}/orders?limit=5`);\nexport const search = (status) => fetch(`${API}/orders/search`, { method: "POST", body: JSON.stringify({ status }) });\n',
     });
     const apis = applicationApis(db, created.publicId);
-    expect(apis.services).toEqual([{ endpoint: "https://api.orders.test", client: "fetch", operations: ["GET /v1/orders", "POST /v1/orders/search"], more: 0 }]);
+    expect(apis.services).toEqual([{ endpoint: "https://api.orders.test", literal: true, client: "fetch", operations: ["GET /v1/orders", "POST /v1/orders/search"], more: 0 }]);
     expect(offersDataStep(apis)).toBe(true);
   });
 
@@ -65,6 +65,16 @@ describe("onboarding's Data step", () => {
     expect(apis.services).toEqual([]);
     expect(apis.substitutes).toContain("MSW handlers in `src/mocks/handlers.ts`");
     expect(offersDataStep(apis)).toBe(true);
+  });
+
+  it("A packaged client calling the application's own origin is said in words, not shown as an address (fleet check, task 13.3)", async () => {
+    const created = await onboarded("admin", {
+      "package.json": JSON.stringify({ name: "admin", dependencies: { react: "19.3.1", "react-dom": "19.3.1", "@acme/analytics": "1.0.0" }, devDependencies: { vite: "8.3.8" }, scripts: { build: "vite build" } }),
+      "src/useAnalytics.ts": 'import { init, track } from "@acme/analytics";\nexport function start() {\n  init({ appId: "admin", endpoint: "/__analytics" });\n  return track("opened");\n}\n',
+    });
+    const [service] = applicationApis(db, created.publicId).services;
+    expect(service).toMatchObject({ client: "A packaged client", literal: false });
+    expect(["The application's own origin", "An address the code works out as it runs"]).toContain(service!.endpoint);
   });
 
   it("No APIs reported: the step isn't offered", async () => {

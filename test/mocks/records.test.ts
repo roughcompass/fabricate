@@ -163,10 +163,12 @@ describe("mock set records", () => {
 
     it("Created from a failed call: takes its method, path, query, and body, and needs a response before it's turned on", () => {
       const set = createSet(db, orders.id, { name: "Happy path" }, null);
-      const { rules } = addRulesFromCalls(db, orders.id, set.publicId, [{ method: "GET", url: "https://api.orders.test/v1/rates?base=USD" }, { method: "POST", url: "https://api.orders.test/v1/orders/search", body: '{"status":"open"}' }], null, config);
+      // A call the capture recorded by its path alone, to the build's own server, matches on any origin.
+      const { rules } = addRulesFromCalls(db, orders.id, set.publicId, [{ method: "GET", url: "https://api.orders.test/v1/rates?base=USD" }, { method: "POST", url: "https://api.orders.test/v1/orders/search", body: '{"status":"open"}' }, { method: "POST", url: "/__analytics?v=2" }], null, config);
       expect(rules.map((item) => [item.method, item.origin, item.pattern, item.queryMode, item.query, item.bodyMode, item.enabled, item.responses.length])).toEqual([
         ["GET", "https://api.orders.test", "/v1/rates", "exact", [["base", "USD"]], "ignore", false, 0],
         ["POST", "https://api.orders.test", "/v1/orders/search", "ignore_all", [], "json", false, 0],
+        ["POST", null, "/__analytics", "exact", [["v", "2"]], "ignore", false, 0],
       ]);
       expect(() => setRuleEnabled(db, orders.id, set.publicId, rules[0]!.publicId, true, null)).toThrow(/Write a response for this rule before turning it on/);
       // A rule saved without a response is off too.

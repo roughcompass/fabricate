@@ -53,7 +53,7 @@ export function DataStep({ slug }: { slug: string }) {
             <ul className={styles.apis} aria-label="APIs the code calls">
               {apis.services.map((service, index) => (
                 <li key={index} data-api={service.endpoint}>
-                  <code>{service.endpoint}</code>
+                  {service.literal ? <code>{service.endpoint}</code> : service.endpoint}
                   {` · ${service.client}`}
                   {service.operations.length > 0 && (
                     <ul>

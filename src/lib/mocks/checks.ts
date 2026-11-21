@@ -216,20 +216,23 @@ export interface CallInput {
 }
 
 /**
- * A rule matching +call+ as it was made: its method, origin, literal path,
+ * A rule matching +call+ as it was made: its method, origin (none for a
+ * call recorded by its path alone), literal path,
  * exact query, and its body as JSON when it is JSON, exactly otherwise, or
  * ignored past 64 KB. It has no response, so it's off, marked Needs a
  * response: the Frontend Registry never invents or copies one (mock-sets
  * spec, "A rule made from a call has no response until one is written").
  */
 export function ruleFromCall(call: CallInput): RuleInput {
-  const url = new URL(call.url);
+  // A capture records a call to the build's own server by its path alone, which matches on any origin.
+  const relative = call.url.startsWith("/");
+  const url = new URL(call.url, "http://relative.invalid");
   const path = { segments: url.pathname.split("/").filter(Boolean).map((segment) => ({ literal: safeDecode(segment) })), rest: false };
   const body = call.body ? utf8(call.body) : null;
   const comparable = body && body.byteLength > 0 && body.byteLength <= MATCH_BODY_LIMIT ? body : null;
   return {
     method: call.method,
-    origin: url.origin,
+    origin: relative ? null : url.origin,
     pattern: patternText(path),
     queryMode: url.search ? "exact" : "ignore_all",
     query: [...url.searchParams.entries()],
