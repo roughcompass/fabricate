@@ -44,6 +44,7 @@ export function setOutcome(code: string | undefined, set: MockSet): Outcome | un
     "rules-added": { tone: "success", title: `Rules for the failed calls were added to ${set.name}.`, description: "Each needs a response before it answers anything." },
     "rule-needs-response": { tone: "error", title: "That rule can't be turned on yet.", description: "Write a response for it first." },
     "rule-limit": { tone: "error", title: "That rule couldn't be duplicated.", description: "A mock set can have 500 rules. Delete rules it no longer needs first." },
+    "failed-calls-limit": { tone: "error", title: "Rules for the failed calls couldn't be added.", description: "A mock set can have 500 rules. Delete rules it no longer needs first." },
   };
   const notice = notices[code];
   return notice && { id, ...notice };

@@ -49,7 +49,7 @@ describe("Data's request list", () => {
 
   it("says each call's outcome in words, and offers Create rule for a call no rule answered", () => {
     const failed = callRow(call({}));
-    expect(failed).toMatchObject({ summary: "Failed, couldn't connect or was blocked by CORS", status: "Couldn't connect or was blocked by CORS", outcome: "failed" });
+    expect(failed).toMatchObject({ summary: "Failed, couldn't connect or was blocked by CORS", status: "No answer", outcome: "failed" });
     expect(canCreateRule(failed)).toBe(true);
     const mocked = callRow(call({ id: "2", url: "https://api.orders.test/v1/orders", outcome: "mocked", rule: { id: "mkr_orders", label: "GET /v1/orders", response: 1 }, status: 200, error: null }));
     expect(mocked).toMatchObject({ summary: "Mocked by rule GET /v1/orders", status: "200" });

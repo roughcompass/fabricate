@@ -6,7 +6,9 @@ import { buildOrdersPortal, ordersPortalRemote } from "./support/fixture-app";
 import { expect, test } from "./support/fixtures";
 import { mockApplicationId, seedFailedCalls, seedMockSet, setDefault, unbuiltApplication } from "./support/mock-sets";
 import { paths } from "./support/paths";
-import { visitorContext } from "./support/running-app";
+import { seeded } from "./support/applications";
+import { visitorContext, workspaceOf } from "./support/running-app";
+import { setDisplayName } from "../src/lib/workspaces/workspaces";
 
 /*
  * An application's mock sets (add-mock-sets, tasks 5.1 to 5.4 and 5.7;
@@ -341,5 +343,28 @@ test.describe("the failed-calls alert", () => {
     await page.reload();
     await expect(page.getByText("1 API call failed when this build loaded", { exact: true })).toBeVisible();
     setDefault(db, application.slug, null);
+  });
+
+  test("Add rules past the set's 500 adds none, and the set's page says why; added rules record who added them (add-mock-sets, task 13.1)", async ({ page, db, context }) => {
+    seeded(db, "Orders portal");
+    const id = mockApplicationId(db, "orders-portal");
+    setDisplayName(db, (await workspaceOf(context, db)).id, "Presenter");
+    const full = seedMockSet(db, "orders-portal", Array.from({ length: 499 }, (_, index) => ({ pattern: `/v1/items/${index}` })), { default: true });
+    seedFailedCalls(db, "orders-portal", [{ url: "https://api.orders.test/v1/rates", kind: "connect" }, { url: "https://api.orders.test/v1/accounts/42", kind: "status", status: 503 }], { set: full });
+    await page.goto(paths.application("orders-portal"));
+    await page.getByRole("button", { name: "Add rules to Happy path" }).click();
+    const notices = page.getByRole("region", { name: "Notifications" });
+    await expect(notices.getByText("Rules for the failed calls couldn't be added.")).toBeVisible();
+    await expect(notices.getByText("A mock set can have 500 rules. Delete rules it no longer needs first.")).toBeVisible();
+    expect(findSet(db, id, full.publicId)!.ruleCount).toBe(499);
+
+    // With room, each failed call becomes a rule, recorded with the display name of who added it.
+    setDefault(db, "orders-portal", seedMockSet(db, "orders-portal", [], { name: "Errors" }).publicId);
+    const errors = findSet(db, id, listSets(db, id).find((set) => set.name === "Errors")!.publicId)!;
+    seedFailedCalls(db, "orders-portal", [{ url: "https://api.orders.test/v1/rates", kind: "connect" }], { set: errors });
+    await page.goto(paths.application("orders-portal"));
+    await page.getByRole("button", { name: "Add rules to Errors" }).click();
+    await expect(page.getByText("1 rule needs a response")).toBeVisible();
+    expect(allRules(db, errors.id).map((rule) => [rule.pattern, rule.createdByName])).toEqual([["/v1/rates", "Presenter"]]);
   });
 });

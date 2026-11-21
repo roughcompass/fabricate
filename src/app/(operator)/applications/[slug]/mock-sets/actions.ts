@@ -94,7 +94,14 @@ export async function addFailedCallsAction(formData: FormData): Promise<void> {
   const set = text(formData, "set", 40);
   const failed = failedCallsOf(getDb(), currentBuildId(getDb(), application.id));
   const calls = (failed?.calls ?? []).filter((call) => call.kind !== "websocket" && /^https?:/.test(call.url));
-  found(() => addRulesFromCalls(getDb(), application.id, set, calls, null));
+  const name = await byName();
+  try {
+    found(() => addRulesFromCalls(getDb(), application.id, set, calls, name));
+  } catch (error) {
+    // Past the set's limit nothing is added, and the set's page says why.
+    if (!(error instanceof ValidationError)) throw error;
+    redirect(routes.mockSet(application.slug, set, { notice: "failed-calls-limit" }));
+  }
   recaptureApplication(getDb(), application.id);
   redirect(routes.mockSet(application.slug, set, { state: "needs-response", notice: "rules-added" }));
 }

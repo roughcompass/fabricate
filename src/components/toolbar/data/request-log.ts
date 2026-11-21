@@ -40,7 +40,8 @@ const lowered = (text: string) => `${text[0]!.toLowerCase()}${text.slice(1)}`;
 
 /** A logged call as a row. */
 export function callRow(call: LoggedCall): RequestRow {
-  const failure = call.error ?? (call.status !== null ? String(call.status) : "no answer");
+  // A call that got no answer says what happened in its outcome; its status says only that none came.
+  const failure = call.status !== null ? String(call.status) : "No answer";
   const summary =
     call.outcome === "mocked" && call.rule
       ? `Mocked by rule ${call.rule.label}`

@@ -34,7 +34,18 @@ export function DataStep({ slug }: { slug: string }) {
   if (!application) notFound();
   const apis = applicationApis(getDb(), application.publicId);
   return (
-    <FlowTemplate focused header={{ title: "New application", description: `${application.name} was created, and its first build is building.` }} steps={STEPS} current={5}>
+    <FlowTemplate
+      focused
+      header={{ title: "New application", description: `${application.name} was created, and its first build is building.` }}
+      // The warning sits in the alerts zone, as Upload HAR's does, never inside the step's panel.
+      alerts={
+        <Alert tone="warning" title="Use recordings of test environments with synthetic data only">
+          {"Never upload real customer, employee, or account data. Mock sets are unencrypted, and everyone who can open the application can see them. The Frontend Registry removes credentials it recognizes, such as tokens and cookies, but it can't recognize personal data."}
+        </Alert>
+      }
+      steps={STEPS}
+      current={5}
+    >
       <div className={styles.step}>
         <p>{`${application.name}'s code calls APIs that a static preview can't reach, so its pages may load empty. A mock set answers those calls in previews and screenshots. This step is optional.`}</p>
         {apis.services.length > 0 && (
@@ -70,9 +81,6 @@ export function DataStep({ slug }: { slug: string }) {
             <p>{"Turning them into a mock set isn't available yet. Upload a HAR file instead."}</p>
           </FormSection>
         )}
-        <Alert tone="warning" title="Use recordings of test environments with synthetic data only">
-          {"Never upload real customer, employee, or account data. Mock sets are unencrypted, and everyone who can open the application can see them. The Frontend Registry removes credentials it recognizes, such as tokens and cookies, but it can't recognize personal data."}
-        </Alert>
         <form method="post" action={routes.mockSetImportsApi(application.slug)} encType="multipart/form-data" noValidate className={formStyles.form} aria-label="Upload HAR">
           <HiddenFields values={{ from: "onboarding", target: "new", application: application.slug }} />
           <TextInput id="data-file" name="file" type="file" label="HAR file" optional accept=".har,application/json" description="Record one in a browser's network panel against a test environment: Export HAR in Chrome or Edge, Save All As HAR in Firefox, or Export in Safari." />
