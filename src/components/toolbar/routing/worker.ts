@@ -1,3 +1,4 @@
+import { isPageAnnouncement } from "./mock-log";
 import { type RoutingCommand, type ViewIdentity, type ViewTable, ROUTING_MESSAGE, prefixes, referrerIsView, rewriteHtmlImportMaps, rewriteImportMap, routeUrl, viewId } from "./table";
 
 /*
@@ -36,6 +37,8 @@ interface ExtendableEvent extends Event {
 interface MessageEventLike extends ExtendableEvent {
   readonly data: unknown;
   readonly ports: readonly MessagePort[];
+  /** The client that posted the message, for a page's own. */
+  readonly source?: { readonly id?: string } | null;
 }
 interface FetchEventLike extends ExtendableEvent {
   readonly request: Request;
@@ -72,10 +75,16 @@ interface Handled {
 const armed = new Map<string, Armed>();
 /** The clients handled, by client ID. */
 const routed = new Map<string, Handled>();
+/** The frame agent's id for each client's page, by client ID, as the page told it; a dedicated worker has its document's. */
+const pages = new Map<string, string>();
 
 function forget(view: string): void {
   armed.delete(view);
-  for (const [client, handled] of routed) if (handled.view === view) routed.delete(client);
+  for (const [client, handled] of routed) {
+    if (handled.view !== view) continue;
+    routed.delete(client);
+    pages.delete(client);
+  }
 }
 
 function live(view: string): ViewTable | null {
@@ -91,6 +100,11 @@ function live(view: string): ViewTable | null {
 self.addEventListener("install", () => void self.skipWaiting());
 
 self.addEventListener("message", (event) => {
+  // A page this worker controls names itself, so the calls it logs name the page.
+  if (isPageAnnouncement(event.data)) {
+    if (event.source?.id) pages.set(event.source.id, event.data.page);
+    return;
+  }
   const command = event.data as RoutingCommand | null;
   if (!command || command.type !== ROUTING_MESSAGE) return;
   if (command.command === "disarm") forget(viewId(command));
@@ -165,6 +179,8 @@ async function routedJson(response: Response, table: ViewTable): Promise<Respons
 function adoptWorker(event: FetchEventLike, handled: Handled): void {
   if (event.request.destination !== "worker" || !event.resultingClientId || routed.has(event.resultingClientId)) return;
   routed.set(event.resultingClientId, { view: handled.view, url: event.request.url });
+  const page = pages.get(event.clientId);
+  if (page) pages.set(event.resultingClientId, page);
 }
 
 self.addEventListener("fetch", (event) => {

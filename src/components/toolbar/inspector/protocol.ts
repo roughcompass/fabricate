@@ -120,6 +120,23 @@ export interface BusEntry {
   readonly from: "application" | "toolbar";
 }
 
+/** Where a WebSocket connection is: opening, open, closed after it opened, or failed before it did. */
+export type SocketState = "connecting" | "open" | "closed" | "failed";
+
+/** A WebSocket connection the page opened, by its address; its messages are never reported. */
+export interface InspectedSocket {
+  /** Numbered from 1 in the page; a later report with the same id replaces the earlier. */
+  readonly id: number;
+  readonly url: string;
+  readonly state: SocketState;
+}
+
+/** A service worker the page registered, with its script and scope, absolute. */
+export interface InspectedRegistration {
+  readonly script: string;
+  readonly scope: string;
+}
+
 type Tagged<M> = { readonly type: typeof INSPECTOR_MESSAGE; readonly page: string } & M;
 
 export type InspectorMessage =
@@ -128,7 +145,9 @@ export type InspectorMessage =
   | Tagged<{ readonly kind: "interaction"; readonly interaction: InspectedInteraction }>
   | Tagged<{ readonly kind: "loads"; readonly loads: readonly InspectedLoad[] }>
   | Tagged<{ readonly kind: "composition"; readonly composition: InspectedComposition }>
-  | Tagged<{ readonly kind: "bus"; readonly entry: BusEntry }>;
+  | Tagged<{ readonly kind: "bus"; readonly entry: BusEntry }>
+  | Tagged<{ readonly kind: "websocket"; readonly socket: InspectedSocket }>
+  | Tagged<{ readonly kind: "service-worker"; readonly registration: InspectedRegistration }>;
 
 export function isInspectorMessage(data: unknown): data is InspectorMessage {
   return typeof data === "object" && data !== null && (data as { type?: unknown }).type === INSPECTOR_MESSAGE;
