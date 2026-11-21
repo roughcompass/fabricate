@@ -6,6 +6,8 @@ import { expect, test } from "../support/fixtures";
 import { paths } from "../support/paths";
 import { serverConfig } from "../support/results";
 import { seedOperatorSurfaces } from "../support/surfaces";
+import { createSet } from "../../src/lib/mocks/records";
+import { routes } from "../../src/lib/web/routes";
 
 // applications/onboarding spec, "Applications are available while previews
 // are", with previews off (npm run test:previews-off): the menu has no
@@ -63,6 +65,20 @@ test("Previews off: the workspace and application endpoints answer not found", a
     const response = await request.post(address, { data: {} });
     expect(response.status(), `POST ${address}`).toBe(404);
   }
+});
+
+test("Previews off: the mock sets' endpoints answer not found (add-mock-sets, task 5.8)", async ({ request, db }) => {
+  const repository = insertRepository(db, { name: "spa-orders", cloneUrl: "https://git.example.com/acme/spa-orders.git", canonicalUrl: "https://git.example.com/acme/spa-orders", gitRef: null });
+  const application = onboard(db, withOverrides(serverConfig(), { previews: { enabled: true } }), repository, { name: "Orders portal" });
+  const set = createSet(db, application.id, { name: "Happy path" }, null).publicId;
+  const slug = application.slug;
+  for (const address of [routes.mockSetsApi(slug), routes.compiledMockSet(slug, set, 1), routes.mockSetBody(slug, set, "a".repeat(64)), routes.mockSetHar(slug, set)]) {
+    expect((await request.get(address)).status(), `GET ${address}`).toBe(404);
+  }
+  for (const address of [routes.mockSetsApi(slug), routes.mockRulesApi(slug, set), routes.mockSetImportsApi(slug)]) {
+    expect((await request.post(address, { data: {} })).status(), `POST ${address}`).toBe(404);
+  }
+  expect((await request.put(routes.mockSetChoiceApi(slug), { data: { set: null } })).status()).toBe(404);
 });
 
 test("Previews off: a Repository offers no Create application, and the marketing page doesn't claim Applications", async ({ page, db }) => {
