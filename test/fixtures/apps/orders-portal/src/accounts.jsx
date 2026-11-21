@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AccountOrders, LiveOrders, Markets, RecentOrders, SearchOrders, dollars, useExport } from "./activity.jsx";
 import { Link } from "./router.jsx";
 
 const ACCOUNTS = [
@@ -6,8 +7,6 @@ const ACCOUNTS = [
   { id: "57", name: "Contoso Pharmaceuticals", region: "Europe", orders: 7, balance: 5320 },
   { id: "63", name: "Fabrikam Logistics", region: "Asia Pacific", orders: 24, balance: 20415 },
 ];
-
-const dollars = (amount) => `$${String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
 /** Holds the main thread for +ms+, as an expensive calculation would. */
 function hold(ms) {
@@ -23,6 +22,7 @@ export function Accounts({ selected }) {
   const needle = query.trim().toLowerCase();
   const shown = ACCOUNTS.filter((account) => account.name.toLowerCase().includes(needle));
   const account = ACCOUNTS.find((candidate) => candidate.id === selected);
+  const [startExport, exportText] = useExport();
 
   return (
     <>
@@ -42,10 +42,11 @@ export function Accounts({ selected }) {
         >
           Recalculate totals
         </button>
-        <button type="button" className="secondary">
+        <button type="button" className="secondary" onClick={startExport}>
           Export orders
         </button>
       </div>
+      {exportText && <p className="export">{exportText}</p>}
       <p className="total">{total === null ? "Totals haven't been calculated yet." : `Total balance ${dollars(total)}`}</p>
       <table className="accounts">
         <caption>Accounts</caption>
@@ -74,8 +75,15 @@ export function Accounts({ selected }) {
         <section className="detail" aria-labelledby="account-name">
           <h2 id="account-name">{account.name}</h2>
           <p>{`Account ${account.id} · ${account.region} · ${account.orders} open orders · Balance ${dollars(account.balance)}`}</p>
+          <AccountOrders key={account.id} id={account.id} />
         </section>
       )}
+      <Markets />
+      <div className="activity">
+        <RecentOrders />
+        <LiveOrders />
+        <SearchOrders />
+      </div>
     </>
   );
 }

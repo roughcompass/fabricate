@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import { eq } from "drizzle-orm";
+import { previewPreparations } from "../src/lib/db/schema";
 import { previewDirectory } from "../src/lib/previews/storage";
+import { profileDocument, profileOfSurvey } from "../src/lib/profiles/profile-records";
 import { E2E_PACKAGE_CACHE, E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { ORDERS_PORTAL_BRANDS, buildOrdersPortal, commitToOrdersPortal, ordersPortalRemote, previewOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
@@ -128,4 +131,32 @@ test("saves previews of feature/new-nav and v1.1.0, each built and captured, ser
     await page.goto(`/previews/${saved.current!.preview}/accounts`);
     await expect(page.getByText(brand, { exact: true })).toBeVisible();
   }
+});
+
+test("calls the orders API, which fails without a mock set, and its Profile reports the API (add-mock-sets, task 1.1)", async ({ page, db }) => {
+  ordersPortalRemote();
+  const { preview, base } = await buildOrdersPortal(db);
+  // The build emits its page and the rates worker beside it.
+  const output = path.join(previewDirectory(serverConfig(), preview.publicId), preview.artifact!);
+  expect(fs.readdirSync(path.join(output, "assets")).some((file) => /^rates-worker-[\w-]+\.js$/.test(file))).toBe(true);
+
+  // The Profile reports the orders API with the operations the code calls.
+  const preparation = db.select().from(previewPreparations).where(eq(previewPreparations.id, preview.preparationId)).get()!;
+  const document = profileDocument(profileOfSurvey(db, preparation.surveyId!)!).fact_document as { service_dependencies: { key: string; endpoint: { value: { origin?: string } }; operations: { value: unknown } }[] };
+  const orders = document.service_dependencies.find((service) => service.key === "https://api.orders.test")!;
+  expect(orders.endpoint.value.origin).toBe("https://api.orders.test");
+  expect(orders.operations.value).toEqual(expect.arrayContaining([expect.objectContaining({ method: "GET", path: "/v1/orders" }), expect.objectContaining({ method: "POST", path: "/v1/orders/search" })]));
+
+  // `.test` never resolves, so each part says it's unavailable, and the page itself still works.
+  await page.goto(`${base}accounts`);
+  await expect(page.getByText("Recent orders unavailable")).toBeVisible();
+  await expect(page.getByText("Live orders unavailable")).toBeVisible();
+  await expect(page.getByText("Rates unavailable")).toBeVisible();
+  await expect(page.getByText("Ticker unavailable")).toBeVisible();
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByText("Search unavailable")).toBeVisible();
+  await page.getByRole("button", { name: "Export orders" }).click();
+  await expect(page.getByText("Export unavailable")).toBeVisible();
+  await page.getByRole("link", { name: "Northwind Traders" }).click();
+  await expect(page.getByText("Account orders unavailable")).toBeVisible();
 });

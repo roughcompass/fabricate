@@ -8,6 +8,30 @@ const Quotes = lazy(() => import("quotesPanel/Quotes"));
 
 const SYMBOLS = ["ACME", "GLOBEX", "INITECH"];
 
+// The desks API. `.test` never resolves, so without a mock set the desk's name is unavailable.
+const DESK_API = "https://api.quotes.test/v1";
+
+/** The desk's name, from the desks API. */
+function DeskName() {
+  const [name, setName] = useState(null);
+  useEffect(() => {
+    let current = true;
+    fetch(`${DESK_API}/desk`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`The desks API answered ${response.status}`);
+        return response.json();
+      })
+      .then(
+        (desk) => current && setName(desk.name ?? false),
+        () => current && setName(false),
+      );
+    return () => {
+      current = false;
+    };
+  }, []);
+  return <Text data-desk-name="">{name === null ? "Loading the desk's name…" : name === false ? "Desk name unavailable" : `Desk: ${name}`}</Text>;
+}
+
 class Unavailable extends Component {
   state = { failed: false };
   static getDerivedStateFromError() {
@@ -55,6 +79,7 @@ function Desk() {
   return (
     <StackLayout gap={2}>
       <h1>Quotes desk</h1>
+      <DeskName />
       <Startup />
       <div role="group" aria-label="Quotes" style={{ display: "flex", gap: 8 }}>
         {SYMBOLS.map((symbol) => (
