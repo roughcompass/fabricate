@@ -254,7 +254,7 @@ A thread placed on another preview is listed as **Not visible in this view**, wi
 
 ### Share
 
-**Share** creates a link to the view: the application, the saved preview shown, if any, the commit of the build shown, the route with its query, and your comments on it. It also captures the Salt theme chosen in Settings, the Microfrontends routing, and the name of the session preset the view starts with, never the preset's entries. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. Whenever the view has routing, a theme, or a preset, the panel says what opening the link does in the recipient's browser: it applies your routing, which registers the routing service worker there, it applies your theme, and it starts with the preset, whose values aren't in the link. See [Share links](#share-links).
+**Share** creates a link to the view: the application, the saved preview shown, if any, the commit of the build shown, the route with its query, and your comments on it. It also captures the Salt theme chosen in Settings, the Microfrontends routing, the name of the session preset the view starts with, never the preset's entries, and the [mock set](#data) the view applies, by its ID and name, never its rules, or None when you chose it. Copy it with **Copy link**; **Create new link** makes another for the route shown now. Each time the panel opens, it creates a new link. Whenever the view has routing, a theme, a preset, or a mock set, the panel says what opening the link does in the recipient's browser: it applies your routing, which registers the routing service worker there, it applies your theme, it starts with the preset, whose values aren't in the link, and it applies the mock set, whose rules aren't in the link, through a service worker it registers there. See [Share links](#share-links).
 
 ### Microfrontends
 
@@ -360,12 +360,14 @@ Opening a link also applies, in the recipient's browser and for that view only, 
 - **Their Microfrontends routing,** which registers the routing service worker for the routed build there (see [Microfrontends](#microfrontends)). It isn't kept for the recipient's own view.
 - **Their Salt theme,** which Settings shows chosen for that view. It isn't kept for the recipient's own view.
 - **Their session preset,** with its entries as the preset holds them now, read from the application's presets. The recipient's own choice stays as it was, and the Session panel says the shared view starts with the preset. The captured route leaves out the query parameters the preset adds, and opening the link adds them again.
+- **Their mock set,** with its rules as the set holds them now, read from the application's mock sets, through the Frontend Registry's service worker, which opening the link registers there. A link made with None applies no set. The recipient's own choice stays as it was, and Data says the set came from the share link. The link names the set by its ID and name; its rules never leave the Frontend Registry.
 
 When what the link captured is gone, it opens the nearest build, with a notice:
 - **The captured build was pruned:** the current build opens at the captured route, the saved preview's for a link to one. The notice reads "The shared commit … is no longer available, so this is the current build.", or for a saved preview, "…, so this is feature/new-nav's current build."
 - **The saved preview was removed:** the application's current build opens at its own address, with "The shared preview of fix/totals was removed, so this is the application's current build."
 - **A routed build is gone:** that microfrontend loads as built, with "The shared routing of quotesPanel was dropped, because the build it named is gone."
 - **The preset was deleted:** the view starts with the recipient's own choice, with "The shared preset "Admin user" no longer exists, so this view starts with your own choice."
+- **The mock set was deleted:** the view uses the recipient's own choice, with "The shared mock set "Errors" no longer exists, so this view uses your own choice."
 
 When several apply, the notice says each of them.
 

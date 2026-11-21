@@ -1,5 +1,6 @@
 import { applicationsUnavailable } from "@/lib/applications/availability";
 import { getDb } from "@/lib/db/client";
+import { findSet } from "@/lib/mocks/records";
 import { jsonBody, writableView } from "@/lib/workspaces/api";
 import { chosenPreset, findPreset, routeWithoutPreset } from "@/lib/workspaces/presets";
 import { createShare, shareInputSchema } from "@/lib/workspaces/shares";
@@ -16,6 +17,11 @@ import { createShare, shareInputSchema } from "@/lib/workspaces/shares";
  * view's preset, is recorded here, by its ID and name, never its entries,
  * and its query parameters are left out of the captured route
  * (restore-toolbar-tools-and-branch-previews, design decision 8).
+ *
+ * The mock set the view applies (`view.mocks`, `{ set }` or `{ set: null }`
+ * for None) is recorded by its ID and name once it's found among the
+ * application's sets, never its rules (add-mock-sets, design decision 17).
+ * A set of another application, or one deleted meanwhile, is refused.
  */
 export async function POST(request: Request) {
   // Availability comes first, so it answers not found whatever the body.
@@ -32,6 +38,10 @@ export async function POST(request: Request) {
   const shared = resolved.view.share?.view.session;
   const preset = shared ? findPreset(db, applicationId, shared.preset) : chosenPreset(db, resolved.workspace.id, applicationId);
   const view = preset ? { ...input.data, route: routeWithoutPreset(input.data.route, preset) } : input.data;
-  const token = createShare(db, applicationId, resolved.view.viewWorkspaceId, view, undefined, { preview: resolved.view.preview ?? null, session: preset ? { preset: preset.publicId, name: preset.name } : null });
+  const sent = input.data.view?.mocks;
+  const set = sent?.set ? findSet(db, applicationId, sent.set) : null;
+  if (sent?.set && !set) return Response.json({ error: "Invalid view" }, { status: 400 });
+  const mocks = sent ? { set: set?.publicId ?? null, name: set?.name ?? null } : null;
+  const token = createShare(db, applicationId, resolved.view.viewWorkspaceId, view, undefined, { preview: resolved.view.preview ?? null, session: preset ? { preset: preset.publicId, name: preset.name } : null, mocks });
   return Response.json({ path: `/s/${token}` }, { status: 201 });
 }

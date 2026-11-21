@@ -14,8 +14,9 @@ import { keyDigest } from "./workspaces";
  * whose comments it shows. It also captures the saved preview shown, with
  * its ref as it was then, and the view: the Salt theme, the Microfrontends
  * routing, and the chosen session preset's ID and name, never its entries
- * (restore-toolbar-tools-and-branch-previews, design decision 5). Only the
- * token's digest is stored.
+ * (restore-toolbar-tools-and-branch-previews, design decision 5), and the
+ * mock set applied, by its ID and name, or None, never its rules
+ * (add-mock-sets, design decision 17). Only the token's digest is stored.
  */
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
@@ -55,12 +56,22 @@ export const shareRouteSchema = z.strictObject({
 /** The chosen session preset, by its public ID and its name then; never its entries. */
 export const shareSessionSchema = z.strictObject({ preset: z.string().regex(/^ses_[a-z0-9]{16}$/), name: z.string().min(1).max(60) });
 
-/** What a share link applies besides its build and route (design decision 5): `{ theme?, routing?, session? }`. */
-export const shareViewSchema = z.strictObject({ theme: shareThemeSchema.optional(), routing: z.array(shareRouteSchema).max(50).optional(), session: shareSessionSchema.optional() });
+const MOCK_SET = /^mks_[a-z0-9]{16}$/;
+
+/** The mock set the view applied, by its public ID and its name then, or None, both null; never its rules (add-mock-sets, design decision 17). */
+export const shareMocksSchema = z.strictObject({ set: z.string().regex(MOCK_SET).nullable(), name: z.string().min(1).max(60).nullable() });
+
+/** What a share link applies besides its build and route (design decision 5): `{ theme?, routing?, session?, mocks? }`. */
+export const shareViewSchema = z.strictObject({ theme: shareThemeSchema.optional(), routing: z.array(shareRouteSchema).max(50).optional(), session: shareSessionSchema.optional(), mocks: shareMocksSchema.optional() });
 export type ShareView = z.infer<typeof shareViewSchema>;
 
-/** What the toolbar sends: the commit, the route, and the theme and routing it shows. The session preset is recorded on the server, from the visitor's choice. */
-export const shareInputSchema = z.strictObject({ commit: commitSchema, route: routeSchema, view: shareViewSchema.omit({ session: true }).optional() });
+/**
+ * What the toolbar sends: the commit, the route, the theme and routing it
+ * shows, and the mock set it applies, by its ID alone, or null for None.
+ * The session preset is recorded on the server, from the visitor's choice,
+ * and so is the set's name, once it's checked to be the application's.
+ */
+export const shareInputSchema = z.strictObject({ commit: commitSchema, route: routeSchema, view: shareViewSchema.omit({ session: true, mocks: true }).extend({ mocks: z.strictObject({ set: z.string().regex(MOCK_SET).nullable() }).optional() }).optional() });
 export type ShareInput = z.infer<typeof shareInputSchema>;
 
 export interface Share {
@@ -75,10 +86,11 @@ export interface Share {
   readonly view: ShareView;
 }
 
-/** What createShare records besides the toolbar's input: the saved preview shown, and the chosen session preset. */
+/** What createShare records besides the toolbar's input: the saved preview shown, the chosen session preset, and the mock set applied, checked to be the application's. */
 export interface ShareContext {
   readonly preview?: { readonly id: number; readonly ref: string } | null;
   readonly session?: z.infer<typeof shareSessionSchema> | null;
+  readonly mocks?: z.infer<typeof shareMocksSchema> | null;
 }
 
 function isShareToken(value: unknown): value is string {
@@ -87,8 +99,8 @@ function isShareToken(value: unknown): value is string {
 
 /** Stores a share link to a view of +applicationId+, with the saved preview and session preset of +context+, and returns its token, which is never stored. */
 export function createShare(db: Executor, applicationId: number, viewWorkspaceId: number, input: ShareInput, now = new Date(), context: ShareContext = {}): string {
-  const { commit, route, view = {} } = shareInputSchema.parse(input);
-  const stored = shareViewSchema.parse({ ...view, ...(context.session && { session: context.session }) });
+  const { commit, route, view: { mocks: _sent, ...view } = {} } = shareInputSchema.parse(input);
+  const stored = shareViewSchema.parse({ ...view, ...(context.session && { session: context.session }), ...(context.mocks && { mocks: context.mocks }) });
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   const token = base64Url(bytes);

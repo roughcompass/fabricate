@@ -5,6 +5,8 @@ import { findApplication } from "@/lib/applications/records";
 import type { FrontendRegistryConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { previewBuilds } from "@/lib/db/schema";
+import { sharedSetGoneNotice } from "@/lib/mocks/active";
+import { findSet } from "@/lib/mocks/records";
 import { openPreview } from "@/lib/previews/access";
 import { type SessionPreset, findPreset } from "./presets";
 import type { ShareView } from "./shares";
@@ -17,6 +19,12 @@ import type { ShareView } from "./shares";
  * chose, applied with its current entries for the shared view only, so the
  * recipient's own choice stays as it is. A routing target that's gone is
  * dropped, and a preset that was deleted is skipped, each with a notice.
+ *
+ * The mock set the link names applies to the shared view only, with its
+ * current rules, through the view's worker; the page resolves it with the
+ * view's active set (src/lib/mocks/active.ts). A set that was deleted adds
+ * a notice, and the view uses the recipient's own choice (add-mock-sets,
+ * design decision 17).
  */
 
 /** A microfrontend the link routes, with the build it's routed to, as Microfrontends shows it. */
@@ -76,5 +84,6 @@ export function openView(db: Executor, config: FrontendRegistryConfig, applicati
     session = findPreset(db, applicationId, view.session.preset) ?? null;
     if (!session) notices.push(`The shared preset "${view.session.name}" no longer exists, so this view starts with your own choice.`);
   }
+  if (view.mocks?.set && !findSet(db, applicationId, view.mocks.set)) notices.push(sharedSetGoneNotice(view.mocks.name ?? view.mocks.set));
   return { theme: view.theme ?? null, routing, session, notices };
 }

@@ -8,6 +8,8 @@ import { DEVICES } from "@/lib/web/device-preview";
 import { COMMENT_LIMIT, THREAD_LIMIT } from "@/lib/workspaces/workspaces";
 import { DESCRIPTION_LIMIT, MB, NAME_LIMIT, RESPONSE_BODY_LIMIT, RESPONSE_LIMIT, RULE_LIMIT, SET_BODY_LIMIT, SET_LIMIT } from "@/lib/mocks/model";
 import { previewMockLine } from "@/components/preview/preview-mocks";
+import { appliesStatement } from "@/components/toolbar/share-panel";
+import { sharedSetGoneNotice } from "@/lib/mocks/active";
 import { REGISTERED_WHILE_VIEWING, SCREENSHOTS_STILL_APPLY, mockRefusalText } from "@/components/toolbar/data/mock-refusals";
 import { REQUEST_LIMIT } from "@/components/toolbar/data/request-log";
 import { TOOLBAR_ITEMS } from "@/components/toolbar/toolbar-context";
@@ -84,5 +86,14 @@ describe("docs/applications.md", () => {
     const tab = doc.slice(start, doc.indexOf("\n### ", start + 5));
     expect(tab).toContain(`"${previewMockLine("Happy path", null)}"`);
     expect(tab).toContain(`"${previewMockLine("Happy path", { refusal: "foreign", readiness: null })}"`);
+  });
+
+  it("quotes the share link's mock set notice as the link gives it, and says what the dialog says of it (add-mock-sets, task 12.3)", () => {
+    const start = doc.indexOf("\n## Share links\n");
+    const links = doc.slice(start, doc.indexOf("\n## ", start + 5));
+    expect(links).toContain(`"${sharedSetGoneNotice("Errors")}"`);
+    expect(links).toContain("its rules never leave the Frontend Registry");
+    expect(appliesStatement({ routed: false, theme: {}, preset: null, mockSet: "Errors" })).toEqual(["Opening the link applies the mock set \"Errors\", whose rules aren't in the link, through a service worker it registers in the recipient's browser."]);
+    expect(doc).toContain("and it applies the mock set, whose rules aren't in the link, through a service worker it registers there.");
   });
 });

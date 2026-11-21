@@ -73,7 +73,8 @@ export default async function RunRoute({ params, searchParams }: PageProps<"/run
   const notice = [opened.notice, ...(applied?.notices ?? [])].filter(Boolean).join(" ") || null;
   // The application's mock sets, and the one this view applies, which the frame waits for (add-mock-sets, design decision 14).
   const sets = listSets(db, viewed.id).map(({ publicId, name, ruleCount, revision, isDefault }) => ({ publicId, name, ruleCount, revision, isDefault }));
-  const active = resolveActiveSet(db, { applicationId: viewed.id, previewId: shown ? (viewedPreview(db, viewed, shown.key)?.id ?? null) : null, workspaceId: workspace?.id ?? null });
+  // A share link's set applies to the view it opened only, with its current rules, or the visitor's own choice once it's deleted (design decision 17).
+  const active = resolveActiveSet(db, { applicationId: viewed.id, previewId: shown ? (viewedPreview(db, viewed, shown.key)?.id ?? null) : null, workspaceId: workspace?.id ?? null, shared: view.share?.view.mocks ?? null });
   return (
     <RunningApplication
       slug={application.slug}
