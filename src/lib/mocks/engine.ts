@@ -271,7 +271,10 @@ export type LatencySetting = "off" | "recorded" | "slow";
 export const RECORDED_LATENCY_LIMIT_MS = 10_000;
 export const SLOW_LATENCY_MS = 2_000;
 
-/** How long to wait before answering with +response+ under +setting+. Screenshots answer at once. */
+/**
+ * How long to wait before answering with +response+ under +setting+. Screenshots answer at once.
+ * @public The routing worker uses this (add-mock-sets, task 8.3).
+ */
 export function latencyFor(response: Pick<CompiledResponse, "latencyMs">, setting: LatencySetting): number {
   if (setting === "slow") return SLOW_LATENCY_MS;
   if (setting === "recorded") return Math.max(0, Math.min(response.latencyMs, RECORDED_LATENCY_LIMIT_MS));
