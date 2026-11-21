@@ -6,7 +6,7 @@ Applications are built by the same pipeline as [repository previews](previews.md
 
 ## Onboarding
 
-Open **New application** from the Applications page header, or from its empty state. Or, on a Repository's page, open **More actions** and choose **Create application**, which starts with that Repository chosen. Onboarding is a focused page whose back button and **Cancel** return to where you opened it. It has four steps, and each step is kept in the address, so every step works without JavaScript.
+Open **New application** from the Applications page header, or from its empty state. Or, on a Repository's page, open **More actions** and choose **Create application**, which starts with that Repository chosen. Onboarding is a focused page whose back button and **Cancel** return to where you opened it. It has four steps, and an optional fifth, and each step is kept in the address, so every step works without JavaScript.
 
 1. **Repository.** Search the catalog by name or clone URL, which lists up to 10 matches, and choose one. Or enter a clone URL under **Or enter a clone URL**. A URL the catalog already has chooses that Repository. Any other URL is registered under the catalog's usual rules, which refuse credentials in URLs and paths outside the allowed roots.
 2. **Branch.** Choose the branch to track from the remote's branches, with the Repository's configured branch first and preselected. When the remote's branches can't be listed, enter the branch's name instead. **Check eligibility** pins the branch's head commit.
@@ -19,7 +19,8 @@ Open **New application** from the Applications page header, or from its empty st
    - **Description:** optional, prefilled from the package's own description, up to 280 characters.
    - **Trust:** confirm that you trust the repository's code to be built and served.
 
-   **Create application** records the application. It enrolls the remote for previews, unless the remote is enrolled already, and queues the first build, all in one step. The Applications page then opens, with a notice and the new card's building placeholder.
+   **Create application** records the application. It enrolls the remote for previews, unless the remote is enrolled already, and queues the first build, all in one step. The Applications page then opens, with a notice and the new card's building placeholder, after the Data step when onboarding offers one.
+5. **Data,** only when the Profile of the checked commit reports a Service Dependency or a test substitute. The step says the application was created and is building, and that its pages call APIs a static preview can't reach. It lists up to 10 of the APIs the code calls, each with its client and up to 5 of its operations, such as `GET /v1/orders`, and names the test substitutes found, such as MSW handlers in `src/mocks/handlers.ts`, saying that turning them into a mock set isn't available yet and that a HAR file can be uploaded instead. It holds the [upload form](#uploading-a-har): after its review is saved, the new set is the application's default, so its first screenshot applies it, and the Applications page opens. **Skip for now** opens the Applications page as Create application does. Nothing in the step is required.
 
 Checking eligibility reads the commit without running anything, so it needs no enrollment. Creating the application is the trust decision: from then on, the remote's install and build scripts run with the worker's permissions, and its pages run on the Frontend Registry's origin. See [Security](previews.md#security) and [Enrolling a remote](previews.md#enrolling-a-remote).
 

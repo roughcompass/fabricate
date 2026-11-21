@@ -5,13 +5,15 @@ import { AcquisitionError } from "@/lib/acquisition/errors";
 import { requireApplications } from "@/lib/applications/availability";
 import { repositoryForCloneUrl } from "@/lib/applications/onboarding";
 import { createApplication, prepareBranch } from "@/lib/applications/pipeline";
-import { PAGE_SIZE, allApplications } from "@/lib/applications/records";
 import { getDb } from "@/lib/db/client";
 import { NotFoundError, ValidationError } from "@/lib/db/errors";
+import { offersDataStep, profileApis } from "@/lib/mocks/profile-apis";
 import { PreviewAccessError } from "@/lib/previews/access";
+import { findPreparation } from "@/lib/previews/records";
 import { RefResolutionError } from "@/lib/previews/refs";
 import { errorsFrom, text } from "@/lib/web/form-data";
 import { routes } from "@/lib/web/routes";
+import { createdAddress } from "../created-address";
 import type { BranchState, CloneUrlState, DetailsState } from "./form-states";
 
 /*
@@ -81,7 +83,14 @@ export async function createAction(_previous: DetailsState, formData: FormData):
     if (error instanceof PreviewAccessError) notFound();
     throw error;
   }
-  const position = allApplications(getDb()).findIndex((application) => application.slug === slug);
-  const page = Math.floor(Math.max(0, position) / PAGE_SIZE) + 1;
-  redirect(`${routes.applications}?${new URLSearchParams({ ...(page > 1 && { page: String(page) }), notice: "created", application: slug })}`);
+  // The Data step comes next when the Profile reports APIs the code calls, or test substitutes (add-mock-sets, design decision 19).
+  const preparation = findPreparation(getDb(), text(formData, "preparation", 40));
+  if (offersDataStep(profileApis(getDb(), preparation?.surveyId ?? null))) redirect(routes.newApplication({ step: "data", application: slug }));
+  redirect(createdAddress(slug));
+}
+
+/** Skip for now, on the Data step: the Applications page, as Create application opens it without the step. */
+export async function skipDataAction(formData: FormData): Promise<void> {
+  requireApplications();
+  redirect(createdAddress(text(formData, "application", 100)));
 }

@@ -16,6 +16,8 @@ export function applicationOutcome(code: string | undefined, application?: Appli
   switch (code) {
     case "created":
       return { id, tone: "success", title: `${application.name} was created.`, description: "Its first build is queued. Its card shows the screenshot when the build is ready." };
+    case "created-with-mocks":
+      return { id, tone: "success", title: `${application.name} was created, with a mock set.`, description: "Its first build is queued, and its screenshot applies the mock set, its default." };
     case "rebuilt":
       return { id, tone: "success", title: `A build of ${application.name} is queued.`, description: application.current ? "The current build stays in use until the new one is ready." : undefined };
     case "building":

@@ -22,6 +22,7 @@ import { type Query, param } from "@/lib/web/query";
 import { routes } from "@/lib/web/routes";
 import { RefusalTable } from "../../repositories/[repositoryId]/previews-section";
 import { checkBranch, chooseCloneUrl, createAction } from "./actions";
+import { DataStep } from "./data-step";
 import { BranchForm, CloneUrlForm, DetailsForm, type StepLinks } from "./onboarding-forms";
 import { onboardingOrigin } from "./origin";
 import styles from "./onboarding.module.css";
@@ -70,6 +71,7 @@ function href(choices: Choices, extra: Query = {}): string {
 export default async function NewApplicationPage({ searchParams }: PageProps<"/applications/new">) {
   requireApplications();
   const query = await searchParams;
+  if (param(query, "step") === "data") return <DataStep slug={param(query, "application") ?? ""} />;
   const choices = readChoices(query);
   const cancel = onboardingOrigin(choices.from, choices.repository?.publicId);
   const header = { title: "New application", description: "Build a repository's single-page application from a branch, and keep it built as the branch moves." };

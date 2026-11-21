@@ -11,6 +11,7 @@ import { HAR_ENTRY_LIMIT, HAR_UPLOAD_LIMIT, IMPORT_BODY_LIMIT } from "@/lib/mock
 import { CREDENTIAL_HEADER, CREDENTIAL_NAME, JWT_PLACEHOLDER, TRANSPORT_HEADERS } from "@/lib/mocks/sanitize";
 import { DRAFT_HOURS, REVIEW_PAGE_SIZE } from "@/lib/mocks/imports";
 import { EXPORT_ORIGIN } from "@/lib/mocks/export";
+import { OPERATIONS_SHOWN, SERVICES_SHOWN } from "@/lib/mocks/profile-apis";
 import { TOOLBAR_ITEMS } from "@/components/toolbar/toolbar-context";
 
 /*
@@ -75,6 +76,15 @@ describe("docs/applications.md", () => {
     expect(doc).toContain(`by host, ${REVIEW_PAGE_SIZE} to a page`);
     expect(doc).toContain(`up to ${RESPONSE_LIMIT}; a rule called more often keeps the first ${RESPONSE_LIMIT - 1} and the last`);
     expect(doc).toContain(`\`${EXPORT_ORIGIN}\``);
+  });
+
+  it("describes onboarding's Data step in the step's own words (add-mock-sets, task 6.2)", () => {
+    const step = fs.readFileSync("src/app/(operator)/applications/new/data-step.tsx", "utf8");
+    for (const words of ["Skip for now", "isn't available yet", "a static preview can't reach"]) {
+      expect(step, words).toContain(words);
+      expect(doc, words).toContain(words);
+    }
+    expect(doc).toContain(`up to ${SERVICES_SHOWN} of the APIs the code calls, each with its client and up to ${OPERATIONS_SHOWN} of its operations`);
   });
 
   it("lists every toolbar tool with its key", () => {

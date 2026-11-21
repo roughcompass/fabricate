@@ -17,6 +17,7 @@ import { errorsFrom, text, texts } from "@/lib/web/form-data";
 import { lockVersion } from "@/lib/web/actions";
 import { routes } from "@/lib/web/routes";
 import { writableWorkspace } from "@/lib/workspaces/request";
+import { createdAddress } from "../../created-address";
 import type { DeleteSetFormState, PreviewSetFormState, ReviewFormState, RuleFormState, SetFormState } from "./form-states";
 
 /*
@@ -313,7 +314,7 @@ export async function reviewAction(slug: string, draftId: string, _previous: Rev
     throw error;
   }
   recaptureApplication(getDb(), application.id);
-  if (draft.fromOnboarding) redirect(`${routes.applications}?notice=created-with-mocks&application=${slug}`);
+  if (draft.fromOnboarding) redirect(createdAddress(slug, "created-with-mocks"));
   redirect(routes.mockSet(slug, set.publicId, { notice: draft.target ? "rules-imported" : "set-imported" }));
 }
 

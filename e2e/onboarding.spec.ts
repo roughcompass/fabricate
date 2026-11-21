@@ -12,6 +12,9 @@ import { expect as baseExpect, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { runJobs } from "./support/results";
 import { expectCurrentItem, pageTitle } from "./support/shell";
+import { applicationDefault } from "../src/lib/mocks/defaults";
+import { listSets } from "../src/lib/mocks/records";
+import { mockApplicationId } from "./support/mock-sets";
 
 /*
  * Onboarding (add-applications tasks 5.1 to 5.6; applications/onboarding
@@ -126,6 +129,7 @@ test("An eligible app: the configured reference first, Checking… while the com
   await expect(page.getByText("Confirm that you trust this repository's code. Creating the application builds and serves it.")).toBeVisible();
   await expect(page).toHaveURL(/\/applications\/new\?/);
 
+  // No APIs reported: its Profile reports no Service Dependency and no test substitute, so there's no Data step (add-mock-sets).
   await page.getByRole("checkbox", { name: /I trust this repository's code/ }).check();
   await page.getByRole("button", { name: "Create application" }).click();
   await expect(page).toHaveURL(/\/applications\?notice=created&application=orders-portal$|\/applications$/);
@@ -214,5 +218,68 @@ test.describe("without JavaScript", () => {
     await page.getByRole("button", { name: "Create application" }).click();
     await expect(page).toHaveURL(/\/applications\?notice=created&application=orders-portal$/);
     await expect(page.getByRole("article").filter({ hasText: "Orders portal" })).toContainText("Building");
+  });
+});
+
+test.describe("the Data step (add-mock-sets, task 6.1)", () => {
+  /** The Orders portal fixture calling https://api.orders.test, checked and ready to create. */
+  async function callingApis(page: Page, db: Parameters<typeof registered>[0], sourcesDir: string) {
+    const repository = registered(db, path.join(sourcesDir, "spa-orders"), {
+      ...offlineViteApp(),
+      "src/api.js": 'const API = "https://api.orders.test/v1";\nexport const recentOrders = () => fetch(`${API}/orders?limit=5`);\nexport const account = (id) => fetch(`${API}/accounts/${id}`);\n',
+    });
+    await page.goto(paths.newApplication({ repository: repository.publicId }));
+    await page.getByRole("button", { name: "Check eligibility" }).click();
+    await expect(step(page)).toContainText("Step 3 of 4");
+    await runJobs(db);
+    // Without JavaScript the step doesn't update on its own; with it, reloading shows the same step.
+    await page.reload();
+    await expect(step(page)).toContainText("Step 4 of 4");
+    await page.getByRole("checkbox", { name: /I trust this repository's code/ }).check();
+    await page.getByRole("button", { name: "Create application" }).click();
+    await expect(page).toHaveURL(/step=data/);
+  }
+
+  test("Creating an application the Profile shows calling APIs, and The APIs the code calls: the Data step lists them and says it's building", async ({ page, db, sourcesDir }) => {
+    await callingApis(page, db, sourcesDir);
+    await expect(page).toHaveURL(/\/applications\/new\?step=data&application=/);
+    await expect(step(page)).toContainText("Step 5 of 5");
+    await expect(page.getByText(/was created, and its first build is building/)).toBeVisible();
+    const apis = page.getByRole("list", { name: "APIs the code calls" });
+    await expect(apis.locator('[data-api="https://api.orders.test"]')).toContainText("GET /v1/orders");
+    await expect(page.getByLabel("This recording holds only synthetic test data")).toBeVisible();
+  });
+
+  test("Skipping: Skip for now opens the Applications page with the new card building, and no mock set", async ({ page, db, sourcesDir }) => {
+    await callingApis(page, db, sourcesDir);
+    await page.getByRole("button", { name: "Skip for now" }).click();
+    await expect(page.getByRole("region", { name: "Notifications" }).getByText(/was created\./)).toBeVisible();
+    const card = page.getByRole("article").first();
+    await expect(card).toContainText("Building");
+    const slug = new URL(page.url()).searchParams.get("application") ?? (db.$client.prepare("select slug from applications").get() as { slug: string }).slug;
+    expect(listSets(db, mockApplicationId(db, slug))).toEqual([]);
+  });
+
+  test("Uploading during onboarding: the saved review makes the set the application's default, and opens the Applications page", async ({ page, db, sourcesDir }) => {
+    await callingApis(page, db, sourcesDir);
+    const slug = new URL(page.url()).searchParams.get("application")!;
+    await page.getByLabel("HAR file").setInputFiles(path.resolve("test/fixtures/har/orders-portal.chrome.har"));
+    await page.getByLabel("This recording holds only synthetic test data").check();
+    await page.getByRole("button", { name: "Upload HAR" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Review HAR" })).toBeVisible();
+    await page.getByRole("button", { name: "Create mock set" }).click();
+    await expect(page.getByRole("region", { name: "Notifications" }).getByText(/was created, with a mock set\./)).toBeVisible();
+    expect(applicationDefault(db, mockApplicationId(db, slug))?.name).toBe("Happy path");
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("the Data step works without JavaScript: Skip for now", async ({ page, db, sourcesDir }) => {
+      await callingApis(page, db, sourcesDir);
+      await expect(page).toHaveURL(/step=data/);
+      await page.getByRole("button", { name: "Skip for now" }).click();
+      await expect(page).toHaveURL(/\/applications\?.*notice=created/);
+    });
   });
 });
