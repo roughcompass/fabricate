@@ -77,7 +77,7 @@ export interface ViewTable extends RoutingTable, ViewIdentity {
 }
 
 /** A message from the toolbar to the worker. A table or view without `share` or `mocks` is the visitor's own, applying no set. */
-export type RoutingCommand = { readonly type: typeof ROUTING_MESSAGE; readonly command: "arm"; readonly table: ViewTable; readonly frame: string | null } | ({ readonly type: typeof ROUTING_MESSAGE; readonly command: "disarm" } & ViewIdentity);
+export type RoutingCommand = { readonly type: typeof ROUTING_MESSAGE; readonly command: "arm"; readonly table: ViewTable; readonly frame: string | null; readonly page?: string | null } | ({ readonly type: typeof ROUTING_MESSAGE; readonly command: "disarm" } & ViewIdentity);
 
 /** Whether the worker could make the view's set ready: with the revision it holds, or why not. */
 export type MocksReadiness = { readonly ok: true; readonly revision: number } | { readonly ok: false; readonly reason: string };
@@ -98,6 +98,8 @@ export interface Prefix {
   readonly from: string;
   /** Null keeps addresses under +from+ as they are. */
   readonly to: string | null;
+  /** What makes the prefix: a routed entry's directory, a kept entry's, or a routed entry's origin. */
+  readonly kind: "entry" | "kept" | "origin";
 }
 
 /** The directory of an address, with its slash: `http://h/a/remoteEntry.js` is `http://h/a/`. */
@@ -115,14 +117,14 @@ export function directoryOf(address: string): string {
  * routes claim one prefix, the first keeps it.
  */
 export function prefixes(table: Pick<RoutingTable, "routes" | "kept" | "scope">): Prefix[] {
-  const found = new Map<string, string | null>();
-  const add = (from: string, to: string | null) => {
-    if (!found.has(from)) found.set(from, to);
+  const found = new Map<string, Prefix>();
+  const add = (from: string, to: string | null, kind: Prefix["kind"]) => {
+    if (!found.has(from)) found.set(from, { from, to, kind });
   };
-  for (const route of table.routes) add(directoryOf(route.from), directoryOf(route.to));
+  for (const route of table.routes) add(directoryOf(route.from), directoryOf(route.to), "entry");
   for (const kept of table.kept) {
     try {
-      add(directoryOf(kept), null);
+      add(directoryOf(kept), null, "kept");
     } catch {
       // An address that isn't absolute can't be taken by a route either.
     }
@@ -131,17 +133,22 @@ export function prefixes(table: Pick<RoutingTable, "routes" | "kept" | "scope">)
     const to = new URL(route.to);
     // The chosen build's root: the scope's form of the target's own path.
     const root = `${to.origin}${to.pathname.match(/^\/previews\/[^/]+\//)?.[0] ?? "/"}`;
-    add(`${new URL(route.from).origin}/`, root);
+    add(`${new URL(route.from).origin}/`, root, "origin");
   }
-  return [...found].map(([from, to]) => ({ from, to })).sort((left, right) => right.from.length - left.from.length);
+  return [...found.values()].sort((left, right) => right.from.length - left.from.length);
+}
+
+/** Where +url+ is routed, and by which kind of prefix, or null when it stays as it is. The longest prefix decides. */
+export function routeOf(url: string, rules: readonly Prefix[]): { readonly to: string; readonly kind: Prefix["kind"] } | null {
+  const rule = rules.find((candidate) => url.startsWith(candidate.from));
+  if (!rule || rule.to === null) return null;
+  const routed = `${rule.to}${url.slice(rule.from.length)}`;
+  return routed === url ? null : { to: routed, kind: rule.kind };
 }
 
 /** The address +url+ is routed to, or null when it stays as it is. The longest prefix decides. */
 export function routeUrl(url: string, rules: readonly Prefix[]): string | null {
-  const rule = rules.find((candidate) => url.startsWith(candidate.from));
-  if (!rule || rule.to === null) return null;
-  const routed = `${rule.to}${url.slice(rule.from.length)}`;
-  return routed === url ? null : routed;
+  return routeOf(url, rules)?.to ?? null;
 }
 
 /** An import map's JSON with each routed specifier's address replaced; null when it names none of them, or isn't an import map. */

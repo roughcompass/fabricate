@@ -1,5 +1,6 @@
 import { isPageAnnouncement } from "./mock-log";
-import { type RoutingCommand, type ViewIdentity, type ViewTable, ROUTING_MESSAGE, prefixes, referrerIsView, rewriteHtmlImportMaps, rewriteImportMap, routeUrl, viewId } from "./table";
+import { type ArmAnswer, type RoutingCommand, type ViewIdentity, type ViewTable, ROUTING_MESSAGE, prefixes, referrerIsView, rewriteHtmlImportMaps, rewriteImportMap, routeUrl, viewId } from "./table";
+import { answerCall, apiLike, appliesSet, dropSet, readySet, restartSequences } from "./worker-mocks";
 
 /*
  * The view's service worker (restore-toolbar-tools-and-branch-previews,
@@ -12,8 +13,13 @@ import { type RoutingCommand, type ViewIdentity, type ViewTable, ROUTING_MESSAGE
  * document that navigation creates, and of the dedicated workers that
  * document starts. Requests under a routed microfrontend's entry are
  * answered from the chosen build, and the page's import maps name the chosen
- * build's files. A repository's preview page, other tabs, and top-level pages
- * are never handled.
+ * build's files. A view's API calls are answered from its mock set
+ * (worker-mocks.ts), which it fetches before it says the view is armed. A
+ * repository's preview page, other tabs, and top-level pages are never
+ * handled.
+ *
+ * Without a mock set, it handles `GET` requests only, as routing always has.
+ * With one, it handles API calls of every method.
  *
  * A view is its address and its share token, so a share link's view and the
  * visitor's own view of one build arm two tables. A table lasts while the
@@ -75,15 +81,27 @@ interface Handled {
 const armed = new Map<string, Armed>();
 /** The clients handled, by client ID. */
 const routed = new Map<string, Handled>();
-/** The frame agent's id for each client's page, by client ID, as the page told it; a dedicated worker has its document's. */
+/** The frame agent's id for each client's page, by client ID, as the page told it. */
 const pages = new Map<string, string>();
+/** The document that started each dedicated worker handled, by the worker's client ID: the worker's calls are its page's. */
+const owners = new Map<string, string>();
+/** The latest document each view's frame loaded, by view. */
+const latest = new Map<string, string>();
+
+/** The page a client's calls are logged under: its own, or the page of the document that started it. */
+function pageOf(client: string): string | null {
+  return pages.get(client) ?? pages.get(owners.get(client) ?? "") ?? null;
+}
 
 function forget(view: string): void {
   armed.delete(view);
+  dropSet(view);
+  latest.delete(view);
   for (const [client, handled] of routed) {
     if (handled.view !== view) continue;
     routed.delete(client);
     pages.delete(client);
+    owners.delete(client);
   }
 }
 
@@ -107,21 +125,35 @@ self.addEventListener("message", (event) => {
   }
   const command = event.data as RoutingCommand | null;
   if (!command || command.type !== ROUTING_MESSAGE) return;
-  if (command.command === "disarm") forget(viewId(command));
-  else {
-    const view = viewId(command.table);
-    armed.set(view, { table: command.table, at: Date.now() });
-    // A worker that was stopped forgot its documents; the frame's address names the one to handle again.
-    if (command.frame) {
-      const frame = command.frame;
-      event.waitUntil(
-        self.clients.matchAll({ type: "window" }).then((clients) => {
-          for (const client of clients) if (client.frameType === "nested" && client.url === frame && !routed.has(client.id)) routed.set(client.id, { view, url: client.url });
-        }),
-      );
-    }
+  const port = event.ports[0];
+  if (command.command === "disarm") {
+    forget(viewId(command));
+    port?.postMessage({ type: ROUTING_MESSAGE, ok: true } satisfies ArmAnswer);
+    return;
   }
-  event.ports[0]?.postMessage({ type: ROUTING_MESSAGE, ok: true });
+  const view = viewId(command.table);
+  const mocks = command.table.mocks ?? null;
+  if (!mocks) dropSet(view);
+  // A worker that was stopped forgot its documents; the frame's address names the one to handle again.
+  const frame = command.frame;
+  const adopted = frame
+    ? self.clients.matchAll({ type: "window" }).then((clients) => {
+        for (const client of clients) {
+          if (client.frameType !== "nested" || client.url !== frame || routed.has(client.id)) continue;
+          routed.set(client.id, { view, url: client.url });
+          // The page told a worker that was stopped who it is; the toolbar tells this one.
+          if (command.page && !pages.has(client.id)) pages.set(client.id, command.page);
+        }
+      })
+    : Promise.resolve();
+  // The view's set is ready before the worker says it's armed, so the build's first call is answered by it.
+  const ready = mocks ? readySet(view, mocks, self.location.origin) : Promise.resolve(null);
+  event.waitUntil(
+    Promise.all([adopted, ready]).then(([, readiness]) => {
+      armed.set(view, { table: command.table, at: Date.now() });
+      port?.postMessage({ type: ROUTING_MESSAGE, ok: true, ...(readiness ? { mocks: readiness } : {}) } satisfies ArmAnswer);
+    }),
+  );
 });
 
 /** The view whose table takes a frame navigation from +referrer+ into +url+: an armed view's address, or a document already handled. */
@@ -179,24 +211,51 @@ async function routedJson(response: Response, table: ViewTable): Promise<Respons
 function adoptWorker(event: FetchEventLike, handled: Handled): void {
   if (event.request.destination !== "worker" || !event.resultingClientId || routed.has(event.resultingClientId)) return;
   routed.set(event.resultingClientId, { view: handled.view, url: event.request.url });
-  const page = pages.get(event.clientId);
-  if (page) pages.set(event.resultingClientId, page);
+  owners.set(event.resultingClientId, event.clientId);
+}
+
+/** Clients of the scope found not to be the view's, by client ID, so their requests are left alone from then on. */
+const strangers = new Set<string>();
+
+/**
+ * The view a client the worker doesn't know belongs to, when exactly one
+ * view of the build applies a set: a dedicated worker started from a
+ * `blob:` address, which makes no script request, or one the browser gave
+ * no ID for. Any other client, such as a repository's preview page, isn't
+ * the view's. With two views armed, the client can't be told apart, and
+ * isn't answered.
+ */
+function soleView(): string | null {
+  const views = [...armed.keys()].filter((view) => live(view));
+  const [view] = views;
+  return views.length === 1 && view && appliesSet(view, armed.get(view)!.table) ? view : null;
+}
+
+/** Answers an API-like call from a client of +view+ from its set, when the set is ready. */
+function answeredBySet(event: FetchEventLike, view: string, table: ViewTable): boolean {
+  if (!apiLike(event.request) || !appliesSet(view, table)) return false;
+  event.respondWith(answerCall(event.request, table, { view, page: pageOf(event.clientId), origin: self.location.origin }));
+  return true;
 }
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
-  if (request.method !== "GET") return;
 
   if (request.mode === "navigate") {
     // Only a frame's navigation, never a top-level page.
-    if (request.destination !== "iframe" && request.destination !== "frame") return;
+    if (request.method !== "GET" || (request.destination !== "iframe" && request.destination !== "frame")) return;
     if (!armed.size) return;
     event.respondWith(
       (async () => {
         const view = await viewOfNavigation(request.referrer, request.url);
         const table = view ? live(view) : null;
         if (!view || !table) return fetch(request);
-        if (event.resultingClientId) routed.set(event.resultingClientId, { view, url: request.url });
+        if (event.resultingClientId) {
+          routed.set(event.resultingClientId, { view, url: request.url });
+          latest.set(view, event.resultingClientId);
+        }
+        // A new document in the view's frame starts its rules' answers over.
+        restartSequences(view);
         return routedPage(request, table);
       })(),
     );
@@ -205,8 +264,30 @@ self.addEventListener("fetch", (event) => {
 
   const handled = routed.get(event.clientId);
   const table = handled ? live(handled.view) : null;
-  if (!handled || !table) return;
+  if (!handled || !table) {
+    const view = event.clientId && !strangers.has(event.clientId) && apiLike(request) ? soleView() : null;
+    if (!view) return;
+    event.respondWith(
+      (async () => {
+        const client = await self.clients.get(event.clientId);
+        const current = live(view);
+        if (client?.type === "worker" && current && appliesSet(view, current)) {
+          routed.set(event.clientId, { view, url: client.url });
+          // Its document is taken to be the view's latest.
+          const document = latest.get(view);
+          if (document) owners.set(event.clientId, document);
+          return answerCall(request, current, { view, page: pageOf(event.clientId), origin: self.location.origin });
+        }
+        if (strangers.size > 1000) strangers.clear();
+        strangers.add(event.clientId);
+        return fetch(request).catch(() => Response.error());
+      })(),
+    );
+    return;
+  }
   adoptWorker(event, handled);
+  if (answeredBySet(event, handled.view, table)) return;
+  if (request.method !== "GET") return;
   const target = routeUrl(request.url, prefixes(table));
   if (target) event.respondWith(fetch(target, { credentials: "same-origin" }));
   else if (/\.json(\?|#|$)|importmap/i.test(new URL(request.url).pathname)) event.respondWith(fetch(request).then((response) => routedJson(response, table)));

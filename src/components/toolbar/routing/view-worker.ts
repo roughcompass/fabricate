@@ -207,9 +207,10 @@ export class ViewWorker {
    * Before each load of the frame: arms the worker with the view's table,
    * registering it, and waits until its set is ready; or, when nothing
    * applies, disarms the view, unregistering the worker once no view of the
-   * build uses it. +frame+ is the frame's address now, if it shows a page.
+   * build uses it. +frame+ is the frame's address now, if it shows a page,
+   * and +page+ the frame agent's id for that page.
    */
-  async prepare(frame: string | null): Promise<ViewWorkerStatus> {
+  async prepare(frame: string | null, page: string | null = null): Promise<ViewWorkerStatus> {
     const table = this.table();
     const mocks = table.mocks ?? null;
     const routed = table.routes.length > 0;
@@ -224,11 +225,12 @@ export class ViewWorker {
     const container = this.environment.container!;
     try {
       const registration = await container.register(ROUTING_WORKER_SCRIPT, { scope: this.scope, updateViaCache: "none" });
-      let answer = await send(await activated(registration), { type: ROUTING_MESSAGE, command: "arm", table, frame }, this.waitMs(mocks));
+      const command: RoutingCommand = { type: ROUTING_MESSAGE, command: "arm", table, frame, ...(page ? { page } : {}) };
+      let answer = await send(await activated(registration), command, this.waitMs(mocks));
       // A worker from before mock sets answers without them; the browser fetches the current script, which does.
       if (mocks && answer && !answer.mocks) {
         await registration.update();
-        answer = await send(await activated(registration), { type: ROUTING_MESSAGE, command: "arm", table, frame }, this.waitMs(mocks));
+        answer = await send(await activated(registration), command, this.waitMs(mocks));
       }
       this.armedTable = table;
       return { routed, mocks, refusal: null, readiness: mocks ? (answer?.mocks ?? { ok: false, reason: NO_ANSWER }) : null };
@@ -238,12 +240,12 @@ export class ViewWorker {
   }
 
   /** Arms the worker already registered for the build again with the table of the last load, if there is one; never registers it. */
-  async rearm(frame: string | null): Promise<void> {
+  async rearm(frame: string | null, page: string | null = null): Promise<void> {
     const table = this.armedTable;
     const container = this.environment.container;
     if (!table || !container) return;
     const registration = await container.getRegistration(this.scope);
-    if (registration?.active && registration.active.scriptURL === workerUrl(this.environment.origin)) await send(registration.active, { type: ROUTING_MESSAGE, command: "arm", table, frame }, this.waitMs(table.mocks ?? null));
+    if (registration?.active && registration.active.scriptURL === workerUrl(this.environment.origin)) await send(registration.active, { type: ROUTING_MESSAGE, command: "arm", table, frame, ...(page ? { page } : {}) }, this.waitMs(table.mocks ?? null));
   }
 
   private waitMs(mocks: ArmedMocks | null): number {

@@ -105,11 +105,11 @@ export function ViewWorkerProvider({ share, children }: { share: string | null; 
     const coordinator = viewWorker();
     coordinator.setRouting(readers.routing?.() ?? NO_ROUTING);
     coordinator.setMocks(readers.mocks?.() ?? null);
-    setStatus(await coordinator.prepare(frameAddress(target.frame)));
+    setStatus(await coordinator.prepare(frameAddress(target.frame), target.page));
     return address;
   });
 
-  const rearm = useEffectEvent(() => void viewWorker().rearm(frameAddress(target.frame)).catch(() => {}));
+  const rearm = useEffectEvent(() => void viewWorker().rearm(frameAddress(target.frame), target.page).catch(() => {}));
   const applies = status !== null && !status.refusal && (status.routed || status.mocks !== null);
   useEffect(() => {
     if (!applies) return;
