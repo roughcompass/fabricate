@@ -69,6 +69,8 @@ const settingsSchema = z.strictObject({
   // Chromium when null, else a Playwright channel or a browser's path.
   // refCacheSeconds is how long preview mode reuses a remote's branches and
   // tags before reading them again; 0 reads them on every view.
+  // maxMockStorageBytes caps the stored bodies of every application's mock
+  // sets together (add-mock-sets, design decision 9).
   previews: z.strictObject({
     enabled: z.boolean(),
     browser: z
@@ -85,6 +87,7 @@ const settingsSchema = z.strictObject({
     maxOutputBytes: positiveInteger,
     maxStorageBytes: positiveInteger,
     refCacheSeconds: z.int().min(0),
+    maxMockStorageBytes: positiveInteger,
   }),
 });
 
@@ -134,6 +137,7 @@ export const ENV_KEYS = {
   previewsMaxOutputBytes: "FRONTEND_REGISTRY_PREVIEWS_MAX_OUTPUT_BYTES",
   previewsMaxStorageBytes: "FRONTEND_REGISTRY_PREVIEWS_MAX_STORAGE_BYTES",
   previewsRefCacheSeconds: "FRONTEND_REGISTRY_PREVIEWS_REF_CACHE_SECONDS",
+  previewsMaxMockStorageBytes: "FRONTEND_REGISTRY_PREVIEWS_MAX_MOCK_STORAGE_BYTES",
 } as const;
 
 export interface AnalysisBudgets {
@@ -160,6 +164,8 @@ export interface PreviewSettings {
   readonly maxStorageBytes: number;
   /** How long preview mode reuses a remote's branches and tags, in seconds; 0 reads them on every view. */
   readonly refCacheSeconds: number;
+  /** The stored bodies of every mock set together, in bytes. */
+  readonly maxMockStorageBytes: number;
 }
 
 export interface FrontendRegistryConfig {
@@ -307,6 +313,7 @@ function buildConfig(raw: unknown, context: { appRoot: string; environment: Envi
       maxOutputBytes: settings.previews.maxOutputBytes,
       maxStorageBytes: settings.previews.maxStorageBytes,
       refCacheSeconds: settings.previews.refCacheSeconds,
+      maxMockStorageBytes: settings.previews.maxMockStorageBytes,
     },
     settings,
   });
@@ -402,6 +409,7 @@ function applyEnvironment(settings: Record<string, unknown>, env: Readonly<Recor
     [previews, "maxOutputBytes", integer(ENV_KEYS.previewsMaxOutputBytes)],
     [previews, "maxStorageBytes", integer(ENV_KEYS.previewsMaxStorageBytes)],
     [previews, "refCacheSeconds", integer(ENV_KEYS.previewsRefCacheSeconds)],
+    [previews, "maxMockStorageBytes", integer(ENV_KEYS.previewsMaxMockStorageBytes)],
   ];
   for (const [target, key, value] of assignments) if (value !== undefined) target[key] = value;
   result.analysis = analysis;

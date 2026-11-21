@@ -34,7 +34,8 @@
       "timeoutMinutes": 15,
       "maxOutputBytes": 209715200,
       "maxStorageBytes": 5368709120,
-      "refCacheSeconds": 60
+      "refCacheSeconds": 60,
+      "maxMockStorageBytes": 5368709120
     }
   },
   "development": {

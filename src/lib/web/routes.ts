@@ -60,6 +60,31 @@ export const routes = {
   applicationPreview: (slug: string, query?: Query) => withQuery(`/applications/${slug}/preview`, query),
   /** New preview: saves a preview of one of the application's branches or tags (restore-toolbar-tools-and-branch-previews, task 3.2). */
   newApplicationPreview: (slug: string, query?: Query) => withQuery(`/applications/${slug}/previews/new`, query),
+  /**
+   * An application's mock sets (add-mock-sets, design decision 18): the application page's section,
+   * a set's page, its rule forms, New mock set, Edit mock set, Upload HAR, an upload's review, and a
+   * saved preview's choice of set.
+   */
+  applicationMockSets: (slug: string) => withQuery(`/applications/${slug}`, {}, "mock-sets"),
+  mockSet: (slug: string, set: string, query?: Query) => withQuery(`/applications/${slug}/mock-sets/${set}`, query),
+  newMockSet: (slug: string, query?: Query) => withQuery(`/applications/${slug}/mock-sets/new`, query),
+  mockSetEdit: (slug: string, set: string) => `/applications/${slug}/mock-sets/${set}/edit`,
+  newMockRule: (slug: string, set: string, query?: Query) => withQuery(`/applications/${slug}/mock-sets/${set}/rules/new`, query),
+  mockRule: (slug: string, set: string, rule: string) => `/applications/${slug}/mock-sets/${set}/rules/${rule}`,
+  mockSetUpload: (slug: string, query?: Query) => withQuery(`/applications/${slug}/mock-sets/upload`, query),
+  mockSetImport: (slug: string, draft: string, query?: Query) => withQuery(`/applications/${slug}/mock-sets/imports/${draft}`, query),
+  savedPreviewMockSet: (slug: string, key: string) => `/applications/${slug}/previews/${key}/mock-set`,
+  /**
+   * The mock sets' endpoints: the sets with a view's active set, creating one, a visitor's choice,
+   * a set's rules, its compiled rules by revision and its bodies by digest, uploads, and export.
+   */
+  mockSetsApi: (slug: string, query?: Query) => withQuery(`/api/applications/${slug}/mock-sets`, query),
+  mockSetChoiceApi: (slug: string) => `/api/applications/${slug}/mock-sets/choice`,
+  mockRulesApi: (slug: string, set: string) => `/api/applications/${slug}/mock-sets/${set}/rules`,
+  compiledMockSet: (slug: string, set: string, revision?: number) => withQuery(`/api/applications/${slug}/mock-sets/${set}/compiled`, { ...(revision !== undefined && { revision: String(revision) }) }),
+  mockSetBody: (slug: string, set: string, digest: string) => `/api/applications/${slug}/mock-sets/${set}/bodies/${digest}`,
+  mockSetImportsApi: (slug: string) => `/api/applications/${slug}/mock-sets/imports`,
+  mockSetHar: (slug: string, set: string) => `/api/applications/${slug}/mock-sets/${set}/har`,
   /** The status of the applications a page shows, which it polls while one is building. */
   applicationsStatus: (publicIds: readonly string[]) => withQuery("/api/applications/status", { ids: publicIds.join(",") }),
   /**
