@@ -170,6 +170,55 @@ A set is kept until someone deletes it, or its application or Repository is dele
 
 Mock sets are stored unencrypted with their application. Everyone who can open the application can read them, and so can any build the browser runs on the Frontend Registry's origin.
 
+## Uploading a HAR
+
+Most mock sets start from a HAR file: a recording of a session in a browser's network panel, made against a test environment. **Upload HAR** reads it, and **Review HAR** shows what it would keep, before anything is added to a set. Both steps work without JavaScript.
+
+### The file
+
+The upload reads HAR 1.1 and 1.2 files as Chrome, Edge, Firefox, and Safari export them, of up to 50 MB and 5,000 entries. A file that isn't a HAR, or is larger, is refused, saying why; entries past the 5,000th are left out, and the review says how many. To record one, open the network panel, use the application, and choose **Export HAR** in Chrome or Edge, **Save All As HAR** in Firefox, or **Export** in Safari, with the responses' content.
+
+Above its fields, the upload warns to use recordings of test environments with synthetic data only, never real customer, employee, or account data, and says that mock sets are unencrypted and visible to everyone who can open the application, and that the Frontend Registry removes credentials it recognizes but can't recognize personal data. Uploading needs a confirmation that the recording holds only synthetic test data.
+
+The uploaded file itself is never kept: it's read in memory and dropped. Only the calls it keeps, sanitized, are kept as a draft, which only your workspace can read, until you save or cancel the review, or for 24 hours.
+
+### What's kept
+
+Only API calls are kept: entries Chrome marks as fetch, XHR, or event source, or, in an export without Chrome's resource types, as Firefox's and Safari's may be, requests sent with `Sec-Fetch-Dest: empty`, or answered with JSON, GraphQL, or an event stream. The review lists everything else as left out, with its reason:
+- the page's own files: documents, scripts, stylesheets, images, fonts, and media;
+- CORS preflights, which mocked calls don't need;
+- WebSocket connections, which can't be mocked yet;
+- calls with no response recorded, such as an entry with status 0;
+- calls answered from the browser's cache with no body recorded;
+- calls whose body wasn't exported, which says to export the HAR with content;
+- bodies over 5 MB.
+
+Bodies recorded in base64 are decoded. A cached answer (304) with its body recorded becomes the 200 it stands for.
+
+### What's removed
+
+Before anything is written, each kept call loses its credentials:
+- **Request headers** aren't kept, apart from `Content-Type`, since rules don't match on headers, and neither are the HAR's cookie lists. `Authorization`, `Proxy-Authorization`, and `Cookie`, and every header whose name matches `/auth|token|secret|session|api[-_]?key|signature|credential/i`, are counted by name in the review.
+- **Response headers** lose `Set-Cookie` and `Set-Cookie2`, every header whose name matches that pattern, other than CORS's `Access-Control-…` headers, and the transport headers that no longer apply: `Content-Length`, `Content-Encoding`, `Transfer-Encoding`, `Connection`, `Keep-Alive`, `Alt-Svc`, `Strict-Transport-Security`, `Report-To`, `NEL`, and `Date`.
+- **Addresses:** a query parameter whose name matches `/pass(word)?|secret|token|api[-_]?key|authorization|session|signature|credential/i` has its value redacted, and the rule ignores it when matching. Every other query value, and every header value kept, is redacted where it looks like a credential, as build logs are (see [Logs and storage](previews.md#logs-and-storage)).
+- **Bodies:** JSON is read value by value: members whose names match that pattern become `[REDACTED]`, and every other string is redacted on its own, so the body stays valid JSON. Form fields are redacted one by one, and other text whole. A body that had a value redacted is matched with its body ignored, since the redacted text would never equal a real request.
+- **Token-like values,** shaped like a JSON Web Token, become `[REDACTED-JWT]` wherever they are. An application that reads its token's contents needs a synthetic token written into the rule.
+- **Binary bodies,** such as a PDF, can't be checked. They're kept as recorded, and listed unchecked, saying their body can't be checked for credentials or personal data.
+
+### The review
+
+**Review HAR** lists the calls it would keep, by host, 50 to a page, each with a checkbox, its method and address, its responses, its size, and what was removed from it. A summary above says how many headers were dropped, by name, how many values were redacted, and how many token-like values were replaced. What was left out is listed with each reason. Checkboxes are kept as you move between pages. Unchecked calls aren't saved.
+
+- **Grouping:** calls with the same method, address, query, and body become one rule, whose responses are theirs in the order recorded, up to 20; a rule called more often keeps the first 19 and the last, and says so. A query parameter whose values differ between otherwise identical calls, such as `_` with a timestamp, is ignored when matching. Calls to one address with different bodies are matched by their bodies, as JSON, or exactly when they aren't JSON, so GraphQL's operations on `POST /graphql` each get their own rule. Paths stay as recorded: nothing turns `/accounts/42` into `/accounts/:id`.
+- **Hosts:** the review lists each origin the kept calls were recorded on, with how many calls each has. A new set matches any host, unless two origins answered the same method and path differently; then it needs mapped hosts, the review says why, and asks which origin the build calls for each.
+- **Name and default:** a new set's name, and whether it becomes the application's default, checked when the application has none.
+
+**Create mock set**, or **Add rules** for an existing set, saves the checked calls' rules after the set's own, in one step within the [limits](#limits), and opens the set. **Cancel** deletes the draft.
+
+### Exporting
+
+**Export HAR** downloads a set as a HAR 1.2 file, `<slug>-<set>.har`, with one entry for each response of each rule that has one, in the set's order. Each entry's address is its rule's recorded origin, or `https://mock.invalid` for a rule written without one, with its pattern as written, such as `/v1/accounts/:id`; a compared body is its `postData`. Each entry records its rule's pattern, matching, state, and position in `_frontendRegistry`, so uploading the file again restores the same rules. Rules that need a response are left out, and bodies are exported as stored, already sanitized.
+
 ## Screenshots
 
 After a build becomes an application's current build, the worker captures it in a headless browser at the Desktop size, 1440 by 900 pixels. It opens the page the build emitted, through the same serving checks as the web server. Then it waits for the load event and for 500 milliseconds without network requests, up to 20 seconds in all, and captures what's shown, even if the page is still loading. Captures run one at a time and take about a second each. See [Screenshots](previews.md#screenshots) for where they're stored and which browser takes them.

@@ -110,6 +110,9 @@ describe("address patterns name the parts that change", () => {
     expect(parsePattern("/")).toEqual({ segments: [], rest: false });
     for (const invalid of ["v1/accounts", "/v1/*/orders", "/v1/:", "/v1/:1d", "/v1/orders?limit=5", "/v1/a b", "/v1/#top"]) expect(parsePattern(invalid), invalid).toBeNull();
     expect(patternText(parsePattern("/v1/files/q3%20report.csv/:name/*")!)).toBe("/v1/files/q3%20report.csv/:name/*");
+    // Literal segments that look like a named part or the rest read back as literals.
+    expect(patternText({ segments: [{ literal: ":id" }, { literal: "*" }], rest: false })).toBe("/%3Aid/%2A");
+    expect(parsePattern("/%3Aid/%2A")).toEqual({ segments: [{ literal: ":id" }, { literal: "*" }], rest: false });
   });
 });
 
