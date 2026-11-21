@@ -81,6 +81,18 @@ describe("the view a frame was opened from", () => {
     expect(referrerIsView("http://elsewhere.example/run/quotes-desk", "/run/quotes-desk", ORIGIN)).toBe(false);
     expect(referrerIsView("", "/run/quotes-desk", ORIGIN)).toBe(false);
   });
+
+  it("is the share link's view only with its token, and preview mode's with its saved preview (add-mock-sets, task 8.2)", () => {
+    expect(referrerIsView(`${ORIGIN}/run/quotes-desk/blotter?share=tok`, "/run/quotes-desk", ORIGIN)).toBe(false);
+    expect(referrerIsView(`${ORIGIN}/run/quotes-desk/blotter?x=1&share=tok`, { view: "/run/quotes-desk", share: "tok" }, ORIGIN)).toBe(true);
+    expect(referrerIsView(`${ORIGIN}/run/quotes-desk?share=other`, { view: "/run/quotes-desk", share: "tok" }, ORIGIN)).toBe(false);
+    // A running application's own query may name anything but `share`.
+    expect(referrerIsView(`${ORIGIN}/run/quotes-desk?preview=x`, { view: "/run/quotes-desk", share: null }, ORIGIN)).toBe(true);
+    const previewMode = { view: "/applications/quotes-desk/preview", share: null, preview: "feature-dark-blotter" };
+    expect(referrerIsView(`${ORIGIN}/applications/quotes-desk/preview?device=mobile&preview=feature-dark-blotter`, previewMode, ORIGIN)).toBe(true);
+    expect(referrerIsView(`${ORIGIN}/applications/quotes-desk/preview`, previewMode, ORIGIN)).toBe(false);
+    expect(referrerIsView(`${ORIGIN}/applications/quotes-desk/preview?preview=feature-dark-blotter`, { ...previewMode, preview: null }, ORIGIN)).toBe(false);
+  });
 });
 
 describe("the application's own service worker", () => {
@@ -180,6 +192,38 @@ describe("the routing worker", () => {
     // The view of a saved preview of the same application isn't this view.
     const other = await navigation(`${ORIGIN}/previews/pvw_desk/`, `${ORIGIN}/run/quotes-desk@feature-dark-blotter`, "other-frame");
     expect(await other!.text()).toContain("http://127.0.0.1:9312/ticker.js");
+  });
+
+  it("arms a share link's view and the visitor's own view of one build as two views (add-mock-sets, task 8.2)", async () => {
+    const BLUE = `${ORIGIN}/previews/pvw_blue/`;
+    await arm();
+    await arm({ ...TABLE, share: "tok", routes: [{ ...TABLE.routes[0]!, to: `${BLUE}remoteEntry.js` }] } as RoutingTable);
+    await navigation(`${ORIGIN}/previews/pvw_desk/`, `${ORIGIN}/run/quotes-desk?share=tok`, "shared-frame");
+    await navigation(`${ORIGIN}/previews/pvw_desk/`, `${ORIGIN}/run/quotes-desk`, "own-frame");
+    await request("http://127.0.0.1:9311/remoteEntry.js", { clientId: "shared-frame" });
+    expect(fetched.at(-1)).toBe(`${BLUE}remoteEntry.js`);
+    await request("http://127.0.0.1:9311/remoteEntry.js", { clientId: "own-frame" });
+    expect(fetched.at(-1)).toBe(`${PANEL}remoteEntry.js`);
+    // Another share link's frame is neither.
+    const other = await navigation(`${ORIGIN}/previews/pvw_desk/`, `${ORIGIN}/run/quotes-desk?share=other`, "other-frame");
+    expect(await other!.text()).toContain("http://127.0.0.1:9312/ticker.js");
+    // Disarming the share link's view leaves the visitor's own.
+    world.listeners.get("message")!({ data: { type: ROUTING_MESSAGE, command: "disarm", view: "/run/quotes-desk", share: "tok" }, ports: [], waitUntil: () => {} });
+    expect(await request("http://127.0.0.1:9311/remoteEntry.js", { clientId: "shared-frame" })).toBeNull();
+    await request("http://127.0.0.1:9311/remoteEntry.js", { clientId: "own-frame" });
+    expect(fetched.at(-1)).toBe(`${PANEL}remoteEntry.js`);
+  });
+
+  it("handles a dedicated worker a routed document starts, from its script's request (add-mock-sets, task 8.2)", async () => {
+    await arm();
+    await navigation(`${ORIGIN}/previews/pvw_desk/`, `${ORIGIN}/run/quotes-desk`);
+    // The worker's script itself is left to the browser, as any file of the build.
+    expect(await request(`${ORIGIN}/previews/pvw_desk/rates-worker.js`, { clientId: "frame-1", destination: "worker", resultingClientId: "worker-1" })).toBeNull();
+    await request("http://127.0.0.1:9311/remoteEntry.js", { clientId: "worker-1" });
+    expect(fetched.at(-1)).toBe(`${PANEL}remoteEntry.js`);
+    // A worker that an unhandled page starts isn't handled.
+    await request(`${ORIGIN}/previews/pvw_desk/rates-worker.js`, { clientId: "a-tab", destination: "worker", resultingClientId: "worker-2" });
+    expect(await request("http://127.0.0.1:9311/remoteEntry.js", { clientId: "worker-2" })).toBeNull();
   });
 
   it("stops routing once the view is disarmed", async () => {

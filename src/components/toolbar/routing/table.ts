@@ -1,15 +1,21 @@
 /*
  * Version routing's rules (restore-toolbar-tools-and-branch-previews, design
- * decision 7), shared by the toolbar, which builds a view's routing table,
- * and the routing service worker, which applies it to the frame of that view
- * only. No browser or React dependencies, so the rules can be tested
- * directly.
+ * decision 7), shared by the toolbar, which builds a view's table, and the
+ * view's service worker, which applies it to the frame of that view only. A
+ * view's table holds its routing and the mock set it applies (add-mock-sets,
+ * design decision 2), so one worker per build serves both. No browser or
+ * React dependencies, so the rules can be tested directly.
  */
 
-/** Where the Frontend Registry serves the routing worker, with `Service-Worker-Allowed: /previews/` (src/app/toolbar/routing-worker.js). */
+/**
+ * Where the Frontend Registry serves the view's worker, with
+ * `Service-Worker-Allowed: /previews/` (src/app/toolbar/routing-worker.js).
+ * The address stays as routing first named it: registrations already in
+ * visitors' browsers name it, and any other script is the application's own.
+ */
 export const ROUTING_WORKER_SCRIPT = "/toolbar/routing-worker.js";
 
-/** Tags the toolbar's messages to the worker. */
+/** Tags the toolbar's messages to the worker, and its answers. */
 export const ROUTING_MESSAGE = "frontend-registry:routing";
 
 export type RoutedMechanism = "module-federation" | "import-map";
@@ -25,7 +31,7 @@ export interface RoutedEntry {
   readonly to: string;
 }
 
-/** What the toolbar arms the worker with for one view. */
+/** A view's routing, as Microfrontends contributes it to the view's table. */
 export interface RoutingTable {
   /** The running application's address the table is for, on the Frontend Registry's origin: `/run/<slug>`, or `/run/<slug>@<key>`. */
   readonly view: string;
@@ -36,8 +42,57 @@ export interface RoutingTable {
   readonly kept: readonly string[];
 }
 
-/** A message from the toolbar to the worker. */
-export type RoutingCommand = { readonly type: typeof ROUTING_MESSAGE; readonly command: "arm"; readonly table: RoutingTable; readonly frame: string | null } | { readonly type: typeof ROUTING_MESSAGE; readonly command: "disarm"; readonly view: string };
+/**
+ * Which view a table is for. A view is its address and the query parameter
+ * that tells views at that address apart: a share link's token, which a
+ * running application's address keeps as `?share=`, and in preview mode the
+ * saved preview shown, kept as `?preview=`. A share link's view and the
+ * visitor's own view of one build, open in two tabs, are two views.
+ */
+export interface ViewIdentity {
+  /** The address, on the Frontend Registry's origin: `/run/<slug>`, `/run/<slug>@<key>`, or preview mode's `/applications/<slug>/preview`. */
+  readonly view: string;
+  /** The token of the share link that opened the view; null, or left out, for the visitor's own view. */
+  readonly share?: string | null;
+  /** Preview mode only: the saved preview shown, or null for the tracked branch. Left out for a running application, whose address names its preview. */
+  readonly preview?: string | null;
+}
+
+/** How long mocked answers wait: at once, each response's recorded latency up to 10 seconds, or 2 seconds. */
+export type MockLatency = "off" | "recorded" | "slow";
+
+/** The mock set a view applies, which the worker fetches by revision before it answers that it's armed. */
+export interface ArmedMocks {
+  /** The application's slug, whose endpoints serve the set. */
+  readonly application: string;
+  /** The set's public ID. */
+  readonly set: string;
+  readonly revision: number;
+  readonly latency: MockLatency;
+}
+
+/** What the toolbar arms the worker with for one view: its routing and its mock set, either of which may be empty. */
+export interface ViewTable extends RoutingTable, ViewIdentity {
+  readonly mocks?: ArmedMocks | null;
+}
+
+/** A message from the toolbar to the worker. A table or view without `share` or `mocks` is the visitor's own, applying no set. */
+export type RoutingCommand = { readonly type: typeof ROUTING_MESSAGE; readonly command: "arm"; readonly table: ViewTable; readonly frame: string | null } | ({ readonly type: typeof ROUTING_MESSAGE; readonly command: "disarm" } & ViewIdentity);
+
+/** Whether the worker could make the view's set ready: with the revision it holds, or why not. */
+export type MocksReadiness = { readonly ok: true; readonly revision: number } | { readonly ok: false; readonly reason: string };
+
+/** The worker's answer to an arm: `mocks` is there only when the table applies a set. */
+export interface ArmAnswer {
+  readonly type: typeof ROUTING_MESSAGE;
+  readonly ok: true;
+  readonly mocks?: MocksReadiness;
+}
+
+/** A key for a view, unique among the views a worker holds. */
+export function viewId(identity: ViewIdentity): string {
+  return JSON.stringify([identity.view, identity.share ?? null, identity.preview === undefined ? false : identity.preview]);
+}
 
 export interface Prefix {
   readonly from: string;
@@ -127,11 +182,18 @@ export function rewriteHtmlImportMaps(html: string, routes: readonly RoutedEntry
   });
 }
 
-/** Whether +referrer+, an address on +origin+, is the view +view+'s running address, at any of its routes. */
-export function referrerIsView(referrer: string, view: string, origin: string): boolean {
+/**
+ * Whether +referrer+, an address on +origin+, is the view +view+'s address,
+ * at any of its routes: the visitor's own view of it when +view+ is just an
+ * address, which a share link's address isn't.
+ */
+export function referrerIsView(referrer: string, view: string | ViewIdentity, origin: string): boolean {
+  const identity = typeof view === "string" ? { view } : view;
   try {
     const url = new URL(referrer);
-    return url.origin === origin && (url.pathname === view || url.pathname.startsWith(`${view}/`));
+    if (url.origin !== origin || !(url.pathname === identity.view || url.pathname.startsWith(`${identity.view}/`))) return false;
+    if (url.searchParams.get("share") !== (identity.share ?? null)) return false;
+    return identity.preview === undefined || url.searchParams.get("preview") === identity.preview;
   } catch {
     return false;
   }

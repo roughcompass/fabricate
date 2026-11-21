@@ -1,19 +1,23 @@
-import { type RoutingCommand, type RoutingTable, ROUTING_MESSAGE, prefixes, referrerIsView, rewriteHtmlImportMaps, rewriteImportMap, routeUrl } from "./table";
+import { type RoutingCommand, type ViewIdentity, type ViewTable, ROUTING_MESSAGE, prefixes, referrerIsView, rewriteHtmlImportMaps, rewriteImportMap, routeUrl, viewId } from "./table";
 
 /*
- * The routing service worker (restore-toolbar-tools-and-branch-previews,
- * design decision 7). The toolbar registers it with the scope of the build
- * it routes, `/previews/<build>/`, and arms it before each frame load with
- * the view's routing table. It never routes on its own: it routes a frame's
- * navigation only when the frame was opened from an armed view's running
- * address, or from a document it already routes, and then every request of
- * the document that navigation creates. Requests under a routed
- * microfrontend's entry are answered from the chosen build, and the page's
- * import maps name the chosen build's files. Preview mode, a repository's
- * preview page, other tabs, and top-level pages are never routed.
+ * The view's service worker (restore-toolbar-tools-and-branch-previews,
+ * design decision 7; add-mock-sets, design decision 2). The toolbar
+ * registers it with the scope of the build a view shows, `/previews/<build>/`,
+ * and arms it before each frame load with the view's table: its routing,
+ * and the mock set it applies. It never acts on its own: it takes a frame's
+ * navigation only when the frame was opened from an armed view's address,
+ * or from a document it already handles, and then every request of the
+ * document that navigation creates, and of the dedicated workers that
+ * document starts. Requests under a routed microfrontend's entry are
+ * answered from the chosen build, and the page's import maps name the chosen
+ * build's files. A repository's preview page, other tabs, and top-level pages
+ * are never handled.
  *
- * A table lasts while the toolbar keeps arming it, every few seconds; one
- * not armed for a while is dropped, and so are its documents.
+ * A view is its address and its share token, so a share link's view and the
+ * visitor's own view of one build arm two tables. A table lasts while the
+ * toolbar keeps arming it, every few seconds; one not armed for a while is
+ * dropped, and so are its clients.
  *
  * Built into src/components/toolbar/routing/routing-worker.generated.ts by
  * scripts/build-inspector.ts, and served by src/app/toolbar/routing-worker.js.
@@ -24,6 +28,7 @@ interface WorkerClient {
   readonly id: string;
   readonly url: string;
   readonly frameType: string;
+  readonly type?: string;
 }
 interface ExtendableEvent extends Event {
   waitUntil(promise: Promise<unknown>): void;
@@ -53,21 +58,31 @@ declare const self: WorkerScope;
 const ARMED_MS = 90_000;
 
 interface Armed {
-  readonly table: RoutingTable;
+  readonly table: ViewTable;
   readonly at: number;
 }
 
-/** Armed tables, by view. */
-const armed = new Map<string, Armed>();
-/** The documents routed, by client ID, with their view and their address when they were created. */
-const routed = new Map<string, { view: string; url: string }>();
+/** A client the worker handles: a frame's document, or a dedicated worker one started, with its view and its address when it was created. */
+interface Handled {
+  readonly view: string;
+  readonly url: string;
+}
 
-function live(view: string): RoutingTable | null {
+/** Armed tables, by view (viewId). */
+const armed = new Map<string, Armed>();
+/** The clients handled, by client ID. */
+const routed = new Map<string, Handled>();
+
+function forget(view: string): void {
+  armed.delete(view);
+  for (const [client, handled] of routed) if (handled.view === view) routed.delete(client);
+}
+
+function live(view: string): ViewTable | null {
   const entry = armed.get(view);
   if (!entry) return null;
   if (Date.now() - entry.at > ARMED_MS) {
-    armed.delete(view);
-    for (const [client, document] of routed) if (document.view === view) routed.delete(client);
+    forget(view);
     return null;
   }
   return entry.table;
@@ -78,17 +93,16 @@ self.addEventListener("install", () => void self.skipWaiting());
 self.addEventListener("message", (event) => {
   const command = event.data as RoutingCommand | null;
   if (!command || command.type !== ROUTING_MESSAGE) return;
-  if (command.command === "disarm") {
-    armed.delete(command.view);
-    for (const [client, document] of routed) if (document.view === command.view) routed.delete(client);
-  } else {
-    armed.set(command.table.view, { table: command.table, at: Date.now() });
-    // A worker that was stopped forgot its documents; the frame's address names the one to route again.
+  if (command.command === "disarm") forget(viewId(command));
+  else {
+    const view = viewId(command.table);
+    armed.set(view, { table: command.table, at: Date.now() });
+    // A worker that was stopped forgot its documents; the frame's address names the one to handle again.
     if (command.frame) {
       const frame = command.frame;
       event.waitUntil(
         self.clients.matchAll({ type: "window" }).then((clients) => {
-          for (const client of clients) if (client.frameType === "nested" && client.url === frame && !routed.has(client.id)) routed.set(client.id, { view: command.table.view, url: client.url });
+          for (const client of clients) if (client.frameType === "nested" && client.url === frame && !routed.has(client.id)) routed.set(client.id, { view, url: client.url });
         }),
       );
     }
@@ -96,17 +110,17 @@ self.addEventListener("message", (event) => {
   event.ports[0]?.postMessage({ type: ROUTING_MESSAGE, ok: true });
 });
 
-/** The view whose table routes a frame navigation from +referrer+ into +url+: an armed view's running address, or a document already routed. */
+/** The view whose table takes a frame navigation from +referrer+ into +url+: an armed view's address, or a document already handled. */
 async function viewOfNavigation(referrer: string, url: string): Promise<string | null> {
-  for (const [view, entry] of armed) if (url.startsWith(new URL(entry.table.scope, self.location.origin).href) && referrerIsView(referrer, view, self.location.origin) && live(view)) return view;
-  for (const [client, document] of routed) {
-    if (document.url !== referrer) continue;
+  for (const [view, entry] of armed) if (url.startsWith(new URL(entry.table.scope, self.location.origin).href) && referrerIsView(referrer, entry.table satisfies ViewIdentity, self.location.origin) && live(view)) return view;
+  for (const [client, handled] of routed) {
+    if (handled.url !== referrer) continue;
     // A document that went away routes nothing.
     if (!(await self.clients.get(client))) {
       routed.delete(client);
       continue;
     }
-    if (live(document.view)) return document.view;
+    if (live(handled.view)) return handled.view;
   }
   return null;
 }
@@ -118,7 +132,7 @@ async function viewOfNavigation(referrer: string, url: string): Promise<string |
  * back for a navigation. The response is made anew, so the page keeps the
  * address it was opened at.
  */
-async function routedPage(request: Request, table: RoutingTable): Promise<Response> {
+async function routedPage(request: Request, table: ViewTable): Promise<Response> {
   let response = await fetch(request);
   const last = new URL(request.url).pathname.split("/").at(-1) ?? "";
   if (response.status === 404 && !last.includes(".")) response = await fetch(new URL(table.scope, self.location.origin).href, { credentials: "same-origin" });
@@ -131,7 +145,7 @@ async function routedPage(request: Request, table: RoutingTable): Promise<Respon
 }
 
 /** An external import map's JSON, rewritten the same way; anything else as it is. */
-async function routedJson(response: Response, table: RoutingTable): Promise<Response> {
+async function routedJson(response: Response, table: ViewTable): Promise<Response> {
   if (!(response.headers.get("content-type") ?? "").includes("json")) return response;
   const text = await response.clone().text();
   const rewritten = rewriteImportMap(text, table.routes);
@@ -140,6 +154,17 @@ async function routedJson(response: Response, table: RoutingTable): Promise<Resp
   headers.delete("content-length");
   headers.delete("etag");
   return new Response(rewritten, { status: response.status, statusText: response.statusText, headers });
+}
+
+/**
+ * A dedicated worker's script, requested by a handled client: the worker
+ * it creates is handled under the same view, so its own calls are answered
+ * too. The browser names the worker's client in `resultingClientId`, where
+ * it gives one.
+ */
+function adoptWorker(event: FetchEventLike, handled: Handled): void {
+  if (event.request.destination !== "worker" || !event.resultingClientId || routed.has(event.resultingClientId)) return;
+  routed.set(event.resultingClientId, { view: handled.view, url: event.request.url });
 }
 
 self.addEventListener("fetch", (event) => {
@@ -162,9 +187,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const document = routed.get(event.clientId);
-  const table = document ? live(document.view) : null;
-  if (!table) return;
+  const handled = routed.get(event.clientId);
+  const table = handled ? live(handled.view) : null;
+  if (!handled || !table) return;
+  adoptWorker(event, handled);
   const target = routeUrl(request.url, prefixes(table));
   if (target) event.respondWith(fetch(target, { credentials: "same-origin" }));
   else if (/\.json(\?|#|$)|importmap/i.test(new URL(request.url).pathname)) event.respondWith(fetch(request).then((response) => routedJson(response, table)));

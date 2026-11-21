@@ -13,6 +13,7 @@ import { GuidedHints, HintsContext, RUNTIME_HINTS, useHintControls } from "./gui
 import { MicrofrontendsPanel } from "./microfrontends/microfrontends-panel";
 import { MicrofrontendsProvider } from "./microfrontends/microfrontends-state";
 import { RegionsOverlay } from "./microfrontends/regions-overlay";
+import { ViewWorkerProvider } from "./routing/view-worker-state";
 import { SessionPanel } from "./session/session-panel";
 import { type SessionStart, SessionProvider } from "./session/session-state";
 import { SettingsPanel } from "./settings/settings-panel";
@@ -36,8 +37,9 @@ import styles from "./running-application.module.css";
  * +share+ opened, if any; and the guided hints that point to them, from the
  * workspace's +hints+ state. Microfrontends
  * (restore-toolbar-tools-and-branch-previews) lists what the +view+ is
- * composed of and routes its microfrontends, Session starts it with one of
- * its +session+ presets, and Settings switches its theme and logs the page's
+ * composed of and routes its microfrontends, through the view's worker
+ * (add-mock-sets, design decision 2), Session starts it with one of its
+ * +session+ presets, and Settings switches its theme and logs the page's
  * event bus. It needs to read the page, so when the frame isn't same-origin
  * it says so and doesn't start.
  */
@@ -57,11 +59,13 @@ export function ApplicationToolbar({ slug, preview, trackedBranch, share, contex
         <AuditProvider>
           <TimingProvider>
             <SettingsProvider>
-              <MicrofrontendsProvider>
-                <SessionProvider start={session}>
-                  <Tools context={context} hints={hints} share={<SharePanel slug={slug} preview={preview} name={preview ? `${context.name} (${context.branch})` : context.name} share={share} />} />
-                </SessionProvider>
-              </MicrofrontendsProvider>
+              <ViewWorkerProvider share={share}>
+                <MicrofrontendsProvider>
+                  <SessionProvider start={session}>
+                    <Tools context={context} hints={hints} share={<SharePanel slug={slug} preview={preview} name={preview ? `${context.name} (${context.branch})` : context.name} share={share} />} />
+                  </SessionProvider>
+                </MicrofrontendsProvider>
+              </ViewWorkerProvider>
             </SettingsProvider>
           </TimingProvider>
         </AuditProvider>

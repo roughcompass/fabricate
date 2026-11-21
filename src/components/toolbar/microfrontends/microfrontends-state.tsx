@@ -1,11 +1,11 @@
 "use client";
 
-import { createContext, use, useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
-import { routes as addresses } from "@/lib/web/routes";
+import { createContext, use, useCallback, useEffect, useRef, useState } from "react";
 import type { InspectedComposition } from "../inspector/protocol";
-import { type AppliedRoute, type AppliedRouting, armRouting, disarmRouting, readRouting, rearmRouting, routingRefusal, writeRouting } from "../routing/routing-client";
-import type { RoutingTable } from "../routing/table";
-import { useAgentMessages, usePreload, useTargetDocument } from "../target-document";
+import { type AppliedRoute, type AppliedRouting, readRouting, routingRefusalText, writeRouting } from "../routing/routing-client";
+import type { RoutingPart } from "../routing/view-worker";
+import { useViewWorker, useViewWorkerPart } from "../routing/view-worker-state";
+import { useAgentMessages, useTargetDocument } from "../target-document";
 import { useToolbarView } from "../view-context";
 import { type Candidate, type Member, type ProfiledMicrofrontend, membersOf } from "./members";
 
@@ -13,10 +13,11 @@ import { type Candidate, type Member, type ProfiledMicrofrontend, membersOf } fr
  * Microfrontends for a running application (restore-toolbar-tools-and-
  * branch-previews, design decisions 7 and 11): the members the Profile and
  * the page show, the Version choices pending until Reload application, and
- * the routing the view keeps in this browser, which arms the routing worker
- * before each load of the frame and every few seconds while the page is
- * open. The selected member and Show regions are kept here, so Select on
- * page and the region outlines share them with the panel.
+ * the routing the view keeps in this browser, which the view's worker
+ * applies from each load of the frame (add-mock-sets, design decision 2:
+ * Microfrontends contributes the routing to the view's table, beside Data's
+ * mock set). The selected member and Show regions are kept here, so Select
+ * on page and the region outlines share them with the panel.
  */
 
 interface MicrofrontendsState {
@@ -50,24 +51,11 @@ export function useMicrofrontends(): MicrofrontendsState {
   return state;
 }
 
-/** How often the page arms the routing worker again while it's open; the worker drops a table not armed for 90 seconds. */
-const REARM_MS = 5000;
-
-/** The frame's address, while it shows a page. */
-function frameAddress(frame: HTMLIFrameElement | null): string | null {
-  try {
-    const href = frame?.contentWindow?.location.href ?? null;
-    return href && href !== "about:blank" ? href : null;
-  } catch {
-    return null;
-  }
-}
-
 export function MicrofrontendsProvider({ children }: { children: React.ReactNode }) {
   const target = useTargetDocument();
   const view = useToolbarView();
   const scope = target.base;
-  const viewAddress = addresses.runningApplication(view.slug, "", undefined, view.preview);
+  const worker = useViewWorker();
   const [profiled, setProfiled] = useState<ProfiledMicrofrontend[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [runtime, setRuntime] = useState<{ page: string | null; composition: InspectedComposition | null }>({ page: target.page, composition: null });
@@ -79,7 +67,6 @@ export function MicrofrontendsProvider({ children }: { children: React.ReactNode
   });
   const [pending, setPending] = useState<ReadonlyMap<string, Candidate | null>>(new Map());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [refusal, setRefusal] = useState<string | null>(null);
   const [showRegions, setShowRegions] = useState(false);
   // The routing the next load arms, set before a reload asks for it.
   const latest = useRef(applied);
@@ -91,7 +78,11 @@ export function MicrofrontendsProvider({ children }: { children: React.ReactNode
 
   const members = membersOf(profiled ?? [], runtime.composition, applied.routes, typeof window === "undefined" ? "" : new URL(scope, window.location.origin).href);
 
-  const tableOf = (routing: AppliedRouting & { kept?: readonly string[] }): RoutingTable => ({ view: viewAddress, scope, routes: routing.routes.map(({ name, mechanism, from, to }) => ({ name, mechanism, from, to })), kept: routing.kept ?? [] });
+  // The routing the view's table holds from the next load.
+  useViewWorkerPart("routing", (): RoutingPart => ({ routes: latest.current.routes.map(({ name, mechanism, from, to }) => ({ name, mechanism, from, to })), kept: latest.current.kept ?? [] }));
+  // Why routing can't run: known for the build before anyone chooses, or found when routing last applied.
+  const status = worker.status;
+  const refusal = worker.refusal ? routingRefusalText(worker.refusal) : status?.routed && status.refusal ? routingRefusalText(status.refusal) : null;
 
   const { slug, preview } = view;
   const fetchComposition = useCallback(() => {
@@ -110,43 +101,6 @@ export function MicrofrontendsProvider({ children }: { children: React.ReactNode
     const timer = window.setTimeout(fetchComposition, 0);
     return () => window.clearTimeout(timer);
   }, [fetchComposition]);
-
-  // Whether this browser and the build's path allow routing at all, said before anyone chooses.
-  useEffect(() => {
-    let live = true;
-    void routingRefusal(scope).then((reason) => {
-      if (live) setRefusal(reason);
-    });
-    return () => {
-      live = false;
-    };
-  }, [scope]);
-
-  usePreload(async (address) => {
-    const routing = latest.current;
-    if (!routing.routes.length) {
-      await disarmRouting(viewAddress, scope).catch(() => {});
-      return address;
-    }
-    const reason = await routingRefusal(scope);
-    if (reason) {
-      setRefusal(reason);
-      return address;
-    }
-    try {
-      await armRouting(tableOf(routing), frameAddress(target.frame));
-    } catch {
-      setRefusal("The routing service worker couldn't start in this browser, so routing isn't applied.");
-    }
-    return address;
-  });
-
-  const rearm = useEffectEvent(() => void rearmRouting(tableOf(latest.current), frameAddress(target.frame)).catch(() => {}));
-  useEffect(() => {
-    if (!applied.routes.length) return;
-    const timer = window.setInterval(() => rearm(), REARM_MS);
-    return () => window.clearInterval(timer);
-  }, [applied]);
 
   const apply = (routing: AppliedRouting & { kept: readonly string[] }) => {
     latest.current = routing;
