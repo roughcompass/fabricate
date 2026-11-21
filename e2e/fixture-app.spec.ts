@@ -7,6 +7,9 @@ import { profileDocument, profileOfSurvey } from "../src/lib/profiles/profile-re
 import { compileSet } from "../src/lib/mocks/compile";
 import { resolveActiveSet } from "../src/lib/mocks/active";
 import { setDirectory } from "../src/lib/mocks/storage";
+import { recaptureApplication } from "../src/lib/mocks/recapture";
+import { failedCallsOf } from "../src/lib/mocks/views";
+import { runJobs } from "./support/results";
 import { E2E_PACKAGE_CACHE, E2E_PREVIEWS } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { ORDERS_PORTAL_BRANDS, buildOrdersPortal, commitToOrdersPortal, ordersPortalRemote, previewOrdersPortal, saveOrdersPortalPreview } from "./support/fixture-app";
@@ -187,4 +190,30 @@ test("seeds a mock set, a default, and failed calls for both agents' specs (add-
     { url: "https://api.orders.test/v1/rates", kind: "status", status: 503 },
   ]);
   expect(db.$client.prepare("select failed_calls from preview_screenshots s join applications a on a.current_preview_id = s.preview_id where a.slug = ?").get(application.slug)).toEqual({ failed_calls: 2 });
+});
+
+test("captures the built Orders portal without a set, recording its four failed calls, then with Happy path, recording only the calls no rule answers (add-mock-sets, tasks 7.1 and 7.2)", async ({ page, db }) => {
+  ordersPortalRemote();
+  const { application, preview } = await buildOrdersPortal(db);
+  const failed = () => failedCallsOf(db, preview.id)!;
+  // A fake API host: each distinct call the page and its worker make fails, as couldn't connect or a WebSocket that never opened.
+  expect(failed().set).toBeNull();
+  expect(failed().calls.map((call) => [call.method, call.url.replace(/_=\d+/, "_=…"), call.kind])).toEqual(
+    expect.arrayContaining([
+      ["GET", "https://api.orders.test/v1/orders?limit=5&_=…", "connect"],
+      ["GET", "https://api.orders.test/v1/orders/stream", "connect"],
+      ["GET", "https://api.orders.test/v1/rates", "connect"],
+      ["GET", "wss://api.orders.test/v1/ticker", "websocket"],
+    ]),
+  );
+  expect(failed().total).toBe(4);
+
+  // With Happy path as its default, the build is captured again with it.
+  seedMockSet(db, application.slug, ORDERS_HAPPY_PATH, { default: true });
+  expect(recaptureApplication(db, mockApplicationId(db, application.slug))).toBe(1);
+  await runJobs(db);
+  expect(failed().set?.name).toBe("Happy path");
+  expect(failed().calls.map((call) => call.url).sort()).toEqual(["https://api.orders.test/v1/rates", "wss://api.orders.test/v1/ticker"]);
+  await page.goto(paths.application(application.slug));
+  await expect(page.getByRole("img", { name: /with the mock set Happy path$/ }).first()).toBeVisible();
 });

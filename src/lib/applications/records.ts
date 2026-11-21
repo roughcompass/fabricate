@@ -80,8 +80,8 @@ export interface Application {
   };
   /** The current build: the last that succeeded. */
   readonly current: ApplicationBuild | null;
-  /** The current build's screenshot, when it's ready: a version for its address, and when it was captured. */
-  readonly screenshot: { readonly version: string; readonly capturedAt: Date } | null;
+  /** The current build's screenshot, when it's ready: a version for its address, when it was captured, and the mock set it applied (add-mock-sets). */
+  readonly screenshot: { readonly version: string; readonly capturedAt: Date; readonly mockSet: string | null } | null;
   readonly facts: ApplicationFacts;
   readonly lockVersion: number;
   readonly createdAt: Date;
@@ -114,7 +114,12 @@ export const buildColumns = <T extends typeof currentBuild | typeof latestBuild>
   packageManager: table.packageManager,
 });
 
-export const screenshotColumns = { state: previewScreenshots.state, capturedAt: previewScreenshots.capturedAt };
+/** +text+, a screenshot's text alternative, naming the mock set it applied, when it applied one (add-mock-sets, design decision 11). */
+export function withMockSet(text: string, mockSet: string | null | undefined): string {
+  return mockSet ? `${text}, with the mock set ${mockSet}` : text;
+}
+
+export const screenshotColumns = { state: previewScreenshots.state, capturedAt: previewScreenshots.capturedAt, mockSetName: previewScreenshots.mockSetName };
 
 type SelectedBuild = { [K in keyof ReturnType<typeof buildColumns>]: ApplicationBuild[K] | null } | null;
 
@@ -124,7 +129,7 @@ type TargetColumns = Pick<ApplicationRow, "latestOutcome" | "currentPreviewId" |
 /** What an application and a saved preview show alike: status, image, latest attempt, current build, and screenshot. */
 export type TargetState = Pick<Application, "status" | "image" | "settling" | "latest" | "current" | "screenshot" | "facts">;
 
-export function targetState(row: TargetColumns, current: SelectedBuild, latest: SelectedBuild, screenshot: { state: string | null; capturedAt: Date | null } | null): TargetState {
+export function targetState(row: TargetColumns, current: SelectedBuild, latest: SelectedBuild, screenshot: { state: string | null; capturedAt: Date | null; mockSetName?: string | null } | null): TargetState {
   // A left join with no row gives null.
   const build = (value: SelectedBuild): ApplicationBuild | null => (value === null || value.preview === null ? null : (value as ApplicationBuild));
   const screenshotState = (screenshot?.state ?? null) as ScreenshotState | null;
@@ -136,7 +141,7 @@ export function targetState(row: TargetColumns, current: SelectedBuild, latest: 
     settling: isSettling(input),
     latest: { outcome: row.latestOutcome, commitSha: row.latestCommitSha, requestedAt: row.latestRequestedAt, reasons: shownReasons(row.latestReasons), build: build(latest) },
     current: build(current),
-    screenshot: screenshotState === "ready" && screenshot?.capturedAt ? { version: screenshot.capturedAt.getTime().toString(36), capturedAt: screenshot.capturedAt } : null,
+    screenshot: screenshotState === "ready" && screenshot?.capturedAt ? { version: screenshot.capturedAt.getTime().toString(36), capturedAt: screenshot.capturedAt, mockSet: screenshot.mockSetName ?? null } : null,
     facts: { frameworks: facts.frameworks ?? [], buildTool: facts.buildTool ?? null, packageManager: facts.packageManager ?? null },
   };
 }

@@ -8,7 +8,7 @@ import { type Executor, getDb } from "@/lib/db/client";
 import { applicationPreviews, applications, previewBuilds, previewScreenshots } from "@/lib/db/schema";
 import { type ScreenshotSize, screenshotFile } from "@/lib/previews/screenshots";
 import { applicationsAvailable } from "./availability";
-import type { Application } from "./records";
+import { type Application, withMockSet } from "./records";
 
 /**
  * An application's screenshot and card image, served through its own
@@ -24,12 +24,14 @@ import type { Application } from "./records";
  */
 
 /**
- * The text alternative for an application's screenshot: the application, and the commit it shows.
+ * The text alternative for an application's screenshot: the application, the commit it shows, and the mock set it applied (add-mock-sets, design decision 11).
  * @public The Applications pages and their actions use this (add-applications tasks 5 to 8).
  */
-export function screenshotAlt(application: Pick<Application, "name" | "current">): string {
-  return application.current ? `Screenshot of ${application.name} at commit ${application.current.commitSha.slice(0, 7)}` : `Screenshot of ${application.name}`;
+export function screenshotAlt(application: Pick<Application, "name" | "current"> & { readonly screenshot?: Application["screenshot"] }): string {
+  const shown = application.current ? `Screenshot of ${application.name} at commit ${application.current.commitSha.slice(0, 7)}` : `Screenshot of ${application.name}`;
+  return withMockSet(shown, application.screenshot?.mockSet);
 }
+
 
 /** The size a request asks for: the card image for `size=card`, else the full screenshot. */
 export function screenshotSize(value: string | null): ScreenshotSize {

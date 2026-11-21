@@ -4,7 +4,7 @@ import { getConfig, withOverrides } from "@/lib/config";
 import type { Db } from "@/lib/db/client";
 import { buildRepository } from "../support/builders";
 import { decidedPreparation, onboard } from "../support/applications";
-import { createTestDb, migrateUpTo } from "../support/db";
+import { createTestDb, migrateToLatest, migrateUpTo } from "../support/db";
 import { migrationFolderAt } from "../support/migrations";
 import { queuedPreview } from "../support/previews";
 
@@ -36,6 +36,8 @@ describe("enrollments and build history migration", () => {
   });
 
   it("keeps an application's history of its own builds, and deletes it with the application", () => {
+    // The code that creates an application reads the latest schema, such as the screenshot's mock set (add-mock-sets).
+    migrateToLatest(db);
     const created = onboard(db, withOverrides(getConfig(), { previews: { enabled: true } }), repository, { preparation: decidedPreparation(db, repository, undefined, undefined, undefined, { hooks: false }) });
     expect(count("application_builds")).toBe(1);
     expect(count("preview_enrollments")).toBe(1);

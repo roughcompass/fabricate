@@ -5,7 +5,7 @@ import type { FrontendRegistryConfig } from "@/lib/config";
 import { type Executor, immediate } from "@/lib/db/client";
 import { JOB_PRIORITIES, jobs, previewScreenshots, screenshotFailedCalls } from "@/lib/db/schema";
 import { failureText } from "@/lib/git/redact";
-import { enqueue } from "@/lib/jobs/queue";
+import { enqueue, jobPayload } from "@/lib/jobs/queue";
 import type { PreviewBuild } from "./records";
 import { previewDirectory } from "./storage";
 
@@ -59,7 +59,7 @@ export function requestScreenshot(db: Executor, preview: Pick<PreviewBuild, "id"
   if (preview.artifact === null) return null;
   const existing = findScreenshot(db, preview.id);
   const sameArtifact = existing && existing.artifact === preview.artifact && existing.state !== "unavailable";
-  if (existing && sameArtifact && (mocks === undefined || existing.state === "pending" || capturedWith(existing, mocks))) {
+  if (existing && sameArtifact && (mocks === undefined || existing.state === "pending" || capturedWith(existing, mocks) || requestedWith(db, preview.publicId, existing, mocks))) {
     if (existing.state === "pending") enqueue(db, { kind: CAPTURE_SCREENSHOT, payload: screenshotJob(preview.publicId, existing), idempotencyKey: screenshotJobKey(preview.publicId, existing), priority, raisePriority: true });
     return existing;
   }
@@ -74,8 +74,20 @@ export function requestScreenshot(db: Executor, preview: Pick<PreviewBuild, "id"
         .values({ ...values, artifact: preview.artifact, previewId: preview.id, createdAt: now })
         .returning()
         .get();
-  enqueue(db, { kind: CAPTURE_SCREENSHOT, payload: screenshotJob(preview.publicId, screenshot), idempotencyKey: screenshotJobKey(preview.publicId, screenshot), priority });
+  const payload = mocks === undefined ? screenshotJob(preview.publicId, screenshot) : { ...screenshotJob(preview.publicId, screenshot), mocks: mocksKey(mocks) };
+  enqueue(db, { kind: CAPTURE_SCREENSHOT, payload, idempotencyKey: screenshotJobKey(preview.publicId, screenshot), priority });
   return screenshot;
+}
+
+/** A mock set as a capture's job records the one it was asked for. */
+function mocksKey(mocks: ExpectedMocks): string {
+  return mocks ? `${mocks.publicId}@${mocks.revision}` : "none";
+}
+
+/** Whether the capture last asked of +screenshot+ is still waiting, for +mocks+: then asking again changes nothing. */
+function requestedWith(db: Executor, previewPublicId: string, screenshot: PreviewScreenshot, mocks: ExpectedMocks): boolean {
+  const job = db.select().from(jobs).where(eq(jobs.idempotencyKey, screenshotJobKey(previewPublicId, screenshot))).get();
+  return !!job && (job.state === "queued" || job.state === "running") && jobPayload(job).mocks === mocksKey(mocks);
 }
 
 export interface ScreenshotJob {

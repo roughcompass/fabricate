@@ -2,7 +2,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { Executor } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/db/errors";
 import { applicationPreviews, applications, previewScreenshots } from "@/lib/db/schema";
-import { type Application, type SettleValues, type TargetState, buildColumns, compareNames, currentBuild, latestBuild, screenshotColumns, settledColumns, targetState } from "./records";
+import { type Application, type SettleValues, type TargetState, buildColumns, compareNames, currentBuild, latestBuild, screenshotColumns, settledColumns, targetState, withMockSet } from "./records";
 
 /*
  * Saved previews (restore-toolbar-tools-and-branch-previews, design decisions
@@ -155,8 +155,9 @@ export function getSavedPreviewRow(db: Executor, publicId: string): SavedPreview
  * The text alternative for a saved preview's screenshot: the application, the branch or tag, and the commit it shows.
  * @public The application page and the screenshot route use it (task 2.3).
  */
-export function savedPreviewAlt(application: Pick<Application, "name">, saved: Pick<SavedPreview, "label" | "current">): string {
-  return saved.current ? `Screenshot of ${application.name}, ${saved.label}, at commit ${saved.current.commitSha.slice(0, 7)}` : `Screenshot of ${application.name}, ${saved.label}`;
+export function savedPreviewAlt(application: Pick<Application, "name">, saved: Pick<SavedPreview, "label" | "current"> & { readonly screenshot?: SavedPreview["screenshot"] }): string {
+  const shown = saved.current ? `Screenshot of ${application.name}, ${saved.label}, at commit ${saved.current.commitSha.slice(0, 7)}` : `Screenshot of ${application.name}, ${saved.label}`;
+  return withMockSet(shown, saved.screenshot?.mockSet);
 }
 
 // -- Changing ---------------------------------------------------------------------

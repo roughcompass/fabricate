@@ -12,6 +12,7 @@ import { CREDENTIAL_HEADER, CREDENTIAL_NAME, JWT_PLACEHOLDER, TRANSPORT_HEADERS 
 import { DRAFT_HOURS, REVIEW_PAGE_SIZE } from "@/lib/mocks/imports";
 import { EXPORT_ORIGIN } from "@/lib/mocks/export";
 import { OPERATIONS_SHOWN, SERVICES_SHOWN } from "@/lib/mocks/profile-apis";
+import { FAILED_CALL_KINDS } from "@/lib/db/schema";
 import { TOOLBAR_ITEMS } from "@/components/toolbar/toolbar-context";
 
 /*
@@ -85,6 +86,11 @@ describe("docs/applications.md", () => {
       expect(doc, words).toContain(words);
     }
     expect(doc).toContain(`up to ${SERVICES_SHOWN} of the APIs the code calls, each with its client and up to ${OPERATIONS_SHOWN} of its operations`);
+  });
+
+  it("quotes the failure kinds a capture records as screenshot_failed_calls.kind has them (add-mock-sets, task 7.4)", () => {
+    const quoted = [...doc.matchAll(/\(`(status|connect|cors|not_mocked|websocket|[a-z_]+)`\)/g)].map((match) => match[1]);
+    expect(new Set(quoted)).toEqual(new Set(FAILED_CALL_KINDS));
   });
 
   it("lists every toolbar tool with its key", () => {

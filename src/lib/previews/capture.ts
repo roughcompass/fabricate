@@ -5,9 +5,13 @@ import type { Browser, CDPSession } from "playwright-core";
 import { type FrontendRegistryConfig, getConfig } from "@/lib/config";
 import type { Executor } from "@/lib/db/client";
 import { failureText } from "@/lib/git/redact";
+import { compileSet } from "@/lib/mocks/compile";
+import { defaultForBuild } from "@/lib/mocks/recapture";
+import { setDirectory } from "@/lib/mocks/storage";
 import { launchBrowser } from "./browser";
+import { type CaptureMocks, applyMocks } from "./capture-mocks";
 import { findPreview } from "./records";
-import { SCREENSHOT_FILES, type ScreenshotJob, completeScreenshot, failScreenshot, findScreenshot, screenshotDirectoryName } from "./screenshots";
+import { type CaptureRecord, SCREENSHOT_FILES, type ScreenshotJob, completeScreenshot, failScreenshot, findScreenshot, screenshotDirectoryName } from "./screenshots";
 import { startPreviewServer } from "./static-server";
 import { previewDirectory } from "./storage";
 import { previewBasePath } from "./toolchain";
@@ -60,21 +64,26 @@ export async function runScreenshot(db: Executor, job: ScreenshotJob, options: C
   if (preview.artifact !== screenshot.artifact) return fail("A newer build was published before the screenshot was taken.");
 
   const root = previewDirectory(config, preview.publicId);
-  const directory = screenshotDirectoryName(screenshot.artifact);
+  // Capturing a shown screenshot again writes beside it, so its images stay until the new ones are recorded.
+  const directory = `${screenshotDirectoryName(screenshot.artifact)}${screenshot.state === "ready" ? `r${crypto.randomBytes(4).toString("hex")}` : ""}`;
   const scratch = path.join(root, "screenshots", `.capture-${crypto.randomBytes(5).toString("hex")}`);
+  // The default set of the build's target, as it stands now (add-mock-sets, design decision 11).
+  const set = defaultForBuild(db, preview.id);
+  const mocks: CaptureMocks = set ? { set: compileSet(db, set, config), directory: setDirectory(config, set.publicId) } : { set: null, directory: null };
   let server: Awaited<ReturnType<typeof startPreviewServer>> | null = null;
   let browser: Browser | null = null;
   try {
     server = await startPreviewServer({ db, config });
     browser = await (options.launch ?? launchBrowser)(config);
-    const images = await capture(browser, `${server.origin}${previewBasePath(preview.publicId)}`, options.limitMs ?? CAPTURE_LIMIT_MS, options.signal);
+    const images = await capture(browser, { origin: server.origin, base: previewBasePath(preview.publicId), mocks }, options.limitMs ?? CAPTURE_LIMIT_MS, options.signal);
     await fsp.mkdir(scratch, { recursive: true });
     await fsp.writeFile(path.join(scratch, SCREENSHOT_FILES.full), images.full);
     await fsp.writeFile(path.join(scratch, SCREENSHOT_FILES.card), images.card);
     const target = path.join(root, ...directory.split("/"));
     await fsp.rm(target, { recursive: true, force: true });
     await fsp.rename(scratch, target);
-    if (!completeScreenshot(db, preview.id, job.requested, directory)) {
+    const record: CaptureRecord = { mocks: set ? { publicId: set.publicId, name: set.name, revision: set.revision } : null, failures: images.failures };
+    if (!completeScreenshot(db, preview.id, job.requested, directory, new Date(), record)) {
       await fsp.rm(target, { recursive: true, force: true });
       return "skipped";
     }
@@ -91,13 +100,21 @@ export async function runScreenshot(db: Executor, job: ScreenshotJob, options: C
   }
 }
 
-/** Opens +url+ at the Desktop size, waits for it to load and settle up to +limitMs+, and captures the full image and the card. */
-async function capture(browser: Browser, url: string, limitMs: number, signal?: AbortSignal): Promise<{ full: Buffer; card: Buffer }> {
+/**
+ * Opens the build at +target+'s base at the Desktop size, with its mock set
+ * applied, waits for it to load and settle up to +limitMs+, and captures the
+ * full image and the card, with the API calls that failed.
+ */
+async function capture(browser: Browser, target: { origin: string; base: string; mocks: CaptureMocks }, limitMs: number, signal?: AbortSignal): Promise<{ full: Buffer; card: Buffer; failures: CaptureRecord["failures"] }> {
   const stop = () => void browser.close().catch(() => {});
   signal?.addEventListener("abort", stop, { once: true });
   try {
     const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1, serviceWorkers: "block" });
     const page = await context.newPage();
+    // The DevTools session opens before navigation, so it sees every call's failure as it happens.
+    const session = await context.newCDPSession(page);
+    const failures = await applyMocks(context, page, session, target);
+    const url = `${target.origin}${target.base}`;
     const deadline = Date.now() + limitMs;
     let response;
     try {
@@ -109,8 +126,7 @@ async function capture(browser: Browser, url: string, limitMs: number, signal?: 
     if (response && !response.ok()) throw new Error(`the build's page answered ${response.status()}`);
     const remaining = deadline - Date.now();
     if (remaining > 0) await page.waitForLoadState("networkidle", { timeout: remaining }).catch((error: unknown) => (isTimeout(error) ? undefined : Promise.reject(error)));
-    const session = await context.newCDPSession(page);
-    return { full: await shoot(session, 1), card: await shoot(session, CARD_SCALE) };
+    return { full: await shoot(session, 1), card: await shoot(session, CARD_SCALE), failures: failures() };
   } finally {
     signal?.removeEventListener("abort", stop);
   }

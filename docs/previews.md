@@ -292,6 +292,8 @@ After an application's build publishes, a `preview.screenshot` job captures it, 
 
 A capture that fails, because the browser can't start or the page can't be opened, records the screenshot as unavailable with the reason, and never fails the build: the build stays current, and the card says no screenshot is available. The next successful build is captured again.
 
+A capture applies the build's default [mock set](applications.md#mock-sets), through the same matching engine as the browser, answering fetch, XHR, and event-source requests with Playwright's request routing; under the build's own path the build answers first, and only a 404 or 405 lets a rule answer. A DevTools session, opened before the page loads, tells calls blocked by CORS from calls that couldn't connect, and sees WebSockets that never opened. The capture records the set it applied, as it was, and up to 50 distinct API calls that failed, with the screenshot, in one step (see [Screenshots](applications.md#screenshots)). When the default set or its rules change, the build is captured again at background priority, and the earlier images stay until the new ones are written beside them.
+
 The browser is `previews.browser`: Playwright's Chromium by default, installed on the worker's host as the worker's user with `npx playwright install chromium`, or a Playwright channel such as `chrome` or `msedge` for an installed browser, or a Chromium-based browser's absolute path. `npm run previews:doctor` checks that it launches. The web server needs no browser.
 
 Like a preview's page, the browser runs the application's own scripts, with the worker's network access, so a screenshot is subject to the same trust as enrollment ([Security](#security)).
