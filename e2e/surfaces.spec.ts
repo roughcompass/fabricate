@@ -1,16 +1,17 @@
-import type { Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { addBitbucketToken } from "../src/lib/admin/bitbucket-tokens";
 import { storeEntry } from "../src/lib/catalog/entries";
 import { saltEntry } from "../test/support/catalog";
 import { buildRepository } from "../test/support/builders";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, test } from "./support/fixtures";
-import { framedRun } from "./support/fixture-app";
+import { buildOrdersPortal, framedRun, ordersPortalRemote } from "./support/fixture-app";
+import { ORDERS_HAPPY_PATH, seedMockSet } from "./support/mock-sets";
 import { buildQuotes } from "./support/quotes-fixtures";
-import { application, waitForPage } from "./support/running-app";
+import { application, waitForPage, workspaceOf } from "./support/running-app";
 import { expectToolbarOnTop, openTool } from "./support/toolbar";
 import { seedResults } from "./support/results";
 import { limitViolations } from "./support/page-limits";
-import { type Surface, applicationSurfaces, seedOperatorSurfaces } from "./support/surfaces";
+import { type Surface, applicationSurfaces, importReviewSurface, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
 import { pageHeader, useTheme } from "./support/shell";
 
@@ -65,16 +66,16 @@ test("Dark theme: the canvas is darker than the surfaces and the header", async 
 
 test("No nested bordered containers on any surface", async ({ page, db, sourcesDir }) => {
   test.setTimeout(240_000);
-  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...applicationSurfaces(db, sourcesDir)];
+  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...(await applicationSurfaces(db, sourcesDir)), importReviewSurface(db, (await workspaceOf(page.context(), db)).id)];
   for (const [name, url] of surfaces) {
     await page.goto(url);
     await test.step(name, () => expectNoNestedBorders(page));
   }
 });
 
-/** Every page: the captured operator surfaces, the routes they leave out, each seeded, and the product site's pages. */
-async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sourcesDir: string): Promise<Surface[]> {
-  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...applicationSurfaces(db, sourcesDir)];
+/** Every page: the captured operator surfaces, the routes they leave out, each seeded, and the product site's pages; Review HAR is the upload of +page+'s workspace. */
+async function everyPage(db: Parameters<typeof seedOperatorSurfaces>[0], sourcesDir: string, page: Page): Promise<Surface[]> {
+  const surfaces = [...(await seedOperatorSurfaces(db, sourcesDir)), ...(await applicationSurfaces(db, sourcesDir)), importReviewSurface(db, (await workspaceOf(page.context(), db)).id)];
   addBitbucketToken(db, { name: "Platform team", serverUrl: "https://bitbucket.example.com", token: "BBDC-surface-token-0000" });
   storeEntry(db, saltEntry());
   const url = (name: string) => surfaces.find(([candidate]) => candidate === name)![1];
@@ -139,9 +140,41 @@ test("Microfrontends with regions, Session, Settings, and hot spots: no nested b
   }
 });
 
+// add-mock-sets, task 13.1: Data with its request list and Create rule, the pill's marker, and preview mode's line keep the surface rules in both themes.
+test("Data with a set, its request list, and Create rule, the pill's marker, and preview mode's line: no nested bordered containers, no horizontal overflow, and the toolbar on top, in both themes", async ({ page, db, baseURL }) => {
+  test.setTimeout(300_000);
+  ordersPortalRemote();
+  const running = await buildOrdersPortal(db);
+  seedMockSet(db, running.application.slug, ORDERS_HAPPY_PATH, { default: true });
+  const rates = "GET https://api.orders.test/v1/rates";
+  for (const theme of ["light", "dark"] as const) {
+    await useTheme(page.context(), theme, baseURL!);
+    await page.goto(framedRun(running, "/accounts"));
+    await waitForPage(page, "Accounts");
+    await expect(page.locator('[data-toolbar="controls"] [data-resting][data-toolbar-item="data"]')).toBeVisible();
+    await test.step(`The pill's marker, ${theme}`, () => expectToolbarOnTop(page));
+    await openTool(page, "data");
+    const data = page.getByRole("dialog", { name: "Data" });
+    await data.locator(`[data-request="${rates}"]`).getByRole("button").click();
+    await data.getByRole("button", { name: "Create rule" }).click();
+    await expect(data.getByRole("form", { name: "Create rule" })).toBeVisible();
+    await test.step(`Data with its requests and Create rule, ${theme}`, async () => {
+      await expectNoNestedBorders(page, "[data-tool-panel]");
+      await expectNoHorizontalOverflow(page);
+      await expectToolbarOnTop(page);
+    });
+    await page.goto(paths.applicationPreview(running.application.slug));
+    await expect(page.locator("[data-mock-line]")).toHaveText("Mock set: Happy path. Change it with Data in full screen.");
+    await test.step(`Preview mode's line, ${theme}`, async () => {
+      await expectNoNestedBorders(page);
+      await expectNoHorizontalOverflow(page);
+    });
+  }
+});
+
 test("every operator page has exactly one h1, in its page header, and none in the shell header", async ({ page, db, sourcesDir }) => {
   test.setTimeout(300_000);
-  for (const [name, url] of await everyPage(db, sourcesDir)) {
+  for (const [name, url] of await everyPage(db, sourcesDir, page)) {
     await page.goto(url);
     await test.step(name, async () => {
       await expect(page.locator("h1"), name).toHaveCount(1);
@@ -157,7 +190,7 @@ test("every operator page has exactly one h1, in its page header, and none in th
 // page-patterns spec, the shell header requirement and finding 26: one banner, one main, and no landmark per item.
 test("Landmarks on every page: one banner outside one main, and no region for an item of a list or table", async ({ page, db, sourcesDir }) => {
   test.setTimeout(300_000);
-  const pages = await everyPage(db, sourcesDir);
+  const pages = await everyPage(db, sourcesDir, page);
   const profile = pages.find(([name]) => name === "06-profile")![1];
   const problems: string[] = [];
   const views = ["composition", "dependencies", "design-system", "services", "tooling", "diagnostics"].map((tab) => [`10-profile-${tab}`, `${profile}?tab=${tab}`] as const);
@@ -189,7 +222,7 @@ test("Landmarks on every page: one banner outside one main, and no region for an
 test("Limits on every page: one primary action, three secondary actions, four meta facts, seven tabs, and five key figures", async ({ page, db, sourcesDir }) => {
   test.setTimeout(300_000);
   const problems: string[] = [];
-  for (const [name, url] of await everyPage(db, sourcesDir)) {
+  for (const [name, url] of await everyPage(db, sourcesDir, page)) {
     await page.goto(url);
     for (const problem of await limitViolations(page)) problems.push(`${name} (${url}): ${problem}`);
   }

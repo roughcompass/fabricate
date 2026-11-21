@@ -1,16 +1,28 @@
 import path from "node:path";
 import type { JsonObject } from "@repo-facts/contract";
+import fs from "node:fs";
 import type { Db } from "../../src/lib/db/client";
+import { createDraft } from "../../src/lib/mocks/imports";
 import { findingsOf } from "../../src/lib/evaluations/evaluation-records";
 import { profileDocument, profilesOf } from "../../src/lib/profiles/profile-records";
 import { reviseRelease } from "../../src/lib/standards/publish";
 import { standardById } from "../../src/lib/standards/standard-records";
 import { ORDERS, publishStandard, seedMapStates, selectReleases } from "../../test/support/scenarios";
+import { manifest } from "../../test/support/profiles";
+import { analyze } from "@repo-facts/bundle";
+import { MemoryReader } from "@repo-facts/contract";
+import { eq } from "drizzle-orm";
+import { surveyRefFor } from "../../src/lib/acquisition/mirror";
+import { immediate } from "../../src/lib/db/client";
+import { surveys } from "../../src/lib/db/schema";
+import { insertProfile } from "../../src/lib/profiles/profile-records";
+import { buildProfile } from "../../src/lib/profiles/schema";
+import { moveSurvey, pinSurvey } from "../../src/lib/surveys/records";
 import { offlineViteApp } from "../../test/support/preview-trees";
 import { registered, seeded, seededPreview } from "./applications";
-import { seedMockSet } from "./mock-sets";
+import { mockApplicationId, seedFailedCalls, seedMockSet } from "./mock-sets";
 import { gitRepo } from "./fixtures";
-import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate } from "./results";
+import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate, serverConfig } from "./results";
 import { paths } from "./paths";
 
 /**
@@ -73,11 +85,13 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
 
 /**
  * Applications' pages: the gallery, a ready application's page, with saved
- * previews and mock sets, and its settings, one still building, with none
- * saved, preview mode, on the tracked branch and on a saved preview, New
- * preview, and the mock sets' pages.
+ * previews, mock sets, and the API calls that failed when its build was
+ * captured, and its settings, one still building, with none saved, preview
+ * mode, on the tracked branch and on a saved preview, New preview, the mock
+ * sets' pages, and onboarding's Data step, for a Profile that reports the
+ * APIs the code calls and its MSW handlers.
  */
-export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
+export async function applicationSurfaces(db: Db, sourcesDir: string): Promise<Surface[]> {
   const repository = registered(db, path.join(sourcesDir, "orders-web"), offlineViteApp());
   const orders = seeded(db, "Orders portal", { description: "Order tracking for partners", repository });
   seededPreview(db, orders, "refs/heads/feature/new-nav");
@@ -89,6 +103,17 @@ export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
   const happy = seedMockSet(db, "orders-portal", [{ pattern: "/v1/orders", query: { mode: "ignore_listed", params: [["limit", "5"]], ignored: ["_"] }, responses: [{ json: { orders: [] } }] }, { method: "POST", pattern: "/v1/orders/search", body: { mode: "json", value: { status: "open" } }, responses: [{ json: { orders: [] } }] }, { pattern: "/v1/rates" }], { default: true, byName: "Presenter" });
   seedMockSet(db, "orders-portal", [], { name: "Errors", description: "Every call failing" });
   const firstRule = (db.$client.prepare("select public_id from mock_rules where set_id = ? order by position limit 1").get(happy.id) as { public_id: string }).public_id;
+  // The calls that failed when the current build was captured with "Happy path" (add-mock-sets, task 13.1): one of each kind.
+  seedFailedCalls(db, "orders-portal", FAILED_CALLS, { set: happy });
+  // The Profile onboarding's Data step reads: the commit eligibility checked, calling the orders API, with MSW handlers.
+  const { surveyId } = db.$client.prepare("select survey_id as surveyId from preview_preparations where id = (select latest_preparation_id from applications where slug = 'orders-portal')").get() as { surveyId: number };
+  const survey = db.select().from(surveys).where(eq(surveys.id, surveyId)).get()!;
+  const factDocument = await analyze(MemoryReader.fromFiles(DATA_STEP_FILES, { commit: survey.commitSha, budgets: serverConfig().analysis }), { entries: [] as JsonObject[] as never });
+  const running = pinSurvey(db, moveSurvey(db, survey, "running", { attempts: 1 }), { treeSha: null, internalRef: surveyRefFor(survey.publicId) });
+  immediate(db, (tx) => {
+    insertProfile(tx, { survey: running, document: buildProfile({ repository: repository.publicId, commit: survey.commitSha, surveyorRelease: survey.surveyorRelease, configurationDigest: survey.configurationDigest, factDocument }) });
+    moveSurvey(tx, running, "succeeded", {});
+  });
   return [
     ["15-applications", paths.applications],
     ["15-application", paths.application("orders-portal")],
@@ -111,5 +136,34 @@ export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
     ["16-mock-rule", paths.mockRule("orders-portal", happy.publicId, firstRule)],
     ["16-mock-set-upload", paths.mockSetUpload("orders-portal")],
     ["16-saved-preview-mock-set", paths.savedPreviewMockSet("orders-portal", "feature-new-nav")],
+    ["16-mock-set-new-failed-calls", paths.newMockSet("orders-portal", { from: "failed-calls" })],
+    ["16-onboarding-data", paths.newApplication({ step: "data", application: "orders-portal" })],
   ];
+}
+
+/** One failed call of each kind, as a capture records them. */
+const FAILED_CALLS = [
+  { url: "https://api.orders.test/v1/rates", kind: "connect" },
+  { url: "https://api.orders.test/v1/accounts/42", kind: "status", status: 503, occurrences: 2 },
+  { url: "https://auth.orders.test/v1/session", kind: "cors" },
+  { method: "POST", url: "https://api.orders.test/v1/exports", kind: "not_mocked", status: 501 },
+  { url: "wss://api.orders.test/v1/ticker", kind: "websocket" },
+] as const;
+
+/** Orders portal's sources as the Data step's Profile reads them: calls to https://api.orders.test, and MSW handlers. */
+const DATA_STEP_FILES = {
+  "package.json": manifest({ name: "orders-web", version: "1.0.0", dependencies: { react: "19.3.1", "react-dom": "19.3.1", msw: "2.12.0" }, devDependencies: { vite: "8.3.8" }, scripts: { build: "vite build" } }),
+  "src/api.js": 'const API = "https://api.orders.test/v1";\nexport const recentOrders = () => fetch(`${API}/orders?limit=5`);\nexport const account = (id) => fetch(`${API}/accounts/${id}`);\nexport const search = (status) => fetch(`${API}/orders/search`, { method: "POST", body: JSON.stringify({ status }) });\n',
+  "src/mocks/handlers.ts": 'import { http, HttpResponse } from "msw";\nexport const handlers = [http.get("https://api.orders.test/v1/orders", () => HttpResponse.json({ orders: [] }))];\n',
+};
+
+/**
+ * Review HAR for the workspace +workspaceId+, whose upload of Orders
+ * portal's Chrome recording it shows: drafts are readable only by the
+ * workspace that uploaded them. Seed the application surfaces first.
+ */
+export function importReviewSurface(db: Db, workspaceId: number): Surface {
+  const source = fs.readFileSync(path.resolve("test/fixtures/har/orders-portal.chrome.har"), "utf8");
+  const draft = createDraft(db, { applicationId: mockApplicationId(db, "orders-portal"), workspaceId, fileName: "orders-portal.chrome.har", target: null, setName: "Recorded orders", fromOnboarding: false }, source, serverConfig());
+  return ["16-mock-set-review", paths.mockSetImport("orders-portal", draft.publicId)];
 }

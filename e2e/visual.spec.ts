@@ -3,9 +3,10 @@ import path from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, expectNoHorizontalOverflow, expectNoNestedBorders, expectNoOverlappingContent, test } from "./support/fixtures";
 import { openTool } from "./support/toolbar";
-import { framedRun } from "./support/fixture-app";
+import { buildOrdersPortal, framedRun, ordersPortalRemote } from "./support/fixture-app";
+import { ORDERS_HAPPY_PATH, seedMockSet } from "./support/mock-sets";
 import { application, runOrdersPortal, waitForPage } from "./support/running-app";
-import { applicationSurfaces, seedOperatorSurfaces } from "./support/surfaces";
+import { applicationSurfaces, importReviewSurface, seedOperatorSurfaces } from "./support/surfaces";
 import { paths } from "./support/paths";
 import { useTheme } from "./support/shell";
 import { storeEntry } from "../src/lib/catalog/entries";
@@ -107,7 +108,8 @@ test("captures every product surface at desktop and mobile width, in both themes
   storeEntry(db, saltEntry());
   const surfaces = [
     ...(await seedOperatorSurfaces(db, sourcesDir)),
-    ...applicationSurfaces(db, sourcesDir),
+    ...(await applicationSurfaces(db, sourcesDir)),
+    importReviewSurface(db, (await workspaceOf(page.context(), db)).id),
     ["10-system", "/admin/system"],
     ["10-bitbucket-tokens", "/admin/bitbucket-tokens"],
     ["10-adoption", "/adoption"],
@@ -373,6 +375,7 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
     ["timing", "Timing"],
     ["microfrontends", "Microfrontends"],
     ["session", "Session"],
+    ["data", "Data"],
     ["settings", "Settings"],
     ["shortcuts", "Preferences / Keyboard shortcuts"],
   ];
@@ -435,4 +438,86 @@ test("captures the toolbar's states at desktop and mobile width, in both operato
   }
   expect(fs.readdirSync(output)).toHaveLength(count);
   expect(count).toBe((panels.length + 5) * VIEWPORTS.length * THEMES.length);
+});
+
+/**
+ * Captures Data where a mock set applies (add-mock-sets, task 13.1): the
+ * pill's marker with its tooltip, Data's request list over Orders portal
+ * with "Happy path" as its default, a failed call's detail with Create rule,
+ * the Share dialog naming the set, and preview mode's line above the
+ * browser window; and Data's refusal beside Quotes desk's own service
+ * worker, in both operator themes. Data with no set is among the toolbar's
+ * states.
+ */
+test("captures Data with a mock set, the pill's marker, and preview mode's line, in both operator themes", async ({ page, context, db, baseURL }) => {
+  test.setTimeout(300_000);
+  const output = path.join(OUTPUT, "toolbar-data");
+  fs.rmSync(output, { recursive: true, force: true });
+  fs.mkdirSync(output, { recursive: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  ordersPortalRemote();
+  const running = await buildOrdersPortal(db);
+  seedMockSet(db, running.application.slug, ORDERS_HAPPY_PATH, { default: true, byName: "Sam Rivera" });
+  // Quotes desk, with a default set, and its own service worker registered for its build's path.
+  const { desk } = await buildQuotes(db, { saved: false });
+  seedMockSet(db, desk.application.slug, [{ pattern: "/v1/desk", responses: [{ json: { name: "FX desk" } }] }], { default: true });
+  await page.goto(framedRun(desk, "/"));
+  await waitForPage(page, "Quotes desk");
+  await application(page)
+    .locator(":root")
+    .evaluate(async () => {
+      await navigator.serviceWorker.register("sw.js");
+      await navigator.serviceWorker.ready;
+    });
+  let count = 0;
+  const capture = async (name: string, theme: string, fullPage = false) => {
+    await settled(page);
+    await page.screenshot({ path: path.join(output, `${name}-${theme}.jpg`), type: "jpeg", quality: 75, fullPage });
+    count++;
+  };
+  const rates = "GET https://api.orders.test/v1/rates";
+  for (const theme of THEMES) {
+    await useTheme(context, theme, baseURL!);
+    await page.goto(framedRun(running, "/accounts"));
+    await waitForPage(page, "Accounts");
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    // The page's calls have been answered: recent orders from the set, and the rates worker's call failed.
+    await expect(application(page).locator("[data-recent-orders] li")).toHaveCount(5);
+    await expect(application(page).locator("[data-rates]")).toHaveText("Rates unavailable");
+    const resting = page.locator('[data-toolbar="controls"] [data-resting][data-toolbar-item="data"]');
+    await resting.hover();
+    await expect(page.locator("[data-toolbar-tooltip]")).toContainText("Data · Mock set: Happy path");
+    await capture("orders-portal-data-pill", theme);
+
+    await resting.click();
+    const data = page.getByRole("dialog", { name: "Data" });
+    await expect(data.locator(`[data-request="${rates}"]`)).toBeVisible();
+    await capture("orders-portal-data", theme);
+    await data.locator(`[data-request="${rates}"]`).getByRole("button").click();
+    await data.getByRole("button", { name: "Create rule" }).click();
+    await expect(data.getByRole("form", { name: "Create rule" })).toBeVisible();
+    await capture("orders-portal-data-create-rule", theme);
+    await page.keyboard.press("Escape");
+    await openTool(page, "share");
+    await expect(page.getByRole("dialog", { name: "Share" }).locator("[data-share-applies]")).toContainText('the mock set "Happy path"');
+    await expect(page.getByRole("dialog", { name: "Share" }).getByLabel("Link to this view")).toBeVisible();
+    await capture("orders-portal-share", theme);
+    await page.keyboard.press("Escape");
+
+    await page.goto(paths.applicationPreview(running.application.slug));
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await expect(page.locator("[data-mock-line]")).toHaveText("Mock set: Happy path. Change it with Data in full screen.");
+    await expect(page.frameLocator("[data-preview-frame]").locator("[data-recent-orders] li")).toHaveCount(5);
+    await capture("orders-portal-preview-mode-line", theme, true);
+
+    await page.goto(framedRun(desk, "/"));
+    await waitForPage(page, "Quotes desk");
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await openTool(page, "data");
+    await expect(page.getByRole("dialog", { name: "Data" }).locator("[data-mock-refusal]")).toBeVisible();
+    await capture("quotes-desk-data-refused", theme);
+    await page.keyboard.press("Escape");
+  }
+  expect(fs.readdirSync(output)).toHaveLength(count);
+  expect(count).toBe(6 * THEMES.length);
 });
