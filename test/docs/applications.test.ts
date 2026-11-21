@@ -7,6 +7,10 @@ import { loadConfig } from "@/lib/config";
 import { DEVICES } from "@/lib/web/device-preview";
 import { COMMENT_LIMIT, THREAD_LIMIT } from "@/lib/workspaces/workspaces";
 import { DESCRIPTION_LIMIT, MB, NAME_LIMIT, RESPONSE_BODY_LIMIT, RESPONSE_LIMIT, RULE_LIMIT, SET_BODY_LIMIT, SET_LIMIT } from "@/lib/mocks/model";
+import { HAR_ENTRY_LIMIT, HAR_UPLOAD_LIMIT, IMPORT_BODY_LIMIT } from "@/lib/mocks/har-import";
+import { CREDENTIAL_HEADER, CREDENTIAL_NAME, JWT_PLACEHOLDER, TRANSPORT_HEADERS } from "@/lib/mocks/sanitize";
+import { DRAFT_HOURS, REVIEW_PAGE_SIZE } from "@/lib/mocks/imports";
+import { EXPORT_ORIGIN } from "@/lib/mocks/export";
 import { TOOLBAR_ITEMS } from "@/components/toolbar/toolbar-context";
 
 /*
@@ -57,6 +61,20 @@ describe("docs/applications.md", () => {
     expect(doc).toContain(`a set can have ${RULE_LIMIT} rules, and its responses can hold ${SET_BODY_LIMIT / MB} MB in all;`);
     expect(doc).toContain(`a rule can have ${RESPONSE_LIMIT} responses, and a response's body up to ${RESPONSE_BODY_LIMIT / MB} MB;`);
     expect(doc).toContain(`a name of up to ${NAME_LIMIT} characters, unique among the application's sets ignoring case, and an optional description of up to ${DESCRIPTION_LIMIT} characters`);
+  });
+
+  it("quotes the upload's limits, and the headers and patterns sanitizing removes, as the code has them (add-mock-sets, task 3.7)", () => {
+    expect(doc).toContain(`of up to ${HAR_UPLOAD_LIMIT / MB} MB and ${HAR_ENTRY_LIMIT.toLocaleString("en-US")} entries`);
+    expect(doc).toContain(`bodies over ${IMPORT_BODY_LIMIT / MB} MB`);
+    expect(doc).toContain(`\`${String(CREDENTIAL_HEADER)}\``);
+    expect(doc).toContain(`\`${String(CREDENTIAL_NAME)}\``);
+    expect(doc).toContain(`\`${JWT_PLACEHOLDER}\``);
+    const quoted = [...doc.matchAll(/the transport headers that no longer apply: (.+?)\.\n/g)][0]![1]!.match(/`([^`]+)`/g)!.map((name) => name.slice(1, -1).toLowerCase());
+    expect(new Set(quoted)).toEqual(new Set(TRANSPORT_HEADERS));
+    expect(doc).toContain(`for ${DRAFT_HOURS} hours`);
+    expect(doc).toContain(`by host, ${REVIEW_PAGE_SIZE} to a page`);
+    expect(doc).toContain(`up to ${RESPONSE_LIMIT}; a rule called more often keeps the first ${RESPONSE_LIMIT - 1} and the last`);
+    expect(doc).toContain(`\`${EXPORT_ORIGIN}\``);
   });
 
   it("lists every toolbar tool with its key", () => {

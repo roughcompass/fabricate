@@ -80,7 +80,8 @@ export function parsePattern(pattern: string): CompiledPath | null {
 
 /** A parsed pattern written out again, as `parsePattern` reads it. */
 export function patternText(path: CompiledPath): string {
-  const parts = path.segments.map((segment) => ("param" in segment ? `:${segment.param}` : encodeURIComponent(segment.literal)));
+  // A literal `*` or leading `:` is escaped, so it reads back as a literal rather than as a part that changes.
+  const parts = path.segments.map((segment) => ("param" in segment ? `:${segment.param}` : encodeURIComponent(segment.literal).replace(/\*/g, "%2A")));
   if (path.rest) parts.push("*");
   return `/${parts.join("/")}`;
 }
