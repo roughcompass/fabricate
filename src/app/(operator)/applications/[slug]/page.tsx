@@ -27,6 +27,10 @@ import { rebuildAction } from "../actions";
 import { ApplicationsPoller } from "../applications-poller";
 import { applicationOutcome } from "../outcomes";
 import { ApplicationStatusLabel, LogExcerpt, applicationImage, traitsLabel } from "../views";
+import { applicationDefault, previewDefault, savedPreviewId } from "@/lib/mocks/defaults";
+import { listSets } from "@/lib/mocks/records";
+import { failedCallsOf } from "@/lib/mocks/views";
+import { FailedCallsAlert, MockSetsSection } from "./mock-sets-section";
 import { PreviewsSection } from "./previews-section";
 import styles from "../applications.module.css";
 
@@ -59,7 +63,10 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const application = load(slug);
   if (!application) notFound();
-  const history = applicationHistory(getDb(), getApplicationRow(getDb(), application.publicId).id);
+  const row = getApplicationRow(getDb(), application.publicId);
+  const history = applicationHistory(getDb(), row.id);
+  const sets = listSets(getDb(), row.id);
+  const defaultSet = applicationDefault(getDb(), row.id);
   const previews = savedPreviewsOf(getDb(), application.publicId);
   const named = previews.map((saved) => ({ ...saved, name: savedPreviewName(application.name, saved) }));
   const snapshot = statusSnapshot([application, ...named]);
@@ -125,6 +132,7 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
         <>
           <OutcomeToast outcome={applicationOutcome(notice, application, notice?.startsWith("preview-") ? findSavedPreview(getDb(), application.publicId, param(query, "preview") ?? "") : undefined)} />
           <LatestFailure application={application} history={history} />
+          <FailedCallsAlert slug={application.slug} failed={failedCallsOf(getDb(), row.currentPreviewId)} />
         </>
       }
     >
@@ -141,6 +149,7 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
               ["Current build", application.current ? <CurrentBuild key="current" application={application} /> : "None yet"],
               ["Built with", traitsLabel(application, true) ?? "Not decided yet"],
               ["Latest build", <ApplicationStatusLabel key="latest" application={application} />],
+              ["Mock set", defaultSet ? <Link key="mock-set" href={routes.mockSet(application.slug, defaultSet.publicId)}>{defaultSet.name}</Link> : "None"],
             ]}
           />
         </div>
@@ -149,7 +158,9 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
         </figure>
       </div>
 
-      <PreviewsSection application={application} previews={previews} />
+      <PreviewsSection application={application} previews={previews} mockSets={previewMockSets(row.id, previews, defaultSet?.name ?? null)} />
+
+      <MockSetsSection application={application} sets={sets} />
 
       <Section title="Builds" description="Each build the application started, newest first: its first build, new commits, rebuilds, and branch switches.">
         <Panel flush>
@@ -177,6 +188,17 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
         shown={[application, ...named].map((shown) => ({ id: shown.publicId, name: shown.name, label: APPLICATION_STATUS_LABELS[shown.status], settling: shown.settling }))}
       />
     </DetailsTemplate>
+  );
+}
+
+/** Each saved preview's mock set in words, by its key: its own set, None, or the application's default it inherits. */
+function previewMockSets(applicationId: number, previews: readonly { publicId: string; key: string }[], fallback: string | null): Record<string, string> {
+  return Object.fromEntries(
+    previews.map((saved) => {
+      const id = savedPreviewId(getDb(), saved.publicId);
+      const own = previewDefault(getDb(), applicationId, id);
+      return [saved.key, own.kind === "set" ? own.set.name : own.kind === "none" ? "None" : `Application default (${fallback ?? "none"})`];
+    }),
   );
 }
 

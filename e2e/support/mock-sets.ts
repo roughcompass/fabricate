@@ -6,6 +6,9 @@ import { setApplicationDefault, setPreviewDefault } from "../../src/lib/mocks/de
 import { checkRule } from "../../src/lib/mocks/checks";
 import type { HostMapping, MockSet, RuleInput } from "../../src/lib/mocks/model";
 import { appendRules, createSet, getSet } from "../../src/lib/mocks/records";
+import { withOverrides } from "../../src/lib/config";
+import { insertRepository } from "../../src/lib/repositories/repository-records";
+import { onboard } from "../../test/support/applications";
 import { serverConfig } from "./results";
 
 /*
@@ -198,3 +201,15 @@ export const ORDERS_HAPPY_PATH: readonly SeedRule[] = [
     ],
   },
 ];
+
+/**
+ * An application named +name+ as onboarding creates it, without building
+ * it, for pages that need no build: its first build stays queued, since the
+ * browser tests' server runs no worker.
+ */
+export function unbuiltApplication(db: Db, name = "Orders portal"): { slug: string; id: number } {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const repository = insertRepository(db, { name: slug, cloneUrl: `https://git.example.com/acme/${slug}.git`, canonicalUrl: `https://git.example.com/acme/${slug}`, gitRef: null });
+  const created = onboard(db, withOverrides(serverConfig(), { previews: { enabled: true } }), repository, { name });
+  return { slug: created.slug, id: created.id };
+}

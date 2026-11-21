@@ -10,6 +10,7 @@ import { E2E_PREVIEWS } from "./support/env";
 import { expect as baseExpect, test } from "./support/fixtures";
 import { paths } from "./support/paths";
 import { runJobs } from "./support/results";
+import { seedMockSet, setDefault } from "./support/mock-sets";
 
 /*
  * An application's saved previews (restore-toolbar-tools-and-branch-
@@ -64,12 +65,14 @@ test("lists saved previews by name, with each one's image, kind, status, commit,
   await expect(row(page, "v1.1.0").locator("[data-placeholder]")).toHaveCount(1);
   await expect(row(page, "v1.1.0")).toContainText("None yet");
   expect(tag.status).toBe("building");
+  // Each preview's mock set (add-mock-sets, task 5.6): the application's default, which it has none of.
+  await expect(row(page, "feature/new-nav")).toContainText("Application default (none)");
 
   await ready.getByRole("link", { name: "feature/new-nav" }).click();
   await expect(page).toHaveURL(/\/applications\/orders-portal\/preview\?preview=feature-new-nav$/);
 });
 
-test("offers Open full screen, Rebuild preview, and Remove preview in a ready preview's overflow menu (Row actions)", async ({ page, db }) => {
+test("offers Open full screen, Rebuild preview, Choose mock set, and Remove preview in a ready preview's overflow menu (Row actions)", async ({ page, db }) => {
   const orders = seeded(db, "Orders portal");
   seededPreview(db, orders, "refs/heads/feature/new-nav");
   await page.goto(paths.application(orders.slug));
@@ -77,6 +80,7 @@ test("offers Open full screen, Rebuild preview, and Remove preview in a ready pr
   const menu = page.locator("[popover]:popover-open");
   await expect(menu.getByRole("link", { name: /Open full screen/ })).toHaveAttribute("href", "/run/orders-portal@feature-new-nav");
   await expect(menu.getByRole("button")).toHaveText(["Rebuild preview", "Remove preview"]);
+  await expect(menu.getByRole("link", { name: "Choose mock set" })).toHaveAttribute("href", "/applications/orders-portal/previews/feature-new-nav/mock-set");
 });
 
 test("shows an empty state that offers New preview (None saved)", async ({ page, db }) => {
@@ -196,5 +200,55 @@ test.describe("without JavaScript", () => {
     await page.getByRole("button", { name: "Create preview" }).click();
     await expect(page).toHaveURL(/\/applications\/orders-portal\/preview\?preview=v1\.1\.0$/);
     expect(findSavedPreview(db, getApplication(db, "orders-portal").publicId, "v1.1.0")).toMatchObject({ kind: "tag", ref: "refs/tags/v1.1.0" });
+  });
+});
+
+test.describe("a saved preview's mock set (add-mock-sets, task 5.6)", () => {
+  /** Orders portal with Happy path as its default and New nav data beside it, and a ready preview of feature/new-nav. */
+  function seededWithSets(db: Db) {
+    const orders = seeded(db, "Orders portal");
+    const saved = seededPreview(db, orders, "refs/heads/feature/new-nav");
+    seedMockSet(db, orders.slug, [{ pattern: "/v1/orders", responses: [{ json: { orders: [] } }] }], { default: true });
+    const newNav = seedMockSet(db, orders.slug, [{ pattern: "/v1/orders", responses: [{ json: { orders: [{ id: "1" }] } }] }], { name: "New nav data" });
+    return { orders, saved, newNav };
+  }
+  const queuedCaptures = (db: Db) => (db.$client.prepare("select count(*) as n from jobs where kind = 'preview.screenshot' and state = 'queued'").get() as { n: number }).n;
+
+  test("Inheriting: a preview that never chose reads Application default (Happy path), and follows the application's", async ({ page, db }) => {
+    const { orders } = seededWithSets(db);
+    await page.goto(paths.application(orders.slug));
+    await expect(row(page, "feature/new-nav")).toContainText("Application default (Happy path)");
+    setDefault(db, orders.slug, null);
+    await page.reload();
+    await expect(row(page, "feature/new-nav")).toContainText("Application default (none)");
+  });
+
+  test("Its own set: choosing New nav data and selecting Save changes, its row reads New nav data, and its screenshot is captured again", async ({ page, db }) => {
+    const { orders } = seededWithSets(db);
+    const before = queuedCaptures(db);
+    await page.goto(paths.application(orders.slug));
+    await row(page, "feature/new-nav").getByRole("button", { name: "Actions for feature/new-nav" }).click();
+    await page.locator("[popover]:popover-open").getByRole("link", { name: "Choose mock set" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Mock set for feature/new-nav" })).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Application default \(Happy path\)/ })).toBeChecked();
+    await page.getByRole("radio", { name: /New nav data/ }).check();
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(row(page, "feature/new-nav")).toContainText("New nav data");
+    expect(queuedCaptures(db)).toBeGreaterThan(before);
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("None: its views and screenshots apply no set, though the application has a default", async ({ page, db }) => {
+      const { orders } = seededWithSets(db);
+      await page.goto(paths.savedPreviewMockSet(orders.slug, "feature-new-nav"));
+      await page.getByRole("radio", { name: /^None/ }).check();
+      await page.getByRole("button", { name: "Save changes" }).click();
+      await expect(row(page, "feature/new-nav")).toContainText("None");
+      const id = getApplicationRow(db, getApplication(db, orders.slug).publicId).id;
+      const preview = db.$client.prepare("select id from application_previews where key = 'feature-new-nav'").get() as { id: number };
+      expect(db.$client.prepare("select mock_set_id from mock_set_defaults where application_id = ? and application_preview_id = ?").get(id, preview.id)).toEqual({ mock_set_id: null });
+    });
   });
 });

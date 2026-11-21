@@ -8,6 +8,7 @@ import { standardById } from "../../src/lib/standards/standard-records";
 import { ORDERS, publishStandard, seedMapStates, selectReleases } from "../../test/support/scenarios";
 import { offlineViteApp } from "../../test/support/preview-trees";
 import { registered, seeded, seededPreview } from "./applications";
+import { seedMockSet } from "./mock-sets";
 import { gitRepo } from "./fixtures";
 import { BASELINE_CONTROLS, SERVICE_CONTROLS, evaluate } from "./results";
 import { paths } from "./paths";
@@ -72,8 +73,9 @@ export async function seedOperatorSurfaces(db: Db, sourcesDir: string): Promise<
 
 /**
  * Applications' pages: the gallery, a ready application's page, with saved
- * previews, and its settings, one still building, with none saved, preview
- * mode, on the tracked branch and on a saved preview, and New preview.
+ * previews and mock sets, and its settings, one still building, with none
+ * saved, preview mode, on the tracked branch and on a saved preview, New
+ * preview, and the mock sets' pages.
  */
 export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
   const repository = registered(db, path.join(sourcesDir, "orders-web"), offlineViteApp());
@@ -83,6 +85,10 @@ export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
   seededPreview(db, orders, "refs/tags/v1.1.0", { state: "latest_failed" });
   seeded(db, "Payments hub", { state: "building" });
   seeded(db, "Admin console", { state: "failed" });
+  // Mock sets (add-mock-sets, task 5.8): a default set with rules, one rule needing a response, and an empty set.
+  const happy = seedMockSet(db, "orders-portal", [{ pattern: "/v1/orders", query: { mode: "ignore_listed", params: [["limit", "5"]], ignored: ["_"] }, responses: [{ json: { orders: [] } }] }, { method: "POST", pattern: "/v1/orders/search", body: { mode: "json", value: { status: "open" } }, responses: [{ json: { orders: [] } }] }, { pattern: "/v1/rates" }], { default: true, byName: "Presenter" });
+  seedMockSet(db, "orders-portal", [], { name: "Errors", description: "Every call failing" });
+  const firstRule = (db.$client.prepare("select public_id from mock_rules where set_id = ? order by position limit 1").get(happy.id) as { public_id: string }).public_id;
   return [
     ["15-applications", paths.applications],
     ["15-application", paths.application("orders-portal")],
@@ -98,5 +104,12 @@ export function applicationSurfaces(db: Db, sourcesDir: string): Surface[] {
     ["15-application-new", paths.newApplication()],
     ["15-application-new-search", paths.newApplication({ q: "orders" })],
     ["15-application-new-branch", paths.newApplication({ repository: repository.publicId, from: "repository" })],
+    ["16-mock-set", paths.mockSet("orders-portal", happy.publicId)],
+    ["16-mock-set-new", paths.newMockSet("orders-portal")],
+    ["16-mock-set-edit", paths.mockSetEdit("orders-portal", happy.publicId)],
+    ["16-mock-rule-new", paths.newMockRule("orders-portal", happy.publicId)],
+    ["16-mock-rule", paths.mockRule("orders-portal", happy.publicId, firstRule)],
+    ["16-mock-set-upload", paths.mockSetUpload("orders-portal")],
+    ["16-saved-preview-mock-set", paths.savedPreviewMockSet("orders-portal", "feature-new-nav")],
   ];
 }

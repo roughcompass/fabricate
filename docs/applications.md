@@ -155,6 +155,41 @@ Mock sets belong to the application, and apply to its tracked branch and its sav
 
 A set has a name of up to 60 characters, unique among the application's sets ignoring case, and an optional description of up to 280 characters. It holds rules, not HAR files: each rule has a method, an address pattern, query matching, body matching, and up to 20 responses, each with a status, headers, a body, and a latency. Bodies are kept as files under preview storage, never in the database (see [Logs and storage](previews.md#logs-and-storage)).
 
+### The Mock sets section
+
+The application's page lists its mock sets between **Previews** and **Builds**, in a table by name. Each row shows the set's name, marked **Default** when it's the application's default, its rule count, the size of its stored bodies, where it came from (**Uploaded HAR**, **Written**, or **From failed calls**), and when it was last changed and by whom. The section's actions are **Upload HAR** and **New mock set**; with no sets, its empty state offers them. A row's overflow menu has **Set as default** or **Stop using as default**, **Export HAR**, and **Delete mock set**. The overview gains a **Mock set** row naming the default, or None.
+
+When the screenshot of the current build recorded API calls that failed (see [Screenshots](#screenshots)), an alert says how many, such as "4 API calls failed when this build loaded", naming the set the build was captured with, if any. Its disclosure lists each call and what happened to it: answered with an error status, couldn't connect, blocked by CORS, answered as not mocked, or a WebSocket that never opened. It offers **Upload HAR**, and **Start a mock set from these calls**, which opens New mock set with each call to choose, or, when the build was captured with a set, **Add rules to** that set. Each rule made from a call needs a response written before it answers anything. **Dismiss** hides the alert for that build; a later build whose capture recorded failures shows it again.
+
+### A set's page
+
+`/applications/<slug>/mock-sets/<set>` shows the set's name, its Default status when it is one, its rules and size, where it came from, and its last change. **New rule** is its primary action; **Upload HAR**, **Export HAR**, and **Edit mock set** follow. Its rules are listed in the set's order, 50 to a page, each with its method, pattern, matching, responses, and state: **On**, **Off**, **Needs a response**, or **Never reached**, for a rule an earlier rule with the same request always answers first. Filters narrow them by path, method, and state. When rules need a response, an alert says how many. A rule's overflow menu has **Edit rule**, **Turn on** or **Turn off**, **Move up**, **Move down**, and **Duplicate**, whose copy starts off.
+
+**New rule** and **Edit rule** are forms with the request, then the responses:
+- **Method:** one, or any method.
+- **Pattern:** a path whose segments are literal, a named part written `:name` that matches one segment, or a final `*` that matches the rest of the path, such as `/v1/accounts/:id` or `/v1/files/*`.
+- **Recorded origin:** where it was recorded, which counts only when the set maps hosts.
+- **Query:** exactly the parameters given, in any order; those parameters, ignoring some, such as a cache buster; or any query.
+- **Body:** any body, exactly this text, or the same JSON, with members in any order. A body to compare can have up to 64 KB.
+- **Responses:** each with a status from 200 to 599, a content type, headers, a body of up to 5 MB, and a latency of up to 30 seconds. `Set-Cookie` is refused, since a mocked response can't set cookies, and `Content-Length`, `Content-Encoding`, and `Transfer-Encoding` are left out, since they're computed. A body whose content type says it's JSON must be valid JSON. **Add response** adds another.
+
+A rule with no response stays off, marked **Needs a response**, and answers nothing. Editing a rule starts its order of responses over. **Delete rule** is in the danger zone after the form.
+
+**Edit mock set** changes the name, description, hosts, and what calls no rule matches get. **Delete mock set** is in its danger zone, and asks for the set's name. Both forms work without JavaScript.
+
+### Matching
+
+A rule answers a call when its method, its pattern, its query, and its body all match. Only API calls a page or its workers make with fetch, XHR, or an event stream are answered, never a document, script, stylesheet, image, font, or worker script. A call to a file the build serves gets the build's file: under the build's own path, a rule answers only when the build has no file there, and it matches the part after that path, so a build at `/previews/p1/` calling `api/accounts` is matched by `/api/accounts`. Paths are compared after percent-decoding each segment, and a trailing slash doesn't matter.
+
+- **Hosts:** a set matches any host by default, comparing paths only, since a HAR is usually recorded against another host than the build calls. **Edit mock set** can map each origin its rules recorded to the origin the build calls, or to `self`, the preview's own origin, which relative calls use. Then a rule answers only calls to the origin its recorded origin maps to; a rule written without one answers any.
+- **The most specific rule answers,** then the first in the set's order. Rules compare by a named method over any method, then a mapped origin, then more literal path segments, then no final `*`, then exact query over ignored parameters over any query, then a compared body over any body. So `GET /v1/accounts/42` answers before `GET /v1/accounts/:id` whatever their order, and a broad error rule, such as `GET /v1/accounts/*` answering 500, doesn't override more specific ones. Keep error states in a set of their own, such as "Errors", or turn the specific rules off.
+- **Repeated calls** get a rule's responses in order, then the last again: a rule answering pending, pending, then ready gives four calls pending, pending, ready, and ready. The order starts over when the page loads a new document, and when the rule changes.
+- **Calls no rule matches pass through** by default, to their own address, as they would without a set, so turning a set on never makes a view worse. **Answer as not mocked** answers them instead with status 501, the header `X-Frontend-Registry-Mock: not-matched`, and a JSON body naming the set, method, and address, for a view that should reach nothing live.
+
+### Defaults
+
+An application has at most one default mock set, which **Set as default** chooses and **Stop using as default** clears. The default applies to every view of the application no visitor, share link, or saved preview chose otherwise, and to its screenshots. A saved preview can choose its own with **Choose mock set**, in its row's overflow menu: the application's default, which it follows as it changes, **None**, or one of the application's sets. The Previews section shows each preview's choice, such as "Application default (Happy path)".
+
 ### Limits
 
 - an application can have 10 mock sets;
@@ -166,7 +201,7 @@ A change past a limit is refused, naming the limit and what to remove.
 
 ### Deleting
 
-A set is kept until someone deletes it, or its application or Repository is deleted. Deleting a set removes its rules and their stored bodies for everyone, and every choice and default that names it: each view that chose it applies its default again, and each saved preview that chose it inherits the application's.
+A set is kept until someone deletes it, or its application or Repository is deleted. **Delete mock set**, in a row's overflow menu, opens a danger confirmation that names the set, says it's deleted for everyone who opens the application, and says when it's the default it clears. Deleting a set removes its rules and their stored bodies for everyone, and every choice and default that names it: each view that chose it applies its default again, and each saved preview that chose it inherits the application's.
 
 Mock sets are stored unencrypted with their application. Everyone who can open the application can read them, and so can any build the browser runs on the Frontend Registry's origin.
 

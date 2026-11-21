@@ -46,9 +46,16 @@ export async function runScreenshot(db: Executor, job: ScreenshotJob, options: C
   const config = options.config ?? getConfig();
   const preview = findPreview(db, job.preview);
   const screenshot = preview && findScreenshot(db, preview.id);
-  // Deleted, captured, or requested again since: a later job, if any, takes it.
-  if (!preview || !screenshot || screenshot.state !== "pending" || screenshot.requestedAt.getTime() !== job.requested) return "skipped";
-  const fail = (reason: string): CaptureOutcome => (failScreenshot(db, preview.id, job.requested, reason) ? "unavailable" : "skipped");
+  // Deleted, or requested again since: a later job, if any, takes it. A ready screenshot is captured again when its mock set changed.
+  if (!preview || !screenshot || screenshot.state === "unavailable" || screenshot.requestedAt.getTime() !== job.requested) return "skipped";
+  const fail = (reason: string): CaptureOutcome => {
+    // Capturing again keeps the earlier images when it fails, and says why in the worker's log.
+    if (screenshot.state === "ready") {
+      console.log(`[worker] ${preview.publicId}'s screenshot wasn't captured again, so the earlier one stays: ${failureText(reason, 600)}`);
+      return "unavailable";
+    }
+    return failScreenshot(db, preview.id, job.requested, reason) ? "unavailable" : "skipped";
+  };
   if (!config.previews.enabled) return fail("Previews were turned off before the screenshot was taken.");
   if (preview.artifact !== screenshot.artifact) return fail("A newer build was published before the screenshot was taken.");
 

@@ -27,6 +27,13 @@ export function byId(db: Executor, id: number): MockSet | undefined {
   return row ? toMockSet(row) : undefined;
 }
 
+/** The row ID of the saved preview +publicId+, for its defaults and choices. */
+export function savedPreviewId(db: Executor, publicId: string): number {
+  const row = db.select({ id: applicationPreviews.id }).from(applicationPreviews).where(eq(applicationPreviews.publicId, publicId)).get();
+  if (!row) throw new NotFoundError("That saved preview no longer exists. Someone else removed it.");
+  return row.id;
+}
+
 /** Refuses a saved preview of another application. */
 export function requirePreviewOf(db: Executor, applicationId: number, previewId: number): void {
   const row = db

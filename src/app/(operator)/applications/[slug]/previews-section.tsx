@@ -21,12 +21,13 @@ import styles from "../applications.module.css";
  * application page lists its saved previews"; design decision 12): between
  * the overview and Builds, a table of its saved previews by name, each with
  * its card image, its branch or tag linked to preview mode, its kind,
- * status, current build's commit, and when it was built. Row actions are in
- * an overflow menu, so rows keep one height: Open full screen, Rebuild
- * preview, and Remove preview, which asks first. New preview is the
+ * status, current build's commit, when it was built, and its mock set
+ * (add-mock-sets). Row actions are in an overflow menu, so rows keep one
+ * height: Open full screen, Rebuild preview, Choose mock set, and Remove
+ * preview, which asks first. New preview is the
  * section's action, and the empty state's. At most 20 rows, so no pages.
  */
-export function PreviewsSection({ application, previews }: { application: Application; previews: readonly SavedPreview[] }) {
+export function PreviewsSection({ application, previews, mockSets }: { application: Application; previews: readonly SavedPreview[]; mockSets: Readonly<Record<string, string>> }) {
   const newPreview = (
     <ButtonLink href={routes.newApplicationPreview(application.slug)} icon="plus" size="sm">
       New preview
@@ -52,6 +53,7 @@ export function PreviewsSection({ application, previews }: { application: Applic
                 <Th>Status</Th>
                 <Th>Commit</Th>
                 <Th>Built</Th>
+                <Th>Mock set</Th>
                 <Th align="actions" hidden>
                   Actions
                 </Th>
@@ -59,7 +61,7 @@ export function PreviewsSection({ application, previews }: { application: Applic
             }
           >
             {previews.map((saved) => (
-              <PreviewRow key={saved.publicId} application={application} saved={saved} />
+              <PreviewRow key={saved.publicId} application={application} saved={saved} mockSet={mockSets[saved.key] ?? "None"} />
             ))}
           </Table>
         )}
@@ -68,7 +70,7 @@ export function PreviewsSection({ application, previews }: { application: Applic
   );
 }
 
-function PreviewRow({ application, saved }: { application: Application; saved: SavedPreview }) {
+function PreviewRow({ application, saved, mockSet }: { application: Application; saved: SavedPreview; mockSet: string }) {
   const building = saved.latest.outcome === "building";
   const fields = { application: application.slug, preview: saved.key };
   return (
@@ -90,6 +92,7 @@ function PreviewRow({ application, saved }: { application: Application; saved: S
       </Td>
       <Td label="Commit">{saved.current ? <ShortValue value={saved.current.commitSha} length={7} label="commit" /> : <span className={styles.traits}>None yet</span>}</Td>
       <Td label="Built">{saved.current ? <RelativeTime value={saved.current.finishedAt} /> : <span className={styles.traits}>Not yet</span>}</Td>
+      <Td label="Mock set">{mockSet}</Td>
       <Td align="actions">
         <RowActions>
           <ConfirmDialog
@@ -110,6 +113,9 @@ function PreviewRow({ application, saved }: { application: Application; saved: S
                   <MenuButton formAction={rebuildPreviewAction} icon="refresh" disabled={building}>
                     Rebuild preview
                   </MenuButton>
+                  <MenuItem href={routes.savedPreviewMockSet(application.slug, saved.key)} icon="network">
+                    Choose mock set
+                  </MenuItem>
                 </>
               ),
             }}

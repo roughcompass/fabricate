@@ -9,7 +9,7 @@ import { MB, NAME_LIMIT } from "./model";
  */
 
 export const UPLOAD_ERRORS = {
-  confirm: { field: "confirm", message: "Confirm that the recording holds only synthetic test data." },
+  confirm: { field: "confirm", message: "This confirmation is required. Confirm that the recording holds only synthetic test data." },
   file: { field: "file", message: "Choose a HAR file." },
   "too-large": { field: "file", message: `A HAR file can have up to ${HAR_UPLOAD_LIMIT / MB} MB. Export only the calls you need, or record a shorter session.` },
   "not-har": { field: "file", message: "This file isn't a HAR file. Export one from the browser's network panel: in Chrome or Edge, choose Export HAR; in Firefox, Save All As HAR; in Safari, Export." },

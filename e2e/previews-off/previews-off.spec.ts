@@ -81,6 +81,29 @@ test("Previews off: the mock sets' endpoints answer not found (add-mock-sets, ta
   expect((await request.put(routes.mockSetChoiceApi(slug), { data: { set: null } })).status()).toBe(404);
 });
 
+test("Previews off: the mock sets' pages answer not found (add-mock-sets, task 5.8)", async ({ page, db }) => {
+  const repository = insertRepository(db, { name: "spa-orders", cloneUrl: "https://git.example.com/acme/spa-orders.git", canonicalUrl: "https://git.example.com/acme/spa-orders", gitRef: null });
+  const application = onboard(db, withOverrides(serverConfig(), { previews: { enabled: true } }), repository, { name: "Orders portal" });
+  const set = createSet(db, application.id, { name: "Happy path" }, null).publicId;
+  const slug = application.slug;
+  db.$client
+    .prepare("insert into application_previews (public_id, application_id, key, ref, latest_commit_sha, latest_requested_at, created_at, updated_at) values ('apv_0000000000000002', ?, 'feature-new-nav', 'refs/heads/feature/new-nav', ?, 0, 0, 0)")
+    .run(application.id, application.latestCommitSha);
+  for (const address of [
+    routes.mockSet(slug, set),
+    routes.newMockSet(slug),
+    routes.newMockSet(slug, { from: "failed-calls" }),
+    routes.mockSetEdit(slug, set),
+    routes.newMockRule(slug, set),
+    routes.mockRule(slug, set, "mkr_0000000000000001"),
+    routes.mockSetUpload(slug),
+    routes.mockSetImport(slug, "mki_0000000000000001"),
+    routes.savedPreviewMockSet(slug, "feature-new-nav"),
+  ]) {
+    expect((await page.goto(address))?.status(), address).toBe(404);
+  }
+});
+
 test("Previews off: a Repository offers no Create application, and the marketing page doesn't claim Applications", async ({ page, db }) => {
   const repository = insertRepository(db, { name: "spa-orders", cloneUrl: "https://git.example.com/acme/spa-orders.git", canonicalUrl: "https://git.example.com/acme/spa-orders", gitRef: null });
   await page.goto(paths.repository(repository.publicId));
