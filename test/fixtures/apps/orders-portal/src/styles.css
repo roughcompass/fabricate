@@ -178,3 +178,58 @@ a {
   border: 1px solid #d0d7de;
   border-radius: 4px;
 }
+
+.export {
+  margin: 0 0 12px;
+}
+
+.markets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 24px 0 0;
+  color: #474e57;
+}
+
+.activity {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.panel {
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.orders {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.unavailable {
+  color: #a40e26;
+}
+
+.search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.search select {
+  padding: 5px 8px;
+  border: 1px solid #6e7781;
+  border-radius: 4px;
+  font: inherit;
+}

@@ -90,10 +90,11 @@ test.describe("timing tool", () => {
     const { preview } = await runOrdersPortal(page, db);
     await openPanel(page, "timing", "Timing");
     const loads = panel(page, "Timing").getByRole("list", { name: "Loaded files" }).locator("[data-load-file]");
-    await expect(loads).toHaveCount(2);
+    // The entry script and stylesheet, and the script of the rates worker the Accounts page starts (add-mock-sets, task 1.1).
+    await expect(loads).toHaveCount(3);
     const files = () => loads.evaluateAll((items) => items.map((item) => [item.getAttribute("data-load-file"), item.getAttribute("data-load-kind")]));
-    expect((await files()).map(([, kind]) => kind).sort()).toEqual(["Script", "Stylesheet"]);
-    expect((await files()).every(([file]) => /^assets\/index-[\w-]+\.(js|css)$/.test(file!))).toBe(true);
+    expect((await files()).map(([, kind]) => kind).sort()).toEqual(["Script", "Script", "Stylesheet"]);
+    expect((await files()).every(([file]) => /^assets\/(index|rates-worker)-[\w-]+\.(js|css)$/.test(file!))).toBe(true);
     // The inspector the toolbar adds isn't one of the application's loads.
     await expect(loads.filter({ hasText: "inspector" })).toHaveCount(0);
     await expect(loads.and(page.locator("[data-slowest]"))).toHaveCount(1);
@@ -104,7 +105,7 @@ test.describe("timing tool", () => {
     await application(page).getByRole("link", { name: "Settings" }).click();
     await waitForPage(page, "Settings");
     await openPanel(page, "timing", "Timing");
-    await expect(loads).toHaveCount(3);
+    await expect(loads).toHaveCount(4);
     await expect(loads.last()).toHaveAttribute("data-load-file", /^assets\/settings-[\w-]+\.js$/);
     await expect(loads.last()).toHaveAttribute("data-load-kind", "Script");
     expect(preview.publicId).toMatch(/^pvw_/);
